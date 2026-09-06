@@ -1,11 +1,14 @@
 import { isCursorAgentTitle } from '../../../shared/agent-detection'
-import type { OrchestrationDb } from './db'
 import { formatMessagePointer } from './formatter'
+import type {
+  OrchestrationMailboxPointerMessage,
+  PointerDeliveryDependencies
+} from './mailbox-pointer-delivery-contract'
 import {
   shouldReleaseOrchestrationPointer,
   type OrchestrationMessageWaiter
 } from './mailbox-pointer-eligibility'
-import type { OrchestrationMailboxLeaf, OrchestrationMailboxOwner } from './mailbox-owner'
+import type { OrchestrationMailboxLeaf } from './mailbox-owner'
 import { isStatuslessIdleProofCurrent } from './mailbox-statusless-idle-proof'
 import type {
   OrchestrationMailboxDeliveryFlight,
@@ -13,175 +16,240 @@ import type {
   OrchestrationStatuslessIdleProof
 } from './mailbox-pointer-state'
 import { submitOrchestrationMailboxPointer } from './mailbox-pointer-submit'
-import {
-  submitStatuslessCodexMailboxPointer,
-  type SubmitStatuslessCodexPointer
-} from './mailbox-statusless-codex-submit'
+import type { OrchestrationMailboxPointerSubmitTarget } from './mailbox-pointer-submit'
+import { submitStatuslessCodexMailboxPointer } from './mailbox-statusless-codex-submit'
+import { isSettledWrite, type WriteSettlement } from '../../../shared/pty-write-settlement'
 
-/** Delay between the pointer text landing in the composer and the submit keystroke. */
-const POINTER_SUBMIT_DELAY_MS = 500
-
-type PointerStageDependencies<TWaiter extends OrchestrationMessageWaiter> = {
-  mailboxOwner: OrchestrationMailboxOwner
+type StagePointerArgs<TWaiter extends OrchestrationMessageWaiter> = {
+  deps: PointerDeliveryDependencies<TWaiter>
   state: OrchestrationMailboxPointerState
-  getDb: () => OrchestrationDb | null
-  getLeaf: (leafKey: string) => OrchestrationMailboxLeaf | undefined
-  getLeafKey: (tabId: string, leafId: string) => string
-  getMessageWaiters: (mailboxHandle: string) => ReadonlySet<TWaiter> | undefined
-  getTabTitle: (tabId: string) => string | null | undefined
-  getTerminalProcessIncarnation: (terminalHandle: string) => string | null
-  isLeafPtyProvenAbsent: (ptyId: string) => Promise<boolean>
-  requestSleepingRecipientWake?: (mailboxHandle: string) => void
-  submitStatuslessCodexPointer?: SubmitStatuslessCodexPointer
+  leaf: OrchestrationMailboxLeaf
+  mailboxHandle: string
+  messages: readonly OrchestrationMailboxPointerMessage[]
+  newestSequence: number
+  enterDelayMs: number
+  leafKey: string
+  statuslessIdleProof?: OrchestrationStatuslessIdleProof
   deferRedriveUntilPtyOutput?: (ptyId: string, mailboxHandle: string, sequence: number) => boolean
   clearDeferredOutputRedrive?: (ptyId: string, mailboxHandle: string, sequence: number) => void
-  writePty: (ptyId: string, data: string) => boolean | Promise<boolean>
   settle: (ptyId: string, flight: OrchestrationMailboxDeliveryFlight) => void
   redrive: (mailboxHandle: string, force?: boolean) => void
 }
 
-type PointerStageInput = {
-  leaf: OrchestrationMailboxLeaf
-  mailboxHandle: string
-  unread: readonly { id: string; type: string; sequence: number }[]
-  newestSequence: number
-  statuslessIdleProof?: OrchestrationStatuslessIdleProof
-}
-
-/** Write the pointer text into the recipient's composer, then arm its submit. */
 export function stageOrchestrationMailboxPointer<TWaiter extends OrchestrationMessageWaiter>(
-  deps: PointerStageDependencies<TWaiter>,
-  input: PointerStageInput
+  args: StagePointerArgs<TWaiter>
 ): void {
-  const ptyId = input.leaf.ptyId
+  const ptyId = args.leaf.ptyId
+  if (!ptyId) {
+    return
+  }
   if (
-    !ptyId ||
-    (input.statuslessIdleProof &&
-      !isStatuslessIdleProofCurrent(
-        input.leaf,
-        input.statuslessIdleProof,
-        deps.getTerminalProcessIncarnation
-      ))
+    args.statuslessIdleProof &&
+    !isStatuslessIdleProofCurrent(
+      args.leaf,
+      args.statuslessIdleProof,
+      args.deps.getTerminalProcessIncarnation
+    )
   ) {
     return
   }
   if (
-    input.statuslessIdleProof &&
-    deps.submitStatuslessCodexPointer &&
-    deps.deferRedriveUntilPtyOutput &&
-    deps.clearDeferredOutputRedrive
+    args.statuslessIdleProof &&
+    args.deps.submitStatuslessCodexPointer &&
+    args.deferRedriveUntilPtyOutput &&
+    args.clearDeferredOutputRedrive
   ) {
+    // A proven statusless Codex pane submits through the guarded agent-prompt
+    // path, which verifies its own delivery instead of the pointer reservation.
     submitStatuslessCodexMailboxPointer(
       {
-        mailboxOwner: deps.mailboxOwner,
-        state: deps.state,
-        getDb: deps.getDb,
-        getLeaf: deps.getLeaf,
-        getLeafKey: deps.getLeafKey,
-        getMessageWaiters: deps.getMessageWaiters,
-        getTerminalProcessIncarnation: deps.getTerminalProcessIncarnation,
-        submitStatuslessCodexPointer: deps.submitStatuslessCodexPointer,
-        deferRedriveUntilPtyOutput: deps.deferRedriveUntilPtyOutput,
-        clearDeferredOutputRedrive: deps.clearDeferredOutputRedrive,
-        settle: deps.settle,
-        redrive: deps.redrive
+        mailboxOwner: args.deps.mailboxOwner,
+        state: args.state,
+        getDb: args.deps.getDb,
+        getLeaf: args.deps.getLeaf,
+        getLeafKey: args.deps.getLeafKey,
+        getMessageWaiters: args.deps.getMessageWaiters,
+        getTerminalProcessIncarnation: args.deps.getTerminalProcessIncarnation,
+        getCliCommand: args.deps.getCliCommand,
+        submitStatuslessCodexPointer: args.deps.submitStatuslessCodexPointer,
+        deferRedriveUntilPtyOutput: args.deferRedriveUntilPtyOutput,
+        clearDeferredOutputRedrive: args.clearDeferredOutputRedrive,
+        settle: args.settle,
+        redrive: args.redrive
       },
       {
-        leaf: input.leaf,
-        mailboxHandle: input.mailboxHandle,
-        unread: input.unread,
-        newestSequence: input.newestSequence,
-        statuslessIdleProof: input.statuslessIdleProof
+        leaf: args.leaf,
+        mailboxHandle: args.mailboxHandle,
+        unread: args.messages,
+        newestSequence: args.newestSequence,
+        statuslessIdleProof: args.statuslessIdleProof
       }
     )
     return
   }
-  const flight = deps.state.beginFlight(ptyId)
-  const writeResult = deps.writePty(
-    ptyId,
-    formatMessagePointer(input.unread.length, input.mailboxHandle)
-  )
-  if (typeof writeResult === 'boolean') {
-    finishPointerWrite(deps, input, ptyId, flight, writeResult)
+  const expectedTarget = args.deps.resolveSubmitTarget(args.leaf, ptyId)
+  if (!expectedTarget) {
     return
   }
-  void writeResult
-    .then(
-      (accepted) => finishPointerWrite(deps, input, ptyId, flight, accepted),
-      () => finishPointerWrite(deps, input, ptyId, flight, false)
+  const db = args.deps.getDb()
+  const reservationTarget = {
+    ptyId,
+    processIncarnation: expectedTarget.processIncarnation
+  }
+  if (
+    !db ||
+    shouldReleaseOrchestrationPointer(
+      db,
+      args.mailboxHandle,
+      args.messages,
+      args.deps.getMessageWaiters(args.mailboxHandle)
     )
-    .catch(() => undefined)
+  ) {
+    return
+  }
+  const flight = args.state.beginFlight(ptyId)
+  flight.stagedMessageIds = args.messages.map((message) => message.id)
+  try {
+    if (
+      !db.stageMailboxPointerEnter(flight.stagedMessageIds, reservationTarget) ||
+      !db.markMailboxPointerWriteAttempted(flight.stagedMessageIds, reservationTarget)
+    ) {
+      args.settle(ptyId, flight)
+      // Not forced: a retry would fail on the same reservation, but a park from an
+      // earlier flight still has to drain.
+      args.redrive(args.mailboxHandle)
+      return
+    }
+  } catch {
+    // The reservation may already be durable; recovery decides whether redrive is safe.
+    args.settle(ptyId, flight)
+    return
+  }
+  // The watermark parks concurrent deliveries, so it must never outlive the DB reservation.
+  args.state.setWatermark(args.mailboxHandle, args.newestSequence, ptyId, args.leafKey)
+  // Only `refused` proves no bytes left, so only `refused` may release the reservation.
+  const settlePointerWrite = (settlement: WriteSettlement): void => {
+    if (settlement.outcome === 'unverifiable') {
+      preserveAmbiguousWrite()
+      return
+    }
+    finishPointerWriteAndStageEnter(args, ptyId, flight, expectedTarget, settlement)
+  }
+  const preserveAmbiguousWrite = (): void => {
+    if (!args.state.isCurrentFlight(ptyId, flight)) {
+      return
+    }
+    args.state.deactivateWatermark(args.mailboxHandle, args.newestSequence, ptyId)
+    args.settle(ptyId, flight)
+  }
+  try {
+    const writeResult = args.deps.writePty(
+      ptyId,
+      formatMessagePointer(
+        args.messages.length,
+        args.mailboxHandle,
+        args.deps.getCliCommand(expectedTarget.terminalHandle)
+      )
+    )
+    if (isSettledWrite(writeResult)) {
+      settlePointerWrite(writeResult)
+      return
+    }
+    void writeResult.then(settlePointerWrite, preserveAmbiguousWrite).catch(() => undefined)
+  } catch {
+    preserveAmbiguousWrite()
+  }
 }
 
-function finishPointerWrite<TWaiter extends OrchestrationMessageWaiter>(
-  deps: PointerStageDependencies<TWaiter>,
-  input: PointerStageInput,
+function finishPointerWriteAndStageEnter<TWaiter extends OrchestrationMessageWaiter>(
+  args: StagePointerArgs<TWaiter>,
   ptyId: string,
   flight: OrchestrationMailboxDeliveryFlight,
-  accepted: boolean
+  expectedTarget: OrchestrationMailboxPointerSubmitTarget,
+  settlement: Extract<WriteSettlement, { outcome: 'accepted' | 'refused' }>
 ): void {
-  const { leaf, mailboxHandle, unread, newestSequence } = input
   let delayedSettle = false
   try {
-    if (!accepted || !deps.state.isCurrentFlight(ptyId, flight)) {
+    if (!args.state.isCurrentFlight(ptyId, flight)) {
       return
     }
-    const currentLeaf = deps.getLeaf(deps.getLeafKey(leaf.tabId, leaf.leafId))
-    if (
-      input.statuslessIdleProof &&
-      (!currentLeaf ||
-        !isStatuslessIdleProofCurrent(
-          currentLeaf,
-          input.statuslessIdleProof,
-          deps.getTerminalProcessIncarnation
-        ))
-    ) {
+    const db = args.deps.getDb()
+    if (settlement.outcome === 'refused') {
+      db?.markAsUndelivered(flight.stagedMessageIds)
+      if (args.state.clearWatermark(args.mailboxHandle, args.newestSequence, ptyId)) {
+        // A delivery parked behind this watermark has to drain now that it is gone.
+        args.redrive(args.mailboxHandle)
+      }
       return
     }
-    const db = deps.getDb()
     if (
       !db ||
       shouldReleaseOrchestrationPointer(
         db,
-        mailboxHandle,
-        unread,
-        deps.getMessageWaiters(mailboxHandle)
+        args.mailboxHandle,
+        args.messages,
+        args.deps.getMessageWaiters(args.mailboxHandle)
       )
     ) {
+      if (args.state.clearWatermark(args.mailboxHandle, args.newestSequence, ptyId)) {
+        args.redrive(args.mailboxHandle)
+      }
       return
     }
-    flight.stagedMessageIds = unread.map((message) => message.id)
-    db.markAsDelivered(flight.stagedMessageIds)
-    deps.state.setWatermark(
-      mailboxHandle,
-      newestSequence,
-      ptyId,
-      deps.getLeafKey(leaf.tabId, leaf.leafId)
-    )
     if (
-      [leaf.lastOscTitle, leaf.paneTitle, deps.getTabTitle(leaf.tabId)].some(isCursorAgentTitle)
+      [args.leaf.lastOscTitle, args.leaf.paneTitle, args.deps.getTabTitle(args.leaf.tabId)].some(
+        isCursorAgentTitle
+      )
     ) {
-      deps.state.clearWatermark(mailboxHandle, newestSequence, ptyId)
-      deps.redrive(mailboxHandle)
+      db.markAsDelivered(flight.stagedMessageIds)
+      args.state.clearWatermark(args.mailboxHandle, args.newestSequence, ptyId)
+      args.redrive(args.mailboxHandle)
       return
     }
-    flight.enterTimer = setTimeout(
-      () =>
-        submitOrchestrationMailboxPointer(deps, {
-          leaf,
-          mailboxHandle,
-          messages: unread,
-          newestSequence,
+    const submitEnter = (): void =>
+      submitOrchestrationMailboxPointer(
+        {
+          mailboxOwner: args.deps.mailboxOwner,
+          state: args.state,
+          getDb: args.deps.getDb,
+          resolveSubmitTarget: args.deps.resolveSubmitTarget,
+          getTerminalProcessIncarnation: args.deps.getTerminalProcessIncarnation,
+          getMessageWaiters: args.deps.getMessageWaiters,
+          isLeafPtyProvenAbsent: args.deps.isLeafPtyProvenAbsent,
+          ...(args.deps.requestSleepingRecipientWake
+            ? { requestSleepingRecipientWake: args.deps.requestSleepingRecipientWake }
+            : {}),
+          writePty: args.deps.writePty,
+          settle: args.settle,
+          redrive: args.redrive
+        },
+        {
+          leaf: args.leaf,
+          mailboxHandle: args.mailboxHandle,
+          messages: args.messages,
+          newestSequence: args.newestSequence,
           ptyId,
           flight,
-          statuslessIdleProof: input.statuslessIdleProof
-        }),
-      POINTER_SUBMIT_DELAY_MS
-    )
+          expectedTarget,
+          ...(args.statuslessIdleProof ? { statuslessIdleProof: args.statuslessIdleProof } : {})
+        }
+      )
+    flight.submitEnter = submitEnter
+    const deferredEnter = flight.idleObservedWhileDeferred
+      ? args.state.takeDeferredEnter(ptyId)
+      : null
+    if (!deferredEnter && !flight.deferredUntilIdle) {
+      flight.enterTimer = setTimeout(() => {
+        flight.enterTimer = null
+        flight.submitEnter = null
+        submitEnter()
+      }, args.enterDelayMs)
+    }
     delayedSettle = true
+    deferredEnter?.()
   } finally {
     if (!delayedSettle) {
-      deps.settle(ptyId, flight)
+      args.settle(ptyId, flight)
     }
   }
 }

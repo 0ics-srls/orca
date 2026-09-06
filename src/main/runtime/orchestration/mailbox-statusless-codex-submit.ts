@@ -1,4 +1,5 @@
 import { formatMessagePointer } from './formatter'
+import type { OrchestrationCliCommand } from './cli-command'
 import type { OrchestrationDb } from './db'
 import {
   shouldReleaseOrchestrationPointer,
@@ -28,6 +29,7 @@ type StatuslessCodexSubmitDependencies<TWaiter extends OrchestrationMessageWaite
   getLeafKey: (tabId: string, leafId: string) => string
   getMessageWaiters: (mailboxHandle: string) => ReadonlySet<TWaiter> | undefined
   getTerminalProcessIncarnation: (terminalHandle: string) => string | null
+  getCliCommand: (terminalHandle: string) => OrchestrationCliCommand
   submitStatuslessCodexPointer: SubmitStatuslessCodexPointer
   deferRedriveUntilPtyOutput: (ptyId: string, mailboxHandle: string, sequence: number) => boolean
   clearDeferredOutputRedrive: (ptyId: string, mailboxHandle: string, sequence: number) => void
@@ -72,7 +74,11 @@ export function submitStatuslessCodexMailboxPointer<TWaiter extends Orchestratio
       deps.submitStatuslessCodexPointer(
         input.statuslessIdleProof.terminalHandle,
         ptyId,
-        formatMessagePointer(input.unread.length, input.mailboxHandle),
+        formatMessagePointer(
+          input.unread.length,
+          input.mailboxHandle,
+          deps.getCliCommand(input.statuslessIdleProof.terminalHandle)
+        ),
         (writePtyId) => {
           if (writePtyId !== ptyId || targetState(deps, input, ptyId, flight) !== 'current') {
             throw new Error('orchestration_pointer_target_changed')

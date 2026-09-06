@@ -106,7 +106,8 @@ export class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId
     getWorktreeId: (handle) => this.getWorktreeIdForTerminalHandle(handle),
     getHandleForPaneKey: (paneKey) => this.getTerminalHandleForPaneKey(paneKey),
     getPaneKey: (handle) => this.getPaneKeyForTerminalHandle(handle),
-    getDispatchAuthority: (handle) => this.getOrchestrationDispatchAuthority(handle)
+    getDispatchAuthority: (handle) => this.getOrchestrationDispatchAuthority(handle),
+    getAgentStatusSnapshot: () => this.getOrchestrationFleetAgentStatusSnapshot()
   })
 
   protected readonly terminalList = new RuntimeTerminalList({
@@ -202,8 +203,10 @@ export class OrcaRuntimeWithStopRequestedPtyIds extends OrcaRuntimeWithRuntimeId
     getLiveLeafForHandle: (handle) => this.getLiveLeafForHandle(handle).leaf,
     getMessageWaiters: (mailboxHandle) => this.messageWaiters.get(mailboxHandle),
     getTabTitle: (tabId) => this.tabs.get(tabId)?.title,
+    getCliCommand: (terminalHandle) => this.getTerminalOrchestrationCliCommand(terminalHandle),
     getTerminalHandleForLeafKey: (leafKey) => this.handleByLeafKey.get(leafKey),
     getTerminalProcessIncarnation: (handle) => this.getTerminalProcessIncarnation(handle),
+    resolveSubmitTarget: (leaf, ptyId) => this.resolveOrchestrationPointerSubmitTarget(leaf, ptyId),
     isLeafPtyProvenAbsent: (ptyId) => this.isLeafPtyProvenAbsent(ptyId),
     proveStatuslessCodexIdle: (handle, ptyId) => this.proveStatuslessCodexIdle(handle, ptyId),
     redriveMailbox: (mailboxHandle, reservedTypes) =>
