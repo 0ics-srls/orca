@@ -82,7 +82,7 @@ export type GitHubProjectView = {
   name: string
   layout: GitHubProjectViewLayout
   /** Normalized to '' when GitHub returns null. Empty/whitespace filters omit
-   *  `items(query:)` so unfiltered boards skip GitHub's search-index lag. */}
+   *  `items(query:)` so unfiltered boards skip GitHub's search-index lag. */
   filter: string
   fields: GitHubProjectField[]
   groupByFields: GitHubProjectField[]
