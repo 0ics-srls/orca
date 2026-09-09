@@ -1,4 +1,5 @@
 import { defaultSchema } from 'rehype-sanitize'
+import { normalizeDetailsOpeningTag } from './details-markdown-html'
 import { stripMarkdownCode } from './markdown-code-stripping'
 import { getRichMarkdownRoundTripOutput } from './markdown-round-trip'
 import { getRichMarkdownHtmlValidationOutput } from './markdown-rich-html-validation'
@@ -208,11 +209,17 @@ function isHtmlOrJsxFragment(fragment: string): boolean {
 function preservesEmbeddedHtml(contentWithoutCode: string, roundTripOutput: string): boolean {
   let searchIndex = 0
   return forEachEmbeddedHtmlFragment(contentWithoutCode, (fragment) => {
-    const foundIndex = roundTripOutput.indexOf(fragment, searchIndex)
+    const normalized = normalizeDetailsOpeningTag(fragment)
+    const exactIndex = roundTripOutput.indexOf(fragment, searchIndex)
+    const normalizedIndex =
+      normalized === fragment ? -1 : roundTripOutput.indexOf(normalized, searchIndex)
+    const useNormalized =
+      normalizedIndex !== -1 && (exactIndex === -1 || normalizedIndex < exactIndex)
+    const foundIndex = useNormalized ? normalizedIndex : exactIndex
     if (foundIndex === -1) {
       return false
     }
-    searchIndex = foundIndex + fragment.length
+    searchIndex = foundIndex + (useNormalized ? normalized.length : fragment.length)
     return true
   })
 }
