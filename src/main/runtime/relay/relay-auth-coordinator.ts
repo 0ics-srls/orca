@@ -33,10 +33,14 @@ function identityKey(identity: RelayAuthIdentity): string {
   return `${identity.userId}\0${identity.profileId}\0${identity.organizationId}`
 }
 
-// The single owner of "why the socket died". Why only the null case: readContext
-// throws on transient failures and returns null solely when the cloud session is
-// gone (absent, or cleared by a 401). A present-but-unentitled context is still a
-// signed-in desktop, and "sign in to reconnect" would be wrong advice for it.
+// The single owner of "why the socket died". Why only the null case: null must mean
+// the cloud session is gone (absent, or cleared by a 401), and every other read
+// outcome must throw so it lands in auth_unavailable. That is a contract
+// readRelayAuthContext owes this helper, not something it can verify — it held for a
+// refresh failure but not for a session file the process could not read, which spent
+// SIGNED_OUT on transient I/O until relay-auth-context.ts started throwing for it. A
+// present-but-unentitled context is still a signed-in desktop, and "sign in to
+// reconnect" would be wrong advice for it.
 function authLossCloseReason(context: RelayAuthContext | null): RelayHostCloseReason | undefined {
   return context ? undefined : RELAY_HOST_CLOSE_REASON.SIGNED_OUT
 }
