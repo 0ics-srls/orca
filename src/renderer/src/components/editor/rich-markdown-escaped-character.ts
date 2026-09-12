@@ -1,33 +1,27 @@
-import { Node } from '@tiptap/core'
+import { Mark, type JSONContent } from '@tiptap/core'
 
 // marked's GFM inline escape rule: a backslash before ASCII punctuation.
+const ESCAPABLE_CHARACTER_PATTERN = /[!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~]/
 const ESCAPED_CHARACTER_PATTERN = /^\\([!"#$%&'()*+,\-./:;<=>?@[\]\\^_`{|}~])/
-const NODE_NAME = 'richMarkdownEscapedCharacter'
+// Why: the serializer entity-encodes these itself; a backslash in front would survive as literal text.
+const ENTITY_ENCODED_CHARACTERS = new Set(['&', '<', '>'])
+const MARK_NAME = 'richMarkdownEscapedCharacter'
 const MARKER_ATTRIBUTE = 'data-rich-markdown-escaped-character'
 
 /**
- * One inline atom per backslash-escaped character. Tiptap's markdown parser has
- * no handler for marked's `escape` token (the character was deleted on load),
- * and its text serializer never re-escapes, so a text node could not carry the
- * backslash back to disk. An atom that owns the token round-trips `\$` as `\$`.
+ * Text that was backslash-escaped in the source. Tiptap's markdown parser has no
+ * handler for marked's `escape` token (the character was deleted on load) and its
+ * text serializer never re-escapes, so the mark carries the escape through the
+ * document and `getMarkdown` writes it back per character (see below).
  */
-export const RichMarkdownEscapedCharacter = Node.create({
-  name: NODE_NAME,
-  inline: true,
-  group: 'inline',
-  atom: true,
-  // Why: reads as one character of text; a node selection on click would be noise.
-  selectable: false,
+export const RichMarkdownEscapedCharacter = Mark.create({
+  name: MARK_NAME,
+  inclusive: false,
+  keepOnSplit: false,
 
-  addAttributes() {
-    return {
-      character: { default: '', rendered: false }
-    }
-  },
-
-  markdownTokenName: NODE_NAME,
+  markdownTokenName: MARK_NAME,
   markdownTokenizer: {
-    name: NODE_NAME,
+    name: MARK_NAME,
     level: 'inline',
     start: (src: string) => src.indexOf('\\'),
     tokenize(src: string) {
@@ -35,33 +29,59 @@ export const RichMarkdownEscapedCharacter = Node.create({
       if (!match) {
         return undefined
       }
-      return { type: NODE_NAME, raw: match[0], character: match[1] }
+      return { type: MARK_NAME, raw: match[0], character: match[1] }
     }
   },
   parseMarkdown: (token, helpers) => {
     const character = (token as { character?: string }).character
-    if (token.type !== NODE_NAME || !character) {
+    if (token.type !== MARK_NAME || !character) {
       return []
     }
-    return helpers.createNode(NODE_NAME, { character })
+    return helpers.applyMark(MARK_NAME, [{ type: 'text', text: character }])
   },
-  renderMarkdown: (node) => `\\${String(node.attrs?.character ?? '')}`,
-  renderText: ({ node }) => String(node.attrs.character ?? ''),
+  // Why: a mark's markdown is one prefix for the whole run, so `\*\*` would come out as `\**`;
+  // this is only the fallback for a serializer that bypasses getMarkdown.
+  renderMarkdown: (node, helpers) => `\\${helpers.renderChildren(node)}`,
 
   parseHTML() {
-    return [
-      {
-        tag: `span[${MARKER_ATTRIBUTE}]`,
-        getAttrs: (element: HTMLElement) => {
-          const character = element.getAttribute(MARKER_ATTRIBUTE) ?? ''
-          return ESCAPED_CHARACTER_PATTERN.test(`\\${character}`) ? { character } : false
-        }
-      }
-    ]
+    return [{ tag: `span[${MARKER_ATTRIBUTE}]` }]
+  },
+  renderHTML() {
+    return ['span', { [MARKER_ATTRIBUTE]: '' }, 0]
   },
 
-  renderHTML({ node }) {
-    const character = String(node.attrs.character ?? '')
-    return ['span', { [MARKER_ATTRIBUTE]: character }, character]
+  onBeforeCreate() {
+    // Why: must be registered after `Markdown`, whose onBeforeCreate installs the
+    // getMarkdown this replaces; the manager itself is what serializes.
+    const editor = this.editor
+    editor.getMarkdown = () => {
+      const manager = editor.markdown
+      if (!manager) {
+        throw new Error('RichMarkdownEscapedCharacter requires the Markdown extension')
+      }
+      return manager.serialize(escapeMarkedCharacters(editor.getJSON()) as JSONContent)
+    }
   }
 })
+
+/** Turns escaped-mark text back into `\X` per character so mark runs around it stay continuous. */
+function escapeMarkedCharacters(node: JSONContent): JSONContent {
+  if (node.type === 'text' && node.marks?.some((mark) => mark.type === MARK_NAME)) {
+    const marks = node.marks.filter((mark) => mark.type !== MARK_NAME)
+    const insideCode = marks.some((mark) => mark.type === 'code')
+    const text = insideCode
+      ? (node.text ?? '')
+      : Array.from(node.text ?? '')
+          .map((character) =>
+            ESCAPABLE_CHARACTER_PATTERN.test(character) && !ENTITY_ENCODED_CHARACTERS.has(character)
+              ? `\\${character}`
+              : character
+          )
+          .join('')
+    return marks.length > 0 ? { ...node, text, marks } : { type: 'text', text }
+  }
+  if (!node.content) {
+    return node
+  }
+  return { ...node, content: node.content.map(escapeMarkedCharacters) }
+}

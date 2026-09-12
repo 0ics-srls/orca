@@ -635,11 +635,35 @@ describe('rich markdown round trip', () => {
       '\\*\\*not bold\\*\\* and \\_not em\\_',
       '\\`not code\\` and \\~\\~not strike\\~\\~',
       'C:\\\\Program Files\\\\(x86)',
-      'shell \\$HOME\\$ var'
+      'shell \\$HOME\\$ var',
+      // Why: marks must stay continuous around an escape; consecutive escapes need one backslash each.
+      '**cost \\$5 total** and **\\$5 fee** and **bold \\$**',
+      '[a \\$ b](http://x) and *a \\_ b* and *\\*literal\\**',
+      '**\\*\\*not bold\\*\\*** inside bold'
     ].join('\n\n')
     const once = roundTripMarkdown(`${content}\n`)
     expect(once).toBe(content)
     expect(roundTripMarkdown(`${once}\n`)).toBe(content)
+  })
+
+  it('does not escape inside code marks and drops the backslash for entity-encoded characters', () => {
+    expect(roundTripMarkdown('a \\& b and \\< c\n')).toBe('a &amp; b and &lt; c')
+    // Why: a code span never contains an escape token, so an escaped mark can only reach code
+    // through editing; the serializer must then emit the literal character.
+    const codec = createRichMarkdownEditorCodec()
+    const editor = new Editor({
+      element: null,
+      extensions: createRichMarkdownExtensions({ codec }),
+      content: encodeRawMarkdownHtmlForRichEditor('cost \\$5\n', codec),
+      contentType: 'markdown'
+    })
+    try {
+      editor.commands.setTextSelection({ from: 1, to: editor.state.doc.content.size - 1 })
+      editor.commands.setCode()
+      expect(editor.getMarkdown()).toBe('`cost $5`')
+    } finally {
+      editor.destroy()
+    }
   })
 
   it('keeps escaped dollars inside table cells', () => {
