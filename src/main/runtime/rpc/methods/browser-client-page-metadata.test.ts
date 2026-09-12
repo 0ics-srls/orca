@@ -111,6 +111,7 @@ async function createHarness() {
     browserPageId: 'page-a',
     workspaceId: 'worktree-a',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:1',
     placement,
     url: 'about:blank',

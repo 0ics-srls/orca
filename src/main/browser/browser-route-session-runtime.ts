@@ -38,12 +38,11 @@ const bindingStore = {
 }
 
 export const browserRouteSessionRegistry = new BrowserRouteSessionRegistry({
-  validateProfile: (browserProfileId) => {
-    browserSessionRegistry.requireRouteBrowserProfile(browserProfileId)
-  },
+  // The runtime that requests placement owns profile identity; the transmitted mode is authoritative.
+  validateProfile: () => {},
   getSession: (partition) => session.fromPartition(partition),
-  setupPolicies: ({ partition, browserProfileId }) => {
-    browserSessionRegistry.setupRoutePartitionPolicies(partition, browserProfileId)
+  setupPolicies: ({ partition, browserProfileId, userAgentMode }) => {
+    browserSessionRegistry.setupRoutePartitionPolicies(partition, browserProfileId, userAgentMode)
   },
   clearPolicies: ({ partition }) => {
     browserSessionRegistry.clearRoutePartitionPolicies(partition)

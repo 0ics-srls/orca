@@ -109,6 +109,8 @@ async function prepareFresh(input: {
     throw new Error('browser_local_route_profile_unavailable')
   }
   browserSessionRegistry.requireRouteBrowserProfile(input.browserProfileId)
+  const userAgentMode =
+    browserSessionRegistry.getProfile(input.browserProfileId)?.userAgentMode ?? 'clean'
   const proxyEndpoint = await retainLocalSshBrowserRoute(input.targetId)
   if (!input.skipProbe) {
     // Why: AllowTcpForwarding no is the one enterprise config that breaks every
@@ -152,11 +154,16 @@ async function prepareFresh(input: {
   await prepareBrowserRouteSessionPolicy({
     partition: derived.partition,
     browserProfileId: input.browserProfileId,
+    userAgentMode,
     proxyEndpoint,
     dependencies: {
       getSession: (partition) => session.fromPartition(partition),
-      setupPolicies: ({ partition, browserProfileId }) => {
-        browserSessionRegistry.setupRoutePartitionPolicies(partition, browserProfileId)
+      setupPolicies: ({ partition, browserProfileId, userAgentMode }) => {
+        browserSessionRegistry.setupRoutePartitionPolicies(
+          partition,
+          browserProfileId,
+          userAgentMode
+        )
       },
       clearPolicies: ({ partition }) => {
         browserSessionRegistry.clearRoutePartitionPolicies(partition)

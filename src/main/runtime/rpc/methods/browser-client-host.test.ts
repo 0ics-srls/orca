@@ -10,7 +10,8 @@ function request(
   browserHostClientId = 'host-a',
   pageCommandProtocolVersion?: 1,
   pageInventoryProtocolVersion?: 1,
-  leaseReconnectProtocolVersion?: 1
+  leaseReconnectProtocolVersion?: 1,
+  userAgentContractVersion?: 1
 ) {
   return {
     id: `browser-host:${browserHostClientId}`,
@@ -22,9 +23,13 @@ function request(
       hostCapabilities: ['webview'],
       ...(pageCommandProtocolVersion ? { pageCommandProtocolVersion } : {}),
       ...(pageInventoryProtocolVersion
-        ? { pageInventoryProtocolVersion, pageInventory: [inventoryPage()] }
+        ? {
+            pageInventoryProtocolVersion,
+            pageInventory: [inventoryPage(userAgentContractVersion === 1)]
+          }
         : {}),
-      ...(leaseReconnectProtocolVersion ? { leaseReconnectProtocolVersion } : {})
+      ...(leaseReconnectProtocolVersion ? { leaseReconnectProtocolVersion } : {}),
+      ...(userAgentContractVersion ? { userAgentContractVersion } : {})
     }
   }
 }
@@ -185,7 +190,7 @@ describe('browser.clientHost.attach RPC', () => {
     })
     const replies: string[] = []
     const dispatch = dispatcher.dispatchStreaming(
-      request('host-a', 1),
+      request('host-a', 1, 1, undefined, 1),
       (reply) => replies.push(reply),
       {
         connectionId: 'connection-a',
@@ -222,6 +227,7 @@ describe('browser.clientHost.attach RPC', () => {
       {
         type: 'createPage',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'host-key-a'
       }
     )
@@ -301,7 +307,7 @@ describe('browser.clientHost.attach RPC', () => {
     }
     const firstReplies: string[] = []
     const first = dispatcher.dispatchStreaming(
-      request('host-a', 1, 1, 1),
+      request('host-a', 1, 1, 1, 1),
       (reply) => firstReplies.push(reply),
       { ...options, connectionId: 'connection-a' }
     )
@@ -333,6 +339,7 @@ describe('browser.clientHost.attach RPC', () => {
       {
         type: 'createPage',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'host-key-a'
       }
     )
@@ -343,7 +350,7 @@ describe('browser.clientHost.attach RPC', () => {
 
     const replacementReplies: string[] = []
     const replacement = dispatcher.dispatchStreaming(
-      request('host-a', 1, 1, 1),
+      request('host-a', 1, 1, 1, 1),
       (reply) => replacementReplies.push(reply),
       { ...options, connectionId: 'connection-b' }
     )
@@ -383,7 +390,7 @@ describe('browser.clientHost.attach RPC', () => {
     }
     const firstReplies: string[] = []
     const first = dispatcher.dispatchStreaming(
-      request('host-a', 1, 1, 1),
+      request('host-a', 1, 1, 1, 1),
       (reply) => firstReplies.push(reply),
       { ...options, connectionId: 'connection-a' }
     )
@@ -392,7 +399,7 @@ describe('browser.clientHost.attach RPC', () => {
     const replacementReplies: string[] = []
 
     const replacement = dispatcher.dispatchStreaming(
-      request('host-a', 1, 1, 1),
+      request('host-a', 1, 1, 1, 1),
       (reply) => replacementReplies.push(reply),
       { ...options, connectionId: 'connection-b' }
     )
@@ -585,7 +592,7 @@ function unownedCommandResult(authorityRuntimeId: string) {
   }
 }
 
-function inventoryPage() {
+function inventoryPage(includeUserAgentMode = false) {
   return {
     authorityRuntimeId: 'runtime-a',
     authorityEpoch: 'epoch-old',
@@ -594,6 +601,7 @@ function inventoryPage() {
     browserPageId: 'page-a',
     pageHostGeneration: 3,
     browserProfileId: 'profile-a',
+    ...(includeUserAgentMode ? { userAgentMode: 'clean' as const } : {}),
     executionHostKey: 'native:runtime-a:1',
     state: 'active' as const,
     currentUrl: 'https://remote.internal/'

@@ -219,19 +219,22 @@ describe('BrowserHostLeaseRegistry', () => {
       leases.issueClientPageCommand(authority, {
         type: 'restorePage',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'host-key-a'
       })
     ).toThrow('browser_host_reconciliation_protocol_required')
     expect(delivery).not.toHaveBeenCalled()
 
     leases.grantExecutionHost(identity, 'host-key-a')
-    const legacy = leases.issueClientPageCommand(authority, {
-      type: 'createPage',
-      browserProfileId: 'default',
-      executionHostKey: 'host-key-a'
-    })
-    expect(legacy.event).not.toHaveProperty('pageReconciliationProtocolVersion')
-    expect(delivery).toHaveBeenCalledWith(legacy.event)
+    expect(() =>
+      leases.issueClientPageCommand(authority, {
+        type: 'createPage',
+        browserProfileId: 'default',
+        userAgentMode: 'clean',
+        executionHostKey: 'host-key-a'
+      })
+    ).toThrow('browser_host_user_agent_contract_required')
+    expect(delivery).not.toHaveBeenCalled()
   })
 
   it('restores exact authority when reattach arrives before old connection cleanup', async () => {
@@ -611,7 +614,10 @@ describe('BrowserHostLeaseRegistry', () => {
       connectionId: 'connection-a',
       pairedDeviceId: 'device-a',
       hostCapabilities: ['webview'],
-      pageCommandProtocolVersion: 1
+      pageCommandProtocolVersion: 1,
+      pageInventoryProtocolVersion: 1,
+      pageInventory: [],
+      userAgentContractVersion: 1
     })
     const identity = {
       authorityEpoch: 'epoch-a',
@@ -636,6 +642,7 @@ describe('BrowserHostLeaseRegistry', () => {
     const issued = leases.issueClientPageCommand(authority, {
       type: 'createPage',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'host-key-a'
     })
     const firstRetirement = leases.beginPageRetirement('page-a', placement)

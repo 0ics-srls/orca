@@ -27,6 +27,7 @@ export function createBrowserClientPageInventory(
     browserPageId: event.browserPageId,
     pageHostGeneration: event.pageHostGeneration,
     browserProfileId: event.command.browserProfileId,
+    ...(event.command.userAgentMode ? { userAgentMode: event.command.userAgentMode } : {}),
     executionHostKey: event.command.executionHostKey,
     state,
     ...(event.command.workspaceId ? { workspaceId: event.command.workspaceId } : {})

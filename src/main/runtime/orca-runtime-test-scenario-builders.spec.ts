@@ -52,7 +52,8 @@ function attachClientBrowserHost(runtime: RuntimeService) {
     pageCommandProtocolVersion: 1,
     pageInventoryProtocolVersion: 1,
     pageInventory: [],
-    pageReconciliationProtocolVersion: 1
+    pageReconciliationProtocolVersion: 1,
+    userAgentContractVersion: 1
   })
   const identity = {
     authorityEpoch: lease.authorityEpoch,
@@ -81,6 +82,7 @@ function attachClientBrowserHost(runtime: RuntimeService) {
           browserHostClientId: command.browserHostClientId,
           browserHostGeneration: command.browserHostGeneration,
           pageCommandProtocolVersion: command.pageCommandProtocolVersion,
+          userAgentContractVersion: command.userAgentContractVersion,
           ...(command.pageReconciliationProtocolVersion
             ? { pageReconciliationProtocolVersion: command.pageReconciliationProtocolVersion }
             : {}),
@@ -106,6 +108,7 @@ async function publishClientHostedPage(
     browserHostClientId: 'host-a',
     pairedDeviceId: 'device-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7'
   })
   host.settleLatest()
@@ -114,6 +117,7 @@ async function publishClientHostedPage(
     browserPageId,
     workspaceId,
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement,
     url: 'https://remote.internal/',

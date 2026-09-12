@@ -19,6 +19,7 @@ export function createCommand(
     browserHostClientId: 'client-a',
     browserHostGeneration: 3,
     pageCommandProtocolVersion: 1,
+    userAgentContractVersion: 1,
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     commandSequence: type === 'createPage' ? 1 : 2,
@@ -28,6 +29,7 @@ export function createCommand(
         ? {
             type: 'createPage',
             browserProfileId: 'profile-a',
+            userAgentMode: 'clean',
             executionHostKey: 'execution-host-a'
           }
         : { type: 'navigate', url: 'example.internal/path' },

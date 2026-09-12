@@ -26,6 +26,15 @@ export function assertBrowserClientHostAttachOptions(
   ) {
     throw new Error('Browser page reconciliation requires command and inventory negotiation')
   }
+  if (
+    options.userAgentContractVersion !== undefined &&
+    (options.pageCommandProtocolVersion !== 1 ||
+      options.onPageCommand === undefined ||
+      options.pageInventoryProtocolVersion !== 1 ||
+      options.getPageInventory === undefined)
+  ) {
+    throw new Error('Browser user-agent contract requires command and inventory negotiation')
+  }
 }
 
 export function createBrowserClientHostAttachRequest(
@@ -47,6 +56,10 @@ export function createBrowserClientHostAttachRequest(
     pageCommandProtocolVersion && pageInventoryProtocolVersion
       ? options.pageReconciliationProtocolVersion
       : undefined
+  const userAgentContractVersion =
+    pageCommandProtocolVersion && pageInventoryProtocolVersion
+      ? options.userAgentContractVersion
+      : undefined
   const fileChannelProtocolVersion = pageCommandProtocolVersion
     ? options.fileChannelProtocolVersion
     : undefined
@@ -63,6 +76,7 @@ export function createBrowserClientHostAttachRequest(
       : {}),
     ...(leaseReconnectProtocolVersion ? { leaseReconnectProtocolVersion } : {}),
     ...(pageReconciliationProtocolVersion ? { pageReconciliationProtocolVersion } : {}),
+    ...(userAgentContractVersion ? { userAgentContractVersion } : {}),
     ...(fileChannelProtocolVersion ? { fileChannelProtocolVersion } : {})
   })
   return {
@@ -70,6 +84,7 @@ export function createBrowserClientHostAttachRequest(
     pageInventoryProtocolVersion,
     leaseReconnectProtocolVersion,
     pageReconciliationProtocolVersion,
+    userAgentContractVersion,
     fileChannelProtocolVersion,
     params
   }

@@ -15,6 +15,7 @@ describe('runtime browser page registry', () => {
       browserPageId: 'page-a',
       workspaceId: 'worktree-a',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:4',
       placement,
       url: 'about:blank',
@@ -27,6 +28,7 @@ describe('runtime browser page registry', () => {
       browserPageId: 'page-a',
       workspaceId: 'worktree-a',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:4',
       placement: { pageHostGeneration: 7 },
       title: 'Browser',
@@ -214,6 +216,7 @@ function clientPage(browserPageId: string, workspaceId: string) {
     browserPageId,
     workspaceId,
     browserProfileId: 'default',
+    userAgentMode: 'clean' as const,
     executionHostKey: 'native:runtime-a:5',
     placement: {
       kind: 'client' as const,

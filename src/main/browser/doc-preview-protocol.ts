@@ -126,7 +126,7 @@ export function installDocPreviewProtocolHandler(): void {
   previewSession.webRequest.onBeforeRequest((details, callback) => {
     callback({ cancel: !isAllowedDocPreviewRequestUrl(details.url) })
   })
-  // Why: the shared installer still owns certificate, UA, download and permission hooks, while
+  // Why: the shared installer still owns certificate, download and permission hooks, while
   // preview content receives no ambient browser/device permissions.
   installBrowserSessionPartitionPolicies(
     {
@@ -141,6 +141,6 @@ export function installDocPreviewProtocolHandler(): void {
     // page to attribute the file to, and a previewed document is not one. Routed here it would
     // reserve a name in this desktop's Downloads folder and write remote-authored bytes into it
     // with nothing in the UI naming the tab that asked, and no prompt in front of it.
-    { downloads: 'deny', permissions: 'deny' }
+    { downloads: 'deny', permissions: 'deny', userAgentExceptions: false }
   )
 }

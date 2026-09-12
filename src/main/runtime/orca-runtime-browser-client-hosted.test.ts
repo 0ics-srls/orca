@@ -92,6 +92,7 @@ function publishClientPage(
     browserPageId: overrides.browserPageId,
     workspaceId: overrides.workspaceId ?? 'wt-1',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement: {
       kind: 'client',
@@ -183,6 +184,7 @@ describe('RuntimeBrowserCommands client-hosted routing', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: JSON.stringify(['native', 'runtime-a', 7]),
       requiredCapabilities: ['automation-v1'],
       // Carried to the client so its page inventory can name the workspace after a restart.

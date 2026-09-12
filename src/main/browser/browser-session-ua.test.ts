@@ -1,12 +1,15 @@
 import { describe, expect, it, vi } from 'vitest'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
-import { cleanElectronUserAgent, setupGoogleAuthUserAgentOverride } from './browser-session-ua'
+import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
+import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { buildViewportUserAgentOverride } from './browser-viewport-user-agent'
 
 type RequestDetails = {
   url: string
   webContentsId?: number
   webContents?: { getUserAgent: () => string }
+  referrer?: string
+  resourceType?: string
   requestHeaders: Record<string, string>
 }
 
@@ -15,7 +18,9 @@ type RequestListener = (
   callback: (response: { requestHeaders: Record<string, string> }) => void
 ) => void
 
-function install(resolveRequestUserAgent?: Parameters<typeof setupGoogleAuthUserAgentOverride>[1]) {
+function install(
+  resolveRequestUserAgent?: Parameters<typeof installBrowserSessionUserAgentExceptions>[1]
+) {
   const onBeforeSendHeaders = vi.fn()
   const sess = {
     getUserAgent: vi.fn(
@@ -24,7 +29,7 @@ function install(resolveRequestUserAgent?: Parameters<typeof setupGoogleAuthUser
     ),
     webRequest: { onBeforeSendHeaders }
   }
-  setupGoogleAuthUserAgentOverride(sess as never, resolveRequestUserAgent)
+  installBrowserSessionUserAgentExceptions(sess as never, resolveRequestUserAgent)
   return onBeforeSendHeaders.mock.calls[0][1] as RequestListener
 }
 
@@ -35,6 +40,75 @@ function runRequest(listener: RequestListener, details: RequestDetails): Record<
 }
 
 describe('browser session request identity', () => {
+  it('returns an ordinary request with the exact header object and contents unchanged', () => {
+    const onBeforeSendHeaders = vi.fn()
+    const sess = { webRequest: { onBeforeSendHeaders } }
+    const resolver = vi.fn(() => undefined)
+    const dispose = installBrowserSessionUserAgentExceptions(sess as never, resolver)
+    const listener = onBeforeSendHeaders.mock.calls[0][1] as RequestListener
+    const requestHeaders = {
+      'User-Agent': 'arbitrary incoming identity',
+      'sec-ch-ua': 'browser-owned',
+      Cookie: 'session=kept'
+    }
+    const callback = vi.fn()
+
+    listener({ url: 'https://example.com/resource', requestHeaders }, callback)
+
+    expect(callback).toHaveBeenCalledWith({ requestHeaders })
+    expect(callback.mock.calls[0][0].requestHeaders).toBe(requestHeaders)
+    expect(requestHeaders).toEqual({
+      'User-Agent': 'arbitrary incoming identity',
+      'sec-ch-ua': 'browser-owned',
+      Cookie: 'session=kept'
+    })
+    dispose()
+    dispose()
+    expect(onBeforeSendHeaders).toHaveBeenLastCalledWith(null)
+    expect(onBeforeSendHeaders).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not treat an HTTP Google hostname as the HTTPS auth exception', () => {
+    const requestHeaders = {
+      'User-Agent': 'Chrome/134',
+      'sec-ch-ua': 'browser-owned'
+    }
+    const result = runRequest(install(), {
+      url: 'http://accounts.google.com/v3/signin/identifier',
+      requestHeaders
+    })
+
+    expect(result).toBe(requestHeaders)
+    expect(result).toEqual({
+      'User-Agent': 'Chrome/134',
+      'sec-ch-ua': 'browser-owned'
+    })
+  })
+
+  it('keeps every native request untouched, including Google auth', () => {
+    const onBeforeSendHeaders = vi.fn()
+    const sess = { webRequest: { onBeforeSendHeaders } }
+    setBrowserSessionUserAgentMode(sess as never, 'native')
+    installBrowserSessionUserAgentExceptions(
+      sess as never,
+      vi.fn(() => ({ userAgent: 'wrong' }))
+    )
+    const listener = onBeforeSendHeaders.mock.calls[0][1] as RequestListener
+    const requestHeaders = {
+      'User-Agent': 'Orca/1 Chrome/134 Electron/30',
+      'sec-ch-ua': 'browser-owned'
+    }
+
+    expect(
+      runRequest(listener, {
+        url: 'https://accounts.google.com/v3/signin/identifier',
+        requestHeaders
+      })
+    ).toBe(requestHeaders)
+    expect(requestHeaders['User-Agent']).toContain('Electron/')
+    expect(requestHeaders['sec-ch-ua']).toBe('browser-owned')
+  })
+
   it('ablates the resolver on a worker request while enforcing its mobile identity when enabled', () => {
     const mobileIdentity = buildViewportUserAgentOverride({
       url: 'https://example.com/worker-beacon',
@@ -55,13 +129,9 @@ describe('browser session request identity', () => {
       }
     }
 
-    // Ablation: with the new resolver disabled, the clean session identity is the only fallback.
+    // Ablation: with the exception resolver disabled, ordinary traffic remains untouched.
     const disabled = runRequest(install(), structuredClone(request))
-    expect(disabled['User-Agent']).toBe(
-      cleanElectronUserAgent(
-        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) orca/1.0.0 Chrome/134.0.0.0 Electron/30.0.0 Safari/537.36'
-      )
-    )
+    expect(disabled['User-Agent']).toBe('Electron/30 Chrome/134')
     expect(disabled['sec-ch-ua-platform']).toBe('"macOS"')
 
     const resolver = vi.fn(() => mobileIdentity)

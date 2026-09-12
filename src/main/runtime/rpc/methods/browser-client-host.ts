@@ -54,6 +54,7 @@ export const BROWSER_CLIENT_HOST_METHODS = [
         pageInventoryProtocolVersion: params.pageInventoryProtocolVersion,
         pageInventory: params.pageInventory,
         pageReconciliationProtocolVersion: params.pageReconciliationProtocolVersion,
+        userAgentContractVersion: params.userAgentContractVersion,
         leaseReconnectProtocolVersion: params.leaseReconnectProtocolVersion,
         fileChannelProtocolVersion: params.fileChannelProtocolVersion
       })
@@ -95,6 +96,9 @@ export const BROWSER_CLIENT_HOST_METHODS = [
             : {}),
           ...(params.pageReconciliationProtocolVersion
             ? { pageReconciliationProtocolVersion: params.pageReconciliationProtocolVersion }
+            : {}),
+          ...(params.userAgentContractVersion
+            ? { userAgentContractVersion: params.userAgentContractVersion }
             : {}),
           ...(handle.lease.fileChannelProtocolVersion
             ? { fileChannelProtocolVersion: handle.lease.fileChannelProtocolVersion }

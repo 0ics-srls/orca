@@ -107,6 +107,7 @@ export class BrowserHostPageReconciliationOrchestrator {
       state.lease.pageReconciliationProtocolVersion !== 1 ||
       state.lease.pageCommandProtocolVersion !== 1 ||
       state.lease.pageInventoryProtocolVersion !== 1 ||
+      state.lease.userAgentContractVersion !== 1 ||
       !state.commandLedger ||
       !state.lease.pageInventory
     ) {

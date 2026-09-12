@@ -20,6 +20,7 @@ const page = (
   browserPageId: 'page-a',
   pageHostGeneration: 4,
   browserProfileId: 'profile-a',
+  userAgentMode: 'clean',
   executionHostKey: `native:${PREDECESSOR_RUNTIME_ID}:1`,
   state: 'active',
   currentUrl: 'https://remote.example/current',

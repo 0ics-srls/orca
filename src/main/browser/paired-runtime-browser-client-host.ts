@@ -57,6 +57,7 @@ export class PairedRuntimeBrowserClientHost {
         ? {
             pageInventoryProtocolVersion: 1,
             leaseReconnectProtocolVersion: 1,
+            userAgentContractVersion: 1,
             ...(options.pageReconciliationProtocolVersion
               ? { pageReconciliationProtocolVersion: options.pageReconciliationProtocolVersion }
               : {}),

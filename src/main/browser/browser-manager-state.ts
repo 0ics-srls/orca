@@ -26,6 +26,7 @@ import type {
 } from '../../shared/browser-guest-events'
 import type { BrowserGrabCancelReason } from '../../shared/browser-grab-types'
 import { BrowserManagerViewportScrollState } from './browser-manager-viewport-scroll-state'
+import type { ElectronDebuggerLease } from './electron-debugger-lease'
 
 export abstract class BrowserManagerState extends BrowserManagerViewportScrollState {
   protected abstract attachGuestPolicies(
@@ -138,6 +139,7 @@ export abstract class BrowserManagerState extends BrowserManagerViewportScrollSt
     number,
     AuthUserAgentOverrideState
   >()
+  protected readonly authUserAgentDebuggerLeaseByGuestId = new Map<number, ElectronDebuggerLease>()
   // Why: the in-flight main-frame navigation target, held only until commit or failure — getURL()
   // still reports the outgoing page until then. See resolveTabNavigationUrl.
   protected readonly pendingNavigationByGuestId = new Map<number, PendingMainFrameNavigation>()
@@ -228,6 +230,7 @@ export abstract class BrowserManagerState extends BrowserManagerViewportScrollSt
   protected trackDebuggerDetachForAuthUserAgent(guest: Electron.WebContents): () => void {
     const onDetach = (): void => {
       this.authUserAgentOverrideStateByGuestId.delete(guest.id)
+      this.releaseAuthUserAgentDebuggerLease(guest.id)
     }
     try {
       guest.debugger.on('detach', onDetach)
@@ -241,6 +244,15 @@ export abstract class BrowserManagerState extends BrowserManagerViewportScrollSt
         /* guest may already be destroyed */
       }
     }
+  }
+
+  protected releaseAuthUserAgentDebuggerLease(guestWebContentsId: number): void {
+    const lease = this.authUserAgentDebuggerLeaseByGuestId.get(guestWebContentsId)
+    if (!lease) {
+      return
+    }
+    this.authUserAgentDebuggerLeaseByGuestId.delete(guestWebContentsId)
+    lease.release()
   }
 
   protected resolveBrowserTabIdForGuestWebContentsId(guestWebContentsId: number): string | null {

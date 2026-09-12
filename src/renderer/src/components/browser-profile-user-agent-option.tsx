@@ -28,13 +28,13 @@ export function BrowserProfileUserAgentOption({
         <Label htmlFor={id} className="text-sm">
           {translate(
             'auto.components.browser.profile.user.agent.option.04af3dc12b',
-            'Use unmodified user agent'
+            'Use native user agent for pages'
           )}
         </Label>
         <p id={descriptionId} className="text-xs text-muted-foreground">
           {translate(
             'auto.components.browser.profile.user.agent.option.5bf47a3c91',
-            'May improve Google sign-in, but can reduce compatibility with bot-protected sites.'
+            'Pages use Orca’s native Electron identity; service and shared workers keep the cleaned identity.'
           )}
         </p>
       </div>

@@ -33,7 +33,9 @@ describe('BrowserProfileUserAgentOption', () => {
     const rendered = renderOption()
     const checkbox = rendered.querySelector<HTMLButtonElement>('[role="checkbox"]')
 
-    expect(rendered.textContent).toContain('May improve Google sign-in')
+    expect(rendered.textContent).toContain(
+      'Pages use Orca’s native Electron identity; service and shared workers keep the cleaned identity.'
+    )
     expect(checkbox?.getAttribute('aria-checked')).toBe('false')
 
     act(() => checkbox?.click())

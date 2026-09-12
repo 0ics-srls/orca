@@ -37,6 +37,7 @@ function command(
     createPage: {
       type: 'createPage' as const,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean' as const,
       executionHostKey: 'execution-host-a'
     },
     navigate: { type: 'navigate' as const, url: 'https://remote.internal/' },
@@ -44,12 +45,14 @@ function command(
       type: 'reclaimPage' as const,
       previousAuthority,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean' as const,
       executionHostKey: 'execution-host-a'
     },
     closePage: { type: 'closePage' as const, targetAuthority: previousAuthority },
     restorePage: {
       type: 'restorePage' as const,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean' as const,
       executionHostKey: 'execution-host-a',
       url: 'https://restored.internal/'
     }
@@ -58,6 +61,7 @@ function command(
     type: 'command',
     pageCommandProtocolVersion: 1,
     pageReconciliationProtocolVersion: 1,
+    userAgentContractVersion: 1,
     browserHostClientId: 'client-a',
     browserPageId: 'page-a',
     commandSequence: 1,

@@ -12,6 +12,7 @@ type BrowserHostReconnectAttach = {
   hostCapabilities: readonly string[]
   pageCommandProtocolVersion?: 1
   pageReconciliationProtocolVersion?: 1
+  userAgentContractVersion?: 1
   leaseReconnectProtocolVersion?: 1
   fileChannelProtocolVersion?: 1
 }
@@ -53,6 +54,7 @@ export class BrowserHostLeaseReconnectController {
       input.leaseReconnectProtocolVersion !== 1 ||
       state.lease.pageCommandProtocolVersion !== input.pageCommandProtocolVersion ||
       state.lease.pageReconciliationProtocolVersion !== input.pageReconciliationProtocolVersion ||
+      state.lease.userAgentContractVersion !== input.userAgentContractVersion ||
       !sameCapabilities(state.lease.hostCapabilities, input.hostCapabilities)
     ) {
       return undefined

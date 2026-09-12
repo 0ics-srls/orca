@@ -10,7 +10,8 @@ import {
 import type {
   BrowserSessionProfile,
   BrowserSessionProfileCreateOptions,
-  BrowserSessionProfileScope
+  BrowserSessionProfileScope,
+  BrowserSessionUserAgentMode
 } from '../../shared/browser-workspace-types'
 import {
   applyPendingBrowserCookieImports,
@@ -26,18 +27,17 @@ import type { BrowserSessionMeta } from './browser-session-meta-store'
 import {
   applyBrowserSessionUserAgentModes,
   forgetBrowserSessionPartitionConfiguration,
-  installBrowserSessionPartitionPolicies
+  installBrowserSessionPartitionPolicies,
+  retireBrowserSessionUserAgentPolicy
 } from './browser-session-partition-policies'
 import { isValidPersistedBrowserSessionProfile } from './browser-session-persisted-profile-validation'
 import { clearBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
-import {
-  clearBrowserRoutePartitionPolicies,
-  installBrowserRoutePartitionPolicies
-} from './browser-session-route-policies'
+import { clearBrowserRoutePartitionPolicies } from './browser-session-route-policies'
 import { retireProxySessionApplication } from '../network/proxy-settings'
 import { invalidateBrowserSessionProxyApplication } from './browser-session-proxy'
 import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
 import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
+import { installBrowserRouteSessionProfilePolicies } from './browser-route-session-profile'
 
 export type BrowserSessionRegistryProfileOptions = {
   orcaProfileId: string
@@ -188,12 +188,17 @@ class BrowserSessionRegistry {
     return this.profiles.get(profileId)?.partition ?? null
   }
 
-  setupRoutePartitionPolicies(partition: string, browserProfileId: string): void {
-    const profile = this.profiles.get(browserProfileId)
-    if (!profile) {
-      throw new Error('browser_route_partition_profile_unavailable')
-    }
-    installBrowserRoutePartitionPolicies(profile, partition)
+  setupRoutePartitionPolicies(
+    partition: string,
+    browserProfileId: string,
+    authoritativeUserAgentMode?: BrowserSessionUserAgentMode
+  ): void {
+    installBrowserRouteSessionProfilePolicies({
+      partition,
+      browserProfileId,
+      authoritativeUserAgentMode,
+      localProfile: this.profiles.get(browserProfileId)
+    })
   }
 
   requireRouteBrowserProfile(browserProfileId: string): void {
@@ -279,6 +284,7 @@ class BrowserSessionRegistry {
     // Why: clear the partition's storage so deleting a profile doesn't leave orphaned cookies/cache behind.
     try {
       const sess = session.fromPartition(profile.partition)
+      retireBrowserSessionUserAgentPolicy(sess)
       clearBrowserSessionUserAgentMode(sess)
       forgetBrowserSessionPartitionConfiguration(profile.partition)
       invalidateBrowserSessionProxyApplication(sess)

@@ -124,6 +124,7 @@ function createCommand(): BrowserClientHostCommandEvent {
     browserHostClientId: 'client-a',
     browserHostGeneration: 3,
     pageCommandProtocolVersion: 1,
+    userAgentContractVersion: 1,
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     commandSequence: 1,
@@ -131,6 +132,7 @@ function createCommand(): BrowserClientHostCommandEvent {
     command: {
       type: 'createPage',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'execution-host-a'
     }
   }

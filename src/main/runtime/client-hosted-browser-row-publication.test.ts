@@ -12,6 +12,7 @@ function publishPage(
     browserPageId,
     workspaceId,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement: {
       kind: 'client',

@@ -40,6 +40,8 @@ vi.mock('./popup-origin-bar-window', () => ({
 }))
 
 import { browserManager } from './browser-manager'
+import { setBrowserProcessUserAgentIdentityForTests } from './browser-process-user-agent'
+import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { MAX_PAGE_INITIATED_TABS_PER_WINDOW } from './browser-page-initiated-tab-budget'
 import {
   rendererWebContentsId,
@@ -62,6 +64,10 @@ describe('browserManager', () => {
   beforeEach(() => {
     resetBrowserManagerMocks(browserMocks)
     resetBrowserManagerState()
+    setBrowserProcessUserAgentIdentityForTests({
+      nativeUserAgent: 'Orca/1 Chrome/140 Electron/43',
+      cleanUserAgent: 'Chrome/140'
+    })
   })
 
   afterEach(() => {
@@ -342,11 +348,16 @@ describe('browserManager', () => {
         openDevTools: vi.fn()
       }
       guestsById.set(child.id, child)
-      openPopupWithOriginBarMock.mockReturnValueOnce({
-        contentWebContents: child,
-        close: vi.fn(),
-        onClosed: vi.fn()
-      })
+      openPopupWithOriginBarMock.mockImplementationOnce(
+        (_options, _url, prepareContent: (contents: unknown) => boolean) => {
+          prepareContent(child)
+          return {
+            contentWebContents: child,
+            close: vi.fn(),
+            onClosed: vi.fn()
+          }
+        }
+      )
       const result = handler({
         url: `https://sso.example.com/child-${index}`,
         frameName: `child-${index}`,
@@ -591,23 +602,33 @@ describe('browserManager', () => {
       rendererWebContentsId
     })
 
+    const popupSession = {}
+    setBrowserSessionUserAgentMode(popupSession as never, 'native')
+    const popupSetUserAgent = vi.fn()
     const popupContents = {
       id: 151,
       isDestroyed: vi.fn(() => false),
       getType: vi.fn(() => 'window'),
       setBackgroundThrottling: vi.fn(),
+      setUserAgent: popupSetUserAgent,
       setWindowOpenHandler: vi.fn(),
       on: vi.fn(),
       once: vi.fn(),
-      off: vi.fn()
+      off: vi.fn(),
+      session: popupSession
     }
     const popupCloseMock = vi.fn()
     const popupOnClosedMock = vi.fn()
-    openPopupWithOriginBarMock.mockReturnValue({
-      contentWebContents: popupContents,
-      close: popupCloseMock,
-      onClosed: popupOnClosedMock
-    })
+    openPopupWithOriginBarMock.mockImplementation(
+      (_options, _url, prepareContent: (contents: unknown) => boolean) => {
+        prepareContent(popupContents)
+        return {
+          contentWebContents: popupContents,
+          close: popupCloseMock,
+          onClosed: popupOnClosedMock
+        }
+      }
+    )
 
     const handler = guestSetWindowOpenHandlerMock.mock.calls[0][0] as (details: {
       url: string
@@ -622,9 +643,14 @@ describe('browserManager', () => {
 
     expect(openPopupWithOriginBarMock).toHaveBeenCalledWith(
       options,
-      'https://sso.example.com/auth?code=SECRET'
+      'https://sso.example.com/auth?code=SECRET',
+      expect.any(Function)
     )
     expect(returned).toBe(popupContents)
+    expect(popupSetUserAgent).toHaveBeenCalledExactlyOnceWith('Orca/1 Chrome/140 Electron/43')
+    expect(popupSetUserAgent.mock.invocationCallOrder[0]).toBeLessThan(
+      popupContents.setWindowOpenHandler.mock.invocationCallOrder[0]!
+    )
     // did-create-window does not fire for createWindow-created children, so
     // the popup must get guest policies (nav guards, recursive popup handling)
     // attached directly here.

@@ -1,14 +1,14 @@
-import {
-  BROWSER_CLIENT_HOST_PAGE_INVENTORY_MAX_PAGES,
-  type BrowserClientHostedPageInventory,
-  type BrowserClientHostCommandEvent,
-  type BrowserClientHostCommandResult
+import type {
+  BrowserClientHostedPageInventory,
+  BrowserClientHostCommandEvent,
+  BrowserClientHostCommandResult
 } from '../../shared/browser-client-host-protocol'
 import {
   cleanupRetainedBrowserClientPage,
   type BrowserClientPageRendererIdentity
 } from './browser-client-page-cleanup'
 import { assertBrowserClientPageAdmission } from './browser-client-page-admission'
+import { resolveBrowserClientPageLimit } from './browser-client-page-capacity'
 import { createReservedBrowserClientPage } from './browser-client-page-creation'
 import { retireSupersededExecutionHostPages } from './browser-client-page-execution-host-supersession'
 import {
@@ -16,6 +16,7 @@ import {
   BrowserClientPageCommandError,
   isBrowserClientPageCleanupFailure
 } from './browser-client-page-command-failure'
+import { assertBrowserClientUserAgentContract } from './browser-client-user-agent-contract'
 import { BrowserClientPageNavigationFence } from './browser-client-page-navigation-fence'
 import { executeBrowserClientPageReconciliationCommand } from './browser-client-page-reconciliation'
 import {
@@ -52,14 +53,7 @@ export class BrowserClientPageCommandExecutor {
   constructor(private readonly dependencies: BrowserClientPageCommandExecutorDependencies) {
     this.authorityConnectionIdentity = dependencies.authorityConnectionIdentity
     this.legacyAuthorityConnectionIdentity = dependencies.legacyAuthorityConnectionIdentity
-    this.maxPages = dependencies.maxPages ?? BROWSER_CLIENT_HOST_PAGE_INVENTORY_MAX_PAGES
-    if (
-      !Number.isInteger(this.maxPages) ||
-      this.maxPages < 1 ||
-      this.maxPages > BROWSER_CLIENT_HOST_PAGE_INVENTORY_MAX_PAGES
-    ) {
-      throw new Error('browser_client_page_limit_invalid')
-    }
+    this.maxPages = resolveBrowserClientPageLimit(dependencies.maxPages)
   }
 
   async handle(
@@ -70,6 +64,7 @@ export class BrowserClientPageCommandExecutor {
       return { status: 'failed', errorCode: 'browser_client_page_executor_closed' }
     }
     try {
+      assertBrowserClientUserAgentContract(event)
       const value = await this.executeCommand(event, signal)
       return value === undefined ? { status: 'completed' } : { status: 'completed', value }
     } catch (error) {

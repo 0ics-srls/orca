@@ -42,6 +42,8 @@ vi.mock('./popup-origin-bar-window', () => ({
 import { browserManager } from './browser-manager'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
+import { setBrowserProcessUserAgentIdentityForTests } from './browser-process-user-agent'
+import { acquireElectronDebugger } from './electron-debugger-lease'
 import {
   guestBaseUserAgent,
   rendererWebContentsId,
@@ -75,6 +77,10 @@ describe('browserManager', () => {
   beforeEach(() => {
     resetBrowserManagerMocks(browserMocks)
     resetBrowserManagerState()
+    setBrowserProcessUserAgentIdentityForTests({
+      nativeUserAgent: GUEST_ELECTRON_UA,
+      cleanUserAgent: GUEST_CLEAN_UA
+    })
   })
 
   afterEach(() => {
@@ -91,7 +97,7 @@ describe('browserManager', () => {
       rendererWebContentsId
     })
 
-    // Ablation: with no mobile preset, the clean session identity is resolved.
+    // Negative control: with no exception, the request hook must remain a pass-through.
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
         session: guest.session as Electron.Session,
@@ -100,7 +106,7 @@ describe('browserManager', () => {
         currentUserAgent: GUEST_CLEAN_UA,
         baseUserAgent: GUEST_ELECTRON_UA
       })
-    ).toEqual({ userAgent: GUEST_CLEAN_UA })
+    ).toBeUndefined()
 
     await browserManager.setViewportOverride('tab-request-identity', MOBILE_VIEWPORT_OVERRIDE)
     await flushViewportOps()
@@ -111,9 +117,9 @@ describe('browserManager', () => {
       currentUserAgent: GUEST_CLEAN_UA,
       baseUserAgent: GUEST_ELECTRON_UA
     })
-    expect(mobile.userAgent).toContain('CriOS/134')
-    expect(mobile.userAgent).toContain('iPhone')
-    expect(mobile.userAgentMetadata).toMatchObject({
+    expect(mobile?.userAgent).toContain('CriOS/134')
+    expect(mobile?.userAgent).toContain('iPhone')
+    expect(mobile?.userAgentMetadata).toMatchObject({
       mobile: true,
       platform: 'iOS',
       model: 'iPhone'
@@ -125,8 +131,18 @@ describe('browserManager', () => {
       url: 'https://example.com/worker-beacon',
       baseUserAgent: GUEST_ELECTRON_UA
     })
-    expect(workerMobile.userAgent).toBe(mobile.userAgent)
-    expect(workerMobile.userAgentMetadata).toEqual(mobile.userAgentMetadata)
+    expect(workerMobile?.userAgent).toBe(mobile?.userAgent)
+    expect(workerMobile?.userAgentMetadata).toEqual(mobile?.userAgentMetadata)
+
+    // A numeric id proves this is a WebContents (for example, a popup), not an unattributed worker.
+    expect(
+      browserManager.resolveBrowserGuestRequestUserAgent({
+        session: guest.session as Electron.Session,
+        url: 'https://example.com/unregistered-popup',
+        webContentsId: 999_999,
+        baseUserAgent: GUEST_ELECTRON_UA
+      })
+    ).toBeUndefined()
 
     // Negative control: auth-document fan-out remains Firefox even while mobile emulation is active.
     expect(
@@ -147,7 +163,7 @@ describe('browserManager', () => {
         url: 'https://example.com/worker-beacon',
         baseUserAgent: GUEST_ELECTRON_UA
       })
-    ).toEqual({ userAgent: GUEST_CLEAN_UA })
+    ).toBeUndefined()
 
     await browserManager.setViewportOverride('tab-request-identity', MOBILE_VIEWPORT_OVERRIDE)
     browserManager.unregisterGuest('tab-request-identity')
@@ -157,7 +173,7 @@ describe('browserManager', () => {
         url: 'https://example.com/worker-after-tab-close',
         baseUserAgent: GUEST_ELECTRON_UA
       })
-    ).toEqual({ userAgent: GUEST_CLEAN_UA })
+    ).toBeUndefined()
   })
 
   it('keeps an unscoped worker request on the desktop identity without a mobile preset', () => {
@@ -168,7 +184,7 @@ describe('browserManager', () => {
         url: 'https://example.com/desktop-worker',
         baseUserAgent: GUEST_ELECTRON_UA
       })
-    ).toEqual({ userAgent: GUEST_CLEAN_UA })
+    ).toBeUndefined()
   })
 
   it('presents the Firefox UA on Google auth hosts and restores the base UA off them', async () => {
@@ -224,7 +240,7 @@ describe('browserManager', () => {
     await expect(sendCommand.mock.results[uaOverrideIndex]?.value).resolves.toBeUndefined()
     expect(sendCommand.mock.calls[uaOverrideIndex]).toEqual([
       'Emulation.setUserAgentOverride',
-      { userAgent: guestBaseUserAgent }
+      { userAgent: GUEST_CLEAN_UA }
     ])
 
     // A navigation that doesn't change the required UA must not thrash setUserAgent.
@@ -258,6 +274,7 @@ describe('browserManager', () => {
       rendererWebContentsId,
       userAgentMode: 'native'
     })
+    expect(setUserAgent).toHaveBeenCalledExactlyOnceWith(GUEST_ELECTRON_UA)
     const didStartNavigation = guestOnMock.mock.calls.find(
       ([event]) => event === 'did-start-navigation'
     )?.[1] as (event: unknown, url: string, isInPlace: boolean, isMainFrame: boolean) => void
@@ -265,6 +282,94 @@ describe('browserManager', () => {
 
     didStartNavigation(null, 'https://accounts.google.com/v3/signin/identifier', false, true)
     expect(setUserAgent).not.toHaveBeenCalled()
+  })
+
+  it('applies the native identity before an offscreen guest can navigate', () => {
+    const setUserAgent = vi.fn()
+    const guest = {
+      id: 410,
+      isDestroyed: vi.fn(() => false),
+      getType: vi.fn(() => 'window'),
+      setBackgroundThrottling: guestSetBackgroundThrottlingMock,
+      setWindowOpenHandler: guestSetWindowOpenHandlerMock,
+      on: guestOnMock,
+      off: guestOffMock,
+      openDevTools: guestOpenDevToolsMock,
+      getURL: vi.fn(() => 'about:blank'),
+      getUserAgent: vi.fn(() => GUEST_CLEAN_UA),
+      setUserAgent,
+      debugger: {
+        isAttached: vi.fn(() => false),
+        on: vi.fn(),
+        off: vi.fn()
+      },
+      session: { getUserAgent: vi.fn(() => GUEST_CLEAN_UA) }
+    }
+    webContentsFromIdMock.mockReturnValue(guest)
+
+    expect(
+      browserManager.registerOffscreenGuest({
+        browserPageId: 'browser-native-offscreen',
+        userAgentMode: 'native',
+        webContentsId: guest.id
+      })
+    ).toBe(true)
+    expect(setUserAgent).toHaveBeenCalledExactlyOnceWith(GUEST_ELECTRON_UA)
+  })
+
+  it('shares the auth debugger with cookie work and releases the attach after both owners settle', async () => {
+    let attached = false
+    const attach = vi.fn(() => {
+      attached = true
+    })
+    const detach = vi.fn(() => {
+      attached = false
+    })
+    const sendCommand = vi.fn().mockResolvedValue(undefined)
+    const guest = {
+      id: 411,
+      isDestroyed: vi.fn(() => false),
+      getType: vi.fn(() => 'webview'),
+      setBackgroundThrottling: guestSetBackgroundThrottlingMock,
+      setWindowOpenHandler: guestSetWindowOpenHandlerMock,
+      on: guestOnMock,
+      off: guestOffMock,
+      openDevTools: guestOpenDevToolsMock,
+      getURL: vi.fn(() => 'https://example.com/'),
+      getUserAgent: vi.fn(() => GUEST_CLEAN_UA),
+      setUserAgent: vi.fn(),
+      debugger: {
+        isAttached: vi.fn(() => attached),
+        attach,
+        detach,
+        sendCommand,
+        on: vi.fn(),
+        off: vi.fn()
+      },
+      session: { getUserAgent: vi.fn(() => GUEST_CLEAN_UA) }
+    }
+    webContentsFromIdMock.mockReturnValue(guest)
+    browserManager.attachGuestPolicies(guest as never)
+    browserManager.registerGuest({
+      browserPageId: 'browser-auth-cookie-debugger',
+      webContentsId: guest.id,
+      rendererWebContentsId
+    })
+    const didStartNavigation = guestOnMock.mock.calls.find(
+      ([event]) => event === 'did-start-navigation'
+    )?.[1] as (event: unknown, url: string, isInPlace: boolean, isMainFrame: boolean) => void
+
+    didStartNavigation(null, 'https://accounts.google.com/', false, true)
+    await expect(sendCommand.mock.results.at(-1)?.value).resolves.toBeUndefined()
+    expect(attach).toHaveBeenCalledOnce()
+    const cookieDebuggerLease = acquireElectronDebugger(guest as never)
+
+    didStartNavigation(null, 'https://example.com/', false, true)
+    await expect(sendCommand.mock.results.at(-1)?.value).resolves.toBeUndefined()
+    expect(detach).not.toHaveBeenCalled()
+
+    cookieDebuggerLease.release()
+    expect(detach).toHaveBeenCalledOnce()
   })
 
   it('honors native session mode before the guest registration IPC arrives', () => {
@@ -297,7 +402,7 @@ describe('browserManager', () => {
 
   // Why: popup child windows get attachGuestPolicies but are never entered into tabIdByWebContentsId,
   // so a direct lookup of the UA mode misses the native opt-out. That is worse than doing nothing —
-  // native sessions skip setupGoogleAuthUserAgentOverride, so the popup would send the raw Electron UA on the
+  // native sessions skip installBrowserSessionUserAgentExceptions, so the popup would send the raw Electron UA on the
   // wire while navigator.userAgent claimed Firefox. Google sign-in popups are a first-class surface.
   it('leaves the UA untouched on auth hosts for a popup owned by a native-UA profile', () => {
     const ownerGuest = {
@@ -459,8 +564,8 @@ describe('browserManager', () => {
 
     expect(guest.setUserAgent).not.toHaveBeenCalled()
     expect(sendCommand.mock.calls).toEqual([
-      ['Emulation.setUserAgentOverride', { userAgent: guestBaseUserAgent }],
-      ['Emulation.setUserAgentOverride', { userAgent: guestBaseUserAgent }]
+      ['Emulation.setUserAgentOverride', { userAgent: GUEST_CLEAN_UA }],
+      ['Emulation.setUserAgentOverride', { userAgent: GUEST_CLEAN_UA }]
     ])
 
     // A newer confirmed write outranks an older write that remains in flight.
@@ -508,7 +613,7 @@ describe('browserManager', () => {
     sendCommand.mockClear()
     didStartNavigation(null, 'https://example.com/', false, true)
     expect(sendCommand).toHaveBeenCalledWith('Emulation.setUserAgentOverride', {
-      userAgent: guestBaseUserAgent
+      userAgent: GUEST_CLEAN_UA
     })
     browserManager.unregisterGuest('browser-redirect-ua')
   })

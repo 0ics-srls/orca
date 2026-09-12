@@ -75,7 +75,11 @@ function leaseState(
       pageCommandProtocolVersion: 1,
       ...(options.legacy
         ? {}
-        : { pageInventoryProtocolVersion: 1, pageReconciliationProtocolVersion: 1 })
+        : {
+            pageInventoryProtocolVersion: 1,
+            pageReconciliationProtocolVersion: 1,
+            userAgentContractVersion: 1
+          })
     },
     pageInventory: options.legacy ? undefined : (options.pageInventory ?? [])
   })
@@ -90,6 +94,7 @@ function oldPage(browserPageId: string): BrowserClientHostedPageInventory {
     browserPageId,
     pageHostGeneration: 7,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-new:1',
     state: 'active',
     currentUrl: 'https://remote.internal/'
@@ -107,6 +112,7 @@ function reclaimIntent(
     browserPageId,
     pageHostGeneration,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-new:1',
     reclaimFrom: { ...oldPage(browserPageId), pairedDeviceId: 'device-a' }
   }

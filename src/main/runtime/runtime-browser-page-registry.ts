@@ -2,6 +2,7 @@ import {
   sameRuntimeBrowserPlacement,
   type RuntimeBrowserClientPlacement
 } from '../../shared/runtime-browser-placement'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 const DEFAULT_MAX_RUNTIME_BROWSER_PAGES = 256
 const MAX_IDENTITY_LENGTH = 256
@@ -10,6 +11,7 @@ export type RuntimeBrowserClientPage = Readonly<{
   browserPageId: string
   workspaceId: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   executionHostKey: string
   placement: RuntimeBrowserClientPlacement
   /**
@@ -31,6 +33,7 @@ type RuntimeBrowserClientPageInput = Pick<
   | 'browserPageId'
   | 'workspaceId'
   | 'browserProfileId'
+  | 'userAgentMode'
   | 'executionHostKey'
   | 'placement'
   | 'url'

@@ -5,7 +5,9 @@ const mocks = vi.hoisted(() => ({
   handleGuestWillDownload: vi.fn(),
   noticeDocPreviewDownloadBlocked: vi.fn(),
   clearBrowserWebAuthnAccessHandlers: vi.fn(),
-  installBrowserWebAuthnAccessHandlers: vi.fn()
+  installBrowserWebAuthnAccessHandlers: vi.fn(),
+  disposeUserAgentExceptions: vi.fn(),
+  installBrowserSessionUserAgentExceptions: vi.fn()
 }))
 
 type WillDownloadListener = (
@@ -83,7 +85,7 @@ vi.mock('./browser-media-access', () => ({
 }))
 vi.mock('./browser-session-ua', () => ({
   cleanElectronUserAgent: (userAgent: string) => userAgent,
-  setupGoogleAuthUserAgentOverride: vi.fn()
+  installBrowserSessionUserAgentExceptions: mocks.installBrowserSessionUserAgentExceptions
 }))
 vi.mock('./browser-session-user-agent-mode', () => ({
   setBrowserSessionUserAgentMode: vi.fn()
@@ -131,6 +133,7 @@ function fireWillDownload(partition: string): { cancelled: boolean } {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.installBrowserSessionUserAgentExceptions.mockReturnValue(mocks.disposeUserAgentExceptions)
   sessionsByPartition.clear()
   vi.resetModules()
 })
@@ -231,5 +234,34 @@ describe('partition permission policy', () => {
       displayMediaDecision = decision
     })
     expect(displayMediaDecision).toEqual({ video: undefined, audio: undefined })
+  })
+})
+
+describe('partition user-agent exception lifecycle', () => {
+  it('disposes the exception listener on general partition cleanup exactly once', async () => {
+    const install = await loadInstaller()
+    install(profileFor('persist:browsing-ua-clear'))
+    const sess = sessionsByPartition.get('persist:browsing-ua-clear')
+    if (!sess) {
+      throw new Error('Expected the browser session')
+    }
+    const { clearBrowserSessionPartitionPolicies } =
+      await import('./browser-session-partition-policies')
+
+    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', sess as never)
+    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', sess as never)
+
+    expect(mocks.disposeUserAgentExceptions).toHaveBeenCalledOnce()
+  })
+
+  it('disposes CLEAN exceptions before the same Session is marked native', async () => {
+    const install = await loadInstaller()
+    const profile = profileFor('persist:browsing-ua-mode')
+    install(profile)
+
+    install({ ...profile, userAgentMode: 'native' })
+
+    expect(mocks.installBrowserSessionUserAgentExceptions).toHaveBeenCalledOnce()
+    expect(mocks.disposeUserAgentExceptions).toHaveBeenCalledOnce()
   })
 })

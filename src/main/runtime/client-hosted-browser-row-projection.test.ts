@@ -8,6 +8,7 @@ function registryWithPages(): RuntimeBrowserPageRegistry {
     browserPageId: 'page-live',
     workspaceId: 'wt-1',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement: {
       kind: 'client',
@@ -25,6 +26,7 @@ function registryWithPages(): RuntimeBrowserPageRegistry {
     browserPageId: 'page-retained',
     workspaceId: 'wt-1',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement: {
       kind: 'client',
@@ -113,6 +115,7 @@ describe('projectClientHostedBrowserRows', () => {
       browserPageId: 'page-anonymous',
       workspaceId: 'wt-1',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'native:runtime-a:7',
       placement: {
         kind: 'client',

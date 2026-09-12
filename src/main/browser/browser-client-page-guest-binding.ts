@@ -1,9 +1,11 @@
 import type { BrowserManager } from './browser-manager'
 import type { BrowserRoutePageGuestIdentity } from './browser-route-page-authority'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 export type BrowserClientPageGuestBindingInput = {
   registration: BrowserRoutePageGuestIdentity
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
 }
 
 /**
@@ -24,7 +26,7 @@ export function createBrowserClientPageGuestBinding(
   >
 ): BrowserClientPageGuestBinding {
   return {
-    bind: ({ registration, browserProfileId }) => {
+    bind: ({ registration, browserProfileId, userAgentMode }) => {
       if (
         browserManager.getGuestWebContentsId(registration.browserPageId) ===
         registration.webContentsId
@@ -35,7 +37,8 @@ export function createBrowserClientPageGuestBinding(
         browserPageId: registration.browserPageId,
         sessionProfileId: browserProfileId,
         webContentsId: registration.webContentsId,
-        rendererWebContentsId: registration.rendererWebContentsId
+        rendererWebContentsId: registration.rendererWebContentsId,
+        userAgentMode
       })
       if (!bound) {
         // Downloads keep failing closed rather than landing on this desktop, so page creation stands.

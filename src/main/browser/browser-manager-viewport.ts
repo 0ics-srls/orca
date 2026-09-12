@@ -6,6 +6,7 @@ import {
 } from '../../shared/browser-annotation-viewport-bridge'
 import type { BrowserViewportOverride } from '../../shared/browser-workspace-types'
 import { googleAuthUserAgent, isGoogleAuthUrl } from './browser-google-auth-ua'
+import { getBrowserProcessUserAgentIdentity } from './browser-process-user-agent'
 import { BrowserManagerDownloadLifecycle } from './browser-manager-download-lifecycle'
 
 export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifecycle {
@@ -194,10 +195,15 @@ export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifec
               guest,
               false,
               url,
-              isGoogleAuthUrl(url) ? googleAuthUserAgent() : guest.session.getUserAgent()
+              isGoogleAuthUrl(url)
+                ? googleAuthUserAgent()
+                : getBrowserProcessUserAgentIdentity().cleanUserAgent
             )
             if (!restored) {
               throw new Error('Failed to preserve auth user agent')
+            }
+            if (!isGoogleAuthUrl(url)) {
+              this.releaseAuthUserAgentDebuggerLease(guest.id)
             }
           } else {
             // Why: passing an empty string restores the session default UA.

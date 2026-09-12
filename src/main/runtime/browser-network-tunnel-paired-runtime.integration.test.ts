@@ -50,6 +50,9 @@ describe('paired runtime browser network tunnel', () => {
       browserHostClientId: 'integration-browser-host',
       hostCapabilities: ['webview'],
       pageCommandProtocolVersion: 1,
+      pageInventoryProtocolVersion: 1,
+      getPageInventory: () => [],
+      userAgentContractVersion: 1,
       onPageCommand,
       onError: (error) => errors.push(error)
     })
@@ -85,6 +88,7 @@ describe('paired runtime browser network tunnel', () => {
       {
         type: 'createPage',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'native:integration'
       }
     )
@@ -131,6 +135,7 @@ describe('paired runtime browser network tunnel', () => {
       browserPageId: 'page-reclaimed',
       pageHostGeneration: 7,
       browserProfileId: 'default',
+      userAgentMode: 'clean' as const,
       executionHostKey: 'native:integration',
       state: 'active' as const,
       currentUrl: 'https://remote.internal/'
@@ -144,6 +149,7 @@ describe('paired runtime browser network tunnel', () => {
       pageCommandProtocolVersion: 1,
       pageInventoryProtocolVersion: 1,
       pageReconciliationProtocolVersion: 1,
+      userAgentContractVersion: 1,
       getPageInventory: () => [oldPage],
       onPageCommand
     })
@@ -169,6 +175,7 @@ describe('paired runtime browser network tunnel', () => {
         browserPageId: oldPage.browserPageId,
         pageHostGeneration: 8,
         browserProfileId: oldPage.browserProfileId,
+        userAgentMode: oldPage.userAgentMode ?? 'clean',
         executionHostKey: oldPage.executionHostKey,
         reclaimFrom: { ...oldPage, pairedDeviceId: pairing.pairedDeviceId }
       }

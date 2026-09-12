@@ -146,6 +146,7 @@ function readyResponse(options: { reconciliation?: boolean } = {}) {
       pageCommandProtocolVersion: 1 as const,
       pageInventoryProtocolVersion: 1 as const,
       leaseReconnectProtocolVersion: 1 as const,
+      userAgentContractVersion: 1 as const,
       ...(options.reconciliation ? { pageReconciliationProtocolVersion: 1 as const } : {})
     },
     _meta: { runtimeId: 'runtime-a' }
@@ -161,6 +162,7 @@ function inventoryPage(state: 'active' | 'outcomeUnknown') {
     browserPageId: 'page-a',
     pageHostGeneration: 1,
     browserProfileId: 'default',
+    userAgentMode: 'clean' as const,
     executionHostKey: 'native:runtime-a:1',
     state
   } as const
@@ -173,6 +175,7 @@ function commandResponse() {
     result: {
       type: 'command' as const,
       pageCommandProtocolVersion: 1 as const,
+      userAgentContractVersion: 1 as const,
       authorityRuntimeId: 'runtime-a',
       authorityEpoch: 'epoch-a',
       browserHostClientId: 'host-a',
@@ -184,6 +187,7 @@ function commandResponse() {
       command: {
         type: 'createPage' as const,
         browserProfileId: 'default',
+        userAgentMode: 'clean' as const,
         executionHostKey: 'native:runtime-a:1'
       }
     },

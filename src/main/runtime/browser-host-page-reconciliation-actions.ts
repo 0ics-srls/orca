@@ -82,6 +82,7 @@ export class BrowserHostPageReconciliationActions {
         type: 'reclaimPage',
         previousAuthority: pageAuthority(pair.page),
         browserProfileId: pair.intent.browserProfileId,
+        userAgentMode: pair.intent.userAgentMode,
         executionHostKey: pair.intent.executionHostKey,
         ...(pair.intent.workspaceId ? { workspaceId: pair.intent.workspaceId } : {})
       },
@@ -124,6 +125,7 @@ export class BrowserHostPageReconciliationActions {
       {
         type: 'restorePage',
         browserProfileId: intent.browserProfileId,
+        userAgentMode: intent.userAgentMode,
         executionHostKey: intent.executionHostKey,
         ...(url ? { url } : {}),
         ...(intent.workspaceId ? { workspaceId: intent.workspaceId } : {})

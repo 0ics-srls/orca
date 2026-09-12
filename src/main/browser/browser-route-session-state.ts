@@ -5,6 +5,7 @@ import type {
   BrowserRouteElectronSession,
   BrowserRouteProxyEndpoint
 } from './browser-route-session-policy'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 export type BrowserRouteSessionHandle = Readonly<{
   partition: string
@@ -16,6 +17,7 @@ export type BrowserRoutePreparePageInput = Readonly<{
   /** Pre-migration identity, so an existing partition keeps serving this route. */
   legacyIdentity?: BrowserRoutePartitionIdentity
   storageScope: string
+  userAgentMode: BrowserSessionUserAgentMode
   browserPageId: string
   pageHostGeneration: number
   rendererWebContentsId: number
@@ -31,6 +33,7 @@ export type PreparedBrowserRoutePartition = {
   partition: string
   bindingFingerprint: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   proxyEndpoint: BrowserRouteProxyEndpoint
   session: BrowserRouteElectronSession
   pages: BrowserRoutePreparedPageLedger
@@ -39,6 +42,7 @@ export type PreparedBrowserRoutePartition = {
 export type PendingBrowserRoutePartition = {
   partition: string
   bindingFingerprint: string
+  userAgentMode: BrowserSessionUserAgentMode
   proxyEndpoint: BrowserRouteProxyEndpoint
   promise: Promise<PreparedBrowserRoutePartition>
   state: PreparedBrowserRoutePartition | null

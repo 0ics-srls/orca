@@ -6757,7 +6757,7 @@
           "a3f8c2d1e0b4": "Imported {{value0}} cookies from {{value1}} ({{value2}}) into {{value3}}.",
           "b4e9d3f2a1c5": "Imported {{value0}} cookies from {{value1}} into {{value2}}.",
           "c5a273a809": "From {{value0}}",
-          "b5c0479e21": "Unmodified user agent"
+          "b5c0479e21": "Native page user agent"
         },
         "BrowserUseComputerUseNotice": {
           "15b5e680ba": "Open Computer Use",
@@ -15655,8 +15655,8 @@
           "user": {
             "agent": {
               "option": {
-                "04af3dc12b": "Use unmodified user agent",
-                "5bf47a3c91": "May improve Google sign-in, but can reduce compatibility with bot-protected sites."
+                "04af3dc12b": "Use native user agent for pages",
+                "5bf47a3c91": "Pages use Orca’s native Electron identity; service and shared workers keep the cleaned identity."
               }
             }
           }

@@ -25,6 +25,9 @@ export function assertBrowserHostPageCommandAdmission(
     command.type === 'reclaimPage' ||
     command.type === 'restorePage'
   ) {
+    if (lease.userAgentContractVersion !== 1 || !command.userAgentMode) {
+      throw new Error('browser_host_user_agent_contract_required')
+    }
     requireExecutionHost(command.executionHostKey)
   }
   if (

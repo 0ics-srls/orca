@@ -6,6 +6,7 @@ import type {
   BrowserClientHostLeaseAuthority
 } from '../../shared/browser-client-host-protocol'
 import { sameRuntimeBrowserPlacement } from '../../shared/runtime-browser-placement'
+import { forEachWithConcurrency } from '../../shared/map-with-concurrency'
 import { isRestoredClientHostedBrowserPlacement } from './client-hosted-browser-page-persistence'
 import type { BrowserExecutionHostKeyResolution } from './runtime-browser-client-page-adoption'
 import type { BrowserHostLeaseRegistry } from './browser-host-lease-registry'
@@ -70,6 +71,7 @@ export async function recoverUnavailableRuntimeBrowserClientPages(options: {
   if (
     options.lease.pageReconciliationProtocolVersion !== 1 ||
     options.lease.pageInventoryProtocolVersion !== 1 ||
+    options.lease.userAgentContractVersion !== 1 ||
     !inventory
   ) {
     return
@@ -84,24 +86,22 @@ export async function recoverUnavailableRuntimeBrowserClientPages(options: {
         isRecoverableByLease(page, options.lease) &&
         !isActiveExactPage(page, inventoryByPageId.get(page.browserPageId), options.lease)
     )
-  await mapWithConcurrency(
-    pages,
-    MAX_RECOVERY_CONCURRENCY,
-    async (page) => {
-      try {
-        await recoverPage(page, inventoryByPageId.get(page.browserPageId), options)
-      } catch (error) {
-        // Why: recovery failures are page-scoped (a refused URL, a creation timeout). Rejecting
-        // here aborts the whole attach and fences the lease, taking every healthy page with it.
-        console.warn('[browser-host-lease] client page recovery failed:', {
-          browserPageId: page.browserPageId,
-          error
-        })
-        releaseUnhostablePage(page, options)
-      }
-    },
-    options.signal
-  )
+  await forEachWithConcurrency(pages, MAX_RECOVERY_CONCURRENCY, async (page) => {
+    if (options.signal?.aborted) {
+      return
+    }
+    try {
+      await recoverPage(page, inventoryByPageId.get(page.browserPageId), options)
+    } catch (error) {
+      // Why: recovery failures are page-scoped (a refused URL, a creation timeout). Rejecting
+      // here aborts the whole attach and fences the lease, taking every healthy page with it.
+      console.warn('[browser-host-lease] client page recovery failed:', {
+        browserPageId: page.browserPageId,
+        error
+      })
+      releaseUnhostablePage(page, options)
+    }
+  })
 }
 
 /**
@@ -221,6 +221,7 @@ async function recoverPage(
     browserHostClientId: options.lease.browserHostClientId,
     pairedDeviceId: options.lease.pairedDeviceId,
     browserProfileId: page.browserProfileId,
+    userAgentMode: page.userAgentMode,
     executionHostKey,
     requiredCapabilities: [BROWSER_CLIENT_AUTOMATION_HOST_CAPABILITY],
     workspaceId: page.workspaceId
@@ -316,6 +317,7 @@ function isActiveExactPage(
     inventory.browserHostGeneration === page.placement.browserHostGeneration &&
     inventory.pageHostGeneration === page.placement.pageHostGeneration &&
     inventory.browserProfileId === page.browserProfileId &&
+    inventory.userAgentMode === page.userAgentMode &&
     inventory.executionHostKey === page.executionHostKey
   )
 }
@@ -334,23 +336,4 @@ function assertInventoryAuthority(
   ) {
     throw new Error('browser_client_page_reconciliation_authority_stale')
   }
-}
-
-async function mapWithConcurrency<T>(
-  values: readonly T[],
-  concurrency: number,
-  operation: (value: T) => Promise<void>,
-  signal?: AbortSignal
-): Promise<void> {
-  let index = 0
-  const worker = async (): Promise<void> => {
-    while (index < values.length && !signal?.aborted) {
-      const value = values[index]
-      index += 1
-      if (value !== undefined) {
-        await operation(value)
-      }
-    }
-  }
-  await Promise.all(Array.from({ length: Math.min(concurrency, values.length) }, worker))
 }

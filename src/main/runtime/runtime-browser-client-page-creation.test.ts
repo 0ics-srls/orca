@@ -24,6 +24,7 @@ describe('runtime browser client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'profile-a',
+      userAgentMode: 'native',
       executionHost: { kind: 'native', runtimeId: 'runtime-a', revision: 7 }
     })
 
@@ -32,6 +33,7 @@ describe('runtime browser client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'profile-a',
+      userAgentMode: 'native',
       executionHostKey: JSON.stringify(['native', 'runtime-a', 7]),
       requiredCapabilities: ['automation-v1']
     })
@@ -59,6 +61,7 @@ describe('runtime browser client page creation', () => {
         browserHostClientId: 'host-a',
         pairedDeviceId: 'device-a',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHost: { kind: 'native', runtimeId: 'runtime-a', revision: 7 }
       })
     ).rejects.toThrow('browser_client_page_mount_failed')

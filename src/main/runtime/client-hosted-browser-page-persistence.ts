@@ -120,6 +120,7 @@ export function buildPersistedClientHostedBrowserPages(
             browserPageId: page.browserPageId,
             workspaceId: page.workspaceId,
             browserProfileId: page.browserProfileId,
+            userAgentMode: page.userAgentMode,
             url: page.url,
             title: page.title,
             pairedDeviceId: page.pairedDeviceId,
@@ -171,6 +172,7 @@ export function rehydrateClientHostedBrowserPages(
             browserPageId: row.browserPageId,
             workspaceId: row.workspaceId,
             browserProfileId: row.browserProfileId,
+            userAgentMode: row.userAgentMode,
             executionHostKey: RESTORED_CLIENT_HOSTED_EXECUTION_HOST_KEY,
             placement: RESTORED_CLIENT_HOSTED_BROWSER_PLACEMENT,
             pairedDeviceId: row.pairedDeviceId,
@@ -225,6 +227,7 @@ function samePersistedClientHostedBrowserPages(
       row.browserPageId === next.browserPageId &&
       row.workspaceId === next.workspaceId &&
       row.browserProfileId === next.browserProfileId &&
+      row.userAgentMode === next.userAgentMode &&
       row.url === next.url &&
       row.title === next.title &&
       row.pairedDeviceId === next.pairedDeviceId

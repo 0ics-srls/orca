@@ -39,6 +39,7 @@ import type {
   PendingBrowserRoutePartition as PendingPartition,
   PreparedBrowserRoutePartition as PreparedPartition
 } from './browser-route-session-state'
+import { assertReusableBrowserRouteUserAgentMode } from './browser-route-session-user-agent-mode'
 
 export type { BrowserRouteElectronSession } from './browser-route-session-policy'
 export type {
@@ -130,7 +131,7 @@ export class BrowserRouteSessionRegistry {
     input: BrowserRoutePreparePageInput,
     rendererFence: BrowserRouteRendererPrepareFence
   ): Promise<BrowserRouteSessionHandle> {
-    this.dependencies.validateProfile(input.identity.browserProfileId)
+    this.dependencies.validateProfile(input.identity.browserProfileId, input.userAgentMode)
     const derived = resolveBrowserRouteSessionPartition(
       this.dependencies,
       input,
@@ -139,6 +140,7 @@ export class BrowserRouteSessionRegistry {
     let state = this.live.get(derived.partition)
     if (state) {
       this.assertReusable(state, derived, input.proxyEndpoint)
+      assertReusableBrowserRouteUserAgentMode(state.userAgentMode, input.userAgentMode)
       rendererFence.assertCurrent()
       return this.linkPage(
         state,
@@ -151,6 +153,7 @@ export class BrowserRouteSessionRegistry {
     const pending = this.pending.get(derived.partition)
     if (pending) {
       this.assertReusable(pending, derived, input.proxyEndpoint)
+      assertReusableBrowserRouteUserAgentMode(pending.userAgentMode, input.userAgentMode)
       return this.linkPendingPage(pending, input, rendererFence)
     }
 
@@ -161,11 +164,13 @@ export class BrowserRouteSessionRegistry {
     const promise = this.preparePartition(
       derived,
       input.identity.browserProfileId,
+      input.userAgentMode,
       input.proxyEndpoint
     )
     const pendingState = {
       partition: derived.partition,
       bindingFingerprint: derived.bindingFingerprint,
+      userAgentMode: input.userAgentMode,
       proxyEndpoint: input.proxyEndpoint,
       promise,
       state: null,
@@ -238,11 +243,13 @@ export class BrowserRouteSessionRegistry {
   private async preparePartition(
     derived: DerivedBrowserRoutePartition,
     browserProfileId: string,
+    userAgentMode: BrowserRoutePreparePageInput['userAgentMode'],
     proxyEndpoint: ProxyEndpoint
   ): Promise<PreparedPartition> {
     const session = await prepareBrowserRouteSessionPolicy({
       partition: derived.partition,
       browserProfileId,
+      userAgentMode,
       proxyEndpoint,
       dependencies: this.dependencies
     })
@@ -250,6 +257,7 @@ export class BrowserRouteSessionRegistry {
       partition: derived.partition,
       bindingFingerprint: derived.bindingFingerprint,
       browserProfileId,
+      userAgentMode,
       proxyEndpoint,
       session,
       pages: new BrowserRoutePreparedPageLedger(derived.partition, this.maxPagesPerPartition)

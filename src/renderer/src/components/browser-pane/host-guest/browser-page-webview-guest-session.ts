@@ -48,7 +48,7 @@ export type BrowserPageWebviewGuestSessionArgs = {
 
 export type BrowserPageWebviewGuestSession = {
   guestRecovery: BrowserPageGuestRecovery
-  handleDidAttach: () => void
+  handleDidAttach: () => Promise<boolean | null>
   handleDomReady: () => void
   handleGuestDestroyed: () => void
 }
@@ -182,13 +182,14 @@ export function createBrowserPageWebviewGuestSession({
     onRecoverySucceeded: clearGuestRecoveryError
   })
 
-  const handleDidAttach = (): void => {
+  const handleDidAttach = (): Promise<boolean | null> => {
     // Why: register at attach since cert failures can precede dom-ready; the dom-ready path stays an idempotent fallback.
-    void registerGuest().then((registered) => {
+    return registerGuest().then((registered) => {
       if (registered === true) {
         guestRecovery.confirmRegistration()
       }
       syncBrowserAnnotationViewportBridge()
+      return registered
     })
   }
 

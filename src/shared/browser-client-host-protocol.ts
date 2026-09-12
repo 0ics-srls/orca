@@ -4,6 +4,15 @@ import {
   BrowserClientAutomationResult
 } from './browser-client-automation-protocol'
 import { BROWSER_CLIENT_FILE_CHANNEL_PROTOCOL_VERSION } from './browser-client-file-channel-protocol'
+import {
+  BROWSER_CLIENT_HOST_USER_AGENT_CONTRACT_VERSION,
+  BrowserClientHostUserAgentMode as UserAgentMode,
+  refineBrowserClientHostAttachUserAgentContract,
+  refineBrowserClientHostCommandUserAgentContract
+} from './browser-client-host-user-agent-contract'
+import { BrowserNetworkExecutionHost } from './browser-network-execution-host'
+export { BROWSER_CLIENT_HOST_USER_AGENT_CONTRACT_VERSION } from './browser-client-host-user-agent-contract'
+export { BrowserNetworkExecutionHost } from './browser-network-execution-host'
 
 const Generation = z.number().int().min(1).max(0xffff_ffff)
 const Identity = z.string().min(1).max(256)
@@ -32,6 +41,7 @@ const PageReconciliationProtocolVersion = z.literal(
   BROWSER_CLIENT_HOST_PAGE_RECONCILIATION_PROTOCOL_VERSION
 )
 const FileChannelProtocolVersion = z.literal(BROWSER_CLIENT_FILE_CHANNEL_PROTOCOL_VERSION)
+const UserAgentContractVersion = z.literal(BROWSER_CLIENT_HOST_USER_AGENT_CONTRACT_VERSION)
 
 /**
  * Sent when an attach names a runtime id this process does not have. It means "a newer authority
@@ -61,6 +71,7 @@ export const BrowserClientHostedPageInventory = z.object({
   browserPageId: PageInventoryIdentity,
   pageHostGeneration: Generation,
   browserProfileId: PageInventoryIdentity,
+  userAgentMode: UserAgentMode.optional(),
   executionHostKey: PageInventoryIdentity,
   state: z.enum(['active', 'outcomeUnknown']),
   currentUrl: z.string().max(BROWSER_CLIENT_HOST_PAGE_INVENTORY_URL_MAX_LENGTH).optional(),
@@ -117,9 +128,11 @@ export const BrowserClientHostAttachParams = z
     pageInventory: BrowserClientHostedPageInventoryList.optional(),
     leaseReconnectProtocolVersion: LeaseReconnectProtocolVersion.optional(),
     pageReconciliationProtocolVersion: PageReconciliationProtocolVersion.optional(),
+    userAgentContractVersion: UserAgentContractVersion.optional(),
     fileChannelProtocolVersion: FileChannelProtocolVersion.optional()
   })
   .superRefine((params, context) => {
+    refineBrowserClientHostAttachUserAgentContract(params, context)
     if (
       params.fileChannelProtocolVersion !== undefined &&
       params.pageCommandProtocolVersion !== 1
@@ -175,6 +188,7 @@ export const BrowserClientHostReady = z.object({
   pageInventoryProtocolVersion: PageInventoryProtocolVersion.optional(),
   leaseReconnectProtocolVersion: LeaseReconnectProtocolVersion.optional(),
   pageReconciliationProtocolVersion: PageReconciliationProtocolVersion.optional(),
+  userAgentContractVersion: UserAgentContractVersion.optional(),
   fileChannelProtocolVersion: FileChannelProtocolVersion.optional()
 })
 
@@ -190,38 +204,11 @@ export const BrowserClientHostLeaseAuthority = BrowserHostLeaseAuthority.extend(
   pageInventoryProtocolVersion: PageInventoryProtocolVersion.optional(),
   leaseReconnectProtocolVersion: LeaseReconnectProtocolVersion.optional(),
   pageReconciliationProtocolVersion: PageReconciliationProtocolVersion.optional(),
+  userAgentContractVersion: UserAgentContractVersion.optional(),
   fileChannelProtocolVersion: FileChannelProtocolVersion.optional()
 })
 
 export type BrowserClientHostLeaseAuthority = z.infer<typeof BrowserClientHostLeaseAuthority>
-
-const BrowserNetworkNativeExecutionHost = z.object({
-  kind: z.literal('native'),
-  runtimeId: Identity,
-  revision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-})
-
-const BrowserNetworkSshExecutionHost = z.object({
-  kind: z.literal('ssh'),
-  targetId: Identity,
-  providerEpoch: Identity,
-  connectionGeneration: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER)
-})
-
-const BrowserNetworkWslExecutionHost = z.object({
-  kind: z.literal('wsl'),
-  runtimeId: Identity,
-  revision: z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER),
-  distro: Identity
-})
-
-export const BrowserNetworkExecutionHost = z.discriminatedUnion('kind', [
-  BrowserNetworkNativeExecutionHost,
-  BrowserNetworkSshExecutionHost,
-  BrowserNetworkWslExecutionHost
-])
-
-export type BrowserNetworkExecutionHost = z.infer<typeof BrowserNetworkExecutionHost>
 
 const BrowserClientPageCommandAuthority = BrowserClientHostLeaseAuthority.extend({
   pageCommandProtocolVersion: PageCommandProtocolVersion,
@@ -234,6 +221,7 @@ const BrowserClientPageCommandAuthority = BrowserClientHostLeaseAuthority.extend
 const BrowserClientHostCreatePageCommand = z.object({
   type: z.literal('createPage'),
   browserProfileId: Identity,
+  userAgentMode: UserAgentMode.optional(),
   executionHostKey: Identity,
   // The client never interprets this; it only echoes it back in the page inventory so a restarted
   // runtime can rebuild the workspace association it holds nowhere else.
@@ -249,6 +237,7 @@ const BrowserClientHostReclaimPageCommand = z.object({
   type: z.literal('reclaimPage'),
   previousAuthority: BrowserClientHostedPageAuthority,
   browserProfileId: Identity,
+  userAgentMode: UserAgentMode.optional(),
   executionHostKey: Identity,
   workspaceId: Identity.optional()
 })
@@ -261,6 +250,7 @@ const BrowserClientHostClosePageCommand = z.object({
 const BrowserClientHostRestorePageCommand = z.object({
   type: z.literal('restorePage'),
   browserProfileId: Identity,
+  userAgentMode: UserAgentMode.optional(),
   executionHostKey: Identity,
   url: z.string().min(1).max(8192).optional(),
   workspaceId: Identity.optional()
@@ -279,6 +269,7 @@ export const BrowserClientHostCommandEvent = BrowserClientPageCommandAuthority.e
   type: z.literal('command'),
   command: BrowserClientHostPageCommand
 }).superRefine((event, context) => {
+  refineBrowserClientHostCommandUserAgentContract(event, context)
   if (
     event.command.type === 'createPage' ||
     event.command.type === 'navigate' ||

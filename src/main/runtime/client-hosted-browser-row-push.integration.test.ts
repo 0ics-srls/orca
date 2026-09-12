@@ -95,6 +95,7 @@ function placeAndPublish(
     browserPageId,
     workspaceId: WT,
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:1',
     placement,
     pairedDeviceId: `device-${browserHostClientId}`,

@@ -1,3 +1,5 @@
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
+
 const PROXY_PROBE_URL = 'http://browser-route-probe.invalid/'
 
 export type BrowserRouteElectronSession = {
@@ -17,6 +19,7 @@ type BrowserRouteSessionPolicyDependencies = {
   setupPolicies(input: {
     partition: string
     browserProfileId: string
+    userAgentMode: BrowserSessionUserAgentMode
     session: BrowserRouteElectronSession
   }): void
   clearPolicies(input: { partition: string; session: BrowserRouteElectronSession }): void
@@ -25,6 +28,7 @@ type BrowserRouteSessionPolicyDependencies = {
 export async function prepareBrowserRouteSessionPolicy(input: {
   partition: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   proxyEndpoint: BrowserRouteProxyEndpoint
   dependencies: BrowserRouteSessionPolicyDependencies
 }): Promise<BrowserRouteElectronSession> {
@@ -39,6 +43,7 @@ export async function prepareBrowserRouteSessionPolicy(input: {
     input.dependencies.setupPolicies({
       partition: input.partition,
       browserProfileId: input.browserProfileId,
+      userAgentMode: input.userAgentMode,
       session
     })
     await proxySetup

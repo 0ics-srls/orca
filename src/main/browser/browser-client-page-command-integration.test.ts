@@ -17,12 +17,14 @@ describe('BrowserClientPageCommandExecutor integration', () => {
       resolveProxy: vi.fn(async () => 'SOCKS5 127.0.0.1:43123')
     }
     const clearPolicies = vi.fn()
+    const setupPolicies = vi.fn()
+    const guestBinding = { bind: vi.fn(), release: vi.fn() }
     let webContentsRegistry: BrowserRouteWebContentsRegistry | null = null
     const sessionRegistry = new BrowserRouteSessionRegistry({
       derivePartition: () => ({ partition, bindingFingerprint: 'binding-a' }),
       validateProfile: vi.fn(),
       getSession: () => routeSession,
-      setupPolicies: vi.fn(),
+      setupPolicies,
       clearPolicies,
       retirePageAuthority: (retirement) =>
         webContentsRegistry?.retirePageAuthority(retirement) ?? false,
@@ -69,7 +71,7 @@ describe('BrowserClientPageCommandExecutor integration', () => {
       routeSessions: sessionRegistry,
       executeAutomation: vi.fn(async () => undefined),
       retireAutomation: vi.fn(async () => {}),
-      guestBinding: { bind: vi.fn(), release: vi.fn() },
+      guestBinding,
       routeWebContents: webContentsRegistry
     })
 
@@ -78,6 +80,10 @@ describe('BrowserClientPageCommandExecutor integration', () => {
     })
     expect(guest.webContents.setWebRTCIPHandlingPolicy).toHaveBeenCalledWith(
       'disable_non_proxied_udp'
+    )
+    expect(setupPolicies).toHaveBeenCalledWith(expect.objectContaining({ userAgentMode: 'native' }))
+    expect(guestBinding.bind).toHaveBeenCalledWith(
+      expect.objectContaining({ userAgentMode: 'native' })
     )
     expect(sessionRegistry.isAllowedPartition(partition)).toBe(true)
     expect(guest.url()).toBe('about:blank')
@@ -138,6 +144,7 @@ function createCommand(
     browserHostGeneration: type === 'reclaimPage' ? 4 : 3,
     pageCommandProtocolVersion: 1,
     pageReconciliationProtocolVersion: 1,
+    userAgentContractVersion: 1,
     browserPageId: 'page-a',
     pageHostGeneration: type === 'reclaimPage' ? 8 : 7,
     commandSequence: type === 'createPage' || type === 'reclaimPage' ? 1 : 2,
@@ -147,6 +154,7 @@ function createCommand(
         ? {
             type: 'createPage',
             browserProfileId: 'profile-a',
+            userAgentMode: 'native',
             executionHostKey: 'execution-host-a'
           }
         : type === 'navigate'
@@ -155,6 +163,7 @@ function createCommand(
               type: 'reclaimPage',
               previousAuthority,
               browserProfileId: 'profile-a',
+              userAgentMode: 'native',
               executionHostKey: 'execution-host-a'
             }
   }

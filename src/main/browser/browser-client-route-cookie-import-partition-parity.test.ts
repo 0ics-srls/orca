@@ -113,6 +113,7 @@ async function pagePartition(host: BrowserNetworkExecutionHost): Promise<string>
       executionHostIdentity: route.executionHostIdentity
     },
     storageScope,
+    userAgentMode: 'clean',
     browserPageId: 'page-a',
     pageHostGeneration: 1,
     rendererWebContentsId: 11,

@@ -216,6 +216,7 @@ function publishPage(
     browserPageId,
     workspaceId: 'workspace-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:1',
     placement,
     url: 'https://example.internal/',

@@ -114,7 +114,8 @@ async function createFixture(options: { automation?: boolean } = {}) {
     pageCommandProtocolVersion: 1,
     pageInventoryProtocolVersion: 1,
     pageInventory: [],
-    pageReconciliationProtocolVersion: 1
+    pageReconciliationProtocolVersion: 1,
+    userAgentContractVersion: 1
   }).lease
   let command: BrowserClientHostCommandEvent | undefined
   let commandWaiter: ((event: BrowserClientHostCommandEvent) => void) | undefined
@@ -136,6 +137,7 @@ async function createFixture(options: { automation?: boolean } = {}) {
     browserHostClientId: 'host-a',
     pairedDeviceId: 'device-a',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7'
   })
   if (!command) {
@@ -149,6 +151,7 @@ async function createFixture(options: { automation?: boolean } = {}) {
     browserPageId: 'page-a',
     workspaceId: 'workspace-a',
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:7',
     placement,
     url: 'https://example.test/',
@@ -176,6 +179,9 @@ async function createFixture(options: { automation?: boolean } = {}) {
         pageCommandProtocolVersion: event.pageCommandProtocolVersion,
         ...(event.pageReconciliationProtocolVersion
           ? { pageReconciliationProtocolVersion: event.pageReconciliationProtocolVersion }
+          : {}),
+        ...(event.userAgentContractVersion
+          ? { userAgentContractVersion: event.userAgentContractVersion }
           : {}),
         browserPageId: event.browserPageId,
         pageHostGeneration: event.pageHostGeneration,

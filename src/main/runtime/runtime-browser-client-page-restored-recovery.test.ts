@@ -36,6 +36,7 @@ describe('recovery of rehydrated client-hosted pages', () => {
         browserHostClientId: 'host-relaunched',
         pairedDeviceId: 'device-a',
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean' as const,
         // Re-resolved, never replayed: the persisted record carries no route key because a key
         // names the runtime process that minted it.
         executionHostKey: 'native:runtime-new:2'
@@ -177,6 +178,7 @@ function harness(options: { pairedDeviceId?: string } = {}) {
     browserPageId: 'page-a',
     workspaceId: 'workspace-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: RESTORED_CLIENT_HOSTED_EXECUTION_HOST_KEY,
     placement: RESTORED_CLIENT_HOSTED_BROWSER_PLACEMENT,
     ...('pairedDeviceId' in options
@@ -228,6 +230,7 @@ function lease() {
     pageCommandProtocolVersion: 1 as const,
     pageInventoryProtocolVersion: 1 as const,
     pageReconciliationProtocolVersion: 1 as const,
+    userAgentContractVersion: 1 as const,
     pageInventory: []
   }
 }
@@ -246,6 +249,7 @@ function adoptionLease() {
         browserPageId: 'page-a',
         pageHostGeneration: 3,
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean' as const,
         executionHostKey: 'native:runtime-a:1',
         workspaceId: 'workspace-a',
         state: 'active' as const,

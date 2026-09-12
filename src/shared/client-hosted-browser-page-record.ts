@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import type { BrowserSessionUserAgentMode } from './browser-workspace-types'
 
 /**
  * Durable form of a client-hosted logical page.
@@ -25,6 +26,7 @@ export type PersistedClientHostedBrowserPage = {
   browserPageId: string
   workspaceId: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   url: string
   title: string
   /**
@@ -59,7 +61,7 @@ type ForbiddenAuthorityField = Extract<
 const noPersistedAuthority: [ForbiddenAuthorityField] extends [never] ? true : never = true
 void noPersistedAuthority
 
-export const CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION = 1
+export const CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION = 2
 
 /** How long a rehydrated row may sit unclaimed before a later start drops it instead of restoring it. */
 export const CLIENT_HOSTED_BROWSER_PAGE_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
@@ -83,6 +85,7 @@ export const persistedClientHostedBrowserPageSchema: z.ZodType<PersistedClientHo
     browserPageId: identity,
     workspaceId: identity,
     browserProfileId: identity,
+    userAgentMode: z.enum(['clean', 'native']),
     url: z.string().max(8192),
     title: z.string().max(4096),
     pairedDeviceId: identity,

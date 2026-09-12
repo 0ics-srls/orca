@@ -277,7 +277,8 @@ describe('installDocPreviewProtocolHandler', () => {
 
     expect(mocks.installBrowserSessionPartitionPolicies).toHaveBeenCalledWith(expect.anything(), {
       downloads: 'deny',
-      permissions: 'deny'
+      permissions: 'deny',
+      userAgentExceptions: false
     })
   })
 })

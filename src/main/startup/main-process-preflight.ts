@@ -86,6 +86,7 @@ import {
 import { maybeApplyGpuFallbackForThisLaunch, registerGpuLifecycleHandlers } from './gpu-lifecycle'
 import { mainProcessState as state } from './main-process-state'
 import { initializeSyntheticTitleRuntime } from './synthetic-title-runtime'
+import { initializeBrowserProcessUserAgent } from '../browser/browser-process-user-agent'
 
 export type MainProcessPreflightOptions = {
   focusExistingWindow: () => void
@@ -284,6 +285,7 @@ export function runMainProcessPreflight(options: MainProcessPreflightOptions): b
   if (state.devInstanceIdentity && shouldApplyPreReadyAppName(state.devInstanceIdentity)) {
     app.setName(state.devInstanceIdentity.appName)
   }
+  initializeBrowserProcessUserAgent()
   // Why: Electron freezes the privileged scheme table at ready, so the doc-preview
   // scheme must be declared here or its webview loses fetch/secure-origin privileges.
   registerDocPreviewSchemePrivileges()

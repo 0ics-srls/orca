@@ -13,6 +13,7 @@ export type BrowserHostLeaseAttachInput = {
   pageInventoryProtocolVersion?: 1
   pageInventory?: readonly BrowserClientHostedPageInventory[]
   pageReconciliationProtocolVersion?: 1
+  userAgentContractVersion?: 1
   leaseReconnectProtocolVersion?: 1
   fileChannelProtocolVersion?: 1
 }
@@ -38,6 +39,15 @@ export function assertBrowserHostReconnectNegotiation(input: BrowserHostLeaseAtt
     (input.pageCommandProtocolVersion !== 1 || input.pageInventoryProtocolVersion !== 1)
   ) {
     throw new Error('browser_host_reconciliation_protocol_dependencies_required')
+  }
+  if (input.userAgentContractVersion !== undefined && input.userAgentContractVersion !== 1) {
+    throw new Error('browser_host_user_agent_contract_unsupported')
+  }
+  if (
+    input.userAgentContractVersion === 1 &&
+    (input.pageCommandProtocolVersion !== 1 || input.pageInventoryProtocolVersion !== 1)
+  ) {
+    throw new Error('browser_host_user_agent_contract_dependencies_required')
   }
   if (input.fileChannelProtocolVersion !== undefined && input.fileChannelProtocolVersion !== 1) {
     throw new Error('browser_host_file_channel_protocol_unsupported')
@@ -78,6 +88,7 @@ export function createBrowserHostLeaseState(options: {
       ...(input.pageReconciliationProtocolVersion
         ? { pageReconciliationProtocolVersion: 1 as const }
         : {}),
+      ...(input.userAgentContractVersion ? { userAgentContractVersion: 1 as const } : {}),
       ...(input.fileChannelProtocolVersion ? { fileChannelProtocolVersion: 1 as const } : {})
     }),
     status: 'active',
@@ -95,7 +106,8 @@ export function createBrowserHostLeaseState(options: {
         pageCommandProtocolVersion: 1,
         ...(state.lease.pageReconciliationProtocolVersion
           ? { pageReconciliationProtocolVersion: 1 as const }
-          : {})
+          : {}),
+        ...(state.lease.userAgentContractVersion ? { userAgentContractVersion: 1 as const } : {})
       }
     })
   }

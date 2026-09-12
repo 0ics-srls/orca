@@ -80,6 +80,7 @@ describe('OrcaRuntimeService', () => {
         browserPageId: 'client-page-1',
         workspaceId: TEST_WORKTREE_ID,
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'native:runtime-a:1',
         placement,
         url: 'https://remote.internal/',

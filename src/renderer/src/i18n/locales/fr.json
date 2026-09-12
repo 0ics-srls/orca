@@ -6469,7 +6469,7 @@
           "a3f8c2d1e0b4": "{{value0}} cookies importés depuis {{value1}} ({{value2}}) vers {{value3}}.",
           "b4e9d3f2a1c5": "{{value0}} cookies importés depuis {{value1}} vers {{value2}}.",
           "c5a273a809": "Depuis {{value0}}",
-          "b5c0479e21": "User agent non modifié"
+          "b5c0479e21": "User agent natif pour les pages"
         },
         "BrowserUseComputerUseNotice": {
           "15b5e680ba": "Ouvrir Computer Use",
@@ -15011,8 +15011,8 @@
           "user": {
             "agent": {
               "option": {
-                "04af3dc12b": "Utiliser le user agent non modifié",
-                "5bf47a3c91": "Peut améliorer la connexion à Google, mais réduire la compatibilité avec les sites protégés contre les bots."
+                "04af3dc12b": "Utiliser le user agent natif pour les pages",
+                "5bf47a3c91": "Les pages utilisent l’identité Electron native d’Orca ; les service workers et shared workers conservent l’identité nettoyée."
               }
             }
           }

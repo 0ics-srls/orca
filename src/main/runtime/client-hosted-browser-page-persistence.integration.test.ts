@@ -88,6 +88,7 @@ function placeAndPublish(runtime: OrcaRuntimeService, browserPageId: string): vo
     browserPageId,
     workspaceId: WT,
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:1',
     placement,
     pairedDeviceId: 'device-a',
@@ -121,6 +122,7 @@ describe('client-hosted browser page persistence through the runtime', () => {
         browserPageId: 'page-a',
         workspaceId: WT,
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean',
         pairedDeviceId: 'device-a',
         url: 'https://example.internal/docs',
         title: 'Internal docs'

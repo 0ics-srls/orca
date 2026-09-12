@@ -41,6 +41,8 @@ vi.mock('./popup-origin-bar-window', () => ({
 
 import { browserManager } from './browser-manager'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
+import { setBrowserProcessUserAgentIdentityForTests } from './browser-process-user-agent'
+import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import {
   rendererWebContentsId,
   resetBrowserManagerMocks,
@@ -49,7 +51,8 @@ import {
 import {
   createViewportGuestFactory,
   flushViewportOps,
-  GUEST_CLEAN_UA
+  GUEST_CLEAN_UA,
+  GUEST_ELECTRON_UA
 } from './browser-manager-viewport-test-fixtures'
 
 const { guestOnMock, webContentsFromIdMock } = browserMocks
@@ -65,6 +68,10 @@ describe('browserManager', () => {
   beforeEach(() => {
     resetBrowserManagerMocks(browserMocks)
     resetBrowserManagerState()
+    setBrowserProcessUserAgentIdentityForTests({
+      nativeUserAgent: GUEST_ELECTRON_UA,
+      cleanUserAgent: GUEST_CLEAN_UA
+    })
   })
 
   afterEach(() => {
@@ -144,6 +151,29 @@ describe('browserManager', () => {
         )
       }
     )
+
+    it('preserves native mode resolved from the local Session when registration omits the mode', async () => {
+      const { guest, debuggerSendCommand } = makeGuest(4246)
+      setBrowserSessionUserAgentMode(guest.session as Electron.Session, 'native')
+      webContentsFromIdMock.mockReturnValue(guest)
+      browserManager.attachGuestPolicies(guest as never)
+      browserManager.registerGuest({
+        browserPageId: 'tab-native-session-mode',
+        sessionProfileId: 'native-profile',
+        webContentsId: guest.id as number,
+        rendererWebContentsId
+      })
+
+      await expect(
+        browserManager.setViewportOverride('tab-native-session-mode', MOBILE_VIEWPORT_OVERRIDE)
+      ).resolves.toBe(true)
+
+      expect(guest.setUserAgent).toHaveBeenCalledExactlyOnceWith(GUEST_ELECTRON_UA)
+      expect(debuggerSendCommand).not.toHaveBeenCalledWith(
+        'Emulation.setUserAgentOverride',
+        expect.anything()
+      )
+    })
 
     // Why: the CDP override outranks setUserAgent for navigator.userAgent, so a preset applied on an
     // auth host must carry the same Firefox identity the header hook sends (verified against real

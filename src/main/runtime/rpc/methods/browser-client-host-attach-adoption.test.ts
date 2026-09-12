@@ -24,6 +24,7 @@ function orphanedPage(
     browserPageId: 'page-a',
     pageHostGeneration: 3,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-old:1',
     state: 'active',
     currentUrl: 'https://remote.internal/left-here',
@@ -82,7 +83,8 @@ function attachHost(
         pageInventoryProtocolVersion: 1,
         pageInventory: pageInventory.map((page) => ({ ...page, browserHostClientId })),
         pageReconciliationProtocolVersion: 1,
-        leaseReconnectProtocolVersion: 1
+        leaseReconnectProtocolVersion: 1,
+        userAgentContractVersion: 1
       }
     },
     (reply) => {
@@ -206,6 +208,7 @@ describe('browser.clientHost.attach adoption', () => {
         browserPageId: 'page-created-after-attach',
         workspaceId: WORKSPACE_ID,
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: EXECUTION_HOST_KEY,
         placement,
         pairedDeviceId: 'device-a',

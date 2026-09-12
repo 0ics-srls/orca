@@ -18,6 +18,7 @@ const intent = (
   pageHostGeneration: 11,
   browserPageId: 'page-a',
   browserProfileId: 'profile-a',
+  userAgentMode: 'clean',
   executionHostKey: 'native:runtime-new:1',
   workspaceId: 'workspace-a',
   ...overrides

@@ -33,6 +33,7 @@ function orphanedPage(
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-old:1',
     state: 'active',
     currentUrl: 'https://remote.internal/left-here',
@@ -70,7 +71,8 @@ function attach(
     pageInventoryProtocolVersion: 1,
     pageInventory,
     pageReconciliationProtocolVersion: 1,
-    leaseReconnectProtocolVersion: 1
+    leaseReconnectProtocolVersion: 1,
+    userAgentContractVersion: 1
   })
   const identity = {
     authorityEpoch: host.lease.authorityEpoch,
@@ -167,6 +169,7 @@ describe('adoptRuntimeBrowserClientPagesFromInventory', () => {
       browserPageId: tracked.browserPageId,
       workspaceId: WORKSPACE_ID,
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: EXECUTION_HOST_KEY,
       placement: {
         kind: 'client',

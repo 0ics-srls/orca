@@ -4,6 +4,7 @@ import type {
 } from './browser-route-identity'
 import type { BrowserRoutePageAuthorityRetirement } from './browser-route-page-authority'
 import type { BrowserRouteElectronSession } from './browser-route-session-policy'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 export type BrowserRoutePartitionBindingStore = {
   get(partition: string): string | null
@@ -16,11 +17,12 @@ export type BrowserRoutePartitionBindingStore = {
 
 export type BrowserRouteSessionRegistryDependencies = {
   derivePartition?: (identity: BrowserRoutePartitionIdentity) => DerivedBrowserRoutePartition
-  validateProfile(browserProfileId: string): void
+  validateProfile(browserProfileId: string, userAgentMode: BrowserSessionUserAgentMode): void
   getSession(partition: string): BrowserRouteElectronSession
   setupPolicies(input: {
     partition: string
     browserProfileId: string
+    userAgentMode: BrowserSessionUserAgentMode
     session: BrowserRouteElectronSession
   }): void
   clearPolicies(input: { partition: string; session: BrowserRouteElectronSession }): void

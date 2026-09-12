@@ -9,9 +9,9 @@ Browser-use profiles let you run the Orca browser with a specific identity — a
 1. Open [Settings → Browser → Profiles](/docs/settings).
 1. Click **Add profile**, give it a name.
 1. Optionally seed it with cookies, a user-agent, and a viewport size.
-1. Default profiles remove Orca and Electron tokens from the browser engine's user agent, preserving the Chrome-shaped identity expected by imported sessions. This focused compatibility measure does not make the embedded browser identical to Chrome. Google sign-in hosts use a scoped Firefox identity. If a site rejects the cleaned identity, including some Cloudflare-protected sites, create a profile that keeps the **native Electron user agent** instead.
+1. Default profiles remove Orca and Electron tokens from the browser engine's user agent, preserving the Chrome-shaped identity expected by imported sessions. The cleaned process identity also covers frames and workers, improving compatibility with challenge-protected sites without making the embedded browser identical to Chrome. Google sign-in hosts use a scoped Firefox identity.
 
-You can also create a no-spoof profile from the CLI with `orca tab profile create --no-ua-spoof` when you script browser setup.
+If a site specifically requires Orca's native Electron identity, create a native-UA profile. Its documents and frames use the native identity, while service and shared workers keep the cleaned identity. The CLI spelling remains `orca tab profile create --no-ua-spoof` for compatibility, but the flag has this page-versus-worker limitation.
 
 ## Cookie import and Google sign-in
 

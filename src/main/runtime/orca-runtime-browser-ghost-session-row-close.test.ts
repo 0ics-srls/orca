@@ -63,6 +63,7 @@ describe('browserTabClose on a session row with no runtime page', () => {
       browserPageId: 'page-restored',
       workspaceId: 'wt-1',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'restored-client-host-execution',
       placement: RESTORED_CLIENT_HOSTED_BROWSER_PLACEMENT,
       pairedDeviceId: 'device-a',

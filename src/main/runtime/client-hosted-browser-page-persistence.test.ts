@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
 import {
   CLIENT_HOSTED_BROWSER_PAGE_MAX_AGE_MS,
+  CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION,
   CLIENT_HOSTED_BROWSER_PAGE_REFRESH_MS,
   persistedClientHostedBrowserPageSchema
 } from '../../shared/client-hosted-browser-page-record'
@@ -42,6 +43,7 @@ describe('client-hosted browser page persistence', () => {
       browserPageId: 'page-a',
       workspaceId: 'repo-1::wt-a',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       // Never the key it was created under: that one names the runtime process that minted it.
       executionHostKey: RESTORED_CLIENT_HOSTED_EXECUTION_HOST_KEY,
       pairedDeviceId: 'device-a',
@@ -73,6 +75,7 @@ describe('client-hosted browser page persistence', () => {
       'savedAt',
       'title',
       'url',
+      'userAgentMode',
       'v',
       'workspaceId'
     ])
@@ -202,10 +205,11 @@ describe('client-hosted browser page persistence', () => {
 
 describe('persisted client-hosted browser page schema', () => {
   const valid = {
-    v: 1,
+    v: CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION,
     browserPageId: 'page-a',
     workspaceId: 'repo-1::wt-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     url: 'https://kept.internal/',
     title: 'Kept',
     pairedDeviceId: 'device-a',
@@ -217,10 +221,12 @@ describe('persisted client-hosted browser page schema', () => {
   })
 
   it.each([
-    ['a newer schema version', { v: 2 }],
+    ['a newer schema version', { v: 3 }],
+    ['the identity-ambiguous legacy version', { v: 1 }],
     ['a version this build predates', { v: 0 }],
     ['a missing version', { v: undefined }],
     ['an empty page id', { browserPageId: '' }],
+    ['a missing user-agent mode', { userAgentMode: undefined }],
     ['a missing paired device', { pairedDeviceId: undefined }],
     ['a non-integer timestamp', { savedAt: 1.5 }]
   ])('refuses %s rather than partly trusting it', (_why, override) => {
@@ -284,6 +290,7 @@ function registryWith(placement: typeof livePlacement): RuntimeBrowserPageRegist
     browserPageId: 'page-a',
     workspaceId: 'repo-1::wt-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-a:1',
     placement,
     pairedDeviceId: 'device-a',

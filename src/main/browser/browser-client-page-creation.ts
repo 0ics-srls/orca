@@ -46,6 +46,10 @@ export async function createReservedBrowserClientPage(
   if (event.command.type !== 'createPage') {
     throw new BrowserClientPageCommandError('browser_client_page_command_invalid')
   }
+  const userAgentMode = event.command.userAgentMode
+  if (!userAgentMode) {
+    throw new BrowserClientPageCommandError('browser_client_user_agent_contract_required')
+  }
   assertBrowserClientPageCommandNotAborted(signal)
   let route: RetainedNetworkRoute | null = null
   let routeSession: BrowserRouteSessionHandle | null = null
@@ -80,6 +84,7 @@ export async function createReservedBrowserClientPage(
         executionHostIdentity: route.legacyExecutionHostIdentity
       },
       storageScope: dependencies.storageScope,
+      userAgentMode,
       browserPageId: event.browserPageId,
       pageHostGeneration: event.pageHostGeneration,
       rendererWebContentsId: renderer.rendererWebContentsId,
@@ -112,7 +117,8 @@ export async function createReservedBrowserClientPage(
     // Before the first navigation: a download can start on it, and an unbound page cannot own one.
     dependencies.guestBinding.bind({
       registration,
-      browserProfileId: event.command.browserProfileId
+      browserProfileId: event.command.browserProfileId,
+      userAgentMode
     })
     guestBound = true
     assertAvailable()

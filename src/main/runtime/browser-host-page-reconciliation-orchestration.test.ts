@@ -90,7 +90,8 @@ describe('browser host page reconciliation orchestration', () => {
       pageInventoryProtocolVersion: 1,
       pageInventory: firstInventory,
       pageReconciliationProtocolVersion: 1,
-      leaseReconnectProtocolVersion: 1
+      leaseReconnectProtocolVersion: 1,
+      userAgentContractVersion: 1
     })
     const replacementIdentity = leaseIdentity(replacement.lease)
     leases.attachCommandDelivery(replacementIdentity, (event) => events.push(event))
@@ -141,7 +142,8 @@ describe('browser host page reconciliation orchestration', () => {
       pageInventoryProtocolVersion: 1,
       pageInventory,
       pageReconciliationProtocolVersion: 1,
-      leaseReconnectProtocolVersion: 1
+      leaseReconnectProtocolVersion: 1,
+      userAgentContractVersion: 1
     })
     const replacementIdentity = leaseIdentity(replacement.lease)
     leases.attachCommandDelivery(replacementIdentity, (event) => events.push(event))
@@ -214,7 +216,8 @@ describe('browser host page reconciliation orchestration', () => {
       pageInventoryProtocolVersion: 1,
       pageInventory,
       pageReconciliationProtocolVersion: 1,
-      leaseReconnectProtocolVersion: 1
+      leaseReconnectProtocolVersion: 1,
+      userAgentContractVersion: 1
     })
     const secondIdentity = leaseIdentity(secondHost.lease)
     const releaseSecondDelivery = leases.attachCommandDelivery(secondIdentity, (event) =>
@@ -239,7 +242,8 @@ describe('browser host page reconciliation orchestration', () => {
       pageInventoryProtocolVersion: 1,
       pageInventory: [],
       pageReconciliationProtocolVersion: 1,
-      leaseReconnectProtocolVersion: 1
+      leaseReconnectProtocolVersion: 1,
+      userAgentContractVersion: 1
     })
     const thirdIdentity = leaseIdentity(thirdHost.lease)
     leases.attachCommandDelivery(thirdIdentity, (event) => events.push(event))
@@ -285,7 +289,8 @@ describe('browser host page reconciliation orchestration', () => {
       pageInventoryProtocolVersion: 1,
       pageInventory,
       pageReconciliationProtocolVersion: 1,
-      leaseReconnectProtocolVersion: 1
+      leaseReconnectProtocolVersion: 1,
+      userAgentContractVersion: 1
     })
     const replacementIdentity = leaseIdentity(replacement.lease)
     leases.attachCommandDelivery(replacementIdentity, (event) => events.push(event))
@@ -365,7 +370,8 @@ function setup(pageInventory: BrowserClientHostedPageInventory[]) {
     pageInventoryProtocolVersion: 1,
     pageInventory,
     pageReconciliationProtocolVersion: 1,
-    leaseReconnectProtocolVersion: 1
+    leaseReconnectProtocolVersion: 1,
+    userAgentContractVersion: 1
   })
   const identity = leaseIdentity(host.lease)
   const events: BrowserClientHostCommandEvent[] = []
@@ -396,6 +402,7 @@ function oldPage(browserPageId: string): BrowserClientHostedPageInventory {
     browserPageId,
     pageHostGeneration: 7,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-new:1',
     state: 'active',
     currentUrl: 'https://remote.internal/'
@@ -414,6 +421,7 @@ function reclaimIntent(
     browserPageId,
     pageHostGeneration,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     executionHostKey: 'native:runtime-new:1',
     reclaimFrom: { ...oldPage(browserPageId), pairedDeviceId: 'device-a' }
   }

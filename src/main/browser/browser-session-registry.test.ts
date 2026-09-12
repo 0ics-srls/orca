@@ -33,7 +33,7 @@ vi.mock('./browser-manager', () => ({
 
 import { browserSessionRegistry } from './browser-session-registry'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
-import { setupGoogleAuthUserAgentOverride } from './browser-session-ua'
+import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
 import { setBrowserNetworkProxySettingsResolver } from './browser-session-proxy'
 import { handleElectronProxyLogin } from '../network/electron-proxy-credentials'
 import { applyProxySettingsToSession } from '../network/proxy-settings'
@@ -63,6 +63,7 @@ describe('BrowserSessionRegistry', () => {
       resolveProxy: vi.fn().mockResolvedValue('DIRECT'),
       setProxy: vi.fn().mockResolvedValue(undefined),
       closeAllConnections: vi.fn().mockResolvedValue(undefined),
+      webRequest: { onBeforeSendHeaders: vi.fn() },
       clearStorageData: vi.fn().mockResolvedValue(undefined),
       clearCache: vi.fn().mockResolvedValue(undefined)
     })
@@ -528,12 +529,17 @@ describe('BrowserSessionRegistry', () => {
     })
   })
 
-  describe('setupGoogleAuthUserAgentOverride', () => {
-    function install(): (details: unknown, callback: ReturnType<typeof vi.fn>) => void {
+  describe('installBrowserSessionUserAgentExceptions', () => {
+    function install(
+      resolveRequestUserAgent?: Parameters<typeof installBrowserSessionUserAgentExceptions>[1]
+    ): (details: unknown, callback: ReturnType<typeof vi.fn>) => void {
       const onBeforeSendHeaders = vi.fn()
-      setupGoogleAuthUserAgentOverride({ webRequest: { onBeforeSendHeaders } } as never)
+      installBrowserSessionUserAgentExceptions(
+        { webRequest: { onBeforeSendHeaders } } as never,
+        resolveRequestUserAgent
+      )
       expect(onBeforeSendHeaders).toHaveBeenCalledWith(
-        { urls: ['https://*/*'] },
+        { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
         expect.any(Function)
       )
       return onBeforeSendHeaders.mock.calls[0][1]
@@ -586,9 +592,12 @@ describe('BrowserSessionRegistry', () => {
 
     it('strips client hints on a cross-host request that carries the Firefox auth UA', () => {
       const callback = vi.fn()
-      install()(
+      install(({ currentUserAgent }) =>
+        currentUserAgent === googleAuthUserAgent() ? { userAgent: currentUserAgent } : undefined
+      )(
         {
           url: 'https://play.google.com/log',
+          resourceType: 'xhr',
           requestHeaders: {
             'User-Agent': googleAuthUserAgent(),
             'sec-ch-ua': 'old',

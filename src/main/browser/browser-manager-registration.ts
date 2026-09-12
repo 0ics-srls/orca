@@ -4,6 +4,19 @@ import { isWorkspaceDocPageId } from './doc-preview-guest-policy'
 import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 import type { BrowserGuestRegistration } from './browser-manager-types'
 import { BrowserManagerGuestPolicy } from './browser-manager-guest-policy'
+import { getBrowserProcessUserAgentIdentity } from './browser-process-user-agent'
+import { getBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
+
+function applyRegisteredGuestUserAgent(
+  guest: Electron.WebContents,
+  mode: BrowserSessionUserAgentMode | undefined
+): BrowserSessionUserAgentMode | undefined {
+  const effectiveMode = mode ?? getBrowserSessionUserAgentMode(guest.session)
+  if (effectiveMode === 'native') {
+    guest.setUserAgent(getBrowserProcessUserAgentIdentity().nativeUserAgent)
+  }
+  return effectiveMode
+}
 
 export abstract class BrowserManagerRegistration extends BrowserManagerGuestPolicy {
   registerGuest({
@@ -44,6 +57,7 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
       // Why: only trust guests that passed attach-time policy install, or a renderer could point us at an arbitrary webview.
       return false
     }
+    const effectiveUserAgentMode = applyRegisteredGuestUserAgent(guest, userAgentMode)
 
     const previousWebContentsId = this.webContentsIdByTabId.get(browserTabId)
     if (previousWebContentsId !== undefined && previousWebContentsId !== webContentsId) {
@@ -58,12 +72,12 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
       this.workspaceIdByPageId.set(browserTabId, workspaceId)
     }
     this.sessionProfileIdByPageId.set(browserTabId, sessionProfileId ?? null)
-    if (userAgentMode) {
-      this.userAgentModeByPageId.set(browserTabId, userAgentMode)
+    if (effectiveUserAgentMode) {
+      this.userAgentModeByPageId.set(browserTabId, effectiveUserAgentMode)
     } else {
       this.userAgentModeByPageId.delete(browserTabId)
     }
-    if (userAgentMode === 'native') {
+    if (effectiveUserAgentMode === 'native') {
       this.clearSessionMobileViewportIntent(browserTabId)
       this.viewportUaOverrideMobileByTabId.delete(browserTabId)
     }
@@ -171,6 +185,7 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     if (!guest || guest.isDestroyed()) {
       return false
     }
+    const effectiveUserAgentMode = applyRegisteredGuestUserAgent(guest, userAgentMode)
     // Why: offscreen pages have no renderer webview listeners, so main owns their load-failure lifecycle.
     this.offscreenGuestIds.add(webContentsId)
     this.attachGuestPolicies(guest)
@@ -184,12 +199,12 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     this.webContentsIdByTabId.set(browserPageId, webContentsId)
     this.tabIdByWebContentsId.set(webContentsId, browserPageId)
     this.sessionProfileIdByPageId.set(browserPageId, sessionProfileId ?? null)
-    if (userAgentMode) {
-      this.userAgentModeByPageId.set(browserPageId, userAgentMode)
+    if (effectiveUserAgentMode) {
+      this.userAgentModeByPageId.set(browserPageId, effectiveUserAgentMode)
     } else {
       this.userAgentModeByPageId.delete(browserPageId)
     }
-    if (userAgentMode === 'native') {
+    if (effectiveUserAgentMode === 'native') {
       this.clearSessionMobileViewportIntent(browserPageId)
       this.viewportUaOverrideMobileByTabId.delete(browserPageId)
     }
@@ -227,6 +242,9 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     this.mobileViewportTabIdsBySession.clear()
     this.viewportPresetActiveByTabId.clear()
     this.viewportScrollStateByTabId.clear()
+    for (const guestWebContentsId of this.authUserAgentDebuggerLeaseByGuestId.keys()) {
+      this.releaseAuthUserAgentDebuggerLease(guestWebContentsId)
+    }
     this.authUserAgentOverrideStateByGuestId.clear()
     this.pendingNavigationByGuestId.clear()
     this.pendingLoadFailuresByGuestId.clear()

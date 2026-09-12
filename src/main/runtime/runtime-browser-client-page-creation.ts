@@ -3,6 +3,7 @@ import { BROWSER_CLIENT_AUTOMATION_HOST_CAPABILITY } from '../../shared/browser-
 import { browserNetworkExecutionHostKey } from '../browser/browser-network-execution-route'
 import type { BrowserHostLeaseRegistry } from './browser-host-lease-registry'
 import type { RuntimeBrowserClientPlacement } from './browser-host-page-placement'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 type RuntimeBrowserClientPageAuthority = Pick<
   BrowserHostLeaseRegistry,
@@ -14,6 +15,7 @@ type RuntimeBrowserClientPageCreation = {
   browserHostClientId: string
   pairedDeviceId: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   executionHost: BrowserNetworkExecutionHost
   workspaceId?: string
 }
@@ -38,6 +40,7 @@ export async function createRuntimeBrowserClientPage(
     browserHostClientId: input.browserHostClientId,
     pairedDeviceId: input.pairedDeviceId,
     browserProfileId: input.browserProfileId,
+    userAgentMode: input.userAgentMode,
     executionHostKey: browserNetworkExecutionHostKey(input.executionHost),
     requiredCapabilities: [BROWSER_CLIENT_AUTOMATION_HOST_CAPABILITY],
     ...(input.workspaceId ? { workspaceId: input.workspaceId } : {})

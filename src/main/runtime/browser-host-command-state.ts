@@ -149,6 +149,7 @@ export function assertBrowserHostCommandResultAuthority(
   if (
     params.pageCommandProtocolVersion !== authority.pageCommandProtocolVersion ||
     params.pageReconciliationProtocolVersion !== authority.pageReconciliationProtocolVersion ||
+    params.userAgentContractVersion !== authority.userAgentContractVersion ||
     params.authorityRuntimeId !== authority.authorityRuntimeId ||
     params.authorityEpoch !== authority.authorityEpoch ||
     params.browserHostClientId !== authority.browserHostClientId ||

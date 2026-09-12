@@ -50,6 +50,7 @@ vi.mock('./browser-route-webrtc-policy', () => ({ enforceBrowserRouteWebRtcPolic
 vi.mock('./browser-session-registry', () => ({
   browserSessionRegistry: {
     requireRouteBrowserProfile: vi.fn(),
+    getProfile: vi.fn(() => ({ userAgentMode: 'clean' })),
     setupRoutePartitionPolicies: vi.fn(),
     clearRoutePartitionPolicies: vi.fn()
   }

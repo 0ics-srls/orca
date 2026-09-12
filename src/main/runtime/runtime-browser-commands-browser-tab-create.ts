@@ -69,11 +69,20 @@ export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCo
       const executionHost = await this.host.resolveBrowserNetworkExecutionHost(worktree)
       const authority = this.host.getBrowserHostLeaseRegistry()
       const browserProfileId = params.profileId ?? browserSessionRegistry.getDefaultProfile().id
+      const browserProfile = browserSessionRegistry.getProfile(browserProfileId)
+      if (!browserProfile) {
+        throw new BrowserError(
+          'invalid_argument',
+          `Browser profile ${browserProfileId} was not found`
+        )
+      }
+      const userAgentMode = browserProfile.userAgentMode ?? 'clean'
       const created = await createRuntimeBrowserClientPage(authority, {
         browserPageId,
         browserHostClientId: params.placement.browserHostClientId,
         pairedDeviceId: caller.pairedDeviceId,
         browserProfileId,
+        userAgentMode,
         executionHost,
         workspaceId: worktree.id
       })
@@ -82,6 +91,7 @@ export class RuntimeBrowserCommandsWithBrowserTabCreate extends RuntimeBrowserCo
         browserPageId,
         workspaceId: worktree.id,
         browserProfileId,
+        userAgentMode,
         executionHostKey: browserNetworkExecutionHostKey(executionHost),
         placement: created.placement,
         pairedDeviceId: caller.pairedDeviceId,

@@ -70,6 +70,7 @@ async function preparePartition(
     identity,
     ...(legacyRuntimeId === null ? {} : { legacyIdentity: legacyIdentityFor(legacyRuntimeId) }),
     storageScope,
+    userAgentMode: 'clean',
     browserPageId: 'page-a',
     pageHostGeneration: 1,
     rendererWebContentsId: 11,

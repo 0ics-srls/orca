@@ -26,7 +26,8 @@ describe('browser.clientHost reconciliation negotiation', () => {
           pageCommandProtocolVersion: 1,
           pageInventoryProtocolVersion: 1,
           pageInventory: [],
-          pageReconciliationProtocolVersion: 1
+          pageReconciliationProtocolVersion: 1,
+          userAgentContractVersion: 1
         }
       },
       (reply) => replies.push(reply),
@@ -91,6 +92,7 @@ describe('browser.clientHost reconciliation negotiation', () => {
       {
         type: 'createPage',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'host-key-a'
       }
     )
@@ -126,7 +128,8 @@ function attachRequest() {
       pageCommandProtocolVersion: 1,
       pageInventoryProtocolVersion: 1,
       pageInventory: [],
-      pageReconciliationProtocolVersion: 1
+      pageReconciliationProtocolVersion: 1,
+      userAgentContractVersion: 1
     }
   }
 }

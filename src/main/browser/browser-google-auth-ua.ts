@@ -14,7 +14,8 @@ const GOOGLE_AUTH_HOSTS = new Set(['accounts.google.com', 'accounts.youtube.com'
 
 export function isGoogleAuthUrl(rawUrl: string): boolean {
   try {
-    return GOOGLE_AUTH_HOSTS.has(new URL(rawUrl).hostname.toLowerCase())
+    const url = new URL(rawUrl)
+    return url.protocol === 'https:' && GOOGLE_AUTH_HOSTS.has(url.hostname.toLowerCase())
   } catch {
     return false
   }

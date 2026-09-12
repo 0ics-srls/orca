@@ -9,7 +9,7 @@ import {
 } from './browser-session-proxy'
 import { hasSystemMediaAccess, requestSystemMediaAccess } from './browser-media-access'
 import { isAutoGrantedBrowserSessionPermission } from './browser-session-permission-policy'
-import { cleanElectronUserAgent, setupGoogleAuthUserAgentOverride } from './browser-session-ua'
+import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import {
   allowsBrowserWebAuthnPermission,
@@ -20,6 +20,37 @@ import { noticeDocPreviewDownloadBlocked } from './doc-preview-download-block-no
 
 // Why: one shared installer keeps every partition's deny-by-default permission/download policies from drifting apart.
 const configuredPartitions = new Set<string>()
+const userAgentPolicyDisposerBySession = new WeakMap<Session, () => void>()
+
+export function retireBrowserSessionUserAgentPolicy(sess: Session): void {
+  const dispose = userAgentPolicyDisposerBySession.get(sess)
+  if (!dispose) {
+    return
+  }
+  userAgentPolicyDisposerBySession.delete(sess)
+  dispose()
+}
+
+function configureBrowserSessionUserAgentPolicy(
+  sess: Session,
+  mode: 'clean' | 'native',
+  installExceptions: boolean
+): void {
+  setBrowserSessionUserAgentMode(sess, mode)
+  if (mode === 'native' || !installExceptions) {
+    retireBrowserSessionUserAgentPolicy(sess)
+    return
+  }
+  if (userAgentPolicyDisposerBySession.has(sess)) {
+    return
+  }
+  userAgentPolicyDisposerBySession.set(
+    sess,
+    installBrowserSessionUserAgentExceptions(sess, (request) =>
+      browserManager.resolveBrowserGuestRequestUserAgent(request)
+    )
+  )
+}
 
 /** Drop only the installer memo; retired-session guards remain fail-closed. */
 export function forgetBrowserSessionPartitionConfiguration(partition: string): void {
@@ -75,11 +106,16 @@ export function installBrowserSessionPartitionPolicies(
     downloads?: BrowserPartitionDownloadPolicy
     permissions?: BrowserPartitionPermissionPolicy
     applyAppWideProxy?: boolean
+    userAgentExceptions?: boolean
   } = {}
 ): Promise<void> {
   const { partition } = profile
   const sess = session.fromPartition(partition)
-  setBrowserSessionUserAgentMode(sess, profile.userAgentMode ?? 'clean')
+  configureBrowserSessionUserAgentPolicy(
+    sess,
+    profile.userAgentMode ?? 'clean',
+    options.userAgentExceptions !== false
+  )
   // Why: route partitions own a SOCKS transport policy that the app proxy must not overwrite.
   const proxyReady = (
     options.applyAppWideProxy === false ? Promise.resolve() : applyProxyToBrowserSession(sess)
@@ -92,13 +128,6 @@ export function installBrowserSessionPartitionPolicies(
   }
 
   browserManager.installCertificateRequestGuard(sess)
-  if (profile.userAgentMode !== 'native' && typeof sess.getUserAgent === 'function') {
-    const cleanUA = cleanElectronUserAgent(sess.getUserAgent())
-    sess.setUserAgent(cleanUA)
-    setupGoogleAuthUserAgentOverride(sess, (request) =>
-      browserManager.resolveBrowserGuestRequestUserAgent(request)
-    )
-  }
   if (options?.permissions === 'deny') {
     sess.setPermissionRequestHandler((_webContents, _permission, callback) => callback(false))
     sess.setPermissionCheckHandler(() => false)
@@ -172,6 +201,7 @@ export function installBrowserSessionPartitionPolicies(
 export function clearBrowserSessionPartitionPolicies(partition: string, sess: Session): void {
   // Why: the Electron Session survives partition deletion; clear callbacks/listeners so removed profiles don't retain closures.
   invalidateBrowserSessionProxyApplication(sess)
+  retireBrowserSessionUserAgentPolicy(sess)
   configuredPartitions.delete(partition)
   browserManager.removeCertificateRequestGuard(sess)
   sess.removeListener('will-download', handleWillDownload)
@@ -188,18 +218,7 @@ export function applyBrowserSessionUserAgentModes(profiles: BrowserSessionProfil
     try {
       const sess = session.fromPartition(partition)
       const userAgentMode = profile.userAgentMode ?? 'clean'
-      setBrowserSessionUserAgentMode(sess, userAgentMode)
-
-      if (profile.userAgentMode === 'native') {
-        continue
-      }
-
-      // Why: imported sessions need the same Chrome-shaped identity after app restart.
-      const cleanUA = cleanElectronUserAgent(sess.getUserAgent())
-      sess.setUserAgent(cleanUA)
-      setupGoogleAuthUserAgentOverride(sess, (request) =>
-        browserManager.resolveBrowserGuestRequestUserAgent(request)
-      )
+      configureBrowserSessionUserAgentPolicy(sess, userAgentMode, true)
     } catch {
       /* session not available yet (e.g. unit tests or pre-ready) */
     }

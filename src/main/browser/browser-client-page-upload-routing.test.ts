@@ -33,6 +33,7 @@ function command(
     browserHostClientId: 'client-a',
     browserHostGeneration: 3,
     pageCommandProtocolVersion: 1,
+    userAgentContractVersion: 1,
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     ...overrides
@@ -42,7 +43,12 @@ function command(
 const createPage = command({
   commandSequence: 1,
   commandId: 'create-a',
-  command: { type: 'createPage', browserProfileId: 'profile-a', executionHostKey: 'execution-a' }
+  command: {
+    type: 'createPage',
+    browserProfileId: 'profile-a',
+    userAgentMode: 'clean',
+    executionHostKey: 'execution-a'
+  }
 } as never)
 
 function uploadCommand(files: string[], commandSequence = 2): BrowserClientHostCommandEvent {

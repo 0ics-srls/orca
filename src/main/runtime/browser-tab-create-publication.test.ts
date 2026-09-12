@@ -710,6 +710,7 @@ describe('browser tab-switch placement census', () => {
           browserPageId,
           workspaceId: 'wt-1',
           browserProfileId: 'default',
+          userAgentMode: 'clean',
           executionHostKey: 'native:runtime-a:7',
           placement: {
             kind: 'client',

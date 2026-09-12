@@ -1,4 +1,5 @@
 import type { BrowserClientHostedPageInventory } from '../../shared/browser-client-host-protocol'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 const DEFAULT_MAX_PAGES = 256
 const MAX_GENERATION = 0xffff_ffff
@@ -17,6 +18,7 @@ export type BrowserHostRuntimePageIntent = BrowserHostPageAuthority &
   Readonly<{
     browserPageId: string
     browserProfileId: string
+    userAgentMode: BrowserSessionUserAgentMode
     executionHostKey: string
     /** Round-tripped to the client so the page's inventory keeps naming its workspace. */
     workspaceId?: string
@@ -95,6 +97,7 @@ function sameCurrentPage(
   return (
     sameAuthority(intent, page) &&
     intent.browserProfileId === page.browserProfileId &&
+    intent.userAgentMode === page.userAgentMode &&
     intent.executionHostKey === page.executionHostKey
   )
 }
@@ -112,6 +115,7 @@ function canReclaimPage(
     sameAuthority(intent.reclaimFrom, page) &&
     intent.browserHostClientId === intent.reclaimFrom.browserHostClientId &&
     intent.browserProfileId === page.browserProfileId &&
+    intent.userAgentMode === page.userAgentMode &&
     intent.executionHostKey === page.executionHostKey
   )
 }
@@ -171,6 +175,7 @@ function assertPageRecord(
   record: BrowserHostPageAuthority & {
     browserPageId: string
     browserProfileId: string
+    userAgentMode?: BrowserSessionUserAgentMode
     executionHostKey: string
   }
 ): void {
@@ -178,6 +183,9 @@ function assertPageRecord(
   assertIdentity(record.browserPageId)
   assertIdentity(record.browserProfileId)
   assertIdentity(record.executionHostKey)
+  if (record.userAgentMode !== 'clean' && record.userAgentMode !== 'native') {
+    throw new Error('browser_host_page_reconciliation_user_agent_mode_invalid')
+  }
 }
 
 function assertAuthority(authority: BrowserHostPageAuthority): void {

@@ -7,6 +7,7 @@ import { assertBrowserHostPageCommandAdmission } from './browser-host-page-comma
 import type { BrowserHostLease, BrowserHostLeaseState } from './browser-host-lease-records'
 import type { BrowserHostPagePlacementRegistry } from './browser-host-page-placement'
 import type { RuntimeBrowserClientPlacement } from '../../shared/runtime-browser-placement'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 
 export type BrowserClientPageExecutionHostGrant = {
   placement: RuntimeBrowserClientPlacement
@@ -19,6 +20,7 @@ export type BrowserHostClientPageCreateOptions = {
   browserHostClientId: string
   pairedDeviceId: string
   browserProfileId: string
+  userAgentMode: BrowserSessionUserAgentMode
   executionHostKey: string
   requiredCapabilities?: readonly string[]
   timeoutMs?: number
@@ -48,6 +50,9 @@ export async function createBrowserHostClientPage(
   if (lease.pageCommandProtocolVersion !== 1 || lease.pageReconciliationProtocolVersion !== 1) {
     throw new Error('browser_host_reconciliation_protocol_required')
   }
+  if (lease.userAgentContractVersion !== 1) {
+    throw new Error('browser_host_user_agent_contract_required')
+  }
   if (dependencies.executionHostGrants.has(options.browserPageId)) {
     throw new Error('browser_page_replacement_requires_retirement')
   }
@@ -66,6 +71,7 @@ export async function createBrowserHostClientPage(
     const command = {
       type: 'createPage' as const,
       browserProfileId: options.browserProfileId,
+      userAgentMode: options.userAgentMode,
       executionHostKey: options.executionHostKey,
       ...(options.workspaceId ? { workspaceId: options.workspaceId } : {})
     }

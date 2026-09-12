@@ -143,7 +143,27 @@ export function bindBrowserPageWebviewListeners({
   validateVisibleGuestRegistrationRef.current = guestRecovery.validateAfterResume
   retryGuestRecoveryRef.current = guestRecovery.retryRecovery
 
-  webview.addEventListener('did-attach', handleDidAttach)
+  let initialNavigationStarted = !needsInitialNavigation
+  const startInitialNavigation = (): void => {
+    if (initialNavigationStarted) {
+      return
+    }
+    initialNavigationStarted = true
+    const initialUrl =
+      normalizeBrowserNavigationUrl(initialBrowserUrlRef.current) ?? ORCA_BROWSER_BLANK_URL
+    trackNextLoadingEventRef.current = initialUrl !== ORCA_BROWSER_BLANK_URL
+    lastKnownWebviewUrlRef.current = initialUrl
+    webview.src = initialUrl
+  }
+  const handleDidAttachAndReleaseNavigation = (): void => {
+    void handleDidAttach().then((registered) => {
+      if (registered === true) {
+        startInitialNavigation()
+      }
+    })
+  }
+
+  webview.addEventListener('did-attach', handleDidAttachAndReleaseNavigation)
   webview.addEventListener('dom-ready', handleDomReady)
   webview.addEventListener('render-process-gone', guestRecovery.recoverRenderer)
   webview.addEventListener('destroyed', handleGuestDestroyed)
@@ -165,14 +185,8 @@ export function bindBrowserPageWebviewListeners({
   webview.addEventListener('did-fail-load', handleFailLoad)
   webview.addEventListener('console-message', handleAnnotationViewportMessage)
 
-  if (needsInitialNavigation) {
-    // Why: set src only after listeners attach so a fast localhost failure isn't missed; only non-blank tabs show the loading indicator.
-    const initialUrl =
-      normalizeBrowserNavigationUrl(initialBrowserUrlRef.current) ?? ORCA_BROWSER_BLANK_URL
-    trackNextLoadingEventRef.current = initialUrl !== ORCA_BROWSER_BLANK_URL
-    lastKnownWebviewUrlRef.current = initialUrl
-    webview.src = initialUrl
-  } else if (isPaintableRef.current) {
+  // A new blank guest waits for main to acknowledge registration and its profile identity.
+  if (!needsInitialNavigation && isPaintableRef.current) {
     if (isBrowserPageRendererRecoveryPending(browserTabId)) {
       guestRecovery.recoverRenderer()
     } else {
@@ -181,7 +195,7 @@ export function bindBrowserPageWebviewListeners({
   }
 
   return () => {
-    webview.removeEventListener('did-attach', handleDidAttach)
+    webview.removeEventListener('did-attach', handleDidAttachAndReleaseNavigation)
     webview.removeEventListener('dom-ready', handleDomReady)
     webview.removeEventListener('render-process-gone', guestRecovery.recoverRenderer)
     webview.removeEventListener('destroyed', handleGuestDestroyed)

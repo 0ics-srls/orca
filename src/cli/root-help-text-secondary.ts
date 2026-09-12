@@ -142,7 +142,7 @@ export const ROOT_HELP_TEXT_SECONDARY = [
   '  --page <id>               Stable browser page id (preferred for concurrent workflows)',
   '  --profile <id>            Browser profile id',
   "  --show-profile            Include the tab's browser profile in text output",
-  "  --no-ua-spoof             Keep Electron's native user agent for a new profile",
+  '  --no-ua-spoof             Use native Electron UA for pages; workers stay cleaned',
   '  --format <png|jpeg>       Screenshot image format',
   '  --from <ref>              Drag source element ref',
   '  --to <ref>                Drag target element ref',

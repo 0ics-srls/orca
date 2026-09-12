@@ -124,6 +124,7 @@ describe('OrcaRuntimeService', () => {
       browserPageId: 'page-client',
       workspaceId: TEST_WORKTREE_ID,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'execution-a',
       placement: {
         kind: 'client',
@@ -147,6 +148,7 @@ describe('OrcaRuntimeService', () => {
         browserWorkspaceId: 'page-client',
         browserPageId: 'page-client',
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean',
         executionHostKey: 'execution-a',
         placement: {
           kind: 'client',
@@ -181,6 +183,7 @@ describe('OrcaRuntimeService', () => {
       browserPageId: 'page-client',
       workspaceId: TEST_WORKTREE_ID,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'execution-a',
       placement: {
         kind: 'client',
@@ -239,6 +242,7 @@ describe('OrcaRuntimeService', () => {
       browserPageId: 'page-client',
       workspaceId: TEST_WORKTREE_ID,
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'execution-a',
       placement,
       url: 'https://remote.internal/',

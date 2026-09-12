@@ -67,6 +67,7 @@ export async function adoptRuntimeBrowserClientPagesFromInventory(
     options.lease.pageReconciliationProtocolVersion !== 1 ||
     options.lease.pageInventoryProtocolVersion !== 1 ||
     options.lease.pageCommandProtocolVersion !== 1 ||
+    options.lease.userAgentContractVersion !== 1 ||
     !inventory
   ) {
     return NOTHING_TO_ADOPT
@@ -152,6 +153,7 @@ export async function adoptRuntimeBrowserClientPagesFromInventory(
         browserPageId,
         workspaceId: page.workspaceId,
         browserProfileId: page.browserProfileId,
+        userAgentMode: page.userAgentMode,
         executionHostKey: intent.executionHostKey,
         placement,
         pairedDeviceId: options.lease.pairedDeviceId,

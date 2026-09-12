@@ -22,6 +22,7 @@ function clientHostedRow(worktreeId: string): PersistedClientHostedBrowserPage {
     browserPageId: `page-${worktreeId}`,
     workspaceId: worktreeId,
     browserProfileId: 'profile-1',
+    userAgentMode: 'clean',
     url: 'https://example.test/',
     title: 'Example',
     pairedDeviceId: 'device-1',

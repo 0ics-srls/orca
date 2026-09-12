@@ -115,7 +115,7 @@ export function BrowserProfileRow({
     : translate('auto.components.settings.BrowserProfileRow.796d846483', 'No cookies imported')
   const userAgentLabel =
     profile.userAgentMode === 'native'
-      ? translate('auto.components.settings.BrowserProfileRow.b5c0479e21', 'Unmodified user agent')
+      ? translate('auto.components.settings.BrowserProfileRow.b5c0479e21', 'Native page user agent')
       : null
 
   // Why: uses div[role=button] instead of <button> to avoid nested <button>

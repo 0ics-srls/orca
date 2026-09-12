@@ -15,6 +15,7 @@ export type PairedRuntimeBrowserHostLeaseOptions = {
   pageCommandProtocolVersion?: 1
   pageInventoryProtocolVersion?: 1
   pageReconciliationProtocolVersion?: 1
+  userAgentContractVersion?: 1
   leaseReconnectProtocolVersion?: 1
   fileChannelProtocolVersion?: 1
   getPageInventory?: () => readonly BrowserClientHostedPageInventory[]

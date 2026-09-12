@@ -167,6 +167,7 @@ describe('runtime browser client page recovery', () => {
     ['authorityEpoch', { authorityEpoch: 'epoch-b' }],
     ['authorityRuntimeId', { authorityRuntimeId: 'runtime-b' }],
     ['browserProfileId', { browserProfileId: 'profile-b' }],
+    ['userAgentMode', { userAgentMode: 'native' }],
     ['browserHostClientId', { browserHostClientId: 'host-b' }],
     ['browserHostGeneration', { browserHostGeneration: 9 }]
   ])(
@@ -451,6 +452,7 @@ function publishPage(
     browserPageId,
     workspaceId: 'workspace-a',
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean' as const,
     executionHostKey: 'native:runtime-a:1',
     placement,
     url: overrides.url ?? 'https://server-known.internal/',
@@ -469,6 +471,7 @@ function lease(pageInventory: ReturnType<typeof inventory>[]) {
     pageCommandProtocolVersion: 1 as const,
     pageInventoryProtocolVersion: 1 as const,
     pageReconciliationProtocolVersion: 1 as const,
+    userAgentContractVersion: 1 as const,
     pageInventory
   }
 }
@@ -485,6 +488,7 @@ function inventory(
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean' as const,
     executionHostKey: 'native:runtime-a:1',
     state,
     currentUrl: 'https://client-latest.internal/',
@@ -501,6 +505,7 @@ function exactInventory() {
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     browserProfileId: 'profile-a',
+    userAgentMode: 'clean' as const,
     executionHostKey: 'native:runtime-a:1',
     state: 'active' as 'active' | 'outcomeUnknown',
     currentUrl: 'https://client-latest.internal/'

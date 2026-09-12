@@ -22,6 +22,7 @@ const intent = (
   browserPageId,
   pageHostGeneration: Number(browserPageId.replace(/\D/g, '')) + 10,
   browserProfileId: 'profile-a',
+  userAgentMode: 'clean',
   executionHostKey: 'native:runtime-new:3',
   ...overrides
 })

@@ -1,8 +1,6 @@
 import { openPopupWithOriginBar, type PopupChildWindowOptions } from './popup-origin-bar-window'
-import {
-  cleanElectronUserAgent,
-  type BrowserSessionRequestUserAgentResolver
-} from './browser-session-ua'
+import type { BrowserSessionRequestUserAgentResolver } from './browser-session-ua'
+import { getBrowserProcessUserAgentIdentity } from './browser-process-user-agent'
 import { getBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { googleAuthUserAgent, isGoogleAuthUrl } from './browser-google-auth-ua'
 import {
@@ -15,12 +13,13 @@ import {
   type AuthUserAgentOverrideState
 } from './browser-manager-types'
 import { BrowserManagerVisibility } from './browser-manager-visibility'
+import { acquireElectronDebugger } from './electron-debugger-lease'
 
 export abstract class BrowserManagerNavigation extends BrowserManagerVisibility {
   /** Resolve the one legacy User-Agent value the session hook must enforce for this guest request. */
   resolveBrowserGuestRequestUserAgent(
     request: Parameters<BrowserSessionRequestUserAgentResolver>[0]
-  ): ViewportUserAgentOverride {
+  ): ViewportUserAgentOverride | undefined {
     const firefoxUa = googleAuthUserAgent()
     const pendingNavigation =
       request.webContentsId === undefined
@@ -30,6 +29,7 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
     // is authoritative for that flow and must not be replaced by the profile/mobile default.
     if (
       request.currentUserAgent === firefoxUa &&
+      request.resourceType !== 'mainFrame' &&
       (!pendingNavigation || isGoogleAuthUrl(pendingNavigation.currentUrl))
     ) {
       return { userAgent: firefoxUa }
@@ -46,13 +46,14 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
     if (
       !currentOverride &&
       request.effectiveUserAgent === firefoxUa &&
+      request.resourceType !== 'mainFrame' &&
       (!pendingNavigation || isGoogleAuthUrl(pendingNavigation.currentUrl))
     ) {
       // Direct auth navigations use WebContents.setUserAgent, which Electron fails to carry onto
       // image/XHR/fetch requests. Read that effective guest identity so those paths stay Firefox.
       return { userAgent: firefoxUa }
     }
-    if (currentOverride?.userAgent === firefoxUa) {
+    if (currentOverride?.userAgent === firefoxUa && request.resourceType !== 'mainFrame') {
       return { userAgent: firefoxUa }
     }
     const browserPageId =
@@ -61,16 +62,24 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
         : this.tabIdByWebContentsId.get(request.webContentsId)
     const mobile = browserPageId
       ? (this.viewportUaOverrideMobileByTabId.get(browserPageId) ?? false)
-      : this.hasSessionMobileViewportIntent(request.session)
+      : request.webContentsId === undefined && this.hasSessionMobileViewportIntent(request.session)
+    const isAuthExit =
+      request.resourceType === 'mainFrame' &&
+      (request.currentUserAgent === firefoxUa ||
+        request.effectiveUserAgent === firefoxUa ||
+        currentOverride?.userAgent === firefoxUa)
+    if (!mobile && !isAuthExit) {
+      return undefined
+    }
     return buildViewportUserAgentOverride({
       url: request.url,
       mobile,
-      baseUserAgent: cleanElectronUserAgent(request.baseUserAgent)
+      baseUserAgent: getBrowserProcessUserAgentIdentity().cleanUserAgent
     })
   }
 
   // Why: navigator.userAgent (read by Google's auth JS) reflects the WebContents UA,
-  // not the request header, so the header-level Firefox switch in setupGoogleAuthUserAgentOverride
+  // not the request header, so the header-level Firefox switch in installBrowserSessionUserAgentExceptions
   // must be matched here per navigation or the two layers disagree — itself a bot tell.
   // Restores the session's base identity off the auth hosts. Native-UA profiles opt out
   // of the whole clean-UA path, so they keep their untouched identity everywhere.
@@ -78,7 +87,7 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
     const browserPageId = this.tabIdByWebContentsId.get(guest.id)
     // Why: popup child windows get these policies but are never in tabIdByWebContentsId, so a direct
     // lookup misses the native-UA opt-out and would hand a native profile's popup the Firefox UA.
-    // That is worse than doing nothing: native sessions skip setupGoogleAuthUserAgentOverride, so
+    // That is worse than doing nothing: native sessions skip installBrowserSessionUserAgentExceptions, so
     // the popup would send the raw Electron UA on the wire while navigator.userAgent claims Firefox.
     const ownerTabId = this.resolveBrowserTabIdForGuestWebContentsId(guest.id)
     // Session state is authoritative before renderer registration and after a native profile imports a source UA.
@@ -102,7 +111,7 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
       : // Only restore when the auth-host override is actually in place, so normal
         // navigation never touches the session UA.
         currentUa === firefoxUa
-        ? guest.session.getUserAgent()
+        ? getBrowserProcessUserAgentIdentity().cleanUserAgent
         : null
     let authOverrideIssuedOverCdp = false
     if (nextUa !== null && nextUa !== currentUa) {
@@ -114,13 +123,20 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
         // resolve one identity for this URL — Firefox on auth hosts, the profile's clean base off
         // them, any mobile preset preserved. Writing the session UA directly would put the
         // unlaundered Electron token back on the wire.
+        const mobilePresetActive = browserPageId
+          ? this.viewportUaOverrideMobileByTabId.has(browserPageId)
+          : false
         void this.applyAuthUserAgentOverrideOverCdp(
           guest,
           (browserPageId ? this.viewportUaOverrideMobileByTabId.get(browserPageId) : undefined) ??
             false,
           url,
           nextUa
-        )
+        ).then((applied) => {
+          if (applied && !isGoogleAuthUrl(url) && !mobilePresetActive) {
+            this.releaseAuthUserAgentDebuggerLease(guest.id)
+          }
+        })
       }
       // Why: with no debugger there is no cancel-free way to retarget navigator.userAgent. The
       // request layer still presents Firefox; a stale JS value is preferable to replaying the page.
@@ -137,10 +153,10 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
       if (guest.isDestroyed()) {
         return false
       }
-      if (!guest.debugger.isAttached()) {
-        guest.debugger.attach('1.3')
+      if (!this.authUserAgentDebuggerLeaseByGuestId.has(guest.id)) {
+        this.authUserAgentDebuggerLeaseByGuestId.set(guest.id, acquireElectronDebugger(guest))
       }
-      return true
+      return guest.debugger.isAttached()
     } catch {
       return false
     }
@@ -274,7 +290,7 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
         // Why: the session UA is the profile's stable base identity. guest.getUserAgent() does not
         // expose the standing CDP auth override once a guest switches to
         // the CDP override, so reading it back here would republish that identity on ordinary hosts.
-        baseUserAgent: cleanElectronUserAgent(baseUserAgent ?? guest.session.getUserAgent())
+        baseUserAgent: baseUserAgent ?? getBrowserProcessUserAgentIdentity().cleanUserAgent
       })
     )
   }
@@ -292,12 +308,15 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
     targetUrl: string,
     options: PopupChildWindowOptions
   ): Electron.WebContents {
-    const popup = openPopupWithOriginBar(options, targetUrl)
-    // Why: Electron emits no did-create-window for createWindow children, so attach the opener's policies here.
-    this.attachGuestPolicies(
-      popup.contentWebContents,
-      this.resolvePopupOwnerContext(openerGuest.id)
-    )
+    const ownerContext = this.resolvePopupOwnerContext(openerGuest.id)
+    const popup = openPopupWithOriginBar(options, targetUrl, (contents) => {
+      if (getBrowserSessionUserAgentMode(contents.session) === 'native') {
+        contents.setUserAgent(getBrowserProcessUserAgentIdentity().nativeUserAgent)
+      }
+      // Why: Electron emits no did-create-window for createWindow children, so prepare them before their first load.
+      this.attachGuestPolicies(contents, ownerContext)
+      return true
+    })
     this.forwardOrQueuePopupEvent(openerGuest.id, {
       origin: safeOrigin(targetUrl),
       action: 'opened-in-orca'

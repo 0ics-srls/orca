@@ -15,6 +15,7 @@ const currentIntent = (overrides: Partial<BrowserHostRuntimePageIntent> = {}) =>
   browserPageId: 'page-a',
   pageHostGeneration: 12,
   browserProfileId: 'profile-a',
+  userAgentMode: 'clean' as const,
   executionHostKey: 'native:runtime-new:3',
   ...overrides
 })
@@ -80,6 +81,7 @@ describe('browser host page reconciliation plan', () => {
 
   it.each([
     ['profile', { browserProfileId: 'profile-b' }],
+    ['user-agent mode', { userAgentMode: 'native' as const }],
     ['execution host', { executionHostKey: 'ssh:target-b:4' }],
     ['authority epoch', { authorityEpoch: 'epoch-stale' }],
     ['host generation', { browserHostGeneration: 8 }],

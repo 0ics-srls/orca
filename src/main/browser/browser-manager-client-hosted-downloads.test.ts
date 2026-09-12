@@ -97,7 +97,8 @@ describe('client-hosted downloads', () => {
         rendererWebContentsId,
         webContentsId: GUEST_WEB_CONTENTS_ID
       },
-      browserProfileId: 'profile-a'
+      browserProfileId: 'profile-a',
+      userAgentMode: 'clean'
     })
     browserManager.attachGuestPolicies(serverGuest as never)
     browserManager.registerGuest({

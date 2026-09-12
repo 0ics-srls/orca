@@ -122,7 +122,12 @@ function createPageCommand(
   return createCommand('createPage', {
     browserPageId,
     commandId: `createPage-${browserPageId}`,
-    command: { type: 'createPage', browserProfileId: 'profile-a', executionHostKey }
+    command: {
+      type: 'createPage',
+      browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
+      executionHostKey
+    }
   } as Partial<BrowserClientHostCommandEvent>)
 }
 

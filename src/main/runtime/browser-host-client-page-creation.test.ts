@@ -19,6 +19,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-b',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'native:runtime-a:7'
     })
     await Promise.resolve()
@@ -45,6 +46,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-b',
       pairedDeviceId: 'device-b',
       browserProfileId: 'profile-a',
+      userAgentMode: 'clean',
       executionHostKey: 'native:runtime-a:7'
     })
 
@@ -54,6 +56,7 @@ describe('browser host client page creation', () => {
       command: {
         type: 'createPage',
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean',
         executionHostKey: 'native:runtime-a:7'
       }
     })
@@ -84,6 +87,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
     settle(leases, selected, commands[0]!, {
@@ -124,6 +128,7 @@ describe('browser host client page creation', () => {
         browserHostClientId: 'host-old',
         pairedDeviceId: 'device-old',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'native:runtime-a:7'
       })
     ).rejects.toThrow('browser_host_reconciliation_protocol_required')
@@ -141,6 +146,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
     settle(leases, selected, commands[0]!, { status: 'completed' })
@@ -150,6 +156,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
     settle(leases, selected, commands[1]!, { status: 'completed' })
@@ -190,6 +197,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
 
@@ -216,6 +224,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
 
@@ -244,6 +253,7 @@ describe('browser host client page creation', () => {
         browserHostClientId: 'host-a',
         pairedDeviceId: 'device-a',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'ssh:target-a:3'
       })
     ).rejects.toThrow('browser_host_command_delivery_failed')
@@ -265,6 +275,7 @@ describe('browser host client page creation', () => {
       browserHostClientId: 'host-a',
       pairedDeviceId: 'device-a',
       browserProfileId: 'default',
+      userAgentMode: 'clean',
       executionHostKey: 'ssh:target-a:3'
     })
     settle(leases, selected, command!, { status: 'completed' })
@@ -291,6 +302,7 @@ describe('browser host client page creation', () => {
         browserHostClientId: 'host-a',
         pairedDeviceId: 'device-a',
         browserProfileId: 'default',
+        userAgentMode: 'clean',
         executionHostKey: 'ssh:target-a:3',
         timeoutMs: 25
       })
@@ -334,7 +346,8 @@ function attachHost(
     pageCommandProtocolVersion: 1,
     pageInventoryProtocolVersion: 1,
     pageInventory: [],
-    pageReconciliationProtocolVersion: 1
+    pageReconciliationProtocolVersion: 1,
+    userAgentContractVersion: 1
   }).lease
 }
 
@@ -363,6 +376,9 @@ function settle(
       pageCommandProtocolVersion: command.pageCommandProtocolVersion,
       ...(command.pageReconciliationProtocolVersion
         ? { pageReconciliationProtocolVersion: command.pageReconciliationProtocolVersion }
+        : {}),
+      ...(command.userAgentContractVersion
+        ? { userAgentContractVersion: command.userAgentContractVersion }
         : {}),
       browserPageId: command.browserPageId,
       pageHostGeneration: command.pageHostGeneration,

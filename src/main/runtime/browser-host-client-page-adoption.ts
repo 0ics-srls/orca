@@ -1,4 +1,5 @@
 import type { BrowserClientHostedPageInventory } from '../../shared/browser-client-host-protocol'
+import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
 import type { BrowserClientPageExecutionHostGrant } from './browser-host-client-page-creation'
 import type { BrowserHostLeaseState } from './browser-host-lease-records'
 import type { RuntimeBrowserPlacement } from './browser-host-page-placement'
@@ -9,7 +10,7 @@ import type { BrowserHostRuntimePageIntent } from './browser-host-page-reconcili
  * because the runtime record it rebuilds cannot exist without one.
  */
 export type AdoptableClientHostedPage = BrowserClientHostedPageInventory &
-  Readonly<{ workspaceId: string }>
+  Readonly<{ workspaceId: string; userAgentMode: BrowserSessionUserAgentMode }>
 
 export type ClientHostedPageAdoptionCandidacy = {
   inventory: readonly BrowserClientHostedPageInventory[]
@@ -35,6 +36,9 @@ export function selectAdoptableClientHostedPages(
       return false
     }
     if (page.workspaceId === undefined) {
+      return false
+    }
+    if (page.userAgentMode === undefined) {
       return false
     }
     if (page.browserHostClientId !== input.browserHostClientId) {
@@ -98,6 +102,7 @@ export function buildClientPageAdoptionIntents(input: {
         pageHostGeneration: baseGeneration + index + 1,
         browserPageId: page.browserPageId,
         browserProfileId: page.browserProfileId,
+        userAgentMode: page.userAgentMode,
         executionHostKey,
         workspaceId: page.workspaceId
       })

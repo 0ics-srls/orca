@@ -111,6 +111,7 @@ function prepare(registry: BrowserRouteSessionRegistry, overrides: Record<string
   return registry.preparePage({
     identity,
     storageScope: 'a'.repeat(64),
+    userAgentMode: 'clean',
     browserPageId: 'page-a',
     pageHostGeneration: 1,
     rendererWebContentsId: 11,

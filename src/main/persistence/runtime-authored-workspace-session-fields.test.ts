@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import type { PersistedClientHostedBrowserPage } from '../../shared/client-hosted-browser-page-record'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import { CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION } from '../../shared/client-hosted-browser-page-record'
 import { preserveRuntimeAuthoredWorkspaceSessionFields } from './runtime-authored-workspace-session-fields'
 
-const row = {
-  v: 1 as const,
+const row: PersistedClientHostedBrowserPage = {
+  v: CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION,
   browserPageId: 'page-a',
   workspaceId: 'repo-1::wt-a',
   browserProfileId: 'profile-a',
-  executionHostKey: 'native:runtime-a:1',
+  userAgentMode: 'clean' as const,
   url: 'https://kept.internal/',
   title: 'Kept',
   pairedDeviceId: 'device-a',

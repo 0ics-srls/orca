@@ -56,6 +56,7 @@ export class OrcaRuntimeWithBuildHeadlessMobileSessionBrowserTabs extends OrcaRu
         browserWorkspaceId: page.browserPageId,
         browserPageId: page.browserPageId,
         browserProfileId: page.browserProfileId,
+        userAgentMode: page.userAgentMode,
         executionHostKey: page.executionHostKey,
         placement: page.placement,
         url: page.url,

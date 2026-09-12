@@ -35,7 +35,8 @@ describe('BrowserClientPageCommandExecutor', () => {
         rendererWebContentsId: 11,
         webContentsId: 41
       },
-      browserProfileId: 'profile-a'
+      browserProfileId: 'profile-a',
+      userAgentMode: 'clean'
     })
     expect(dependencies.retainNetworkRoute).toHaveBeenCalledWith(
       'execution-host-a',
@@ -57,6 +58,7 @@ describe('BrowserClientPageCommandExecutor', () => {
       storageScope: 'a'.repeat(64),
       browserPageId: 'page-a',
       pageHostGeneration: 7,
+      userAgentMode: 'clean',
       rendererWebContentsId: 11,
       proxyEndpoint: { host: '127.0.0.1', port: 43123 }
     })
@@ -75,6 +77,18 @@ describe('BrowserClientPageCommandExecutor', () => {
       rendererWebContentsId: 11,
       webContentsId: 41
     })
+  })
+
+  it('rejects a page command from a host that omitted the negotiated user-agent contract', async () => {
+    const { dependencies, executor } = createHarness()
+    const command = createCommand('createPage', { userAgentContractVersion: undefined })
+    delete (command.command as { userAgentMode?: string }).userAgentMode
+
+    await expect(executor.handle(command, new AbortController().signal)).resolves.toEqual({
+      status: 'failed',
+      errorCode: 'browser_client_user_agent_contract_required'
+    })
+    expect(dependencies.retainNetworkRoute).not.toHaveBeenCalled()
   })
 
   it('loads a normalized URL only through the retained exact guest', async () => {
@@ -99,6 +113,7 @@ describe('BrowserClientPageCommandExecutor', () => {
         browserPageId: 'page-a',
         pageHostGeneration: 7,
         browserProfileId: 'profile-a',
+        userAgentMode: 'clean',
         executionHostKey: 'execution-host-a',
         state: 'active',
         currentUrl: 'https://example.internal/path'
@@ -142,7 +157,12 @@ describe('BrowserClientPageCommandExecutor', () => {
     await expect(
       executor.handle(
         createCommand('createPage', {
-          command: { type: 'createPage', browserProfileId, executionHostKey: 'execution-host-a' }
+          command: {
+            type: 'createPage',
+            browserProfileId,
+            userAgentMode: 'clean',
+            executionHostKey: 'execution-host-a'
+          }
         }),
         new AbortController().signal
       )

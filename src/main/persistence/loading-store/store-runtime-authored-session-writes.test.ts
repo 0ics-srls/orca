@@ -10,7 +10,10 @@ import { mkdtempSync, realpathSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { PersistedClientHostedBrowserPage } from '../../../shared/client-hosted-browser-page-record'
+import {
+  CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION,
+  type PersistedClientHostedBrowserPage
+} from '../../../shared/client-hosted-browser-page-record'
 import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
 
 vi.mock('electron', () => ({
@@ -55,10 +58,11 @@ function createStore(): InstanceType<typeof Store> {
 
 function page(): PersistedClientHostedBrowserPage {
   return {
-    v: 1,
+    v: CLIENT_HOSTED_BROWSER_PAGE_RECORD_VERSION,
     browserPageId: 'page-a',
     workspaceId: WT,
     browserProfileId: 'default',
+    userAgentMode: 'clean',
     url: 'https://example.test/a',
     title: 'A',
     pairedDeviceId: 'device-1',

@@ -68,6 +68,7 @@ async function reclaimPage(
     page.inventory.authorityRuntimeId !== event.authorityRuntimeId ||
     !sameBrowserClientPageAuthority(page.inventory, event.command.previousAuthority) ||
     page.inventory.browserProfileId !== event.command.browserProfileId ||
+    page.inventory.userAgentMode !== event.command.userAgentMode ||
     page.inventory.executionHostKey !== event.command.executionHostKey
   ) {
     throw new BrowserClientPageCommandError('browser_client_page_reconciliation_authority_stale')
@@ -226,6 +227,7 @@ function reconciliationCreateEvent(
     command: {
       type: 'createPage',
       browserProfileId: event.command.browserProfileId,
+      userAgentMode: event.command.userAgentMode,
       executionHostKey: event.command.executionHostKey,
       ...(event.command.workspaceId ? { workspaceId: event.command.workspaceId } : {})
     }
