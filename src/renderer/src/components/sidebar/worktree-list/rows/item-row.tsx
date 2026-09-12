@@ -139,8 +139,7 @@ export function renderWorktreeItemRow(
   const worktreeIdentity = getWorktreeHostIdentity(itemRow.worktree)
   const isLineageDropTarget =
     ctx.worktreeDragState.draggingWorktreeId &&
-    (ctx.worktreePointerDragRef.current?.latestStatusDropTarget?.target.lineageParentId ===
-      itemRow.worktree.id ||
+    (ctx.worktreeDragState.lineageDropTargetId === itemRow.worktree.id ||
       ctx.nativeLineageDropTargetId === itemRow.worktree.id)
   const isActiveWorktree =
     ctx.activeWorktreeId === itemRow.worktree.id &&
