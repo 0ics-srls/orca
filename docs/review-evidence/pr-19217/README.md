@@ -13,9 +13,6 @@ sidebar showed working. Closing its chat tab removed that exact session's row an
 returned the worktree to `active`. A different completed chat remained present,
 confirming that closure removed only the selected session.
 
-- [Working: CLI and sidebar](working.png)
-- [Closed: CLI and sidebar](closed.png)
-
 The disappearing session is `codex_40677067_f492_4d7d_86dd_ec566ede04c3`.
 The host's held-session roster controls eligibility; its retained broadcast cache
 is history, not a roster. Failed eviction intentionally keeps an entry for retry.
