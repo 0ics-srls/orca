@@ -87,6 +87,14 @@ export async function resolveCreatedWorktree(
     return { created: described, worktrees: [], listingComplete: false }
   }
   if (listingError) {
+    if (describeError) {
+      // The listing's failure stays the thrown one, but the recovery's reason -- often
+      // `repo common dir unverifiable: ...` -- would otherwise vanish from the record entirely.
+      console.warn('[worktrees:create] created-worktree recovery also failed', {
+        err: describeError,
+        worktreePath
+      })
+    }
     throw listingError
   }
   const notFound = createdWorktreeNotFoundError(worktreePath, branchName)

@@ -141,12 +141,19 @@ describe('resolveCreatedWorktree', () => {
 
   it('keeps the listing failure when the direct read itself throws', async () => {
     const failure = new Error('fatal: not a git repository')
+    const recoveryFailure = new Error('repo common dir unverifiable: deadline exceeded')
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
     vi.mocked(listWorktreesSharedStrict).mockRejectedValue(failure)
-    vi.mocked(describeCreatedWorktree).mockRejectedValue(new Error('rev-parse exploded'))
+    vi.mocked(describeCreatedWorktree).mockRejectedValue(recoveryFailure)
 
     await expect(resolveCreatedWorktree('/repo', '/workspaces/feature', 'feature')).rejects.toBe(
       failure
     )
+    expect(warn).toHaveBeenCalledWith('[worktrees:create] created-worktree recovery also failed', {
+      err: recoveryFailure,
+      worktreePath: '/workspaces/feature'
+    })
+    warn.mockRestore()
   })
 
   it('names the path and branch when the listing succeeded without the row', async () => {
