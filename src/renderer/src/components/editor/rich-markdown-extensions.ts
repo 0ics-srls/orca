@@ -41,7 +41,6 @@ import { RichMarkdownCodeSpanPadding } from './rich-markdown-code-span-padding'
 import { RichMarkdownListItem } from './rich-markdown-list-item'
 import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
-import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
 import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
 import { RichMarkdownSerializerFidelity } from './rich-markdown-serializer-fidelity'
@@ -56,18 +55,33 @@ const RichMarkdownLink = Link.extend({
   priority: 90
 })
 
-// Why: marked ends a paragraph wherever a block tokenizer's `start` points, so
-// display math only opens at a line start.
+// Why: Pandoc's rule keeps money as text — both `$` must touch the formula, the closing one
+// must not be followed by a digit, and an escaped `\$` never closes.
+const INLINE_MATH_PATTERN = /^\$(?![\s$])((?:\\[\s\S]|[^$\\])*?)(?<!\s)\$(?!\d)/
+const RichMarkdownInlineMath = InlineMath.extend({
+  markdownTokenizer: {
+    name: 'inlineMath', level: 'inline', start: (src: string) => src.indexOf('$'),
+    tokenize: (src: string) => { const match = src.match(INLINE_MATH_PATTERN); if (!match) return undefined; return { type: 'inlineMath', raw: match[0], latex: match[1] } }
+  }
+})
+const BLOCK_MATH_START_PATTERN = /\n[ \t]*\$\$/
+const BLOCK_MATH_PATTERN = /^[ \t]*\$\$((?:(?!\$\$)[\s\S])+?)\$\$/
+const RichMarkdownBlockMath = BlockMath.extend({
+  markdownTokenizer: {
+    name: 'blockMath', level: 'block',
+    start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
+    tokenize: (src: string) => { const match = src.match(BLOCK_MATH_PATTERN); if (!match) return undefined; return { type: 'blockMath', raw: match[0], latex: match[1].trim() } }
+  }
+})
 const RichMarkdownBlockMath = BlockMath.extend({
   markdownTokenizer: {
     name: 'blockMath',
     level: 'block',
-    start: (src: string) => {
-      const index = src.indexOf('\n$$')
-      return index === -1 ? -1 : index + 1
-    },
+    // Why: marked cuts the paragraph at the returned index + 1; pointing at the newline keeps
+    // the indent out of the paragraph and lets the block tokenizer see the whole opener line.
+    start: (src: string) => BLOCK_MATH_START_PATTERN.exec(src)?.index ?? -1,
     tokenize: (src: string) => {
-      const match = src.match(/^\$\$([^$]+)\$\$/)
+      const match = src.match(BLOCK_MATH_PATTERN)
       if (!match) {
         return undefined
       }

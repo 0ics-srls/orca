@@ -35,7 +35,7 @@ function toSourceForm(node: JSONContent, context: SerializerContext): JSONConten
   if (node.type === 'text') {
     return textToSourceForm(node, context)
   }
-  const next: JSONContent = node.type === 'image' ? imageToSourceForm(node) : node
+  const next: JSONContent = node.type === 'image' ? imageToSourceForm(node, context) : node
   if (!next.content) {
     return next
   }
@@ -47,21 +47,20 @@ function toSourceForm(node: JSONContent, context: SerializerContext): JSONConten
 }
 
 function textToSourceForm(node: JSONContent, context: SerializerContext): JSONContent {
-  const marks = (node.marks ?? []).map(linkMarkToSourceForm)
+  const marks = (node.marks ?? []).map((mark) => linkMarkToSourceForm(mark, context))
   const escaped = marks.some((mark) => mark.type === RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
   const insideCode = marks.some((mark) => mark.type === 'code')
-  let text = node.text ?? ''
-  if (escaped) {
-    text = escapedCharacterSourceText(text, insideCode)
-  } else if (context.insideTableCell) {
-    // Why: marked splits cells on unescaped `|` before inline lexing, code spans included.
-    text = text.replace(/\|/g, '\\|')
-  }
+  const text = escaped
+    ? escapedCharacterSourceText(node.text ?? '', insideCode)
+    : escapeTableCellPipes(node.text ?? '', context)
   const kept = marks.filter((mark) => mark.type !== RICH_MARKDOWN_ESCAPED_CHARACTER_MARK)
   return kept.length > 0 ? { ...node, text, marks: kept } : { type: 'text', text }
 }
 
-function linkMarkToSourceForm(mark: NonNullable<JSONContent['marks']>[number]) {
+function linkMarkToSourceForm(
+  mark: NonNullable<JSONContent['marks']>[number],
+  context: SerializerContext
+) {
   if (mark.type !== 'link' || !mark.attrs) {
     return mark
   }
@@ -69,13 +68,13 @@ function linkMarkToSourceForm(mark: NonNullable<JSONContent['marks']>[number]) {
     ...mark,
     attrs: {
       ...mark.attrs,
-      href: destinationToSourceForm(mark.attrs.href),
-      title: titleToSourceForm(mark.attrs.title)
+      href: destinationToSourceForm(mark.attrs.href, context),
+      title: titleToSourceForm(mark.attrs.title, context)
     }
   }
 }
 
-function imageToSourceForm(node: JSONContent): JSONContent {
+function imageToSourceForm(node: JSONContent, context: SerializerContext): JSONContent {
   if (!node.attrs) {
     return node
   }
@@ -83,22 +82,31 @@ function imageToSourceForm(node: JSONContent): JSONContent {
     ...node,
     attrs: {
       ...node.attrs,
-      src: destinationToSourceForm(node.attrs.src),
+      src: destinationToSourceForm(node.attrs.src, context),
       alt:
         typeof node.attrs.alt === 'string'
-          ? node.attrs.alt.replace(/[\\[\]]/g, '\\$&')
+          ? escapeTableCellPipes(node.attrs.alt.replace(/[\\[\]]/g, '\\$&'), context)
           : node.attrs.alt,
-      title: titleToSourceForm(node.attrs.title)
+      title: titleToSourceForm(node.attrs.title, context)
     }
   }
 }
 
 // Why: a bare destination ends at an unbalanced `)`; marked unescapes `\(` and `\)` back on load.
 // (The `<…>` form is not an option here: Orca's raw-HTML pass would placeholder it before parsing.)
-function destinationToSourceForm(destination: unknown): unknown {
-  return typeof destination === 'string' ? destination.replace(/[()]/g, '\\$&') : destination
+function destinationToSourceForm(destination: unknown, context: SerializerContext): unknown {
+  return typeof destination === 'string'
+    ? escapeTableCellPipes(destination.replace(/[()]/g, '\\$&'), context)
+    : destination
 }
 
-function titleToSourceForm(title: unknown): unknown {
-  return typeof title === 'string' ? title.replace(/"/g, '\\"') : title
+function titleToSourceForm(title: unknown, context: SerializerContext): unknown {
+  return typeof title === 'string'
+    ? escapeTableCellPipes(title.replace(/"/g, '\\"'), context)
+    : title
+}
+
+// Why: marked splits cells on unescaped `|` before parsing anything inside them, attributes included.
+function escapeTableCellPipes(text: string, context: SerializerContext): string {
+  return context.insideTableCell ? text.replace(/\|/g, '\\|') : text
 }

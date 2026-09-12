@@ -735,6 +735,26 @@ describe('rich markdown round trip', () => {
     expect(roundTripMarkdown('text\n\n$$\nx^2\n$$\n')).toBe('text\n\n$$\nx^2\n$$')
   })
 
+  it('parses display math that is indented or holds an escaped dollar', () => {
+    for (const source of [
+      'text\n\n  $$\nx^2\n$$\n',
+      'text\n $$\nx^2\n$$\n',
+      'text\n\t$$\nx^2\n$$\n'
+    ]) {
+      expect(roundTripMarkdown(source)).toBe('text\n\n$$\nx^2\n$$')
+    }
+    expect(roundTripMarkdown('$$\n\\$5 + x\n$$\n')).toBe('$$\n\\$5 + x\n$$')
+  })
+
+  it('escapes pipes inside link and image attributes in table cells', () => {
+    const once = roundTripMarkdown(
+      '| a | b |\n|---|---|\n| ![x \\| y](img.png) | [c \\| d](http://e "f \\| g") |\n'
+    )
+    expect(once).toContain('![x \\| y](img.png)')
+    expect(once).toContain('[c \\| d](http://e "f \\| g")')
+    expect(roundTripMarkdown(`${once}\n`)).toBe(once)
+  })
+
   it('preserves markdown tables', () => {
     expect(roundTripMarkdown('| a | b |\n| - | - |\n| 1 | 2 |\n')).toContain('| a')
   })
