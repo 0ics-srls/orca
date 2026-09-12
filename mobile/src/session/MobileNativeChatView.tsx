@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -190,17 +190,10 @@ export function MobileNativeChatView({
   // Lift the composer clear of the keyboard, plus the bottom safe-area so it
   // never sits under the home indicator / nav bar (mirrors the terminal dock).
   const bottomPad = keyboardInset > 0 ? keyboardInset + insets.bottom : insets.bottom
-  const [atBottom, setAtBottom] = useState(true)
-  const sendScrollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [followingTail, setFollowingTail] = useState(true)
+  const atBottomRef = useRef(true)
+  const followingTailRef = useRef(true)
   const { fontScale, pinchGesture } = useMobileNativeChatPinchGesture()
-  useEffect(
-    () => () => {
-      if (sendScrollTimerRef.current) {
-        clearTimeout(sendScrollTimerRef.current)
-      }
-    },
-    []
-  )
 
   // `data` is the list source: folded transcript + synthetic streaming bubble +
   // route-owned accepted echoes. Memoize on the same deps so the
@@ -216,18 +209,22 @@ export function MobileNativeChatView({
       }),
     [messages, folded, streaming, pending, imagePreviewsByMessageId]
   )
+  const hasDataRef = useRef(false)
+  hasDataRef.current = data.length > 0
 
-  // Follow the tail as the conversation grows and keep the newest message above
-  // the keyboard when it opens — but only when already pinned to the bottom, so
-  // we don't yank the user away while they read history. (Also fires on keyboard
-  // close, which is harmless while atBottom.)
-  useEffect(() => {
-    if (data.length === 0 || !atBottom) {
+  const pinToTail = useCallback(() => {
+    if (!followingTailRef.current || !hasDataRef.current) {
       return
     }
-    const t = setTimeout(() => listRef.current?.scrollToEnd({ animated: true }), 60)
-    return () => clearTimeout(t)
-  }, [data.length, atBottom, keyboardInset])
+    listRef.current?.scrollToEnd({ animated: false })
+  }, [])
+
+  const jumpToTail = useCallback(() => {
+    followingTailRef.current = true
+    atBottomRef.current = true
+    setFollowingTail(true)
+    pinToTail()
+  }, [pinToTail])
 
   const handleSend = useCallback(
     async (text: string): Promise<boolean> => {
@@ -239,30 +236,41 @@ export function MobileNativeChatView({
       // or a stale "Message not sent" sits above the delivered message.
       onClearSendError?.()
       // Always jump to the newest message when the user sends.
-      setAtBottom(true)
-      if (sendScrollTimerRef.current) {
-        clearTimeout(sendScrollTimerRef.current)
-      }
-      sendScrollTimerRef.current = setTimeout(() => {
-        sendScrollTimerRef.current = null
-        listRef.current?.scrollToEnd({ animated: true })
-      }, 60)
+      jumpToTail()
       return true
     },
-    [onSend, onClearSendError]
+    [onSend, onClearSendError, jumpToTail]
   )
+
+  const beginUserScroll = useCallback(() => {
+    followingTailRef.current = false
+    setFollowingTail(false)
+  }, [])
+
+  const finishUserScroll = useCallback(() => {
+    followingTailRef.current = atBottomRef.current
+    setFollowingTail(atBottomRef.current)
+  }, [])
+
+  const loadEarlier = useCallback(() => {
+    followingTailRef.current = false
+    atBottomRef.current = false
+    setFollowingTail(false)
+    onLoadEarlier?.()
+  }, [onLoadEarlier])
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
       const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height)
-      setAtBottom(distanceFromBottom < 80)
+      const isAtBottom = distanceFromBottom < 80
+      atBottomRef.current = isAtBottom
       // Near the top — page in older history.
       if (contentOffset.y < 60 && hasMore && !loadingEarlier) {
-        onLoadEarlier?.()
+        loadEarlier()
       }
     },
-    [hasMore, loadingEarlier, onLoadEarlier]
+    [hasMore, loadingEarlier, loadEarlier]
   )
 
   // Per-turn status rows: one live indicator while the turn runs, then a settled
@@ -318,17 +326,18 @@ export function MobileNativeChatView({
               // instead of being swallowed by the dismiss gesture.
               keyboardShouldPersistTaps="handled"
               onScroll={onScroll}
+              onScrollBeginDrag={beginUserScroll}
+              onScrollEndDrag={finishUserScroll}
+              onMomentumScrollBegin={beginUserScroll}
+              onMomentumScrollEnd={finishUserScroll}
               scrollEventThrottle={32}
-              onContentSizeChange={() => {
-                if (data.length > 0 && atBottom) {
-                  listRef.current?.scrollToEnd({ animated: false })
-                }
-              }}
+              onContentSizeChange={pinToTail}
+              onLayout={pinToTail}
               ListHeaderComponent={
                 hasMore ? (
                   <Pressable
                     style={styles.loadEarlier}
-                    onPress={onLoadEarlier}
+                    onPress={loadEarlier}
                     disabled={loadingEarlier}
                   >
                     {loadingEarlier ? (
@@ -360,11 +369,11 @@ export function MobileNativeChatView({
             />
           </GestureDetector>
           {/* Jump-to-latest control. */}
-          {!atBottom ? (
+          {!followingTail ? (
             <Pressable
               accessibilityLabel="Scroll to latest"
               style={[styles.fab, styles.fabBottom]}
-              onPress={() => listRef.current?.scrollToEnd({ animated: true })}
+              onPress={jumpToTail}
             >
               <ArrowDown size={18} color={colors.textPrimary} strokeWidth={2.2} />
             </Pressable>

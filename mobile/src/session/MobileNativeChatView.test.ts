@@ -4,14 +4,22 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
 import { MobileNativeChatView } from './MobileNativeChatView'
 
-vi.mock('react-native', () => ({
-  ActivityIndicator: 'ActivityIndicator',
-  FlatList: 'FlatList',
-  Pressable: 'Pressable',
-  StyleSheet: { create: (styles: unknown) => styles, hairlineWidth: 1 },
-  Text: 'Text',
-  View: 'View'
-}))
+const scrollToEnd = vi.hoisted(() => vi.fn())
+
+vi.mock('react-native', async () => {
+  const React = await import('react')
+  return {
+    ActivityIndicator: 'ActivityIndicator',
+    FlatList: React.forwardRef((props, ref) => {
+      React.useImperativeHandle(ref, () => ({ scrollToEnd }), [])
+      return React.createElement('FlatList', props)
+    }),
+    Pressable: 'Pressable',
+    StyleSheet: { create: (styles: unknown) => styles, hairlineWidth: 1 },
+    Text: 'Text',
+    View: 'View'
+  }
+})
 
 vi.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
@@ -77,6 +85,9 @@ type Overrides = {
   agentWorking?: boolean
   canStop?: boolean
   sendSurfaceId?: string
+  keyboardInset?: number
+  hasMore?: boolean
+  onLoadEarlier?: () => void
 }
 
 function assistantTurn(id: string, text: string): NativeChatMessage {
@@ -105,6 +116,7 @@ describe('MobileNativeChatView', () => {
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
+    scrollToEnd.mockReset()
   })
 
   async function render(overrides: Overrides = {}): Promise<void> {
@@ -133,15 +145,18 @@ describe('MobileNativeChatView', () => {
   })
 
   function listIds(): string[] {
-    const list = renderer!.root.find((node) => node.type === 'FlatList')
-    return (list.props.data as { id: string }[]).map((row) => row.id)
+    return (list().props.data as { id: string }[]).map((row) => row.id)
+  }
+
+  function list(): ReactTestInstance {
+    return renderer!.root.find((node) => node.type === 'FlatList')
   }
 
   function renderedRow(id: string): ReturnType<typeof createElement> {
-    const list = renderer!.root.find((node) => node.type === 'FlatList')
-    const data = list.props.data as NativeChatMessage[]
+    const listNode = list()
+    const data = listNode.props.data as NativeChatMessage[]
     const index = data.findIndex((row) => row.id === id)
-    return list.props.renderItem({ item: data[index], index })
+    return listNode.props.renderItem({ item: data[index], index })
   }
 
   function banners(): ReactTestInstance[] {
@@ -167,6 +182,19 @@ describe('MobileNativeChatView', () => {
     }
     await act(async () => {
       await composer.props.onPress()
+    })
+  }
+
+  async function scrollAwayFromTail(): Promise<void> {
+    await act(async () => {
+      list().props.onScrollBeginDrag?.({})
+      list().props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 200 },
+          contentSize: { height: 1_200 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
     })
   }
 
@@ -212,6 +240,152 @@ describe('MobileNativeChatView', () => {
     await update({ folded, streaming: 'The tests' })
 
     expect(listIds()).toEqual(['a1', 'streaming'])
+  })
+
+  it('lets content growth own streaming tail-follow without a delayed animated command', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Starting')]
+      await render({ folded })
+      await act(async () => vi.runOnlyPendingTimers())
+      scrollToEnd.mockClear()
+
+      await update({ folded, streaming: 'Streaming output' })
+      act(() => list().props.onContentSizeChange(320, 900))
+
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+      await act(async () => vi.advanceTimersByTime(60))
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('stops tail-follow before loading earlier history can resize the list', async () => {
+    const folded = [assistantTurn('a1', 'History')]
+    const onLoadEarlier = vi.fn()
+    await render({ folded, hasMore: true, onLoadEarlier })
+    scrollToEnd.mockClear()
+
+    act(() => {
+      list().props.onScrollBeginDrag?.({})
+      list().props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 40 },
+          contentSize: { height: 1_200 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
+      list().props.onContentSizeChange(320, 950)
+    })
+
+    expect(onLoadEarlier).toHaveBeenCalledOnce()
+    expect(scrollToEnd).not.toHaveBeenCalled()
+  })
+
+  it('does not treat programmatic scroll metrics as user intent', async () => {
+    const folded = [assistantTurn('a1', 'Latest')]
+    await render({ folded })
+    scrollToEnd.mockClear()
+
+    act(() => {
+      list().props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 200 },
+          contentSize: { height: 1_200 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
+      list().props.onContentSizeChange(320, 1_300)
+    })
+
+    expect(scrollToEnd).toHaveBeenCalledOnce()
+    expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+    expect(
+      renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
+    ).toHaveLength(0)
+  })
+
+  it('detaches before the Load earlier messages button prepends history', async () => {
+    const folded = [assistantTurn('a1', 'Short history')]
+    const onLoadEarlier = vi.fn()
+    await render({ folded, hasMore: true, onLoadEarlier })
+    scrollToEnd.mockClear()
+
+    const header = list().props.ListHeaderComponent as { props: { onPress: () => void } }
+    act(() => {
+      header.props.onPress()
+      list().props.onContentSizeChange(320, 950)
+    })
+
+    expect(onLoadEarlier).toHaveBeenCalledOnce()
+    expect(scrollToEnd).not.toHaveBeenCalled()
+    expect(
+      renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
+    ).toHaveLength(1)
+  })
+
+  it('routes an accepted send through the immediate nonanimated tail owner', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'History')]
+      await render({ folded })
+      await act(async () => vi.runOnlyPendingTimers())
+      await scrollAwayFromTail()
+      scrollToEnd.mockClear()
+
+      await pressSend()
+
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+      await act(async () => vi.advanceTimersByTime(60))
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('routes the latest-message chevron through the tail owner and resumes following', async () => {
+    const folded = [assistantTurn('a1', 'History')]
+    await render({ folded })
+    await scrollAwayFromTail()
+    scrollToEnd.mockClear()
+
+    const chevron = renderer!.root.find(
+      (node) => node.props.accessibilityLabel === 'Scroll to latest'
+    )
+    act(() => chevron.props.onPress())
+    expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+
+    act(() => list().props.onContentSizeChange(320, 1_300))
+    expect(scrollToEnd).toHaveBeenCalledTimes(2)
+  })
+
+  it('repins after a keyboard-driven viewport layout only while following', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Latest')]
+      await render({ folded })
+      await act(async () => vi.runOnlyPendingTimers())
+      scrollToEnd.mockClear()
+
+      await update({ folded, keyboardInset: 320 })
+      act(() => list().props.onLayout?.({ nativeEvent: { layout: { height: 400 } } }))
+
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+      await act(async () => vi.advanceTimersByTime(60))
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+
+      await scrollAwayFromTail()
+      scrollToEnd.mockClear()
+      await update({ folded, keyboardInset: 0 })
+      act(() => list().props.onLayout?.({ nativeEvent: { layout: { height: 700 } } }))
+      expect(scrollToEnd).not.toHaveBeenCalled()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('renders an accepted optimistic image send without a queued state', async () => {
