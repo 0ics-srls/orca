@@ -49,6 +49,11 @@ import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown
 
 const lowlight = createCachedLowlight(createLowlight(common))
 
+const RichMarkdownLink = Link.extend({
+  // Keep link priority below code so linked code labels serialize correctly.
+  priority: 90
+})
+
 const RichMarkdownCode = Code.extend({
   // Why: Markdown supports linked code labels, so code cannot exclude the link
   // mark even though it should still stay exclusive with emphasis marks.
@@ -96,7 +101,7 @@ export function createRichMarkdownExtensions({
       lowlight,
       defaultLanguage: null
     }),
-    Link.configure({
+    RichMarkdownLink.configure({
       openOnClick: false,
       autolink: true,
       linkOnPaste: true

@@ -83,11 +83,18 @@ export function reconcileSerializedMarkdown({
     return restoreMarkdownSourceLineEndings(edited, originalSource)
   }
 
-  // Why: getMarkdown omits one non-semantic final newline; making it shared diff context keeps EOF edits before that newline.
-  const omittedSourceEof = !baseLf.endsWith('\n') && originalTrailingNewlines === '\n' ? '\n' : ''
-  const patchBase = baseLf + omittedSourceEof
-  const patchEdited = editedLf.endsWith('\n') ? editedLf : editedLf + omittedSourceEof
-  let diffs = makeDiff(patchBase, patchEdited, {
+  // Patch newline-stripped bodies so an EOF edit cannot land after the source's
+  // non-semantic trailing newline and force a whole-file canonical rewrite.
+  const sourceBody = stripTrailingNewlines(originalSourceLf)
+  const baseBody = stripTrailingNewlines(baseLf)
+  const editedBody = stripTrailingNewlines(editedLf)
+  const sourceTrailingNewlines = originalSourceLf.match(/\n+$/)?.[0] ?? ''
+  const baseTrailingNewlines = baseLf.match(/\n+$/)?.[0] ?? ''
+  const editedTrailingNewlines = editedLf.match(/\n+$/)?.[0] ?? ''
+  const reconciledTrailingNewlines =
+    (editedTrailingNewlines === baseTrailingNewlines ? '' : editedTrailingNewlines) +
+    sourceTrailingNewlines
+  let diffs = makeDiff(baseBody, editedBody, {
     checkLines: true,
     timeout: RECONCILE_DIFF_TIMEOUT_SECONDS
   })
@@ -95,17 +102,18 @@ export function reconcileSerializedMarkdown({
     diffs = cleanupSemantic(diffs)
     diffs = cleanupEfficiency(diffs)
   }
-  const patches = makePatches(patchBase, diffs)
+  const patches = makePatches(baseBody, diffs)
   // Why: applyPatches decodes starts as UTF-8 offsets even though makePatches returns UTF-16 indices; encode against the divergent text being patched so decoding preserves the fuzzy-match seed.
   const utf8Offsets = getUtf8OffsetsAtCodeUnitIndices(
-    originalSourceLf,
+    sourceBody,
     patches.flatMap((patch) => [patch.start1, patch.start2])
   )
   for (const patch of patches) {
     patch.start1 = utf8Offsets.get(patch.start1) ?? 0
     patch.start2 = utf8Offsets.get(patch.start2) ?? 0
   }
-  const [reconciledLf, results] = applyPatches(patches, originalSourceLf)
+  const [reconciledBody, results] = applyPatches(patches, sourceBody)
+  const reconciledLf = reconciledBody + reconciledTrailingNewlines
 
   // Branch 5: a hunk failed to locate in the non-canonical source → unreliable fuzzy match, fall back to canonical.
   if (results.some((applied) => !applied)) {
