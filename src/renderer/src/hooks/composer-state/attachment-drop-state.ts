@@ -20,12 +20,28 @@ import { joinPath } from '@/lib/path'
 import { captureDirectSshMutationExpectation } from '@/lib/ssh-mutation-expectation'
 import { useAppStore } from '@/store'
 import { importExternalPathsToRuntime } from '@/runtime/runtime-file-client'
+import { readIpcErrorMessage } from '@/lib/ipc-error'
+import { showComposerDropFailureToast } from '../composer-drop-failure-toast'
 import {
   collectComposerDropUploadResult,
-  shouldReportComposerDropUploadFailure
+  shouldReportComposerDropUploadFailure,
+  type ComposerDropUploadImportResult
 } from '../composer-drop-upload-result'
 import { applyComposerNativeFileDrop } from '../composer-native-file-drop'
 import { useComposerDropListener } from './composer-drop-listener'
+
+// Why map errno here: a local drop never reaches the runtime importer that classifies skips, so
+// without this the translated "no longer at its original path" copy would be unreachable for anyone
+// on a plain local workspace.
+function localDropFailure(detail: string | undefined): ComposerDropUploadImportResult {
+  if (detail?.startsWith('ENOENT')) {
+    return { status: 'skipped', reason: 'missing' }
+  }
+  if (/^(EACCES|EPERM)/.test(detail ?? '')) {
+    return { status: 'skipped', reason: 'permission-denied' }
+  }
+  return { status: 'failed', reason: detail }
+}
 
 export function useAttachmentDropState(input: AttachmentDropStateInput) {
   const {
@@ -166,12 +182,11 @@ export function useAttachmentDropState(input: AttachmentDropStateInput) {
       )
       const uploadResult = collectComposerDropUploadResult(results)
       if (shouldReportComposerDropUploadFailure(uploadResult, canReportFailure)) {
-        toast.error(
-          translate(
-            'auto.hooks.useComposerState.a9ff236145',
-            'Some attachments could not be uploaded.'
-          )
-        )
+        showComposerDropFailureToast({
+          skippedOrFailed: uploadResult.skippedOrFailed,
+          total: sourcePaths.length,
+          uniformFailure: uploadResult.uniformFailure
+        })
       }
       return { filePaths: uploadResult.filePaths, folderPaths: uploadResult.folderPaths }
     },
@@ -199,27 +214,37 @@ export function useAttachmentDropState(input: AttachmentDropStateInput) {
 
   const applyLocalComposerDrop = useCallback(
     async (paths: string[], canApply: () => boolean = () => true): Promise<void> => {
-      const fileAttachments: string[] = []
-      const folderPaths: string[] = []
+      const results: ComposerDropUploadImportResult[] = []
       for (const filePath of paths) {
         try {
           await window.api.fs.authorizeExternalPath({ targetPath: filePath })
           const stat = await window.api.fs.stat({ filePath })
-          if (stat.isDirectory) {
-            folderPaths.push(filePath)
-          } else {
-            fileAttachments.push(filePath)
-          }
-        } catch {
-          // Skip paths we cannot authorize or stat.
+          results.push({
+            status: 'imported',
+            destPath: filePath,
+            kind: stat.isDirectory ? 'directory' : 'file'
+          })
+        } catch (error) {
+          // Why classify here: these are the only producers on a local workspace, so without this
+          // the translated skip copy would be unreachable for anyone without a runtime host.
+          results.push(localDropFailure(readIpcErrorMessage(error)))
         }
       }
 
       if (!canApply()) {
         return
       }
-      addComposerAttachments(fileAttachments)
-      insertComposerFolderPaths(folderPaths)
+      const dropResult = collectComposerDropUploadResult(results)
+      addComposerAttachments(dropResult.filePaths)
+      insertComposerFolderPaths(dropResult.folderPaths)
+      // Why: the drop-ownership gate already ran above, so only the count is left to check.
+      if (dropResult.skippedOrFailed > 0) {
+        showComposerDropFailureToast({
+          skippedOrFailed: dropResult.skippedOrFailed,
+          total: paths.length,
+          uniformFailure: dropResult.uniformFailure
+        })
+      }
     },
     [addComposerAttachments, insertComposerFolderPaths]
   )

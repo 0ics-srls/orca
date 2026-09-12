@@ -997,7 +997,11 @@
         "folderWorkspaceCreateFailedMessage": "The folder workspace could not be created. Check the error details above, then try again.",
         "setupAgentStartupPolicySaveFailed": "Failed to save setup startup behavior.",
         "5f3d2c8a1b": "Failed to resolve MR base.",
-        "a9ff236145": "Some attachments could not be uploaded."
+        "dropPartiallyAttached": "{{value0}} of {{value1}} item{{value2}} could not be attached.",
+        "attachSkipMissing": "No longer at its original path.",
+        "attachSkipSymlink": "Symbolic links cannot be attached.",
+        "attachSkipPermissionDenied": "Permission denied.",
+        "attachSkipUnsupported": "Unsupported file type."
       },
       "useGlobalFileDrop": {
         "38c9f034ff": "Failed to upload dropped files.",

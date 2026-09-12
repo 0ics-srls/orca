@@ -10,15 +10,25 @@ describe('composer drop upload result', () => {
     const results: ComposerDropUploadImportResult[] = [
       { status: 'imported', kind: 'file', destPath: '/repo/.orca/drops/file.txt' },
       { status: 'imported', kind: 'directory', destPath: '/repo/.orca/drops/folder' },
-      { status: 'skipped' },
-      { status: 'failed' }
+      { status: 'skipped', reason: 'permission-denied' },
+      { status: 'failed', reason: 'disk full' }
     ]
 
     expect(collectComposerDropUploadResult(results)).toEqual({
       filePaths: ['/repo/.orca/drops/file.txt'],
       folderPaths: ['/repo/.orca/drops/folder'],
-      skippedOrFailed: 2
+      skippedOrFailed: 2,
+      // Why undefined: the two non-imported entries disagree, so no single reason explains the count.
+      uniformFailure: undefined
     })
+  })
+
+  it('reports no first failure when every path imported', () => {
+    expect(
+      collectComposerDropUploadResult([
+        { status: 'imported', kind: 'file', destPath: '/repo/.orca/drops/file.txt' }
+      ]).uniformFailure
+    ).toBeUndefined()
   })
 
   it('suppresses failed-upload reporting after a composer loses drop ownership', () => {
