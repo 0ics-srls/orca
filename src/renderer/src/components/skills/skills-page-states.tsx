@@ -84,11 +84,12 @@ export function SkillsEmptyState({
 }
 
 export function SkillsScanErrorBand({
-  message,
+  detail,
   disabled,
   onRetry
 }: {
-  message: string
+  /** The underlying scan error, so the user can tell a missing folder from a broken host. */
+  detail?: string
   disabled: boolean
   onRetry: () => void
 }): React.JSX.Element {
@@ -97,9 +98,20 @@ export function SkillsScanErrorBand({
       <div
         className={cn(SKILLS_PAGE_COLUMN, 'flex flex-wrap items-center justify-between gap-3 py-2')}
       >
-        <p className="min-w-0 flex-1 text-xs text-destructive" role="alert">
-          {message}
-        </p>
+        {/* Why: role on the wrapper so the reason line is announced too, not just the headline. */}
+        <div className="min-w-0 flex-1" role="alert">
+          {/* Why: same two-line shape as the CLI install-failure band — one token, weight separates them. */}
+          <p className={cn('text-xs text-destructive', detail && 'font-medium')}>
+            {translate('auto.components.skills.SkillsPage.ea72d6185b', 'Could not scan skills')}
+          </p>
+          {detail ? (
+            // Why whitespace-pre-line: this slot is fed the UNCLAMPED reader precisely so a
+            // multi-line git/SSH stderr survives; default white-space would collapse it again.
+            <p className="whitespace-pre-line break-words text-xs leading-snug text-destructive">
+              {detail}
+            </p>
+          ) : null}
+        </div>
         <Button type="button" variant="outline" size="xs" disabled={disabled} onClick={onRetry}>
           {translate('auto.components.skills.SkillsPage.retry', 'Retry')}
         </Button>

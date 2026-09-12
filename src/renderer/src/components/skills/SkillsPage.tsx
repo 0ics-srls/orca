@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Share2, Trash2 } from 'lucide-react'
+import { readIpcErrorDetail } from '@/lib/ipc-error'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { discoverSkillsForRuntimeTarget } from '@/runtime/runtime-skills-client'
@@ -68,7 +69,7 @@ export default function SkillsPage(): React.JSX.Element {
   const hostLabel = useSkillDiscoveryHostLabel(runtimeTarget)
   const [result, setResult] = useState<SkillDiscoveryResult | null>(null)
   const [loading, setLoading] = useState(true)
-  const [scanError, setScanError] = useState<string | null>(null)
+  const [scanError, setScanError] = useState<{ detail?: string } | null>(null)
   const [shareSkills, setShareSkills] = useState<DiscoveredSkill[]>([])
   const [selectionMode, setSelectionMode] = useState<'share' | 'delete' | null>(null)
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(() => new Set())
@@ -121,9 +122,7 @@ export default function SkillsPage(): React.JSX.Element {
         if (isCurrentScan()) {
           // Why: a failed scan needs to stay on screen with a retry — a toast
           // disappears before the user can act on it.
-          setScanError(
-            translate('auto.components.skills.SkillsPage.ea72d6185b', 'Could not scan skills')
-          )
+          setScanError({ detail: readIpcErrorDetail(error) })
         }
       } finally {
         if (isCurrentScan()) {
@@ -310,7 +309,7 @@ export default function SkillsPage(): React.JSX.Element {
       />
       {scanError ? (
         <SkillsScanErrorBand
-          message={scanError}
+          detail={scanError.detail}
           disabled={loading}
           onRetry={() => {
             deleteFlow.reprobe()
@@ -359,7 +358,7 @@ export default function SkillsPage(): React.JSX.Element {
                 />
               ) : skills.length > 0 ? (
                 <SkillsNoMatchesState onClearFilters={() => setFilters(NO_FILTERS)} />
-              ) : (
+              ) : result ? (
                 <SkillsEmptyState
                   onRefresh={() => {
                     deleteFlow.reprobe()
@@ -367,7 +366,7 @@ export default function SkillsPage(): React.JSX.Element {
                   }}
                   onInstallFromLink={openInstallDialog}
                 />
-              )}
+              ) : null}
             </>
           )}
         </div>

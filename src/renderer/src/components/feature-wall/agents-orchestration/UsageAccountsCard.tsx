@@ -16,6 +16,21 @@ import { translate } from '@/i18n/i18n'
 
 type ConnectAction = 'idle' | 'adding'
 
+// Why only 'failed': a read still in flight is not evidence of anything, so it keeps the quiet
+// label until it settles. Only a read that actually FAILED may claim the status is unknown.
+function usageConnectionLabel(
+  connection: { connected: boolean; label: string },
+  accountsRead: 'pending' | 'failed' | 'loaded'
+): string {
+  if (connection.connected || accountsRead !== 'failed') {
+    return connection.label
+  }
+  return translate(
+    'auto.components.feature.wall.agents.orchestration.UsageAccountsCard.accountStatusUnknown',
+    'Account status unknown'
+  )
+}
+
 function ConnectionPill(props: { connected: boolean; label: string }): JSX.Element {
   const { connected, label } = props
   return (
@@ -97,14 +112,14 @@ export function UsageAccountsCard(props: {
   const fetchRateLimits = useAppStore((s) => s.fetchRateLimits)
   const mountedRef = useMountedRef()
 
-  const [claudeAccounts, setClaudeAccounts] = useState<ClaudeRateLimitAccountsState>({
-    accounts: [],
-    activeAccountId: null
-  })
-  const [codexAccounts, setCodexAccounts] = useState<CodexRateLimitAccountsState>({
-    accounts: [],
-    activeAccountId: null
-  })
+  const [claudeAccounts, setClaudeAccounts] = useState<ClaudeRateLimitAccountsState>()
+  const [codexAccounts, setCodexAccounts] = useState<CodexRateLimitAccountsState>()
+  const [claudeAccountsRead, setClaudeAccountsRead] = useState<'pending' | 'failed' | 'loaded'>(
+    'pending'
+  )
+  const [codexAccountsRead, setCodexAccountsRead] = useState<'pending' | 'failed' | 'loaded'>(
+    'pending'
+  )
   const [claudeAction, setClaudeAction] = useState<ConnectAction>('idle')
   const [codexAction, setCodexAction] = useState<ConnectAction>('idle')
 
@@ -119,9 +134,13 @@ export function UsageAccountsCard(props: {
         const next = await window.api.claudeAccounts.list()
         if (!stale) {
           setClaudeAccounts(next)
+          setClaudeAccountsRead('loaded')
         }
       } catch {
-        // Silent — empty list is the right fallback for the inline pitch.
+        // Why: a failed read is distinct from a confirmed empty account list.
+        if (!stale) {
+          setClaudeAccountsRead('failed')
+        }
       }
     })()
     void (async () => {
@@ -129,9 +148,12 @@ export function UsageAccountsCard(props: {
         const next = await window.api.codexAccounts.list()
         if (!stale) {
           setCodexAccounts(next)
+          setCodexAccountsRead('loaded')
         }
       } catch {
-        // Silent — same reason as above.
+        if (!stale) {
+          setCodexAccountsRead('failed')
+        }
       }
     })()
     return () => {
@@ -140,11 +162,11 @@ export function UsageAccountsCard(props: {
   }, [fetchRateLimits])
 
   const claudeConnection = getFeatureWallUsageProviderConnection({
-    managedAccountCount: claudeAccounts.accounts.length,
+    managedAccountCount: claudeAccounts?.accounts.length ?? 0,
     provider: rateLimits.claude
   })
   const codexConnection = getFeatureWallUsageProviderConnection({
-    managedAccountCount: codexAccounts.accounts.length,
+    managedAccountCount: codexAccounts?.accounts.length ?? 0,
     provider: rateLimits.codex
   })
 
@@ -240,7 +262,7 @@ export function UsageAccountsCard(props: {
           'Track session and weekly usage.'
         )}
         connected={claudeConnection.connected}
-        connectionLabel={claudeConnection.label}
+        connectionLabel={usageConnectionLabel(claudeConnection, claudeAccountsRead)}
         isAdding={claudeAction === 'adding'}
         onSignIn={() => void handleClaudeSignIn()}
       />
@@ -252,7 +274,7 @@ export function UsageAccountsCard(props: {
           'Surface rate limits and swap accounts inline.'
         )}
         connected={codexConnection.connected}
-        connectionLabel={codexConnection.label}
+        connectionLabel={usageConnectionLabel(codexConnection, codexAccountsRead)}
         isAdding={codexAction === 'adding'}
         onSignIn={() => void handleCodexSignIn()}
       />
