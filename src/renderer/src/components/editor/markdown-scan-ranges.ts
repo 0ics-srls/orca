@@ -46,14 +46,35 @@ export function isInsideRange(index: number, ranges: MarkdownFenceRanges): boole
   return ranges.some(([start, end]) => index >= start && index < end)
 }
 
+function rangeEndAt(index: number, ranges: MarkdownFenceRanges): number {
+  for (const [start, end] of ranges) {
+    if (index >= start && index < end) {
+      return end
+    }
+  }
+  return -1
+}
+
 // CommonMark code spans: a backtick run only closes on a run of the same
 // length, so `` `<details>` `` is one span even though `<details>` alone
 // isn't. Mirrors the tick-matching in raw-markdown-html.ts's inline scan.
-export function markdownCodeSpanRanges(content: string): MarkdownFenceRanges {
+// Fenced blocks are skipped whole — their delimiters and content are not
+// inline code, and scanning them pairs a fence backtick with a later prose
+// one, swallowing everything between. Blank lines are not span boundaries.
+export function markdownCodeSpanRanges(
+  content: string,
+  fenceRanges: MarkdownFenceRanges = markdownFenceRanges(content)
+): MarkdownFenceRanges {
   const ranges: [number, number][] = []
   let index = 0
 
   while (index < content.length) {
+    const fenceEnd = rangeEndAt(index, fenceRanges)
+    if (fenceEnd !== -1) {
+      index = fenceEnd
+      continue
+    }
+
     if (content[index] !== '`') {
       index += 1
       continue
@@ -71,6 +92,10 @@ export function markdownCodeSpanRanges(content: string): MarkdownFenceRanges {
       const candidate = content.indexOf('`'.repeat(tickCount), searchFrom)
       if (candidate === -1) {
         break
+      }
+      if (rangeEndAt(candidate, fenceRanges) !== -1) {
+        searchFrom = candidate + 1
+        continue
       }
       if (
         (candidate === 0 || content[candidate - 1] !== '`') &&
