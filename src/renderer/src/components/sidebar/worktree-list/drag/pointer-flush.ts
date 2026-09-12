@@ -181,10 +181,20 @@ export function flushWorktreePointerDragFrame(args: WorktreePointerDragFrameArgs
     return
   }
   // Let the pointer cross a reorder gutter into the card before moving its target.
-  if (drag.reorderIntent?.dropIndex !== drop.dropIndex) {
-    drag.reorderIntent = { dropIndex: drop.dropIndex, startedAt: performance.now() }
+  let intent = drag.reorderIntent
+  if (!intent || (intent.dropIndex !== drop.dropIndex && intent.pointerY !== drag.currentY)) {
+    intent = {
+      dropIndex: drop.dropIndex,
+      pointerY: drag.currentY,
+      startedAt: performance.now()
+    }
+  } else {
+    // Autoscroll changes slots beneath a stationary pointer without renewing intent.
+    intent.dropIndex = drop.dropIndex
+    intent.pointerY = drag.currentY
   }
-  if (performance.now() - drag.reorderIntent.startedAt < REORDER_INTENT_DELAY_MS) {
+  drag.reorderIntent = intent
+  if (performance.now() - intent.startedAt < REORDER_INTENT_DELAY_MS) {
     drag.latestStatusDropTarget = null
     args.setWorktreeDragState((prev) =>
       clearWorktreeDropPreview(prev, {

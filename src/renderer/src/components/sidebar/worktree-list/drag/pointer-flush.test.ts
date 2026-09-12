@@ -1,4 +1,8 @@
 // @vitest-environment happy-dom
+import { act, cleanup, renderHook } from '@testing-library/react'
+import { useWorktreeDragRuntime } from './use-runtime'
+import { useWorktreePointerDragWindowEvents } from './use-pointer-window-events'
+import { commitWorktreePointerDrop } from './pointer-commit'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { flushWorktreePointerDragFrame, type WorktreePointerDragFrameArgs } from './pointer-flush'
 import { NO_WORKTREE_SIDEBAR_DROP_TARGET, WORKTREE_ROW_DRAG_INITIAL_STATE } from './row-state'
@@ -10,7 +14,12 @@ vi.mock('../../workspace-kanban-sidebar-drop', () => ({
   updateWorkspaceKanbanSidebarDropTargetVisual: () => ({ status: null, isPinDrop: false })
 }))
 
-afterEach(() => vi.restoreAllMocks())
+vi.mock('./pointer-commit', () => ({ commitWorktreePointerDrop: vi.fn() }))
+
+afterEach(() => {
+  cleanup()
+  vi.restoreAllMocks()
+})
 
 function setup() {
   let time = 0
@@ -133,6 +142,7 @@ describe('combined nesting and animated reordering', () => {
     flushWorktreePointerDragFrame(t.args)
     t.tick(160)
     expect(t.state().dropIndicatorY).toBe(300)
+    t.args.drag.currentY = 356
     t.args.ctx.computeWorktreeDrop = () => ({
       dropIndex: 2,
       dropIndicatorY: 356,
@@ -147,5 +157,103 @@ describe('combined nesting and animated reordering', () => {
     const frames = vi.mocked(window.requestAnimationFrame).mock.calls.length
     t.tick(1000)
     expect(vi.mocked(window.requestAnimationFrame).mock.calls).toHaveLength(frames)
+  })
+})
+
+describe('stationary pointer autoscroll', () => {
+  it.each([1, -1])('keeps the gap tracking slots while scrolling in direction %s', (direction) => {
+    const t = setup()
+    const container = document.createElement('div')
+    t.args.ctx.scrollRef.current = container
+    let index = 10
+    let offsets = new Map([['parent', 56]])
+    t.args.ctx.computeWorktreeDrop = () => ({
+      dropIndex: index,
+      dropIndicatorY: 300 - container.scrollTop,
+      dropAnchorId: null,
+      previewOffsetsByWorktreeId: offsets
+    })
+    flushWorktreePointerDragFrame(t.args)
+    for (let frame = 1; frame <= 6; frame++) {
+      index += direction
+      container.scrollTop += direction * 56
+      offsets = new Map([[`row-${index}`, direction * 56]])
+      t.tick(80)
+      flushWorktreePointerDragFrame(t.args)
+      if (frame >= 2) {
+        expect(t.state().previewOffsetsByWorktreeId).toBe(offsets)
+        expect(t.state().dropIndicatorY).toBe(300 - container.scrollTop)
+      }
+    }
+    expect(t.args.drag.currentY).toBe(300)
+  })
+})
+
+describe('Escape during pointer dragging', () => {
+  function renderDrag() {
+    const t = setup()
+    const cancelBoard = vi.fn()
+    const { result, unmount } = renderHook(() => {
+      const runtime = useWorktreeDragRuntime({
+        worktreeDragSessionRef: { current: null },
+        statusDropAnchorsRef: { current: new Map() },
+        onWorkspaceBoardDragPreviewCancel: cancelBoard
+      })
+      useWorktreePointerDragWindowEvents({
+        ctx: t.args.ctx,
+        runtime,
+        beginWorktreePointerDrag: vi.fn(),
+        scheduleWorktreePointerDragFrame: vi.fn(),
+        onWorkspaceBoardDragPreviewCommit: vi.fn(),
+        onDropWorktreesOnWorkspaceBoard: vi.fn()
+      })
+      return runtime
+    })
+    result.current.worktreePointerDragRef.current = t.args.drag
+    if (t.args.drag.preview) {
+      document.body.append(t.args.drag.preview)
+    }
+    return { ...t, result, unmount, cancelBoard }
+  }
+
+  it('removes the preview and cancels frames without committing on pointer release', () => {
+    const t = renderDrag()
+    const cancelFrame = vi.spyOn(window, 'cancelAnimationFrame')
+    t.args.drag.frameId = 12
+    t.result.current.pointerAutoscrollFrameIdRef.current = 13
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
+    act(() => window.dispatchEvent(escape))
+    expect(escape.defaultPrevented).toBe(true)
+    expect(t.result.current.worktreePointerDragRef.current).toBeNull()
+    expect(t.args.drag.preview?.isConnected).toBe(false)
+    expect(cancelFrame).toHaveBeenCalledWith(12)
+    expect(cancelFrame).toHaveBeenCalledWith(13)
+    expect(t.cancelBoard).toHaveBeenCalledOnce()
+    window.dispatchEvent(new PointerEvent('pointerup', { pointerId: 1 }))
+    expect(commitWorktreePointerDrop).not.toHaveBeenCalled()
+    expect(t.result.current.worktreeDragState).toBe(WORKTREE_ROW_DRAG_INITIAL_STATE)
+  })
+
+  it('leaves other keys and Escape without a drag available to the app', () => {
+    const t = renderDrag()
+    const enter = new KeyboardEvent('keydown', { key: 'Enter', cancelable: true })
+    window.dispatchEvent(enter)
+    expect(enter.defaultPrevented).toBe(false)
+    expect(t.result.current.worktreePointerDragRef.current).toBe(t.args.drag)
+    act(() => t.result.current.clearWorktreeDrag())
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
+    window.dispatchEvent(escape)
+    expect(escape.defaultPrevented).toBe(false)
+    expect(t.cancelBoard).toHaveBeenCalledOnce()
+  })
+
+  it('removes its Escape listener on unmount', () => {
+    const t = renderDrag()
+    t.unmount()
+    const escape = new KeyboardEvent('keydown', { key: 'Escape', cancelable: true })
+    window.dispatchEvent(escape)
+    expect(escape.defaultPrevented).toBe(false)
+    expect(t.cancelBoard).not.toHaveBeenCalled()
+    t.args.drag.preview?.remove()
   })
 })
