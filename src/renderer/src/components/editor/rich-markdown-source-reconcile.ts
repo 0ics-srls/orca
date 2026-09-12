@@ -30,12 +30,18 @@ export type ReconcileSerializedMarkdownParams = {
   roundTrip: (markdown: string) => string | null
 }
 
-/** Restores the source's EOL sequence and final newline to canonical markdown. */
+export function restoreMarkdownSourceEol(markdown: string, source: string): string {
+  return restoreEol(toLf(markdown), detectDominantEol(source))
+}
+
+/** Restores canonical output to the source's EOL and single trailing newline. */
 export function restoreMarkdownSourceLineEndings(markdown: string, source: string): string {
-  return restoreEol(
-    preserveSourceTrailingNewline(toLf(markdown), toLf(source)),
-    detectDominantEol(source)
-  )
+  const sourceLf = toLf(source)
+  const markdownLf = toLf(markdown)
+  const sourceTrailing = sourceLf.match(/\n+$/)?.[0] ?? ''
+  const withTrailing =
+    markdownLf.endsWith('\n') || sourceTrailing.length !== 1 ? markdownLf : `${markdownLf}\n`
+  return restoreEol(withTrailing, detectDominantEol(source))
 }
 
 /**
@@ -69,35 +75,45 @@ export function reconcileSerializedMarkdown({
     return restoreEol(editedLf + originalTrailingNewlines, eol)
   }
 
+  // Why: canonical output has no final newline; keep the source's single one so a fallback does not strip it.
+  const canonicalFallback = (): string =>
+    restoreEol(
+      editedLf.endsWith('\n') || originalTrailingNewlines.length !== 1
+        ? editedLf
+        : editedLf + originalTrailingNewlines,
+      eol
+    )
+
   // Branch 3: oversize → bounded-cost canonical fallback (today's behavior).
   if (
     Math.max(originalSource.length, baseCanonical.length, edited.length) >
     RECONCILE_SIZE_CAP_CODE_UNITS
   ) {
-    return restoreMarkdownSourceLineEndings(edited, originalSource)
+    return canonicalFallback()
   }
 
   // Branch 4: run the divergent-base patch entirely in LF space.
-  // Why: dmp's half-match accelerator ignores the diff deadline (100ms+ on repeated seeds), so bail to canonical for highly repetitive replacements.
-  if (hasRepeatedHalfMatchSeed(baseLf, editedLf)) {
-    return restoreMarkdownSourceLineEndings(edited, originalSource)
-  }
-
-  // Patch newline-stripped bodies so an EOF edit cannot land after the source's
-  // non-semantic trailing newline and force a whole-file canonical rewrite.
-  const sourceBody = stripTrailingNewlines(originalSourceLf)
-  const baseBody = stripTrailingNewlines(baseLf)
-  const editedBody = stripTrailingNewlines(editedLf)
-  const sourceTrailingNewlines = originalSourceLf.match(/\n+$/)?.[0] ?? ''
-  const baseTrailingNewlines = baseLf.match(/\n+$/)?.[0] ?? ''
+  // Why: when the source ends in one newline that canonical lacks, an end-of-document hunk (whose
+  // trailing context is dmp's end-of-text padding) lands after that newline and fails branch 6, so
+  // patch the bodies and re-attach the run. Any other shape (a trailing empty paragraph is `\n\n`
+  // in canonical too) patches correctly whole.
   const editedTrailingNewlines = editedLf.match(/\n+$/)?.[0] ?? ''
-  const reconciledTrailingNewlines =
-    (editedTrailingNewlines === baseTrailingNewlines ? '' : editedTrailingNewlines) +
-    sourceTrailingNewlines
+  const stripEnd = !baseLf.endsWith('\n') && originalTrailingNewlines.length === 1
+  const sourceBody = stripEnd ? stripTrailingNewlines(originalSourceLf) : originalSourceLf
+  const baseBody = baseLf
+  const editedBody = stripEnd ? stripTrailingNewlines(editedLf) : editedLf
+  const reconciledTrailingNewlines = stripEnd
+    ? editedTrailingNewlines + originalTrailingNewlines
+    : ''
+  // Why: dmp's half-match accelerator ignores the diff deadline (100ms+ on repeated seeds), so bail to canonical for highly repetitive replacements.
+  if (hasRepeatedHalfMatchSeed(baseBody, editedBody)) {
+    return canonicalFallback()
+  }
   let diffs = makeDiff(baseBody, editedBody, {
     checkLines: true,
     timeout: RECONCILE_DIFF_TIMEOUT_SECONDS
   })
+  // Match makePatches's cleanup while supplying our own bounded diff, avoiding the library's 1s timeout.
   if (diffs.length > 2) {
     diffs = cleanupSemantic(diffs)
     diffs = cleanupEfficiency(diffs)
@@ -117,24 +133,17 @@ export function reconcileSerializedMarkdown({
 
   // Branch 5: a hunk failed to locate in the non-canonical source → unreliable fuzzy match, fall back to canonical.
   if (results.some((applied) => !applied)) {
-    return restoreMarkdownSourceLineEndings(edited, originalSource)
+    return canonicalFallback()
   }
 
   // Branch 6: prove reconciled bytes render-equal the editor's document — any fuzzy misplacement changes canonical output and is caught here → canonical fallback.
   const reparsed = roundTrip(reconciledLf)
   if (reparsed === null || normalizeForSafety(reparsed) !== normalizeForSafety(editedLf)) {
-    return restoreMarkdownSourceLineEndings(edited, originalSource)
+    return canonicalFallback()
   }
 
-  return restoreEol(preserveSourceTrailingNewline(reconciledLf, originalSourceLf), eol)
-}
-
-function preserveSourceTrailingNewline(lfText: string, originalSourceLf: string): string {
-  // A single final newline is non-semantic; longer runs can create an empty paragraph.
-  if (lfText.endsWith('\n') || !originalSourceLf.endsWith('\n')) {
-    return lfText
-  }
-  return `${lfText}\n`
+  // Restore the detected EOL as the final step so reconciled CRLF stays CRLF.
+  return restoreEol(reconciledLf, eol)
 }
 
 function stripTrailingNewlines(lfText: string): string {

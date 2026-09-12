@@ -624,26 +624,50 @@ describe('rich markdown round trip', () => {
     expect(slashCommandSelectionParent(commandId)).toBe('detailsSummary')
   })
 
-  it('keeps backslash-escaped characters instead of dropping them on load', () => {
-    // Why: marked emits `escape` tokens that Tiptap's parser otherwise discards, deleting the character.
-    expect(roundTripMarkdown('cost was \\$1,200, rate 5\\*, file\\_name, see \\[note\\].\n')).toBe(
-      'cost was $1,200, rate 5*, file_name, see [note].'
-    )
+  it('round-trips backslash-escaped characters byte for byte', () => {
+    // Why: Tiptap's parser dropped marked's `escape` token (the character vanished on load), and its
+    // serializer never re-escapes, so a bare character would become syntax on the next open.
+    const content = [
+      'cost was \\$1,200, rate 5\\*, file\\_name, see \\[note\\](y).',
+      '\\# not a heading',
+      '1\\. not a list',
+      '\\- not a bullet',
+      '\\*\\*not bold\\*\\* and \\_not em\\_',
+      '\\`not code\\` and \\~\\~not strike\\~\\~',
+      'C:\\\\Program Files\\\\(x86)',
+      'shell \\$HOME\\$ var'
+    ].join('\n\n')
+    const once = roundTripMarkdown(`${content}\n`)
+    expect(once).toBe(content)
+    expect(roundTripMarkdown(`${once}\n`)).toBe(content)
   })
 
   it('keeps escaped dollars inside table cells', () => {
-    expect(roundTripMarkdown('| Item | Amount |\n|---|---|\n| Fee | \\$500 |\n')).toContain('$500')
+    expect(roundTripMarkdown('| Item | Amount |\n|---|---|\n| Fee | \\$500 |\n')).toContain(
+      '\\$500'
+    )
+  })
+
+  it('does not turn escaped dollars into inline math', () => {
+    expect(countInlineMathNodes('shell \\$HOME\\$ var and \\$x\\$ too')).toBe(0)
   })
 
   it('keeps dollar amounts as text instead of inline math', () => {
     const content = 'from $10 to $20, then (deficit −$509,542 by end-2020) entered 2021 at $0'
     expect(countInlineMathNodes(content)).toBe(0)
     expect(roundTripMarkdown(`${content}\n`)).toBe(content)
+    // Why: Pandoc boundaries — a space inside either `$` or a digit after the closing `$` means money.
+    for (const text of ['$x$2 apples', 'costs $ x$ here', 'costs $x $ here', '$5-$6 range']) {
+      expect(countInlineMathNodes(text)).toBe(0)
+    }
   })
 
   it('still parses inline math that touches its dollar signs', () => {
     expect(countInlineMathNodes('Energy is $E = mc^2$ here, and $x_1$ too.')).toBe(2)
     expect(roundTripMarkdown('Energy is $E = mc^2$ here.\n')).toBe('Energy is $E = mc^2$ here.')
+    // Why: a formula may wrap across a soft line break, and may end in a LaTeX line break.
+    expect(countInlineMathNodes('wrap $a +\nb$ end')).toBe(1)
+    expect(countInlineMathNodes('break $x\\\\$ end')).toBe(1)
   })
 
   it('preserves markdown tables', () => {

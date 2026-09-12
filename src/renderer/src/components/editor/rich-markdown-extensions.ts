@@ -43,6 +43,7 @@ import { RichMarkdownProseEntities } from './rich-markdown-prose-entities'
 import { RichMarkdownParagraph } from './rich-markdown-paragraph'
 import { RichMarkdownInlineMath } from './rich-markdown-inline-math'
 import { RichMarkdownCodeBlockLowlight } from './rich-markdown-lowlight'
+import { RichMarkdownEscapedCharacter } from './rich-markdown-escaped-character'
 import { RichMarkdownTaskList } from './rich-markdown-task-list'
 import { createCachedLowlight } from './rich-markdown-lowlight-cache'
 import { renderRichMarkdownCodeBlock } from './rich-markdown-code-block-markdown'
@@ -248,6 +249,7 @@ export function createRichMarkdownExtensions({
         throwOnError: false
       }
     }),
+    RichMarkdownEscapedCharacter,
     createRichMarkdownLiteral(codec.transport),
     ...(htmlSuperscriptLinks
       ? [createRichMarkdownHtmlSuperscriptLink(codec.transport, htmlSuperscriptLinkContext!)]
@@ -262,6 +264,7 @@ export function createRichMarkdownExtensions({
         gfm: true
       }
     }),
+    RichMarkdownEscapedCharacter,
     RichMarkdownCodeSpanPadding,
     RichMarkdownProseEntities,
     createRichMarkdownAnnotationHighlightExtension()
