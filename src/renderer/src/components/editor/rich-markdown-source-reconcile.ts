@@ -30,6 +30,8 @@ export type ReconcileSerializedMarkdownParams = {
   roundTrip: (markdown: string) => string | null
 }
 
+type PatchAttempt = { source: string; base: string; edited: string; trailing: string }
+
 export function restoreMarkdownSourceEol(markdown: string, source: string): string {
   return restoreEol(toLf(markdown), detectDominantEol(source))
 }
@@ -92,24 +94,47 @@ export function reconcileSerializedMarkdown({
     return canonicalFallback()
   }
 
+  // Why: dmp's half-match accelerator ignores the diff deadline (100ms+ on repeated seeds), so bail to canonical for highly repetitive replacements.
+  if (hasRepeatedHalfMatchSeed(baseLf, editedLf)) {
+    return canonicalFallback()
+  }
+
   // Branch 4: run the divergent-base patch entirely in LF space.
   // Why: when the source ends in one newline that canonical lacks, an end-of-document hunk (whose
   // trailing context is dmp's end-of-text padding) lands after that newline and fails branch 6, so
-  // patch the bodies and re-attach the run. Any other shape (a trailing empty paragraph is `\n\n`
-  // in canonical too) patches correctly whole.
-  const editedTrailingNewlines = editedLf.match(/\n+$/)?.[0] ?? ''
-  const stripEnd = !baseLf.endsWith('\n') && originalTrailingNewlines.length === 1
-  const sourceBody = stripEnd ? stripTrailingNewlines(originalSourceLf) : originalSourceLf
-  const baseBody = baseLf
-  const editedBody = stripEnd ? stripTrailingNewlines(editedLf) : editedLf
-  const reconciledTrailingNewlines = stripEnd
-    ? editedTrailingNewlines + originalTrailingNewlines
-    : ''
-  // Why: dmp's half-match accelerator ignores the diff deadline (100ms+ on repeated seeds), so bail to canonical for highly repetitive replacements.
-  if (hasRepeatedHalfMatchSeed(baseBody, editedBody)) {
-    return canonicalFallback()
+  // try the bodies first and re-attach the run; the whole-text patch (right for every other shape)
+  // stays as the second attempt so no file does worse than before.
+  const attempts: PatchAttempt[] = []
+  if (!baseLf.endsWith('\n') && originalTrailingNewlines.length === 1) {
+    attempts.push({
+      source: stripTrailingNewlines(originalSourceLf),
+      base: baseLf,
+      edited: stripTrailingNewlines(editedLf),
+      trailing: (editedLf.match(/\n+$/)?.[0] ?? '') + originalTrailingNewlines
+    })
   }
-  let diffs = makeDiff(baseBody, editedBody, {
+  attempts.push({ source: originalSourceLf, base: baseLf, edited: editedLf, trailing: '' })
+
+  for (const attempt of attempts) {
+    // Branch 5: a hunk failed to locate in the non-canonical source → unreliable fuzzy match.
+    const patched = patchDivergentSource(attempt.source, attempt.base, attempt.edited)
+    if (patched === null) {
+      continue
+    }
+    const reconciledLf = patched + attempt.trailing
+    // Branch 6: prove reconciled bytes render-equal the editor's document — any fuzzy misplacement changes canonical output and is caught here.
+    const reparsed = roundTrip(reconciledLf)
+    if (reparsed !== null && normalizeForSafety(reparsed) === normalizeForSafety(editedLf)) {
+      // Restore the detected EOL as the final step so reconciled CRLF stays CRLF.
+      return restoreEol(reconciledLf, eol)
+    }
+  }
+  return canonicalFallback()
+}
+
+/** Applies the base→edited diff onto the divergent source; null when a hunk could not be located. */
+function patchDivergentSource(source: string, base: string, edited: string): string | null {
+  let diffs = makeDiff(base, edited, {
     checkLines: true,
     timeout: RECONCILE_DIFF_TIMEOUT_SECONDS
   })
@@ -118,32 +143,18 @@ export function reconcileSerializedMarkdown({
     diffs = cleanupSemantic(diffs)
     diffs = cleanupEfficiency(diffs)
   }
-  const patches = makePatches(baseBody, diffs)
+  const patches = makePatches(base, diffs)
   // Why: applyPatches decodes starts as UTF-8 offsets even though makePatches returns UTF-16 indices; encode against the divergent text being patched so decoding preserves the fuzzy-match seed.
   const utf8Offsets = getUtf8OffsetsAtCodeUnitIndices(
-    sourceBody,
+    source,
     patches.flatMap((patch) => [patch.start1, patch.start2])
   )
   for (const patch of patches) {
     patch.start1 = utf8Offsets.get(patch.start1) ?? 0
     patch.start2 = utf8Offsets.get(patch.start2) ?? 0
   }
-  const [reconciledBody, results] = applyPatches(patches, sourceBody)
-  const reconciledLf = reconciledBody + reconciledTrailingNewlines
-
-  // Branch 5: a hunk failed to locate in the non-canonical source → unreliable fuzzy match, fall back to canonical.
-  if (results.some((applied) => !applied)) {
-    return canonicalFallback()
-  }
-
-  // Branch 6: prove reconciled bytes render-equal the editor's document — any fuzzy misplacement changes canonical output and is caught here → canonical fallback.
-  const reparsed = roundTrip(reconciledLf)
-  if (reparsed === null || normalizeForSafety(reparsed) !== normalizeForSafety(editedLf)) {
-    return canonicalFallback()
-  }
-
-  // Restore the detected EOL as the final step so reconciled CRLF stays CRLF.
-  return restoreEol(reconciledLf, eol)
+  const [patched, results] = applyPatches(patches, source)
+  return results.some((applied) => !applied) ? null : patched
 }
 
 function stripTrailingNewlines(lfText: string): string {

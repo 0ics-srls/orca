@@ -440,6 +440,23 @@ describe('serializeRichMarkdownForReconcile (real editor pipeline)', () => {
     expect(reconciled).toBe('Cost \\$1 for _em_.\n\ntext\n\nAdded')
   })
 
+  it('keeps source style when appending to a source whose last line is whitespace only', () => {
+    // Why: the trailing run is one newline, so the body strip is tried first; it lands after the
+    // spaces and fails the proof, and the whole-text patch must then take over instead of canonical.
+    const originalSource = 'Cost \\$1 & co.\n\nLast.\n  \n'
+    const baseCanonical = serialize(originalSource)!
+    const edited = `${baseCanonical} Added.`
+
+    const reconciled = reconcileSerializedMarkdown({
+      originalSource,
+      baseCanonical,
+      edited,
+      roundTrip: (md) => serialize(md)
+    })
+
+    expect(reconciled).toBe('Cost \\$1 & co.\n\nLast. Added.\n  \n')
+  })
+
   it('keeps source style when deleting the trailing empty paragraph', () => {
     const originalSource = 'Cost \\$1 for _em_.\n\ntext\n\n'
     const baseCanonical = serialize(originalSource)!

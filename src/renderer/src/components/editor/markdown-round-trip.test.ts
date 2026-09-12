@@ -673,7 +673,25 @@ describe('rich markdown round trip', () => {
   })
 
   it('does not turn escaped dollars into inline math', () => {
-    expect(countInlineMathNodes('shell \\$HOME\\$ var and \\$x\\$ too')).toBe(0)
+    const content = 'shell \\$HOME\\$ var, \\$x\\$ too, and costs $5 to \\$x here'
+    expect(countInlineMathNodes(content)).toBe(0)
+    expect(roundTripMarkdown(`${content}\n`)).toBe(content)
+  })
+
+  it('keeps escaped characters as searchable text', () => {
+    const codec = createRichMarkdownEditorCodec()
+    const editor = new Editor({
+      element: null,
+      extensions: createRichMarkdownExtensions({ codec }),
+      content: encodeRawMarkdownHtmlForRichEditor('cost \\$1,200 and file\\_name\n', codec),
+      contentType: 'markdown'
+    })
+    try {
+      // Why: find/replace treats atoms as read-only, so escapes must stay ordinary text.
+      expect(editor.state.doc.textContent).toBe('cost $1,200 and file_name')
+    } finally {
+      editor.destroy()
+    }
   })
 
   it('keeps dollar amounts as text instead of inline math', () => {

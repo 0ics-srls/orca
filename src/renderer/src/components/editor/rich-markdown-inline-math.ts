@@ -1,7 +1,7 @@
 import { InlineMath } from '@tiptap/extension-mathematics'
 
 // Keep money as text while allowing valid multiline and escaped LaTeX content.
-const INLINE_MATH = /^\$(?![\s$])([^$]*?[^\s$])\$(?![\d$])/
+const INLINE_MATH = /^\$(?![\s$])((?:\\[\s\S]|[^$\\])*?)(?<!\s)\$(?![\d$])/
 
 const baseTokenizer = InlineMath.config.markdownTokenizer
 if (!baseTokenizer) {
