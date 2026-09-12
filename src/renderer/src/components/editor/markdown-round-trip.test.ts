@@ -396,7 +396,7 @@ describe('rich markdown round trip', () => {
     expect(roundTripMarkdown(input)).toBe(input.trimEnd())
   })
 
-  it('preserves details blocks with closing tags inside fenced code as passthrough html', () => {
+  it('keeps a fenced closing tag in the body instead of ending the block at it', () => {
     const input = [
       '<details><summary>Toggle</summary>',
       '',
@@ -407,7 +407,19 @@ describe('rich markdown round trip', () => {
       '</details>',
       ''
     ].join('\n')
-    expect(roundTripMarkdown(input)).toBe(input.trimEnd())
+
+    expect(roundTripMarkdown(input)).toBe(
+      [
+        '<details class="orca-details">',
+        '<summary>Toggle</summary>',
+        '',
+        '```',
+        '</details>',
+        '```',
+        '',
+        '</details>'
+      ].join('\n')
+    )
   })
 
   it('reopens nested toggles as editable details blocks', () => {
@@ -496,18 +508,81 @@ describe('rich markdown round trip', () => {
     expect(roundTripMarkdown(input)).toBe(input.trimEnd())
   })
 
-  it('keeps a details block intact when its body mentions </details> in a code span', () => {
-    // The body text still contains a literal </details>-shaped tag, so
-    // isEditableDetailsHtmlBlock keeps this passthrough HTML rather than rich
-    // mode — the regression this guards is the tag-depth pairing scan closing
-    // the block early at that code-span match and truncating the raw source.
+  it('keeps body text after a </details> code span instead of truncating there', () => {
     const input =
       '<details><summary>Toggle</summary><p>See `</details>` for reference and more body text after.</p></details>\n'
-    expect(roundTripMarkdown(input)).toBe(input.trimEnd())
+
+    expect(roundTripMarkdown(input)).toBe(
+      [
+        '<details class="orca-details">',
+        '<summary>Toggle</summary>',
+        '',
+        'See `</details>` for reference and more body text after.',
+        '',
+        '</details>'
+      ].join('\n')
+    )
   })
 
   it('round-trips a real-world document with multiple <details> mentions in code spans', () => {
     expect(roundTripMarkdown(REPORT_DOCUMENT_FIXTURE)).toBe(REPORT_DOCUMENT_FIXTURE)
+  })
+
+  it('renders a details block whose body mentions a details pair in a code span', () => {
+    const input = [
+      '<details>',
+      '<summary>Toggle</summary>',
+      '',
+      'Mentions `<details>text</details>` inline.',
+      '',
+      '</details>',
+      ''
+    ].join('\n')
+
+    expect(roundTripMarkdown(input)).toBe(
+      input.trimEnd().replace('<details>', '<details class="orca-details">')
+    )
+  })
+
+  it('renders a details block whose body holds a fenced block containing details tags', () => {
+    const input = [
+      '<details>',
+      '<summary>Toggle</summary>',
+      '',
+      '```',
+      '<details>',
+      '</details>',
+      '```',
+      '',
+      '</details>',
+      ''
+    ].join('\n')
+
+    expect(roundTripMarkdown(input)).toBe(
+      input.trimEnd().replace('<details>\n<summary>', '<details class="orca-details">\n<summary>')
+    )
+  })
+
+  it('finds a details block after a fence whose content holds an unpaired backtick', () => {
+    const input = [
+      '```',
+      'x = `abc',
+      '```',
+      '',
+      '<details>',
+      '<summary>Toggle</summary>',
+      '',
+      'Body',
+      '',
+      '</details>',
+      '',
+      'Prose with `code` here.',
+      ''
+    ].join('\n')
+
+    expect(roundTripMarkdown(input)).toBe(
+      input.trimEnd().replace('<details>\n<summary>', '<details class="orca-details">\n<summary>')
+    )
   })
 
   it('inserts editable text toggles from slash commands', () => {

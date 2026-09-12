@@ -200,6 +200,26 @@ function hasOnlyPlainParagraphAndBreakTags(content: string): boolean {
   return !/<p\b(?!\s*>)[^>]*>|<br\b(?!\s*\/?>)[^>]*>/iu.test(content)
 }
 
+const HTML_TAG_PATTERN = /<\/?[A-Za-z][\w.:-]*(?:\s[^<>]*?)?\/?>/g
+
+// Tag-shaped text inside fenced or inline code is prose the editor round-trips
+// verbatim, so it leaves the block editable.
+function hasHtmlTagOutsideCode(content: string): boolean {
+  const fenceRanges = markdownFenceRanges(content)
+  const codeSpanRanges = markdownCodeSpanRanges(content, fenceRanges)
+  HTML_TAG_PATTERN.lastIndex = 0
+
+  for (;;) {
+    const match = HTML_TAG_PATTERN.exec(content)
+    if (!match) {
+      return false
+    }
+    if (!isInsideRange(match.index, fenceRanges) && !isInsideRange(match.index, codeSpanRanges)) {
+      return true
+    }
+  }
+}
+
 export function extractDetailsSummaryHtml(inner: string): DetailsSummaryHtml | null {
   let startIndex = 0
   while (startIndex < inner.length && isHtmlWhitespace(inner.charCodeAt(startIndex))) {
@@ -283,18 +303,27 @@ function stripEditableNestedDetails(bodyHtml: string, nestingLevel: number): str
   let fenceRanges: MarkdownFenceRanges | null = null
   let codeSpanRanges: MarkdownFenceRanges | null = null
 
+  // Why: a candidate inside fenced or inline code is prose, so the search cursor
+  // passes over it while `index` stays put and keeps that text in the result.
+  let searchFrom = 0
+
   for (;;) {
-    const nestedStart = indexOfAsciiIgnoreCase(bodyHtml, '<details', index)
+    const nestedStart = indexOfAsciiIgnoreCase(bodyHtml, '<details', searchFrom)
     if (nestedStart === -1) {
       return result + bodyHtml.slice(index)
+    }
+
+    fenceRanges ??= markdownFenceRanges(bodyHtml)
+    codeSpanRanges ??= markdownCodeSpanRanges(bodyHtml, fenceRanges)
+    if (isInsideRange(nestedStart, fenceRanges) || isInsideRange(nestedStart, codeSpanRanges)) {
+      searchFrom = nestedStart + 1
+      continue
     }
 
     if (nestingLevel >= MAX_DETAILS_NESTING_LEVELS) {
       return null
     }
 
-    fenceRanges ??= markdownFenceRanges(bodyHtml)
-    codeSpanRanges ??= markdownCodeSpanRanges(bodyHtml)
     const nested = matchDetailsHtmlBlock(bodyHtml, nestedStart, fenceRanges, codeSpanRanges)
     if (!nested || !isEditableDetailsHtmlBlock(nested, nestingLevel + 1)) {
       return null
@@ -302,6 +331,7 @@ function stripEditableNestedDetails(bodyHtml: string, nestingLevel: number): str
 
     result += bodyHtml.slice(index, nestedStart)
     index = nestedStart + nested.raw.length
+    searchFrom = index
   }
 }
 
@@ -319,7 +349,7 @@ export function isEditableDetailsHtmlBlock(block: DetailsHtmlBlock, nestingLevel
     return false
   }
 
-  if (/<\/?[A-Za-z][\w.:-]*(?:\s[^<>]*?)?\/?>/.test(summary.content)) {
+  if (hasHtmlTagOutsideCode(summary.content)) {
     return false
   }
 
@@ -332,7 +362,11 @@ export function isEditableDetailsHtmlBlock(block: DetailsHtmlBlock, nestingLevel
     return false
   }
 
-  const allowedHtmlRemoved = bodyHtml.replace(/<\/?p\b[^>]*>/gi, '').replace(/<br\s*\/?>/gi, '')
+  // Why: blanking the allowed tags rather than deleting them keeps every later
+  // offset aligned with the fence and code-span ranges scanned over the body.
+  const allowedHtmlBlanked = bodyHtml
+    .replace(/<\/?p\b[^>]*>/gi, (tag) => ' '.repeat(tag.length))
+    .replace(/<br\s*\/?>/gi, (tag) => ' '.repeat(tag.length))
 
-  return !/<\/?[A-Za-z][\w.:-]*(?:\s[^<>]*?)?\/?>/.test(allowedHtmlRemoved)
+  return !hasHtmlTagOutsideCode(allowedHtmlBlanked)
 }
