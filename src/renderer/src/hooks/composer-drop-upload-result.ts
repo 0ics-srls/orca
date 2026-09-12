@@ -1,10 +1,4 @@
-/**
- * Hand-copied from `ImportSkipReason` (`src/main/ipc/filesystem-import-result-types.ts`); the
- * renderer cannot import that path under `config/tsconfig.web.json`. Nothing type-links the two, so
- * adding a member there will NOT fail the build here — an unrecognised reason simply renders no
- * detail, which is the correct degradation per `docs/reference/remote-wire-compatibility.md`.
- */
-export type ComposerDropSkipReason = 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
+import type { ImportSkipReason } from '@/runtime/runtime-file-client'
 
 export type ComposerDropUploadImportResult =
   | {
@@ -12,11 +6,9 @@ export type ComposerDropUploadImportResult =
       destPath: string
       kind: 'file' | 'directory'
     }
-  // Why split: the runtime import client reports a closed enum for a skip and free text for a
-  // failure. Collapsing them would erase the union and let an unmapped token reach the UI.
   | {
       status: 'skipped'
-      reason: ComposerDropSkipReason
+      reason: ImportSkipReason
     }
   | {
       status: 'failed'
@@ -27,11 +19,7 @@ export type ComposerDropUploadResult = {
   filePaths: string[]
   folderPaths: string[]
   skippedOrFailed: number
-  /**
-   * Set only when EVERY non-imported entry agrees on status and reason. A description sitting under
-   * an aggregate count reads as the explanation for all of it, so a mixed batch gets no reason
-   * rather than one item's reason presented as the whole story.
-   */
+  /** Included only when one explanation applies to every failed item. */
   uniformFailure?: ComposerDropFailure
 }
 

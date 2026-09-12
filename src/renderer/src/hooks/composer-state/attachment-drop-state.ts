@@ -30,9 +30,7 @@ import {
 import { applyComposerNativeFileDrop } from '../composer-native-file-drop'
 import { useComposerDropListener } from './composer-drop-listener'
 
-// Why map errno here: a local drop never reaches the runtime importer that classifies skips, so
-// without this the translated "no longer at its original path" copy would be unreachable for anyone
-// on a plain local workspace.
+// Local drops bypass the runtime importer's skip classification.
 function localDropFailure(detail: string | undefined): ComposerDropUploadImportResult {
   if (detail?.startsWith('ENOENT')) {
     return { status: 'skipped', reason: 'missing' }
@@ -225,8 +223,6 @@ export function useAttachmentDropState(input: AttachmentDropStateInput) {
             kind: stat.isDirectory ? 'directory' : 'file'
           })
         } catch (error) {
-          // Why classify here: these are the only producers on a local workspace, so without this
-          // the translated skip copy would be unreachable for anyone without a runtime host.
           results.push(localDropFailure(readIpcErrorMessage(error)))
         }
       }
@@ -237,7 +233,6 @@ export function useAttachmentDropState(input: AttachmentDropStateInput) {
       const dropResult = collectComposerDropUploadResult(results)
       addComposerAttachments(dropResult.filePaths)
       insertComposerFolderPaths(dropResult.folderPaths)
-      // Why: the drop-ownership gate already ran above, so only the count is left to check.
       if (dropResult.skippedOrFailed > 0) {
         showComposerDropFailureToast({
           skippedOrFailed: dropResult.skippedOrFailed,

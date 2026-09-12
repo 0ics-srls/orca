@@ -20,6 +20,7 @@ import {
 } from './runtime-file-upload-client'
 import { getActiveRuntimeTarget } from './runtime-rpc-client'
 import { toRuntimeWorktreeSelector } from './runtime-worktree-selector'
+import type { ImportSkipReason } from '../../../shared/filesystem-import-result-types'
 
 type StagedRuntimeImportSource =
   | {
@@ -32,7 +33,7 @@ type StagedRuntimeImportSource =
   | {
       sourcePath: string
       status: 'skipped'
-      reason: 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
+      reason: ImportSkipReason
     }
   | { sourcePath: string; status: 'failed'; reason: string }
 
@@ -51,7 +52,7 @@ type RuntimeImportResult =
   | {
       sourcePath: string
       status: 'skipped'
-      reason: 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
+      reason: ImportSkipReason
     }
   | {
       sourcePath: string

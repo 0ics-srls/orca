@@ -4,11 +4,9 @@ const { toastError } = vi.hoisted(() => ({ toastError: vi.fn() }))
 vi.mock('sonner', () => ({ toast: { error: toastError } }))
 
 import { showComposerDropFailureToast } from './composer-drop-failure-toast'
-import type { ComposerDropSkipReason } from './composer-drop-upload-result'
+import type { ImportSkipReason } from '@/runtime/runtime-file-client'
 
-// Why a Record: a fifth ComposerDropSkipReason fails to compile here, the way it does in the
-// copy switch — a plain annotated array would leave this test green.
-const SKIP_REASON_COPY: Record<ComposerDropSkipReason, string> = {
+const SKIP_REASON_COPY: Record<ImportSkipReason, string> = {
   missing: 'No longer at its original path.',
   symlink: 'Symbolic links cannot be attached.',
   'permission-denied': 'Permission denied.',
@@ -38,7 +36,7 @@ describe('showComposerDropFailureToast', () => {
 
   it("turns the import client's skip enum into copy instead of leaking the token", () => {
     const seen = new Map<string, string | undefined>()
-    for (const reason of Object.keys(SKIP_REASON_COPY) as ComposerDropSkipReason[]) {
+    for (const reason of Object.keys(SKIP_REASON_COPY) as ImportSkipReason[]) {
       showComposerDropFailureToast({
         skippedOrFailed: 1,
         total: 3,
