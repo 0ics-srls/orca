@@ -40,6 +40,11 @@ export function extractExecError(err: unknown): { stderr: string; stdout: string
   return { stderr: String(err), stdout: '' }
 }
 
+/** True only when the OS could not find the command binary to spawn. */
+export function isMissingCommandBinaryError(err: unknown): boolean {
+  return Boolean(err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT')
+}
+
 /**
  * Detect a Retry-After hint in gh stderr and return the suggested delay in ms,
  * or null when the response includes no Retry-After.
