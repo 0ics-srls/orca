@@ -2,7 +2,8 @@
 
 Validated on September 7, 2026 in a background Electron dev instance of
 `pr19217-review-r2`, based on `ce1024096b` with the source-adapter refactor.
-CDP app identity confirmed the checkout; screenshots show the full hidden renderer.
+CDP app identity confirmed the checkout; CDP screenshots of the full hidden renderer
+were reviewed at the time and are not retained here.
 The command output is the real `orca worktree ps --json` response reduced to status,
 agent state, provider, and pane key for readability.
 
@@ -34,7 +35,7 @@ targeted lint and diff checks passed. Ablating the runtime call to enumerate
 retained history caused the executable call-site test to fail with two rows where
 one was expected; restoring the live accessor passed both call-site tests.
 
-Live screenshots prove Codex working and closure on macOS. Claude provider turns,
+Codex working and closure were observed live on macOS. Claude provider turns,
 approval/input states, live Windows/Linux/WSL/SSH/relay/mobile scenarios and
 release-scale latency/heap measurements remain unverified. Existing tests cover
 remote/WSL evidence, monitoring precedence and lifecycle cases. The existing
