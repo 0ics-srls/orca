@@ -70,7 +70,7 @@ jobs:
           timeout_minutes: 10
           max_attempts: 3
           retry_wait_seconds: 30
-          command: pnpm install --frozen-lockfile
+          command: pnpm install --frozen-lockfile --os=current,darwin,linux,win32 --cpu=current,x64,arm64
 
       - name: Verify macOS signing environment
         run: node config/scripts/verify-macos-release-env.mjs

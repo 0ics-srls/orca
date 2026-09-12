@@ -28,3 +28,43 @@ describe('CI dependency download caches', () => {
     ])
   })
 })
+
+describe('release install targets', () => {
+  const targetFlags = ['--os=current,darwin,linux,win32', '--cpu=current,x64,arm64']
+
+  it.each([
+    'adhoc-mac-build',
+    'daily-mac-build',
+    'hourly-mac-build',
+    'release-mac-build',
+    'release-cut',
+    'dev-channel-win-build',
+    'windows-signing-rehearsal'
+  ])('%s keeps cross-target packaging dependencies', (name) => {
+    const installs = Object.values(workflow(name).jobs)
+      .flatMap((job) => job.steps ?? [])
+      .filter((step) => step.with?.command?.startsWith('pnpm install '))
+    expect(installs.length).toBeGreaterThan(0)
+    for (const step of installs) {
+      for (const flag of targetFlags) {
+        expect(step.with.command).toContain(flag)
+      }
+    }
+  })
+
+  it('offers the same targets for local cross-target packaging', () => {
+    const script = JSON.parse(readFileSync('package.json', 'utf8')).scripts['install:release']
+    for (const flag of targetFlags) {
+      expect(script).toContain(flag)
+    }
+  })
+
+  it('keeps installed Windows addon checks in the Windows CI lane', () => {
+    const steps = Object.values(workflow('pr').jobs).flatMap((job) => job.steps ?? [])
+    const test = steps.find((step) => step.name === 'Test Windows-specific boundaries')
+    expect(test.run).toContain('config/scripts/windows-process-tree-gyp-path.test.mjs')
+    expect(test.run).toContain('config/scripts/windows-process-tree-gyp-rebuild.test.mjs')
+    expect(test.run).toContain('config/scripts/package-electron-runtime-contract.test.mjs')
+    expect(test.run).toContain('config/scripts/electron-builder-runtime-resources.test.mjs')
+  })
+})

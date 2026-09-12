@@ -264,7 +264,9 @@ describe('packaged runtime resources', () => {
   })
 
   it('includes the Claude agent SDK in every desktop package plan', () => {
-    for (const platform of ['darwin', 'linux', 'win32']) {
+    for (const platform of process.platform === 'win32'
+      ? ['darwin', 'linux', 'win32']
+      : ['darwin', 'linux']) {
       const packagedTargets = createPackagedRuntimeNodeModuleResources(platform).map(
         (resource) => resource.to
       )
@@ -564,11 +566,13 @@ describe('lazily required packages reach Resources/node_modules', () => {
       const covered = (platform) =>
         destinations[platform].has(`node_modules/${packageName}`) ||
         destinations[platform].has(`node_modules/${specifier}`)
-      // Windows carries the full closure, so an uncovered specifier is uncovered everywhere.
-      expect(
-        covered('win'),
-        `${source} lazily requires '${specifier}', but nothing copies it to Resources/node_modules`
-      ).toBe(true)
+      // The Windows CI lane checks the full closure with its native addons installed.
+      if (process.platform === 'win32') {
+        expect(
+          covered('win'),
+          `${source} lazily requires '${specifier}', but nothing copies it to Resources/node_modules`
+        ).toBe(true)
+      }
       if (covered('mac') && covered('linux')) {
         continue
       }

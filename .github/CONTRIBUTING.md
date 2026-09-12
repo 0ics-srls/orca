@@ -21,6 +21,12 @@ pnpm install
 pnpm dev
 ```
 
+Ordinary installs include native optional dependencies for the current OS and CPU only.
+Before packaging for another target (including the default dual-architecture macOS build),
+run `pnpm install:release --frozen-lockfile` to include all supported targets.
+For a narrower cross-target install, use pnpm's `--os` and `--cpu` flags and include the host
+so build tools can still run. See [install measurements](../docs/reference/pnpm-install-policy.md).
+
 ## Branch Naming
 
 Use a clear, descriptive branch name that reflects the change.

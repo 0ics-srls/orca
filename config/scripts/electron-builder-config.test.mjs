@@ -433,3 +433,19 @@ describe('electron-builder config', () => {
     })
   })
 })
+
+describe('host-only install packaging guard', () => {
+  it('allows host packaging and requires installed Windows addons for Windows packaging', () => {
+    const windowsAddon = electronBuilderConfig.win.extraResources.some(
+      (resource) => resource.to === join('node_modules', '@vscode', 'windows-process-tree')
+    )
+    expect(() => electronBuilderConfig.beforePack({ electronPlatformName: 'darwin' })).not.toThrow()
+    expect(() => electronBuilderConfig.beforePack({ electronPlatformName: 'linux' })).not.toThrow()
+    const packWindows = () => electronBuilderConfig.beforePack({ electronPlatformName: 'win32' })
+    if (process.platform === 'win32' || windowsAddon) {
+      expect(packWindows).not.toThrow()
+    } else {
+      expect(packWindows).toThrow('pnpm install:release --frozen-lockfile')
+    }
+  })
+})

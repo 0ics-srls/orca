@@ -147,6 +147,13 @@ const rpmElectronRuntimeDependencies = [
 // config/nsis/orca-installer-hooks.nsh, which registers the same set on Windows.
 const MARKDOWN_FILE_EXTENSIONS = ['md', 'markdown', 'mdx']
 
+// Loading the config for a host-only install must not resolve unused Windows addons.
+const windowsRuntimeResources = ['@vscode/windows-process-tree', 'windows-native-registry'].every(
+  (name) => existsSync(join(__dirname, '..', 'node_modules', name, 'package.json'))
+)
+  ? createPackagedRuntimeNodeModuleResources('win32')
+  : []
+
 /** @type {import('electron-builder').Configuration} */
 module.exports = {
   appId,
@@ -276,6 +283,13 @@ module.exports = {
   artifactBuildCompleted: ({ file, arch }) => {
     if (file.endsWith('.AppImage')) {
       verifyStaticAppImagePackage(file, arch)
+    }
+  },
+  beforePack: (context) => {
+    if (context.electronPlatformName === 'win32' && windowsRuntimeResources.length === 0) {
+      throw new Error(
+        'Windows packaging dependencies are missing. Run pnpm install:release --frozen-lockfile.'
+      )
     }
   },
   afterPack: async (context) => {
@@ -418,7 +432,7 @@ module.exports = {
     ...(isWinDevChannel ? { verifyUpdateCodeSignature: false } : {}),
     extraResources: [
       ...commonExtraResources,
-      ...createPackagedRuntimeNodeModuleResources('win32'),
+      ...windowsRuntimeResources,
       winSpeechNativeResource,
       {
         from: 'resources/win32/bin/orca.cmd',
