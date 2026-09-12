@@ -150,6 +150,12 @@ export type RuntimeRepoSearchRefs = {
   refs: string[]
   refDetails?: BaseRefSearchResult[]
   truncated: boolean
+  /**
+   * Set when the host could not run the ref search at all, so an empty `refs` means "not asked",
+   * not "no matching branches". Absent on success and from hosts that predate the field, which is
+   * why it is a reason string rather than a flag: the absent case is already indistinguishable.
+   */
+  unverifiableReason?: string
 }
 
 export type RuntimeWorktreeListResult = {

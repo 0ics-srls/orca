@@ -8,7 +8,11 @@ import {
   isRepoSearchRefsScanLimit
 } from '../../shared/repo-search-limits'
 import { isSafeGitRefName } from '../../shared/git-status-upstream-ref'
-import { isRemoteHeadRef } from '../../shared/hosted-review-refs'
+import {
+  parseAndFilterSearchRefDetails,
+  resolveConfiguredRemoteBranchName,
+  resolveLocalBranchName
+} from './base-ref-search-result-parsing'
 import { getLocalGitCapabilityCache } from './git-capability-state'
 import { gitExecOptions, type LocalGitExecOptions } from './repo-default-base-ref'
 import { gitExecFileAsync } from './runner'
@@ -161,6 +165,21 @@ export function mergeBaseRefSearchResultGroups(
   return merged
 }
 
+/**
+ * A ref search either answered or could not be run. The distinction matters because an empty
+ * `results` is a real answer -- this repo has no ref matching the query -- while `unverifiable`
+ * means Git never reported, and a caller that shows "no matching branches" for that is asserting
+ * something it does not know.
+ *
+ * `unverifiable` is the repo's verdict-layer word (see docs/reference/ssh-execution-boundary.md and
+ * the `hostScope` fields in shared/runtime-worktree-contracts.ts); `unavailable` is reserved for the
+ * raw process-evidence layer in main/daemon. Callers with no room for a third state use the array
+ * adapters below.
+ */
+export type BaseRefSearchOutcome =
+  | { status: 'ok'; results: BaseRefSearchResult[] }
+  | { status: 'unverifiable'; reason: string }
+
 export async function searchBaseRefs(
   path: string,
   query: string,
@@ -173,13 +192,25 @@ export async function searchBaseRefs(
   return (await searchBaseRefDetails(path, query, boundedLimit)).map((entry) => entry.refName)
 }
 
+/** Array adapter for callers whose contract has no room for the unverifiable state. */
 export async function searchBaseRefDetails(
   path: string,
   query: string,
   limit = REPO_SEARCH_REFS_DEFAULT_LIMIT
 ): Promise<BaseRefSearchResult[]> {
+  const outcome = await searchBaseRefDetailsOutcome(path, query, limit)
+  return outcome.status === 'ok' ? outcome.results : []
+}
+
+export async function searchBaseRefDetailsOutcome(
+  path: string,
+  query: string,
+  limit = REPO_SEARCH_REFS_DEFAULT_LIMIT
+): Promise<BaseRefSearchOutcome> {
   if (!isRepoSearchRefsRequestLimit(limit)) {
-    return []
+    // Unreachable from the IPC and runtime callers, which both validate first -- but `ok` here would
+    // mean "this repo has no matching ref" on the one path where nothing was ever asked.
+    return { status: 'unverifiable', reason: `invalid ref search limit: ${String(limit)}` }
   }
   const boundedScanLimit = clampRepoSearchRefsScanLimit(limit)
   const normalizedQuery = normalizeRefSearchQuery(query)
@@ -198,24 +229,47 @@ export async function searchBaseRefDetails(
           patternGroup: 'branchRoot'
         })
       ])
-      return mergeBaseRefSearchResultGroups(
-        results.map((entry) =>
-          parseAndFilterSearchRefDetails(entry.stdout, boundedScanLimit, remotes)
-        ),
-        boundedScanLimit
-      )
+      return {
+        status: 'ok',
+        results: mergeBaseRefSearchResultGroups(
+          results.map((entry) =>
+            parseAndFilterSearchRefDetails(entry.stdout, boundedScanLimit, remotes)
+          ),
+          boundedScanLimit
+        )
+      }
     }
 
     const result = await runSearchBaseRefsGit(path, normalizedQuery, boundedScanLimit, {
       remoteNames: remotes
     })
-    return parseAndFilterSearchRefDetails(result.stdout, boundedScanLimit, remotes)
+    return {
+      status: 'ok',
+      results: parseAndFilterSearchRefDetails(result.stdout, boundedScanLimit, remotes)
+    }
   } catch (err) {
     console.warn('[searchBaseRefs] for-each-ref failed', { path, err })
-    return []
+    return { status: 'unverifiable', reason: describeBaseRefSearchFailure(err) }
   }
 }
 
+function describeBaseRefSearchFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error)
+  const firstLine = message.split('\n')[0]?.trim()
+  return firstLine ? `git for-each-ref failed: ${firstLine}` : 'git for-each-ref failed'
+}
+
+/**
+ * `[]` already reads as "no hint", not as "this repo has no remotes": every consumer branches on
+ * `remoteNames.length > 0` and an empty list produces byte-identical `for-each-ref` argv to an
+ * absent one, so a third state here would change no behaviour. Doctrine remedy 1 -- uncached, and
+ * almost every consequence degrades toward showing more rows rather than fewer: `<remote>/HEAD`
+ * filtering is lost and `resolveLocalBranchName` cannot strip a slash-containing remote's prefix.
+ * The one exception is a ref under a slash-containing remote on a multi-token query: the branch-root
+ * patterns fall back to a single-segment wildcard, which cannot reach past the first remote segment,
+ * so `up/stream/feature/x` is unmatched. Accepted rather than fixed here -- the remedy belongs with
+ * a remote-name-aware pattern builder, not with a swallow that re-asks on the next keystroke.
+ */
 export async function listRemoteNames(
   path: string,
   options: LocalGitExecOptions = {}
@@ -231,90 +285,8 @@ export async function listRemoteNames(
   }
 }
 
-export function parseAndFilterSearchRefDetails(
-  stdout: string,
-  limit: number,
-  remotes: string[] = []
-): BaseRefSearchResult[] {
-  const seen = new Set<string>()
-  const sortedRemotes = [...remotes].sort((a, b) => b.length - a.length)
-
-  const canonicalShortRef = (fullRef: string, gitShortRef: string): string => {
-    // Git's refname:short DWIM rule can strip a trailing `/HEAD` (for example,
-    // `refs/remotes/origin/feature/HEAD` becomes `origin/feature`). Derive the
-    // display name only for that case; otherwise Git's disambiguation prefixes
-    // (such as `heads/` and `remotes/`) are significant and must be retained.
-    if (
-      fullRef.startsWith('refs/remotes/') &&
-      fullRef.endsWith('/HEAD') &&
-      !gitShortRef.endsWith('/HEAD')
-    ) {
-      return fullRef.slice('refs/remotes/'.length)
-    }
-    return gitShortRef
-  }
-
-  return stdout
-    .split('\n')
-    .map((line) => line.trim())
-    .filter((line) => line.length > 0)
-    .map((line) => {
-      const nul = line.indexOf('\0')
-      if (nul === -1) {
-        return null
-      }
-      const full = line.slice(0, nul)
-      const gitShort = line.slice(nul + 1)
-      return { full, short: canonicalShortRef(full, gitShort) }
-    })
-    .filter((entry): entry is { full: string; short: string } => entry !== null)
-    .filter(({ full }) => !isRemoteHeadRef(full, sortedRemotes))
-    .filter(({ short }) => {
-      if (seen.has(short)) {
-        return false
-      }
-      seen.add(short)
-      return true
-    })
-    .map(({ full, short }) => ({
-      refName: short,
-      localBranchName: resolveLocalBranchName(full, short, sortedRemotes)
-    }))
-    .slice(0, Math.max(0, limit))
-}
-
-export function resolveConfiguredRemoteBranchName(
-  fullRef: string,
-  longestFirstRemoteNames: readonly string[]
-): string | null {
-  const remoteRefPrefix = 'refs/remotes/'
-  if (!fullRef.startsWith(remoteRefPrefix)) {
-    return null
-  }
-  const remoteAndBranch = fullRef.slice(remoteRefPrefix.length)
-  const remote = longestFirstRemoteNames.find((candidate) =>
-    remoteAndBranch.startsWith(`${candidate}/`)
-  )
-  return remote ? remoteAndBranch.slice(remote.length + 1) || null : null
-}
-
-export function resolveLocalBranchName(
-  fullRef: string,
-  shortRef: string,
-  remotes: string[]
-): string {
-  const remoteRefPrefix = 'refs/remotes/'
-  if (!fullRef.startsWith(remoteRefPrefix)) {
-    return shortRef
-  }
-  const configuredBranch = resolveConfiguredRemoteBranchName(fullRef, remotes)
-  if (configuredBranch) {
-    return configuredBranch
-  }
-  const remoteAndBranch = fullRef.slice(remoteRefPrefix.length)
-  return remoteAndBranch.split('/').slice(1).join('/') || shortRef
-}
-
 export function normalizeRefSearchQuery(query: string): string {
   return query.trim().replace(/[*?[\]\\]/g, '')
 }
+
+export { parseAndFilterSearchRefDetails, resolveConfiguredRemoteBranchName, resolveLocalBranchName }

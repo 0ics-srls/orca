@@ -165,6 +165,10 @@ export function formatRepoShow(result: { repo: Record<string, unknown> }): strin
 }
 
 export function formatRepoRefs(result: RuntimeRepoSearchRefs): string {
+  // "No refs found." is an answer; say so only when the host actually answered.
+  if (result.unverifiableReason) {
+    return `refs: unverifiable — ${result.unverifiableReason}`
+  }
   if (result.refs.length === 0) {
     return 'No refs found.'
   }

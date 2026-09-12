@@ -17,9 +17,9 @@ import {
   resolveDefaultBaseRefViaExec,
   buildSearchBaseRefsArgv,
   isForEachRefExcludeUnsupportedError,
-  mergeBaseRefSearchResultGroups,
-  searchBaseRefDetails
+  mergeBaseRefSearchResultGroups
 } from '../../git/repo'
+import { searchBaseRefDetailsOutcome } from '../../git/repo-base-ref-search'
 import { getSshGitProvider } from '../../providers/ssh-git-dispatch'
 import { getSshGitCapabilityCache } from '../../git/git-capability-state'
 
@@ -181,10 +181,22 @@ async function searchBaseRefDetailsForRepo(
         path: repo.path,
         err
       })
+      // Array contract, same as the local branch below: the third state reaches clients through the
+      // runtime `repo.searchRefs` result's `unverifiableReason`, not through this channel.
       return []
     }
   }
-  return searchBaseRefDetails(repo.path, args.query, limit)
+  const outcome = await searchBaseRefDetailsOutcome(repo.path, args.query, limit)
+  if (outcome.status === 'unverifiable') {
+    // This IPC contract is an array, so the gap can only be logged here. The third state reaches
+    // clients through the runtime `repo.searchRefs` result's `unverifiableReason`.
+    console.warn('[repos:searchBaseRefs] ref search unverifiable', {
+      path: repo.path,
+      reason: outcome.reason
+    })
+    return []
+  }
+  return outcome.results
 }
 
 function getRepoForExecutionHost(

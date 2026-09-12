@@ -1,4 +1,4 @@
-import type { BaseRefSearchResult, Repo } from '../../shared/repo-types'
+import type { Repo } from '../../shared/repo-types'
 import type { RuntimeRepoSearchRefs } from '../../shared/runtime-types'
 import { isFolderRepo } from '../../shared/repo-kind'
 import {
@@ -15,9 +15,9 @@ import {
   normalizeRefSearchQuery,
   parseAndFilterSearchRefDetails,
   parseRemoteCount,
-  resolveDefaultBaseRefViaExec,
-  searchBaseRefDetails
+  resolveDefaultBaseRefViaExec
 } from '../git/repo'
+import { searchBaseRefDetailsOutcome, type BaseRefSearchOutcome } from '../git/repo-base-ref-search'
 import { getSshGitCapabilityCache } from '../git/git-capability-state'
 import { getSshGitProvider } from '../providers/ssh-git-dispatch'
 
@@ -38,9 +38,14 @@ export class RuntimeRepositoryRefQueries {
     if (isFolderRepo(repo)) {
       return { refs: [], truncated: false }
     }
-    const refDetails = repo.connectionId
+    const outcome = repo.connectionId
       ? await this.searchRemote(repo, query, probeLimit)
-      : await searchBaseRefDetails(repo.path, query, probeLimit)
+      : await searchBaseRefDetailsOutcome(repo.path, query, probeLimit)
+    // An empty list the host never produced must not read as "this repo has no matching ref".
+    if (outcome.status === 'unverifiable') {
+      return { refs: [], truncated: false, unverifiableReason: outcome.reason }
+    }
+    const refDetails = outcome.results
     return {
       refs: refDetails.slice(0, effectiveLimit).map((entry) => entry.refName),
       refDetails: refDetails.slice(0, effectiveLimit),
@@ -107,10 +112,12 @@ export class RuntimeRepositoryRefQueries {
     repo: Repo,
     query: string,
     limit: number
-  ): Promise<BaseRefSearchResult[]> {
+  ): Promise<BaseRefSearchOutcome> {
     const provider = repo.connectionId ? getSshGitProvider(repo.connectionId) : null
     if (!provider) {
-      return []
+      // Per docs/reference/ssh-execution-boundary.md the execution host owns this answer, and
+      // having no provider means nobody was asked -- not that the remote repo has no refs.
+      return { status: 'unverifiable', reason: 'no SSH git provider for this connection' }
     }
     const normalizedQuery = normalizeRefSearchQuery(query)
     try {
@@ -149,18 +156,27 @@ export class RuntimeRepositoryRefQueries {
       }
       if (normalizedQuery.split('/').filter((token) => token.length > 0).length > 1) {
         const results = await Promise.all([runSearch('segmented'), runSearch('branchRoot')])
-        return mergeBaseRefSearchResultGroups(
-          results.map((stdout) => parseAndFilterSearchRefDetails(stdout, limit, remotes)),
-          limit
-        )
+        return {
+          status: 'ok',
+          results: mergeBaseRefSearchResultGroups(
+            results.map((stdout) => parseAndFilterSearchRefDetails(stdout, limit, remotes)),
+            limit
+          )
+        }
       }
-      return parseAndFilterSearchRefDetails(await runSearch(), limit, remotes)
+      return {
+        status: 'ok',
+        results: parseAndFilterSearchRefDetails(await runSearch(), limit, remotes)
+      }
     } catch (error) {
       console.warn('[runtime:repo.searchRefs] SSH for-each-ref failed', {
         path: repo.path,
         err: error
       })
-      return []
+      return {
+        status: 'unverifiable',
+        reason: `ssh git for-each-ref failed: ${error instanceof Error ? error.message.split('\n')[0] : String(error)}`
+      }
     }
   }
 }
