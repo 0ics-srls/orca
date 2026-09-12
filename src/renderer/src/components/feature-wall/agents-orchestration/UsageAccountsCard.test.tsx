@@ -88,9 +88,7 @@ describe('UsageAccountsCard account-list failures', () => {
     expect(container.textContent).toContain('Connected · System default')
   })
 
-  it('keeps the quiet label while the read is still in flight, and only then goes unknown', async () => {
-    // Why: pending is not failed. Painting "unknown" before the IPC settles alarms exactly the
-    // users this card targets — the ones with no tracking configured, whose rateLimits never fill.
+  it('does not claim tracking is unset while the account read is pending', async () => {
     let rejectClaude: (reason: Error) => void = () => {}
     mocks.claudeList.mockReturnValue(
       new Promise((_resolve, reject) => {
@@ -101,7 +99,7 @@ describe('UsageAccountsCard account-list failures', () => {
 
     await renderCard()
 
-    expect(container.textContent).not.toContain(UNKNOWN_TEXT)
+    expect(container.textContent).toContain(UNKNOWN_TEXT)
     expect(container.textContent).toContain(NOT_SET_UP_TEXT)
 
     await act(async () => {

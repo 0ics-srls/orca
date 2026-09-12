@@ -16,13 +16,11 @@ import { translate } from '@/i18n/i18n'
 
 type ConnectAction = 'idle' | 'adding'
 
-// Why only 'failed': a read still in flight is not evidence of anything, so it keeps the quiet
-// label until it settles. Only a read that actually FAILED may claim the status is unknown.
 function usageConnectionLabel(
   connection: { connected: boolean; label: string },
-  accountsRead: 'pending' | 'failed' | 'loaded'
+  accountsKnown: boolean
 ): string {
-  if (connection.connected || accountsRead !== 'failed') {
+  if (connection.connected || accountsKnown) {
     return connection.label
   }
   return translate(
@@ -114,12 +112,6 @@ export function UsageAccountsCard(props: {
 
   const [claudeAccounts, setClaudeAccounts] = useState<ClaudeRateLimitAccountsState>()
   const [codexAccounts, setCodexAccounts] = useState<CodexRateLimitAccountsState>()
-  const [claudeAccountsRead, setClaudeAccountsRead] = useState<'pending' | 'failed' | 'loaded'>(
-    'pending'
-  )
-  const [codexAccountsRead, setCodexAccountsRead] = useState<'pending' | 'failed' | 'loaded'>(
-    'pending'
-  )
   const [claudeAction, setClaudeAction] = useState<ConnectAction>('idle')
   const [codexAction, setCodexAction] = useState<ConnectAction>('idle')
 
@@ -134,13 +126,9 @@ export function UsageAccountsCard(props: {
         const next = await window.api.claudeAccounts.list()
         if (!stale) {
           setClaudeAccounts(next)
-          setClaudeAccountsRead('loaded')
         }
       } catch {
-        // Why: a failed read is distinct from a confirmed empty account list.
-        if (!stale) {
-          setClaudeAccountsRead('failed')
-        }
+        // Leave the account state unknown.
       }
     })()
     void (async () => {
@@ -148,12 +136,9 @@ export function UsageAccountsCard(props: {
         const next = await window.api.codexAccounts.list()
         if (!stale) {
           setCodexAccounts(next)
-          setCodexAccountsRead('loaded')
         }
       } catch {
-        if (!stale) {
-          setCodexAccountsRead('failed')
-        }
+        // Leave the account state unknown.
       }
     })()
     return () => {
@@ -262,7 +247,7 @@ export function UsageAccountsCard(props: {
           'Track session and weekly usage.'
         )}
         connected={claudeConnection.connected}
-        connectionLabel={usageConnectionLabel(claudeConnection, claudeAccountsRead)}
+        connectionLabel={usageConnectionLabel(claudeConnection, claudeAccounts !== undefined)}
         isAdding={claudeAction === 'adding'}
         onSignIn={() => void handleClaudeSignIn()}
       />
@@ -274,7 +259,7 @@ export function UsageAccountsCard(props: {
           'Surface rate limits and swap accounts inline.'
         )}
         connected={codexConnection.connected}
-        connectionLabel={usageConnectionLabel(codexConnection, codexAccountsRead)}
+        connectionLabel={usageConnectionLabel(codexConnection, codexAccounts !== undefined)}
         isAdding={codexAction === 'adding'}
         onSignIn={() => void handleCodexSignIn()}
       />
