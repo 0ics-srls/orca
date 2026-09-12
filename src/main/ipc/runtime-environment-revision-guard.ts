@@ -15,6 +15,13 @@ export function runtimeEnvironmentRevisionFailure(
   if (!pairingChanged && !runtimeChanged) {
     return null
   }
+  return runtimeEnvironmentChangedFailure(environment, method)
+}
+
+export function runtimeEnvironmentChangedFailure(
+  environment: Pick<KnownRuntimeEnvironment, 'runtimeId'>,
+  method: string
+): RuntimeRpcResponse<never> {
   return {
     id: method,
     ok: false,
