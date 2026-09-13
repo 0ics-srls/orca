@@ -1,6 +1,10 @@
 import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import { AiVaultSearchRequestSchema } from '../../shared/ai-vault-search-contract'
 import { SessionSearchInstance } from '../ai-vault-search/session-search-instance'
+import {
+  sameSessionSearchRoots,
+  type SessionSearchScanRoots
+} from '../ai-vault-search/session-search-scan-roots'
 import { sessionSearchSqliteAvailable } from '../ai-vault-search/session-search-sqlite-support'
 import type {
   AiVaultServiceRequest,
@@ -24,6 +28,7 @@ type SearchOperation = Extract<
 export class SessionScannerServiceSearch {
   private instance: SessionSearchInstance | null = null
   private databasePath: string | null = null
+  private roots: SessionSearchScanRoots | null = null
 
   /** Applied at init and again on every settings change; both are close-and-construct. */
   apply(init: AiVaultSessionSearchInit): void {
@@ -35,7 +40,14 @@ export class SessionScannerServiceSearch {
       // rather than a case to support: close the old one before it writes there.
       this.close()
     }
+    if (this.instance && this.roots && !sameSessionSearchRoots(this.roots, init.roots)) {
+      // The indexer's roots are fixed at construction, and the parent re-resolves
+      // them on every push: a distro or Codex home that appeared since spawn only
+      // enters the window if the pair is rebuilt around the new set.
+      this.close()
+    }
     this.databasePath = init.databasePath
+    this.roots = init.roots
     this.instance ??= new SessionSearchInstance({
       databasePath: init.databasePath,
       roots: init.roots
@@ -75,5 +87,6 @@ export class SessionScannerServiceSearch {
     this.instance?.close()
     this.instance = null
     this.databasePath = null
+    this.roots = null
   }
 }
