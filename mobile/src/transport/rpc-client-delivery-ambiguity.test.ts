@@ -122,7 +122,7 @@ describe('mobile rpc-client delivery ambiguity marking', () => {
       expect(isLogicalClientCutoverError(error)).toBe(true)
       expect(isRpcDeliveryUnknown(error)).toBe(sent)
       expect(error).toBeInstanceOf(LogicalClientCutoverError)
-      expect(isRpcDeliveryUnknown((error as Error).cause)).toBe(sent)
+      expect(isRpcDeliveryUnknown(error instanceof Error ? error.cause : null)).toBe(sent)
       expect(hasSentRequest(replacement.socket, 'worktree.create')).toBe(false)
       expect(
         physical.socket.sent.filter((payload) => payload.includes('worktree.create'))
