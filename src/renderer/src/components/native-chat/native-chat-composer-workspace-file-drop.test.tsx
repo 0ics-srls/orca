@@ -10,6 +10,7 @@ import {
   writeWorkspaceFileDragSource
 } from '@/lib/workspace-file-drag'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type * as AttachmentUploadModule from './native-chat-attachment-upload'
 import type { NativeChatComposerInput } from './native-chat-composer-input'
 import { NativeChatComposerField } from './NativeChatComposerField'
 import { useNativeChatComposerAttachments } from './use-native-chat-composer-attachments'
@@ -47,8 +48,10 @@ vi.mock('@/store', () => {
 vi.mock('@/lib/worktree-runtime-owner', () => ({
   getExecutionHostIdForWorktree: () => testState.executionHostId
 }))
-vi.mock('./native-chat-attachment-upload', () => ({
-  nativeChatWorktreeNotReadyNotice: () => 'Worktree not ready — try again in a moment.',
+// Real notice strings, so a copy of the wording here cannot outlive the string
+// users actually read, and a newly added export cannot go missing from the mock.
+vi.mock('./native-chat-attachment-upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof AttachmentUploadModule>()),
   resolveNativeChatAttachmentOwnerForWorktree: () =>
     testState.ownerKind === 'ssh'
       ? {
