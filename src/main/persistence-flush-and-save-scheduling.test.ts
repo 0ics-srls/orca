@@ -473,8 +473,10 @@ describe('Store', () => {
       expect(store.persistPtyBinding({ ...binding, incarnationId: 'b' })).toBe(true)
 
       expect(flushSpy).toHaveBeenCalledTimes(1)
-      const persisted = readDataFile() as { workspaceSession: WorkspaceSessionState }
-      expect(persisted.workspaceSession.terminalPtyIncarnationsByPaneKey?.[paneKey]).toBe('b')
+      expect(readDataFile()).toHaveProperty(
+        ['workspaceSession', 'terminalPtyIncarnationsByPaneKey', paneKey],
+        'b'
+      )
     })
 
     it('does not acknowledge an unpersisted binding published after the final flush', async () => {
@@ -492,8 +494,10 @@ describe('Store', () => {
       expect(() => store.persistPtyBinding({ ...binding, ptyId: 'pty-after-quit' })).toThrow(
         'Cannot synchronously flush after final persistence has started'
       )
-      const persisted = readDataFile() as { workspaceSession: WorkspaceSessionState }
-      expect(persisted.workspaceSession.tabsByWorktree[WORKTREE][0].ptyId).toBe('pty-1')
+      expect(readDataFile()).toHaveProperty(
+        ['workspaceSession', 'tabsByWorktree', WORKTREE, '0', 'ptyId'],
+        'pty-1'
+      )
     })
 
     it('treats an undefined incarnation against a recorded one as a miss', async () => {
@@ -597,9 +601,9 @@ describe('Store', () => {
         expect(store.persistPtyBinding(binding, hostId)).toBe(true)
 
         expect(flushSpy).toHaveBeenCalledTimes(1)
-        expect((readDataFile() as PersistedState).repos.some((repo) => repo.id === 'r-dirty')).toBe(
-          true
-        )
+        expect(readDataFile()).toMatchObject({
+          repos: expect.arrayContaining([expect.objectContaining({ id: 'r-dirty' })])
+        })
       }
     )
 
@@ -627,10 +631,10 @@ describe('Store', () => {
       expect(store.persistPtyBinding({ ...binding, ptyId: 'pty-next' })).toBe(true)
 
       expect(flushSpy).toHaveBeenCalledTimes(1)
-      const persisted = readDataFile() as { workspaceSession: WorkspaceSessionState }
-      expect(
-        persisted.workspaceSession.terminalLayoutsByTabId?.tab1?.ptyIdsByLeafId?.[TEST_LEAF_1]
-      ).toBe('pty-next')
+      expect(readDataFile()).toHaveProperty(
+        ['workspaceSession', 'terminalLayoutsByTabId', 'tab1', 'ptyIdsByLeafId', TEST_LEAF_1],
+        'pty-next'
+      )
     })
 
     it('lets every pane of a split tab hit the fast lane', async () => {
@@ -701,10 +705,10 @@ describe('Store', () => {
     })
 
     it('emits one persistence.pty-binding span per call with its outcome', async () => {
-      const records: { name: string; attributes: Record<string, unknown> }[] = []
+      const records: unknown[] = []
       setActiveSink({
         push: (record) => {
-          records.push(record as { name: string; attributes: Record<string, unknown> })
+          records.push(record)
         },
         flush: () => {},
         close: () => {}
@@ -716,21 +720,33 @@ describe('Store', () => {
       store.persistPtyBinding(binding)
       store.persistPtyBinding({ ...binding, tabId: 'missing-tab', mayCreate: false })
 
-      const spans = records.filter((record) => record.name === 'persistence.pty-binding')
-      expect(spans.map((span) => span.attributes['binding.outcome'])).toEqual([
-        'flushed',
-        'fast_lane',
-        'refused'
+      const spans = records.filter(
+        (record) =>
+          typeof record === 'object' &&
+          record !== null &&
+          'name' in record &&
+          record.name === 'persistence.pty-binding'
+      )
+      expect(spans).toMatchObject([
+        {
+          attributes: {
+            'binding.outcome': 'flushed',
+            'binding.eligible': false,
+            'binding.misses': 'not_durable'
+          }
+        },
+        {
+          attributes: {
+            'binding.outcome': 'fast_lane',
+            'binding.eligible': true,
+            'binding.generation_gap': 0,
+            'binding.host': 'local'
+          }
+        },
+        { attributes: { 'binding.outcome': 'refused' } }
       ])
-      expect(spans[0]?.attributes['binding.eligible']).toBe(false)
-      expect(spans[0]?.attributes['binding.misses']).toBe('not_durable')
-      expect(spans[1]?.attributes['binding.eligible']).toBe(true)
-      expect(spans[1]?.attributes['binding.generation_gap']).toBe(0)
-      expect(spans[1]?.attributes['binding.host']).toBe('local')
-      for (const span of spans) {
-        expect(JSON.stringify(span.attributes)).not.toContain(TEST_LEAF_1)
-        expect(JSON.stringify(span.attributes)).not.toContain('pty-1')
-      }
+      expect(JSON.stringify(spans)).not.toContain(TEST_LEAF_1)
+      expect(JSON.stringify(spans)).not.toContain('pty-1')
     })
   })
 })
