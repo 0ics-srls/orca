@@ -398,9 +398,38 @@ describe('agent interrupt inference', () => {
     entry = undefined
   })
 
+  it.each([['claude'], ['omp'], ['pi'], ['prime-agent']] as const)(
+    'keeps a pending Ctrl+C for %s when a navigation Escape lands before it settles',
+    (agentType) => {
+      // Why: Escape is not a retraction. The user asked to interrupt; dismissing an overlay
+      // while that request is still settling must not silently cancel it.
+      vi.useFakeTimers()
+      let entry: AgentStatusEntry | undefined = makeEntry({ agentType, toolName: 'Bash' })
+      const inferInterrupt = vi.fn().mockReturnValue(true)
+      const tracker = createAgentInterruptInference({
+        paneKey: PANE_KEY,
+        getStatusEntry: () => entry,
+        inferInterrupt,
+        now: () => 1_100
+      })
+
+      tracker.observeInputIntent('ctrl-c')
+      tracker.observeInputIntent('plain-escape')
+      vi.advanceTimersByTime(500)
+
+      expect(inferInterrupt).toHaveBeenCalledTimes(1)
+      expect(inferInterrupt).toHaveBeenCalledWith(
+        expect.objectContaining({ paneKey: PANE_KEY, intent: 'ctrl-c' })
+      )
+      tracker.dispose()
+      entry = undefined
+    }
+  )
+
   it('reports main refusing an inference instead of assuming it applied', () => {
     vi.useFakeTimers()
-    let entry: AgentStatusEntry | undefined = makeEntry({ agentType: 'claude' })
+    // Why: an agent with no navigation-Escape rule, so the request actually reaches main.
+    let entry: AgentStatusEntry | undefined = makeEntry({ agentType: 'custom-agent' })
     const tracker = createAgentInterruptInference({
       paneKey: PANE_KEY,
       getStatusEntry: () => entry,
