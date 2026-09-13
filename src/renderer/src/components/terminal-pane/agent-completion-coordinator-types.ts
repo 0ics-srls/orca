@@ -1,6 +1,7 @@
 import type { ParsedAgentStatusPayload } from '../../../../shared/agent-status-types'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import type { RecognizedAgentProcess } from '../../../../shared/agent-process-recognition'
+import type { LastCompletionIdentity } from './agent-completion-identity-store'
 import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
 
 export type AgentCompletionStatusSnapshot = ParsedAgentStatusPayload & {
@@ -14,6 +15,7 @@ export type AgentCompletionDispatchMeta = {
   quietedHookDone: boolean
   terminalIdleConfirmed?: boolean
   agentStatus?: AgentCompletionStatusSnapshot
+  completionIdentity?: LastCompletionIdentity
 }
 
 export type AgentAttentionDispatchMeta = {

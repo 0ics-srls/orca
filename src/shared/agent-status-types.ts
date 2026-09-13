@@ -25,6 +25,13 @@ export type {
 
 export const AGENT_STATUS_STATES = ['working', 'blocked', 'waiting', 'done'] as const
 export type AgentStatusState = (typeof AGENT_STATUS_STATES)[number]
+export const AGENT_COMPLETION_OUTCOMES = [
+  'succeeded',
+  'failed',
+  'cancelled',
+  'session-ended'
+] as const
+export type AgentCompletionOutcome = (typeof AGENT_COMPLETION_OUTCOMES)[number]
 export type AgentWorkingMode = 'monitoring'
 // Why: agent types aren't a fixed set (custom agents exist); any non-empty string is
 // accepted — the well-known names are the launchable TuiAgent ids plus the 'unknown'
@@ -184,6 +191,10 @@ export type AgentStatusPayload = {
    *  completions (notifications, automation runs, unread badges, finished timestamps)
    *  must ignore it. Only meaningful on `done`. */
   sessionBoundary?: boolean
+  /** Provider terminal outcome for this observation. Event-only — not stored on AgentStatusEntry. */
+  completionOutcome?: AgentCompletionOutcome
+  /** Provider-owned attention decision. Missing means legacy fail-open. Event-only. */
+  announceCompletion?: boolean
   /** Wall-clock ms when the lead turn ended while Claude background inventory kept the pane `working`.
    *  `stateStartedAt` stays pinned for that whole working run, so this is the per-turn identity.
    *  Present on the gated `working` row and that turn's later all-clear `done`. Event-only — not stored on AgentStatusEntry. */
@@ -225,6 +236,8 @@ export function pickParsedAgentStatusPayload(
       : {}),
     ...(row.interrupted !== undefined ? { interrupted: row.interrupted } : {}),
     ...(row.sessionBoundary !== undefined ? { sessionBoundary: row.sessionBoundary } : {}),
+    ...(row.completionOutcome !== undefined ? { completionOutcome: row.completionOutcome } : {}),
+    ...(row.announceCompletion !== undefined ? { announceCompletion: row.announceCompletion } : {}),
     ...(row.turnCompletedAt !== undefined ? { turnCompletedAt: row.turnCompletedAt } : {}),
     ...(row.subagents !== undefined ? { subagents: row.subagents } : {})
   }
@@ -255,6 +268,7 @@ export {
 
 // Why: ReadonlySet<string> so .has() accepts any string without a cast here; the narrowing cast stays on the return line where it's proven safe.
 const VALID_STATES: ReadonlySet<string> = new Set<string>(AGENT_STATUS_STATES)
+const VALID_COMPLETION_OUTCOMES: ReadonlySet<string> = new Set<string>(AGENT_COMPLETION_OUTCOMES)
 /** Maximum character length for the agentType label. Truncated on parse. */
 export const AGENT_TYPE_MAX_LENGTH = 40
 export const AGENT_MODEL_MAX_LENGTH = 120
@@ -389,6 +403,16 @@ function normalizeAgentStatusObject(parsed: unknown): ParsedAgentStatusPayload |
     // Why: only meaningful on `done`; coerce to undefined elsewhere so it can't leak stale truth across transitions.
     interrupted: obj.interrupted === true && state === 'done' ? true : undefined,
     sessionBoundary: obj.sessionBoundary === true && state === 'done' ? true : undefined,
+    completionOutcome:
+      state === 'done' &&
+      typeof obj.completionOutcome === 'string' &&
+      VALID_COMPLETION_OUTCOMES.has(obj.completionOutcome)
+        ? (obj.completionOutcome as AgentCompletionOutcome)
+        : undefined,
+    announceCompletion:
+      state === 'done' && typeof obj.announceCompletion === 'boolean'
+        ? obj.announceCompletion
+        : undefined,
     turnCompletedAt: normalizeTurnCompletedAtField(obj.turnCompletedAt, state),
     subagents: normalizeSubagentsField(obj.subagents)
   }
