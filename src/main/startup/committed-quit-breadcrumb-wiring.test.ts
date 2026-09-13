@@ -39,11 +39,16 @@ describe('committed-quit breadcrumb startup wiring', () => {
     expect(willQuitBody).toContain('\n    recordCommittedQuitBreadcrumb({')
   })
 
-  it('writes it after the commit gate, not before it', () => {
+  it('writes it after the commit gate and before the teardown barrier', () => {
     const gateIndex = willQuitBody.indexOf('if (!quitTeardownStartGate.tryStart(event)) {')
     const crumbIndex = willQuitBody.indexOf('recordCommittedQuitBreadcrumb({')
+    // Why the barrier is the other bound: past it the crumb rides on teardown finishing,
+    // so the 20s deadline and a force-quit would each drop it from a quit that committed.
+    const barrierIndex = willQuitBody.indexOf('settleTeardownWithinDeadline([')
 
     expect(gateIndex).toBeGreaterThanOrEqual(0)
+    expect(barrierIndex).toBeGreaterThan(gateIndex)
     expect(crumbIndex).toBeGreaterThan(gateIndex)
+    expect(crumbIndex).toBeLessThan(barrierIndex)
   })
 })

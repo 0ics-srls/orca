@@ -1,7 +1,8 @@
 // Answers one question the crash report could never answer before: did the main
 // process that recorded the previous session's reports exit, or was it killed?
-// The evidence is the durable-breadcrumb trail already in the NDJSON trace file —
-// a launch that ends without `main_process_quit_committed` died abruptly.
+// The evidence is the durable-breadcrumb trail already in the NDJSON trace file — a
+// launch whose crumbs carry the schema marker but no `main_process_quit_committed`
+// died abruptly. Without the marker the launch is named and left unjudged.
 
 import { open } from 'node:fs/promises'
 import type { CrashReportDetailValue } from '../../shared/crash-reporting'
@@ -10,11 +11,15 @@ import { getTraceFilePath } from '../observability/logs-directory'
 import { readLinesNewestFirst } from '../observability/ndjson-line-scan'
 import { COMMITTED_QUIT_BREADCRUMB_NAME } from './committed-quit-breadcrumb'
 import type { CrashReportStore } from './crash-report-store'
+import { DURABLE_CRASH_BREADCRUMB_SCHEMA } from './durable-crash-breadcrumb'
 import { getMainProcessLifecycleIdentity } from './main-process-lifecycle-identity'
 
 export type PreviousLaunchExit = {
   previousLaunchId: string
-  diedAbruptly: boolean
+  /** Undefined when the previous launch ran a build that never wrote the quit crumb:
+   *  its absence is then no evidence of an abrupt death, and saying so would fabricate
+   *  one for every user's first launch after upgrading to this build. */
+  diedAbruptly?: boolean
 }
 
 const BREADCRUMB_SPAN_NAME = 'crash.breadcrumb'
@@ -27,7 +32,7 @@ const TRACE_FILES_SCANNED = 2
 // is its absence from the launch.
 const PREVIOUS_LAUNCH_CRUMB_SCAN_LIMIT = 200
 
-type TracedBreadcrumb = { name: string; launchId: string }
+type TracedBreadcrumb = { name: string; launchId: string; writesQuitCrumb: boolean }
 
 function tracedBreadcrumb(line: string): TracedBreadcrumb | null {
   let parsed: unknown
@@ -51,7 +56,11 @@ function tracedBreadcrumb(line: string): TracedBreadcrumb | null {
   if (typeof name !== 'string' || typeof launchId !== 'string' || !launchId) {
     return null
   }
-  return { name, launchId }
+  return {
+    name,
+    launchId,
+    writesQuitCrumb: attributes['breadcrumb.schema'] === DURABLE_CRASH_BREADCRUMB_SCHEMA
+  }
 }
 
 /** Scans a trace tail newest-first for the launch that preceded `currentLaunchId`.
@@ -61,6 +70,7 @@ export function findPreviousLaunchExit(
   currentLaunchId: string
 ): PreviousLaunchExit | null {
   let previousLaunchId: string | undefined
+  let previousLaunchWritesQuitCrumb = false
   let scanned = 0
   for (const line of readLinesNewestFirst(traceTail)) {
     const crumb = tracedBreadcrumb(line)
@@ -72,6 +82,7 @@ export function findPreviousLaunchExit(
     } else if (crumb.launchId !== previousLaunchId) {
       break
     }
+    previousLaunchWritesQuitCrumb ||= crumb.writesQuitCrumb
     if (crumb.name === COMMITTED_QUIT_BREADCRUMB_NAME) {
       return { previousLaunchId, diedAbruptly: false }
     }
@@ -80,7 +91,14 @@ export function findPreviousLaunchExit(
       break
     }
   }
-  return previousLaunchId === undefined ? null : { previousLaunchId, diedAbruptly: true }
+  if (previousLaunchId === undefined) {
+    return null
+  }
+  // Named but not judged: a launch whose crumbs predate the schema marker ran a build
+  // that had no quit crumb to write, so nothing here separates a kill from a clean quit.
+  return previousLaunchWritesQuitCrumb
+    ? { previousLaunchId, diedAbruptly: true }
+    : { previousLaunchId }
 }
 
 async function readTraceTail(filePath: string, maxBytes: number): Promise<string | null> {
@@ -133,7 +151,9 @@ export function previousLaunchExitDetails(): Record<string, CrashReportDetailVal
   }
   return {
     previousMainProcessLaunchId: previousLaunchExit.previousLaunchId,
-    previousMainProcessDiedAbruptly: previousLaunchExit.diedAbruptly
+    ...(previousLaunchExit.diedAbruptly === undefined
+      ? {}
+      : { previousMainProcessDiedAbruptly: previousLaunchExit.diedAbruptly })
   }
 }
 

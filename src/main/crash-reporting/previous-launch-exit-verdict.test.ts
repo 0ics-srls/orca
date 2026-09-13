@@ -43,14 +43,15 @@ async function traceFileFromRealBreadcrumbs(write: () => void): Promise<string> 
   return filePath
 }
 
-function breadcrumbLine(name: string, launchId: string): string {
+function breadcrumbLine(name: string, launchId: string, schema: number | null = 1): string {
   return JSON.stringify({
     type: 'effect-span',
     name: 'crash.breadcrumb',
     attributes: {
       kind: 'crash-breadcrumb',
       'breadcrumb.name': name,
-      'breadcrumb.data': { mainProcessLaunchId: launchId }
+      'breadcrumb.data': { mainProcessLaunchId: launchId },
+      ...(schema === null ? {} : { 'breadcrumb.schema': schema })
     }
   })
 }
@@ -149,6 +150,18 @@ describe('findPreviousLaunchExit', () => {
     })
   })
 
+  // Without this the first launch after every upgrade reports the launch before it as
+  // an abrupt death, because that build had no quit crumb to write in the first place.
+  it('names a launch whose build predates the quit crumb without judging how it ended', () => {
+    const previous = randomUUID()
+    const tail = [
+      breadcrumbLine('main_process_lifecycle_started', previous, null),
+      breadcrumbLine('renderer_recovery_reload', previous, null)
+    ].join('\n')
+
+    expect(findPreviousLaunchExit(tail, randomUUID())).toEqual({ previousLaunchId: previous })
+  })
+
   it('still finds the quit crumb behind the crumbs teardown emits after it', () => {
     const previous = randomUUID()
     const tail = [
@@ -163,6 +176,12 @@ describe('findPreviousLaunchExit', () => {
 describe('previousLaunchExitDetails', () => {
   it('publishes nothing when no verdict was reached', () => {
     expect(previousLaunchExitDetails()).toEqual({})
+  })
+
+  it('names an unjudged launch without claiming it died', () => {
+    setPreviousLaunchExitForTest({ previousLaunchId: 'launch-a' })
+
+    expect(previousLaunchExitDetails()).toEqual({ previousMainProcessLaunchId: 'launch-a' })
   })
 
   it('names the previous launch and its fate', () => {
@@ -213,7 +232,7 @@ describe('annotateAbruptlyEndedLaunchReports', () => {
     })
   })
 
-  it('leaves reports from a different launch, and every report of an orderly exit, alone', async () => {
+  it('leaves reports from a different launch, an orderly exit, and an unjudged one alone', async () => {
     const store = await storeWithReport('launch-a')
 
     await annotateAbruptlyEndedLaunchReports(store, {
@@ -224,6 +243,7 @@ describe('annotateAbruptlyEndedLaunchReports', () => {
       previousLaunchId: 'launch-a',
       diedAbruptly: false
     })
+    await annotateAbruptlyEndedLaunchReports(store, { previousLaunchId: 'launch-a' })
 
     const [report] = await store.listRecent()
     expect(report.details.mainProcessDiedAbruptly).toBeUndefined()
