@@ -135,6 +135,7 @@ export function useNativeChatResolvedPathAttachments({
       }
       if (isComposing()) {
         if (paths.length > NATIVE_FILE_DROP_MAX_PATHS - pendingResolvedPathsRef.current.length) {
+          // Reject the whole completion so ordered path batches are never partially applied.
           pendingPathLimitRejectedRef.current = true
           setNotice(
             translate(

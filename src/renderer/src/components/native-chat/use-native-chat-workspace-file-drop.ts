@@ -14,6 +14,7 @@ import {
 } from './native-chat-attachment-upload'
 import { findTerminalTabWorktreeId } from './native-chat-file-link'
 import {
+  nativeChatAttachmentOwnerUnchanged,
   nativeChatWorkspaceAttachmentMismatchNotice,
   type NativeChatResolvedPathOptions
 } from './native-chat-resolved-path-ownership'
@@ -33,21 +34,6 @@ type Args = {
   setNotice: (notice: string | null) => void
   structuredWorktreeId?: string
   terminalTabId: string
-}
-
-function workspaceFileDropOwnerStillCurrent(
-  captured: ReturnType<typeof resolveNativeChatAttachmentOwnerForWorktree>,
-  current: ReturnType<typeof resolveNativeChatAttachmentOwnerForWorktree>
-): boolean {
-  if (captured.kind !== current.kind) {
-    return false
-  }
-  if (captured.kind !== 'ssh' || current.kind !== 'ssh') {
-    return captured.kind !== 'not-ready'
-  }
-  return (
-    captured.connectionId === current.connectionId && captured.worktreePath === current.worktreePath
-  )
 }
 
 function stopWorkspaceFileDrop(event: React.DragEvent<HTMLDivElement>): void {
@@ -151,7 +137,7 @@ export function useNativeChatWorkspaceFileDrop({
         return (
           isResolvedWorkspaceFileDragExecutionHost(currentHostId) &&
           currentHostId === source.executionHostId &&
-          workspaceFileDropOwnerStillCurrent(owner, currentOwner)
+          nativeChatAttachmentOwnerUnchanged(owner, currentOwner)
         )
       }
 

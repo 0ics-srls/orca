@@ -20,12 +20,14 @@ const testState: {
   executionHostId: ExecutionHostId
   ownerConnectionId: string
   ownerKind: 'local' | 'not-ready' | 'runtime' | 'ssh'
+  ownerSshGeneration: number
   ownerWorktreePath: string
   store: { tabsByWorktree: Record<string, { id: string }[]> }
 } = vi.hoisted(() => ({
   executionHostId: 'local',
   ownerConnectionId: 'ssh-1',
   ownerKind: 'local',
+  ownerSshGeneration: 4,
   ownerWorktreePath: '/remote/repo',
   store: {
     tabsByWorktree: {
@@ -50,7 +52,10 @@ vi.mock('./native-chat-attachment-upload', () => ({
       ? {
           kind: 'ssh',
           connectionId: testState.ownerConnectionId,
-          worktreePath: testState.ownerWorktreePath
+          worktreePath: testState.ownerWorktreePath,
+          expectedExecutionHostId: `ssh:${testState.ownerConnectionId}`,
+          expectedSshTargetId: testState.ownerConnectionId,
+          expectedSshConnectionGeneration: testState.ownerSshGeneration
         }
       : { kind: testState.ownerKind }
 }))
@@ -232,6 +237,7 @@ describe('native chat workspace file drops', () => {
     testState.executionHostId = 'local'
     testState.ownerConnectionId = 'ssh-1'
     testState.ownerKind = 'local'
+    testState.ownerSshGeneration = 4
     testState.ownerWorktreePath = '/remote/repo'
     latestInput = null
     bubbledDrop.mockReset()
@@ -357,6 +363,25 @@ describe('native chat workspace file drops', () => {
     )
 
     testState.ownerConnectionId = 'ssh-2'
+    fireEvent.compositionEnd(input, { data: '' })
+
+    expect(screen.getByTestId('draft').textContent).toBe('preedit')
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+  })
+
+  it('rejects an IME-queued path when the SSH connection reconnects under the same id', () => {
+    testState.executionHostId = 'ssh:ssh-1'
+    testState.ownerKind = 'ssh'
+    render(<ComposerProbe initialDraft="preedit" />)
+    const input = editor()
+    fireEvent.compositionStart(input)
+    dispatchDragEvent(
+      'drop',
+      input,
+      internalTransfer(['/remote/repo/a.ts'], { executionHostId: 'ssh:ssh-1' })
+    )
+
+    testState.ownerSshGeneration = 5
     fireEvent.compositionEnd(input, { data: '' })
 
     expect(screen.getByTestId('draft').textContent).toBe('preedit')
