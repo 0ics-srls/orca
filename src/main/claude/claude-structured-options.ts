@@ -67,10 +67,12 @@ export async function setClaudeStructuredOption(
   }
   // One read answers every catalog question this write asks, so the guards below
   // cannot each pay a round trip for the same list nor disagree about the model.
-  // An effort write with no current model has nothing to look up, so it reads nothing.
+  // Two writes ask nothing of it and so read nothing: an effort write with no current
+  // model has nothing to look up, and turning Fast off needs no support evidence —
+  // which is every restore replaying a stored `false`.
   const needsCatalog =
     input.key === 'model' ||
-    input.key === 'fastMode' ||
+    (input.key === 'fastMode' && fastMode === true) ||
     (input.key === 'effort' && readClaudeCurrentModel(session).id !== undefined)
   const listed = needsCatalog ? await readClaudeListedModels(session, timeoutMs) : []
   // The child stores an effort its model has no control for and keeps it across

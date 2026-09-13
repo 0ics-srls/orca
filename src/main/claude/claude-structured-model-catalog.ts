@@ -62,9 +62,10 @@ export function listedModels(value: unknown): ListedModel[] {
   })
 }
 
-/** Sole alias matcher: a pick stored as an alias, as the resolved id, or as the
- *  literal `default` must find the same row, or two guards answer differently about
- *  one model. */
+/** Alias matcher for the Fast-mode guards: a pick stored as an alias, as the resolved
+ *  id, or as the literal `default` finds the same row. The effort and admit guards
+ *  match on alias and resolved id only — neither ever resolved `default`, and widening
+ *  them here would tighten what they refuse. */
 export function matchListedModel(
   models: readonly ListedModel[],
   modelId: string

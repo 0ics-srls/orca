@@ -144,6 +144,28 @@ describe('Claude structured Fast mode', () => {
     }
   )
 
+  // Turning Fast off needs no support evidence, so it must not pay a catalog round
+  // trip — restore replays a stored `false` on every acquire.
+  it('reads no catalog to turn Fast off, but does to turn it on', async () => {
+    const { session } = fastModeSession(true)
+    const listed = session.connection.supportedModels
+    let reads = 0
+    session.connection.supportedModels = async (...args: Parameters<typeof listed>) => {
+      reads += 1
+      return listed(...args)
+    }
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'fastMode', value: 'false' }, undefined)
+    ).resolves.toMatchObject({ fastMode: 'false' })
+    expect(reads).toBe(0)
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'fastMode', value: 'true' }, undefined)
+    ).resolves.toMatchObject({ fastMode: 'true' })
+    expect(reads).toBe(1)
+  })
+
   it('restores explicit Fast off when model support is unknown', async () => {
     const { session, applyFlagSettings } = fastModeSession(undefined)
     session.options.set('fastMode', 'false')
