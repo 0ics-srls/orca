@@ -1,6 +1,11 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { findDetailsBlockStart } from './details-markdown-html'
 import { markdownCodeSpanRanges, markdownFenceRanges } from './markdown-scan-ranges'
+import * as markdownScanRanges from './markdown-scan-ranges'
+
+afterEach(() => {
+  vi.restoreAllMocks()
+})
 
 describe('markdownCodeSpanRanges', () => {
   it('reports a span whose backtick run closes on an equal run', () => {
@@ -73,6 +78,80 @@ describe('findDetailsBlockStart with fenced content', () => {
 
   it('skips a details mention inside a code span that spans a blank line', () => {
     expect(findDetailsBlockStart('text `a\n\n<details>b` tail')).toBe(-1)
+  })
+})
+
+describe('findDetailsBlockStart cost on documents without a toggle', () => {
+  it('never scans fence or code-span ranges for a toggle-free document', () => {
+    const fenceSpy = vi.spyOn(markdownScanRanges, 'markdownFenceRanges')
+    const codeSpanSpy = vi.spyOn(markdownScanRanges, 'markdownCodeSpanRanges')
+    const paragraphs = Array.from(
+      { length: 300 },
+      (_, index) => `Paragraph ${index} ${'lorem ipsum dolor sit amet '.repeat(25)}`
+    )
+    const document = paragraphs.join('\n\n')
+    expect(document.length).toBeGreaterThan(200_000)
+
+    let offset = 0
+    for (const paragraph of paragraphs) {
+      expect(findDetailsBlockStart(document.slice(offset))).toBe(-1)
+      offset += paragraph.length + 2
+    }
+
+    expect(fenceSpy).not.toHaveBeenCalled()
+    expect(codeSpanSpy).not.toHaveBeenCalled()
+  })
+
+  it('scans ranges only for calls whose remaining source holds the toggle', () => {
+    const fenceSpy = vi.spyOn(markdownScanRanges, 'markdownFenceRanges')
+    const codeSpanSpy = vi.spyOn(markdownScanRanges, 'markdownCodeSpanRanges')
+    const paragraphs = Array.from({ length: 300 }, (_, index) => `Paragraph ${index}.`)
+    paragraphs.push('<details>\n<summary>S</summary>\n\nbody\n\n</details>')
+    const document = paragraphs.join('\n\n')
+
+    let offset = 0
+    let found = -1
+    for (const paragraph of paragraphs) {
+      const relative = findDetailsBlockStart(document.slice(offset))
+      if (relative !== -1) {
+        found = offset + relative
+      }
+      offset += paragraph.length + 2
+    }
+
+    expect(found).toBe(document.indexOf('<details>'))
+    expect(fenceSpy).toHaveBeenCalledTimes(paragraphs.length)
+    expect(codeSpanSpy).toHaveBeenCalledTimes(paragraphs.length)
+  })
+
+  it.skipIf(process.env.ORCA_DETAILS_SCAN_BENCH !== '1')('benchmarks a large toggle-free document', () => {
+    const paragraphs = Array.from(
+      { length: 300 },
+      (_, index) => `Paragraph ${index} ${'lorem ipsum dolor sit amet '.repeat(25)}`
+    )
+    const document = paragraphs.join('\n\n')
+
+    const started = performance.now()
+    let offset = 0
+    for (const paragraph of paragraphs) {
+      expect(findDetailsBlockStart(document.slice(offset))).toBe(-1)
+      offset += paragraph.length + 2
+    }
+
+    process.stdout.write(`${JSON.stringify({ elapsedMs: performance.now() - started })}\n`)
+  })
+
+  it('still finds a toggle that follows a long run of prose', () => {
+    const prose = Array.from({ length: 300 }, (_, index) => `Paragraph ${index}.`).join('\n\n')
+    const document = `${prose}\n\n<details>\n<summary>S</summary>\n\nbody\n\n</details>`
+
+    expect(findDetailsBlockStart(document)).toBe(document.indexOf('<details>'))
+  })
+
+  it('finds an uppercase opening tag the lowercase fast path misses', () => {
+    const document = 'Prose paragraph.\n\n<DETAILS>\n<summary>S</summary>\n\nbody\n\n</DETAILS>'
+
+    expect(findDetailsBlockStart(document)).toBe(document.indexOf('<DETAILS>'))
   })
 })
 
