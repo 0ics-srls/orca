@@ -1,23 +1,30 @@
-import { useCallback, useRef, useState, type RefObject } from 'react'
-import type { FlatList } from 'react-native'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import type { FlatList, NativeScrollEvent, NativeSyntheticEvent } from 'react-native'
 
 /** Distance from the bottom, in points, still treated as "at the tail". */
 const AT_TAIL_SLOP = 80
+
+function isAtTail(event: NativeScrollEvent): boolean {
+  const { contentOffset, contentSize, layoutMeasurement } = event
+  return contentSize.height - (contentOffset.y + layoutMeasurement.height) <= AT_TAIL_SLOP
+}
 
 export type MobileNativeChatTailFollow<TItem> = {
   /** Attach to the transcript list; the hook scrolls through this ref alone. */
   listRef: RefObject<FlatList<TItem> | null>
   /** Render flag for the jump-to-latest control. */
-  following: boolean
+  showJumpToTail: boolean
   /** Passive maintenance: re-pin after the content or viewport resizes. */
   pinToTail: () => void
   /** Explicit jump — send, or the jump-to-latest control. Resumes following. */
   jumpToTail: () => void
   beginUserScroll: () => void
-  finishUserScroll: () => void
+  endUserDrag: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
+  beginMomentum: () => void
+  endMomentum: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
   /** Leave the tail deliberately, e.g. before prepending older history. */
   detachFromTail: () => void
-  recordScrollMetrics: (distanceFromBottom: number) => void
+  recordScrollMetrics: (event: NativeScrollEvent) => void
 }
 
 /** Sole owner of transcript scroll position.
@@ -40,14 +47,28 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
   const { hasItems } = args
   const listRef = useRef<FlatList<TItem> | null>(null)
   const [following, setFollowingFlag] = useState(true)
+  const [atTail, setAtTailFlag] = useState(true)
   // Event handlers read intent at event time, before a re-render lands.
   const followingRef = useRef(true)
   const atTailRef = useRef(true)
+  const userScrollActiveRef = useRef(false)
+  const userScrollSettleFrameRef = useRef<number | null>(null)
 
   // Single writer, so the event-time ref and the render flag cannot disagree.
   const setFollowing = useCallback((next: boolean) => {
+    if (followingRef.current === next) {
+      return
+    }
     followingRef.current = next
     setFollowingFlag(next)
+  }, [])
+
+  const setAtTail = useCallback((next: boolean) => {
+    if (atTailRef.current === next) {
+      return
+    }
+    atTailRef.current = next
+    setAtTailFlag(next)
   }, [])
 
   const pinToTail = useCallback(() => {
@@ -57,33 +78,90 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     listRef.current?.scrollToEnd({ animated: false })
   }, [hasItems])
 
+  const clearUserScrollSettle = useCallback(() => {
+    if (userScrollSettleFrameRef.current !== null) {
+      cancelAnimationFrame(userScrollSettleFrameRef.current)
+      userScrollSettleFrameRef.current = null
+    }
+  }, [])
+
+  const recordScrollMetrics = useCallback(
+    (event: NativeScrollEvent) => setAtTail(isAtTail(event)),
+    [setAtTail]
+  )
+
   const jumpToTail = useCallback(() => {
-    atTailRef.current = true
+    clearUserScrollSettle()
+    userScrollActiveRef.current = false
+    setAtTail(true)
     setFollowing(true)
     pinToTail()
-  }, [pinToTail, setFollowing])
+  }, [clearUserScrollSettle, pinToTail, setAtTail, setFollowing])
 
-  const beginUserScroll = useCallback(() => setFollowing(false), [setFollowing])
+  const beginUserScroll = useCallback(() => {
+    clearUserScrollSettle()
+    userScrollActiveRef.current = true
+    setFollowing(false)
+  }, [clearUserScrollSettle, setFollowing])
 
-  // Where the gesture left us decides whether following resumes.
-  const finishUserScroll = useCallback(() => setFollowing(atTailRef.current), [setFollowing])
+  const finishUserScroll = useCallback(
+    (finishedAtTail: boolean) => {
+      if (!userScrollActiveRef.current) {
+        return
+      }
+      clearUserScrollSettle()
+      userScrollActiveRef.current = false
+      setAtTail(finishedAtTail)
+      setFollowing(finishedAtTail)
+    },
+    [clearUserScrollSettle, setAtTail, setFollowing]
+  )
+
+  const endUserDrag = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      if (!userScrollActiveRef.current) {
+        return
+      }
+      clearUserScrollSettle()
+      const releasedAtTail = isAtTail(event.nativeEvent)
+      userScrollSettleFrameRef.current = requestAnimationFrame(() => {
+        userScrollSettleFrameRef.current = null
+        finishUserScroll(releasedAtTail)
+      })
+    },
+    [clearUserScrollSettle, finishUserScroll]
+  )
+
+  const beginMomentum = useCallback(() => {
+    if (userScrollActiveRef.current) {
+      clearUserScrollSettle()
+    }
+  }, [clearUserScrollSettle])
+
+  const endMomentum = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) =>
+      finishUserScroll(isAtTail(event.nativeEvent)),
+    [finishUserScroll]
+  )
 
   const detachFromTail = useCallback(() => {
-    atTailRef.current = false
+    clearUserScrollSettle()
+    userScrollActiveRef.current = false
+    setAtTail(false)
     setFollowing(false)
-  }, [setFollowing])
+  }, [clearUserScrollSettle, setAtTail, setFollowing])
 
-  const recordScrollMetrics = useCallback((distanceFromBottom: number) => {
-    atTailRef.current = distanceFromBottom < AT_TAIL_SLOP
-  }, [])
+  useEffect(() => clearUserScrollSettle, [clearUserScrollSettle])
 
   return {
     listRef,
-    following,
+    showJumpToTail: !following && !atTail,
     pinToTail,
     jumpToTail,
     beginUserScroll,
-    finishUserScroll,
+    endUserDrag,
+    beginMomentum,
+    endMomentum,
     detachFromTail,
     recordScrollMetrics
   }

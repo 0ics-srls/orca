@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import { act, create, type ReactTestInstance, type ReactTestRenderer } from 'react-test-renderer'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
 import { MobileNativeChatView } from './MobileNativeChatView'
 
@@ -113,10 +113,20 @@ function chatViewElement(overrides: Overrides): ReturnType<typeof createElement>
 describe('MobileNativeChatView', () => {
   let renderer: ReactTestRenderer | null = null
 
+  beforeEach(() => {
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) =>
+      setTimeout(() => callback(0), 0)
+    )
+    vi.stubGlobal('cancelAnimationFrame', (handle: ReturnType<typeof setTimeout>) =>
+      clearTimeout(handle)
+    )
+  })
+
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
     scrollToEnd.mockReset()
+    vi.unstubAllGlobals()
   })
 
   async function render(overrides: Overrides = {}): Promise<void> {
@@ -307,23 +317,164 @@ describe('MobileNativeChatView', () => {
     ).toHaveLength(0)
   })
 
-  it('detaches before the Load earlier messages button prepends history', async () => {
-    const folded = [assistantTurn('a1', 'Short history')]
-    const onLoadEarlier = vi.fn()
-    await render({ folded, hasMore: true, onLoadEarlier })
+  it('keeps tail-follow paused across the drag-to-momentum handoff', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Latest')]
+      await render({ folded })
+      scrollToEnd.mockClear()
+
+      act(() => list().props.onScrollBeginDrag?.({}))
+      expect(
+        renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
+      ).toHaveLength(0)
+
+      act(() => {
+        list().props.onScroll({
+          nativeEvent: {
+            contentOffset: { y: 700 },
+            contentSize: { height: 1_200 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onScrollEndDrag?.({
+          nativeEvent: {
+            contentOffset: { y: 700 },
+            contentSize: { height: 1_200 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onContentSizeChange(320, 1_250)
+        list().props.onMomentumScrollBegin?.({})
+      })
+      await act(async () => vi.advanceTimersByTime(200))
+      act(() => list().props.onContentSizeChange(320, 1_300))
+
+      expect(scrollToEnd).not.toHaveBeenCalled()
+
+      act(() => {
+        list().props.onMomentumScrollEnd?.({
+          nativeEvent: {
+            contentOffset: { y: 800 },
+            contentSize: { height: 1_300 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onContentSizeChange(320, 1_350)
+      })
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('uses momentum-end metrics instead of a stale throttled scroll sample', async () => {
+    const folded = [assistantTurn('a1', 'Latest')]
+    await render({ folded })
     scrollToEnd.mockClear()
 
-    const header = list().props.ListHeaderComponent as { props: { onPress: () => void } }
     act(() => {
-      header.props.onPress()
-      list().props.onContentSizeChange(320, 950)
+      list().props.onScrollBeginDrag?.({})
+      list().props.onScroll({
+        nativeEvent: {
+          contentOffset: { y: 700 },
+          contentSize: { height: 1_200 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
+      list().props.onScrollEndDrag?.({
+        nativeEvent: {
+          contentOffset: { y: 700 },
+          contentSize: { height: 1_200 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
+      list().props.onMomentumScrollBegin?.({})
+      list().props.onMomentumScrollEnd?.({
+        nativeEvent: {
+          contentOffset: { y: 200 },
+          contentSize: { height: 1_300 },
+          layoutMeasurement: { height: 500 }
+        }
+      })
+      list().props.onContentSizeChange(320, 1_350)
     })
 
-    expect(onLoadEarlier).toHaveBeenCalledOnce()
     expect(scrollToEnd).not.toHaveBeenCalled()
     expect(
       renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
     ).toHaveLength(1)
+  })
+
+  it('uses finger-release metrics when no momentum event follows', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Latest')]
+      await render({ folded })
+      scrollToEnd.mockClear()
+
+      act(() => {
+        list().props.onScrollBeginDrag?.({})
+        list().props.onScroll({
+          nativeEvent: {
+            contentOffset: { y: 200 },
+            contentSize: { height: 1_200 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onScrollEndDrag?.({
+          nativeEvent: {
+            contentOffset: { y: 620 },
+            contentSize: { height: 1_200 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+      })
+      await act(async () => vi.advanceTimersByTime(200))
+      act(() => list().props.onContentSizeChange(320, 1_250))
+
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('keeps a history load detached after its triggering drag settles', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Short history')]
+      const onLoadEarlier = vi.fn()
+      await render({ folded, hasMore: true, onLoadEarlier })
+      scrollToEnd.mockClear()
+
+      act(() => {
+        list().props.onScrollBeginDrag?.({})
+        list().props.onScroll({
+          nativeEvent: {
+            contentOffset: { y: 0 },
+            contentSize: { height: 400 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onScrollEndDrag?.({
+          nativeEvent: {
+            contentOffset: { y: 0 },
+            contentSize: { height: 400 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+      })
+      await act(async () => vi.advanceTimersByTime(200))
+      act(() => list().props.onContentSizeChange(320, 950))
+
+      expect(onLoadEarlier).toHaveBeenCalledOnce()
+      expect(scrollToEnd).not.toHaveBeenCalled()
+      expect(
+        renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
+      ).toHaveLength(1)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('routes an accepted send through the immediate nonanimated tail owner', async () => {

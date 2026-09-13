@@ -208,11 +208,13 @@ export function MobileNativeChatView({
   )
   const {
     listRef,
-    following: followingTail,
+    showJumpToTail,
     pinToTail,
     jumpToTail,
     beginUserScroll,
-    finishUserScroll,
+    endUserDrag,
+    beginMomentum,
+    endMomentum,
     detachFromTail,
     recordScrollMetrics
   } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
@@ -240,8 +242,8 @@ export function MobileNativeChatView({
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
-      const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
-      recordScrollMetrics(contentSize.height - (contentOffset.y + layoutMeasurement.height))
+      const { contentOffset } = e.nativeEvent
+      recordScrollMetrics(e.nativeEvent)
       // Near the top — page in older history.
       if (contentOffset.y < 60 && hasMore && !loadingEarlier) {
         loadEarlier()
@@ -304,9 +306,9 @@ export function MobileNativeChatView({
               keyboardShouldPersistTaps="handled"
               onScroll={onScroll}
               onScrollBeginDrag={beginUserScroll}
-              onScrollEndDrag={finishUserScroll}
-              onMomentumScrollBegin={beginUserScroll}
-              onMomentumScrollEnd={finishUserScroll}
+              onScrollEndDrag={endUserDrag}
+              onMomentumScrollBegin={beginMomentum}
+              onMomentumScrollEnd={endMomentum}
               scrollEventThrottle={32}
               onContentSizeChange={pinToTail}
               onLayout={pinToTail}
@@ -346,7 +348,7 @@ export function MobileNativeChatView({
             />
           </GestureDetector>
           {/* Jump-to-latest control. */}
-          {!followingTail ? (
+          {showJumpToTail ? (
             <Pressable
               accessibilityLabel="Scroll to latest"
               style={[styles.fab, styles.fabBottom]}
