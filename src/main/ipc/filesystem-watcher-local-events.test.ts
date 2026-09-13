@@ -16,6 +16,11 @@ vi.mock('./parcel-watcher-process', () => ({ subscribeViaWatcherProcess: subscri
 
 import { createLocalWatcher } from './filesystem-watcher-local-events'
 import { cancelLocalBatchFlush } from './filesystem-watcher-batch-control'
+import {
+  subscribeLocalWatcher,
+  unsubscribeLocalWatcher
+} from './filesystem-watcher-local-subscription'
+import { watcherLifecycleState } from './filesystem-watcher-lifecycle-state'
 
 function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void
@@ -325,5 +330,27 @@ describe('local filesystem watcher flush serialization', () => {
     expect((sender.send.mock.calls[1][1] as FsChangedPayload).events).toEqual([
       { kind: 'update', absolutePath: otherPath, isDirectory: false }
     ])
+  })
+
+  it('re-arms the debounce window after a re-subscribe inside the teardown grace period', async () => {
+    // Why real timers: fake-timers' refresh() revives a cleared handle, but Node's is a no-op — the bug only shows on real Timeouts.
+    vi.useRealTimers()
+    statMock.mockResolvedValue({ isDirectory: () => true })
+    const listener = { ...sender, id: 7, once: vi.fn() }
+    try {
+      await subscribeLocalWatcher('/repo', listener as never)
+      watcherCallback?.(null, [{ type: 'delete', path: '/repo/file.ts' }])
+      unsubscribeLocalWatcher('/repo', listener.id)
+      await subscribeLocalWatcher('/repo', listener as never)
+      watcherCallback?.(null, [{ type: 'delete', path: '/repo/file.ts' }])
+      await new Promise((resolve) => setTimeout(resolve, WATCH_BATCH_TRAILING_MS + 50))
+      expect(sender.send).toHaveBeenCalledTimes(1)
+    } finally {
+      for (const teardown of watcherLifecycleState.pendingTeardowns.values()) {
+        clearTimeout(teardown)
+      }
+      watcherLifecycleState.pendingTeardowns.clear()
+      watcherLifecycleState.watchedRoots.clear()
+    }
   })
 })
