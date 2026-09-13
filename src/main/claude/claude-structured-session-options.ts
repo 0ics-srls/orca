@@ -1,25 +1,17 @@
 import type {
   AgentSessionFastModeSupport,
-  AgentSessionModelOption,
-  AgentSessionOptionChoice,
   AgentSessionOptionsResult
 } from '../../shared/agent-session-wire'
-import { CLAUDE_SESSION_OPTION_CATALOG } from '../../shared/agent-session-option-catalog-claude-codex'
-import type { CatalogModel } from '../../shared/agent-session-option-catalog-types'
+import {
+  currentModelId,
+  listedModels,
+  record,
+  seedModels,
+  text,
+  type ListedModel
+} from './claude-structured-model-catalog'
 import type { ClaudeSession } from './claude-structured-session-state'
 import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
-
-type ListedModel = AgentSessionModelOption & { resolvedModel: string | null }
-
-function record(value: unknown): Record<string, unknown> | null {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null
-}
-
-function text(value: unknown): string | null {
-  return typeof value === 'string' && value.trim() ? value : null
-}
 
 /**
  * The session's current effort, which only `get_settings` reports: the
@@ -70,81 +62,6 @@ export function observeClaudeFastModeFacts(session: ClaudeSession, value: unknow
   } else if (facts.disabledReasonReported) {
     delete session.fastModeDisabledReason
   }
-}
-
-function effortLabel(value: string): string {
-  return value === 'xhigh' ? 'Extra high' : `${value.charAt(0).toUpperCase()}${value.slice(1)}`
-}
-
-function listedEfforts(row: Record<string, unknown>): AgentSessionOptionChoice[] {
-  return row.supportsEffort === true && Array.isArray(row.supportedEffortLevels)
-    ? row.supportedEffortLevels.flatMap((value) => {
-        const effort = text(value)
-        return effort ? [{ value: effort, label: effortLabel(effort) }] : []
-      })
-    : []
-}
-
-function listedModels(value: unknown): ListedModel[] {
-  const response = record(value)
-  const rows = Array.isArray(response?.models)
-    ? response.models.map(record).filter((row): row is Record<string, unknown> => row !== null)
-    : []
-  const defaultRow = rows.find((row) => text(row.value) === 'default')
-  const defaultResolvedModel = text(defaultRow?.resolvedModel)
-  const seen = new Set<string>()
-  return rows.flatMap((row) => {
-    const id = text(row.value)
-    if (!id || id === 'default' || seen.has(id)) {
-      return []
-    }
-    seen.add(id)
-    const resolvedModel = text(row.resolvedModel)
-    const description = text(row.description)
-    const supportsFastMode =
-      typeof row.supportsFastMode === 'boolean' ? row.supportsFastMode : undefined
-    return [
-      {
-        id,
-        label: text(row.displayName) ?? id,
-        ...(description ? { description } : {}),
-        isDefault: resolvedModel !== null && resolvedModel === defaultResolvedModel,
-        efforts: listedEfforts(row),
-        ...(supportsFastMode !== undefined ? { supportsFastMode } : {}),
-        resolvedModel
-      }
-    ]
-  })
-}
-
-function seedEfforts(model: CatalogModel): AgentSessionOptionChoice[] {
-  const effort = model.options.find((option) => option.id === 'effort')
-  return effort?.kind.type === 'select' ? effort.kind.choices : []
-}
-
-function seedModels(): ListedModel[] {
-  return CLAUDE_SESSION_OPTION_CATALOG.models.map((model) => ({
-    id: model.id,
-    label: model.label,
-    ...(model.description ? { description: model.description } : {}),
-    isDefault: model.isDefault === true,
-    efforts: seedEfforts(model),
-    resolvedModel: null
-  }))
-}
-
-function currentModelId(models: ListedModel[], reportedModel: string | undefined): string {
-  const matched = reportedModel
-    ? models.find(
-        (model) =>
-          model.id === reportedModel ||
-          model.resolvedModel === reportedModel ||
-          (reportedModel === 'default' && model.isDefault)
-      )
-    : undefined
-  return (
-    matched?.id ?? reportedModel ?? models.find((model) => model.isDefault)?.id ?? models[0]!.id
-  )
 }
 
 /**
@@ -261,6 +178,28 @@ function decodedFastMode(session: ClaudeSession): boolean | undefined {
   }
   const decoded = decodeStructuredAgentSessionOptionValue('fastMode', encoded)
   return typeof decoded === 'boolean' ? decoded : undefined
+}
+
+/**
+ * Whether the catalog admits the model, matched by alias or resolved id so a pick
+ * stored as either one is found. The permissive case lives here rather than at the
+ * call site: every caller must treat an unidentified catalog the same way, and one
+ * that forgot would refuse every model on a CLI that cannot answer.
+ */
+export async function claudeCatalogAdmitsModel(
+  session: ClaudeSession,
+  modelId: string,
+  timeoutMs: number | undefined
+): Promise<boolean> {
+  const catalog = await session.connection.supportedModels({ timeoutMs }).catch(() => null)
+  const models = listedModels(catalog ? { models: catalog } : null)
+  // An empty list identifies no model, so it is not evidence against one — a live
+  // CLI predating `list_models` would otherwise have every model refused under it.
+  // Do not turn this into a refusal.
+  return (
+    models.length === 0 ||
+    models.some((model) => model.id === modelId || model.resolvedModel === modelId)
+  )
 }
 
 export async function readClaudeStructuredSessionOptions(
