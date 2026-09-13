@@ -348,3 +348,45 @@ describe('Claude Fast mode against a catalog that identifies nothing', () => {
     expect(applyFlagSettings).not.toHaveBeenCalled()
   })
 })
+
+describe('Claude Fast mode reported by the session frame alone', () => {
+  /**
+   * Measured against a running Claude session: the first `agentSession.options`
+   * read carries `fastModeState: 'off'` while `effective.fastMode` is still absent,
+   * so the two are not redundant — the frame answers at a moment the boolean has no
+   * answer. Without this the picker asks the user to disambiguate a value the
+   * provider already reported.
+   */
+  function frameOnlySession(state: 'off' | 'on' | 'cooldown') {
+    const { session } = fastModeSession(true)
+    // Settings are silent on Fast, exactly as observed on a fresh session.
+    session.connection.getSettings = async () => ({ effective: { effortLevel: 'high' } })
+    observeClaudeFastModeFacts(session, { fast_mode_state: state })
+    return session
+  }
+
+  it('reports Fast off from the session frame when settings never carry it', async () => {
+    const result = await readClaudeStructuredSessionOptions(frameOnlySession('off'), undefined)
+
+    expect(result.current.fastMode).toBe(false)
+    expect(result.current.confirmed).toContain('fastMode')
+  })
+
+  it('reads a throttled session as on, since cooldown throttles routing not the pick', async () => {
+    await expect(
+      readClaudeStructuredSessionOptions(frameOnlySession('on'), undefined)
+    ).resolves.toMatchObject({ current: { fastMode: true } })
+    await expect(
+      readClaudeStructuredSessionOptions(frameOnlySession('cooldown'), undefined)
+    ).resolves.toMatchObject({ current: { fastMode: true, fastModeState: 'cooldown' } })
+  })
+
+  it('stays unknown when neither settings nor a session frame report Fast', async () => {
+    const { session } = fastModeSession(true)
+    session.connection.getSettings = async () => ({ effective: { effortLevel: 'high' } })
+
+    const result = await readClaudeStructuredSessionOptions(session, undefined)
+
+    expect(result.current.fastMode).toBeUndefined()
+  })
+})

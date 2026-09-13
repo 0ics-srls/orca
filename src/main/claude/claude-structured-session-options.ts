@@ -238,7 +238,16 @@ export async function readClaudeStructuredSessionOptions(
     session.confirmedOptions.delete('fastMode')
     desiredFastMode = false
   }
-  const fastMode = desiredFastMode ?? session.reportedOptions.fastMode
+  // The child answers Fast two ways and need not answer both: the settings readback
+  // carries the boolean, and the session frames carry a routing state. A fresh
+  // session reports the state while the boolean is still absent, so without this
+  // fallback the picker asks the user to re-answer what the provider just reported.
+  // `cooldown` throttles routing, it does not clear the pick, so it reads as on —
+  // reading it as off would flip a control nobody touched.
+  const fastMode =
+    desiredFastMode ??
+    session.reportedOptions.fastMode ??
+    (session.fastModeState === undefined ? undefined : session.fastModeState !== 'off')
   const support = claudeFastModeSupport(discovered, session.fastModeDisabledReason)
   const confirmed = [
     ...(current.confirmed ? ['model'] : []),
