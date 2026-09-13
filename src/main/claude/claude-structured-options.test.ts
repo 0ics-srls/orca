@@ -206,6 +206,31 @@ describe('Claude structured Fast mode', () => {
     expect(applyFlagSettings).not.toHaveBeenCalled()
   })
 
+  // The child omits the reason when nothing blocks Fast, so a later unblocked frame is
+  // the only all-clear. Without it the first reason latches and the control never returns.
+  it('clears a blocking reason once a later frame reports state without one', async () => {
+    const { session } = fastModeSession(true)
+
+    observeClaudeFastModeFacts(session, {
+      fast_mode_state: 'off',
+      fast_mode_disabled_reason: 'model_not_allowed'
+    })
+    expect(session.fastModeDisabledReason).toBe('model_not_allowed')
+    await expect(readClaudeStructuredSessionOptions(session, undefined)).resolves.toMatchObject({
+      fastModeSupport: { supported: false, reason: 'model_not_allowed' }
+    })
+
+    // Switched back to a model that allows Fast: state reported, reason omitted.
+    observeClaudeFastModeFacts(session, { fast_mode_state: 'on' })
+    expect(session.fastModeDisabledReason).toBeUndefined()
+    await expect(readClaudeStructuredSessionOptions(session, undefined)).resolves.toMatchObject({
+      fastModeSupport: { supported: true }
+    })
+    await expect(
+      setClaudeStructuredOption(session, { key: 'fastMode', value: 'true' }, undefined)
+    ).resolves.toMatchObject({ fastMode: 'true' })
+  })
+
   it('reconciles an earlier Fast request to a later provider readback', async () => {
     const { session } = fastModeSession(true)
     session.options.set('fastMode', 'true')
