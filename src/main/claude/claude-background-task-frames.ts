@@ -41,6 +41,13 @@ export function taskDescription(value: unknown): string | undefined {
   return boundedTaskText(value)
 }
 
+/** Every other provider string a durable task row carries — its summary, its
+ *  error, its output path — takes the description bound: the row is replayed on
+ *  every reconnect, and each reader clips it again anyway. */
+export function taskText(value: unknown): string | undefined {
+  return boundedTaskText(value)
+}
+
 /** The provider-reported identity for a task. Subagent frames have carried the
  *  type under both `agent_type` and `subagent_type` across SDK versions. */
 export function taskName(frame: Record<string, unknown>): string | undefined {

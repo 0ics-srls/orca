@@ -160,6 +160,23 @@ function boundBlock(block: NativeChatBlock, state: TranscriptBoundState): Native
       }))
     }
   }
+  if (block.type === 'background-task') {
+    // Provider strings get the same redaction and clipping as every other piece
+    // of transcript metadata. `outputFile` is dropped outright for the reason
+    // the image branch below drops local paths: it names a file on the
+    // execution host, which no peer reading this payload can open.
+    const { outputFile, ...carried } = block
+    if (outputFile) {
+      markClipped(state, 'Background task output paths were omitted from transcript output.')
+    }
+    return {
+      ...carried,
+      taskId: boundEntryId(block.taskId, state),
+      label: clipMetadata(block.label, state),
+      ...(block.summary ? { summary: clipText(block.summary, state) } : {}),
+      ...(block.error ? { error: clipText(block.error, state) } : {})
+    }
+  }
   if (block.path || (block.url && isLocalFileLocator(block.url))) {
     markClipped(state, 'Local image paths were omitted from transcript output.')
     return {

@@ -166,6 +166,46 @@ describe('provider frame classification catalog', () => {
   })
 })
 
+describe('typed translator coverage', () => {
+  it('emits no generic row for a covered kind, whatever the payload reports', () => {
+    // The catalogue calls these `status-chrome`, but `hasProviderError` promotes
+    // any of them that reports a failure — which is how a failed background task
+    // reached users as `claude · message:system:task_notification`. Coverage is
+    // the contract that stops it: the typed translator writes the row instead.
+    for (const kind of [
+      'message:system:task_started',
+      'message:system:task_updated',
+      'message:system:task_progress',
+      'message:system:task_notification',
+      'message:system:background_tasks_changed'
+    ]) {
+      expect(
+        unhandledProviderFrameJournalItem('claude', kind, {
+          task_id: 'byjnee2no',
+          status: 'failed',
+          summary: 'Background command "Wait" failed with exit code 1'
+        }),
+        kind
+      ).toBeNull()
+    }
+  })
+
+  it('covers Claude only — the same method name on another provider still falls back', () => {
+    expect(
+      unhandledProviderFrameJournalItem('codex', 'message:system:task_notification', {
+        status: 'failed'
+      })
+    ).not.toBeNull()
+  })
+
+  it('leaves an unmodelled Claude failure on the visible fallback', () => {
+    const item = unhandledProviderFrameJournalItem('claude', 'message:system:future_task', {
+      status: 'failed'
+    })
+    expect(item?.classification).toBe('error-surface')
+  })
+})
+
 describe('notice disposition boundaries', () => {
   it.each(['warning', 'guardianWarning', 'deprecationNotice', 'configWarning'])(
     'retains the error-surface cap exemption for %s',

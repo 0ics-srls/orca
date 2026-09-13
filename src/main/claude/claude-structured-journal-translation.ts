@@ -36,6 +36,7 @@ import {
   createClaudeProviderFrameFallback,
   isSettledClaudeResultKind
 } from './claude-structured-provider-fallback'
+import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
@@ -94,6 +95,7 @@ export function createClaudeJournalTranslator(
     sink: deps.sink,
     currentGroupKey: () => groupKeyOf(currentTurn)
   })
+  const backgroundTasks = new ClaudeBackgroundTaskRows({ sink: deps.sink })
   const streamedText = createClaudeStreamedTextCheckpoints({
     ...(deps.coalesceMs === undefined ? {} : { coalesceMs: deps.coalesceMs }),
     ...(deps.schedule ? { schedule: deps.schedule } : {}),
@@ -294,9 +296,10 @@ export function createClaudeJournalTranslator(
           providerFallback.append(kind, event.message, failure?.text)
         }
       } else if (event.type === 'message') {
-        // These frames stay `status-chrome`: the roster reads them here, and the
-        // fallback below still drops the raw frame instead of printing an opcode.
+        // The roster claims the agent tasks and the row owner claims the rest;
+        // both kinds are covered, so the fallback below emits nothing for them.
         subagents.observeSystemFrame(event.message)
+        backgroundTasks.observe(event.message)
         const kind = claudeProviderFrameKind(event.message)
         if (
           !handleMessage(event.message, event.startsTurn === true, event.observedAt ?? Date.now())
@@ -319,6 +322,10 @@ export function createClaudeJournalTranslator(
       promptItems.clear()
       streamedBlocks.clear()
       subagents.dispose()
+      // Settles every live row: `ended` is delivered immediately before this on
+      // every provider-exit path, and this one also covers a teardown with no
+      // `ended` at all.
+      backgroundTasks.dispose()
     }
   }
 }
