@@ -7,6 +7,7 @@ import type * as AttachmentUploadModule from './native-chat-attachment-upload'
 const mocks = vi.hoisted(() => ({
   authorizeExternalPath: vi.fn(),
   resolveNativeChatAttachmentOwner: vi.fn(),
+  resolveNativeChatAttachmentOwnerForWorktree: vi.fn(),
   uploadNativeChatAttachmentPaths: vi.fn()
 }))
 
@@ -19,6 +20,7 @@ vi.mock('@/store', () => ({
 vi.mock('./native-chat-attachment-upload', async (importOriginal) => ({
   ...(await importOriginal<typeof AttachmentUploadModule>()),
   resolveNativeChatAttachmentOwner: mocks.resolveNativeChatAttachmentOwner,
+  resolveNativeChatAttachmentOwnerForWorktree: mocks.resolveNativeChatAttachmentOwnerForWorktree,
   uploadNativeChatAttachmentPaths: mocks.uploadNativeChatAttachmentPaths
 }))
 
@@ -36,11 +38,13 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 
 function Probe({
   disabled,
+  structuredWorktreeId,
   attachResolvedPaths,
   setNotice,
   onReady
 }: {
   disabled: boolean
+  structuredWorktreeId?: string
   attachResolvedPaths: (paths: string[]) => void
   setNotice: (notice: string | null) => void
   onReady: (api: HookApi) => void
@@ -48,6 +52,7 @@ function Probe({
   onReady(
     useNativeChatExternalAttachments({
       terminalTabId: 'tab-1',
+      structuredWorktreeId,
       disabled,
       attachResolvedPaths,
       setNotice
@@ -60,18 +65,26 @@ let root: Root | null = null
 
 async function renderProbe(args: {
   disabled?: boolean
+  structuredWorktreeId?: string
   attachResolvedPaths: (paths: string[]) => void
   setNotice?: (notice: string | null) => void
-}): Promise<{ latest: () => HookApi; setDisabled: (disabled: boolean) => Promise<void> }> {
+}): Promise<{
+  latest: () => HookApi
+  setDisabled: (disabled: boolean) => Promise<void>
+  setStructuredWorktreeId: (structuredWorktreeId: string) => Promise<void>
+}> {
   const container = document.createElement('div')
   document.body.append(container)
   let api: HookApi | null = null
   root = createRoot(container)
-  const render = async (disabled: boolean): Promise<void> => {
+  let disabled = args.disabled ?? false
+  let structuredWorktreeId = args.structuredWorktreeId
+  const render = async (): Promise<void> => {
     await act(async () => {
       root?.render(
         createElement(Probe, {
           disabled,
+          structuredWorktreeId,
           attachResolvedPaths: args.attachResolvedPaths,
           setNotice: args.setNotice ?? (() => {}),
           onReady: (next) => {
@@ -81,7 +94,7 @@ async function renderProbe(args: {
       )
     })
   }
-  await render(args.disabled ?? false)
+  await render()
   return {
     latest: () => {
       if (!api) {
@@ -89,12 +102,20 @@ async function renderProbe(args: {
       }
       return api
     },
-    setDisabled: render
+    setDisabled: async (next) => {
+      disabled = next
+      await render()
+    },
+    setStructuredWorktreeId: async (next) => {
+      structuredWorktreeId = next
+      await render()
+    }
   }
 }
 
 beforeEach(() => {
   mocks.authorizeExternalPath.mockReset().mockResolvedValue(undefined)
+  mocks.resolveNativeChatAttachmentOwnerForWorktree.mockReset().mockReturnValue({ kind: 'local' })
   window.api = {
     fs: { authorizeExternalPath: mocks.authorizeExternalPath }
   } as unknown as Window['api']
@@ -195,6 +216,30 @@ describe('useNativeChatExternalAttachments', () => {
 
     act(() => probe.latest().attachExternalPaths(['/external/only.pdf']))
     owner = { kind: 'runtime' }
+    await act(async () => authorization.resolve())
+
+    expect(attachResolvedPaths).not.toHaveBeenCalled()
+    expect(notices.at(-1)).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
+  })
+
+  // Both workspaces answer `local`, so the owner alone cannot tell them apart:
+  // only asking which workspace this composer serves now catches a tab that
+  // moved while the authorization was still in flight.
+  it('does not attach when the pane changes workspace during authorization', async () => {
+    const authorization = deferred<void>()
+    mocks.authorizeExternalPath.mockReturnValueOnce(authorization.promise)
+    const attachResolvedPaths = vi.fn()
+    const notices: (string | null)[] = []
+    const probe = await renderProbe({
+      structuredWorktreeId: 'worktree-1',
+      attachResolvedPaths,
+      setNotice: (notice) => notices.push(notice)
+    })
+
+    act(() => probe.latest().attachExternalPaths(['/external/only.pdf']))
+    await probe.setStructuredWorktreeId('worktree-2')
     await act(async () => authorization.resolve())
 
     expect(attachResolvedPaths).not.toHaveBeenCalled()

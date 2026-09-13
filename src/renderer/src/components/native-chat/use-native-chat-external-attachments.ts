@@ -27,6 +27,15 @@ export type UseNativeChatExternalAttachmentsArgs = {
  * worktrees upload into the worktree's `.orca/drops` first so the remote agent
  * can actually read what gets referenced (STA-1465).
  */
+type ComposerWorkspace = { structuredWorktreeId?: string; terminalTabId: string }
+
+function isSameComposerWorkspace(captured: ComposerWorkspace, current: ComposerWorkspace): boolean {
+  return (
+    captured.structuredWorktreeId === current.structuredWorktreeId &&
+    captured.terminalTabId === current.terminalTabId
+  )
+}
+
 export function useNativeChatExternalAttachments({
   terminalTabId,
   structuredWorktreeId,
@@ -42,13 +51,23 @@ export function useNativeChatExternalAttachments({
     disabledRef.current = disabled
   }, [disabled])
 
-  const resolveAttachmentOwner = useCallback(
-    () =>
-      structuredWorktreeId
-        ? resolveNativeChatAttachmentOwnerForWorktree(useAppStore.getState(), structuredWorktreeId)
-        : resolveNativeChatAttachmentOwner(useAppStore.getState(), terminalTabId),
-    [structuredWorktreeId, terminalTabId]
-  )
+  // The post-await gate asks which workspace this composer serves now, so it
+  // reads the pane through a ref. Resolving through the render closure would
+  // re-ask the workspace the upload started in — a comparison with itself.
+  const workspaceRef = useRef<ComposerWorkspace>({ structuredWorktreeId, terminalTabId })
+  useLayoutEffect(() => {
+    workspaceRef.current = { structuredWorktreeId, terminalTabId }
+  }, [structuredWorktreeId, terminalTabId])
+
+  const resolveAttachmentOwner = useCallback(() => {
+    const workspace = workspaceRef.current
+    return workspace.structuredWorktreeId
+      ? resolveNativeChatAttachmentOwnerForWorktree(
+          useAppStore.getState(),
+          workspace.structuredWorktreeId
+        )
+      : resolveNativeChatAttachmentOwner(useAppStore.getState(), workspace.terminalTabId)
+  }, [])
 
   const attachExternalPaths = useCallback(
     (paths: string[]) => {
@@ -67,7 +86,11 @@ export function useNativeChatExternalAttachments({
       // Why every exit reports: a drop that reaches here and produces nothing is
       // the silent-failure complaint in #15782. Only a disabled composer stays
       // quiet — it is being torn down or guarded, and has no notice surface.
+      // Both halves matter: a moved tab can land on a workspace that reports the
+      // same owner kind, and the owner alone would call that unchanged.
+      const capturedWorkspace = workspaceRef.current
       const ownerStillCurrent = (): boolean =>
+        isSameComposerWorkspace(capturedWorkspace, workspaceRef.current) &&
         nativeChatAttachmentOwnerUnchanged(owner, resolveAttachmentOwner())
       if (owner.kind !== 'ssh') {
         void (async () => {
