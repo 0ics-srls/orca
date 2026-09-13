@@ -833,3 +833,34 @@ describe('session command catalog stream', () => {
     ).toHaveLength(0)
   })
 })
+
+describe('structured option surface snapshot identity', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    fence = 3
+    items = []
+    submissions = []
+    mocks.call.mockResolvedValue(null)
+  })
+
+  /** `SessionOptionsSurface` is read through `useSyncExternalStore` by the sibling
+   *  PTY surface, whose contract is a cached snapshot: an uncached `getSnapshot`
+   *  returns a new array per call and never quiesces. */
+  it('returns the same snapshot instance for repeated reads at one state', async () => {
+    mocks.call.mockResolvedValue(FAST_OPTIONS)
+    const { result } = renderHook(() =>
+      useStructuredAgentSession({
+        sessionId: 'session-1',
+        agent: 'codex',
+        target: LOCAL_TARGET,
+        isVisible: true
+      })
+    )
+    await waitFor(() =>
+      expect(result.current.optionSurface.getSnapshot().length).toBeGreaterThan(0)
+    )
+    expect(result.current.optionSurface.getSnapshot()).toBe(
+      result.current.optionSurface.getSnapshot()
+    )
+  })
+})

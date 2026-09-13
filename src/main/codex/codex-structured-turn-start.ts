@@ -81,6 +81,10 @@ function codexTurnOptions(host: CodexTurnHost): Record<string, string> {
   }
   const model = host.options.get('model') ?? host.reportedOptions?.model
   const tierId = model ? host.fastModeTierByModel.get(model) : undefined
+  // Fast is on but nothing has named the tier for this model yet, so there is no
+  // value to route to. Deliberately Standard rather than an omission: the tier
+  // persists on the thread, so omitting would silently keep routing a paid tier we
+  // cannot currently name, and discovery recovers the exact tier on a later turn.
   if (!tierId) {
     return { ...options, serviceTier: 'default' }
   }

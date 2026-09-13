@@ -226,7 +226,7 @@ export function useStructuredAgentSession(args: {
   )
   const optionSurface = useMemo<SessionOptionsSurface>(
     () => ({
-      getSnapshot: () => structuredAgentSessionOptionSnapshot(optionStateRef.current),
+      getSnapshot: () => optionSnapshot,
       setOption,
       invokeAction: async () => ({ snapshot: optionSnapshot }),
       subscribe: () => () => {}

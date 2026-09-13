@@ -6,9 +6,10 @@ import {
 } from '../native-chat/agent-session-wire/structured-agent-session-option-error'
 import {
   claudeCatalogAdmitsModel,
+  claudeModelEffortLevels,
+  claudeModelFastModeSupport,
   readClaudeCurrentModel,
-  readClaudeModelFastModeSupport,
-  readClaudeModelEffortLevels,
+  readClaudeListedModels,
   readClaudeSettingsEffort,
   readClaudeSettingsFastMode
 } from './claude-structured-session-options'
@@ -64,12 +65,20 @@ export async function setClaudeStructuredOption(
       `claude stream-json has no session option named ${input.key}`
     )
   }
+  // One read answers every catalog question this write asks, so the guards below
+  // cannot each pay a round trip for the same list nor disagree about the model.
+  // An effort write with no current model has nothing to look up, so it reads nothing.
+  const needsCatalog =
+    input.key === 'model' ||
+    input.key === 'fastMode' ||
+    (input.key === 'effort' && readClaudeCurrentModel(session).id !== undefined)
+  const listed = needsCatalog ? await readClaudeListedModels(session, timeoutMs) : []
   // The child stores an effort its model has no control for and keeps it across
   // every later model switch and restore, so refuse before the write rather than
   // read the acceptance back as adoption. Refused here, restore drops the stale
   // value instead of replaying it onto a model that cannot use it.
   if (input.key === 'effort') {
-    const { modelId, levels } = await readClaudeModelEffortLevels(session, timeoutMs)
+    const { modelId, levels } = claudeModelEffortLevels(session, listed)
     if (levels && !levels.has(input.value)) {
       throw new AgentSessionOptionRejectedError(
         `claude model ${modelId} does not accept effort ${input.value}`
@@ -80,8 +89,12 @@ export async function setClaudeStructuredOption(
     if (typeof fastMode !== 'boolean') {
       throw new AgentSessionOptionRejectedError('claude fast mode must be encoded as true or false')
     }
-    const support = await readClaudeModelFastModeSupport(session, timeoutMs)
-    if (fastMode && support.supported !== true) {
+    const support = claudeModelFastModeSupport(session, listed)
+    // A catalog that identified nothing is not evidence against this model, the same
+    // rule the admit-check below applies — otherwise a CLI that cannot answer has Fast
+    // refused on every model. A catalog that did list the model and stayed silent
+    // about Fast is still not positive evidence, so that case keeps refusing.
+    if (fastMode && listed.length > 0 && support.supported !== true) {
       throw new AgentSessionOptionRejectedError(
         `claude model ${support.modelId ?? 'current'} does not support Fast mode`
       )
@@ -100,12 +113,12 @@ export async function setClaudeStructuredOption(
   // fails every turn with zero tokens, so the acceptance proves nothing and only
   // the catalog does. Restore replays a pick the provider may since have retired,
   // which reaches here with no user error at all.
-  if (input.key === 'model' && !(await claudeCatalogAdmitsModel(session, input.value, timeoutMs))) {
+  if (input.key === 'model' && !claudeCatalogAdmitsModel(listed, input.value)) {
     throw new AgentSessionOptionRejectedError(`claude does not list a model named ${input.value}`)
   }
   const modelFastModeSupport =
     input.key === 'model' && session.options.get('fastMode') === 'true'
-      ? await readClaudeModelFastModeSupport(session, timeoutMs, input.value)
+      ? claudeModelFastModeSupport(session, listed, input.value)
       : null
   const modelWasConfirmed = readClaudeCurrentModel(session).confirmed
   const mutationSequence = ++session.optionMutationSequence
@@ -160,9 +173,10 @@ export async function setClaudeStructuredOption(
     session.reportedOptions.fastMode = adopted
   }
   // A disagreement stops main vouching for the value, it does not veto the write:
-  // the pre-flight guard already refuses levels the model advertises no control
-  // for, and no other client refuses on a readback. Keep the child's own answer so
-  // the disagreement survives as the level a later read falls back to.
+  // the pre-flight guard already refused levels the model advertises no control for,
+  // so what is left is the child reporting a value it chose for itself. Keep the
+  // child's own answer so the disagreement survives as the level a later read falls
+  // back to.
   const decodedInput = input.key === 'fastMode' ? fastMode : input.value
   if (adopted !== null && adopted !== decodedInput) {
     if (typeof adopted === 'string') {

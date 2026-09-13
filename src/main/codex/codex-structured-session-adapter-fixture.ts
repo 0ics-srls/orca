@@ -8,10 +8,10 @@ import type {
   CodexAppServerLaunch,
   openCodexAppServerConnection
 } from './codex-app-server-connection'
-import type { CodexStructuredSessionAdapterDeps } from './codex-structured-session-adapter'
 import {
   CodexStructuredSessionAdapter,
   type CodexStructuredLaunch,
+  type CodexStructuredSessionAdapterDeps,
   type CodexStructuredSessionEvent
 } from './codex-structured-session-adapter'
 

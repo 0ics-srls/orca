@@ -75,6 +75,7 @@ function fastModeSession(supportsFastMode: boolean | undefined) {
   })
   const session = sessionFor(vi.fn(async () => undefined))
   session.options.set('model', 'opus')
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal supplies every connection member this fixture's code paths call, and the spread carries the rest from sessionFor.
   session.connection = {
     ...session.connection,
     supportedModels: async () => [
@@ -316,6 +317,34 @@ describe('Claude structured Fast mode', () => {
     await expect(
       setClaudeStructuredOption(session, { key: 'fastMode', value: 'true' }, undefined)
     ).rejects.toThrow('future_entitlement_rule')
+    expect(applyFlagSettings).not.toHaveBeenCalled()
+  })
+})
+
+describe('Claude Fast mode against a catalog that identifies nothing', () => {
+  /**
+   * A CLI whose catalog answers with nothing identifies no model, so it is not
+   * evidence against one — the same rule the model admit-check already applies.
+   * Refusing here would have Fast unavailable on every model of a CLI that cannot
+   * answer, while a catalog that did list the model and stayed silent about Fast
+   * still refuses.
+   */
+  it('allows Fast on when the catalog identifies no model at all', async () => {
+    const { session, applyFlagSettings } = fastModeSession(true)
+    session.connection.supportedModels = async () => []
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'fastMode', value: 'true' }, undefined)
+    ).resolves.toMatchObject({ fastMode: 'true' })
+    expect(applyFlagSettings).toHaveBeenCalledWith({ fastMode: true }, { timeoutMs: undefined })
+  })
+
+  it('still refuses Fast on when the catalog lists the model and omits Fast support', async () => {
+    const { session, applyFlagSettings } = fastModeSession(undefined)
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'fastMode', value: 'true' }, undefined)
+    ).rejects.toThrow('does not support Fast mode')
     expect(applyFlagSettings).not.toHaveBeenCalled()
   })
 })

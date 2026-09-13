@@ -464,3 +464,21 @@ describe('structured Codex session options', () => {
     ).resolves.toMatchObject({ model: 'gpt-standard', fastMode: 'false' })
   })
 })
+
+describe('Codex service tier is not a settable option', () => {
+  /** The turn derives the tier from `fastMode`, so accepting a direct write would
+   *  report success for a value the next turn discards. Restore still reads the key
+   *  so a session persisted before Fast existed migrates. */
+  it('refuses a direct serviceTier write while still restoring a legacy one', async () => {
+    const session = optionSession(async () => ({ data: [] }))
+
+    await expect(
+      applyCodexStructuredSessionOption(session, 'serviceTier', 'priority', undefined)
+    ).rejects.toThrow('cannot be set directly')
+    expect(session.options.has('serviceTier')).toBe(false)
+
+    expect(Object.fromEntries(restoredCodexSessionOptions({ serviceTier: 'default' }))).toEqual({
+      fastMode: 'false'
+    })
+  })
+})

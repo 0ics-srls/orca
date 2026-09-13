@@ -1,10 +1,12 @@
 import type {
+  AgentSessionFastModeState,
   AgentSessionFastModeSupport,
   AgentSessionOptionsResult
 } from '../../shared/agent-session-wire'
 import {
   currentModelId,
   listedModels,
+  matchListedModel,
   record,
   seedModels,
   text,
@@ -33,20 +35,20 @@ export function readClaudeSettingsFastModePerSessionOptIn(settings: unknown): bo
   return typeof value === 'boolean' ? value : null
 }
 
-const FAST_MODE_STATES = new Set(['off', 'cooldown', 'on'])
+const FAST_MODE_STATES: readonly AgentSessionFastModeState[] = ['off', 'cooldown', 'on']
 
 export function readClaudeFastModeFacts(value: unknown): {
-  state?: NonNullable<ClaudeSession['fastModeState']>
+  state?: AgentSessionFastModeState
   disabledReason?: string
   disabledReasonReported: boolean
 } {
   const row = record(value)
   const state = text(row?.fast_mode_state)
+  // Narrowed by lookup, so the wire string reaches the session only as a known state.
+  const matched = FAST_MODE_STATES.find((entry) => entry === state)
   const reportedDisabledReason = text(row?.fast_mode_disabled_reason)
   return {
-    ...(state && FAST_MODE_STATES.has(state)
-      ? { state: state as NonNullable<ClaudeSession['fastModeState']> }
-      : {}),
+    ...(matched ? { state: matched } : {}),
     ...(reportedDisabledReason ? { disabledReason: reportedDisabledReason } : {}),
     disabledReasonReported: Object.hasOwn(row ?? {}, 'fast_mode_disabled_reason')
   }
@@ -97,19 +99,26 @@ export function readClaudeCurrentModel(session: ClaudeSession): {
  * of a refusal — and an absent or unlisted one is not evidence, or a live CLI
  * that predates `list_models` would have every effort refused under it.
  */
-export async function readClaudeModelEffortLevels(
+/** One catalog read serves a whole option write. The admit check, the effort guard
+ *  and the Fast guard all ask about the same list; each taking its own read made a
+ *  single model write pay for two `list_models` round trips and let two guards answer
+ *  from two different catalogs. An unreadable catalog is an empty list, which
+ *  identifies no model and so refuses nothing. */
+export async function readClaudeListedModels(
   session: ClaudeSession,
   timeoutMs: number | undefined
-): Promise<{ modelId: string | undefined; levels: ReadonlySet<string> | null }> {
-  const modelId = readClaudeCurrentModel(session).id
-  if (!modelId) {
-    return { modelId, levels: null }
-  }
+): Promise<ListedModel[]> {
   const catalog = await session.connection.supportedModels({ timeoutMs }).catch(() => null)
-  const matched = catalog
-    ? listedModels({ models: catalog }).find(
-        (model) => model.id === modelId || model.resolvedModel === modelId
-      )
+  return catalog ? listedModels({ models: catalog }) : []
+}
+
+export function claudeModelEffortLevels(
+  session: ClaudeSession,
+  models: readonly ListedModel[]
+): { modelId: string | undefined; levels: ReadonlySet<string> | null } {
+  const modelId = readClaudeCurrentModel(session).id
+  const matched = modelId
+    ? models.find((model) => model.id === modelId || model.resolvedModel === modelId)
     : undefined
   return {
     modelId: matched?.id ?? modelId,
@@ -117,21 +126,14 @@ export async function readClaudeModelEffortLevels(
   }
 }
 
-export async function readClaudeModelFastModeSupport(
+export function claudeModelFastModeSupport(
   session: ClaudeSession,
-  timeoutMs: number | undefined,
+  models: readonly ListedModel[],
   requestedModel?: string
-): Promise<{ modelId: string | undefined; supported: boolean | null }> {
+): { modelId: string | undefined; supported: boolean | null } {
   const reportedModelId = requestedModel ?? readClaudeCurrentModel(session).id
-  const catalog = await session.connection.supportedModels({ timeoutMs }).catch(() => null)
-  const models = catalog ? listedModels({ models: catalog }) : []
   const modelId = reportedModelId ?? models.find((model) => model.isDefault)?.id
-  const matched = models.find(
-    (model) =>
-      model.id === modelId ||
-      model.resolvedModel === modelId ||
-      (modelId === 'default' && model.isDefault)
-  )
+  const matched = modelId ? matchListedModel(models, modelId) : undefined
   return {
     modelId: matched?.id ?? modelId,
     supported: matched?.supportsFastMode ?? null
@@ -163,12 +165,7 @@ function listedModelFastModeSupport(
   models: readonly ListedModel[],
   modelId: string
 ): boolean | undefined {
-  return models.find(
-    (model) =>
-      model.id === modelId ||
-      model.resolvedModel === modelId ||
-      (modelId === 'default' && model.isDefault)
-  )?.supportsFastMode
+  return matchListedModel(models, modelId)?.supportsFastMode
 }
 
 function decodedFastMode(session: ClaudeSession): boolean | undefined {
@@ -186,13 +183,7 @@ function decodedFastMode(session: ClaudeSession): boolean | undefined {
  * call site: every caller must treat an unidentified catalog the same way, and one
  * that forgot would refuse every model on a CLI that cannot answer.
  */
-export async function claudeCatalogAdmitsModel(
-  session: ClaudeSession,
-  modelId: string,
-  timeoutMs: number | undefined
-): Promise<boolean> {
-  const catalog = await session.connection.supportedModels({ timeoutMs }).catch(() => null)
-  const models = listedModels(catalog ? { models: catalog } : null)
+export function claudeCatalogAdmitsModel(models: readonly ListedModel[], modelId: string): boolean {
   // An empty list identifies no model, so it is not evidence against one — a live
   // CLI predating `list_models` would otherwise have every model refused under it.
   // Do not turn this into a refusal.

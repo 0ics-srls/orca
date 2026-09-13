@@ -62,6 +62,21 @@ export function listedModels(value: unknown): ListedModel[] {
   })
 }
 
+/** Sole alias matcher: a pick stored as an alias, as the resolved id, or as the
+ *  literal `default` must find the same row, or two guards answer differently about
+ *  one model. */
+export function matchListedModel(
+  models: readonly ListedModel[],
+  modelId: string
+): ListedModel | undefined {
+  return models.find(
+    (model) =>
+      model.id === modelId ||
+      model.resolvedModel === modelId ||
+      (modelId === 'default' && model.isDefault)
+  )
+}
+
 function seedEfforts(model: CatalogModel): AgentSessionOptionChoice[] {
   const effort = model.options.find((option) => option.id === 'effort')
   return effort?.kind.type === 'select' ? effort.kind.choices : []

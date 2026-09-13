@@ -12,8 +12,10 @@ import type { ClaudeJournalTranslator } from './claude-structured-journal-transl
 import type { ClaudePendingPrompt, ClaudePromptRegistry } from './claude-structured-prompt-replies'
 import { cancelProcessAcquisition } from '../../shared/child-process/cancel-process-acquisition'
 import { randomUUID } from 'node:crypto'
-import type { AgentSessionBackgroundTaskState } from '../../shared/agent-session-wire'
-import type { AgentSessionFastModeState } from '../../shared/agent-session-wire'
+import type {
+  AgentSessionBackgroundTaskState,
+  AgentSessionFastModeState
+} from '../../shared/agent-session-wire'
 import type { ClaudeBackgroundTaskTracker } from './claude-background-task-tracker'
 import type { ClaudeSlashCommandCatalog } from './claude-slash-command-catalog'
 

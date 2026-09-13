@@ -149,6 +149,15 @@ describe('narrowStructuredLaunchSeedOptions', () => {
     })
   })
 
+  // A never-picked Fast preference must stay absent, not default on: seeding `true`
+  // would silently move a user onto the faster tier they never chose.
+  it('seeds no fastMode at all when the user never picked one', () => {
+    expect(narrowStructuredLaunchSeedOptions({ model: 'opus', effort: 'high' })).toEqual({
+      model: 'opus',
+      effort: 'high'
+    })
+  })
+
   it('drops ids no structured create may seed', () => {
     expect(narrowStructuredLaunchSeedOptions({ model: 'opus', mode: 'plan' })).toEqual({
       model: 'opus'

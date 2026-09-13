@@ -97,6 +97,12 @@ async function applyValidatedCodexStructuredSessionOption(
   value: string,
   timeoutMs: number | undefined
 ): Promise<Readonly<Record<string, string>>> {
+  // `serviceTier` still restores, so a session persisted before Fast existed migrates,
+  // but the turn now derives the tier from `fastMode`. Accepting a direct write would
+  // report success for a value the next turn discards.
+  if (key === 'serviceTier') {
+    throw new Error('codex service tier is derived from Fast mode and cannot be set directly')
+  }
   if (key !== 'model' && key !== 'effort' && key !== 'fastMode') {
     session.options.set(key, value)
     return Object.fromEntries(session.options)
