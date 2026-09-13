@@ -15,7 +15,10 @@ vi.mock('@/lib/launch-structured-agent-session', () => ({
 }))
 
 import { StructuredAgentSessionCreateRefusalError } from '@/lib/launch-structured-agent-session'
-import { settleStructuredAgentLaunch } from './structured-agent-launch-settlement'
+import {
+  settleStructuredAgentLaunch,
+  type StructuredAgentLaunchDeadlineClock
+} from './structured-agent-launch-settlement'
 
 type FakeLaunch = {
   launchResult: Promise<unknown>
@@ -27,26 +30,48 @@ type FakeLaunch = {
  *  with whether it ran; a non-refusal settlement resolves it false without running it. */
 function fakeLaunch(args: FakeLaunch) {
   const releaseCallerAfterUnknownOutcome = vi.fn(() => true)
-  const claimDefinitiveRefusalFallback = vi.fn((fallback: () => Promise<void>) =>
-    args.launchResult.then(
+  const runFallback = new Map<string, () => Promise<void>>()
+  let fallbackStarted = false
+  const claimFallback = vi.fn<
+    (fallback: () => Promise<void>, reason?: 'refusal' | 'deadline') => Promise<boolean>
+  >((fallback: () => Promise<void>, reason: 'refusal' | 'deadline' = 'refusal') => {
+    runFallback.set('fallback', fallback)
+    const runOnce = (): Promise<void> => {
+      if (fallbackStarted) {
+        return Promise.resolve()
+      }
+      fallbackStarted = true
+      return runFallback.get('fallback')!()
+    }
+    if (reason === 'deadline') {
+      return Promise.resolve()
+        .then(runOnce)
+        .then(() => true)
+    }
+    return args.launchResult.then(
       () => false,
       (error) =>
         error instanceof StructuredAgentSessionCreateRefusalError
           ? Promise.resolve()
-              .then(fallback)
+              .then(runOnce)
               .then(() => true)
           : false
     )
-  )
+  })
   mocks.startStructuredAgentLaunch.mockReturnValue({
     sessionId: 'session-1',
     launchResult: args.launchResult,
     ...(args.promptDeliveryResult ? { promptDeliveryResult: args.promptDeliveryResult } : {}),
     isVisibilityUnknown: () => args.visibilityUnknown === true,
     releaseCallerAfterUnknownOutcome,
-    claimDefinitiveRefusalFallback
+    claimFallback,
+    claimDefinitiveRefusalFallback: claimFallback
   })
-  return { releaseCallerAfterUnknownOutcome, claimDefinitiveRefusalFallback }
+  return {
+    releaseCallerAfterUnknownOutcome,
+    claimDefinitiveRefusalFallback: claimFallback,
+    claimFallback
+  }
 }
 
 const fallbackResult = {
@@ -66,6 +91,22 @@ function fakeCancellation(initiallyCancelled = false) {
     removeEventListener,
     fire: () => controller.abort(),
     signal: controller.signal
+  }
+}
+
+function fakeClock(): { clock: StructuredAgentLaunchDeadlineClock; fire: () => void } {
+  let callback: (() => void) | null = null
+  return {
+    clock: {
+      setTimeout: (next) => {
+        callback = next
+        return next
+      },
+      clearTimeout: () => {
+        callback = null
+      }
+    },
+    fire: () => callback?.()
   }
 }
 
@@ -103,7 +144,9 @@ describe('settleStructuredAgentLaunch', () => {
     fakeLaunch({
       launchResult: Promise.reject(new StructuredAgentSessionCreateRefusalError('unsupported'))
     })
-    const legacyFallback = vi.fn().mockResolvedValue(fallbackResult)
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
     const onStructuredReady = vi.fn()
 
     await expect(
@@ -238,7 +281,9 @@ describe('settleStructuredAgentLaunch', () => {
     fakeLaunch({
       launchResult: Promise.reject(new StructuredAgentSessionCreateRefusalError('unsupported'))
     })
-    const legacyFallback = vi.fn().mockResolvedValue(fallbackResult)
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
 
     await expect(
       settleStructuredAgentLaunch(
@@ -312,5 +357,128 @@ describe('settleStructuredAgentLaunch', () => {
     ).resolves.toEqual({ kind: 'structured', sessionId: 'session-1' })
     expect(mocks.cancelStructuredAgentLaunch).not.toHaveBeenCalled()
     expect(cancellation.removeEventListener).toHaveBeenCalledOnce()
+  })
+
+  it('uses the single fallback claim when the launch reaches its deadline', async () => {
+    const clock = fakeClock()
+    const launchResult = new Promise<never>(() => {})
+    const { claimFallback } = fakeLaunch({ launchResult })
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
+    const settlement = settleStructuredAgentLaunch(
+      'worktree-1',
+      'codex',
+      {},
+      { legacyFallback, clock: clock.clock, deadlineMs: 10 }
+    )
+
+    clock.fire()
+
+    await expect(settlement).resolves.toEqual({
+      kind: 'deadline-then-legacy',
+      ...fallbackResult
+    })
+    expect(legacyFallback).toHaveBeenCalledOnce()
+    expect(claimFallback).toHaveBeenCalledWith(expect.any(Function), 'deadline')
+  })
+
+  it('does not run the fallback when a launch settles before its deadline', async () => {
+    const clock = fakeClock()
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
+    fakeLaunch({ launchResult: Promise.resolve({ sessionId: 'session-1', fence: 1 }) })
+
+    await expect(
+      settleStructuredAgentLaunch(
+        'worktree-1',
+        'codex',
+        {},
+        { legacyFallback, clock: clock.clock, deadlineMs: 10 }
+      )
+    ).resolves.toEqual({ kind: 'structured', sessionId: 'session-1' })
+    clock.fire()
+    expect(legacyFallback).not.toHaveBeenCalled()
+  })
+
+  it('keeps a definitive refusal and a deadline single-shot', async () => {
+    const clock = fakeClock()
+    let rejectLaunch!: (error: unknown) => void
+    const launchResult = new Promise<never>((_, reject) => {
+      rejectLaunch = reject
+    })
+    const { claimFallback } = fakeLaunch({ launchResult })
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
+    const settlement = settleStructuredAgentLaunch(
+      'worktree-1',
+      'codex',
+      {},
+      { legacyFallback, clock: clock.clock, deadlineMs: 10 }
+    )
+    clock.fire()
+    rejectLaunch(new StructuredAgentSessionCreateRefusalError('unsupported'))
+
+    await expect(settlement).resolves.toEqual({
+      kind: 'deadline-then-legacy',
+      ...fallbackResult
+    })
+    expect(legacyFallback).toHaveBeenCalledOnce()
+    expect(claimFallback).toHaveBeenCalledTimes(2)
+  })
+
+  it('lets cancellation win over a fired deadline', async () => {
+    const clock = fakeClock()
+    let resolveLaunch!: (receipt: { sessionId: string; fence: number }) => void
+    const launchResult = new Promise<{ sessionId: string; fence: number }>((resolve) => {
+      resolveLaunch = resolve
+    })
+    fakeLaunch({ launchResult })
+    const cancellation = fakeCancellation()
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
+    const settlement = settleStructuredAgentLaunch(
+      'worktree-1',
+      'codex',
+      {},
+      { legacyFallback, signal: cancellation.signal, clock: clock.clock, deadlineMs: 10 }
+    )
+    cancellation.fire()
+    clock.fire()
+    resolveLaunch({ sessionId: 'session-1', fence: 1 })
+
+    await expect(settlement).resolves.toEqual({ kind: 'cancelled', sessionId: 'session-1' })
+    expect(legacyFallback).not.toHaveBeenCalled()
+  })
+
+  it('retires a structured result that arrives after the fallback surface', async () => {
+    const clock = fakeClock()
+    let resolveLaunch!: (receipt: { sessionId: string; fence: number }) => void
+    const launchResult = new Promise<{ sessionId: string; fence: number }>((resolve) => {
+      resolveLaunch = resolve
+    })
+    fakeLaunch({ launchResult })
+    const legacyFallback = vi
+      .fn<() => Promise<typeof fallbackResult>>()
+      .mockResolvedValue(fallbackResult)
+    const onStructuredLate = vi.fn<(sessionId: string) => void>()
+    const settlement = settleStructuredAgentLaunch(
+      'worktree-1',
+      'codex',
+      {},
+      {
+        legacyFallback,
+        onStructuredLate,
+        clock: clock.clock,
+        deadlineMs: 10
+      }
+    )
+    clock.fire()
+    await expect(settlement).resolves.toMatchObject({ kind: 'deadline-then-legacy' })
+    resolveLaunch({ sessionId: 'session-1', fence: 1 })
+    await vi.waitFor(() => expect(onStructuredLate).toHaveBeenCalledWith('session-1'))
   })
 })

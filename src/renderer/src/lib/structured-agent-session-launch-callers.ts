@@ -205,7 +205,7 @@ export function settleStructuredLaunchCallersWithoutFallback(
 export function settleStructuredLaunchCallersWithFallback(
   group: StructuredLaunchCallerGroup
 ): void {
-  if (group.outcome === 'refused') {
+  if (group.outcome !== 'pending' && group.outcome !== 'unknown') {
     return
   }
   group.outcome = 'refused'

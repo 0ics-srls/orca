@@ -179,6 +179,7 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
         primaryTabId: args.primaryTabId
       }
     case 'refused-then-legacy':
+    case 'deadline-then-legacy':
       return {
         completed: false,
         structuredLaunch: false,

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   findPendingLinkedWorkItemCreationId,
+  getCreationProgressLabel,
   type PendingWorktreeCreation,
   type WorktreeCreationRequest
 } from './pending-worktree-creation'
@@ -95,5 +96,27 @@ describe('findPendingLinkedWorkItemCreationId', () => {
     expect(
       findPendingLinkedWorkItemCreationId({ existing: pending('existing', request()) }, request())
     ).toBeNull()
+  })
+})
+
+describe('getCreationProgressLabel', () => {
+  it('names the pending agent while structured chat starts', () => {
+    expect(
+      getCreationProgressLabel({
+        phase: 'starting-chat',
+        indeterminate: false,
+        request: request({ agent: 'codex' })
+      })
+    ).toBe('Starting Codex chat…')
+  })
+
+  it('falls back to a neutral label when the pending agent is absent', () => {
+    expect(
+      getCreationProgressLabel({
+        phase: 'starting-chat',
+        indeterminate: false,
+        request: request({ agent: null })
+      })
+    ).toBe('Starting chat…')
   })
 })

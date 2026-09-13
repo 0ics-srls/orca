@@ -15,7 +15,9 @@ const mocks = vi.hoisted(() => ({
   ensureWorktreeHasInitialTerminal: vi.fn(),
   ensureWebRuntimeWorktreeTerminalAfterWake: vi.fn(),
   preflightAgentTrust: vi.fn(),
-  updateWorktreeMeta: vi.fn()
+  updateWorktreeMeta: vi.fn(),
+  updatePendingWorktreeCreation:
+    vi.fn<(creationId: string, patch: { phase: 'starting-chat' }) => void>()
 }))
 
 vi.mock('@/store', () => ({
@@ -112,18 +114,23 @@ function storeWithWorktree() {
     pendingWorktreeCreations: { 'creation-1': {} },
     allWorktrees: () => [{ id: 'worktree-1', path: '/tmp/worktree-1' }],
     repos: [{ id: 'repo-1', connectionId: 'ssh-1' }],
-    updateWorktreeMeta: mocks.updateWorktreeMeta
+    updateWorktreeMeta: mocks.updateWorktreeMeta,
+    updatePendingWorktreeCreation: mocks.updatePendingWorktreeCreation
   } as unknown as typeof mocks.state
 }
 
 describe('launchStructuredWorktreeSession', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mocks.state = { pendingWorktreeCreations: { 'creation-1': {} } }
+    mocks.state = {
+      pendingWorktreeCreations: { 'creation-1': {} },
+      updatePendingWorktreeCreation: mocks.updatePendingWorktreeCreation
+    } as typeof mocks.state
     mocks.listener = null
     mocks.closeStructuredAgentSession.mockResolvedValue('closed')
     mocks.callRuntimeRpc.mockResolvedValue(undefined)
     mocks.updateWorktreeMeta.mockResolvedValue(undefined)
+    mocks.updatePendingWorktreeCreation.mockClear()
     mocks.preflightAgentTrust.mockResolvedValue(undefined)
   })
 
@@ -152,6 +159,12 @@ describe('launchStructuredWorktreeSession', () => {
     expect(mocks.startStructuredAgentLaunch).toHaveBeenCalledWith('worktree-1', 'codex', {
       prompt: 'Fix the route'
     })
+    expect(mocks.updatePendingWorktreeCreation).toHaveBeenCalledWith('creation-1', {
+      phase: 'starting-chat'
+    })
+    expect(mocks.updatePendingWorktreeCreation.mock.invocationCallOrder[0]).toBeLessThan(
+      mocks.startStructuredAgentLaunch.mock.invocationCallOrder[0]
+    )
     expect(mocks.activateStructuredAgentSessionById).toHaveBeenCalledExactlyOnceWith({
       worktreeId: 'worktree-1',
       sessionId: 'session-1'
@@ -321,6 +334,9 @@ describe('launchStructuredWorktreeSession', () => {
     expect(mocks.ensureWorktreeHasInitialTerminal).not.toHaveBeenCalled()
     expect(mocks.activateStructuredAgentSessionById).not.toHaveBeenCalled()
     expect(mocks.closeStructuredAgentSession).not.toHaveBeenCalled()
+    expect(mocks.updatePendingWorktreeCreation).toHaveBeenCalledWith('creation-1', {
+      phase: 'starting-chat'
+    })
     expect(mocks.unsubscribe).toHaveBeenCalledOnce()
   })
 
@@ -392,6 +408,9 @@ describe('launchStructuredWorktreeSession', () => {
     expect(mocks.activateAndRevealWorktree).not.toHaveBeenCalled()
     expect(mocks.closeStructuredAgentSession).not.toHaveBeenCalled()
     expect(mocks.callRuntimeRpc).not.toHaveBeenCalled()
+    expect(mocks.updatePendingWorktreeCreation).toHaveBeenCalledWith('creation-1', {
+      phase: 'starting-chat'
+    })
   })
 
   it('leaves an agent that cannot hold a structured session untouched, cancel or not', async () => {
@@ -606,7 +625,77 @@ describe('launchStructuredWorktreeSession', () => {
 
     expect(mocks.activateStructuredAgentSessionById).not.toHaveBeenCalled()
     expect(releaseCallerAfterUnknownOutcome).toHaveBeenCalledOnce()
+    expect(mocks.updatePendingWorktreeCreation).toHaveBeenCalledWith('creation-1', {
+      phase: 'starting-chat'
+    })
     expect(mocks.unsubscribe).toHaveBeenCalledOnce()
+  })
+
+  it('keeps the fallback surface and retires a structured session published after the deadline', async () => {
+    vi.useFakeTimers()
+    try {
+      storeWithWorktree()
+      let resolveLaunch!: (receipt: { sessionId: string; fence: number }) => void
+      const launchResult = new Promise<{ sessionId: string; fence: number }>((resolve) => {
+        resolveLaunch = resolve
+      })
+      let fallbackStarted = false
+      const claimFallback = vi.fn<
+        (fallback: () => Promise<void>, reason?: 'refusal' | 'deadline') => Promise<boolean>
+      >(async (fallback, reason = 'refusal') => {
+        if (reason !== 'deadline' || fallbackStarted) {
+          return false
+        }
+        fallbackStarted = true
+        await fallback()
+        return true
+      })
+      mocks.startStructuredAgentLaunch.mockReturnValue({
+        sessionId: 'session-late',
+        launchResult,
+        isVisibilityUnknown: () => false,
+        releaseCallerAfterUnknownOutcome: vi.fn(),
+        claimFallback,
+        claimDefinitiveRefusalFallback: claimFallback
+      })
+      mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: 'terminal-tab' })
+
+      const result = launchStructuredWorktreeSession({
+        creationId: 'creation-1',
+        request,
+        agentLaunchRoute: 'structured-native-chat',
+        worktreeId: 'worktree-1',
+        shouldActivateOnCompletion: true,
+        fallbackStartupOpt: undefined,
+        activation: false,
+        primaryTabId: null
+      })
+      await vi.advanceTimersByTimeAsync(30_000)
+
+      await expect(result).resolves.toEqual({
+        ...idle,
+        accepted: false,
+        activation: { primaryTabId: 'terminal-tab' },
+        primaryTabId: 'terminal-tab'
+      })
+      expect(mocks.updatePendingWorktreeCreation).toHaveBeenCalledWith('creation-1', {
+        phase: 'starting-chat'
+      })
+      resolveLaunch({ sessionId: 'session-late', fence: 1 })
+      await vi.waitFor(() =>
+        expect(mocks.closeStructuredAgentSession).toHaveBeenCalledWith(
+          { kind: 'local' },
+          'session-late'
+        )
+      )
+      expect(mocks.callRuntimeRpc).toHaveBeenCalledWith({ kind: 'local' }, 'session.tabs.close', {
+        worktree: { id: 'worktree-1' },
+        tabId: 'agent-session:session-late',
+        reason: 'user'
+      })
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('activates the workspace before selecting a chat when creation deferred activation', async () => {

@@ -146,6 +146,9 @@ export async function launchStructuredWorktreeSession(
   })
   let settlement: Awaited<ReturnType<typeof plan.launch>>
   try {
+    useAppStore.getState().updatePendingWorktreeCreation(args.creationId, {
+      phase: 'starting-chat'
+    })
     settlement = await plan.launch(
       {
         signal: abandoned.signal,
@@ -165,6 +168,9 @@ export async function launchStructuredWorktreeSession(
             primaryTabId = activation === false ? null : activation.primaryTabId
           }
           activateStructuredAgentSessionById({ worktreeId: args.worktreeId, sessionId })
+        },
+        onStructuredLate: (sessionId) => {
+          void retireCancelledStructuredSession(args.worktreeId, sessionId)
         }
       },
       { worktreeId: args.worktreeId }
@@ -197,6 +203,7 @@ export async function launchStructuredWorktreeSession(
       }
     }
     case 'refused-then-legacy':
+    case 'deadline-then-legacy':
       return {
         ...settled,
         accepted: false,

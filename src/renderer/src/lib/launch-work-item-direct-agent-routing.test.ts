@@ -69,32 +69,38 @@ describe('settleDirectWorkItemStructuredLaunch', () => {
     )
   })
 
-  it('runs trust preflight and the legacy terminal as the refusal fallback', async () => {
-    mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: 'fallback-tab' })
-    mocks.settleStructuredAgentLaunch.mockImplementation(
-      async (_worktreeId, _agent, _options, hooks) => ({
-        kind: 'refused-then-legacy',
-        ...(await hooks.legacyFallback())
-      })
-    )
+  it.each(['refused-then-legacy', 'deadline-then-legacy'] as const)(
+    'runs trust preflight and the legacy terminal for a %s settlement',
+    async (kind) => {
+      mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: 'fallback-tab' })
+      mocks.settleStructuredAgentLaunch.mockImplementation(
+        async (_worktreeId, _agent, _options, hooks) => ({
+          kind,
+          ...(await hooks.legacyFallback())
+        })
+      )
 
-    await expect(settleDirectWorkItemStructuredLaunch(baseArgs)).resolves.toEqual({
-      completed: false,
-      structuredLaunch: false,
-      visibilityUnknown: false,
-      failed: false,
-      primaryTabId: 'fallback-tab'
-    })
-    expect(mocks.preflightAgentTrust).toHaveBeenCalledWith({
-      agent: 'codex',
-      workspacePath: '/repo/worktree',
-      connectionId: null
-    })
-    expect(mocks.activateAndRevealWorktree).toHaveBeenCalledWith(
-      'worktree-1',
-      expect.objectContaining({ sidebarRevealBehavior: 'auto', createNewTerminalForStartup: true })
-    )
-  })
+      await expect(settleDirectWorkItemStructuredLaunch(baseArgs)).resolves.toEqual({
+        completed: false,
+        structuredLaunch: false,
+        visibilityUnknown: false,
+        failed: false,
+        primaryTabId: 'fallback-tab'
+      })
+      expect(mocks.preflightAgentTrust).toHaveBeenCalledWith({
+        agent: 'codex',
+        workspacePath: '/repo/worktree',
+        connectionId: null
+      })
+      expect(mocks.activateAndRevealWorktree).toHaveBeenCalledWith(
+        'worktree-1',
+        expect.objectContaining({
+          sidebarRevealBehavior: 'auto',
+          createNewTerminalForStartup: true
+        })
+      )
+    }
+  )
 
   it('reports an unknown outcome without starting a fallback terminal', async () => {
     mocks.settleStructuredAgentLaunch.mockResolvedValue({
