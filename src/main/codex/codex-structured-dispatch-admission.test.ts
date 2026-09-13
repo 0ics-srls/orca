@@ -74,14 +74,29 @@ describe('codex dispatch admission', () => {
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u2', clientId: 'client-2' })
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
 
-    expect(
-      settlements.map((settlement) => [
-        settlement.clientMessageId,
-        (settlement.providerIdentity as { ordinal: number }).ordinal
-      ])
-    ).toEqual([
-      ['client-2', 0],
-      ['client-1', 1]
+    // Ordinals follow the ECHO order, and each one lands on the send whose
+    // `clientId` it carried -- not on the send that was queued in that slot.
+    expect(settlements).toEqual([
+      {
+        sessionId: 'session-1',
+        clientMessageId: 'client-2',
+        providerIdentity: {
+          provider: 'codex',
+          threadId: CODEX_TEST_THREAD_ID,
+          turnId: 'turn-1',
+          ordinal: 0
+        }
+      },
+      {
+        sessionId: 'session-1',
+        clientMessageId: 'client-1',
+        providerIdentity: {
+          provider: 'codex',
+          threadId: CODEX_TEST_THREAD_ID,
+          turnId: 'turn-1',
+          ordinal: 1
+        }
+      }
     ])
   })
 

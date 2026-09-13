@@ -77,7 +77,7 @@ export function recordingSink(): StructuredAgentSessionEventSink {
     appendItem: () => {},
     appendTombstone: () => {},
     publish: () => {}
-  } as unknown as StructuredAgentSessionEventSink
+  }
 }
 
 export async function acquiredCodexAdapter(input: {

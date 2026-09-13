@@ -283,13 +283,9 @@ function textOf(item: AgentJournalRenderItem): string {
 
 /** The durable submission row, which settlement rewrites after the send returns. */
 function submissionOf(clientMessageId: string): AgentJournalSubmission | undefined {
-  const host = getStructuredAgentSessionHost() as unknown as {
-    sessions: Map<string, { journal: AgentSessionJournal }>
-  } | null
-  return host?.sessions
-    .get(SESSION)
-    ?.journal.submissions()
-    .find((entry) => entry.clientMessageId === clientMessageId)
+  return getStructuredAgentSessionHost()
+    ?.journalSnapshot(SESSION)
+    .submissions.find((entry) => entry.clientMessageId === clientMessageId)
 }
 
 async function historyPage(
