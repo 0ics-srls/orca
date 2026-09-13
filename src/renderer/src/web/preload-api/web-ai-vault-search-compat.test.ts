@@ -51,15 +51,15 @@ describe('web session search preload compatibility', () => {
     await expect(api.searchSessions({ query: 'needle' })).rejects.toThrow()
     await expect(api.searchStatus()).rejects.toThrow()
   })
-  it('answers for its own runtime and for `all`, and reports any other host unavailable', async () => {
+  it('answers for its own runtime and reports any other host unavailable', async () => {
     const api = createWebAiVaultApi()
     callRuntimeResult.mockResolvedValue(searchResults())
-    for (const scope of ['runtime:owning-host', 'all'] as const) {
+    for (const scope of ['runtime:owning-host'] as const) {
       expect(await api.searchSessions({ query: 'needle' }, scope)).toMatchObject({
         kind: 'results'
       })
     }
-    expect(callRuntimeResult).toHaveBeenCalledTimes(2)
+    expect(callRuntimeResult).toHaveBeenCalledTimes(1)
     callRuntimeResult.mockClear()
     for (const scope of ['runtime:other-host', 'ssh:box', 'local'] as const) {
       expect(await api.searchSessions({ query: 'needle' }, scope)).toEqual({
@@ -68,6 +68,11 @@ describe('web session search preload compatibility', () => {
       })
       expect(await api.searchStatus(scope)).toEqual(unavailableSessionSearchStatus())
     }
+    // @ts-expect-error All-host search is deliberately outside the public API.
+    expect(await api.searchSessions({ query: 'needle' }, 'all')).toEqual({
+      kind: 'unavailable',
+      reason: 'no-service'
+    })
     expect(callRuntimeResult).not.toHaveBeenCalled()
   })
 })

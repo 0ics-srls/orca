@@ -1,11 +1,6 @@
 import { createSessionSearchClient } from '../../shared/ai-vault-search-client'
 import type { AiVaultSearchRequest } from '../../shared/ai-vault-search-types'
-import {
-  ALL_EXECUTION_HOSTS_SCOPE,
-  LOCAL_EXECUTION_HOST_ID,
-  type ExecutionHostId,
-  type ExecutionHostScope
-} from '../../shared/execution-host'
+import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../shared/execution-host'
 import { ipcRenderer } from 'electron'
 import type {
   AiVaultDeleteSessionArgs,
@@ -20,15 +15,10 @@ import type { AiVaultSessionTitlesArgs } from '../../shared/ai-vault-session-tit
 import type { AiVaultPrepareSessionResumeArgs } from '../../shared/ai-vault-resume-preparation'
 import type { PreloadApi } from '../api-types'
 
-// Main already applied the per-leg policy to an `all` merge, so re-redacting it
-// here as `relay` would strip the local host's own paths back out.
 function searchClient(
-  executionHostScope?: ExecutionHostScope
+  executionHostScope?: ExecutionHostId
 ): ReturnType<typeof createSessionSearchClient> {
-  const remote =
-    executionHostScope !== undefined &&
-    executionHostScope !== ALL_EXECUTION_HOSTS_SCOPE &&
-    executionHostScope !== LOCAL_EXECUTION_HOST_ID
+  const remote = executionHostScope !== undefined && executionHostScope !== LOCAL_EXECUTION_HOST_ID
   return createSessionSearchClient(
     (method, params) =>
       method === 'aiVault.searchSessions'
@@ -39,7 +29,7 @@ function searchClient(
 }
 
 export const aiVaultApi = {
-  searchSessions: (request: AiVaultSearchRequest, executionHostScope?: ExecutionHostScope) =>
+  searchSessions: (request: AiVaultSearchRequest, executionHostScope?: ExecutionHostId) =>
     searchClient(executionHostScope).searchSessions(request),
   searchStatus: (executionHostScope?: ExecutionHostId) =>
     searchClient(executionHostScope).searchStatus(),

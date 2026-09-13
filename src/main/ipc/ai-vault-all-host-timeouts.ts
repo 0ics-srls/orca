@@ -6,9 +6,5 @@ export const AI_VAULT_ALL_HOST_TIMEOUT_MS = {
   // all-hosts view; the relay gets a real scan budget and the whole leg (relay
   // attempt plus any legacy crawl) stays bounded.
   sshScanRelay: 15_000,
-  sshScan: 20_000,
-  // Why: search answers from an index rather than a filesystem walk, so a leg
-  // needs the relay round trip plus the 5s `wait-until-current` ceiling, not
-  // the scan budget above.
-  search: 10_000
+  sshScan: 20_000
 } as const

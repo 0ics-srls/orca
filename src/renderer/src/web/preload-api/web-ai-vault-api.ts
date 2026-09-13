@@ -14,12 +14,11 @@ import type {
 } from '../../../../shared/ai-vault-session-title'
 import type { AiVaultListArgs, AiVaultListResult } from '../../../../shared/ai-vault-types'
 import {
-  ALL_EXECUTION_HOSTS_SCOPE,
   normalizeExecutionHostId,
   normalizeExecutionHostScope,
   toRuntimeExecutionHostId
 } from '../../../../shared/execution-host'
-import type { ExecutionHostId, ExecutionHostScope } from '../../../../shared/execution-host'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 import { callRuntimeResult } from './web-runtime-calls'
 import { requireActiveEnvironment } from './web-runtime-session'
 import { noopUnsubscribe } from './web-storage'
@@ -31,9 +30,7 @@ export function createWebAiVaultApi(): NonNullable<Partial<PreloadApi>['aiVault'
     'relay'
   )
   return {
-    // Why: a browser has no local index, so its own paired runtime is the only
-    // host it can search; `all` therefore means that one host, and any other
-    // scope is unavailable rather than an error, matching listSessions.
+    // A browser searches only its selected paired runtime.
     searchSessions: (request, executionHostScope) =>
       addressesOwnRuntime(executionHostScope)
         ? search.searchSessions(request)
@@ -96,11 +93,10 @@ export function createWebAiVaultApi(): NonNullable<Partial<PreloadApi>['aiVault'
 }
 
 // An unparseable id must not normalize into the everything-scope and answer anyway.
-function addressesOwnRuntime(executionHostScope: ExecutionHostScope | undefined): boolean {
+function addressesOwnRuntime(executionHostScope: ExecutionHostId | undefined): boolean {
   const ownRuntimeId = toRuntimeExecutionHostId(requireActiveEnvironment().id)
   return (
     executionHostScope === undefined ||
-    executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ||
     normalizeExecutionHostId(executionHostScope) === ownRuntimeId
   )
 }

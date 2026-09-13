@@ -3,7 +3,6 @@ import type {
   AiVaultSearchRequestSchema,
   AiVaultSearchResponseSchema,
   AiVaultSearchHitSchema,
-  AiVaultSearchHostOutcomeSchema,
   AiVaultSearchStatusSchema
 } from './ai-vault-search-contract'
 
@@ -17,9 +16,7 @@ export type AiVaultSearchRequest = z.input<typeof AiVaultSearchRequestSchema>
 export type AiVaultSearchResponse = z.infer<typeof AiVaultSearchResponseSchema>
 /**
  * Evidence is null for operator-only matches; remote callers receive source presence only.
- * `executionHostId` names the host that owns the transcript; always set under the `all` scope.
+ * `executionHostId` names the host that owns the transcript; set by the desktop on remote answers.
  */
 export type AiVaultSearchHit = z.infer<typeof AiVaultSearchHitSchema>
-/** One leg's verdict in an `all` fan-out; `hosts` is absent on single-host responses. */
-export type AiVaultSearchHostOutcome = z.infer<typeof AiVaultSearchHostOutcomeSchema>
 export type AiVaultSearchStatus = z.infer<typeof AiVaultSearchStatusSchema>

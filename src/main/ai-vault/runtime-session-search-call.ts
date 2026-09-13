@@ -7,16 +7,9 @@ export async function callRuntimeSessionSearch(
   userDataPath: string,
   environmentId: string,
   method: string,
-  params: Record<string, unknown>,
-  timeoutMs?: number
+  params: Record<string, unknown>
 ): Promise<unknown> {
-  const response = await callRuntimeEnvironment(
-    userDataPath,
-    environmentId,
-    method,
-    params,
-    timeoutMs
-  )
+  const response = await callRuntimeEnvironment(userDataPath, environmentId, method, params)
   if (response.ok === true) {
     return response.result
   }

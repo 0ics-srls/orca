@@ -45,22 +45,11 @@ describe('session search public contract', () => {
     const legacy = searchResults()
     expect(AiVaultSearchResponseSchema.parse(legacy)).toEqual(legacy)
     expect(legacy.hits[0]).not.toHaveProperty('executionHostId')
-    expect(legacy).not.toHaveProperty('hosts')
-    const merged = {
+    const attributed = {
       ...searchResults(),
-      hits: [{ ...searchHit(), executionHostId: 'runtime:env-1' }],
-      hosts: [
-        { executionHostId: 'local', outcome: 'results' },
-        { executionHostId: 'ssh:box', outcome: 'unreachable' }
-      ]
+      hits: [{ ...searchHit(), executionHostId: 'runtime:env-1' }]
     }
-    expect(AiVaultSearchResponseSchema.parse(merged)).toEqual(merged)
-    expect(
-      AiVaultSearchResponseSchema.safeParse({
-        ...searchResults(),
-        hosts: [{ executionHostId: 'local', outcome: 'exploded' }]
-      }).success
-    ).toBe(false)
+    expect(AiVaultSearchResponseSchema.parse(attributed)).toEqual(attributed)
     expect(
       AiVaultSearchResponseSchema.safeParse({
         ...searchResults(),

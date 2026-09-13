@@ -217,10 +217,8 @@ export function registerCoreHandlers(
   registerRuntimeEnvironmentHandlers(store)
   registerEphemeralVmHandlers(store, pluginService)
   registerAiVaultSearchHandlers({
-    getActiveRuntimeAiVaultHostInfos: () =>
-      getSavedRuntimeAiVaultHostInfos(app.getPath('userData')),
-    callRuntimeSearch: (environmentId, method, params, timeoutMs) =>
-      callRuntimeSessionSearch(app.getPath('userData'), environmentId, method, params, timeoutMs)
+    callRuntimeSearch: (environmentId, method, params) =>
+      callRuntimeSessionSearch(app.getPath('userData'), environmentId, method, params)
   })
   registerAiVaultHandlers({
     ensureStructuredSessionOwnership: () => runtime.ensureStructuredAgentSessionHost(),
