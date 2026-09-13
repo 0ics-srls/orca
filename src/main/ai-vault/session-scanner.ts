@@ -1,4 +1,3 @@
-import { CodexSessionAccumulator } from './codex-session-accumulator'
 import type {
   AiVaultListResult,
   AiVaultScanIssue,
@@ -7,7 +6,7 @@ import type {
 import { LOCAL_EXECUTION_HOST_ID, type ExecutionHostId } from '../../shared/execution-host'
 import { withSpan } from '../observability/tracer'
 import { sessionSortTime } from './session-scanner-accumulator'
-import { dedupeCodexSessionsBySessionId } from './codex-session-root-dedup'
+import { CodexSessionCollection, dedupeCodexSessionsBySessionId } from './codex-session-root-dedup'
 import {
   createAntigravityWorkspaceResolver,
   readLocalAntigravityHistory,
@@ -24,6 +23,7 @@ import {
   type SessionParseStats
 } from './session-scanner-parse-cache'
 import { recordSessionScanIssue } from './session-scan-issues'
+import { canStopParsingSessions } from './session-scan-cutoff'
 import { discoverInScopeClaudeFiles } from './session-scanner-scope-discovery'
 import { discoverAiVaultSessionSources } from './session-scanner-source-discovery'
 import { cursorChatMetaRefusals, withCursorChatMetaScan } from './session-scanner-cursor-chat-meta'
@@ -212,8 +212,7 @@ async function parseSessionCandidates(args: {
   signal?: AbortSignal
   antigravityWorkspaceResolver?: AntigravityWorkspaceResolver
 }): Promise<AiVaultSession[]> {
-  const sessions: AiVaultSession[] = []
-  const unlimited = Number.isFinite(args.limit) ? null : new CodexSessionAccumulator()
+  const sessions = new CodexSessionCollection()
   let index = 0
 
   while (index < args.candidates.length) {
@@ -223,7 +222,7 @@ async function parseSessionCandidates(args: {
     }
 
     const remaining = args.candidates.length - index
-    const needed = Math.max(args.limit - sessions.length, 1)
+    const needed = Math.max(args.limit - sessions.size, 1)
     const batchSize = Math.min(SESSION_PARSE_CONCURRENCY, needed, remaining)
     const batch = args.candidates.slice(index, index + batchSize)
     const results = await Promise.all(
@@ -243,18 +242,8 @@ async function parseSessionCandidates(args: {
         recordSessionScanIssue(args.issues, result.issue)
       }
       if (result.session) {
-        if (unlimited) {
-          unlimited.add(result.session)
-        } else {
-          sessions.push(result.session)
-        }
+        sessions.add(result.session)
       }
-    }
-
-    // Capped scans need the current unique count; unlimited scans retain only canonical rows.
-    if (Number.isFinite(args.limit)) {
-      const uniqueSessions = dedupeCodexSessionsBySessionId(sessions)
-      sessions.splice(0, sessions.length, ...uniqueSessions)
     }
 
     index += batchSize
@@ -263,7 +252,7 @@ async function parseSessionCandidates(args: {
   // An abort can land while the final batch settles; observe it here so a
   // partial parse is never cached or returned as a complete scan.
   throwIfAiVaultScanCancelled(args.signal)
-  return unlimited?.sessions() ?? sessions
+  return [...sessions.values()]
 }
 
 async function parseSessionCandidate(
@@ -307,22 +296,4 @@ function withSessionExecutionHost(
     executionHostId,
     id: `${executionHostId}:${session.agent}:${session.sessionId}:${session.filePath}`
   }
-}
-
-function canStopParsingSessions(
-  sessions: AiVaultSession[],
-  limit: number,
-  nextCandidateMtimeMs: number | undefined
-): boolean {
-  if (sessions.length < limit || typeof nextCandidateMtimeMs !== 'number') {
-    return false
-  }
-  const visibleCutoff = sessions
-    .map(sessionSortTime)
-    .sort((left, right) => right - left)
-    .at(limit - 1)
-
-  // Transcript mtime is already our discovery bound and fallback sort key; older
-  // files cannot displace the current visible set once the cutoff is newer.
-  return typeof visibleCutoff === 'number' && nextCandidateMtimeMs < visibleCutoff
 }
