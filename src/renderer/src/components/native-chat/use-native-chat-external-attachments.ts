@@ -22,11 +22,6 @@ export type UseNativeChatExternalAttachmentsArgs = {
   setNotice: (notice: string | null) => void
 }
 
-/**
- * Attach paths that arrived client-local (composer drop / file picker). SSH
- * worktrees upload into the worktree's `.orca/drops` first so the remote agent
- * can actually read what gets referenced (STA-1465).
- */
 type ComposerWorkspace = { structuredWorktreeId?: string; terminalTabId: string }
 
 function isSameComposerWorkspace(captured: ComposerWorkspace, current: ComposerWorkspace): boolean {
@@ -36,6 +31,11 @@ function isSameComposerWorkspace(captured: ComposerWorkspace, current: ComposerW
   )
 }
 
+/**
+ * Attach paths that arrived client-local (composer drop / file picker). SSH
+ * worktrees upload into the worktree's `.orca/drops` first so the remote agent
+ * can actually read what gets referenced (STA-1465).
+ */
 export function useNativeChatExternalAttachments({
   terminalTabId,
   structuredWorktreeId,
@@ -86,9 +86,9 @@ export function useNativeChatExternalAttachments({
       // Why every exit reports: a drop that reaches here and produces nothing is
       // the silent-failure complaint in #15782. Only a disabled composer stays
       // quiet — it is being torn down or guarded, and has no notice surface.
+      const capturedWorkspace = workspaceRef.current
       // Both halves matter: a moved tab can land on a workspace that reports the
       // same owner kind, and the owner alone would call that unchanged.
-      const capturedWorkspace = workspaceRef.current
       const ownerStillCurrent = (): boolean =>
         isSameComposerWorkspace(capturedWorkspace, workspaceRef.current) &&
         nativeChatAttachmentOwnerUnchanged(owner, resolveAttachmentOwner())
