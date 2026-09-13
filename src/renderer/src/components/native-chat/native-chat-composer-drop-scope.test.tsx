@@ -3,7 +3,8 @@
 import { EventEmitter } from 'node:events'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
+import type * as AttachmentUploadModule from './native-chat-attachment-upload'
 import type { NativeChatComposerInput } from './native-chat-composer-input'
 import { NativeChatPromptEditor } from './NativeChatPromptEditor'
 import { useNativeChatExternalAttachments } from './use-native-chat-external-attachments'
@@ -32,7 +33,9 @@ const intake = vi.hoisted(() => ({
   upload: vi.fn()
 }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => ({}) } }))
-vi.mock('./native-chat-attachment-upload', () => ({
+// Keeps the real notice strings so the silent-failure guards assert what users see.
+vi.mock('./native-chat-attachment-upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof AttachmentUploadModule>()),
   resolveNativeChatAttachmentOwner: () => intake.owner,
   uploadNativeChatAttachmentPaths: intake.upload
 }))
@@ -52,6 +55,7 @@ import {
 // Uses the production drop listener, subscriber fan-out, attachment hook, and scope cache.
 function ComposerProbe({ pane, hidden = false }: { pane: string; hidden?: boolean }) {
   const textareaRef = useRef<NativeChatComposerInput>(null)
+  const [notice, setNotice] = useState<string | null>(null)
   const attachments = useNativeChatComposerAttachments({
     attachmentScopeKey: pane,
     allowWithoutTarget: true,
@@ -62,13 +66,13 @@ function ComposerProbe({ pane, hidden = false }: { pane: string; hidden?: boolea
     textareaRef,
     setCaret: () => {},
     setDraft: () => {},
-    setNotice: () => {}
+    setNotice
   })
   const { attachExternalPaths } = useNativeChatExternalAttachments({
     terminalTabId: pane,
     disabled: false,
     attachResolvedPaths: attachments.attachResolvedPaths,
-    setNotice: () => {}
+    setNotice
   })
   useNativeChatFileAttachmentActions(pane, attachExternalPaths)
   return (
@@ -92,8 +96,18 @@ function ComposerProbe({ pane, hidden = false }: { pane: string; hidden?: boolea
         />
       ))}
       <output>{JSON.stringify(attachments.imageAttachments.map(({ path }) => path))}</output>
+      <output data-notice={pane}>{notice}</output>
     </div>
   )
+}
+
+/** The external-attach loop awaits once per path; drain those before asserting. */
+async function settleAttachments(): Promise<void> {
+  await act(async () => {
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+  })
 }
 
 async function dropTwoImages(target: Element): Promise<void> {
@@ -136,6 +150,7 @@ describe('native chat composer drop scoping', () => {
 
   beforeEach(() => {
     intake.owner = { kind: 'local' }
+    electron.getPathForFile.mockReset().mockImplementation((file: File) => `/repro/${file.name}`)
     intake.authorizeExternalPath.mockReset().mockResolvedValue(undefined)
     intake.readFile.mockReset().mockResolvedValue({ content: '', isBinary: false })
     intake.upload.mockReset()
@@ -148,6 +163,51 @@ describe('native chat composer drop scoping', () => {
     vi.unstubAllGlobals()
     clearNativeChatAttachmentCacheForTests()
     electron.send.mockClear()
+  })
+
+  // #15782: an OS drop that produces nothing must say so. Every assertion here
+  // is about the absence of silence, not about which path was attached.
+  it('reports an OS drop whose files carry no readable path', async () => {
+    electron.getPathForFile.mockReturnValue('')
+    const view = render(<ComposerProbe pane="chat-a" />)
+
+    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!)
+
+    expect(electron.send).toHaveBeenCalledExactlyOnceWith('terminal:file-dropped-from-preload', {
+      byteLength: 0,
+      pathCount: 2,
+      reason: 'unresolved-paths',
+      target: 'rejected'
+    })
+    expect(readNativeChatAttachmentCache('chat-a')).toEqual([])
+  })
+
+  it('notices an OS drop whose every path fails authorization', async () => {
+    intake.authorizeExternalPath.mockRejectedValue(new Error('denied'))
+    const view = render(<ComposerProbe pane="chat-a" />)
+
+    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!)
+    await settleAttachments()
+
+    expect(view.container.querySelector('[data-notice="chat-a"]')?.textContent).toBe(
+      "Couldn't read the dropped files."
+    )
+    expect(readNativeChatAttachmentCache('chat-a')).toEqual([])
+  })
+
+  it('notices an OS drop whose owner changes during authorization', async () => {
+    intake.authorizeExternalPath.mockImplementation(async () => {
+      intake.owner = { kind: 'ssh', connectionId: 'conn-1' }
+    })
+    const view = render(<ComposerProbe pane="chat-a" />)
+
+    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!)
+    await settleAttachments()
+
+    expect(view.container.querySelector('[data-notice="chat-a"]')?.textContent).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
+    expect(readNativeChatAttachmentCache('chat-a')).toEqual([])
   })
 
   it('attaches only to the dropped pane and leaves a hidden pane clean on remount', async () => {
