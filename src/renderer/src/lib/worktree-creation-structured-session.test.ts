@@ -11,25 +11,29 @@ type MockStoreState = {
   updatePendingWorktreeCreation?: (creationId: string, patch: { phase: 'starting-chat' }) => void
 }
 
-const mocks = vi.hoisted(() => ({
-  state: {
-    pendingWorktreeCreations: { 'creation-1': {} } as Record<string, unknown>
-  } as MockStoreState,
-  listener: null as ((state: MockStoreState) => void) | null,
-  unsubscribe: vi.fn(),
-  startStructuredAgentLaunch: vi.fn(),
-  cancelStructuredAgentLaunch: vi.fn(),
-  closeStructuredAgentSession: vi.fn(),
-  callRuntimeRpc: vi.fn(),
-  activateStructuredAgentSessionById: vi.fn(),
-  activateAndRevealWorktree: vi.fn(),
-  ensureWorktreeHasInitialTerminal: vi.fn(),
-  ensureWebRuntimeWorktreeTerminalAfterWake: vi.fn(),
-  preflightAgentTrust: vi.fn(),
-  updateWorktreeMeta: vi.fn(),
-  updatePendingWorktreeCreation:
-    vi.fn<(creationId: string, patch: { phase: 'starting-chat' }) => void>()
-}))
+const mocks = vi.hoisted(() => {
+  const state: MockStoreState = {
+    pendingWorktreeCreations: { 'creation-1': {} }
+  }
+  const noStoreListener = (): ((state: MockStoreState) => void) | null => null
+  return {
+    state,
+    listener: noStoreListener(),
+    unsubscribe: vi.fn(),
+    startStructuredAgentLaunch: vi.fn(),
+    cancelStructuredAgentLaunch: vi.fn(),
+    closeStructuredAgentSession: vi.fn(),
+    callRuntimeRpc: vi.fn(),
+    activateStructuredAgentSessionById: vi.fn(),
+    activateAndRevealWorktree: vi.fn(),
+    ensureWorktreeHasInitialTerminal: vi.fn(),
+    ensureWebRuntimeWorktreeTerminalAfterWake: vi.fn(),
+    preflightAgentTrust: vi.fn(),
+    updateWorktreeMeta: vi.fn(),
+    updatePendingWorktreeCreation:
+      vi.fn<(creationId: string, patch: { phase: 'starting-chat' }) => void>()
+  }
+})
 
 vi.mock('@/store', () => ({
   useAppStore: Object.assign(vi.fn(), {
