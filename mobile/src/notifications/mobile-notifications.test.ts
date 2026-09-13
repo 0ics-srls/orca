@@ -1,3 +1,14 @@
+vi.mock('expo-notifications', () => ({ scheduleNotificationAsync: vi.fn() }))
+vi.mock('./push-registration', () => ({ hasConfirmedPushRegistration: vi.fn(async () => true) }))
+vi.mock('./push-receive', () => ({
+  foregroundNotificationBehavior: vi.fn(async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: false
+  }))
+}))
+vi.mock('../transport/host-store', () => ({ loadHostCatalog: vi.fn(async () => []) }))
+vi.mock('./push-host-fingerprint', () => ({ deriveHostFingerprint: vi.fn(() => 'fingerprint') }))
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { subscribeToDesktopNotifications } from './mobile-notifications'
 import { dismissHostPushNotification } from './push-socket-dismissal'

@@ -320,6 +320,10 @@ export function startPushTokenSync(): () => void {
   }
 }
 
+export async function hasConfirmedPushRegistration(hostId: string): Promise<boolean> {
+  return (await readRecords()).registered.has(hostId)
+}
+
 export function resetPushRegistrationForTests(): void {
   hostsById.clear()
   registrationRecords = null
