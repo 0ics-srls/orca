@@ -167,4 +167,31 @@ describe('markdownFenceRanges', () => {
 
     expect(markdownFenceRanges(content)).toEqual([[0, content.length]])
   })
+
+  it('does not close a fence on a closer followed by a non-breaking space', () => {
+    // CommonMark 4.5: a closing fence may be followed only by spaces or tabs.
+    // U+00A0 is not one, so this line must not close the open fence, and a
+    // `<details>` further down stays inside the still-open fenced range.
+    const content = ['```', `\`\`\` `, '<details>', '```'].join('\n')
+
+    expect(markdownFenceRanges(content)).toEqual([[0, content.length]])
+  })
+})
+
+describe('findDetailsBlockStart with a non-breaking space after a fence closer', () => {
+  it('does not rewrite a details block that is still inside an open fence', () => {
+    const content = [
+      '```',
+      `\`\`\` `,
+      '<details>',
+      '<summary>S</summary>',
+      '',
+      'body',
+      '',
+      '</details>',
+      '```'
+    ].join('\n')
+
+    expect(findDetailsBlockStart(content)).toBe(-1)
+  })
 })

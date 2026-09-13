@@ -25,7 +25,9 @@ export function markdownFenceRanges(content: string): MarkdownFenceRanges {
       if (openingFenceMatch?.[1]) {
         openFence = {
           closingPattern: new RegExp(
-            `^ {0,3}${openingFenceMatch[1][0]}{${openingFenceMatch[1].length},}\\s*$`
+            // CommonMark 4.5: a closing fence may be followed only by spaces or
+            // tabs, unlike `\s`, which also matches non-ASCII whitespace.
+            `^ {0,3}${openingFenceMatch[1][0]}{${openingFenceMatch[1].length},}[ \\t]*$`
           ),
           start: offset
         }
