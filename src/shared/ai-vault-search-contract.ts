@@ -96,7 +96,8 @@ export const AiVaultSearchStatusSchema = z.object({
   filesIndexed: z.number().int().nonnegative(),
   filesDue: z.number().int().nonnegative(),
   filesFailed: z.number().int().nonnegative(),
-  degradedRoots: z.array(z.object({ root: z.string(), reason: z.string() })),
+  // `root` is a host path, withheld over the relay; the array length is the count.
+  degradedRoots: z.array(z.object({ root: z.string().optional(), reason: z.string() })),
   lastReconcileAt: z.number().nullable(),
   lastSweepCompletedAt: z.number().nullable(),
   generation: z.number().int().nonnegative()

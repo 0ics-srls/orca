@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { fakeSearchService } from '../../shared/ai-vault-search-test-fixture'
+import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import {
   setSessionSearchService,
   searchSessionService,
@@ -17,13 +18,31 @@ describe('session search service registry', () => {
       kind: 'unavailable',
       reason: 'no-service'
     })
-    expect(await sessionSearchServiceStatus()).toMatchObject({
+    expect(await sessionSearchServiceStatus({}, 'ipc')).toMatchObject({
       enabled: false,
       phase: 'idle',
       generation: 0
     })
     await expect(searchSessionService({ query: 42 }, 'ipc')).rejects.toThrow()
   })
+  it.each(['ipc', 'runtime', 'relay'] as const)(
+    'withholds degraded-root paths from %s status per the exposure policy',
+    async (transport) => {
+      const service = fakeSearchService()
+      service.status.mockResolvedValue({
+        ...unavailableSessionSearchStatus(),
+        enabled: true,
+        phase: 'degraded',
+        degradedRoots: [{ root: '/host/projects', reason: 'could not be listed' }]
+      })
+      setSessionSearchService(service)
+      expect((await sessionSearchServiceStatus({}, transport)).degradedRoots).toEqual([
+        transport === 'relay'
+          ? { reason: 'could not be listed' }
+          : { root: '/host/projects', reason: 'could not be listed' }
+      ])
+    }
+  )
   it('searches indexed data by default, drops legacy options and suppresses unsolicited diagnostics', async () => {
     const service = fakeSearchService()
     setSessionSearchService(service)

@@ -5,7 +5,7 @@ import {
   AiVaultSearchStatusSchema
 } from './ai-vault-search-contract'
 import { searchHit, searchResults } from './ai-vault-search-test-fixture'
-import { redactForTransport } from './ai-vault-search-transport'
+import { redactForTransport, redactStatusForTransport } from './ai-vault-search-transport'
 import { unavailableSessionSearchStatus } from './ai-vault-search-client'
 
 describe('session search public contract', () => {
@@ -67,6 +67,24 @@ describe('session search public contract', () => {
           redactForTransport({ ...hit, source: { ...hit.source, presence } }, transport)
         ).not.toHaveProperty('resumeCommand')
       }
+    }
+  )
+  it.each(['ipc', 'runtime', 'relay'] as const)(
+    'withholds degraded-root paths from %s status without mutating it',
+    (transport) => {
+      const status = {
+        ...unavailableSessionSearchStatus(),
+        degradedRoots: [{ root: '/host/projects', reason: 'could not be listed' }]
+      }
+      const original = structuredClone(status)
+      const result = redactStatusForTransport(status, transport)
+      expect(status).toEqual(original)
+      expect(AiVaultSearchStatusSchema.parse(result)).toEqual(result)
+      expect(result.degradedRoots).toEqual([
+        transport === 'relay'
+          ? { reason: 'could not be listed' }
+          : { root: '/host/projects', reason: 'could not be listed' }
+      ])
     }
   )
 })

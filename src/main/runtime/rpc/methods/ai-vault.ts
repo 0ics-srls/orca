@@ -33,7 +33,8 @@ export const AI_VAULT_METHODS = [
   defineMethod({
     name: 'aiVault.searchStatus',
     params: AiVaultSearchStatusRequestSchema,
-    handler: (params) => sessionSearchServiceStatus(params)
+    handler: (params, { clientKind }) =>
+      sessionSearchServiceStatus(params, clientKind ? 'relay' : 'runtime')
   }),
   defineMethod({
     name: 'aiVault.resolveSessionTitles',

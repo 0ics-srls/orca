@@ -20,7 +20,7 @@ export function registerAiVaultSearchHandlers(): void {
   })
   ipcMain.handle('aiVault:searchStatus', (_event, rawTarget?: unknown) => {
     const targetId = targetSchema.parse(rawTarget)
-    return targetId ? remoteClient(targetId).searchStatus() : sessionSearchServiceStatus()
+    return targetId ? remoteClient(targetId).searchStatus() : sessionSearchServiceStatus({}, 'ipc')
   })
 }
 

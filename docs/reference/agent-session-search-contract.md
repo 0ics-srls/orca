@@ -55,11 +55,11 @@ a source missing.
 
 `redactForTransport(hit, transport)` is the exposure policy:
 
-| Transport                                 | filePath / codexHome                 | resumeCommand                     |
-| ----------------------------------------- | ------------------------------------ | --------------------------------- |
-| Desktop IPC on the same machine           | Included when known, under source    | Included only for present sources |
-| Runtime RPC on the same machine           | Included when known, under source    | Included only for present sources |
-| Relay or paired runtime/web/mobile client | Withheld; source keeps presence only | Withheld                          |
+| Transport                                 | filePath / codexHome                 | resumeCommand                     | Status `degradedRoots[].root` |
+| ----------------------------------------- | ------------------------------------ | --------------------------------- | ----------------------------- |
+| Desktop IPC on the same machine           | Included when known, under source    | Included only for present sources | Included                      |
+| Runtime RPC on the same machine           | Included when known, under source    | Included only for present sources | Included                      |
+| Relay or paired runtime/web/mobile client | Withheld; source keeps presence only | Withheld                          | Withheld                      |
 
 `cwd`, titles, snippets, and other hit metadata remain visible to paired clients.
 Snippets cross the authenticated transport as indexed; this contract does not
@@ -77,8 +77,12 @@ same exposure function.
 `degraded`, or `closed`), `filesIndexed`, `filesDue`, `filesFailed`, `degradedRoots`
 (`root` and `reason`), `lastReconcileAt`, `lastSweepCompletedAt`, and `generation`.
 Times are milliseconds since epoch or null. These are the indexer's observations;
-an indexed row is not a new filesystem verification. Status roots and reasons
-are host diagnostics and remain visible to authenticated paired callers.
+an indexed row is not a new filesystem verification. A degraded root's `reason`
+is a host diagnostic visible to every caller, but `root` is a local filesystem
+path and follows the same exposure policy as a hit's `filePath`: desktop IPC and
+same-machine runtime RPC see it, relay and paired clients get the reason and the
+array length only. `redactStatusForTransport(status, transport)` applies this on
+the host and again on the receiving client.
 
 `wait-until-current` calls `service.reconcile()` before searching. The adapter
 uses `indexer.reconcile({ full: false })`. After five seconds the endpoint searches

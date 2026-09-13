@@ -8,7 +8,11 @@ import type {
   AiVaultSearchResponse,
   AiVaultSearchStatus
 } from './ai-vault-search-types'
-import { redactForTransport, type SessionSearchTransport } from './ai-vault-search-transport'
+import {
+  redactForTransport,
+  redactStatusForTransport,
+  type SessionSearchTransport
+} from './ai-vault-search-transport'
 
 export function unavailableSessionSearchStatus(): AiVaultSearchStatus {
   return {
@@ -64,7 +68,10 @@ export function createSessionSearchClient(
     },
     searchStatus: async () => {
       try {
-        return AiVaultSearchStatusSchema.parse(await call('aiVault.searchStatus', {}))
+        return redactStatusForTransport(
+          AiVaultSearchStatusSchema.parse(await call('aiVault.searchStatus', {})),
+          transport
+        )
       } catch (error) {
         if (isUnknownMethod(error)) {
           return unavailableSessionSearchStatus()

@@ -21,7 +21,12 @@ afterEach(async () => {
 async function fixture() {
   harness = await openSessionSearchHarness('public-contract')
   const { enabled: _enabled, generation: _generation, ...status } = unavailableSessionSearchStatus()
-  const indexer = { status: () => status, reconcile: vi.fn(async () => {}) }
+  // degradedRoots is re-stated because the contract type leaves `root` optional
+  // for relay redaction, while the indexer always names the root it degraded.
+  const indexer = {
+    status: () => ({ ...status, degradedRoots: [] }),
+    reconcile: vi.fn(async () => {})
+  }
   const service = createSessionSearchService({ engine: harness.engine, indexer })
   return { ...harness, service, indexer }
 }

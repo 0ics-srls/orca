@@ -8,6 +8,7 @@ import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-cli
 import type { AiVaultSearchResponse, AiVaultSearchStatus } from '../../shared/ai-vault-search-types'
 import {
   redactForTransport,
+  redactStatusForTransport,
   type SessionSearchTransport
 } from '../../shared/ai-vault-search-transport'
 import type { SessionSearchService } from './session-search-service'
@@ -45,10 +46,16 @@ export async function searchSessionService(
   }
 }
 
-export async function sessionSearchServiceStatus(raw: unknown = {}): Promise<AiVaultSearchStatus> {
+export async function sessionSearchServiceStatus(
+  raw: unknown,
+  transport: SessionSearchTransport
+): Promise<AiVaultSearchStatus> {
   AiVaultSearchStatusRequestSchema.parse(raw)
-  return AiVaultSearchStatusSchema.parse(
-    service ? await service.status() : unavailableSessionSearchStatus()
+  return redactStatusForTransport(
+    AiVaultSearchStatusSchema.parse(
+      service ? await service.status() : unavailableSessionSearchStatus()
+    ),
+    transport
   )
 }
 

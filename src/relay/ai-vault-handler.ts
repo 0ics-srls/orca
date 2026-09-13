@@ -38,7 +38,9 @@ export class AiVaultHandler {
     dispatcher.onRequest('aiVault.searchSessions', (params) =>
       searchSessionService(params, 'relay')
     )
-    dispatcher.onRequest('aiVault.searchStatus', (params) => sessionSearchServiceStatus(params))
+    dispatcher.onRequest('aiVault.searchStatus', (params) =>
+      sessionSearchServiceStatus(params, 'relay')
+    )
     this.remoteHome = options.remoteHome ?? homedir()
     const hostPlatform = options.hostPlatform ?? currentRelayHostPlatform()
     // Why: an OS/arch this build has no path flavor for must not abort relay
