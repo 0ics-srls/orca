@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import { RelayFrameBuffer } from '../../../shared/relay-frame-buffer'
-import { parseScrcpyVideoFrames, parseScrcpyVideoMeta } from './scrcpy-video-frame-parser'
+import {
+  MAX_PENDING_CHUNKS,
+  parseScrcpyVideoFrames,
+  parseScrcpyVideoMeta
+} from './scrcpy-video-frame-parser'
 
 const CONFIG = 1n << 63n
 const KEY = 1n << 62n
@@ -98,6 +102,25 @@ describe('parseScrcpyVideoFrames', () => {
     expect(frames).toHaveLength(1)
     expect(frames[0]).toMatchObject({ config: false, keyFrame: true, pts: 456n })
     expect(frames[0].data.equals(second.subarray(12))).toBe(true)
+    expect(pending.length).toBe(0)
+  })
+
+  it('bounds queued fragment count for a large frame delivered one byte at a time', () => {
+    const full = Buffer.alloc(256 * 1024 + 12, 7)
+    full.writeBigUInt64BE(KEY | 789n, 0)
+    full.writeUInt32BE(full.length - 12, 8)
+    const pending = new RelayFrameBuffer()
+    let maxChunks = 0
+    let frames: ReturnType<typeof parseScrcpyVideoFrames> = []
+    for (const byte of full) {
+      pending.append(Buffer.from([byte]))
+      frames = parseScrcpyVideoFrames(pending)
+      maxChunks = Math.max(maxChunks, pending.chunkCount)
+    }
+    expect(maxChunks).toBeLessThanOrEqual(MAX_PENDING_CHUNKS)
+    expect(frames).toHaveLength(1)
+    expect(frames[0]).toMatchObject({ config: false, keyFrame: true, pts: 789n })
+    expect(frames[0].data.equals(full.subarray(12))).toBe(true)
     expect(pending.length).toBe(0)
   })
 

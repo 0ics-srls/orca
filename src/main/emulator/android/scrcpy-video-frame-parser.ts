@@ -10,6 +10,8 @@ const CODEC_META_SIZE = 12
 // scrcpy frames are well under this at the configured max_size; a larger
 // size means a desynced stream — fail fast instead of buffering toward OOM.
 const MAX_FRAME_BYTES = 16 * 1024 * 1024
+// Caps per-object overhead when a socket delivers one frame as many tiny chunks.
+export const MAX_PENDING_CHUNKS = 1024
 // Top two bits of the 64-bit PTS field carry packet flags.
 const CONFIG_FLAG = 1n << 63n
 const KEY_FRAME_FLAG = 1n << 62n
@@ -78,6 +80,9 @@ export function parseScrcpyVideoFrames(buffer: RelayFrameBuffer): ScrcpyVideoFra
     if (pendingHead.buffer.byteLength > Math.max(Buffer.poolSize, pendingHead.length * 2)) {
       buffer.append(Buffer.from(buffer.drain()))
     }
+  }
+  if (buffer.chunkCount > MAX_PENDING_CHUNKS) {
+    buffer.append(buffer.drain())
   }
   return frames
 }
