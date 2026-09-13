@@ -26,7 +26,8 @@ vi.mock('../ai-vault/remote-session-scanner', () => ({
   scanRemoteAiVaultSessions: mocks.scanRemoteAiVaultSessions
 }))
 vi.mock('../wsl', () => ({
-  listRunningWslHomeDirsAsync: vi.fn().mockResolvedValue([])
+  listRunningWslHomeDirsAsync: vi.fn().mockResolvedValue([]),
+  listWslDistrosAsync: vi.fn().mockResolvedValue(['Ubuntu'])
 }))
 vi.mock('../wsl-running-path-filter', () => ({
   filterPathsToRunningWslDistrosAsync: vi.fn(async (paths: readonly string[]) => [...paths])
