@@ -43,8 +43,14 @@ import {
 import { readSshDocPreviewFile } from './ssh-filesystem-doc-preview'
 const WORKSPACE_SPACE_SCAN_TIMEOUT_MS = 130_000
 export class SshFilesystemProvider implements IFilesystemProvider {
-  private connectionId: string
-  private mux: SshChannelMultiplexer
+  materializeWorktreePaths(
+    source: string,
+    target: string,
+    linkedPaths: readonly string[],
+    copyPaths?: readonly string[]
+  ) {
+    return requestSshWorktreeMaterialization(this.mux, source, target, linkedPaths, copyPaths)
+  }
   private watchListeners = new Map<string, WatchRegistration>()
   private unsubscribeNotifications: (() => void) | null = null
   private tempDirPromise: Promise<string> | null = null
@@ -53,15 +59,12 @@ export class SshFilesystemProvider implements IFilesystemProvider {
   readonly downloadFolder?: IFilesystemProvider['downloadFolder']
 
   constructor(
-    connectionId: string,
-    mux: SshChannelMultiplexer,
+    private readonly connectionId: string,
+    private readonly mux: SshChannelMultiplexer,
     private readonly createSftp?: SftpFactory,
     private readonly rawTransfer?: SshRawTransferOptions,
     hostPlatform?: RemoteHostPlatform
   ) {
-    this.connectionId = connectionId
-    this.mux = mux
-
     if (createSftp) {
       // Why: system SSH has raw single-file transfer but no ssh2 SFTP channel;
       // omitting this method makes folder capability truthful at the provider boundary.

@@ -2235,7 +2235,13 @@ export async function createRemoteWorktree(
   )
 
   const pathMaterializationWarning = await timing.time('materialize_workspace_paths', () =>
-    materializeSshWorktreePaths(fsProvider, repo.path, created.path, repo.symlinkPaths ?? [])
+    materializeSshWorktreePaths(
+      fsProvider,
+      repo.path,
+      created.path,
+      repo.symlinkPaths ?? [],
+      repo.worktreeCopyPaths ?? []
+    )
   )
 
   let setup: CreateWorktreeResult['setup']
@@ -2946,13 +2952,16 @@ async function performLocalWorktreeCreate(
         localWorktreeGitOptions.wslDistro,
         repo.path,
         created.path,
-        repo.symlinkPaths ?? []
+        repo.symlinkPaths ?? [],
+        undefined,
+        repo.worktreeCopyPaths ?? []
       )
     : await materializeHostWorktreePaths(
         repo.path,
         created.path,
         repo.symlinkPaths ?? [],
-        timing.time
+        timing.time,
+        repo.worktreeCopyPaths ?? []
       )
 
   // Why: the worktree's base-branch `orca.yaml` is authoritative; we don't re-gate on content parity with the primary checkout since benign divergence silently disabled setup (#1280).
