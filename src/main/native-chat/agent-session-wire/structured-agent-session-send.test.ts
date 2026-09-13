@@ -1,13 +1,15 @@
 // What one `agentSession.send` writes, and when a user's Retry is allowed to
 // put the same message on the wire a second time.
 
-import { DISPATCH_DOUBT_PROVIDER_EXITED } from '../agent-session-journal/journal-dispatch-doubt-reasons'
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { StructuredAgentSessionHost } from './structured-agent-session-host'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
-import { DISPATCH_DOUBT_SUBMISSION_MISSING } from '../agent-session-journal/journal-dispatch-doubt-reasons'
+import {
+  DISPATCH_DOUBT_PROVIDER_EXITED,
+  DISPATCH_DOUBT_SUBMISSION_MISSING
+} from '../agent-session-journal/journal-dispatch-doubt-reasons'
 import {
   accepted,
   attach,
