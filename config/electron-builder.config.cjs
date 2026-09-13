@@ -150,8 +150,10 @@ const MARKDOWN_FILE_EXTENSIONS = ['md', 'markdown', 'mdx']
 
 // Why: the config must load on a host-only install without resolving unused Windows addons.
 // This is load-time tolerance only; beforePack enforces that the target's natives are installed.
-const windowsRuntimeResources = ['@vscode/windows-process-tree', 'windows-native-registry'].every(
-  (name) => existsSync(join(__dirname, '..', 'node_modules', name, 'package.json'))
+// Why one package: @vscode/windows-process-tree is the only os: win32 npm addon;
+// @orca/windows-registry is a workspace link present on every host, so its presence proves nothing.
+const windowsRuntimeResources = existsSync(
+  join(__dirname, '..', 'node_modules', '@vscode', 'windows-process-tree', 'package.json')
 )
   ? createPackagedRuntimeNodeModuleResources('win32')
   : []

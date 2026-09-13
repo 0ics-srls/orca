@@ -30,18 +30,20 @@ broken. `beforePack` in
 therefore calls `assertPackagedNativeVariantsInstalled` in
 [`config/packaged-runtime-node-modules.cjs`](../../config/packaged-runtime-node-modules.cjs),
 which fails the build when the target platform/architecture's native variants
-are not installed: `sherpa-onnx-*`, `@parcel/watcher-*`, and on Windows the two
-node-gyp addons (`@vscode/windows-process-tree`, `windows-native-registry`). The
-error names every missing package and gives the remedy that fits: another
-architecture's variants come from `pnpm install:release`, the Windows addons do
-not (see below).
+are not installed: `sherpa-onnx-*`, `@parcel/watcher-*`, and on Windows the
+node-gyp addon `@vscode/windows-process-tree`. The error names every missing
+package and gives the remedy that fits: another architecture's variants come
+from `pnpm install:release`, the Windows addon does not (see below).
 
-Windows packaging requires a Windows host. The two addons are `os: win32`
-packages, so they are installed only where that matches, and they are compiled
-only by the Windows-only rebuild in `config/scripts/rebuild-native-deps.mjs`
+Windows packaging requires a Windows host. `@vscode/windows-process-tree` is an
+`os: win32` npm addon, so it is installed only where that matches;
+`@orca/windows-registry` is a workspace package that links on every host, but
+its native binary is still compiled only on Windows. Both are compiled only by
+the Windows-only rebuild in `config/scripts/rebuild-native-deps.mjs`
 (`allowBuilds` in `pnpm-workspace.yaml` keeps pnpm itself from running node-gyp
-for them). `pnpm install:release` does not help on macOS or Linux because it
-does not widen the OS set.
+for them). The guard checks `@vscode/windows-process-tree` alone because the
+workspace link is present everywhere and proves nothing. `pnpm install:release`
+does not help on macOS or Linux because it does not widen the OS set.
 
 Tests that inspect installed Windows addons and their packaging closure run on
 Windows, where those dependencies are required. The PR Windows lane explicitly

@@ -22,10 +22,11 @@ const {
   verifyPackagedMainRuntimeDeps
 } = require('../packaged-runtime-node-modules.cjs')
 
-// Why not process.platform: the win32 plan resolves wherever its node-gyp addons are
-// installed, which a cross-architecture release install can also produce off Windows.
-const windowsAddonsInstalled = ['@vscode/windows-process-tree', 'windows-native-registry'].every(
-  (name) => existsSync(join(projectRoot, 'node_modules', name, 'package.json'))
+// Why this and not process.platform: @vscode/windows-process-tree is the only os: win32 npm
+// addon left, so its presence is what decides whether the win32 plan resolves.
+// @orca/windows-registry is a workspace link present on every host, so it proves nothing.
+const windowsAddonsInstalled = existsSync(
+  join(projectRoot, 'node_modules', '@vscode', 'windows-process-tree', 'package.json')
 )
 
 describe('packaged runtime resources', () => {

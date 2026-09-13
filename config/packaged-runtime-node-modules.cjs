@@ -552,20 +552,18 @@ function assertPackagedNativeVariantsInstalled(electronPlatformName, electronArc
     }
   }
 
+  // Why one package: @vscode/windows-process-tree is the only os: win32 npm addon;
+  // @orca/windows-registry is a workspace link present on every host, so its presence proves nothing.
   const missingWindowsAddons = []
-  if (electronPlatformName === 'win32') {
-    for (const name of ['@vscode/windows-process-tree', 'windows-native-registry']) {
-      if (!isInstalled(name)) {
-        missingWindowsAddons.push(name)
-      }
-    }
+  if (electronPlatformName === 'win32' && !isInstalled('@vscode/windows-process-tree')) {
+    missingWindowsAddons.push('@vscode/windows-process-tree')
   }
 
   if (missing.length === 0 && missingWindowsAddons.length === 0) {
     return
   }
-  // Why separate remedies: install:release widens only the CPU set, so the os: win32 addons
-  // never arrive on a non-Windows host and are compiled only by the Windows-only rebuild.
+  // Why separate remedies: install:release widens only the CPU set, so the os: win32 addon
+  // never arrives on a non-Windows host and is compiled only by the Windows-only rebuild.
   const remedies = []
   if (missing.length > 0) {
     remedies.push('Run pnpm install:release to install another architecture.')
