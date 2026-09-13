@@ -15,7 +15,7 @@ import {
   type LinearListEntry,
   PR_PRESETS,
   type TaskItem,
-  compareLinearIssues,
+  sortLinearIssues,
   groupLinearIssues
 } from './mobile-tasks-legacy-foundation'
 
@@ -122,12 +122,14 @@ export function useMobileTasksProviderViewProjection(model: PickerProjectionMode
   ])
   const linearIssuesForView = useMemo(
     () =>
-      items
-        .filter(
-          (item): item is Extract<TaskItem, { provider: 'linear' }> => item.provider === 'linear'
-        )
-        .map((item) => item.source)
-        .sort((a, b) => compareLinearIssues(a, b, linearOrderBy)),
+      sortLinearIssues(
+        items
+          .filter(
+            (item): item is Extract<TaskItem, { provider: 'linear' }> => item.provider === 'linear'
+          )
+          .map((item) => item.source),
+        linearOrderBy
+      ),
     [items, linearOrderBy]
   )
   const linearIssueSections = useMemo(
@@ -148,14 +150,14 @@ export function useMobileTasksProviderViewProjection(model: PickerProjectionMode
       ),
     [linearGroupBy, linearIssueSections]
   )
+  // Why: every grouping but `none` produces the same sections as the list, so the
+  // board reuses them; `none` still needs its own status split for columns.
   const linearBoardSections = useMemo(
     () =>
-      groupLinearIssues(
-        linearIssuesForView,
-        linearGroupBy === 'none' ? 'status' : linearGroupBy,
-        linearOrderBy
-      ),
-    [linearGroupBy, linearIssuesForView, linearOrderBy]
+      linearGroupBy === 'none'
+        ? groupLinearIssues(linearIssuesForView, 'status', linearOrderBy)
+        : linearIssueSections,
+    [linearGroupBy, linearIssueSections, linearIssuesForView, linearOrderBy]
   )
   const githubModeLabel =
     githubMode === 'project' ? 'Projects' : githubKind === 'prs' ? 'PRs' : 'Issues'
