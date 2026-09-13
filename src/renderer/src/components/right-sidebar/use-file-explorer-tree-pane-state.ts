@@ -163,7 +163,6 @@ export function useFileExplorerTreePaneState({
   })
 
   useFileExplorerTreeLoadEffects({
-    activeWorktreeId,
     visibleFilesWorktreePath,
     expanded,
     dirCache,

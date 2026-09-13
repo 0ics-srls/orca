@@ -8,7 +8,6 @@ import type { DirCache } from './file-explorer-types'
 import { splitPathSegments } from './path-tree'
 
 type UseFileExplorerTreeLoadEffectsParams = {
-  activeWorktreeId: string | null
   visibleFilesWorktreePath: string | null
   expanded: Set<string>
   dirCache: Record<string, DirCache>
@@ -23,7 +22,6 @@ type UseFileExplorerTreeLoadEffectsParams = {
 
 /** Reset/retry/stale-dir loads for the currently visible worktree tree. */
 export function useFileExplorerTreeLoadEffects({
-  activeWorktreeId,
   visibleFilesWorktreePath,
   expanded,
   dirCache,
@@ -38,27 +36,26 @@ export function useFileExplorerTreeLoadEffects({
   const sshConnectedGeneration = useAppStore((s) => s.sshConnectedGeneration)
 
   const lastResetWorktreePathRef = useRef<string | null>(null)
-  const lastResetWorktreeIdRef = useRef<string | null>(null)
   useEffect(() => {
     if (!visibleFilesWorktreePath) {
       return
     }
     // Why: the sidebar remains mounted while closed to preserve caches, but
     // loading the hidden tree would probe every clicked workspace on macOS.
-    const pathChanged = shouldResetFileExplorerForVisibleWorktree(
-      lastResetWorktreePathRef.current,
-      visibleFilesWorktreePath
-    )
-    if (!pathChanged && lastResetWorktreeIdRef.current === activeWorktreeId) {
+    if (
+      !shouldResetFileExplorerForVisibleWorktree(
+        lastResetWorktreePathRef.current,
+        visibleFilesWorktreePath
+      )
+    ) {
       return
     }
     lastResetWorktreePathRef.current = visibleFilesWorktreePath
-    lastResetWorktreeIdRef.current = activeWorktreeId
     resetSelection()
     setNameFilterQuery('')
     resetAndLoad()
     clearFileExplorerUndoHistory()
-  }, [activeWorktreeId, visibleFilesWorktreePath, resetSelection]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [visibleFilesWorktreePath, resetSelection]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Why: on app startup the file explorer loads before SSH providers are
   // registered, so readDir fails for remote worktrees. When the SSH
