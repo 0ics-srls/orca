@@ -16,10 +16,11 @@ vi.mock('./session-scanner-worker-spawn', () => ({
   resetAiVaultScannerWorkerForTests: vi.fn()
 }))
 
-import { _resetWslCachesForTests, _setWslCachesForTests } from '../wsl'
+import { _resetWslCachesForTests, _setWslCachesForTests, listWslDistrosAsync } from '../wsl'
 import { filterPathsToRunningWslDistrosAsync } from '../wsl-running-path-filter'
 import {
   configureAiVaultSessionSources,
+  getAiVaultWslHomeDirs,
   listAiVaultSessions,
   resetAiVaultSessionListCacheForTests
 } from './cached-session-list'
@@ -87,5 +88,23 @@ describe('AI Vault listing wsl.exe probes', () => {
     await expect(filterPathsToRunningWslDistrosAsync([`${WSL_HOME}\\.codex`])).resolves.toEqual([
       `${WSL_HOME}\\.codex`
     ])
+  })
+
+  // Why: a rejected `--list --quiet` yields [] without caching. Treating that as "no distro
+  // installed" would narrow the allowed roots delete/subagent validation trusts.
+  it('still discovers WSL homes after the installed-distro probe was rejected', async () => {
+    execFileMock.mockImplementation((_command, args, _options, callback) => {
+      if (args.includes('--running')) {
+        callback(null, 'Ubuntu\n')
+      } else if (args.includes('--list')) {
+        callback(new Error('wsl.exe transient failure'), '')
+      } else {
+        callback(null, '/home/ada\n')
+      }
+    })
+    await expect(listWslDistrosAsync()).resolves.toEqual([])
+
+    await expect(getAiVaultWslHomeDirs()).resolves.toEqual([WSL_HOME])
+    expect(wslSpawns()).toContainEqual(['--list', '--running', '--quiet'])
   })
 })

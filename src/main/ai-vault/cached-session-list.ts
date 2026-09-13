@@ -4,7 +4,7 @@ import {
   resetAiVaultScannerBackgroundForTests,
   scanAiVaultSessionsInBackground
 } from './session-scanner-background'
-import { listRunningWslHomeDirsAsync, listWslDistrosAsync } from '../wsl'
+import { getCachedWslDistros, hasCachedWslDistros, listRunningWslHomeDirsAsync } from '../wsl'
 import { filterPathsToRunningWslDistrosAsync } from '../wsl-running-path-filter'
 import type { AiVaultListArgs, AiVaultListResult } from '../../shared/ai-vault-types'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
@@ -138,7 +138,10 @@ export async function getAiVaultWslHomeDirs(): Promise<string[]> {
     return []
   }
   // No installed distro can be running: spares WSL-less hosts the running-distro probe.
-  if ((await listWslDistrosAsync()).length === 0) {
+  // Cache read only: a rejected wsl.exe probe yields [] without caching, so it must not
+  // narrow the WSL roots delete/subagent validation trusts; and probing here would let this
+  // listing be the first to cache [] and flip a configured distro to "missing".
+  if (hasCachedWslDistros() && getCachedWslDistros()?.length === 0) {
     return []
   }
   return listRunningWslHomeDirsAsync()

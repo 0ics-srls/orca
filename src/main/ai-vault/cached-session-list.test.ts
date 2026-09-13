@@ -3,13 +3,15 @@ import type { AiVaultListResult } from '../../shared/ai-vault-types'
 
 const {
   filterPathsToRunningWslDistrosAsync,
+  getCachedWslDistros,
+  hasCachedWslDistros,
   listRunningWslHomeDirsAsync,
-  listWslDistrosAsync,
   scanAiVaultSessionsInWorker
 } = vi.hoisted(() => ({
   filterPathsToRunningWslDistrosAsync: vi.fn(async (paths: readonly string[]) => [...paths]),
+  getCachedWslDistros: vi.fn((): string[] | null => null),
+  hasCachedWslDistros: vi.fn(() => false),
   listRunningWslHomeDirsAsync: vi.fn().mockResolvedValue([]),
-  listWslDistrosAsync: vi.fn().mockResolvedValue(['Ubuntu']),
   scanAiVaultSessionsInWorker: vi.fn()
 }))
 
@@ -18,8 +20,9 @@ vi.mock('./session-scanner-worker-spawn', () => ({
   resetAiVaultScannerWorkerForTests: vi.fn()
 }))
 vi.mock('../wsl', () => ({
-  listRunningWslHomeDirsAsync,
-  listWslDistrosAsync
+  getCachedWslDistros,
+  hasCachedWslDistros,
+  listRunningWslHomeDirsAsync
 }))
 vi.mock('../wsl-running-path-filter', () => ({ filterPathsToRunningWslDistrosAsync }))
 
@@ -54,8 +57,9 @@ describe('invalidateAiVaultSessionListCache generation guard', () => {
     vi.spyOn(process, 'platform', 'get').mockImplementation(() => platform)
     resetAiVaultSessionListCacheForTests()
     filterPathsToRunningWslDistrosAsync.mockClear()
+    getCachedWslDistros.mockReset().mockReturnValue(null)
+    hasCachedWslDistros.mockReset().mockReturnValue(false)
     listRunningWslHomeDirsAsync.mockReset().mockResolvedValue([])
-    listWslDistrosAsync.mockReset().mockResolvedValue(['Ubuntu'])
     scanAiVaultSessionsInWorker.mockReset()
   })
   afterEach(() => {
@@ -103,11 +107,20 @@ describe('invalidateAiVaultSessionListCache generation guard', () => {
     expect(listRunningWslHomeDirsAsync).toHaveBeenCalledTimes(1)
   })
 
-  it('skips running-distro discovery when no WSL distro is installed', async () => {
-    listWslDistrosAsync.mockResolvedValue([])
+  it('skips running-distro discovery once a probe has reported no installed WSL distro', async () => {
+    hasCachedWslDistros.mockReturnValue(true)
+    getCachedWslDistros.mockReturnValue([])
 
     await expect(getAiVaultWslHomeDirs()).resolves.toEqual([])
     expect(listRunningWslHomeDirsAsync).not.toHaveBeenCalled()
+  })
+
+  it('still discovers running distros before any distro probe has succeeded', async () => {
+    hasCachedWslDistros.mockReturnValue(false)
+    listRunningWslHomeDirsAsync.mockResolvedValue(['\\\\wsl.localhost\\Ubuntu\\home\\ada'])
+
+    await expect(getAiVaultWslHomeDirs()).resolves.toEqual(['\\\\wsl.localhost\\Ubuntu\\home\\ada'])
+    expect(listRunningWslHomeDirsAsync).toHaveBeenCalledTimes(1)
   })
 
   it('skips WSL home discovery off Windows', async () => {
