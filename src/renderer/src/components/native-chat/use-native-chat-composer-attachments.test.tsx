@@ -207,6 +207,25 @@ describe('useNativeChatComposerAttachments', () => {
     act(() => probe.root.unmount())
   })
 
+  // Today's only caller settles ownership synchronously before it calls, so this
+  // verdict cannot arrive false — but the hook exports this entry point. Pinned
+  // because the fallback is not a refusal: a false verdict is not "owned", so a
+  // remote target would blame client-local attachments for an ownership failure.
+  it('names the ownership failure when an immediate attach arrives already false', async () => {
+    runtimeTarget.remote = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => false })
+
+    act(() =>
+      probe.latest().attachResolvedPaths(['/remote/moved.txt'], undefined, {
+        targetOwnerIsCurrent: () => false
+      })
+    )
+
+    expect(probe.draft()).toBe('')
+    expect(probe.notice()).toBe('Files can only be attached to their source workspace.')
+    act(() => probe.root.unmount())
+  })
+
   // Ownership is per path: the target-owned drop still lands, the client-local
   // paste is refused, and the refusal is reported rather than hidden.
   it('keeps the owned half of a mixed queued batch after the target becomes remote', async () => {
@@ -259,6 +278,30 @@ describe('useNativeChatComposerAttachments', () => {
 
     expect(probe.draft()).toBe('')
     expect(probe.notice()).toBe('Local attachments are not available for remote sessions.')
+    act(() => probe.root.unmount())
+  })
+
+  // An already-blocked target refuses at the drop instead of queueing. Queued
+  // paths that can never attach would still spend the pending budget, and the
+  // next legitimate drop would be turned away for being one too many.
+  it('refuses an already-blocked target at the drop without spending the queue budget', async () => {
+    runtimeTarget.remote = true
+    let composing = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
+
+    const refused = Array.from(
+      { length: NATIVE_FILE_DROP_MAX_PATHS },
+      (_unused, index) => `/local/refused-${index}.txt`
+    )
+    act(() => probe.latest().attachResolvedPaths(refused))
+    expect(probe.notice()).toBe('Local attachments are not available for remote sessions.')
+
+    runtimeTarget.remote = false
+    act(() => probe.latest().attachResolvedPaths(['/local/allowed.txt']))
+    composing = false
+    act(() => probe.latest().flushPendingAttachments())
+
+    expect(probe.draft()).toBe('@/local/allowed.txt ')
     act(() => probe.root.unmount())
   })
 
