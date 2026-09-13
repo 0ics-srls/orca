@@ -10,7 +10,7 @@ import { pathToFileURL } from 'node:url'
 // git index rather than the working tree.
 const TRANSLATED_README_DIR = path.join('docs', 'readme')
 const EXTERNAL_TARGET = /^(?:[a-z][a-z0-9+.-]*:|#|\/\/)/i
-const HTML_ATTRIBUTE = /\b(?:src|srcset|href)\s*=\s*"([^"]*)"/g
+const HTML_ATTRIBUTE = /\b(?:src|srcset|href)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 const MARKDOWN_LINK = /!?\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g
 
 function readmeFiles(root) {
@@ -38,7 +38,7 @@ function trackedFiles(root, candidates) {
 function* localTargets(markdown) {
   for (const match of markdown.matchAll(HTML_ATTRIBUTE)) {
     // Why: srcset is a candidate list ("a.gif 1x, b.gif 2x"); each entry starts with a URL.
-    for (const candidate of match[1].split(',')) {
+    for (const candidate of (match[1] ?? match[2]).split(',')) {
       const target = candidate.trim().split(/\s+/)[0]
       if (target) {
         yield target

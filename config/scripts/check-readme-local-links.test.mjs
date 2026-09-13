@@ -39,6 +39,7 @@ const validReadmes = {
     '<img src="resources/build/icon.png" />',
     '<picture><source srcset="docs/site/public/docs/tab-split.gif" type="image/gif"><img src="resources/onboarding/feature-wall/tile-01.poster.jpg" /></picture>',
     '<a href="docs/readme/README.ja.md">日本語</a>',
+    "<img src='resources/build/icon.png' />",
     '<img src="https://img.shields.io/badge/x-y-z" />',
     '[Contributing](.github/CONTRIBUTING.md) [Docs](https://example.com/docs) [Top](#top)',
     '![hero](docs/assets/hero%20image.jpg "Hero")'
@@ -116,6 +117,23 @@ describe('README local link check', () => {
 
     expect(findBrokenReadmeLinks(root)).toEqual([
       { readme: 'docs/readme/README.ja.md', target: '../../../outside.png', resolved: null }
+    ])
+  })
+
+  // Why: a single-quoted attribute is valid HTML and GitHub renders it, so a parser
+  // that only reads double quotes would pass a README with a broken image.
+  it('reports a missing target in a single-quoted attribute', () => {
+    const files = {
+      ...validReadmes,
+      'README.md': `${validReadmes['README.md']}\n<img src='docs/assets/missing.gif' />`
+    }
+
+    expect(findBrokenReadmeLinks(makeFixture(files))).toEqual([
+      {
+        readme: 'README.md',
+        target: 'docs/assets/missing.gif',
+        resolved: 'docs/assets/missing.gif'
+      }
     ])
   })
 
