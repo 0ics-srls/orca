@@ -24,19 +24,62 @@ export const BOOLEAN_FLAGS = CLI_BOOLEAN_FLAGS
 export const REPEATED_FLAG_SEPARATOR = '\u0000'
 const REPEATABLE_STRING_FLAGS = new Set(['label', 'skill'])
 
-function setFlagValue(flags: Map<string, string | boolean>, name: string, value: string): void {
+function setFlagValue(
+  flags: Map<string, string | boolean>,
+  name: string,
+  value: string,
+  repeatable: ReadonlySet<string>
+): void {
   const existing = flags.get(name)
-  if (typeof existing === 'string' && REPEATABLE_STRING_FLAGS.has(name)) {
+  if (typeof existing === 'string' && repeatable.has(name)) {
     flags.set(name, `${existing}${REPEATED_FLAG_SEPARATOR}${value}`)
     return
   }
   flags.set(name, value)
 }
 
-export function parseArgs(argv: string[], commandPaths?: readonly string[][]): ParsedArgs {
+/** The most specific spec whose path prefixes `path`, so a group never shadows a leaf. */
+function specForPathPrefix(
+  specs: readonly CommandSpec[],
+  path: readonly string[]
+): CommandSpec | undefined {
+  let best: { spec: CommandSpec; length: number } | undefined
+  for (const spec of specs) {
+    for (const candidate of specPaths(spec)) {
+      if (
+        candidate.length <= path.length &&
+        candidate.every((part, index) => part === path[index]) &&
+        (!best || candidate.length > best.length)
+      ) {
+        best = { spec, length: candidate.length }
+      }
+    }
+  }
+  return best?.spec
+}
+
+export function parseArgs(
+  argv: string[],
+  commandPaths?: readonly string[][],
+  specs: readonly CommandSpec[] = []
+): ParsedArgs {
   const commandPath: string[] = []
   const flags = new Map<string, string | boolean>()
   const commandIndex = findCliCommandIndex(argv, commandPaths ?? [])
+  // Why memoised on length: the active spec can only change when a command token
+  // is read, so the lookup runs once per command depth, not once per flag.
+  let scopedAt = -1
+  let scoped: ReadonlySet<string> = REPEATABLE_STRING_FLAGS
+  const repeatableFlags = (): ReadonlySet<string> => {
+    if (scopedAt !== commandPath.length) {
+      scopedAt = commandPath.length
+      const declared = specForPathPrefix(specs, commandPath)?.repeatableFlags
+      scoped = declared
+        ? new Set([...REPEATABLE_STRING_FLAGS, ...declared])
+        : REPEATABLE_STRING_FLAGS
+    }
+    return scoped
+  }
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
@@ -51,7 +94,12 @@ export function parseArgs(argv: string[], commandPaths?: readonly string[][]): P
     // treats a `--`-leading next token as a new flag, so it can't express one.
     const equalsIndex = assignment.indexOf('=')
     if (equalsIndex !== -1) {
-      setFlagValue(flags, assignment.slice(0, equalsIndex), assignment.slice(equalsIndex + 1))
+      setFlagValue(
+        flags,
+        assignment.slice(0, equalsIndex),
+        assignment.slice(equalsIndex + 1),
+        repeatableFlags()
+      )
       continue
     }
 
@@ -71,7 +119,7 @@ export function parseArgs(argv: string[], commandPaths?: readonly string[][]): P
       flags.set(flag, true)
       continue
     }
-    setFlagValue(flags, flag, next)
+    setFlagValue(flags, flag, next, repeatableFlags())
     i += 1
   }
 
@@ -116,6 +164,7 @@ export function supportsBrowserPageFlag(commandPath: string[]): boolean {
       'diagnostics',
       'linear',
       'skills',
+      'search',
       'agent-context'
     ].includes(commandPath[0])
   ) {
