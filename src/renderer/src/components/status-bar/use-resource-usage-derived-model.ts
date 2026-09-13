@@ -88,15 +88,13 @@ export function useResourceUsageDerivedModel({
     return map
   }, [repos])
 
-  const worktreeById = useMemo(() => {
-    // A bare resource identity cannot choose between the same workspace id on different hosts.
-    const ambiguousIds = findAmbiguousWorktreeIds(allWorktrees)
-    return new Map(
-      allWorktrees
-        .filter((worktree) => !ambiguousIds.has(worktree.id))
-        .map((worktree) => [worktree.id, worktree])
-    )
-  }, [allWorktrees])
+  const worktreeById = useMemo(
+    () => new Map(allWorktrees.map((worktree) => [worktree.id, worktree])),
+    [allWorktrees]
+  )
+  // Why: a bare resource identity cannot choose between the same workspace id on different
+  // hosts, but the id still exists; keep the map whole and let the merge gate attribution only.
+  const ambiguousWorktreeIds = useMemo(() => findAmbiguousWorktreeIds(allWorktrees), [allWorktrees])
 
   // Why: skip the merge when closed; the always-mounted segment recomputing on every keystroke-driven store mutation made the app laggy.
   const unifiedRepos = useMemo(
@@ -112,7 +110,8 @@ export function useResourceUsageDerivedModel({
             repoConnectionIdById,
             repoRuntimeScopedById,
             browserTabsByWorktree,
-            worktreeById
+            worktreeById,
+            ambiguousWorktreeIds
           })
         : [],
     [
@@ -125,7 +124,8 @@ export function useResourceUsageDerivedModel({
       repoConnectionIdById,
       repoRuntimeScopedById,
       browserTabsByWorktree,
-      worktreeById
+      worktreeById,
+      ambiguousWorktreeIds
     ]
   )
 

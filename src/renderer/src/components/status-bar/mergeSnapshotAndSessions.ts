@@ -24,7 +24,6 @@ import type {
 } from '../../../../shared/process-stats-types'
 import { parsePtySessionId } from '../../../../shared/pty-session-id-format'
 import { parsePaneKey as parseStablePaneKey } from '../../../../shared/stable-pane-id'
-import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import {
   getRepoIdFromWorktreeId,
   getWorktreePathBasenameFromId
@@ -40,7 +39,10 @@ import {
   buildResourceSessionBindingIndex,
   type ResourceSessionBindingIndex
 } from './resource-session-bindings'
-import { resolveResourceWorkspaceHost } from './resource-workspace-host'
+import {
+  resolveResourceFolderWorkspace,
+  resolveResourceWorkspaceHost
+} from './resource-workspace-host'
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -191,10 +193,7 @@ export function mergeSnapshotAndSessions(
   // ── Step 1: ingest snapshot worktrees as the local-truth foundation.
   if (snapshot) {
     for (const wt of snapshot.worktrees as readonly WorktreeMemory[]) {
-      const worktree =
-        parseWorkspaceKey(wt.worktreeId)?.type === 'folder'
-          ? ctx.worktreeById?.get(wt.worktreeId)
-          : undefined
+      const worktree = resolveResourceFolderWorkspace(ctx, wt.worktreeId)
       const repoId = worktree?.repoId ?? wt.repoId
       const repoName = (worktree && ctx.repoDisplayNameById.get(repoId)) || wt.repoName
       const { isRemote, isRuntimeScoped } = resolveResourceWorkspaceHost(ctx, wt.worktreeId, repoId)
@@ -255,10 +254,7 @@ export function mergeSnapshotAndSessions(
     // 2c: unattributed bucket.
     const isUnattributed = !worktreeId
     const finalWorktreeId = worktreeId ?? `${UNATTRIBUTED_REPO_ID}::${session.id}`
-    const worktree =
-      parseWorkspaceKey(finalWorktreeId)?.type === 'folder'
-        ? ctx.worktreeById?.get(finalWorktreeId)
-        : undefined
+    const worktree = resolveResourceFolderWorkspace(ctx, finalWorktreeId)
     const finalRepoId = isUnattributed
       ? UNATTRIBUTED_REPO_ID
       : (worktree?.repoId ?? getRepoIdFromWorktreeId(finalWorktreeId))

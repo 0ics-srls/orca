@@ -74,4 +74,6 @@ export type MergeContext = {
   browserTabsByWorktree?: Record<string, BrowserWorkspace[]>
   /** Canonical workspace names and grouping for every resource source. */
   worktreeById?: ReadonlyMap<string, Worktree>
+  /** Ids present on more than one execution host; their catalog row cannot name a host. */
+  ambiguousWorktreeIds?: ReadonlySet<string>
 }
