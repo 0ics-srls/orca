@@ -22,6 +22,12 @@ describe('rich Markdown blank-run encoding', () => {
     expect(encodeWithDeadline(content)).toBe(content)
   })
 
+  it('inlines a reference definition after a long blank prefix without rescanning it', () => {
+    const blankPrefix = '\n'.repeat(100_000)
+    const content = `${blankPrefix}[Docs]\n\n[docs]: https://example.com/docs\n`
+    expect(encodeWithDeadline(content)).toBe(`${blankPrefix}[Docs](https://example.com/docs)\n\n`)
+  })
+
   it('preserves code and surrounding HTML after a long blank prefix', () => {
     const blankPrefix = '\n'.repeat(100_000)
     const content = '```\n<div>inside</div>\n```\n<b>after</b>'
