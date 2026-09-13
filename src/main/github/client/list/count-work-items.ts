@@ -47,6 +47,9 @@ export async function countWorkItemsForQuery(
       }
     }
   }
+  if (repositoryRateLimitGuard(ownerRepo, 'search', ghOptions).blocked) {
+    return 0
+  }
   const { stdout } = await ghExecFileAsync(
     [
       'api',

@@ -4,6 +4,25 @@ import { listWorkItems } from './client/list/list-work-items'
 import { countWorkItems } from './client/list/count-work-items'
 import metadata from './__fixtures__/work-item-search-metadata.json'
 
+it('preserves the Search budget floor when the preferred count fails', async () => {
+  api.restSearches = 29
+  api.aliasErrorRepo = 'fixture/repo'
+
+  expect(await countWorkItems('fixture/repo', 'is:issue')).toBe(0)
+  expect(api.calls.some((call) => call.args.includes('graphql'))).toBe(true)
+  expect(api.calls.some((call) => call.args.some((arg) => arg.startsWith('search/issues?')))).toBe(
+    false
+  )
+  expect(api.restSearches).toBe(29)
+})
+
+it('still counts through GraphQL when the REST Search budget is below its floor', async () => {
+  api.restSearches = 29
+
+  expect(await countWorkItems('fixture/repo', 'is:issue')).toBe(120)
+  expect(api.restSearches).toBe(29)
+})
+
 it('keeps REST fallback on the credential captured for the failed preferred search', async () => {
   vi.stubEnv('GH_TOKEN', 'fixture-original-credential')
   api.aliasErrorRepo = 'fixture/repo'
