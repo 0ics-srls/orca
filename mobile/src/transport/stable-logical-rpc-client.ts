@@ -96,15 +96,13 @@ export function createStableLogicalRpcClient(
           .sendRequest(method, projectMobileRpcRequestParams(method, params), options)
           .then(
             (response) => {
-              if (closed) {
-                reject(new Error('Client closed'))
-              } else if (requestGeneration !== generation) {
-                reject(new LogicalClientCutoverError())
-              } else {
-                resolve(response)
-              }
+              // A correlated response is definitive even if close/cutover won the
+              // callback race after the physical promise had already settled.
+              resolve(response)
             },
             (error: unknown) => {
+              // Why: the retiring physical session settles this, so keep its error as the
+              // cause — it is the only evidence of whether the frame reached the wire.
               reject(
                 requestGeneration !== generation ? new LogicalClientCutoverError(error) : error
               )
