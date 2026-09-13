@@ -62,3 +62,27 @@ it('maps summary state only when explicitly supplied by the host', async () => {
     expect.objectContaining({ summaryOnly: true })
   )
 })
+
+it('remembers an unsupported runHistory method per connection instead of re-probing', async () => {
+  const request = vi
+    .fn()
+    .mockRejectedValueOnce({ code: -32601 })
+    .mockResolvedValue({
+      total: 1,
+      runs: [{ id: 'run-1', output_content: 'legacy full log' }]
+    })
+  relay(request)
+  await listExternalAutomationRuns(input)
+  await listExternalAutomationRuns({ ...input, page: 2 })
+  expect(request.mock.calls.map(([method]) => method)).toEqual([
+    'externalAutomations.runHistory',
+    'externalAutomations.runs',
+    'externalAutomations.runs'
+  ])
+  await expect(listExternalAutomationRuns({ ...input, runId: 'run-1' })).rejects.toThrow()
+  expect(request).toHaveBeenCalledTimes(3)
+  // A reconnect replaces the multiplexer, so the upgraded relay is probed again.
+  relay(request)
+  await listExternalAutomationRuns(input)
+  expect(request.mock.calls.at(-1)?.[0]).toBe('externalAutomations.runHistory')
+})

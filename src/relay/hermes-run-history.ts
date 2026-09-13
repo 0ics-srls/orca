@@ -76,7 +76,9 @@ export class HermesRunHistory {
     if (typeof jobId !== 'string' || !EXTERNAL_AUTOMATION_JOB_ID_PATTERN.test(jobId)) {
       throw new Error('Invalid external automation job ID.')
     }
-    if (pageSize === 0) {
+    // A detail request names its run, so pageSize does not gate it.
+    const runId = typeof params.runId === 'string' ? params.runId : undefined
+    if (pageSize === 0 && runId === undefined) {
       return { total: await this.readRunCount(jobId), runs: [] }
     }
     const runRefs = await this.readRunRefs(jobId)
@@ -84,8 +86,8 @@ export class HermesRunHistory {
     return {
       total: runRefs.length,
       runs: await Promise.all(
-        (typeof params.runId === 'string'
-          ? runRefs.filter((ref) => ref.id === params.runId)
+        (runId !== undefined
+          ? runRefs.filter((ref) => ref.id === runId)
           : runRefs.slice(start, start + pageSize)
         ).map((ref) => this.hydrateRunRef(jobId, ref, params.summaryOnly === true))
       )

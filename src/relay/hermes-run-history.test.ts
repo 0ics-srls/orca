@@ -163,3 +163,12 @@ it('loads summaries without hydrating logs and resolves selected IDs within the 
   ).toEqual([])
   expect(readOutputRun).not.toHaveBeenCalled()
 })
+
+it('honours a runId detail request regardless of pageSize', async () => {
+  const history = new HermesRunHistory(
+    sources({ readOutputRefs: async () => [outputRef(16), outputRef(15)] })
+  )
+  await expect(
+    history.listRuns({ provider: 'hermes', jobId: 'job-1', pageSize: 0, runId: outputRef(15).id })
+  ).resolves.toEqual({ total: 2, runs: [outputRef(15)] })
+})

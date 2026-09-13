@@ -2,7 +2,11 @@
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { ExternalAutomationRunOutput } from './ExternalAutomationRunOutput'
+import { i18n } from '@/i18n/i18n'
+import {
+  clearExternalRunOutputCache,
+  ExternalAutomationRunOutput
+} from './ExternalAutomationRunOutput'
 import { makeExternalManager, makeExternalAutomationScope } from './automations-page-fixtures'
 import type { SelectedExternalRunPage } from './automation-page-state'
 
@@ -36,6 +40,7 @@ function selection(id: string): SelectedExternalRunPage {
 beforeEach(() => {
   globalThis.IS_REACT_ACT_ENVIRONMENT = true
   request.mockReset()
+  clearExternalRunOutputCache()
   vi.stubGlobal('api', undefined)
   Object.defineProperty(window, 'api', {
     configurable: true,
@@ -116,4 +121,51 @@ it('shows a persistent error with retry when the selected output disappeared', a
   expect(container.querySelector('[role="alert"]')?.textContent).toContain('unavailable')
   await act(async () => container.querySelector('button')!.click())
   expect(container.textContent).toBe('restored log')
+})
+
+it('keeps the row summary visible before the spinner and beside the error', async () => {
+  let finish!: (page: unknown) => void
+  request.mockImplementationOnce(
+    () =>
+      new Promise((resolve) => {
+        finish = resolve
+      })
+  )
+  vi.useFakeTimers()
+  const selected = selection('run')
+  selected.run.error = 'row error'
+  await act(async () => root.render(<ExternalAutomationRunOutput selected={selected} />))
+  expect(container.textContent).toBe('row error')
+  expect(container.querySelector('[role="status"]')).toBeNull()
+  await act(async () => vi.advanceTimersByTimeAsync(250))
+  expect(container.querySelector('[role="status"]')).not.toBeNull()
+  expect(container.querySelector('pre')?.textContent).toBe('row error')
+  await act(async () => finish({ runs: [] }))
+  expect(container.querySelector('[role="alert"]')?.textContent).toContain('unavailable')
+  expect(container.querySelector('pre')?.textContent).toBe('row error')
+})
+
+it('reuses a loaded log when the same run is reopened', async () => {
+  request.mockResolvedValue({
+    runs: [{ ...selection('run').run, outputContentDeferred: undefined, outputContent: 'log' }]
+  })
+  await act(async () => root.render(<ExternalAutomationRunOutput selected={selection('run')} />))
+  expect(container.textContent).toBe('log')
+  await act(async () => root.render(<ExternalAutomationRunOutput selected={selection('other')} />))
+  await act(async () => root.render(<ExternalAutomationRunOutput selected={selection('run')} />))
+  expect(container.textContent).toBe('log')
+  expect(request.mock.calls.map(([params]) => params.runId)).toEqual(['run', 'other'])
+})
+
+it('localizes the unavailable message', async () => {
+  i18n.addResourceBundle('en', 'translation', {
+    automations: { runOutput: { unavailable: 'LOCALIZED unavailable' } }
+  })
+  try {
+    request.mockResolvedValueOnce({ runs: [] })
+    await act(async () => root.render(<ExternalAutomationRunOutput selected={selection('run')} />))
+    expect(container.querySelector('[role="alert"]')?.textContent).toBe('LOCALIZED unavailable')
+  } finally {
+    i18n.removeResourceBundle('en', 'translation')
+  }
 })
