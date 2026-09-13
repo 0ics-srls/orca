@@ -211,7 +211,7 @@ export async function resumePromptCancellation(
     if (hasPromptCancellationProof(displayed, clientOperationId)) {
       return settlePromptCancellation(ctx, clientOperationId, settlement)
     }
-    return { ok: true, value: { turnId: settlement.turnId, cancelled: false } }
+    return null
   }
   await ctx.flushLifecycle()
   const confirmed: AgentSessionPromptCancelSettlement = {

@@ -54,6 +54,32 @@ describe('prompt cancellation recovery', () => {
     expect(cancelTurn).toHaveBeenCalledTimes(2)
   })
 
+  it('keeps a prepared cancellation unknown when retry delivery cannot prove the effect', async () => {
+    await attach()
+    const prompt = await seedApproval()
+    cancelTurn
+      .mockRejectedValueOnce(new Error('interrupt reply lost'))
+      .mockResolvedValueOnce({ cancelled: false })
+    const fields = {
+      prompt: { itemId: prompt.itemId, expectedRevision: prompt.revision }
+    }
+    const params = {
+      envelope: envelope('agentSession.cancel', fields),
+      ...fields
+    }
+
+    await expect(host.cancel(CALLER, params)).rejects.toThrow('interrupt reply lost')
+    await expect(host.cancel(CALLER, params)).resolves.toMatchObject({
+      ok: false,
+      refusal: { code: 'agent_session_operation_unknown' }
+    })
+    expect(store.listOperationRows().at(-1)?.outcome).toMatchObject({
+      status: 'unknown',
+      promptCancelSettlement: { phase: 'prepared', target: fields.prompt }
+    })
+    expect(cancelTurn).toHaveBeenCalledTimes(2)
+  })
+
   it('retries only durable prompt settlement after a confirmed interruption', async () => {
     await attach()
     const prompt = await seedApproval()
