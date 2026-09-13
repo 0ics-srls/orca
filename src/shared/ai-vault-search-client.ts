@@ -37,7 +37,7 @@ function isUnknownMethod(error: unknown): boolean {
 }
 
 export function createSessionSearchClient(
-  call: (method: string, params: unknown) => Promise<unknown>,
+  call: (method: string, params: Record<string, unknown>) => Promise<unknown>,
   transport: SessionSearchTransport
 ): {
   searchSessions(request: AiVaultSearchRequest): Promise<AiVaultSearchResponse>

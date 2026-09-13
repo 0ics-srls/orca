@@ -82,9 +82,24 @@ describe('session search public contract', () => {
       expect(AiVaultSearchStatusSchema.parse(result)).toEqual(result)
       expect(result.degradedRoots).toEqual([
         transport === 'relay'
-          ? { reason: 'could not be listed' }
+          ? { reason: 'Source root could not be verified.' }
           : { root: '/host/projects', reason: 'could not be listed' }
       ])
     }
   )
+  it.each([
+    '/host/private/path could not be listed.',
+    "EACCES: permission denied, scandir '/host/private/path'",
+    "EACCES: permission denied, scandir 'C:\\Users\\private\\sessions'"
+  ])('withholds paths embedded in relay diagnostics: %s', (reason) => {
+    const status = {
+      ...unavailableSessionSearchStatus(),
+      degradedRoots: [{ root: '/host/private/path', reason }]
+    }
+    const result = redactStatusForTransport(status, 'relay')
+    expect(result.degradedRoots).toHaveLength(1)
+    expect(JSON.stringify(result)).not.toContain('/host/private/path')
+    expect(JSON.stringify(result)).not.toContain('private')
+    expect(redactStatusForTransport(status, 'runtime')).toEqual(status)
+  })
 })

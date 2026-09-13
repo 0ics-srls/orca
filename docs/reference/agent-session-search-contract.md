@@ -77,12 +77,10 @@ same exposure function.
 `degraded`, or `closed`), `filesIndexed`, `filesDue`, `filesFailed`, `degradedRoots`
 (`root` and `reason`), `lastReconcileAt`, `lastSweepCompletedAt`, and `generation`.
 Times are milliseconds since epoch or null. These are the indexer's observations;
-an indexed row is not a new filesystem verification. A degraded root's `reason`
-is a host diagnostic visible to every caller, but `root` is a local filesystem
-path and follows the same exposure policy as a hit's `filePath`: desktop IPC and
-same-machine runtime RPC see it, relay and paired clients get the reason and the
-array length only. `redactStatusForTransport(status, transport)` applies this on
-the host and again on the receiving client.
+an indexed row is not a new filesystem verification. A degraded root's `root` and
+raw `reason` can both contain host filesystem paths. Desktop IPC and same-machine runtime RPC receive the full diagnostic;
+relay and paired clients receive only the fixed reason "Source root could not
+be verified." for each degraded root. The array length retains the count.
 
 `wait-until-current` calls `service.reconcile()` before searching. The adapter
 uses `indexer.reconcile({ full: false })`. After five seconds the endpoint searches

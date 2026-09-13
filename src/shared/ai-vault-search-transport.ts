@@ -16,8 +16,7 @@ export function redactForTransport(
   }
 }
 
-// A degraded root is a host filesystem path, so relay callers keep the reason
-// and the array length as the count; dropping `root` beats a parallel count field.
+// Native error messages can repeat private paths even after root is removed.
 export function redactStatusForTransport(
   status: AiVaultSearchStatus,
   transport: SessionSearchTransport
@@ -25,5 +24,10 @@ export function redactStatusForTransport(
   if (transport !== 'relay') {
     return status
   }
-  return { ...status, degradedRoots: status.degradedRoots.map(({ reason }) => ({ reason })) }
+  return {
+    ...status,
+    degradedRoots: status.degradedRoots.map(() => ({
+      reason: 'Source root could not be verified.'
+    }))
+  }
 }

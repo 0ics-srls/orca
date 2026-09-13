@@ -29,10 +29,7 @@ function wire(register: boolean) {
   if (register) {
     new AiVaultHandler(host, { remoteHome: '/synthetic-host' })
   }
-  const client = createSessionSearchClient(
-    (method, params) => mux.request(method, params as Record<string, unknown>),
-    'relay'
-  )
+  const client = createSessionSearchClient((method, params) => mux.request(method, params), 'relay')
   return { host, mux, client }
 }
 

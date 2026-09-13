@@ -32,7 +32,7 @@ export function searchResults(): Extract<AiVaultSearchResponse, { kind: 'results
 
 export function fakeSearchService() {
   return {
-    search: vi.fn(async () => searchResults() as AiVaultSearchResponse),
+    search: vi.fn(async (): Promise<AiVaultSearchResponse> => searchResults()),
     status: vi.fn(async () => ({
       ...unavailableSessionSearchStatus(),
       enabled: true,

@@ -38,7 +38,7 @@ describe('session search service registry', () => {
       setSessionSearchService(service)
       expect((await sessionSearchServiceStatus({}, transport)).degradedRoots).toEqual([
         transport === 'relay'
-          ? { reason: 'could not be listed' }
+          ? { reason: 'Source root could not be verified.' }
           : { root: '/host/projects', reason: 'could not be listed' }
       ])
     }

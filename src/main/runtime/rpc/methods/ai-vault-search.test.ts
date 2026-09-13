@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { RpcDispatcher } from '../dispatcher'
-import type { OrcaRuntimeService } from '../../orca-runtime'
+import { OrcaRuntimeService } from '../../orca-runtime'
 import { AI_VAULT_METHODS } from './ai-vault'
 import { fakeSearchService } from '../../../../shared/ai-vault-search-test-fixture'
 import { createSessionSearchClient } from '../../../../shared/ai-vault-search-client'
@@ -10,7 +10,7 @@ afterEach(() => setSessionSearchService(null))
 
 function dispatcher(legacy = false) {
   return new RpcDispatcher({
-    runtime: { getRuntimeId: () => 'owning-host' } as OrcaRuntimeService,
+    runtime: new OrcaRuntimeService(),
     methods: legacy ? [] : AI_VAULT_METHODS
   })
 }
