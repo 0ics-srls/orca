@@ -228,6 +228,26 @@ describe('useNativeChatComposerAttachments', () => {
     act(() => probe.root.unmount())
   })
 
+  // References are inserted in the order the user made them. Splitting the queue
+  // into an owned half and a client-local half would hoist every workspace drop
+  // ahead of a paste that came first.
+  it('keeps a mixed queued batch in the order it was attached', async () => {
+    let composing = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
+
+    act(() => {
+      probe.latest().attachResolvedPaths(['/local/first.txt'])
+      probe.latest().attachResolvedPaths(['/remote/second.txt'], undefined, {
+        targetOwnerIsCurrent: () => true
+      })
+    })
+    composing = false
+    act(() => probe.latest().flushPendingAttachments())
+
+    expect(probe.draft()).toBe('@/local/first.txt @/remote/second.txt ')
+    act(() => probe.root.unmount())
+  })
+
   it('refuses a wholly client-local queued batch on a remote target', async () => {
     let composing = true
     const probe = await renderProbe('pty-1', false, { isComposing: () => composing })

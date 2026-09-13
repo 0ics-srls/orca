@@ -90,14 +90,17 @@ export function useNativeChatResolvedPathAttachments({
       // Ownership is per path, so the verdict is too: a queued batch can mix a
       // workspace drop the target owns with a client-local paste it does not,
       // and one verdict for the batch would refuse the drop the user can make.
-      const owned = resolvedPaths.filter(({ targetOwnerIsCurrent }) => targetOwnerIsCurrent)
-      const clientLocal = resolvedPaths.filter(({ targetOwnerIsCurrent }) => !targetOwnerIsCurrent)
-      const ownedBlocked = owned.length > 0 && attachmentTargetBlocked(true)
-      const clientLocalBlocked = clientLocal.length > 0 && attachmentTargetBlocked(false)
-      const attachable = [
-        ...(ownedBlocked ? [] : owned),
-        ...(clientLocalBlocked ? [] : clientLocal)
-      ]
+      const ownedBlocked =
+        resolvedPaths.some(({ targetOwnerIsCurrent }) => targetOwnerIsCurrent) &&
+        attachmentTargetBlocked(true)
+      const clientLocalBlocked =
+        resolvedPaths.some(({ targetOwnerIsCurrent }) => !targetOwnerIsCurrent) &&
+        attachmentTargetBlocked(false)
+      // Filter rather than partition: the two halves are interleaved, and these
+      // references are inserted in the order the user attached them.
+      const attachable = resolvedPaths.filter(({ targetOwnerIsCurrent }) =>
+        targetOwnerIsCurrent ? !ownedBlocked : !clientLocalBlocked
+      )
       if (attachable.length === 0) {
         noteAttachmentTargetBlocked()
         return
