@@ -201,6 +201,30 @@ describe('structured session runtime provider-exit wiring', () => {
     await new Promise<void>((resolve) => setImmediate(resolve))
 
     expect(connections).toHaveLength(1)
+    expect(host.deps.store.getRecord(SESSION)?.lease).toMatchObject({
+      claimStatus: 'released',
+      ownerProcess: null,
+      handoffStage: null
+    })
+
+    const restarted = await ensureStructuredAgentSessionHost({
+      stateDirectory: root,
+      hostId: 'local',
+      claimKeyId: 'key-1',
+      resolveWorkspacePath: async () => root!,
+      resolveClaudeAuthPolicy: () => ({ stripAuthEnv: true }),
+      resolveCodexCommand: () => 'codex',
+      resolveEnvironment: async () => ({ PATH: process.env.PATH }),
+      openCodexConnection: openConnection,
+      readProcessStartTime: async () => 1_700_000_000_000
+    })
+    await restarted.restoreReadableSessions()
+    const history = restarted.history({ sessionId: SESSION, direction: 'tail' })
+    expect(history.ok && history.page.items.some((item) => item.body.kind === 'status')).toBe(false)
+    expect(restarted.deps.store.getRecord(SESSION)?.providerHandleChain.at(-1)?.handle).toEqual({
+      provider: 'codex',
+      threadId: 'thread-runtime-close'
+    })
   })
 
   it('waits for an in-flight recovery before tearing down the runtime', async () => {

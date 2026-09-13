@@ -31,6 +31,8 @@ export type StructuredAgentSessionEvictionContext = {
   forget: () => Promise<void>
   /** Drops the cached sink so a later attach mints a fresh one. */
   discardSink: () => void
+  /** Settles work owned by the child after its final callbacks have drained. */
+  settleWork?: () => Promise<void>
   /** Hands the lease back now that this host's child is proven gone. No-ops when the record is
    *  not this host's to release. */
   releaseLease: () => Promise<void>
@@ -67,6 +69,10 @@ export const STRUCTURED_AGENT_SESSION_EVICTION_STEPS: readonly StructuredAgentSe
           throw barrier.error
         }
       }
+    },
+    {
+      name: 'settle-dead-generation',
+      run: (context) => (context.hasProviderChild === false ? undefined : context.settleWork?.())
     },
     { name: 'stop-publishing', run: (context) => context.eventSink.unbind() },
     { name: 'close-sink', run: (context) => context.eventSink.close() },

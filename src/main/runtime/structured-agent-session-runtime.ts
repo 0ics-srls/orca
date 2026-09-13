@@ -171,13 +171,29 @@ async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
   // Drain an in-flight recovery before stopping children; recovery may still
   // be writing lifecycle rows or acquiring a replacement child.
   await installed.waitForRecovery()
+  const failures: unknown[] = []
   try {
-    await installed.adapter.closeAll()
-  } finally {
-    // closeAll can itself deliver a final exit callback; observe that callback
-    // before flushing and releasing the host's journal resources.
-    await installed.waitForRecovery()
     await installed.host.flushAllStreamedEvents()
+  } catch (error) {
+    failures.push(error)
+  }
+  try {
+    // Backstop acquisitions that failed before the host indexed their journal.
+    await installed.adapter.closeAll()
+  } catch (error) {
+    failures.push(error)
+  }
+  // A backstop close can still deliver a final exit callback.
+  try {
+    await installed.waitForRecovery()
+  } catch (error) {
+    failures.push(error)
+  }
+  if (failures.length === 1) {
+    throw failures[0]
+  }
+  if (failures.length > 1) {
+    throw new AggregateError(failures, 'structured agent-session runtime teardown failed')
   }
 }
 

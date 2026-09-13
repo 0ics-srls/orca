@@ -12,6 +12,7 @@ import type {
 import type Database from '../../sqlite/sync-database'
 import type { JournalLoad } from './journal-open'
 import { clearJournalRepairMarker } from './journal-repair-marker'
+import { clearJournalEpochMigrations } from './journal-epoch-migration-marker'
 import { applyJournalRow, createJournalReducerState } from './journal-reducer'
 import { buildJournalItemRow, journalRowBase } from './journal-row-builders'
 import {
@@ -67,6 +68,7 @@ export function replaceJournalEpoch(input: {
   try {
     deleteAllJournalRows(input.db)
     clearJournalRepairMarker(input.db, input.identity.sessionId)
+    clearJournalEpochMigrations(input.db, input.identity.sessionId)
     for (const row of rows) {
       insertJournalRow(input.db, input.identity.sessionId, row)
     }

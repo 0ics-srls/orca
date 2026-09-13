@@ -6,9 +6,16 @@ import type {
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 
 type RoutedAgent = 'claude' | 'codex'
+type SessionRoute = { adapter: StructuredAgentSessionAdapter; state: 'live' | 'stopped' }
 
 export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessionAdapter {
-  private readonly owners = new Map<string, StructuredAgentSessionAdapter>()
+  private readonly routes = new Map<string, SessionRoute>()
+  private allAdaptersClosed = false
+  private closing = false
+  private inFlightAcquisitions = 0
+  private acquisitionDrain: Promise<void> | null = null
+  private resolveAcquisitionDrain: (() => void) | null = null
+  private closePromise: Promise<void> | null = null
 
   constructor(
     private readonly adapters: Record<RoutedAgent, StructuredAgentSessionAdapter>,
@@ -24,20 +31,32 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
     Object.values(this.adapters).some((adapter) => adapter.supportsLocation?.(location) ?? false)
 
   async acquire(input: Parameters<StructuredAgentSessionAdapter['acquire']>[0]) {
+    if (this.closing) {
+      throw new Error('structured session adapter router is closing')
+    }
     const adapter = this.requireAgent(input.identity)
-    const acquired = await adapter.acquire(input)
-    this.owners.set(input.identity.sessionId, adapter)
-    return acquired
+    this.allAdaptersClosed = false
+    this.beginAcquisition()
+    try {
+      const acquired = await adapter.acquire(input)
+      this.routes.set(input.identity.sessionId, { adapter, state: 'live' })
+      return acquired
+    } finally {
+      this.endAcquisition()
+    }
   }
 
   async releaseAcquisition(input: { sessionId: string }): Promise<boolean> {
-    const adapter = this.owners.get(input.sessionId)
-    if (adapter) {
+    const route = this.routes.get(input.sessionId)
+    if (route) {
       try {
-        return (await adapter.releaseAcquisition?.(input)) === true
+        return (await route.adapter.releaseAcquisition?.(input)) === true
       } finally {
-        this.owners.delete(input.sessionId)
+        this.routes.delete(input.sessionId)
       }
+    }
+    if (this.allAdaptersClosed) {
+      return true
     }
     let released = false
     for (const candidate of Object.values(this.adapters)) {
@@ -50,7 +69,7 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
     this.owner(input.sessionId).dispatch(input)
 
   rewindSupport: NonNullable<StructuredAgentSessionAdapter['rewindSupport']> = (sessionId) =>
-    this.owners.get(sessionId)?.rewindSupport?.(sessionId) ?? {
+    this.liveOwnerOrNull(sessionId)?.rewindSupport?.(sessionId) ?? {
       supported: false,
       reason: 'unsupported'
     }
@@ -83,10 +102,10 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
 
   backgroundTaskState: NonNullable<StructuredAgentSessionAdapter['backgroundTaskState']> = (
     sessionId
-  ) => this.owners.get(sessionId)?.backgroundTaskState?.(sessionId)
+  ) => this.liveOwnerOrNull(sessionId)?.backgroundTaskState?.(sessionId)
 
   readCommands: NonNullable<StructuredAgentSessionAdapter['readCommands']> = (sessionId) =>
-    this.owners.get(sessionId)?.readCommands?.(sessionId)
+    this.liveOwnerOrNull(sessionId)?.readCommands?.(sessionId)
 
   answerPrompt: StructuredAgentSessionAdapter['answerPrompt'] = (input) =>
     this.owner(input.sessionId).answerPrompt(input)
@@ -128,30 +147,60 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
       adapter: StructuredAgentSessionAdapter
     ) => NonNullable<StructuredAgentSessionAdapter['closeSession']> | undefined
   ): Promise<boolean> {
-    const adapter = this.owners.get(sessionId)
-    if (!adapter) {
-      return false
+    const route = this.routes.get(sessionId)
+    if (!route) {
+      return this.allAdaptersClosed
     }
-    const stop = selectStop(adapter)
-    const stopped = await stop?.call(adapter, sessionId)
+    if (route.state === 'stopped') {
+      return true
+    }
+    const stop = selectStop(route.adapter)
+    const stopped = await stop?.call(route.adapter, sessionId)
     if (stopped === true) {
-      this.owners.delete(sessionId)
+      route.state = 'stopped'
       return true
     }
     return false
   }
 
   async closeAll(): Promise<void> {
-    this.owners.clear()
-    await this.closeAdapters()
+    if (this.allAdaptersClosed) {
+      return
+    }
+    if (this.closePromise) {
+      return this.closePromise
+    }
+    this.closing = true
+    this.closePromise = (async () => {
+      try {
+        await this.waitForAcquisitions()
+        await this.closeAdapters()
+        this.routes.clear()
+        this.allAdaptersClosed = true
+      } finally {
+        this.closing = false
+        this.closePromise = null
+      }
+    })()
+    return this.closePromise
+  }
+
+  /** Drops a per-session stop receipt after the host releases its durable owner. */
+  acknowledgeSessionRelease = (sessionId: string): void => {
+    this.routes.delete(sessionId)
   }
 
   private owner(sessionId: string): StructuredAgentSessionAdapter {
-    const adapter = this.owners.get(sessionId)
+    const adapter = this.liveOwnerOrNull(sessionId)
     if (!adapter) {
       throw new Error(`no live structured adapter owns ${sessionId}`)
     }
     return adapter
+  }
+
+  private liveOwnerOrNull(sessionId: string): StructuredAgentSessionAdapter | null {
+    const route = this.routes.get(sessionId)
+    return route?.state === 'live' ? route.adapter : null
   }
 
   private requireAgent(identity: AgentSessionJournalIdentity): StructuredAgentSessionAdapter {
@@ -164,5 +213,27 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
 
   private adapterForAgent(agent: string): StructuredAgentSessionAdapter | null {
     return agent === 'claude' || agent === 'codex' ? this.adapters[agent] : null
+  }
+
+  private beginAcquisition(): void {
+    if (this.inFlightAcquisitions === 0) {
+      this.acquisitionDrain = new Promise((resolve) => {
+        this.resolveAcquisitionDrain = resolve
+      })
+    }
+    this.inFlightAcquisitions += 1
+  }
+
+  private endAcquisition(): void {
+    this.inFlightAcquisitions -= 1
+    if (this.inFlightAcquisitions === 0) {
+      this.resolveAcquisitionDrain?.()
+      this.resolveAcquisitionDrain = null
+      this.acquisitionDrain = null
+    }
+  }
+
+  private waitForAcquisitions(): Promise<void> {
+    return this.acquisitionDrain ?? Promise.resolve()
   }
 }

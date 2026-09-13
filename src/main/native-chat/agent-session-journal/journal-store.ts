@@ -33,6 +33,8 @@ import {
 import type {
   AgentSessionJournalOptions,
   JournalAppendResult,
+  JournalEpochMigrationResult,
+  JournalEpochTombstoneMigrationInput,
   JournalItemAppendOptions,
   JournalLifecycleBatchInput,
   JournalReadSince,
@@ -49,6 +51,7 @@ import { createJournalStoreCollaborators } from './journal-store-collaborators'
 import { ensureJournalDir, journalStoreLoadedFields } from './journal-store-open'
 import type { JournalItemAppender } from './journal-item-appender'
 import type { JournalLifecycleBatchAppender } from './journal-lifecycle-batch-appender'
+import type { JournalEpochMigrationRunner } from './journal-epoch-migration-runner'
 
 export { AgentSessionJournalError } from './journal-write-guards'
 
@@ -70,6 +73,7 @@ export class AgentSessionJournal {
   private readonly epochController: JournalEpochController
   private readonly itemAppender: JournalItemAppender
   private readonly lifecycleBatchAppender: JournalLifecycleBatchAppender
+  private readonly epochMigrationRunner: JournalEpochMigrationRunner
   private readonly restore: () => Promise<void>
 
   constructor(options: AgentSessionJournalOptions) {
@@ -113,6 +117,7 @@ export class AgentSessionJournal {
     this.epochController = collaborators.epochController
     this.itemAppender = collaborators.itemAppender
     this.lifecycleBatchAppender = collaborators.lifecycleBatchAppender
+    this.epochMigrationRunner = collaborators.epochMigrationRunner
     this.restore = collaborators.restore
   }
 
@@ -225,6 +230,12 @@ export class AgentSessionJournal {
 
   appendLifecycleBatch(input: JournalLifecycleBatchInput): Promise<AgentJournalCursor> {
     return this.lifecycleBatchAppender.append(input)
+  }
+
+  applyEpochTombstoneMigration(
+    input: JournalEpochTombstoneMigrationInput
+  ): Promise<JournalEpochMigrationResult> {
+    return this.epochMigrationRunner.run(input)
   }
 
   /**

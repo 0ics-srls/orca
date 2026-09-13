@@ -8,9 +8,10 @@
 
 /** DB shape version, carried in `PRAGMA user_version`. Independent of the row
  *  body version (`JournalRow.v`): a newer build can change either alone.
- *  v2 added `journal_repairs`; a build without it would replay a partially
- *  repaired journal as clean, so it must latch read-only rather than write. */
-export const JOURNAL_DB_SCHEMA_VERSION = 2
+ *  v2 added `journal_repairs`; v3 added epoch-scoped migration markers. Older
+ *  builds must latch read-only so they cannot write rows behind a completed
+ *  migration marker. */
+export const JOURNAL_DB_SCHEMA_VERSION = 3
 
 export function createJournalTablesSql(): string {
   return `
@@ -32,6 +33,13 @@ CREATE TABLE IF NOT EXISTS journal_repairs (
   epoch        TEXT    NOT NULL,
   content_from INTEGER NOT NULL,
   repaired_at  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS journal_epoch_migrations (
+  session_id  TEXT    NOT NULL,
+  epoch       TEXT    NOT NULL,
+  migration_id TEXT   NOT NULL,
+  applied_at  INTEGER NOT NULL,
+  PRIMARY KEY (session_id, epoch, migration_id)
 );
 `
 }

@@ -2,6 +2,7 @@ import type {
   AgentJournalCursor,
   AgentJournalItemBody,
   AgentJournalItemIdentity,
+  AgentJournalRenderItem,
   AgentJournalMessageItem,
   AgentJournalResetReason,
   AgentSessionJournalIdentity
@@ -47,6 +48,19 @@ export type JournalLifecycleBatchInput = {
   mutations: readonly JournalLifecycleMutationInput[]
   fence: number
   recovered?: true
+}
+
+export type JournalEpochTombstoneMigrationInput = {
+  migrationId: string
+  settlementId: string
+  fence: number
+  recovered?: true
+  selectIdentity: (item: AgentJournalRenderItem) => AgentJournalItemIdentity | null
+}
+
+export type JournalEpochMigrationResult = {
+  applied: boolean
+  tombstonedItems: number
 }
 
 export type JournalSubmissionInput = {

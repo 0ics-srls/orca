@@ -21,6 +21,7 @@ import type {
 import { releaseStoredStructuredAgentSessionOwner } from './structured-agent-session-lease-release'
 import { resumeHeldStructuredAgentSession } from './structured-agent-session-hold-resume'
 import type { AgentSessionWireRefusal } from '../../../shared/agent-session-wire'
+import { settleStructuredAgentSessionDeadGeneration } from './structured-agent-session-dead-generation-settlement'
 
 export type StructuredAgentSessionLifetimeContext = {
   deps: StructuredAgentSessionHostDeps
@@ -58,25 +59,72 @@ export async function evictHeldStructuredAgentSession(
   if (!context.sessions.has(sessionId)) {
     return
   }
+  const session = context.sessions.get(sessionId)!
+  const ownedProviderChild = session.hasProviderChild
   const eviction: StructuredAgentSessionEvictionContext = {
     sessionId,
-    hasProviderChild: hasProviderChild(context, sessionId),
+    hasProviderChild: ownedProviderChild,
     eventSink: context.runtimeState.eventSinkFor(sessionId),
     adapter: context.deps.adapter,
-    forget: () => forgetStructuredAgentSession(context, sessionId),
+    forget: async () => {
+      await forgetStructuredAgentSession(context, sessionId)
+      context.deps.adapter.acknowledgeSessionRelease?.(sessionId)
+    },
     discardSink: () => context.runtimeState.discardEventSink(sessionId),
-    releaseLease: () =>
-      releaseStoredStructuredAgentSessionOwner({
+    settleWork: async () => {
+      const settled = await settleStructuredAgentSessionDeadGeneration({
+        journal: session.journal,
+        sessionId,
+        fence: session.fence,
+        settlementId: `expected-close:${sessionId}:${session.fence}:${session.acquisitionGeneration ?? 'unknown'}`,
+        pendingSubmissionReason: 'provider_closed_before_acknowledgement',
+        verdict: { state: 'interrupted', completedAt: context.now() },
+        showUnexpectedExitOutcome: false,
+        onError: (id, error) => context.deps.onEventSinkError?.({ sessionId: id, error })
+      })
+      if (!settled) {
+        throw new Error('dead generation work settlement failed')
+      }
+    },
+    releaseLease: async () => {
+      await releaseStoredStructuredAgentSessionOwner({
         store: context.deps.store,
         sessionId,
-        hasProviderChild: hasProviderChild(context, sessionId),
+        hasProviderChild: ownedProviderChild,
+        expectedFence: session.fence,
         now: context.now()
       })
+      session.hasProviderChild = false
+      context.forgetStatus(sessionId)
+    }
   }
   await evictStructuredAgentSession(
     eviction,
     withStructuredAgentSessionEvictionDeadline(STRUCTURED_AGENT_SESSION_EVICTION_STEPS)
   )
+}
+
+/** Stops every provider child owned by this host while keeping failed evictions reachable. */
+export async function evictOwnedStructuredAgentSessions(
+  context: StructuredAgentSessionLifetimeContext,
+  retainOnFailure: Set<string>
+): Promise<void> {
+  const ownedSessionIds = [...context.sessions]
+    .filter(([, session]) => session.hasProviderChild)
+    .map(([sessionId]) => sessionId)
+  const results = await Promise.allSettled(
+    ownedSessionIds.map((sessionId) => evictHeldStructuredAgentSession(context, sessionId))
+  )
+  const failures: unknown[] = []
+  results.forEach((result, index) => {
+    if (result.status === 'rejected') {
+      retainOnFailure.add(ownedSessionIds[index]!)
+      failures.push(result.reason)
+    }
+  })
+  if (failures.length > 0) {
+    throw new AggregateError(failures, 'structured agent-session child eviction failed')
+  }
 }
 
 /** The first hold on a childless session: reconcile the lease, settle recovery, then attach. */

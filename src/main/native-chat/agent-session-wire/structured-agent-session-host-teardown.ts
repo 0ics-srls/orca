@@ -34,6 +34,7 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
   }
   handoffs: { stopTuiHistoryCatchup: () => void; drain: () => Promise<void> }
   tasks: { drainAttaches: () => Promise<void> }
+  evictOwnedSessions: () => Promise<void>
 }): StructuredAgentSessionTeardownPhase[] {
   return [
     { name: 'dispose-holds', run: () => collaborators.holds.dispose() },
@@ -44,6 +45,7 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
       run: () => withTimeout(collaborators.handoffs.drain(), HANDOFF_DRAIN_TIMEOUT_MS, undefined)
     },
     { name: 'drain-attaches', run: () => collaborators.tasks.drainAttaches() },
+    { name: 'evict-owned-sessions', run: () => collaborators.evictOwnedSessions() },
     { name: 'flush-event-sinks', run: () => collaborators.runtimeState.flushAllEventSinks() }
   ]
 }
@@ -51,6 +53,8 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
 export async function tearDownStructuredAgentSessionHost(input: {
   phases: readonly StructuredAgentSessionTeardownPhase[]
   sessions: Map<string, StructuredAgentSessionHostSession>
+  retainSessionIds?: ReadonlySet<string>
+  acknowledgeSessionRelease?: (sessionId: string) => void
 }): Promise<void> {
   const failures: unknown[] = []
   for (const phase of input.phases) {
@@ -61,7 +65,9 @@ export async function tearDownStructuredAgentSessionHost(input: {
     }
   }
 
-  const entries = [...input.sessions.entries()]
+  const entries = [...input.sessions.entries()].filter(
+    ([sessionId]) => !input.retainSessionIds?.has(sessionId)
+  )
   // `allSettled`, so one rejected close cannot skip the others.
   const closed = await Promise.allSettled(entries.map(([, session]) => session.journal.close()))
   closed.forEach((result, index) => {
@@ -71,6 +77,7 @@ export async function tearDownStructuredAgentSessionHost(input: {
       // which is what makes a later close a real retry rather than a no-op.
       if (sessionId !== undefined) {
         input.sessions.delete(sessionId)
+        input.acknowledgeSessionRelease?.(sessionId)
       }
       return
     }

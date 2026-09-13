@@ -20,6 +20,7 @@ import type { StructuredAgentSessionAdapter } from './structured-agent-session-a
 import type { StructuredAgentSessionEventSink } from './structured-agent-session-event-sink'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
 import type { StructuredAgentSessionHandoffTransport } from './structured-agent-session-handoff-types'
+import type { StructuredAgentSessionStatusSink } from './structured-agent-session-status-feed'
 import {
   HOST_TEST_NOW as NOW,
   HOST_TEST_SESSION as SESSION,
@@ -43,6 +44,7 @@ let closeSession: Mock<NonNullable<StructuredAgentSessionAdapter['closeSession']
 let dispatch: Mock<StructuredAgentSessionAdapter['dispatch']>
 let sink: StructuredAgentSessionEventSink | null
 let hostErrors: unknown[]
+let statusSink: StructuredAgentSessionStatusSink
 function adapter(): StructuredAgentSessionAdapter {
   return {
     acquire,
@@ -68,6 +70,7 @@ function openHost(
     releaseGraceMs: GRACE_MS,
     now: () => NOW,
     onEventSinkError: ({ error }) => hostErrors.push(error),
+    statusSink,
     ...(probeOwner ? { probeOwner: probeOwner as never } : {}),
     ...(handoffTransport ? { handoffTransport } : {})
   })
@@ -124,6 +127,7 @@ beforeEach(async () => {
   resetHostTestOperationIds()
   sink = null
   hostErrors = []
+  statusSink = { publish: vi.fn(), forget: vi.fn() }
   let generation = 0
   acquire = vi.fn(async ({ fence, spawnToken, events }) => {
     sink = events ?? null
@@ -235,6 +239,35 @@ describe('a chat that closes', () => {
 
     await expect(settlement).resolves.toBeUndefined()
   })
+
+  it('retries teardown after journal close loses its result', async () => {
+    await attach()
+    const session = host['sessions'].get(SESSION)
+    expect(session).toBeDefined()
+    const closeJournal = session!.journal.close.bind(session!.journal)
+    vi.spyOn(session!.journal, 'close')
+      .mockImplementationOnce(async () => {
+        await closeJournal()
+        throw new Error('journal close result lost')
+      })
+      .mockImplementation(closeJournal)
+
+    await expect(host.close(SESSION)).rejects.toMatchObject({
+      step: 'forget-session',
+      cause: expect.objectContaining({ message: 'journal close result lost' })
+    })
+    expect(host.hasSession(SESSION)).toBe(true)
+    expect(host['sessions'].get(SESSION)?.hasProviderChild).toBe(false)
+    expect(store.getRecord(SESSION)?.lease).toMatchObject({
+      claimStatus: 'released',
+      ownerProcess: null
+    })
+    expect(statusSink.forget).toHaveBeenCalledWith(SESSION)
+
+    await expect(host.close(SESSION)).resolves.toBeUndefined()
+    expect(host.hasSession(SESSION)).toBe(false)
+    expect(closeSession).toHaveBeenCalledOnce()
+  })
 })
 
 describe('a session with a turn in flight', () => {
@@ -258,6 +291,35 @@ describe('a session with a turn in flight', () => {
 })
 
 describe('startup', () => {
+  it('settles an idle absent owner without chat pollution and resumes the same provider identity', async () => {
+    await attach()
+    const beforeRestart = store.getRecord(SESSION)
+    host['runtimeState'].stopLeaseRenewal()
+    host['holds'].dispose()
+    await host['sessions'].get(SESSION)?.journal.close()
+    host['sessions'].clear()
+
+    store = await AgentSessionRecordStore.open({ directory: join(root, 'store'), hostId: 'local' })
+    openHost(async () => ({ outcome: 'pid-absent' }))
+    await host.restoreReadableSessions()
+
+    const restored = host.history({ sessionId: SESSION, direction: 'tail' })
+    expect(restored.ok && restored.page.items.some((item) => item.body.kind === 'status')).toBe(
+      false
+    )
+    expect(store.getRecord(SESSION)?.lease).toMatchObject({
+      claimStatus: 'released',
+      ownerProcess: null,
+      settlementRetryRequired: undefined
+    })
+
+    await host.hold(SESSION, SURFACE)
+    expect(store.getRecord(SESSION)?.providerHandleChain.at(-1)?.handle).toEqual(
+      beforeRestart?.providerHandleChain.at(-1)?.handle
+    )
+    expect(store.getRecord(SESSION)?.providerHandleChain.at(-1)?.origin).toBe('resumed')
+  })
+
   it('restores a session for reading without spawning a provider child', async () => {
     await attach()
     await reboot()
@@ -377,7 +439,7 @@ describe('an unexpected provider exit', () => {
         history.page.items.some(
           (item) => item.body.kind === 'status' && item.body.text.includes('journal sink failure')
         )
-    ).toBe(true)
+    ).toBe(false)
 
     // Replace the failed cached sink so suite cleanup can drain the host.
     ;(
@@ -528,10 +590,9 @@ describe('an unexpected provider exit', () => {
     expect(
       history.ok &&
         history.page.items.some(
-          (item) =>
-            item.body.kind === 'status' && item.body.text === 'Provider exited: provider exited'
+          (item) => item.body.kind === 'status' && item.body.text.includes('provider exited')
         )
-    ).toBe(true)
+    ).toBe(false)
 
     dispatch.mockResolvedValueOnce({
       state: 'accepted',
@@ -547,6 +608,8 @@ describe('an unexpected provider exit', () => {
   it('latches a failed exit settlement and blocks attach until the terminal batch is written', async () => {
     await attach()
     await host.hold(SESSION, SURFACE)
+    emitTurnLifecycle('running', 1)
+    await host.flushStreamedEvents(SESSION)
     const runtimeState = (
       host as unknown as {
         runtimeState: { lifecycleBarrier: () => Promise<{ ok: false; error: Error }> }

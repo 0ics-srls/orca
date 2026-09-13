@@ -5,10 +5,7 @@ import type {
   StructuredAgentSessionHostSession
 } from './structured-agent-session-host-types'
 import { turnVerdictFromDeathEvidence } from './structured-agent-session-stale-turn-verdict'
-import {
-  retryUnexpectedExitSettlement,
-  type StructuredAgentSessionUnexpectedExitContext
-} from './structured-agent-session-unexpected-exit'
+import { settleStructuredAgentSessionDeadGeneration } from './structured-agent-session-dead-generation-settlement'
 
 export async function retryPendingStructuredAgentSessionSettlement(input: {
   deps: StructuredAgentSessionHostDeps
@@ -67,23 +64,20 @@ export async function retryLoadedStructuredAgentSessionSettlement(input: {
   }
   const retrySession = input.session
   retrySession.fence = record.lease.runtimeFence
-  const context: Pick<StructuredAgentSessionUnexpectedExitContext, 'onBarrierError'> = {
-    onBarrierError: (id, error) => input.deps.onEventSinkError?.({ sessionId: id, error })
-  }
-  const ok = await retryUnexpectedExitSettlement({
-    context,
-    event: {
-      type: 'ended',
-      sessionId: input.sessionId,
-      reason: record.lease.deathEvidence?.detail ?? 'provider exited',
-      cause: 'unexpected-exit',
-      fence: record.lease.runtimeFence,
-      acquisitionGeneration: retrySession.acquisitionGeneration ?? 'recovery'
-    },
-    session: retrySession,
-    stableSettlementId: record.lease.settlementRetryId,
+  const onError = (id: string, error: unknown): void =>
+    input.deps.onEventSinkError?.({ sessionId: id, error })
+  const ok = await settleStructuredAgentSessionDeadGeneration({
+    journal: retrySession.journal,
+    sessionId: input.sessionId,
+    fence: retrySession.fence,
+    settlementId: record.lease.settlementRetryId,
+    pendingSubmissionReason: 'provider_exited_before_acknowledgement',
     // Only an observed exit earns an end time; a probe-proven death never saw one.
-    verdict: turnVerdictFromDeathEvidence(record.lease.deathEvidence)
+    verdict: turnVerdictFromDeathEvidence(record.lease.deathEvidence),
+    showUnexpectedExitOutcome: record.lease.settlementRetryId.startsWith(
+      `provider-exit:${input.sessionId}:`
+    ),
+    onError
   })
   if (!ok) {
     return false
