@@ -216,10 +216,7 @@ describe('daemon-init: runRestartDaemon (7-step sequence)', () => {
       const mod = await importFresh()
       await mod.initDaemonPtyProvider(undefined, { macosLoginSessionWatch: true })
 
-      const launcher = spawnerInstances[0].launcher as (
-        socketPath: string,
-        tokenPath: string
-      ) => Promise<{ mode?: string; shutdown(): Promise<void> }>
+      const launcher = spawnerInstances[0].launcher
       getMacDaemonTccAttributionHealthMock.mockResolvedValueOnce('severed')
       getDaemonLaunchIdentityMock.mockReturnValueOnce(identity)
       // Why: live sessions must veto replacement — the Settings surface owns the remedy instead.

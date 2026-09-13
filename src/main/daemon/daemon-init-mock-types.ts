@@ -1,4 +1,5 @@
 import type { Mock } from 'vitest'
+import type { DaemonLauncher } from './daemon-spawner'
 
 /** Fake DaemonSpawner instance every mocked `new DaemonSpawner()` records. */
 export type MockSpawner = {
@@ -7,7 +8,7 @@ export type MockSpawner = {
   resetRespawnWindow: Mock
   shutdown: Mock
   getHandle: Mock
-  launcher: unknown
+  launcher: DaemonLauncher
 }
 
 /** Fake DaemonPtyAdapter instance every mocked `new DaemonPtyAdapter()` records. */
@@ -40,7 +41,7 @@ export type MockAdapter = {
 
 export type MockSpawnerConstructor = new (opts: {
   runtimeDir: string
-  launcher: unknown
+  launcher: DaemonLauncher
 }) => MockSpawner
 
 export type MockAdapterConstructor = new (opts: MockAdapter['options']) => MockAdapter

@@ -2,27 +2,27 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const {
   inProcessProvider,
-  installedProvider,
   degradedInstances,
   isDaemonRestartInFlightMock,
   getDaemonProviderMock,
+  getLocalPtyProviderMock,
   replaceDaemonProviderMock,
   rebindLocalProviderListenersMock,
   checkDaemonHealthMock,
   getMacDaemonTccAttributionHealthMock
 } = vi.hoisted(() => {
   const inProcessProvider = { kind: 'in-process' }
-  const installedProvider = { kind: 'installed-daemon-adapter' }
+  const degradedInstances: {
+    opts: Record<string, unknown>
+    discover: ReturnType<typeof vi.fn>
+    dispose: ReturnType<typeof vi.fn>
+  }[] = []
   return {
     inProcessProvider,
-    installedProvider,
-    degradedInstances: [] as {
-      opts: Record<string, unknown>
-      discover: ReturnType<typeof vi.fn>
-      dispose: ReturnType<typeof vi.fn>
-    }[],
+    degradedInstances,
     isDaemonRestartInFlightMock: vi.fn(() => false),
-    getDaemonProviderMock: vi.fn((): unknown => installedProvider),
+    getDaemonProviderMock: vi.fn<() => unknown>(),
+    getLocalPtyProviderMock: vi.fn<() => unknown>(),
     replaceDaemonProviderMock: vi.fn(),
     rebindLocalProviderListenersMock: vi.fn(),
     checkDaemonHealthMock: vi.fn(async () => 'healthy'),
@@ -34,7 +34,7 @@ vi.mock('../ipc/pty', () => ({
   getInProcessPtyProvider: () => inProcessProvider,
   // Why the installed provider here: this is what the real registry answers after install, and
   // what the degraded fallback must never be.
-  getLocalPtyProvider: () => installedProvider,
+  getLocalPtyProvider: getLocalPtyProviderMock,
   rebindLocalProviderListeners: rebindLocalProviderListenersMock
 }))
 vi.mock('./daemon-restart-state', () => ({ isDaemonRestartInFlight: isDaemonRestartInFlightMock }))
@@ -70,15 +70,19 @@ import {
   createSeveredDaemonRecoveryProbe,
   degradeInstalledProviderForSeveredDaemon
 } from './daemon-severed-attribution-degrade'
-import type { DaemonPtyAdapter } from './daemon-pty-adapter'
+import { DaemonPtyAdapter } from './daemon-pty-adapter'
 
-const installedAdapter = installedProvider as unknown as DaemonPtyAdapter
+const installedAdapter = new DaemonPtyAdapter({
+  socketPath: '/runtime/daemon.sock',
+  tokenPath: '/runtime/token'
+})
 
 beforeEach(() => {
   degradedInstances.length = 0
   vi.clearAllMocks()
   isDaemonRestartInFlightMock.mockReturnValue(false)
-  getDaemonProviderMock.mockReturnValue(installedProvider)
+  getDaemonProviderMock.mockReturnValue(installedAdapter)
+  getLocalPtyProviderMock.mockReturnValue(installedAdapter)
   checkDaemonHealthMock.mockResolvedValue('healthy')
   getMacDaemonTccAttributionHealthMock.mockResolvedValue('intact')
 })
@@ -106,8 +110,8 @@ describe('degradeInstalledProviderForSeveredDaemon', () => {
     expect(degradedInstances).toHaveLength(1)
     const [degraded] = degradedInstances
     expect(degraded.opts.fallback).toBe(inProcessProvider)
-    expect(degraded.opts.fallback).not.toBe(installedProvider)
-    expect(degraded.opts.current).toBe(installedProvider)
+    expect(degraded.opts.fallback).not.toBe(installedAdapter)
+    expect(degraded.opts.current).toBe(installedAdapter)
     expect(degraded.opts.legacy).toEqual([])
     expect(replaceDaemonProviderMock).toHaveBeenCalledTimes(1)
     expect(rebindLocalProviderListenersMock).toHaveBeenCalledTimes(1)

@@ -359,8 +359,11 @@ describe('daemon-init: runRestartDaemon (7-step sequence)', () => {
     getMacDaemonTccAttributionHealthMock.mockResolvedValue('severed')
 
     const { DegradedDaemonPtyProvider } = await import('./degraded-daemon-pty-provider')
-    const provider = mod.getDaemonProvider() as InstanceType<typeof DegradedDaemonPtyProvider>
+    const provider = mod.getDaemonProvider()
     expect(provider).toBeInstanceOf(DegradedDaemonPtyProvider)
+    if (!(provider instanceof DegradedDaemonPtyProvider)) {
+      throw new Error('Expected degraded daemon provider')
+    }
 
     await expect(provider.recoverFreshSpawnRouting()).resolves.toBe(false)
     expect(provider.routesFreshSpawnsToLocalProvider).toBe(true)

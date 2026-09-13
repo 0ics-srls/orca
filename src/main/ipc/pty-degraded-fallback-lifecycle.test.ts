@@ -11,6 +11,24 @@ import {
 import { DegradedDaemonPtyProvider } from '../daemon/degraded-daemon-pty-provider'
 import type { DaemonPtyAdapter } from '../daemon/daemon-pty-adapter'
 
+function isDaemonAdapter(
+  provider: ReturnType<typeof getLocalPtyProvider>
+): provider is DaemonPtyAdapter {
+  return typeof provider.onWriteUnavailable === 'function'
+}
+
+function getSpawnResultId(result: unknown): string {
+  if (
+    typeof result !== 'object' ||
+    result === null ||
+    !('id' in result) ||
+    typeof result.id !== 'string'
+  ) {
+    throw new Error('Expected PTY spawn result')
+  }
+  return result.id
+}
+
 vi.mock('electron', () => import('./pty-ipc-mock-registry').then((m) => m.electronModuleMock()))
 vi.mock('fs', () => import('./pty-ipc-mock-registry').then((m) => m.fsModuleMock()))
 vi.mock('node-pty', () => import('./pty-ipc-mock-registry').then((m) => m.nodePtyModuleMock()))
@@ -61,10 +79,14 @@ describe('configured in-process fallback lifecycle', () => {
 
   function setup() {
     const daemon = installObservableDaemonTestProvider()
-    getLocalPtyProvider().onWriteUnavailable = vi.fn(() => () => {})
+    const current = getLocalPtyProvider()
+    current.onWriteUnavailable = vi.fn(() => () => {})
+    if (!isDaemonAdapter(current)) {
+      throw new Error('Expected daemon adapter test double')
+    }
     const fallback = getInProcessPtyProvider()
     const provider = new DegradedDaemonPtyProvider({
-      current: getLocalPtyProvider() as DaemonPtyAdapter,
+      current,
       legacy: [],
       fallback
     })
@@ -88,9 +110,7 @@ describe('configured in-process fallback lifecycle', () => {
   it('delivers local and daemon output and natural exits exactly once', async () => {
     const { daemon, provider, runtime, process } = setup()
     try {
-      const result = (await handlers.get('pty:spawn')!(null, { cols: 80, rows: 24 })) as {
-        id: string
-      }
+      const id = getSpawnResultId(await handlers.get('pty:spawn')!(null, { cols: 80, rows: 24 }))
       process.emitData('abc')
       expect(runtime.onPtyData).toHaveBeenCalledTimes(1)
       process.emitExit()
@@ -101,7 +121,7 @@ describe('configured in-process fallback lifecycle', () => {
       expect(runtime.onPtyExit).toHaveBeenCalledTimes(2)
       expect(mainWindow.webContents.send).toHaveBeenCalledWith(
         'pty:exit',
-        expect.objectContaining({ id: result.id })
+        expect.objectContaining({ id })
       )
     } finally {
       provider.disposeProviderOnly()
@@ -111,13 +131,11 @@ describe('configured in-process fallback lifecycle', () => {
   it('destroys fallback handles on app quit without stopping daemon sessions', async () => {
     const { daemon, fallback, provider, process } = setup()
     try {
-      const result = (await handlers.get('pty:spawn')!(null, { cols: 80, rows: 24 })) as {
-        id: string
-      }
+      const id = getSpawnResultId(await handlers.get('pty:spawn')!(null, { cols: 80, rows: 24 }))
       const kill = process.proc.kill
       killAllPty()
       expect(kill).toHaveBeenCalledOnce()
-      expect(fallback.hasPty(result.id)).toBe(false)
+      expect(fallback.hasPty(id)).toBe(false)
       expect(daemon.shutdown).not.toHaveBeenCalled()
     } finally {
       provider.disposeProviderOnly()
@@ -131,8 +149,8 @@ describe('configured in-process fallback lifecycle', () => {
       const kill = process.proc.kill
       const reload = () => {
         for (const [name, callback] of mainWindow.webContents.on.mock.calls) {
-          if (name === 'did-finish-load') {
-            ;(callback as () => void)()
+          if (name === 'did-finish-load' && typeof callback === 'function') {
+            callback()
           }
         }
       }

@@ -1,11 +1,11 @@
-import { describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
 import { DegradedDaemonFreshSpawnRouter } from './degraded-daemon-fresh-spawn-routing'
-import type { IPtyProvider } from '../providers/types'
+import { createPtyProviderTestDouble } from '../providers/pty-provider-test-double'
 
 describe('degraded fresh-spawn transitions', () => {
   function setup(probe: () => Promise<boolean>) {
-    const current = { spawn: vi.fn(async () => ({ id: 'daemon' })) } as unknown as IPtyProvider
-    const fallback = { spawn: vi.fn(async () => ({ id: 'local' })) } as unknown as IPtyProvider
+    const current = createPtyProviderTestDouble('daemon')
+    const fallback = createPtyProviderTestDouble('local')
     return {
       current,
       fallback,
