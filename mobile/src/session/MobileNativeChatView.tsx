@@ -210,6 +210,7 @@ export function MobileNativeChatView({
     listRef,
     showJumpToTail,
     pinToTail,
+    pinToTailAfterContentResize,
     jumpToTail,
     beginUserScroll,
     endUserDrag,
@@ -310,7 +311,7 @@ export function MobileNativeChatView({
               onMomentumScrollBegin={beginMomentum}
               onMomentumScrollEnd={endMomentum}
               scrollEventThrottle={32}
-              onContentSizeChange={pinToTail}
+              onContentSizeChange={pinToTailAfterContentResize}
               onLayout={pinToTail}
               ListHeaderComponent={
                 hasMore ? (

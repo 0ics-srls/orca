@@ -5,13 +5,14 @@ import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
 import { MobileNativeChatView } from './MobileNativeChatView'
 
 const scrollToEnd = vi.hoisted(() => vi.fn())
+const scrollToOffset = vi.hoisted(() => vi.fn())
 
 vi.mock('react-native', async () => {
   const React = await import('react')
   return {
     ActivityIndicator: 'ActivityIndicator',
     FlatList: React.forwardRef((props, ref) => {
-      React.useImperativeHandle(ref, () => ({ scrollToEnd }), [])
+      React.useImperativeHandle(ref, () => ({ scrollToEnd, scrollToOffset }), [])
       return React.createElement('FlatList', props)
     }),
     Pressable: 'Pressable',
@@ -126,6 +127,7 @@ describe('MobileNativeChatView', () => {
     act(() => renderer?.unmount())
     renderer = null
     scrollToEnd.mockReset()
+    scrollToOffset.mockReset()
     vi.unstubAllGlobals()
   })
 
@@ -263,10 +265,10 @@ describe('MobileNativeChatView', () => {
       await update({ folded, streaming: 'Streaming output' })
       act(() => list().props.onContentSizeChange(320, 900))
 
-      expect(scrollToEnd).toHaveBeenCalledOnce()
-      expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+      expect(scrollToOffset).toHaveBeenCalledOnce()
+      expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 900 })
       await act(async () => vi.advanceTimersByTime(60))
-      expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToOffset).toHaveBeenCalledOnce()
     } finally {
       vi.useRealTimers()
     }
@@ -292,6 +294,7 @@ describe('MobileNativeChatView', () => {
 
     expect(onLoadEarlier).toHaveBeenCalledOnce()
     expect(scrollToEnd).not.toHaveBeenCalled()
+    expect(scrollToOffset).not.toHaveBeenCalled()
   })
 
   it('does not treat programmatic scroll metrics as user intent', async () => {
@@ -310,8 +313,8 @@ describe('MobileNativeChatView', () => {
       list().props.onContentSizeChange(320, 1_300)
     })
 
-    expect(scrollToEnd).toHaveBeenCalledOnce()
-    expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+    expect(scrollToOffset).toHaveBeenCalledOnce()
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 1_300 })
     expect(
       renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
     ).toHaveLength(0)
@@ -351,6 +354,7 @@ describe('MobileNativeChatView', () => {
       act(() => list().props.onContentSizeChange(320, 1_300))
 
       expect(scrollToEnd).not.toHaveBeenCalled()
+      expect(scrollToOffset).not.toHaveBeenCalled()
 
       act(() => {
         list().props.onMomentumScrollEnd?.({
@@ -363,6 +367,7 @@ describe('MobileNativeChatView', () => {
         list().props.onContentSizeChange(320, 1_350)
       })
       expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 1_350 })
     } finally {
       vi.useRealTimers()
     }
@@ -401,6 +406,7 @@ describe('MobileNativeChatView', () => {
     })
 
     expect(scrollToEnd).not.toHaveBeenCalled()
+    expect(scrollToOffset).not.toHaveBeenCalled()
     expect(
       renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
     ).toHaveLength(1)
@@ -434,9 +440,57 @@ describe('MobileNativeChatView', () => {
       act(() => list().props.onContentSizeChange(320, 1_250))
 
       expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 1_250 })
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it('repins when content grows between tail release and drag settle', async () => {
+    vi.useFakeTimers()
+    try {
+      const folded = [assistantTurn('a1', 'Latest')]
+      await render({ folded })
+      scrollToEnd.mockClear()
+
+      act(() => {
+        list().props.onScrollBeginDrag?.({})
+        list().props.onScrollEndDrag?.({
+          nativeEvent: {
+            contentOffset: { y: 700 },
+            contentSize: { height: 1_200 },
+            layoutMeasurement: { height: 500 }
+          }
+        })
+        list().props.onContentSizeChange(320, 1_250)
+      })
+
+      expect(scrollToEnd).not.toHaveBeenCalled()
+      expect(scrollToOffset).not.toHaveBeenCalled()
+
+      await act(async () => vi.runOnlyPendingTimers())
+
+      expect(scrollToEnd).toHaveBeenCalledOnce()
+      expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
+      expect(
+        renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
+      ).toHaveLength(0)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('uses measured content height when the first message fills an empty transcript', async () => {
+    await render()
+
+    await pressSend()
+    expect(scrollToEnd).not.toHaveBeenCalled()
+
+    await update({ folded: [assistantTurn('a1', 'First response')] })
+    act(() => list().props.onContentSizeChange(320, 1_200))
+
+    expect(scrollToOffset).toHaveBeenCalledOnce()
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 1_200 })
   })
 
   it('keeps a history load detached after its triggering drag settles', async () => {
@@ -469,6 +523,7 @@ describe('MobileNativeChatView', () => {
 
       expect(onLoadEarlier).toHaveBeenCalledOnce()
       expect(scrollToEnd).not.toHaveBeenCalled()
+      expect(scrollToOffset).not.toHaveBeenCalled()
       expect(
         renderer!.root.findAll((node) => node.props.accessibilityLabel === 'Scroll to latest')
       ).toHaveLength(1)
@@ -510,7 +565,8 @@ describe('MobileNativeChatView', () => {
     expect(scrollToEnd).toHaveBeenLastCalledWith({ animated: false })
 
     act(() => list().props.onContentSizeChange(320, 1_300))
-    expect(scrollToEnd).toHaveBeenCalledTimes(2)
+    expect(scrollToEnd).toHaveBeenCalledOnce()
+    expect(scrollToOffset).toHaveBeenLastCalledWith({ animated: false, offset: 1_300 })
   })
 
   it('repins after a keyboard-driven viewport layout only while following', async () => {

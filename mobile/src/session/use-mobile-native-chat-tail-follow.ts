@@ -14,8 +14,10 @@ export type MobileNativeChatTailFollow<TItem> = {
   listRef: RefObject<FlatList<TItem> | null>
   /** Render flag for the jump-to-latest control. */
   showJumpToTail: boolean
-  /** Passive maintenance: re-pin after the content or viewport resizes. */
+  /** Passive maintenance: re-pin after the viewport resizes. */
   pinToTail: () => void
+  /** Content-size maintenance using the list's authoritative measured height. */
+  pinToTailAfterContentResize: (_width: number, height: number) => void
   /** Explicit jump — send, or the jump-to-latest control. Resumes following. */
   jumpToTail: () => void
   beginUserScroll: () => void
@@ -78,6 +80,16 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     listRef.current?.scrollToEnd({ animated: false })
   }, [hasItems])
 
+  const pinToTailAfterContentResize = useCallback(
+    (_width: number, height: number) => {
+      if (!followingRef.current || !hasItems) {
+        return
+      }
+      listRef.current?.scrollToOffset({ animated: false, offset: height })
+    },
+    [hasItems]
+  )
+
   const clearUserScrollSettle = useCallback(() => {
     if (userScrollSettleFrameRef.current !== null) {
       cancelAnimationFrame(userScrollSettleFrameRef.current)
@@ -113,8 +125,11 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
       userScrollActiveRef.current = false
       setAtTail(finishedAtTail)
       setFollowing(finishedAtTail)
+      if (finishedAtTail) {
+        pinToTail()
+      }
     },
-    [clearUserScrollSettle, setAtTail, setFollowing]
+    [clearUserScrollSettle, pinToTail, setAtTail, setFollowing]
   )
 
   const endUserDrag = useCallback(
@@ -157,6 +172,7 @@ export function useMobileNativeChatTailFollow<TItem>(args: {
     listRef,
     showJumpToTail: !following && !atTail,
     pinToTail,
+    pinToTailAfterContentResize,
     jumpToTail,
     beginUserScroll,
     endUserDrag,
