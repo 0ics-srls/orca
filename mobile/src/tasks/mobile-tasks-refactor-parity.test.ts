@@ -44,7 +44,7 @@ describe('Mobile Tasks refactor parity', () => {
 
   it('preserves every moved top-level declaration', () => {
     const declarations = readMobileTasksDeclarationSignatures()
-    expect(declarations).toHaveLength(193)
+    expect(declarations).toHaveLength(194)
     expect(hash(declarations)).toBe(MAIN_REBASED_DECLARATIONS)
   })
 
