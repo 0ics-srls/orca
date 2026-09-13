@@ -6,6 +6,7 @@ import {
   type StructuredAgentLaunchOptions
 } from '@/lib/structured-agent-session-launch'
 import type { StructuredPromptDeliveryResult } from '@/lib/structured-agent-session-launch-prompt'
+import { retireStructuredAgentSessionSurface } from '@/lib/structured-agent-session-surface-retirement'
 import type { ActivateAndRevealResult } from '@/lib/worktree-activation'
 
 export type StructuredAgentLegacyFallbackResult = {
@@ -42,19 +43,53 @@ export type StructuredAgentLaunchDeadlineClock = {
   clearTimeout: (handle: unknown) => void
 }
 
+const DEFAULT_DEADLINE_CLOCK: StructuredAgentLaunchDeadlineClock = {
+  setTimeout: (callback, delayMs) => {
+    const handle = setTimeout(callback, delayMs)
+    return () => clearTimeout(handle)
+  },
+  clearTimeout: (handle) => {
+    if (typeof handle === 'function') {
+      handle()
+    }
+  }
+}
+
 export type StructuredAgentLaunchHooks = {
   /** What this flow did before structured chat existed: activate with a startup payload, set the
    *  first-message rename flag, run trust preflight. Runs at most once after refusal or deadline.
    *  Resume has no legacy equivalent, so a refusal without this hook settles as `failed`. */
   legacyFallback?: () => Promise<StructuredAgentLegacyFallbackResult>
   onStructuredReady?: (sessionId: string) => void
-  /** Removes a structured tab that was published after the deadline fallback won the surface. */
-  onStructuredLate?: (sessionId: string) => void
   /** Abort the moment the caller abandons the launch. The loop cancels on the event, not only by
    *  polling after awaits, so a staged prompt is discarded before it can reach the provider. */
   signal?: AbortSignal
   deadlineMs?: number
   clock?: StructuredAgentLaunchDeadlineClock
+}
+
+export function structuredAgentLegacyFallbackFromSettlement(
+  settlement: StructuredAgentLaunchSettlement | null | undefined
+): StructuredAgentLegacyFallbackResult | null {
+  if (!settlement) {
+    return null
+  }
+  switch (settlement.kind) {
+    case 'refused-then-legacy':
+    case 'deadline-then-legacy':
+      return {
+        ...(settlement.activation !== undefined ? { activation: settlement.activation } : {}),
+        primaryTabId: settlement.primaryTabId,
+        ...(settlement.promptDeliveryResult
+          ? { promptDeliveryResult: settlement.promptDeliveryResult }
+          : {})
+      }
+    case 'structured':
+    case 'cancelled':
+    case 'visibility-unknown':
+    case 'failed':
+      return null
+  }
 }
 
 /**
@@ -105,10 +140,7 @@ export async function settleStructuredAgentLaunch(
     sessionId: launch.sessionId,
     ...(fallback.result ? { fallback: fallback.result } : {})
   })
-  const clock = hooks.clock ?? {
-    setTimeout: (callback: () => void, delayMs: number) => setTimeout(callback, delayMs),
-    clearTimeout: (handle: unknown) => clearTimeout(handle as ReturnType<typeof setTimeout>)
-  }
+  const clock = hooks.clock ?? DEFAULT_DEADLINE_CLOCK
   let deadlineHandle: unknown
   const deadline = new Promise<'deadline'>((resolve) => {
     deadlineHandle = clock.setTimeout(
@@ -137,14 +169,14 @@ export async function settleStructuredAgentLaunch(
         }
         fallback.result = await legacyFallback()
       }, 'deadline')
-      if (isCancelled()) {
-        return cancelled()
-      }
-      if (ran && fallback.result) {
+      if (ran) {
         void launch.launchResult.then(
-          (receipt) => hooks.onStructuredLate?.(receipt.sessionId),
+          (receipt) => retireStructuredAgentSessionSurface(worktreeId, receipt.sessionId),
           () => undefined
         )
+      }
+      if (isCancelled()) {
+        return cancelled()
       }
       return ran && fallback.result
         ? { kind: 'deadline-then-legacy', ...fallback.result }

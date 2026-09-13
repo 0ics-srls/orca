@@ -219,30 +219,33 @@ describe('forkAgentSessionFromPane', () => {
     expect(mockWriteClipboardText).not.toHaveBeenCalled()
   })
 
-  it('copies context when the refusal fallback opened no terminal tab', async () => {
-    store.agentStatusByPaneKey = {
-      [`tab-1:${LEAF_ID}`]: { agentType: 'codex' }
+  it.each(['refused-then-legacy', 'deadline-then-legacy'] as const)(
+    'copies context when the %s fallback opened no terminal tab',
+    async (kind) => {
+      store.agentStatusByPaneKey = {
+        [`tab-1:${LEAF_ID}`]: { agentType: 'codex' }
+      }
+      mockLaunchAgentInNewTab.mockReturnValue({
+        tabId: null,
+        startupPlan: {},
+        pasteDraftAfterLaunch: false,
+        structuredSettlement: Promise.resolve({ kind, primaryTabId: null })
+      })
+      const { forkAgentSessionFromPane } = await import('./terminal-agent-session-fork')
+
+      await forkAgentSessionFromPane({
+        pane: makePane('Assistant: current implementation notes'),
+        tabId: 'tab-1',
+        worktreeId: 'wt-1',
+        groupId: null
+      })
+
+      expect(mockToast.success).not.toHaveBeenCalled()
+      expect(mockWriteClipboardText).toHaveBeenCalledWith(
+        expect.stringContaining('Assistant: current implementation notes')
+      )
     }
-    mockLaunchAgentInNewTab.mockReturnValue({
-      tabId: null,
-      startupPlan: {},
-      pasteDraftAfterLaunch: false,
-      structuredSettlement: Promise.resolve({ kind: 'refused-then-legacy', primaryTabId: null })
-    })
-    const { forkAgentSessionFromPane } = await import('./terminal-agent-session-fork')
-
-    await forkAgentSessionFromPane({
-      pane: makePane('Assistant: current implementation notes'),
-      tabId: 'tab-1',
-      worktreeId: 'wt-1',
-      groupId: null
-    })
-
-    expect(mockToast.success).not.toHaveBeenCalled()
-    expect(mockWriteClipboardText).toHaveBeenCalledWith(
-      expect.stringContaining('Assistant: current implementation notes')
-    )
-  })
+  )
 
   it.each([
     ['failed', { kind: 'failed', error: new Error('boom') }, true],

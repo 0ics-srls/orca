@@ -51,7 +51,14 @@ function indexableModules() {
     const source = readFileSync(path.join(RPC_DIR, file), 'utf8')
     for (const [, specifier] of source.matchAll(/from\s+'(\.[^']+)'/g)) {
       const resolved = `${path.resolve(path.dirname(path.join(RPC_DIR, file)), specifier)}.ts`
-      if (resolved.startsWith(`${SHARED_DIR}${path.sep}`) && existsSync(resolved)) {
+      // Never re-add the generator's own output: a module under RPC_DIR may import the
+      // catalog for a type-only contract, and bundling a stale catalog makes regeneration
+      // crash in exactly the state that requires regenerating.
+      if (
+        resolved !== OUTPUT_PATH &&
+        resolved.startsWith(`${SHARED_DIR}${path.sep}`) &&
+        existsSync(resolved)
+      ) {
         modules.add(resolved)
       }
     }
@@ -197,9 +204,10 @@ ${uncataloged.map((name) => `  '${name}'`).join(',\n')}
 
 export type RpcMethodName = keyof typeof RPC_PARAMS_BY_METHOD
 
-// Why: z.output is the post-parse shape the handler receives. z.input is not a
-// send-side type here — requiredString is z.unknown().transform(...), so its input
-// admits any value and loses optional/default semantics.
+// Why: z.output is the post-parse shape the handler receives, which is not what a
+// client may send — a .default() field reads as required. z.input is not the answer
+// either: requiredString is z.unknown().transform(...), so its input admits any value.
+// Senders use RpcSendParams from ./rpc-send-params, which is derived from this map.
 export type RpcParams<Method extends RpcMethodName> =
   (typeof RPC_PARAMS_BY_METHOD)[Method] extends z.ZodType
     ? z.output<(typeof RPC_PARAMS_BY_METHOD)[Method]>

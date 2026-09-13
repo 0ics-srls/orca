@@ -15,6 +15,7 @@ import { slugifyForWorkspaceName } from '../../../../shared/workspace-name'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { getLocalProjectExecutionRuntimeContext } from '@/lib/local-preflight-context'
+import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
 import { translate } from '@/i18n/i18n'
 
 type ForkAgentSessionFromPaneArgs = {
@@ -262,8 +263,9 @@ export async function startAgentSessionFork(fork: PreparedAgentSessionFork): Pro
     providesInitialSurface: true
   })
   const settlement = await result.structuredSettlement
-  // Why: a refusal whose terminal fallback opened nothing is the structured twin of a null launch.
-  if (settlement.kind === 'refused-then-legacy' && settlement.primaryTabId === null) {
+  const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
+  // Why: a structured fallback that opened nothing is the structured twin of a null launch.
+  if (legacyFallback?.primaryTabId === null) {
     return copyAgentSessionForkContext(fork)
   }
   // Why: the worktree already exists, so a false return would keep the dialog open and a second

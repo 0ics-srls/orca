@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as StructuredLaunchSettlementModule from './structured-agent-launch-settlement'
 
 const mocks = vi.hoisted(() => ({
   settleStructuredAgentLaunch: vi.fn(),
@@ -6,7 +7,8 @@ const mocks = vi.hoisted(() => ({
   preflightAgentTrust: vi.fn()
 }))
 
-vi.mock('@/lib/structured-agent-launch-settlement', () => ({
+vi.mock('@/lib/structured-agent-launch-settlement', async (importOriginal) => ({
+  ...(await importOriginal<typeof StructuredLaunchSettlementModule>()),
   settleStructuredAgentLaunch: mocks.settleStructuredAgentLaunch
 }))
 

@@ -1,10 +1,21 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+type MockStoreState = {
+  pendingWorktreeCreations: Record<string, unknown>
+  allWorktrees?: () => { id: string; path: string }[]
+  repos?: { id: string; connectionId: string }[]
+  updateWorktreeMeta?: (
+    worktreeId: string,
+    patch: { pendingFirstAgentMessageRename: boolean }
+  ) => Promise<void>
+  updatePendingWorktreeCreation?: (creationId: string, patch: { phase: 'starting-chat' }) => void
+}
+
 const mocks = vi.hoisted(() => ({
   state: {
     pendingWorktreeCreations: { 'creation-1': {} } as Record<string, unknown>
-  },
-  listener: null as ((state: { pendingWorktreeCreations: Record<string, unknown> }) => void) | null,
+  } as MockStoreState,
+  listener: null as ((state: MockStoreState) => void) | null,
   unsubscribe: vi.fn(),
   startStructuredAgentLaunch: vi.fn(),
   cancelStructuredAgentLaunch: vi.fn(),
@@ -23,12 +34,10 @@ const mocks = vi.hoisted(() => ({
 vi.mock('@/store', () => ({
   useAppStore: Object.assign(vi.fn(), {
     getState: () => mocks.state,
-    subscribe: vi.fn(
-      (listener: (state: { pendingWorktreeCreations: Record<string, unknown> }) => void) => {
-        mocks.listener = listener
-        return mocks.unsubscribe
-      }
-    )
+    subscribe: vi.fn((listener: (state: MockStoreState) => void) => {
+      mocks.listener = listener
+      return mocks.unsubscribe
+    })
   })
 }))
 
@@ -116,7 +125,7 @@ function storeWithWorktree() {
     repos: [{ id: 'repo-1', connectionId: 'ssh-1' }],
     updateWorktreeMeta: mocks.updateWorktreeMeta,
     updatePendingWorktreeCreation: mocks.updatePendingWorktreeCreation
-  } as unknown as typeof mocks.state
+  }
 }
 
 describe('launchStructuredWorktreeSession', () => {
@@ -125,7 +134,7 @@ describe('launchStructuredWorktreeSession', () => {
     mocks.state = {
       pendingWorktreeCreations: { 'creation-1': {} },
       updatePendingWorktreeCreation: mocks.updatePendingWorktreeCreation
-    } as typeof mocks.state
+    }
     mocks.listener = null
     mocks.closeStructuredAgentSession.mockResolvedValue('closed')
     mocks.callRuntimeRpc.mockResolvedValue(undefined)

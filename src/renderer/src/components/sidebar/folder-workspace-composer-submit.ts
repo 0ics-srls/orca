@@ -19,6 +19,7 @@ import {
   toFolderWorkspaceLinkedTask
 } from './folder-workspace-composer-helpers'
 import { planAgentSessionLaunch } from '@/lib/agent-session-launch-plan'
+import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
 import { getNewWorkspaceProjectGroupHostId } from '@/lib/new-workspace-project-options'
 import { useAppStore } from '@/store'
 import {
@@ -253,10 +254,11 @@ export async function submitFolderWorkspaceCreate({
       if (settlement.kind === 'failed' || settlement.kind === 'cancelled') {
         return true
       }
-      if (settlement.kind === 'refused-then-legacy') {
+      const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
+      if (legacyFallback) {
         structuredLaunchAccepted = false
         // Why: this flow's own fallback always activates; `??` only satisfies the shared type.
-        activation = settlement.activation ?? false
+        activation = legacyFallback.activation ?? false
       }
     }
     if (

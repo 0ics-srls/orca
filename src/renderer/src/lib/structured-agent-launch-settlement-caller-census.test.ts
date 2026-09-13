@@ -25,4 +25,18 @@ describe('structured launch settle loop caller census', () => {
       .sort()
     expect(callers).toEqual([...SETTLE_LOOP_CALLERS].sort())
   })
+
+  it('keeps legacy fallback kind interpretation in the shared settlement module', async () => {
+    const files = await glob(['src/**/*.ts', 'src/**/*.tsx'], {
+      cwd: REPO_ROOT,
+      ignore: ['**/*.test.ts', '**/*.test.tsx', CENSUS_FILE, LOOP_FILE]
+    })
+    const directInterpreters = files
+      .filter((file) => {
+        const source = readFileSync(join(REPO_ROOT, file), 'utf8')
+        return source.includes("'refused-then-legacy'") || source.includes("'deadline-then-legacy'")
+      })
+      .sort()
+    expect(directInterpreters).toEqual([])
+  })
 })

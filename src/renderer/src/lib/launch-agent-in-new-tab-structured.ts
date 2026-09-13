@@ -1,6 +1,9 @@
 import type { AgentSessionLaunchPlan } from '@/lib/agent-session-launch-plan'
 import type { LaunchAgentInNewTabResult } from '@/lib/launch-agent-in-new-tab'
-import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
+import {
+  structuredAgentLegacyFallbackFromSettlement,
+  type StructuredAgentLaunchSettlement
+} from '@/lib/structured-agent-launch-settlement'
 import type { StructuredPromptDeliveryResult } from '@/lib/structured-agent-session-launch-prompt'
 
 export type StructuredNewTabLaunchArgs = {
@@ -20,8 +23,12 @@ const UNDELIVERED: StructuredPromptDeliveryResult = { delivered: false, failureN
 function promptDeliveryFromSettlement(
   settlement: StructuredAgentLaunchSettlement
 ): Promise<StructuredPromptDeliveryResult> {
-  if (settlement.kind === 'structured' || settlement.kind === 'refused-then-legacy') {
+  if (settlement.kind === 'structured') {
     return settlement.promptDeliveryResult ?? Promise.resolve(UNDELIVERED)
+  }
+  const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
+  if (legacyFallback) {
+    return legacyFallback.promptDeliveryResult ?? Promise.resolve(UNDELIVERED)
   }
   return Promise.resolve(UNDELIVERED)
 }

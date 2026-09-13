@@ -1,14 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type {
-  StructuredAgentLaunchHooks,
-  StructuredAgentLaunchSettlement
-} from './structured-agent-launch-settlement'
+import type * as StructuredLaunchSettlementModule from './structured-agent-launch-settlement'
+
+type StructuredAgentLaunchHooks = StructuredLaunchSettlementModule.StructuredAgentLaunchHooks
+type StructuredAgentLaunchSettlement =
+  StructuredLaunchSettlementModule.StructuredAgentLaunchSettlement
 
 const mocks = vi.hoisted(() => ({
   settleStructuredAgentLaunch: vi.fn()
 }))
 
-vi.mock('@/lib/structured-agent-launch-settlement', () => ({
+vi.mock('@/lib/structured-agent-launch-settlement', async (importOriginal) => ({
+  ...(await importOriginal<typeof StructuredLaunchSettlementModule>()),
   settleStructuredAgentLaunch: mocks.settleStructuredAgentLaunch
 }))
 
@@ -29,8 +31,10 @@ const structuredPlan = (prompt: string, promptDelivery: Delivery, onPromptDelive
 const delivered = { delivered: true, failureNotified: false }
 const undelivered = { delivered: false, failureNotified: true }
 
-/** Mirrors the shared loop: a refusal runs the caller's fallback once and settles with its result. */
-function settleWith(settlement: StructuredAgentLaunchSettlement | 'refusal') {
+type LegacyTrigger = 'refusal' | 'deadline'
+
+/** Mirrors the shared loop: a refusal or deadline runs the fallback once and returns its surface. */
+function settleWith(settlement: StructuredAgentLaunchSettlement | LegacyTrigger) {
   mocks.settleStructuredAgentLaunch.mockImplementation(
     async (
       _worktreeId: string,
@@ -38,12 +42,15 @@ function settleWith(settlement: StructuredAgentLaunchSettlement | 'refusal') {
       _options: unknown,
       hooks: StructuredAgentLaunchHooks
     ) => {
-      if (settlement !== 'refusal') {
+      if (settlement !== 'refusal' && settlement !== 'deadline') {
         return settlement
       }
       const fallback = await hooks.legacyFallback?.()
       return fallback
-        ? { kind: 'refused-then-legacy', ...fallback }
+        ? {
+            kind: settlement === 'refusal' ? 'refused-then-legacy' : 'deadline-then-legacy',
+            ...fallback
+          }
         : { kind: 'failed', error: null }
     }
   )
@@ -88,29 +95,35 @@ describe('launchAgentInStructuredNewTab', () => {
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('runs the terminal launch exactly once on refusal and reports its delivery', async () => {
-    settleWith('refusal')
-    const legacyDelivery = Promise.resolve(delivered)
-    const legacyLaunch = vi.fn(() => ({
-      tabId: 'tab-1',
-      startupPlan: {} as never,
-      pasteDraftAfterLaunch: true,
-      promptDeliveryResult: legacyDelivery
-    }))
+  it.each([
+    ['refusal', 'refusal', 'refused-then-legacy'],
+    ['deadline', 'deadline', 'deadline-then-legacy']
+  ] as const)(
+    'runs the terminal launch exactly once on %s and reports its delivery',
+    async (_label, trigger, expectedKind) => {
+      settleWith(trigger)
+      const legacyDelivery = Promise.resolve(delivered)
+      const legacyLaunch = vi.fn(() => ({
+        tabId: 'tab-1',
+        startupPlan: {} as never,
+        pasteDraftAfterLaunch: true,
+        promptDeliveryResult: legacyDelivery
+      }))
 
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan('Fix it', 'submit-after-ready'),
-      legacyLaunch
-    })
+      const result = launchAgentInStructuredNewTab({
+        plan: structuredPlan('Fix it', 'submit-after-ready'),
+        legacyLaunch
+      })
 
-    await expect(result.structuredSettlement).resolves.toEqual({
-      kind: 'refused-then-legacy',
-      primaryTabId: 'tab-1',
-      promptDeliveryResult: legacyDelivery
-    })
-    await expect(result.promptDeliveryResult).resolves.toBe(delivered)
-    expect(legacyLaunch).toHaveBeenCalledOnce()
-  })
+      await expect(result.structuredSettlement).resolves.toEqual({
+        kind: expectedKind,
+        primaryTabId: 'tab-1',
+        promptDeliveryResult: legacyDelivery
+      })
+      await expect(result.promptDeliveryResult).resolves.toBe(delivered)
+      expect(legacyLaunch).toHaveBeenCalledOnce()
+    }
+  )
 
   it('counts an argv-carried prompt as delivered when the terminal launch returns no promise', async () => {
     settleWith('refusal')

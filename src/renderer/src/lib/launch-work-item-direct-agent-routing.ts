@@ -13,6 +13,7 @@ import type { AgentSessionLaunchPlan } from '@/lib/agent-session-launch-plan'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
 import { preflightAgentTrust } from '@/lib/agent-trust-preflight'
+import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
 
 export function buildDirectWorkItemStartup(args: {
   agent: TuiAgent | null
@@ -169,6 +170,16 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
   if (!settlement) {
     return notLaunched(true)
   }
+  const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
+  if (legacyFallback) {
+    return {
+      completed: false,
+      structuredLaunch: false,
+      visibilityUnknown: false,
+      failed: false,
+      primaryTabId: legacyFallback.primaryTabId
+    }
+  }
   switch (settlement.kind) {
     case 'structured':
       return {
@@ -177,15 +188,6 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
         visibilityUnknown: false,
         failed: false,
         primaryTabId: args.primaryTabId
-      }
-    case 'refused-then-legacy':
-    case 'deadline-then-legacy':
-      return {
-        completed: false,
-        structuredLaunch: false,
-        visibilityUnknown: false,
-        failed: false,
-        primaryTabId: settlement.primaryTabId
       }
     case 'visibility-unknown':
       return {
@@ -198,6 +200,8 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
     case 'failed':
     case 'cancelled':
       // Why: the launch layer already toasted the failure.
+      return withoutAgentSurface
+    default:
       return withoutAgentSurface
   }
 }

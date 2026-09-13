@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   startStructuredAgentLaunch: vi.fn(),
-  cancelStructuredAgentLaunch: vi.fn()
+  cancelStructuredAgentLaunch: vi.fn(),
+  retireStructuredAgentSessionSurface:
+    vi.fn<(worktreeId: string, sessionId: string) => Promise<void>>()
 }))
 
 vi.mock('@/lib/structured-agent-session-launch', () => ({
@@ -14,9 +16,14 @@ vi.mock('@/lib/launch-structured-agent-session', () => ({
   StructuredAgentSessionCreateRefusalError: class extends Error {}
 }))
 
+vi.mock('@/lib/structured-agent-session-surface-retirement', () => ({
+  retireStructuredAgentSessionSurface: mocks.retireStructuredAgentSessionSurface
+}))
+
 import { StructuredAgentSessionCreateRefusalError } from '@/lib/launch-structured-agent-session'
 import {
   settleStructuredAgentLaunch,
+  structuredAgentLegacyFallbackFromSettlement,
   type StructuredAgentLaunchDeadlineClock
 } from './structured-agent-launch-settlement'
 
@@ -111,7 +118,19 @@ function fakeClock(): { clock: StructuredAgentLaunchDeadlineClock; fire: () => v
 }
 
 describe('settleStructuredAgentLaunch', () => {
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.retireStructuredAgentSessionSurface.mockResolvedValue()
+  })
+
+  it.each(['refused-then-legacy', 'deadline-then-legacy'] as const)(
+    'normalizes %s into the shared legacy fallback result',
+    (kind) => {
+      expect(structuredAgentLegacyFallbackFromSettlement({ kind, ...fallbackResult })).toEqual(
+        expect.objectContaining(fallbackResult)
+      )
+    }
+  )
 
   it('returns structured and activates once the launch is published', async () => {
     const promptDeliveryResult = Promise.resolve({ delivered: true, failureNotified: false })
@@ -464,14 +483,12 @@ describe('settleStructuredAgentLaunch', () => {
     const legacyFallback = vi
       .fn<() => Promise<typeof fallbackResult>>()
       .mockResolvedValue(fallbackResult)
-    const onStructuredLate = vi.fn<(sessionId: string) => void>()
     const settlement = settleStructuredAgentLaunch(
       'worktree-1',
       'codex',
       {},
       {
         legacyFallback,
-        onStructuredLate,
         clock: clock.clock,
         deadlineMs: 10
       }
@@ -479,6 +496,11 @@ describe('settleStructuredAgentLaunch', () => {
     clock.fire()
     await expect(settlement).resolves.toMatchObject({ kind: 'deadline-then-legacy' })
     resolveLaunch({ sessionId: 'session-1', fence: 1 })
-    await vi.waitFor(() => expect(onStructuredLate).toHaveBeenCalledWith('session-1'))
+    await vi.waitFor(() =>
+      expect(mocks.retireStructuredAgentSessionSurface).toHaveBeenCalledWith(
+        'worktree-1',
+        'session-1'
+      )
+    )
   })
 })
