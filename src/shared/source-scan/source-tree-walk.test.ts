@@ -1,4 +1,12 @@
-import { mkdirSync, mkdtempSync, rmSync, statSync, symlinkSync, writeFileSync } from 'node:fs'
+import {
+  mkdirSync,
+  mkdtempSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  symlinkSync,
+  writeFileSync
+} from 'node:fs'
 import type * as Fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -7,13 +15,20 @@ import { scanSourceTree } from './source-tree-scan'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>()
-  return { ...actual, statSync: vi.fn(actual.statSync) }
+  return {
+    ...actual,
+    readdirSync: vi.fn(actual.readdirSync),
+    statSync: vi.fn(actual.statSync)
+  }
 })
+
+const actualFs = await vi.importActual<typeof Fs>('node:fs')
 
 let root: string
 
 beforeEach(() => {
   root = mkdtempSync(join(tmpdir(), 'orca-source-tree-walk-'))
+  vi.mocked(readdirSync).mockReset()
   vi.mocked(statSync).mockClear()
 })
 
@@ -35,14 +50,18 @@ describe('scanSourceTree filesystem traversal', () => {
 
     const files = scanSourceTree(root)
 
-    expect(files).toEqual([
-      { path: join(root, 'first.ts'), relativePath: 'first.ts', source: 'first.ts' },
-      {
-        path: join(root, 'nested', 'second.tsx'),
-        relativePath: 'nested/second.tsx',
-        source: 'nested/second.tsx'
-      }
-    ])
+    // readdir order is filesystem-dependent (tmpfs differs from APFS/ext4).
+    expect(files).toHaveLength(2)
+    expect(files).toEqual(
+      expect.arrayContaining([
+        { path: join(root, 'first.ts'), relativePath: 'first.ts', source: 'first.ts' },
+        {
+          path: join(root, 'nested', 'second.tsx'),
+          relativePath: 'nested/second.tsx',
+          source: 'nested/second.tsx'
+        }
+      ])
+    )
     expect(statSync).not.toHaveBeenCalled()
   })
 
@@ -65,9 +84,11 @@ describe('scanSourceTree filesystem traversal', () => {
     file('module.ts')
     file('module.test.ts')
 
-    expect(scanSourceTree(root, { includeTests: true }).map((entry) => entry.relativePath)).toEqual(
-      ['module.test.ts', 'module.ts']
-    )
+    expect(
+      scanSourceTree(root, { includeTests: true })
+        .map((entry) => entry.relativePath)
+        .sort()
+    ).toEqual(['module.test.ts', 'module.ts'])
     expect(
       scanSourceTree(root, { extensions: /\.mjs$/ }).map((entry) => entry.relativePath)
     ).toEqual(['module.mjs'])
@@ -87,6 +108,31 @@ describe('scanSourceTree filesystem traversal', () => {
       }
     ])
     expect(statSync).toHaveBeenCalledExactlyOnceWith(join(root, 'alias'))
+  })
+
+  it('stats an entry whose type readdir could not report instead of dropping its subtree', () => {
+    mkdirSync(join(root, 'nested'))
+    file(join('nested', 'inner.ts'), 'inner source')
+    // Filesystems without d_type yield a Dirent where every predicate is false.
+    vi.mocked(readdirSync).mockImplementationOnce(((directory: Fs.PathLike) =>
+      actualFs.readdirSync(directory, { withFileTypes: true }).map((entry) =>
+        entry.name === 'nested'
+          ? Object.assign(Object.create(Object.getPrototypeOf(entry)), entry, {
+              isFile: () => false,
+              isDirectory: () => false,
+              isSymbolicLink: () => false
+            })
+          : entry
+      )) as typeof readdirSync)
+
+    expect(scanSourceTree(root)).toEqual([
+      {
+        path: join(root, 'nested', 'inner.ts'),
+        relativePath: 'nested/inner.ts',
+        source: 'inner source'
+      }
+    ])
+    expect(statSync).toHaveBeenCalledExactlyOnceWith(join(root, 'nested'))
   })
 
   it('still reports a broken link instead of silently dropping it', () => {

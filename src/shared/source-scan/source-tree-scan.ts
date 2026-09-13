@@ -52,8 +52,11 @@ export function scanSourceTree(
         continue
       }
       const path = join(directory, name)
-      // Preserve link traversal; ordinary entries already carry their type from readdir.
-      if (entry.isSymbolicLink() ? statSync(path).isDirectory() : entry.isDirectory()) {
+      // Ordinary entries carry their type from readdir. Links need a stat to follow
+      // them, and so does DT_UNKNOWN (every predicate false), or a real directory
+      // would be silently dropped from the scan.
+      const needsStat = entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())
+      if (needsStat ? statSync(path).isDirectory() : entry.isDirectory()) {
         visit(path)
         continue
       }
