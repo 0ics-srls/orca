@@ -22,6 +22,7 @@ const testState: {
   ownerKind: 'local' | 'not-ready' | 'runtime' | 'ssh'
   ownerSshGeneration: number
   ownerWorktreePath: string
+  targetIsRemoteRuntime: boolean
   store: { tabsByWorktree: Record<string, { id: string }[]> }
 } = vi.hoisted(() => ({
   executionHostId: 'local',
@@ -29,6 +30,7 @@ const testState: {
   ownerKind: 'local',
   ownerSshGeneration: 4,
   ownerWorktreePath: '/remote/repo',
+  targetIsRemoteRuntime: false,
   store: {
     tabsByWorktree: {
       'worktree-1': [{ id: 'terminal-tab-1' }]
@@ -63,7 +65,7 @@ vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
 }))
 vi.mock('@/runtime/runtime-terminal-inspection', () => ({
-  isRemoteRuntimePtyId: () => false
+  isRemoteRuntimePtyId: () => testState.targetIsRemoteRuntime
 }))
 vi.mock('./NativeChatComposerActions', () => ({
   NativeChatComposerActions: () => <div data-testid="composer-actions" />
@@ -85,7 +87,9 @@ vi.mock('./NativeChatImageAttachmentPreview', () => ({
 }))
 
 class FileDragDataTransfer {
-  dropEffect = 'none'
+  // Not 'none' and not 'copy': the browser picks a default we did not choose, so
+  // starting here is what makes an assertion on either verdict load-bearing.
+  dropEffect = 'link'
   effectAllowed = 'copyMove'
   files: File[] = []
   private readonly data = new Map<string, string>()
@@ -239,6 +243,7 @@ describe('native chat workspace file drops', () => {
     testState.ownerKind = 'local'
     testState.ownerSshGeneration = 4
     testState.ownerWorktreePath = '/remote/repo'
+    testState.targetIsRemoteRuntime = false
     latestInput = null
     bubbledDrop.mockReset()
   })
@@ -315,12 +320,44 @@ describe('native chat workspace file drops', () => {
     expect(screen.getByTestId('draft').textContent).toBe('')
   })
 
-  it('consumes but ignores an internal drop while disabled', () => {
+  // A guarded composer must refuse visibly. It still claims the event, because
+  // the terminal surface behind it would otherwise paste the paths into the shell.
+  it('refuses the drag outright while disabled instead of promising a copy', () => {
     render(<ComposerProbe disabled />)
+    const hover = internalTransfer(['/repo/a.ts'])
+    expect(dispatchDragEvent('dragover', editor(), hover)).toBe(false)
+    expect(hover.dropEffect).toBe('none')
+    expect(bubbledDrop).not.toHaveBeenCalled()
+
     const transfer = internalTransfer(['/repo/a.ts'])
     expect(dispatchDragEvent('drop', editor(), transfer)).toBe(false)
     expect(transfer.dropEffect).toBe('none')
     expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  // The relaxation that lets a runtime-owned path reach a runtime pane: the
+  // explorer lists that host's filesystem, so the agent can read what it drags.
+  it('accepts a same-host drop on a remote runtime target and refuses a foreign one', () => {
+    testState.executionHostId = 'runtime:env-1'
+    testState.ownerKind = 'runtime'
+    testState.targetIsRemoteRuntime = true
+    const view = render(<ComposerProbe structured={false} />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/env/owned.ts'], { executionHostId: 'runtime:env-1' })
+    )
+    expect(screen.getByTestId('draft').textContent).toBe('@/env/owned.ts ')
+    view.unmount()
+
+    render(<ComposerProbe structured={false} />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/elsewhere/foreign.ts'], { executionHostId: 'runtime:env-2' })
+    )
+    expect(screen.getByTestId('draft').textContent).toBe('')
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
   })
 
   it('queues an internal reference until composition settles without stealing focus', () => {

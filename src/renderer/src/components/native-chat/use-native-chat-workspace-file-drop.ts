@@ -36,13 +36,19 @@ type Args = {
   terminalTabId: string
 }
 
-function stopWorkspaceFileDrop(event: React.DragEvent<HTMLDivElement>): void {
+// The composer sits inside the terminal surface, which accepts the same drag and
+// pastes it into the shell. Claiming the event here is what keeps a drop aimed at
+// the composer out of the terminal behind it — including when we refuse it.
+function claimWorkspaceFileDrag(event: React.DragEvent<HTMLDivElement>): void {
   event.preventDefault()
   event.stopPropagation()
-  event.nativeEvent.stopImmediatePropagation()
 }
 
-function setCopyDropEffect(dataTransfer: DataTransfer): void {
+function setDropEffect(dataTransfer: DataTransfer, effect: 'copy' | 'none'): void {
+  if (effect === 'none') {
+    dataTransfer.dropEffect = 'none'
+    return
+  }
   if (
     dataTransfer.effectAllowed === 'all' ||
     dataTransfer.effectAllowed === 'copy' ||
@@ -66,10 +72,10 @@ export function useNativeChatWorkspaceFileDrop({
       if (!hasWorkspaceFileDragType(event.dataTransfer)) {
         return
       }
-      stopWorkspaceFileDrop(event)
-      if (!disabled) {
-        setCopyDropEffect(event.dataTransfer)
-      }
+      claimWorkspaceFileDrag(event)
+      // A guarded composer answers `none` rather than promising a copy it will
+      // then drop on the floor: the cursor refuses, and no drop event follows.
+      setDropEffect(event.dataTransfer, disabled ? 'none' : 'copy')
     },
     [disabled]
   )
@@ -79,11 +85,12 @@ export function useNativeChatWorkspaceFileDrop({
       if (!hasWorkspaceFileDragType(event.dataTransfer)) {
         return
       }
-      stopWorkspaceFileDrop(event)
+      claimWorkspaceFileDrag(event)
       if (disabled) {
+        setDropEffect(event.dataTransfer, 'none')
         return
       }
-      setCopyDropEffect(event.dataTransfer)
+      setDropEffect(event.dataTransfer, 'copy')
 
       const dragPaths = readWorkspaceFileDragPaths(event.dataTransfer)
       if (dragPaths.status === 'rejected') {
