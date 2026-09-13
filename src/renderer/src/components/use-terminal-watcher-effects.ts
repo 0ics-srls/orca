@@ -20,7 +20,39 @@ import type { TerminalColdActivationController } from './terminal-cold-activatio
 // Why shared: surfaces without watchable live tabs need no per-pass allocation.
 const NO_PARKED_TAB_IDS: ReadonlySet<string> = new Set()
 
-export function useTerminalWatcherEffects(controller: TerminalColdActivationController): void {
+type TerminalWatcherController = Pick<
+  TerminalColdActivationController,
+  | 'activationDeferredMountTabIdsByWorktreeRef'
+  | 'activeTabId'
+  | 'activeTabIdByWorktree'
+  | 'activeView'
+  | 'activeWorktreeId'
+  | 'activityTerminalPortals'
+  | 'anyMountedWorktreeHasLayout'
+  | 'backgroundMountRevision'
+  | 'createTab'
+  | 'effectiveParkedTerminalWorktreeIds'
+  | 'evictionExemptTerminalTabIds'
+  | 'getEffectiveLayoutForWorktree'
+  | 'groupsByWorktree'
+  | 'hydrationSucceeded'
+  | 'measurableBackgroundWorktreeIdsRef'
+  | 'mountedWorktreeIdsRef'
+  | 'pairedRuntimeParkingEnvironmentIds'
+  | 'pendingStartupByTabId'
+  | 'reconcileWorktreeTabModel'
+  | 'renderedActiveWorktreeId'
+  | 'tabsByWorktree'
+  | 'terminalParkingEnabled'
+  | 'terminalProviderSnapshotCapabilityRevision'
+  | 'terminalSshParkingEnabled'
+  | 'terminalStartupRestorationReady'
+  | 'terminalTitleSnapshotAuthorityEnabled'
+  | 'workspaceSessionReady'
+  | 'workspaceSurfaceIds'
+>
+
+export function useTerminalWatcherEffects(controller: TerminalWatcherController): void {
   const {
     activationDeferredMountTabIdsByWorktreeRef,
     activeTabId,

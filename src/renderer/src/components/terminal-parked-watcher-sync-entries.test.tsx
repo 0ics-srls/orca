@@ -4,10 +4,12 @@ import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { useTerminalWatcherEffects } from './use-terminal-watcher-effects'
 import type { ParkedTerminalTabWatcherSyncEntry } from './terminal-pane/terminal-parked-tab-watchers'
-import type { TerminalColdActivationController } from './terminal-cold-activation'
+import type { TerminalTab } from '../../../shared/terminal-tab-types'
+
+type WatcherController = Parameters<typeof useTerminalWatcherEffects>[0]
 
 const mocks = vi.hoisted(() => ({
-  sync: vi.fn(),
+  sync: vi.fn<(entries: Map<string, ParkedTerminalTabWatcherSyncEntry>) => void>(),
   prune: vi.fn(),
   canCover: vi.fn(() => true)
 }))
@@ -26,7 +28,7 @@ vi.mock('./terminal-pane/terminal-parked-tab-watchers', () => ({
   syncParkedTerminalTabWatchersForWorkspaces: mocks.sync,
   terminalWatcherLiveWorkspaceIds: (ids: Iterable<string>) => new Set(ids)
 }))
-;(globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true
+Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true })
 
 const SURFACE_COUNT = 423
 const PARKED_WORKTREE_ID = 'repo-1::/worktree-0'
@@ -40,10 +42,21 @@ afterEach(async () => {
   mocks.canCover.mockReturnValue(true)
 })
 
-function renderWatcherEffects(
-  overrides: Partial<TerminalColdActivationController> = {}
-): Promise<void> {
-  const controller = {
+function terminalTab(id: string, worktreeId: string, ptyId: string | null = null): TerminalTab {
+  return {
+    id,
+    worktreeId,
+    ptyId,
+    title: 'Terminal',
+    customTitle: null,
+    color: null,
+    sortOrder: 0,
+    createdAt: 0
+  }
+}
+
+function renderWatcherEffects(overrides: Partial<WatcherController> = {}): Promise<void> {
+  const controller: WatcherController = {
     activationDeferredMountTabIdsByWorktreeRef: { current: new Map() },
     activeTabId: null,
     activeTabIdByWorktree: {},
@@ -52,9 +65,14 @@ function renderWatcherEffects(
     activityTerminalPortals: [],
     anyMountedWorktreeHasLayout: false,
     backgroundMountRevision: 0,
+    createTab: vi.fn(),
+    reconcileWorktreeTabModel: vi.fn(),
+    pairedRuntimeParkingEnvironmentIds: new Set(),
+    terminalSshParkingEnabled: true,
+    terminalProviderSnapshotCapabilityRevision: 0,
     effectiveParkedTerminalWorktreeIds: new Set([PARKED_WORKTREE_ID]),
     evictionExemptTerminalTabIds: new Set(['tab-exempt']),
-    getEffectiveLayoutForWorktree: () => null,
+    getEffectiveLayoutForWorktree: () => undefined,
     groupsByWorktree: {},
     hydrationSucceeded: false,
     measurableBackgroundWorktreeIdsRef: { current: new Set() },
@@ -63,7 +81,10 @@ function renderWatcherEffects(
     // Another workspace is on screen, so the mounted one is hidden and parks.
     renderedActiveWorktreeId: 'repo-1::/worktree-9',
     tabsByWorktree: {
-      [PARKED_WORKTREE_ID]: [{ id: 'tab-parked' }, { id: 'tab-exempt' }]
+      [PARKED_WORKTREE_ID]: [
+        terminalTab('tab-parked', PARKED_WORKTREE_ID),
+        terminalTab('tab-exempt', PARKED_WORKTREE_ID)
+      ]
     },
     terminalParkingEnabled: true,
     terminalStartupRestorationReady: false,
@@ -71,7 +92,7 @@ function renderWatcherEffects(
     workspaceSessionReady: false,
     workspaceSurfaceIds: surfaceIds,
     ...overrides
-  } as unknown as TerminalColdActivationController
+  }
   function Watcher(): null {
     useTerminalWatcherEffects({ ...controller, ...overrides })
     return null
@@ -82,7 +103,11 @@ function renderWatcherEffects(
 }
 
 function lastSyncEntries(): Map<string, ParkedTerminalTabWatcherSyncEntry> {
-  return mocks.sync.mock.calls.at(-1)?.[0] as Map<string, ParkedTerminalTabWatcherSyncEntry>
+  const entries = mocks.sync.mock.calls.at(-1)?.[0]
+  if (!entries) {
+    throw new Error('Expected watcher synchronization')
+  }
+  return entries
 }
 
 describe('parked terminal watcher sync entries', () => {
@@ -118,12 +143,12 @@ describe('parked terminal watcher sync entries', () => {
   it.each(['repo-1::/never-visited', 'folder:never-visited'])(
     'watches a live terminal in never-activated workspace %s and restores its title',
     async (workspaceId) => {
-      const tab = { id: 'background-agent', ptyId: 'live-pty' }
+      const tab = terminalTab('background-agent', workspaceId, 'live-pty')
       await renderWatcherEffects({
         anyMountedWorktreeHasLayout: true,
         workspaceSurfaceIds: [...surfaceIds, workspaceId],
         tabsByWorktree: { [workspaceId]: [tab] }
-      } as unknown as Partial<TerminalColdActivationController>)
+      })
 
       const entry = lastSyncEntries().get(workspaceId)
       expect([...entry!.parkedTabIds]).toEqual([tab.id])
@@ -136,18 +161,20 @@ describe('parked terminal watcher sync entries', () => {
   it('does not watch a never-activated tab whose host cannot provide coverage', async () => {
     mocks.canCover.mockReturnValue(false)
     await renderWatcherEffects({
-      tabsByWorktree: { [surfaceIds[1]]: [{ id: 'unverifiable-tab' }] }
-    } as unknown as Partial<TerminalColdActivationController>)
+      tabsByWorktree: { [surfaceIds[1]]: [terminalTab('unverifiable-tab', surfaceIds[1])] }
+    })
 
     const entry = lastSyncEntries().get(surfaceIds[1])!
     expect(entry.parkedTabIds.size).toBe(0)
     expect(entry.restoreTitleOnStartTabIds).toBeUndefined()
   })
   it('starts watching when host snapshot capability resolves after tab admission', async () => {
-    const overrides = {
+    const overrides: Partial<WatcherController> = {
       terminalProviderSnapshotCapabilityRevision: 0,
-      tabsByWorktree: { [surfaceIds[1]]: [{ id: 'background-agent', ptyId: 'live-pty' }] }
-    } as unknown as Partial<TerminalColdActivationController>
+      tabsByWorktree: {
+        [surfaceIds[1]]: [terminalTab('background-agent', surfaceIds[1], 'live-pty')]
+      }
+    }
     mocks.canCover.mockReturnValue(false)
     await renderWatcherEffects(overrides)
     expect(lastSyncEntries().get(surfaceIds[1])!.parkedTabIds.size).toBe(0)
@@ -162,11 +189,13 @@ describe('parked terminal watcher sync entries', () => {
   it.each(['paired capability', 'SSH parking setting'])(
     'reconciles never-mounted remote tabs when %s changes',
     async (input) => {
-      const overrides = {
+      const overrides: Partial<WatcherController> = {
         pairedRuntimeParkingEnvironmentIds: new Set<string>(),
         terminalSshParkingEnabled: false,
-        tabsByWorktree: { [surfaceIds[1]]: [{ id: 'remote-agent', ptyId: 'remote-pty' }] }
-      } as unknown as Partial<TerminalColdActivationController>
+        tabsByWorktree: {
+          [surfaceIds[1]]: [terminalTab('remote-agent', surfaceIds[1], 'remote-pty')]
+        }
+      }
       mocks.canCover.mockReturnValue(false)
       await renderWatcherEffects(overrides)
       expect(lastSyncEntries().get(surfaceIds[1])!.parkedTabIds.size).toBe(0)
@@ -193,9 +222,19 @@ describe('parked terminal watcher sync entries', () => {
 
   it('leaves activity-portal terminals with their existing consumer', async () => {
     await renderWatcherEffects({
-      tabsByWorktree: { [surfaceIds[1]]: [{ id: 'portal-agent', ptyId: 'live-pty' }] },
-      activityTerminalPortals: [{ worktreeId: surfaceIds[1], tabId: 'portal-agent' }]
-    } as unknown as Partial<TerminalColdActivationController>)
+      tabsByWorktree: { [surfaceIds[1]]: [terminalTab('portal-agent', surfaceIds[1], 'live-pty')] },
+      activityTerminalPortals: [
+        {
+          worktreeId: surfaceIds[1],
+          tabId: 'portal-agent',
+          slotId: 'slot',
+          requestToken: 'request',
+          target: document.createElement('div'),
+          paneKey: 'pane',
+          active: true
+        }
+      ]
+    })
 
     expect(lastSyncEntries().get(surfaceIds[1])!.parkedTabIds.size).toBe(0)
   })
