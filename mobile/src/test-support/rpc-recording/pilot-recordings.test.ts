@@ -14,6 +14,7 @@ import {
 import type { Recording } from './recording-scenario'
 import type { RecordedValue } from './recording-values'
 import type { Mutation } from './operation-mutations'
+import { determinismRuns } from './determinism-runs'
 
 const root = resolve(import.meta.dirname, '../../../..')
 const input = readScenarios(
@@ -68,7 +69,7 @@ describe('RPC main recordings', () => {
   for (const scenario of input.scenarios) {
     it(`${scenario.id}: frozen main parity and determinism`, async () => {
       let first = ''
-      for (let run = 0; run < Number(process.env.RPC_FOUNDATION_DETERMINISM_RUNS ?? 2); run++) {
+      for (let run = 0; run < determinismRuns(); run++) {
         const { adapters } = pilotMountAdapters(root)
         const recording = await runRecording(
           scenario,

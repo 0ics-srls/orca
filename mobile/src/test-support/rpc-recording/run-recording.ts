@@ -89,6 +89,11 @@ export async function runRecording(
     }
     return recording
   } finally {
+    // Why the count: every checkpoint already structuredClone'd `effects`, so anything cleanup
+    // appends lands after the recording was built and would be silently absent from it. A
+    // rejection thrown by dispose or a detached effect is exactly what this oracle exists to
+    // catch, so surface it instead of dropping it.
+    const beforeCleanup = effects.length
     try {
       await mounted?.dispose()
       transport.dispose()
@@ -96,6 +101,17 @@ export async function runRecording(
     } finally {
       stopUnhandled()
       scheduler.stop()
+    }
+    if (effects.length !== beforeCleanup) {
+      // Known and unresolved: six scenarios land here today (see the README's cleanup-observation
+      // note). Warning rather than throwing keeps the gap visible without asserting a shape for
+      // these observations, which would change every golden. Deciding that is its own change.
+      console.warn(
+        `[rpc-recording] cleanup observations dropped from ${scenario.id}: ${effects
+          .slice(beforeCleanup)
+          .map((entry) => entry.name)
+          .join(', ')}`
+      )
     }
   }
 }

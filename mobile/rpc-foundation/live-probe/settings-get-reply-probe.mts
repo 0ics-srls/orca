@@ -63,7 +63,7 @@ function rawReply(): Promise<unknown> {
       if (plain === null) {
         return
       }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a thrown value is not an Error by type; only its constructor name and message are printed.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the probe prints whatever the host sent, so the frame is read as a bag of fields.
       const frame = JSON.parse(plain) as { type?: string; id?: string }
       if (frame.type === 'e2ee_authenticated') {
         ws.send(
@@ -87,7 +87,7 @@ function describe(label: string, run: () => unknown): string {
     const value = run()
     return `${label}=${JSON.stringify(value)}`
   } catch (error) {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the probe prints whatever the host sent, so the frame is read as a bag of fields.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a thrown value is not an Error by type; only its constructor name and message are printed.
     return `${label}=THREW ${(error as Error).constructor.name}: ${(error as Error).message}`
   }
 }

@@ -26,6 +26,30 @@ const baseline = await runProcess({
 if (baseline.code !== 0) {
   throw new Error('Product sources or lockfile differ from the pinned main baseline')
 }
+// Why a second check: `git diff` only sees tracked paths, so an untracked module under the
+// guarded trees can change resolution while the baseline check still passes — the golden would
+// then carry a pinned baseline header it did not actually record against.
+const untracked = await runProcess({
+  program: 'git',
+  args: [
+    'ls-files',
+    '--others',
+    '--exclude-standard',
+    '--',
+    'mobile/src',
+    'src/shared',
+    ':!mobile/src/test-support/rpc-recording'
+  ],
+  cwd: root
+})
+if (untracked.code !== 0) {
+  throw new Error(`Could not enumerate untracked product sources: ${untracked.stderr}`)
+}
+if (untracked.stdout.trim() !== '') {
+  throw new Error(
+    `Untracked product sources would not be pinned by the baseline:\n${untracked.stdout.trim()}`
+  )
+}
 const require = createRequire(resolve(root, 'mobile/package.json'))
 const result = await runProcess({
   program: process.execPath,

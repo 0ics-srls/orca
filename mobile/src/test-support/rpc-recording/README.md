@@ -229,3 +229,26 @@ The original settings slice coverage maps nine host-RPC callers in
 `settings-recording-coverage.json`; device-preference entries are excluded by coordinator
 instruction. Later manifest additions require new scenarios and remain uncovered until
 those recordings land. This runner does not certify native storage or transport skew.
+
+## Cleanup observations are not recorded (known gap)
+
+Every checkpoint `structuredClone`s the effects array, so anything appended after the final
+checkpoint — during `dispose()`, the transport teardown, or the last `scheduler.flush()` — lands
+after the recording was built and never reaches a golden. `run-recording.ts` now warns when this
+happens instead of dropping it silently.
+
+Six scenarios trip it today, and the dropped names are not noise:
+
+| Scenario | Dropped observations |
+|---|---|
+| `b2.prelude` | `projectRowDetailError`, `projectMutating` |
+| `settings-repo-metadata-fulfilled.prelude` | `hostLabelById`, `hostPlatform` |
+| `settings-repo-metadata-fulfilled.reject-peer-pending` | `hostLabelById`, `hostPlatform` |
+| `settings-task-workspace-fulfilled.prelude` | `workspaceAgent`, `workspaceAgentOverridden`, `error`, `creatingKey` |
+| `settings-workspace-submit-fulfilled` | `error` |
+| `settings-workspace-submit-fulfilled.prelude` | `selectedAgent`, `agentOverridden`, `error` |
+
+A rejection or state write on unmount is exactly what this oracle should catch, so this is a real
+hole, not a nuisance. Closing it means either recording a cleanup checkpoint or folding these into
+the final one — both change what every golden contains, which is a deliberate change of its own
+rather than something to slip in here.

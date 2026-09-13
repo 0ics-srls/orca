@@ -20,6 +20,7 @@ import {
   writeGolden
 } from './golden-recording'
 import type { Recording, RecordingScenario } from './recording-scenario'
+import { determinismRuns } from './determinism-runs'
 
 const root = resolve(import.meta.dirname, '../../../..')
 const input = readScenarios(
@@ -45,7 +46,7 @@ const settingsNormal = {
 
 async function certify(id: string, scenarios: RecordingScenario[]) {
   let first = ''
-  for (let run = 0; run < Number(process.env.RPC_FOUNDATION_DETERMINISM_RUNS ?? 2); run++) {
+  for (let run = 0; run < determinismRuns(); run++) {
     const checkpoints: Recording['checkpoints'] = []
     for (const scenario of scenarios) {
       const { adapters } = pilotMountAdapters(root)
