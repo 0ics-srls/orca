@@ -30,9 +30,18 @@ export const AiVaultSearchEvidenceSchema = z.object({
   role: z.enum(['user', 'assistant', 'tool', 'system', 'unknown']),
   timestamp: z.string().nullable()
 })
+// Optional so a single-host response stays byte-identical to the pre-fan-out shape.
+const executionHostIdSchema = z.string().min(1)
+
+export const AiVaultSearchHostOutcomeSchema = z.object({
+  executionHostId: executionHostIdSchema,
+  outcome: z.enum(['results', 'stale-cursor', 'malformed-cursor', 'unavailable', 'unreachable'])
+})
+
 export const AiVaultSearchHitSchema = z
   .object({
     agent: z.enum(AI_VAULT_AGENTS),
+    executionHostId: executionHostIdSchema.optional(),
     sessionId: z.string(),
     title: z.string(),
     cwd: z.string().nullable(),
@@ -76,6 +85,7 @@ export const AiVaultSearchResponseSchema = z.discriminatedUnion('kind', [
     generation: z.number().int().nonnegative(),
     truncated: AiVaultSearchTruncationSchema,
     durationMs: z.number().nonnegative(),
+    hosts: z.array(AiVaultSearchHostOutcomeSchema).optional(),
     debug: AiVaultSearchDebugSchema.optional()
   }),
   z.object({
