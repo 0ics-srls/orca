@@ -198,6 +198,32 @@ describe('repeatable flags are command-scoped', () => {
     })
   })
 
+  it('repeats --agent placed before the command', () => {
+    expect(request(['--agent', 'claude', '--agent', 'codex', 'search', 'q'])).toMatchObject({
+      filters: { agents: ['claude', 'codex'] }
+    })
+  })
+
+  it('repeats --path across the command boundary', () => {
+    expect(request(['--path', '/a', 'search', 'q', '--path', '/b'])).toMatchObject({
+      filters: { scopePaths: ['/a', '/b'] }
+    })
+  })
+
+  it('leaves a pre-command --agent single-valued for worktree create', () => {
+    const parsed = parseCli([
+      '--agent',
+      'claude',
+      '--agent',
+      'codex',
+      'worktree',
+      'create',
+      '--name',
+      'w'
+    ])
+    expect(parsed.flags.get('agent')).toBe('codex')
+  })
+
   it('leaves --agent single-valued for worktree create', () => {
     const parsed = parseCli([
       'worktree',

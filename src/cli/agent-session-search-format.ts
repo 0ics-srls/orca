@@ -33,11 +33,12 @@ function oneLine(value: string): string {
 }
 
 function formatHit(hit: AiVaultSearchHit): string {
+  const host = oneLine(hit.executionHostId ?? '')
   const header = [
     aiVaultAgentLabel(hit.agent),
-    hit.updatedAt ?? 'unknown time',
+    oneLine(hit.updatedAt ?? '') || 'unknown time',
     oneLine(hit.title) || '(untitled)',
-    ...(hit.executionHostId ? [`host=${hit.executionHostId}`] : [])
+    ...(host ? [`host=${host}`] : [])
   ].join('  ')
   const evidence = hit.evidence
     ? `    ${hit.evidence.role}: ${oneLine(hit.evidence.snippet)}`
@@ -68,7 +69,9 @@ function formatDebug(debug: SessionSearchResults['debug']): string[] {
     '',
     'debug:',
     `  route: ${debug.route}`,
-    ...(debug.repairedTerms ? [`  repairedTerms: ${debug.repairedTerms.join(' ')}`] : []),
+    ...(debug.repairedTerms
+      ? [`  repairedTerms: ${debug.repairedTerms.map((term) => oneLine(term)).join(' ')}`]
+      : []),
     `  plannerScope: ${debug.plannerReport.scope}`
   ]
 }
@@ -92,10 +95,11 @@ function formatUnavailable(reason: 'disabled' | 'not-ready' | 'no-service'): str
 function formatResults(response: SessionSearchResults): string {
   const body =
     response.hits.length === 0 ? ['No sessions match this query.'] : response.hits.map(formatHit)
+  const cursor = oneLine(response.page.cursor ?? '')
   const footer = [
     `${response.hits.length} ${response.hits.length === 1 ? 'result' : 'results'} on this page, ${Math.round(response.durationMs)} ms.`,
-    ...(response.page.hasMore && response.page.cursor
-      ? [`more pages: re-run with --cursor ${response.page.cursor}`]
+    ...(response.page.hasMore && cursor
+      ? [`more pages: re-run with --cursor ${cursor}`]
       : response.page.hasMore
         ? ['more pages exist, but this host issued no cursor for them']
         : []),
@@ -134,7 +138,7 @@ export function formatSessionSearchStatus(status: AiVaultSearchStatus): string {
     `degradedRoots: ${status.degradedRoots.length}`,
     // A paired host withholds the root itself and sends the count with a fixed reason.
     ...status.degradedRoots.map(
-      (root) => `  ${root.root ? terminalSafe(root.root) : '(withheld)'}: ${oneLine(root.reason)}`
+      (root) => `  ${root.root ? oneLine(root.root) : '(withheld)'}: ${oneLine(root.reason)}`
     )
   ].join('\n')
 }

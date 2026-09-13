@@ -186,6 +186,61 @@ describe('terminal safety', () => {
     expect(terminalSafe('red \u001b[31mtext\u001b[0m')).toBe('red text')
   })
 
+  it.each([
+    ['updatedAt', { updatedAt: '2026-09-12\u001b[31mT18:04:11.000Z' }, '\u001b'],
+    ['executionHostId', { executionHostId: 'ssh:\u001b]0;pwned\u0007build-01' }, '\u001b'],
+    ['title', { title: 'resize\u001b[2Jrace' }, '\u001b'],
+    ['evidence snippet', { evidence: { ...localHit.evidence!, snippet: 'a\u001b[1mb' } }, '\u001b'],
+    ['resumeCommand', { resumeCommand: 'claude \u001b[3Jresume' }, '\u001b']
+  ])('strips an escape sequence a host put in %s', (_field, override, escape) => {
+    const text = formatSessionSearchResponse(results({ hits: [{ ...localHit, ...override }] }))
+
+    expect(text).not.toContain(escape)
+  })
+
+  it('strips an escape sequence a host put in the next-page cursor', () => {
+    const text = formatSessionSearchResponse(
+      results({ page: { cursor: 'eyJ2\u001b[31mIjoxfQ', hasMore: true } })
+    )
+
+    expect(text).toContain('more pages: re-run with --cursor eyJ2IjoxfQ')
+    expect(text).not.toContain('\u001b')
+  })
+
+  it('strips an escape sequence a host put in a repaired term', () => {
+    const text = formatSessionSearchResponse(
+      results({
+        debug: {
+          route: 'typo+phrase',
+          repairedTerms: ['resize\u001b[31m', '\u001b]0;t\u0007race'],
+          plannerReport: { route: 'typo+phrase', scope: 'all' }
+        }
+      })
+    )
+
+    expect(text).toContain('  repairedTerms: resize race')
+    expect(text).not.toContain('\u001b')
+  })
+
+  it.each([
+    ['root', { root: '/Users/me/\u001b[31m.codex', reason: 'EACCES' }],
+    ['reason', { root: '/r', reason: 'EACCES\u001b]0;x\u0007' }]
+  ])('strips an escape sequence a host put in a degraded %s', (_field, degradedRoot) => {
+    const text = formatSessionSearchStatus({
+      enabled: true,
+      phase: 'degraded',
+      filesIndexed: 1,
+      filesDue: 0,
+      filesFailed: 1,
+      degradedRoots: [degradedRoot],
+      lastReconcileAt: null,
+      lastSweepCompletedAt: null,
+      generation: 1
+    })
+
+    expect(text).not.toContain('\u001b')
+  })
+
   it('keeps a snippet on the one indented line it was given', () => {
     const text = formatSessionSearchResponse(
       results({

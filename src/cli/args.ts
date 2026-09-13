@@ -66,6 +66,11 @@ export function parseArgs(
   const commandPath: string[] = []
   const flags = new Map<string, string | boolean>()
   const commandIndex = findCliCommandIndex(argv, commandPaths ?? [])
+  // A flag before the command has consumed no path yet, so scope it by the tokens ahead.
+  const tokensAtCommand: string[] = []
+  for (let i = commandIndex; i >= 0 && i < argv.length && !argv[i].startsWith('--'); i += 1) {
+    tokensAtCommand.push(argv[i])
+  }
   // Why memoised on length: the active spec can only change when a command token
   // is read, so the lookup runs once per command depth, not once per flag.
   let scopedAt = -1
@@ -73,7 +78,8 @@ export function parseArgs(
   const repeatableFlags = (): ReadonlySet<string> => {
     if (scopedAt !== commandPath.length) {
       scopedAt = commandPath.length
-      const declared = specForPathPrefix(specs, commandPath)?.repeatableFlags
+      const scopePath = commandPath.length > 0 ? commandPath : tokensAtCommand
+      const declared = specForPathPrefix(specs, scopePath)?.repeatableFlags
       scoped = declared
         ? new Set([...REPEATABLE_STRING_FLAGS, ...declared])
         : REPEATABLE_STRING_FLAGS
