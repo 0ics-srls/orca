@@ -1,4 +1,7 @@
-import { createSessionSearchClient } from '../../../../shared/ai-vault-search-client'
+import {
+  createSessionSearchClient,
+  unavailableSessionSearchStatus
+} from '../../../../shared/ai-vault-search-client'
 import type { PreloadApi } from '../../../../preload/api-types'
 import type {
   AiVaultPrepareSessionResumeArgs,
@@ -11,10 +14,12 @@ import type {
 } from '../../../../shared/ai-vault-session-title'
 import type { AiVaultListArgs, AiVaultListResult } from '../../../../shared/ai-vault-types'
 import {
+  ALL_EXECUTION_HOSTS_SCOPE,
+  normalizeExecutionHostId,
   normalizeExecutionHostScope,
   toRuntimeExecutionHostId
 } from '../../../../shared/execution-host'
-import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { ExecutionHostId, ExecutionHostScope } from '../../../../shared/execution-host'
 import { callRuntimeResult } from './web-runtime-calls'
 import { requireActiveEnvironment } from './web-runtime-session'
 import { noopUnsubscribe } from './web-storage'
@@ -26,18 +31,17 @@ export function createWebAiVaultApi(): NonNullable<Partial<PreloadApi>['aiVault'
     'relay'
   )
   return {
-    searchSessions: (request, sshTargetId) => {
-      if (sshTargetId !== undefined) {
-        return Promise.reject(new Error('Select the transcript-owning runtime for search'))
-      }
-      return search.searchSessions(request)
-    },
-    searchStatus: (sshTargetId) => {
-      if (sshTargetId !== undefined) {
-        return Promise.reject(new Error('Select the transcript-owning runtime for search'))
-      }
-      return search.searchStatus()
-    },
+    // Why: a browser has no local index, so its own paired runtime is the only
+    // host it can search; `all` therefore means that one host, and any other
+    // scope is unavailable rather than an error, matching listSessions.
+    searchSessions: (request, executionHostScope) =>
+      addressesOwnRuntime(executionHostScope)
+        ? search.searchSessions(request)
+        : Promise.resolve({ kind: 'unavailable', reason: 'no-service' }),
+    searchStatus: (executionHostScope) =>
+      addressesOwnRuntime(executionHostScope)
+        ? search.searchStatus()
+        : Promise.resolve(unavailableSessionSearchStatus()),
     listSessions: (args?: AiVaultListArgs) => {
       const environment = requireActiveEnvironment()
       const executionHostId = toRuntimeExecutionHostId(environment.id)
@@ -89,6 +93,16 @@ export function createWebAiVaultApi(): NonNullable<Partial<PreloadApi>['aiVault'
       }),
     onWindowFocused: () => noopUnsubscribe
   }
+}
+
+// An unparseable id must not normalize into the everything-scope and answer anyway.
+function addressesOwnRuntime(executionHostScope: ExecutionHostScope | undefined): boolean {
+  const ownRuntimeId = toRuntimeExecutionHostId(requireActiveEnvironment().id)
+  return (
+    executionHostScope === undefined ||
+    executionHostScope === ALL_EXECUTION_HOSTS_SCOPE ||
+    normalizeExecutionHostId(executionHostScope) === ownRuntimeId
+  )
 }
 
 export function webAiVaultUnavailableResult(executionHostId: ExecutionHostId): AiVaultListResult {
