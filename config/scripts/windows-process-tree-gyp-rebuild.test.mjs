@@ -5,12 +5,12 @@ import {
   mkdtempSync,
   readFileSync,
   realpathSync,
-  rmSync,
   writeFileSync
 } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { removeTreeSync } from '../../src/shared/windows-transient-lock-removal.ts'
 import {
   assertWindowsProcessTreeCreationTimePatch,
   assertWindowsProcessTreeRuntimeCreationTime,
@@ -63,7 +63,7 @@ describe('windows-process-tree node-gyp rebuild', () => {
         expect(readFileSync(join(stagedDir, header), 'utf8')).toBe(`// ${header}\n`)
       }
     } finally {
-      rmSync(packageDir, { recursive: true, force: true })
+      removeTreeSync(packageDir)
     }
   })
 })
@@ -75,7 +75,7 @@ describe('inspecting a compiled windows-process-tree addon', () => {
     dir = mkdtempSync(join(tmpdir(), 'orca-windows-process-tree-addon-'))
   })
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true })
+    removeTreeSync(dir)
   })
 
   it('reports a binary that still imports ReadProcessMemory as unpatched', () => {
@@ -112,7 +112,7 @@ describe('windows-process-tree CreationTime patch assertion', () => {
     dir = mkdtempSync(join(tmpdir(), 'orca-windows-process-tree-creation-time-'))
   })
   afterEach(() => {
-    rmSync(dir, { recursive: true, force: true })
+    removeTreeSync(dir)
   })
 
   it('accepts a package whose source and JS surfaces expose process creation time', () => {

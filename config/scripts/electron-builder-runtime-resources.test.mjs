@@ -1,9 +1,10 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
+import { cp, mkdir, mkdtemp, readFile, readdir, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { delimiter, dirname, join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { removeTree } from '../../src/shared/windows-transient-lock-removal.ts'
 
 const require = createRequire(import.meta.url)
 const projectRoot = resolve(import.meta.dirname, '..', '..')
@@ -46,7 +47,7 @@ describe('packaged runtime resources', () => {
 
       expect(() => verifyPackagedMainRuntimeDeps(resourcesDir, asar)).not.toThrow()
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -81,7 +82,7 @@ describe('packaged runtime resources', () => {
       })
       expect(() => verifyPackagedMainRuntimeDeps(resourcesDir, asar)).not.toThrow()
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -99,7 +100,7 @@ describe('packaged runtime resources', () => {
         /managed-agent-hook-controls\.js was not found/
       )
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -133,7 +134,7 @@ describe('packaged runtime resources', () => {
       await mkdir(join(resourcesDir, 'node_modules', 'jsonc-parser'), { recursive: true })
       expect(() => verifyPackagedMainRuntimeDeps(resourcesDir, asar)).not.toThrow()
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -153,7 +154,7 @@ describe('packaged runtime resources', () => {
 
       expect(() => verifyPackagedMainRuntimeDeps(resourcesDir, asar)).toThrow(/jsonc-parser/)
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -175,7 +176,7 @@ describe('packaged runtime resources', () => {
 
       expect(() => verifyPackagedMainRuntimeDeps(resourcesDir, asar)).not.toThrow()
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -213,7 +214,7 @@ describe('packaged runtime resources', () => {
         'Unsupported packaged runtime architecture: 4'
       )
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -249,7 +250,7 @@ describe('packaged runtime resources', () => {
           `console payload ${arch}`
         )
       } finally {
-        await rm(resourcesDir, { recursive: true, force: true })
+        await removeTree(resourcesDir)
       }
     }
   })
@@ -301,7 +302,7 @@ describe('packaged runtime resources', () => {
         'Unsupported packaged runtime architecture: universal'
       )
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -323,7 +324,7 @@ describe('packaged runtime resources', () => {
         'watcher-linux-x64-glibc'
       ])
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -341,7 +342,7 @@ describe('packaged runtime resources', () => {
 
       await expect(readdir(join(packageDir, 'dist'))).resolves.toEqual(['index.cjs'])
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -361,7 +362,7 @@ describe('packaged runtime resources', () => {
         'sherpa-onnx.node'
       ])
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -377,7 +378,7 @@ describe('packaged runtime resources', () => {
 
       await expect(readdir(packageDir)).resolves.toEqual(['index.cjs'])
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 
@@ -391,7 +392,7 @@ describe('packaged runtime resources', () => {
         })
       ).rejects.toThrow(/Missing packaged resources directory/)
     } finally {
-      await rm(root, { recursive: true, force: true })
+      await removeTree(root)
     }
   })
 
@@ -456,7 +457,7 @@ describe('packaged runtime resources', () => {
         await expect(stat(wrongArchPackage)).rejects.toMatchObject({ code: 'ENOENT' })
       } finally {
         process.env.PATH = previousPath
-        await rm(root, { recursive: true, force: true })
+        await removeTree(root)
       }
     }
   )
@@ -517,7 +518,7 @@ describe('packaged runtime resources', () => {
         ).resolves.toContain('"version": "9.9.9"')
         await expect(readFile(join(resourcesDir, 'package-type'), 'utf8')).resolves.toBe('AppImage')
       } finally {
-        await rm(root, { recursive: true, force: true })
+        await removeTree(root)
       }
     }
   )
@@ -608,7 +609,7 @@ describe('lazily required packages reach Resources/node_modules', () => {
       const dataset = require(probe)('emojibase-data/en/shortcodes/emojibase.json')
       expect(Object.keys(dataset).length).toBeGreaterThan(1000)
     } finally {
-      await rm(resourcesDir, { recursive: true, force: true })
+      await removeTree(resourcesDir)
     }
   })
 })
