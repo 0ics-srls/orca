@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { createEditorStore } from './editor-slice-test-harness'
 import type { AppState } from '../types'
-import type { Worktree } from '../../../../shared/worktree/types'
 import type {
   GitBranchChangeEntry,
   GitBranchCompareSummary
@@ -25,38 +24,6 @@ vi.mock('@/runtime/close-mirrored-editor-tab', () => ({
 }))
 
 describe('createEditorSlice combined diff exclusions', () => {
-  it('keeps combined-diff drag ownership bound to the host captured at open', () => {
-    const store = createEditorStore()
-    const worktreeId = 'repo-1::/srv/repo/worktree'
-    const repo = store.getState().repos[0]
-    const worktree = store.getState().worktreesByRepo['repo-1']?.[0]
-    if (!repo || !worktree) {
-      throw new Error('Expected editor test harness workspace')
-    }
-    const ownedWorktree: Worktree = {
-      ...worktree,
-      id: worktreeId,
-      repoId: 'repo-1',
-      path: '/srv/repo/worktree',
-      hostId: 'runtime:env-1'
-    }
-    store.setState({
-      repos: [{ ...repo, executionHostId: 'runtime:env-1' }],
-      worktreesByRepo: { 'repo-1': [ownedWorktree] }
-    })
-
-    store.getState().openAllDiffs(worktreeId, '/srv/repo/worktree')
-    store.setState({
-      worktreesByRepo: {
-        'repo-1': [{ ...ownedWorktree, hostId: 'runtime:env-2' }]
-      }
-    })
-
-    expect(
-      store.getState().openFiles[0]?.operationProvenance?.generation.route.executionHostId
-    ).toBe('runtime:env-1')
-  })
-
   it('stores skipped unresolved conflicts on combined diff tabs', () => {
     const store = createEditorStore()
 

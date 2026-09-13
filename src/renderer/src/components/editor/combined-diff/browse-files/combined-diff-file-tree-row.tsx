@@ -5,11 +5,8 @@ import type { SourceControlTreeNode } from '@/components/right-sidebar/source-co
 import { getFileTypeIcon } from '@/lib/file-type-icons'
 import { basename, dirname, joinPath } from '@/lib/path'
 import { cn } from '@/lib/utils'
-import {
-  WORKSPACE_FILE_PATH_MIME,
-  writeWorkspaceFileDragSourceIfResolved
-} from '@/lib/workspace-file-drag'
-import type { ExecutionHostId } from '../../../../../../shared/execution-host'
+import { WORKSPACE_FILE_PATH_MIME } from '@/lib/workspace-file-drag'
+import { writeWorkspaceFileDragSourceForWorkspace } from '@/lib/workspace-file-drag-source'
 import type { GitBranchChangeEntry } from '../../../../../../shared/git-diff-compare-types'
 import type {
   GitFileStatus,
@@ -40,7 +37,6 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
   mode,
   worktreePath,
   sourceWorkspaceId,
-  sourceExecutionHostId,
   activeSectionKey,
   sectionIndexByKey,
   isCollapsed,
@@ -52,7 +48,6 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
   mode: CombinedDiffFileTreeMode
   worktreePath: string
   sourceWorkspaceId?: string
-  sourceExecutionHostId?: ExecutionHostId
   activeSectionKey: string | null
   sectionIndexByKey: ReadonlyMap<string, number>
   isCollapsed: boolean
@@ -70,11 +65,9 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
         draggable
         onDragStart={(event) => {
           event.dataTransfer.setData(WORKSPACE_FILE_PATH_MIME, joinPath(worktreePath, node.path))
-          writeWorkspaceFileDragSourceIfResolved(
-            event.dataTransfer,
-            sourceWorkspaceId,
-            sourceExecutionHostId
-          )
+          if (sourceWorkspaceId) {
+            writeWorkspaceFileDragSourceForWorkspace(event.dataTransfer, sourceWorkspaceId)
+          }
           event.dataTransfer.effectAllowed = 'copy'
         }}
       >
@@ -130,11 +123,9 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
           WORKSPACE_FILE_PATH_MIME,
           joinPath(worktreePath, node.entry.path)
         )
-        writeWorkspaceFileDragSourceIfResolved(
-          event.dataTransfer,
-          sourceWorkspaceId,
-          sourceExecutionHostId
-        )
+        if (sourceWorkspaceId) {
+          writeWorkspaceFileDragSourceForWorkspace(event.dataTransfer, sourceWorkspaceId)
+        }
         event.dataTransfer.effectAllowed = 'copy'
       }}
       onClick={() => onNavigate(node.entry)}

@@ -1,5 +1,4 @@
 import React from 'react'
-import type { ExecutionHostId } from '../../../../../../shared/execution-host'
 import { SourceControlVirtualFileList } from '@/components/right-sidebar/source-control/listing/virtual-file-list'
 import type {
   CombinedDiffFileTreeEntry,
@@ -21,7 +20,6 @@ export function CombinedDiffFileTreeRows({
   mode,
   worktreePath,
   sourceWorkspaceId,
-  sourceExecutionHostId,
   activeSectionKey,
   sectionIndexByKey,
   collapsedDirectoryKeys,
@@ -34,7 +32,6 @@ export function CombinedDiffFileTreeRows({
   mode: CombinedDiffFileTreeMode
   worktreePath: string
   sourceWorkspaceId?: string
-  sourceExecutionHostId?: ExecutionHostId
   activeSectionKey: string | null
   sectionIndexByKey: ReadonlyMap<string, number>
   collapsedDirectoryKeys: ReadonlySet<string>
@@ -56,7 +53,6 @@ export function CombinedDiffFileTreeRows({
           mode={mode}
           worktreePath={worktreePath}
           sourceWorkspaceId={sourceWorkspaceId}
-          sourceExecutionHostId={sourceExecutionHostId}
           activeSectionKey={activeSectionKey}
           sectionIndexByKey={sectionIndexByKey}
           isCollapsed={collapsedDirectoryKeys.has(node.key)}

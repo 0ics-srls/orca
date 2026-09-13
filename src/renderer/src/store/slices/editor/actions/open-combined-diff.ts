@@ -4,25 +4,6 @@ import type { OpenFile } from '../types/open-file'
 import { resolveDiffRuntimeEnvironmentId } from '../git/diff-runtime-owner'
 import { toBranchCompareSnapshot, toCommitCompareSnapshot } from '../git/git-status-reconciliation'
 import { openWorkspaceEditorItem } from '../tabs/workspace-editor-item'
-import {
-  captureEditorFileOperationProvenance,
-  type EditorFileOperationProvenance
-} from '@/lib/editor-file-operation-owner'
-import type { AppState } from '../../../types'
-
-function captureCombinedDiffOperationProvenance(
-  state: AppState,
-  worktreeId: string,
-  runtimeEnvironmentId: string | null | undefined
-): EditorFileOperationProvenance | undefined {
-  try {
-    return captureEditorFileOperationProvenance(state, worktreeId, runtimeEnvironmentId, true)
-  } catch {
-    // Unlike open-file-apply this stays quiet: a combined diff never mutates,
-    // so the only cost is an unstamped drag, which the composer reports itself.
-    return undefined
-  }
-}
 
 export function createOpenCombinedDiff(
   set: EditorSet,
@@ -70,11 +51,6 @@ export function createOpenCombinedDiff(
             ] ?? 'All Changes')
           : 'All Changes'
         const runtimeEnvironmentId = resolveDiffRuntimeEnvironmentId(s, worktreeId, undefined)
-        const operationProvenance = captureCombinedDiffOperationProvenance(
-          s,
-          worktreeId,
-          runtimeEnvironmentId
-        )
         const existing = s.openFiles.find((f) => f.id === id)
         if (existing) {
           return {
@@ -91,8 +67,7 @@ export function createOpenCombinedDiff(
                     skippedConflicts,
                     conflictReview: undefined,
                     conflict: undefined,
-                    runtimeEnvironmentId,
-                    operationProvenance
+                    runtimeEnvironmentId
                   }
                 : f
             ),
@@ -119,8 +94,7 @@ export function createOpenCombinedDiff(
           skippedConflicts,
           conflictReview: undefined,
           conflict: undefined,
-          runtimeEnvironmentId,
-          operationProvenance
+          runtimeEnvironmentId
         }
         return {
           openFiles: [...s.openFiles, newFile],
@@ -137,11 +111,6 @@ export function createOpenCombinedDiff(
       const id = `${worktreeId}::all-diffs::branch::${compare.baseRef}::${branchCompare.compareVersion}`
       set((s) => {
         const runtimeEnvironmentId = resolveDiffRuntimeEnvironmentId(s, worktreeId, undefined)
-        const operationProvenance = captureCombinedDiffOperationProvenance(
-          s,
-          worktreeId,
-          runtimeEnvironmentId
-        )
         const branchEntriesSnapshot = s.gitBranchChangesByWorktree[worktreeId] ?? []
         const existing = s.openFiles.find((f) => f.id === id)
         if (existing) {
@@ -156,8 +125,7 @@ export function createOpenCombinedDiff(
                     conflict: undefined,
                     skippedConflicts: undefined,
                     conflictReview: undefined,
-                    runtimeEnvironmentId,
-                    operationProvenance
+                    runtimeEnvironmentId
                   }
                 : f
             ),
@@ -182,8 +150,7 @@ export function createOpenCombinedDiff(
           conflict: undefined,
           skippedConflicts: undefined,
           conflictReview: undefined,
-          runtimeEnvironmentId,
-          operationProvenance
+          runtimeEnvironmentId
         }
         return {
           openFiles: [...s.openFiles, newFile],
@@ -210,11 +177,6 @@ export function createOpenCombinedDiff(
         : `Commit ${commitCompare.compareRef}`
       set((s) => {
         const runtimeEnvironmentId = resolveDiffRuntimeEnvironmentId(s, worktreeId, undefined)
-        const operationProvenance = captureCombinedDiffOperationProvenance(
-          s,
-          worktreeId,
-          runtimeEnvironmentId
-        )
         const existing = s.openFiles.find((f) => f.id === id)
         if (existing) {
           return {
@@ -228,8 +190,7 @@ export function createOpenCombinedDiff(
                     conflict: undefined,
                     skippedConflicts: undefined,
                     conflictReview: undefined,
-                    runtimeEnvironmentId,
-                    operationProvenance
+                    runtimeEnvironmentId
                   }
                 : f
             ),
@@ -254,8 +215,7 @@ export function createOpenCombinedDiff(
           conflict: undefined,
           skippedConflicts: undefined,
           conflictReview: undefined,
-          runtimeEnvironmentId,
-          operationProvenance
+          runtimeEnvironmentId
         }
         return {
           openFiles: [...s.openFiles, newFile],

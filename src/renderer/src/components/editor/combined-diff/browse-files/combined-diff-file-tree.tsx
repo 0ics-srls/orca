@@ -15,7 +15,6 @@ import type {
 import { CombinedDiffFileTreeRows } from './combined-diff-file-tree-rows'
 import { useCombinedDiffFileTreeResize } from './use-combined-diff-file-tree-resize'
 import { translate } from '@/i18n/i18n'
-import type { ExecutionHostId } from '../../../../../../shared/execution-host'
 import {
   buildCombinedDiffBranchTreeRoots,
   buildCombinedDiffUncommittedTreeGroups,
@@ -38,7 +37,6 @@ export function CombinedDiffFileTree({
   mode,
   worktreePath,
   sourceWorkspaceId,
-  sourceExecutionHostId,
   entries,
   sectionIndexByKey,
   activeSectionKey,
@@ -50,7 +48,6 @@ export function CombinedDiffFileTree({
   mode: CombinedDiffFileTreeMode
   worktreePath: string
   sourceWorkspaceId?: string
-  sourceExecutionHostId?: ExecutionHostId
   entries: readonly CombinedDiffFileTreeEntry[]
   sectionIndexByKey: ReadonlyMap<string, number>
   activeSectionKey: string | null
@@ -206,7 +203,6 @@ export function CombinedDiffFileTree({
     mode,
     worktreePath,
     sourceWorkspaceId,
-    sourceExecutionHostId,
     activeSectionKey,
     sectionIndexByKey,
     collapsedDirectoryKeys,
