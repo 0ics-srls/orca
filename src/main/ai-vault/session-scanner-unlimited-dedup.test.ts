@@ -187,3 +187,36 @@ it('retains only canonical rows during duplicate-heavy load-all scans', () => {
   expect(accumulator.size).toBe(100)
   expect(accumulator.sessions().every((row) => row.codexHome === null)).toBe(true)
 })
+
+it('bounds per-session bookkeeping for a large mostly-unique load-all corpus', () => {
+  const gc = (globalThis as { gc?: () => void }).gc
+  if (!gc) {
+    throw new Error('Retention test requires --expose-gc (config/vitest.config.ts)')
+  }
+  const heapUsed = () => {
+    gc()
+    gc()
+    return process.memoryUsage().heapUsed
+  }
+  const count = 50000
+  // Why pre-build: the corpus itself must not count against the accumulator.
+  const corpus = Array.from({ length: count }, (_, index) =>
+    index % 100 === 99
+      ? {
+          ...session(index - 1),
+          codexHome: '/custom',
+          filePath: `/custom/rollout-${index - 1}.jsonl`
+        }
+      : session(index)
+  )
+  const before = heapUsed()
+  const accumulator = new CodexSessionAccumulator()
+  for (const row of corpus) {
+    accumulator.add(row)
+  }
+  const retained = heapUsed() - before
+
+  expect(accumulator.sessions()).toEqual(dedupeCodexSessionsBySessionId(corpus))
+  // An alias-key string plus wrapper object and positions array per session costs ~430 B.
+  expect(retained).toBeLessThan(count * 128)
+})
