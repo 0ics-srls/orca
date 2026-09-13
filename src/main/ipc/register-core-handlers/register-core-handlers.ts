@@ -26,6 +26,8 @@ import { registerRuntimeEnvironmentHandlers } from '../runtime-environments'
 import { registerEphemeralVmHandlers } from '../ephemeral-vm'
 import { registerAiVaultHandlers } from '../ai-vault'
 import { registerAiVaultSearchHandlers } from '../ai-vault-search'
+import { installChildSessionSearchService } from '../../ai-vault-search/session-search-enablement'
+import { getCanonicalUserDataPath } from '../../persistence/loading-store/user-data-path'
 import { registerNativeChatHandlers } from '../native-chat'
 import { registerNotificationHandlers } from '../notifications'
 import { registerNotebookHandlers } from '../notebook'
@@ -219,6 +221,13 @@ export function registerCoreHandlers(
   registerAiVaultSearchHandlers({
     callRuntimeSearch: (environmentId, method, params) =>
       callRuntimeSessionSearch(app.getPath('userData'), environmentId, method, params)
+  })
+  // Why beside the handlers and not in preflight: the handlers are what answer a
+  // search, and this is what gives them something to answer from. Same canonical
+  // path the parse cache takes, so both halves of the scanner's state agree.
+  installChildSessionSearchService({
+    dataRoot: getCanonicalUserDataPath(),
+    getSettings: () => store.getSettings()
   })
   registerAiVaultHandlers({
     ensureStructuredSessionOwnership: () => runtime.ensureStructuredAgentSessionHost(),
