@@ -40,22 +40,17 @@ export const OPERATION_MUTATIONS = {
   },
   // Reads the overrides one level above the settings envelope.
   'bot-overrides-envelope': {
-    file: 'use-pr-bot-author-overrides.ts',
-    before: 'const overrides = result?.settings?.prBotAuthorOverrides',
-    after:
-      'const overrides = (result as { prBotAuthorOverrides?: unknown } | null)?.prBotAuthorOverrides'
+    file: 'settings-read-operations.ts',
+    before: "settings == null ? undefined : Reflect.get(Object(settings), 'prBotAuthorOverrides')",
+    after: "raw == null ? undefined : Reflect.get(Object(raw), 'prBotAuthorOverrides')"
   },
-  // Keeps the settings envelope instead of unwrapping it into the runtime settings.
+  // Publishes the settings envelope instead of the accepted operation value.
   'workspace-context-envelope': {
     file: 'use-new-workspace-runtime-context.ts',
-    before: `            settingsResult.result as {
-              settings: NewWorktreeRuntimeSettings & { visibleTaskProviders?: unknown }
-            }
-          ).settings`,
-    after: `            settingsResult.result as NewWorktreeRuntimeSettings & {
-              visibleTaskProviders?: unknown
-            }
-          )`
+    before:
+      '(settingsResult.value as NewWorktreeRuntimeSettings & { visibleTaskProviders?: unknown })',
+    after:
+      '(settingsRes.value.result as NewWorktreeRuntimeSettings & { visibleTaskProviders?: unknown })'
   },
   // Treats any successful linear.status reply as a connected Linear account.
   'home-providers-linear': {
@@ -69,12 +64,11 @@ export const OPERATION_MUTATIONS = {
     before: 'const platform = (result as { platform?: unknown } | null)?.platform',
     after: 'const platform = (result as { hostPlatform?: unknown } | null)?.hostPlatform'
   },
-  // Hydrates the runtime task settings from the envelope rather than its settings member.
+  // Hydrates the runtime task settings from the envelope rather than the accepted value.
   'task-hydration-envelope': {
     file: 'use-mobile-tasks-runtime-hydration.tsx',
-    before: `        ? (((settingsResponse.result as { settings?: RuntimeTaskSettings }).settings ??
-            {}) as RuntimeTaskSettings)`,
-    after: '        ? ((settingsResponse.result ?? {}) as RuntimeTaskSettings)'
+    before: '((settingsResult.value ?? {}) as RuntimeTaskSettings)',
+    after: '((settingsResponse.result ?? {}) as RuntimeTaskSettings)'
   },
   // Applies the preset only after the write settles, dropping the optimistic update.
   'task-preferences-optimistic': {
@@ -96,19 +90,42 @@ export const OPERATION_MUTATIONS = {
   // Publishes the settings envelope as the refreshed workspace runtime settings.
   'workspace-submit-envelope': {
     file: 'use-new-workspace-create-submit.ts',
-    before: `          latestRuntimeSettings = result.settings
-          args.setRuntimeSettings(result.settings)`,
-    after: `          latestRuntimeSettings = result as unknown as NewWorktreeRuntimeSettings
-          args.setRuntimeSettings(result as unknown as NewWorktreeRuntimeSettings)`
+    before: 'latestRuntimeSettings = settings.value as NewWorktreeRuntimeSettings',
+    after: 'latestRuntimeSettings = settingsReply.result as NewWorktreeRuntimeSettings'
+  },
+  // Reads settings eagerly, so a null result throws before the sibling's refusal is checked.
+  'new-tab-deferred-settings-read': {
+    file: 'settings-read-operations.ts',
+    before: '  value: () => settingsMember(raw),',
+    after: '  value: ((settings) => () => settings)(settingsMember(raw)),'
+  },
+  // Checks the sibling's refusal before the operation's own, so a correlated refusal reports the
+  // sibling. Invisible to every scenario whose sibling succeeds or rejects at the transport.
+  'new-tab-refusal-order': {
+    file: 'mobile-new-tab-agent-loader.ts',
+    before: `  const readSettings = newTabSettingsRead.interpret(settingsResponse)
+  if (!detectedResponse.ok) {
+    throw new Error((detectedResponse as RpcFailure).error.message)
+  }`,
+    after: `  if (!detectedResponse.ok) {
+    throw new Error((detectedResponse as RpcFailure).error.message)
+  }
+  const readSettings = newTabSettingsRead.interpret(settingsResponse)`
+  },
+  // Publishes an unaccepted read, blanking settings a refusal should have left alone. Invisible
+  // to any scenario that refuses before the screen ever held data.
+  'workspace-context-refusal-blanks': {
+    file: 'use-new-workspace-runtime-context.ts',
+    before: `      if (settingsValue) {
+        setRuntimeSettings(settingsValue)
+      }`,
+    after: '      setRuntimeSettings(settingsValue)'
   },
   // Publishes the settings envelope as the refreshed task runtime settings.
   'task-workspace-envelope': {
     file: 'use-mobile-tasks-workspace-create-actions.tsx',
-    before: `            latestRuntimeTaskSettings = ((
-              settingsResponse.result as { settings?: RuntimeTaskSettings }
-            ).settings ?? {}) as RuntimeTaskSettings`,
-    after:
-      '            latestRuntimeTaskSettings = (settingsResponse.result ?? {}) as RuntimeTaskSettings'
+    before: 'latestRuntimeTaskSettings = (settingsResult.value ?? {}) as RuntimeTaskSettings',
+    after: 'latestRuntimeTaskSettings = (settingsReply.result ?? {}) as RuntimeTaskSettings'
   }
 } as const satisfies Record<string, OperationMutation>
 

@@ -3,15 +3,67 @@
   "family": "settings-agent-read",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "aac38d698ff75ac4c8658addab48ef5a83617619",
-  "lockfileSha256": "7bcb20be34e3665506cb46b00c50e986be6c671b32d1a303e2e5d12cd7ab4cdf",
-  "recorderSha256": "18f1dccead77f1301b82e8480c1eb1e29a88607b9fe096873a39f8863a09d632",
+  "baseline": "22f56f7c2a5aa11812fc0bfec4af02a475205531",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "fdcd40b216daf0ff3905c1ea098bdcea88c52d3deb774624aaebe6e7c32f67b8",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
   "goldenFormatVersion": 2,
   "values": {
-    "0b6f5724327e": [
+    "155ff7f445b7": [
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      },
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "227b6af1aa2d": [
       {
         "name": "repo.list#1",
         "args": [
@@ -75,11 +127,12 @@
           "startedAt": 0,
           "settledAt": 0,
           "value": {
+            "error": {
+              "code": "refused",
+              "message": "settings refused"
+            },
             "id": "frame-2",
-            "ok": true,
-            "result": {
-              "$rpc": "null"
-            }
+            "ok": false
           }
         }
       },
@@ -118,58 +171,18 @@
         }
       }
     ],
-    "155ff7f445b7": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
+    "274355646d54": {
+      "load": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "settings refused",
+          "isRpcDeliveryUnknown": false
         }
       }
-    ],
+    },
     "3076d0a13ab4": [
       {
         "name": "repo.list#1",
@@ -201,22 +214,10 @@
         "status": "pending",
         "startedAt": 0
       }
-    },
-    "b2ed82397ed2": {
-      "load": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "agents refused",
-          "isRpcDeliveryUnknown": false
-        }
-      }
     }
   },
   "recording": {
-    "scenario": "probe-new-tab-null-sibling-refused",
+    "scenario": "probe-new-tab-both-refused",
     "checkpoints": [
       {
         "id": "pending",
@@ -231,9 +232,9 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "0b6f5724327e",
+          "sender": "227b6af1aa2d",
           "payloads": "503a535a0cd0",
-          "settlements": "b2ed82397ed2",
+          "settlements": "274355646d54",
           "state": "44136fa355b3",
           "effects": "4f53cda18c2b"
         }

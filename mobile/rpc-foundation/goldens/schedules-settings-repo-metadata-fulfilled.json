@@ -3,9 +3,9 @@
   "family": "settings.repo-metadata",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "aac38d698ff75ac4c8658addab48ef5a83617619",
-  "lockfileSha256": "7bcb20be34e3665506cb46b00c50e986be6c671b32d1a303e2e5d12cd7ab4cdf",
-  "recorderSha256": "18f1dccead77f1301b82e8480c1eb1e29a88607b9fe096873a39f8863a09d632",
+  "baseline": "22f56f7c2a5aa11812fc0bfec4af02a475205531",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "fdcd40b216daf0ff3905c1ea098bdcea88c52d3deb774624aaebe6e7c32f67b8",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
@@ -1184,7 +1184,7 @@
         "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"host.platform\"}"
       }
     ],
-    "bcb5d1795ffc": [
+    "b0cdb6dbc9a3": [
       {
         "name": "repo.list#1",
         "args": [
@@ -1296,7 +1296,12 @@
           "error": {
             "category": "LogicalClientCutoverError",
             "message": "RPC interrupted by connection migration",
-            "isRpcDeliveryUnknown": false
+            "isRpcDeliveryUnknown": true,
+            "cause": {
+              "category": "Error",
+              "message": "Connection closed",
+              "isRpcDeliveryUnknown": true
+            }
           }
         }
       },
@@ -1327,7 +1332,12 @@
           "error": {
             "category": "LogicalClientCutoverError",
             "message": "RPC interrupted by connection migration",
-            "isRpcDeliveryUnknown": false
+            "isRpcDeliveryUnknown": true,
+            "cause": {
+              "category": "Error",
+              "message": "Connection closed",
+              "isRpcDeliveryUnknown": true
+            }
           }
         }
       }
@@ -1736,7 +1746,7 @@
       {
         "id": "settings-repo-metadata-fulfilled.client-cutover:settled",
         "observation": {
-          "sender": "bcb5d1795ffc",
+          "sender": "b0cdb6dbc9a3",
           "payloads": "83ef5f7039bf",
           "settlements": "cb923c11ddca",
           "state": "1de50f3b4aac",

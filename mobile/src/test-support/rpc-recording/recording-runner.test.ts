@@ -280,14 +280,15 @@ describe('recording boundaries', () => {
   it('refuses a mutation anchor that matches more than once', () => {
     const root = mkdtempSync(join(tmpdir(), 'rpc-mutant-'))
     try {
-      const anchor = 'const overrides = result?.settings?.prBotAuthorOverrides'
+      const anchor =
+        "const overrides = settings == null ? undefined : Reflect.get(Object(settings), 'prBotAuthorOverrides')"
       mkdirSync(join(root, 'mod'), { recursive: true })
       writeFileSync(
-        join(root, 'mod/use-pr-bot-author-overrides.ts'),
-        `const result = {} as { settings?: { prBotAuthorOverrides?: unknown } }\nexport function first() {\n  ${anchor}\n  return overrides\n}\nexport function second() {\n  ${anchor}\n  return overrides\n}\n`
+        join(root, 'mod/settings-read-operations.ts'),
+        `const raw = {} as { settings?: unknown }\nconst settings = raw.settings\nexport function first() {\n  ${anchor}\n  return overrides\n}\nexport function second() {\n  ${anchor}\n  return overrides\n}\n`
       )
       const loader = operationModuleLoader(root, 'bot-overrides-envelope')
-      expect(() => loader.load('mod/use-pr-bot-author-overrides.ts')).toThrow(
+      expect(() => loader.load('mod/settings-read-operations.ts')).toThrow(
         'matched 2 sites, expected 1'
       )
     } finally {

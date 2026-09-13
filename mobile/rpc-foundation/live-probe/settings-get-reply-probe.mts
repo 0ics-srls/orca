@@ -2,13 +2,13 @@
 import WebSocket from 'ws'
 import nacl from 'tweetnacl'
 import { readFileSync } from 'node:fs'
-import { deriveSharedKey, e2eeDecrypt, e2eeEncrypt } from './mock-server-encryption.ts'
+import { deriveSharedKey, e2eeDecrypt, e2eeEncrypt } from '../../scripts/mock-server-encryption.ts'
 import {
   botOverridesRead,
   newTabSettingsRead,
   optionalSettingsRead,
   settingsRead
-} from '../src/transport/settings-read-operations.ts'
+} from '../../src/transport/settings-read-operations.ts'
 
 const PORT = Number(process.env.PORT) || 6768
 const KEY_FILE = process.env.MOCK_SERVER_KEY_FILE!

@@ -3,116 +3,14 @@
   "family": "settings-agent-read",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "aac38d698ff75ac4c8658addab48ef5a83617619",
-  "lockfileSha256": "7bcb20be34e3665506cb46b00c50e986be6c671b32d1a303e2e5d12cd7ab4cdf",
-  "recorderSha256": "18f1dccead77f1301b82e8480c1eb1e29a88607b9fe096873a39f8863a09d632",
+  "baseline": "22f56f7c2a5aa11812fc0bfec4af02a475205531",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "fdcd40b216daf0ff3905c1ea098bdcea88c52d3deb774624aaebe6e7c32f67b8",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
   "goldenFormatVersion": 2,
   "values": {
-    "05bb4ee23d42": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "LogicalClientCutoverError",
-            "message": "RPC interrupted by connection migration",
-            "isRpcDeliveryUnknown": false
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "LogicalClientCutoverError",
-            "message": "RPC interrupted by connection migration",
-            "isRpcDeliveryUnknown": false
-          }
-        }
-      }
-    ],
     "08dec2e70517": [
       {
         "name": "repo.list#1",
@@ -312,6 +210,118 @@
             "category": "Error",
             "message": "preflight.detectRemoteAgents#1 rejected",
             "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "16d4a6c93cc9": [
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "connectionId": "ssh-1",
+                  "id": "repo-1"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "LogicalClientCutoverError",
+            "message": "RPC interrupted by connection migration",
+            "isRpcDeliveryUnknown": true,
+            "cause": {
+              "category": "Error",
+              "message": "Connection closed",
+              "isRpcDeliveryUnknown": true
+            }
+          }
+        }
+      },
+      {
+        "name": "preflight.detectRemoteAgents#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "preflight.detectRemoteAgents"
+          },
+          {
+            "name": "params",
+            "value": {
+              "connectionId": "ssh-1"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "LogicalClientCutoverError",
+            "message": "RPC interrupted by connection migration",
+            "isRpcDeliveryUnknown": true,
+            "cause": {
+              "category": "Error",
+              "message": "Connection closed",
+              "isRpcDeliveryUnknown": true
+            }
           }
         }
       }
@@ -655,6 +665,31 @@
         "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"preflight.detectRemoteAgents\",\"params\":{\"connectionId\":\"ssh-1\"}}"
       }
     ],
+    "7145ee805a54": {
+      "load": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "LogicalClientCutoverError",
+          "message": "RPC interrupted by connection migration",
+          "isRpcDeliveryUnknown": true,
+          "cause": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      },
+      "cutover": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "undefined"
+        }
+      }
+    },
     "8e8786e18ff2": [
       {
         "name": "repo.list#1",
@@ -858,26 +893,6 @@
         }
       }
     ],
-    "9c1600fca2c8": {
-      "load": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "LogicalClientCutoverError",
-          "message": "RPC interrupted by connection migration",
-          "isRpcDeliveryUnknown": false
-        }
-      },
-      "cutover": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
-      }
-    },
     "b11c8efab170": {
       "load": {
         "status": "pending",
@@ -1157,9 +1172,9 @@
       {
         "id": "settings-new-tab-ssh.client-cutover:settled",
         "observation": {
-          "sender": "05bb4ee23d42",
+          "sender": "16d4a6c93cc9",
           "payloads": "503a535a0cd0",
-          "settlements": "9c1600fca2c8",
+          "settlements": "7145ee805a54",
           "state": "44136fa355b3",
           "effects": "4f53cda18c2b"
         }
