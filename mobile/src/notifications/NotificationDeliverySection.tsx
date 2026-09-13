@@ -40,7 +40,7 @@ export function NotificationDeliverySection({ value, disabled, onChange }: Props
         {row(
           'suppressWhileViewing',
           'Suppress while focused',
-          'Skip alerts for this workspace only while Orca is open.'
+          'Skip alerts for the workspace open on this phone.'
         )}
       </View>
       <Text style={styles.footer}>
