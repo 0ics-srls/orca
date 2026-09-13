@@ -19,6 +19,25 @@ export type UseNativeChatExternalAttachmentsArgs = {
   setNotice: (notice: string | null) => void
 }
 
+function attachmentOwnerStillCurrent(
+  captured: NativeChatAttachmentOwner,
+  current: NativeChatAttachmentOwner
+): boolean {
+  if (captured.kind !== current.kind) {
+    return false
+  }
+  if (captured.kind !== 'ssh' || current.kind !== 'ssh') {
+    return captured.kind === 'local'
+  }
+  return (
+    captured.connectionId === current.connectionId &&
+    captured.worktreePath === current.worktreePath &&
+    captured.expectedExecutionHostId === current.expectedExecutionHostId &&
+    captured.expectedSshTargetId === current.expectedSshTargetId &&
+    captured.expectedSshConnectionGeneration === current.expectedSshConnectionGeneration
+  )
+}
+
 /**
  * Attach paths that arrived client-local (composer drop / file picker). SSH
  * worktrees upload into the worktree's `.orca/drops` first so the remote agent
@@ -65,17 +84,30 @@ export function useNativeChatExternalAttachments({
         void (async () => {
           const authorizedPaths: string[] = []
           for (const targetPath of paths) {
-            if (disabledRef.current) {
+            if (
+              disabledRef.current ||
+              !attachmentOwnerStillCurrent(owner, resolveAttachmentOwner())
+            ) {
               return
             }
             try {
               await window.api.fs.authorizeExternalPath({ targetPath })
+              if (
+                disabledRef.current ||
+                !attachmentOwnerStillCurrent(owner, resolveAttachmentOwner())
+              ) {
+                return
+              }
               authorizedPaths.push(targetPath)
             } catch {
               // Skip unreadable paths, matching workspace composer drops.
             }
           }
-          if (authorizedPaths.length > 0 && !disabledRef.current) {
+          if (
+            authorizedPaths.length > 0 &&
+            !disabledRef.current &&
+            attachmentOwnerStillCurrent(owner, resolveAttachmentOwner())
+          ) {
             attachResolvedPaths(authorizedPaths)
           }
         })()
@@ -83,7 +115,12 @@ export function useNativeChatExternalAttachments({
       }
       void (async () => {
         const remotePaths = await uploadNativeChatAttachmentPaths(paths, owner)
-        if (!remotePaths || remotePaths.length === 0 || disabledRef.current) {
+        if (
+          !remotePaths ||
+          remotePaths.length === 0 ||
+          disabledRef.current ||
+          !attachmentOwnerStillCurrent(owner, resolveAttachmentOwner())
+        ) {
           return
         }
         attachResolvedPaths(remotePaths, owner.connectionId)

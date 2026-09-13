@@ -1,0 +1,422 @@
+// @vitest-environment happy-dom
+
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { useLayoutEffect, useRef, useState } from 'react'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import {
+  encodeWorkspaceFilePaths,
+  WORKSPACE_FILE_PATHS_MIME,
+  WORKSPACE_FILE_PATH_MIME,
+  writeWorkspaceFileDragSource
+} from '@/lib/workspace-file-drag'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { NativeChatComposerInput } from './native-chat-composer-input'
+import { NativeChatComposerField } from './NativeChatComposerField'
+import { useNativeChatComposerAttachments } from './use-native-chat-composer-attachments'
+import { useNativeChatWorkspaceFileDrop } from './use-native-chat-workspace-file-drop'
+import { useImeEnterGestureOwnership } from '@/lib/ime-composition-keyboard-event'
+
+const testState: {
+  executionHostId: ExecutionHostId
+  ownerConnectionId: string
+  ownerKind: 'local' | 'not-ready' | 'runtime' | 'ssh'
+  ownerWorktreePath: string
+  store: { tabsByWorktree: Record<string, { id: string }[]> }
+} = vi.hoisted(() => ({
+  executionHostId: 'local',
+  ownerConnectionId: 'ssh-1',
+  ownerKind: 'local',
+  ownerWorktreePath: '/remote/repo',
+  store: {
+    tabsByWorktree: {
+      'worktree-1': [{ id: 'terminal-tab-1' }]
+    }
+  }
+}))
+
+vi.mock('@/store', () => {
+  const useAppStore = (selector: (state: typeof testState.store) => unknown) =>
+    selector(testState.store)
+  useAppStore.getState = () => testState.store
+  return { useAppStore }
+})
+vi.mock('@/lib/worktree-runtime-owner', () => ({
+  getExecutionHostIdForWorktree: () => testState.executionHostId
+}))
+vi.mock('./native-chat-attachment-upload', () => ({
+  nativeChatWorktreeNotReadyNotice: () => 'Worktree not ready — try again in a moment.',
+  resolveNativeChatAttachmentOwnerForWorktree: () =>
+    testState.ownerKind === 'ssh'
+      ? {
+          kind: 'ssh',
+          connectionId: testState.ownerConnectionId,
+          worktreePath: testState.ownerWorktreePath
+        }
+      : { kind: testState.ownerKind }
+}))
+vi.mock('@/i18n/i18n', () => ({
+  translate: (_key: string, fallback: string) => fallback
+}))
+vi.mock('@/runtime/runtime-terminal-inspection', () => ({
+  isRemoteRuntimePtyId: () => false
+}))
+vi.mock('./NativeChatComposerActions', () => ({
+  NativeChatComposerActions: () => <div data-testid="composer-actions" />
+}))
+vi.mock('./NativeChatAutocompleteMenus', () => ({
+  NativeChatMentionHint: () => null,
+  NativeChatPickerMenu: () => null
+}))
+vi.mock('./NativeChatImageAttachmentPreview', () => ({
+  NativeChatImageAttachmentPreview: ({
+    attachment
+  }: {
+    attachment: { connectionId?: string; path: string }
+  }) => (
+    <output data-image-attachment data-connection-id={attachment.connectionId}>
+      {attachment.path}
+    </output>
+  )
+}))
+
+class FileDragDataTransfer {
+  dropEffect = 'none'
+  effectAllowed = 'copyMove'
+  files: File[] = []
+  private readonly data = new Map<string, string>()
+
+  get types(): string[] {
+    return [...this.data.keys()]
+  }
+
+  getData(type: string): string {
+    return this.data.get(type) ?? ''
+  }
+
+  setData(type: string, value: string): void {
+    this.data.set(type, value)
+  }
+}
+
+type ProbeProps = {
+  disabled?: boolean
+  initialDraft?: string
+  structured?: boolean
+  workspaceId?: string
+}
+
+let latestInput: NativeChatComposerInput | null = null
+const bubbledDrop = vi.fn()
+
+function ComposerProbe({
+  disabled = false,
+  initialDraft = '',
+  structured = true,
+  workspaceId = 'worktree-1'
+}: ProbeProps): React.JSX.Element {
+  const [draft, setDraft] = useState(initialDraft)
+  const [caret, setCaret] = useState(initialDraft.length)
+  const [notice, setNotice] = useState<string | null>(null)
+  const inputRef = useRef<NativeChatComposerInput>(null)
+  const imeEnterGesture = useImeEnterGestureOwnership()
+  const attachments = useNativeChatComposerAttachments({
+    attachmentScopeKey: `pane:${workspaceId}`,
+    allowWithoutTarget: structured,
+    caret,
+    disabled,
+    isComposing: imeEnterGesture.isComposing,
+    resolveTarget: () =>
+      structured ? null : { ptyId: 'pty-1', settings: { activeRuntimeEnvironmentId: null } },
+    textareaRef: inputRef,
+    setCaret,
+    setDraft,
+    setNotice
+  })
+  const workspaceFileDropHandlers = useNativeChatWorkspaceFileDrop({
+    terminalTabId: 'terminal-tab-1',
+    structuredWorktreeId: structured ? workspaceId : undefined,
+    disabled,
+    attachResolvedPaths: attachments.attachResolvedPaths,
+    setNotice
+  })
+  useLayoutEffect(() => {
+    latestInput = inputRef.current
+  })
+
+  return (
+    <div onDrop={bubbledDrop}>
+      <NativeChatComposerField
+        composerScopeKey={`pane:${workspaceId}`}
+        textareaRef={inputRef}
+        draft={draft}
+        disabled={disabled}
+        hasPty
+        canSend={!disabled}
+        autocomplete={{ mode: 'none' }}
+        activeSuggestion={0}
+        notice={notice}
+        imageAttachments={attachments.imageAttachments}
+        sendButtonDisabled={false}
+        isWorking={false}
+        attachDisabled={disabled}
+        dictationDisabled
+        isDictating={false}
+        isDictationHoldMode={false}
+        imeEnterGesture={imeEnterGesture}
+        onDraftChange={(value, input) => {
+          setDraft(value)
+          setCaret(input.selectionStart ?? value.length)
+        }}
+        onTextareaSelect={(input) => setCaret(input.selectionStart ?? input.value.length)}
+        onKeyDown={() => {}}
+        onImeSettled={(input) => {
+          setDraft(input.value)
+          attachments.flushPendingAttachments()
+        }}
+        onPaste={() => {}}
+        pickerListboxId="picker"
+        onChoosePickerItem={() => {}}
+        onRetrySkills={() => {}}
+        onAcceptMention={() => {}}
+        onRemoveImageAttachment={attachments.removeImageAttachment}
+        onAttach={() => {}}
+        workspaceFileDropHandlers={workspaceFileDropHandlers}
+        onDictationToggle={() => {}}
+        onDictationHoldStart={() => {}}
+        onDictationHoldEnd={() => {}}
+        onSend={() => {}}
+        sessionOptionsSurface={null}
+        sessionOptionsSnapshot={[]}
+      />
+      <output data-testid="draft">{draft}</output>
+    </div>
+  )
+}
+
+function internalTransfer(
+  paths: string[],
+  source: { executionHostId?: ExecutionHostId; workspaceId?: string } = {}
+): FileDragDataTransfer {
+  const transfer = new FileDragDataTransfer()
+  transfer.setData(WORKSPACE_FILE_PATH_MIME, paths[0] ?? '')
+  if (paths.length > 1) {
+    transfer.setData(WORKSPACE_FILE_PATHS_MIME, encodeWorkspaceFilePaths(paths))
+  }
+  writeWorkspaceFileDragSource(transfer, {
+    executionHostId: source.executionHostId ?? 'local',
+    workspaceId: source.workspaceId ?? 'worktree-1'
+  })
+  return transfer
+}
+
+function editor(): HTMLElement {
+  return screen.getByRole('textbox')
+}
+
+function dispatchDragEvent(
+  type: 'dragover' | 'drop',
+  target: Element,
+  dataTransfer: FileDragDataTransfer
+): boolean {
+  const event = new Event(type, { bubbles: true, cancelable: true })
+  Object.defineProperty(event, 'dataTransfer', { value: dataTransfer })
+  let accepted = true
+  act(() => {
+    accepted = target.dispatchEvent(event)
+  })
+  return accepted
+}
+
+describe('native chat workspace file drops', () => {
+  beforeEach(() => {
+    testState.executionHostId = 'local'
+    testState.ownerConnectionId = 'ssh-1'
+    testState.ownerKind = 'local'
+    testState.ownerWorktreePath = '/remote/repo'
+    latestInput = null
+    bubbledDrop.mockReset()
+  })
+
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('consumes a nested editor drop once and inserts top-level paths at the caret', () => {
+    render(<ComposerProbe initialDraft="$rev tail" />)
+    act(() => {
+      latestInput!.insertSkill!(0, 4, '$review')
+    })
+    expect(editor().querySelectorAll('[data-native-chat-skill]')).toHaveLength(1)
+
+    const transfer = internalTransfer([
+      '/repo/src',
+      '/repo/src/index.ts',
+      '/repo/My File.ts',
+      '/repo/My File.ts'
+    ])
+    transfer.setData('text/plain', 'must not be inserted by ProseMirror')
+    const accepted = dispatchDragEvent('drop', editor(), transfer)
+
+    expect(accepted).toBe(false)
+    expect(screen.getByTestId('draft').textContent).toBe(
+      '$review @/repo/src @"/repo/My File.ts"  tail'
+    )
+    expect(editor().querySelectorAll('[data-native-chat-skill]')).toHaveLength(1)
+    expect(editor().textContent).not.toContain('must not be inserted')
+    expect(bubbledDrop).not.toHaveBeenCalled()
+  })
+
+  it('advertises a copy drop while leaving unrelated drags alone', () => {
+    render(<ComposerProbe />)
+    const internal = internalTransfer(['/repo/a.ts'])
+    const accepted = dispatchDragEvent('dragover', editor(), internal)
+    expect(accepted).toBe(false)
+    expect(internal.dropEffect).toBe('copy')
+
+    const unrelated = new FileDragDataTransfer()
+    unrelated.setData('text/plain', 'plain')
+    unrelated.setData('text/html', '<b>plain</b>')
+    dispatchDragEvent('dragover', editor(), unrelated)
+    dispatchDragEvent('drop', editor(), unrelated)
+    expect(bubbledDrop).toHaveBeenCalledOnce()
+    expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  const mismatchedSources: [string, { executionHostId?: ExecutionHostId; workspaceId?: string }][] =
+    [
+      ['different workspace', { workspaceId: 'worktree-2' }],
+      ['different execution host', { executionHostId: 'ssh:other' }]
+    ]
+
+  it.each(mismatchedSources)('rejects paths from a %s', (_label, source) => {
+    render(<ComposerProbe />)
+    dispatchDragEvent('drop', editor(), internalTransfer(['/repo/a.ts'], source))
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+    expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  it('rejects legacy unscoped payloads and unavailable owners', () => {
+    const view = render(<ComposerProbe />)
+    const unscoped = new FileDragDataTransfer()
+    unscoped.setData(WORKSPACE_FILE_PATH_MIME, '/repo/a.ts')
+    dispatchDragEvent('drop', editor(), unscoped)
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+
+    testState.ownerKind = 'not-ready'
+    view.rerender(<ComposerProbe />)
+    dispatchDragEvent('drop', editor(), internalTransfer(['/repo/b.ts']))
+    expect(screen.getByText('Worktree not ready — try again in a moment.')).toBeTruthy()
+    expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  it('consumes but ignores an internal drop while disabled', () => {
+    render(<ComposerProbe disabled />)
+    const transfer = internalTransfer(['/repo/a.ts'])
+    expect(dispatchDragEvent('drop', editor(), transfer)).toBe(false)
+    expect(transfer.dropEffect).toBe('none')
+    expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  it('queues an internal reference until composition settles without stealing focus', () => {
+    render(<ComposerProbe initialDraft="preedit" />)
+    const input = editor()
+    act(() => latestInput!.setSelectionRange(7, 7))
+    input.focus()
+    fireEvent.compositionStart(input)
+    dispatchDragEvent('drop', input, internalTransfer(['/repo/a.ts']))
+    expect(screen.getByTestId('draft').textContent).toBe('preedit')
+
+    fireEvent.compositionEnd(input, { data: '' })
+    expect(screen.getByTestId('draft').textContent).toBe('preedit@/repo/a.ts ')
+    expect(document.activeElement).toBe(input)
+  })
+
+  it('rejects an IME-queued path when its execution host changes before composition settles', () => {
+    render(<ComposerProbe initialDraft="preedit" />)
+    const input = editor()
+    fireEvent.compositionStart(input)
+    dispatchDragEvent('drop', input, internalTransfer(['/repo/a.ts']))
+
+    testState.executionHostId = 'ssh:replacement'
+    fireEvent.compositionEnd(input, { data: '' })
+
+    expect(screen.getByTestId('draft').textContent).toBe('preedit')
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+  })
+
+  it('rejects an IME-queued path when its SSH route changes under the same host', () => {
+    testState.executionHostId = 'runtime:outer-env'
+    testState.ownerKind = 'ssh'
+    render(<ComposerProbe initialDraft="preedit" />)
+    const input = editor()
+    fireEvent.compositionStart(input)
+    dispatchDragEvent(
+      'drop',
+      input,
+      internalTransfer(['/remote/repo/a.ts'], { executionHostId: 'runtime:outer-env' })
+    )
+
+    testState.ownerConnectionId = 'ssh-2'
+    fireEvent.compositionEnd(input, { data: '' })
+
+    expect(screen.getByTestId('draft').textContent).toBe('preedit')
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+  })
+
+  it('rejects only the exact unresolved-owner sentinel', () => {
+    testState.executionHostId = 'runtime:unresolved-owner'
+    const view = render(<ComposerProbe />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/repo/rejected.ts'], {
+        executionHostId: 'runtime:unresolved-owner'
+      })
+    )
+    expect(screen.getByTestId('draft').textContent).toBe('')
+
+    testState.executionHostId = 'runtime:my-unresolved-owner-env'
+    testState.ownerKind = 'runtime'
+    view.rerender(<ComposerProbe />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/repo/accepted.ts'], {
+        executionHostId: 'runtime:my-unresolved-owner-env'
+      })
+    )
+    expect(screen.getByTestId('draft').textContent).toBe('@/repo/accepted.ts ')
+  })
+
+  it('attaches same-owner SSH images without uploading or client authorization', () => {
+    testState.executionHostId = 'ssh:ssh-1'
+    testState.ownerKind = 'ssh'
+    render(<ComposerProbe />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/remote/repo/image.png'], {
+        executionHostId: 'ssh:ssh-1'
+      })
+    )
+
+    const image = screen.getByText('/remote/repo/image.png')
+    expect(image.getAttribute('data-connection-id')).toBe('ssh-1')
+    expect(screen.getByTestId('draft').textContent).toBe('')
+  })
+
+  it('supports PTY-owned and folder-workspace paths with the same ownership gate', () => {
+    const first = render(<ComposerProbe structured={false} />)
+    dispatchDragEvent('drop', editor(), internalTransfer(['/repo/pty.ts']))
+    expect(screen.getByTestId('draft').textContent).toBe('@/repo/pty.ts ')
+    first.unmount()
+
+    render(<ComposerProbe workspaceId="folder:folder-1" />)
+    dispatchDragEvent(
+      'drop',
+      editor(),
+      internalTransfer(['/folder/note.md'], { workspaceId: 'folder:folder-1' })
+    )
+    expect(screen.getByTestId('draft').textContent).toBe('@/folder/note.md ')
+  })
+})

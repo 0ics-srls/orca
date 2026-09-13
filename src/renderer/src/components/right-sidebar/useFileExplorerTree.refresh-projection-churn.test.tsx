@@ -163,6 +163,7 @@ describe('file explorer directory refresh churn', () => {
   it('does not stack a second read on an expanded dir the loading set already owns', () => {
     const loadDir = vi.fn().mockResolvedValue(true)
     const params = {
+      activeWorktreeId: 'wt-1',
       visibleFilesWorktreePath: WORKTREE_PATH,
       expanded: new Set([SRC_DIR]),
       dirCache: {},
@@ -189,6 +190,31 @@ describe('file explorer directory refresh churn', () => {
     })
     expect(loadDir).toHaveBeenCalledTimes(1)
     expect(loadDir).toHaveBeenCalledWith(SRC_DIR, 0, undefined)
+  })
+
+  it('resets a same-path tree when the workspace identity changes', () => {
+    const resetAndLoad = vi.fn()
+    const params = {
+      activeWorktreeId: 'wt-1',
+      visibleFilesWorktreePath: WORKTREE_PATH,
+      expanded: new Set<string>(),
+      dirCache: {},
+      loadingDirPaths: new Set<string>(),
+      rootError: null,
+      isDirStale: () => false,
+      loadDir: vi.fn().mockResolvedValue(true),
+      resetAndLoad,
+      resetSelection: vi.fn(),
+      setNameFilterQuery: vi.fn()
+    }
+    const hook = renderHook((props: typeof params) => useFileExplorerTreeLoadEffects(props), {
+      initialProps: params
+    })
+    resetAndLoad.mockClear()
+
+    hook.rerender({ ...params, activeWorktreeId: 'wt-2' })
+
+    expect(resetAndLoad).toHaveBeenCalledOnce()
   })
 
   it('renders the folder spinner from the loading dir set', () => {

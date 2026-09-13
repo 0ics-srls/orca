@@ -9,6 +9,8 @@ import { shouldShowIgnoredDecoration, STATUS_COLORS } from './status-display'
 import type { TreeNode } from './file-explorer-types'
 import type { FileExplorerRowProjection } from './file-explorer-row-projection'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client'
+import { getFileExplorerOperationExecutionHostId } from './file-explorer-operation-owner'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 
 type FileExplorerVirtualRowsProps = {
   virtualizer: Virtualizer<HTMLDivElement, Element>
@@ -28,6 +30,7 @@ type FileExplorerVirtualRowsProps = {
   flashingPath: string | null
   deleteShortcutLabel: string
   connectionId?: string | null
+  sourceWorkspaceId?: string | null
   runtimeDownloadContext?: RuntimeFileOperationArgs | null
   supportsFolderDownload?: boolean
   canOpenInOrcaBrowser?: (filePath: string) => boolean
@@ -56,6 +59,23 @@ type FileExplorerVirtualRowsProps = {
   nativeDropTargetDir: string | null
 }
 
+function getSelectedSourceExecutionHostId(
+  rowProjection: FileExplorerRowProjection,
+  selectedPaths: ReadonlySet<string>
+): ExecutionHostId | null {
+  let sourceExecutionHostId: ExecutionHostId | null = null
+  for (const path of selectedPaths) {
+    const executionHostId = getFileExplorerOperationExecutionHostId(
+      rowProjection.getRowByPath(path)?.operationOwner
+    )
+    if (!executionHostId || (sourceExecutionHostId && executionHostId !== sourceExecutionHostId)) {
+      return null
+    }
+    sourceExecutionHostId = executionHostId
+  }
+  return sourceExecutionHostId
+}
+
 export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): React.JSX.Element {
   const {
     virtualizer,
@@ -75,6 +95,7 @@ export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): Re
     flashingPath,
     deleteShortcutLabel,
     connectionId,
+    sourceWorkspaceId,
     runtimeDownloadContext,
     supportsFolderDownload = false,
     canOpenInOrcaBrowser = () => false,
@@ -104,6 +125,10 @@ export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): Re
   } = props
 
   const visibleSelectionCount = rowProjection.countVisiblePaths(selectedPaths)
+  const selectedSourceExecutionHostId = getSelectedSourceExecutionHostId(
+    rowProjection,
+    selectedPaths
+  )
 
   return (
     <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
@@ -181,6 +206,12 @@ export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): Re
               isIgnored={isIgnored}
               deleteShortcutLabel={deleteShortcutLabel}
               connectionId={connectionId}
+              sourceWorkspaceId={sourceWorkspaceId}
+              sourceExecutionHostId={
+                selectedPaths.has(n.path) && selectedPaths.size > 1
+                  ? selectedSourceExecutionHostId
+                  : getFileExplorerOperationExecutionHostId(n.operationOwner)
+              }
               runtimeDownloadContext={runtimeDownloadContext}
               supportsFolderDownload={supportsFolderDownload}
               canOpenInOrcaBrowser={canOpenInOrcaBrowser(n.path)}

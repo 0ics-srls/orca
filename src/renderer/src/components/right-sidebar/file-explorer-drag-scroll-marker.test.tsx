@@ -8,6 +8,7 @@ import { useFileExplorerHandlers } from './useFileExplorerHandlers'
 import { createFileExplorerRowProjection } from './file-explorer-row-projection'
 import { FILE_EXPLORER_DRAGGABLE_SELECTOR } from './file-explorer-drag-scroll-marker'
 import type { TreeNode } from './file-explorer-types'
+import { readWorkspaceFileDragSource } from '@/lib/workspace-file-drag'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
@@ -47,7 +48,10 @@ const directoryNode: TreeNode = {
   depth: 0
 }
 
-function virtualRowsElement(nodes: TreeNode[]): React.JSX.Element {
+function virtualRowsElement(
+  nodes: TreeNode[],
+  options: { selectedPaths?: Set<string>; sourceWorkspaceId?: string } = {}
+): React.JSX.Element {
   return FileExplorerVirtualRows({
     virtualizer: {
       getTotalSize: () => nodes.length * 26,
@@ -65,10 +69,11 @@ function virtualRowsElement(nodes: TreeNode[]): React.JSX.Element {
     ignoredByRelativePath: new Set(),
     expanded: new Set(),
     loadingDirPaths: new Set<string>(),
-    selectedPaths: new Set(),
+    selectedPaths: options.selectedPaths ?? new Set(),
     activeFileId: null,
     flashingPath: null,
     deleteShortcutLabel: 'Del',
+    sourceWorkspaceId: options.sourceWorkspaceId,
     onClick: vi.fn(),
     onDoubleClick: vi.fn(),
     onContextMenuSelect: vi.fn(),
@@ -106,6 +111,51 @@ describe('file explorer draggable rows carry the wheel-scroll marker', () => {
     draggableButtons.forEach((button) => {
       expect(button.matches(FILE_EXPLORER_DRAGGABLE_SELECTOR)).toBe(true)
     })
+  })
+
+  it('stamps a row with the workspace and host that produced its cached node', async () => {
+    const cachedNode: TreeNode = {
+      ...fileNode,
+      operationOwner: {
+        kind: 'runtime',
+        environmentId: 'old-env',
+        executionHostId: 'runtime:old-env'
+      }
+    }
+    const container = await renderToBody(
+      virtualRowsElement([cachedNode], { sourceWorkspaceId: 'old-workspace' })
+    )
+    const transfer = new DataTransfer()
+    const event = new Event('dragstart', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+
+    container.querySelector('[data-file-explorer-row]')?.dispatchEvent(event)
+
+    expect(readWorkspaceFileDragSource(transfer)).toEqual({
+      executionHostId: 'runtime:old-env',
+      workspaceId: 'old-workspace'
+    })
+  })
+
+  it('omits ownership when selected cached rows came from different hosts', async () => {
+    const localNode: TreeNode = { ...fileNode, operationOwner: { kind: 'local' } }
+    const sshNode: TreeNode = {
+      ...directoryNode,
+      operationOwner: { kind: 'ssh', connectionId: 'remote-1' }
+    }
+    const container = await renderToBody(
+      virtualRowsElement([localNode, sshNode], {
+        selectedPaths: new Set([localNode.path, sshNode.path]),
+        sourceWorkspaceId: 'workspace-1'
+      })
+    )
+    const transfer = new DataTransfer()
+    const event = new Event('dragstart', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+
+    container.querySelector('[data-file-explorer-row]')?.dispatchEvent(event)
+
+    expect(readWorkspaceFileDragSource(transfer)).toBeNull()
   })
 })
 

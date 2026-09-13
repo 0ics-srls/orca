@@ -4,6 +4,8 @@ import { EventEmitter } from 'node:events'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen } from '@testing-library/react'
 import { useRef } from 'react'
+import type { NativeChatComposerInput } from './native-chat-composer-input'
+import { NativeChatPromptEditor } from './NativeChatPromptEditor'
 import { useNativeChatExternalAttachments } from './use-native-chat-external-attachments'
 import { NativeChatImageAttachmentPreview } from './NativeChatImageAttachmentPreview'
 import { resetLocalImageSrcStateForTests } from '../editor/useLocalImageSrc'
@@ -49,7 +51,7 @@ import {
 
 // Uses the production drop listener, subscriber fan-out, attachment hook, and scope cache.
 function ComposerProbe({ pane, hidden = false }: { pane: string; hidden?: boolean }) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const textareaRef = useRef<NativeChatComposerInput>(null)
   const attachments = useNativeChatComposerAttachments({
     attachmentScopeKey: pane,
     allowWithoutTarget: true,
@@ -71,11 +73,17 @@ function ComposerProbe({ pane, hidden = false }: { pane: string; hidden?: boolea
   useNativeChatFileAttachmentActions(pane, attachExternalPaths)
   return (
     <div data-pane={pane} style={{ display: hidden ? 'none' : 'block' }}>
-      <textarea
-        ref={textareaRef}
-        data-native-file-drop-target="composer"
-        data-composer-scope-key={pane}
-      />
+      <div data-native-file-drop-target="composer" data-composer-scope-key={pane}>
+        <NativeChatPromptEditor
+          scopeKey={pane}
+          inputRef={textareaRef}
+          initialValue="untouched draft"
+          disabled={false}
+          placeholder="Message"
+          onChange={() => {}}
+          onSelect={() => {}}
+        />
+      </div>
       {attachments.imageAttachments.map((attachment) => (
         <NativeChatImageAttachmentPreview
           key={attachment.id}
@@ -152,7 +160,7 @@ describe('native chat composer drop scoping', () => {
     expect(readNativeChatAttachmentCache('chat-a')).toEqual([])
     expect(readNativeChatAttachmentCache('chat-b')).toEqual([])
 
-    const target = view.container.querySelector('[data-pane="chat-a"] textarea')!
+    const target = view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!
     await dropTwoImages(target)
 
     expect(electron.send).toHaveBeenCalledExactlyOnceWith('terminal:file-dropped-from-preload', {
@@ -165,6 +173,7 @@ describe('native chat composer drop scoping', () => {
       '/repro/second.png'
     ])
     expect(readNativeChatAttachmentCache('chat-b')).toEqual([])
+    expect(target.textContent).toBe('untouched draft')
 
     view.unmount()
     const returned = render(<ComposerProbe pane="chat-b" />)
@@ -198,7 +207,7 @@ describe('native chat composer drop scoping', () => {
       </>
     )
 
-    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] textarea')!)
+    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!)
     expect(workspaceDrop).not.toHaveBeenCalled()
     expect(readNativeChatAttachmentCache('chat-b')).toEqual([])
     expect(readNativeChatAttachmentCache('chat-a').map(({ path }) => path)).toEqual([
@@ -239,7 +248,11 @@ describe('native chat composer drop scoping', () => {
         <ComposerProbe pane="chat-b" hidden />
       </>
     )
-    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] textarea')!)
+    await dropTwoImages(
+      view.container.querySelector(
+        '[data-pane="chat-a"] [data-native-file-drop-target="composer"]'
+      )!
+    )
     expect(await screen.findByRole('img', { name: 'first.png' })).toBeTruthy()
     expect(await screen.findByRole('img', { name: 'second.png' })).toBeTruthy()
     expect(intake.authorizeExternalPath.mock.calls).toEqual([
@@ -264,7 +277,7 @@ describe('native chat composer drop scoping', () => {
         <ComposerProbe pane="chat-b" hidden />
       </>
     )
-    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] textarea')!)
+    await dropTwoImages(view.container.querySelector('[data-pane="chat-a"] .ProseMirror')!)
     expect(intake.upload).toHaveBeenCalledExactlyOnceWith(
       ['/repro/first.png', '/repro/second.png'],
       intake.owner

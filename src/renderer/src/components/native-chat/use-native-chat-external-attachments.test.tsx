@@ -154,6 +154,22 @@ describe('useNativeChatExternalAttachments', () => {
     expect(mocks.authorizeExternalPath).toHaveBeenCalledTimes(1)
   })
 
+  it('does not attach local paths when the owner changes during authorization', async () => {
+    const authorization = deferred<void>()
+    let owner: { kind: 'local' } | { kind: 'runtime' } = { kind: 'local' }
+    mocks.resolveNativeChatAttachmentOwner.mockImplementation(() => owner)
+    mocks.authorizeExternalPath.mockReturnValueOnce(authorization.promise)
+    const attachResolvedPaths = vi.fn()
+    const probe = await renderProbe({ attachResolvedPaths })
+
+    act(() => probe.latest().attachExternalPaths(['/external/a.png', '/external/b.png']))
+    owner = { kind: 'runtime' }
+    await act(async () => authorization.resolve())
+
+    expect(attachResolvedPaths).not.toHaveBeenCalled()
+    expect(mocks.authorizeExternalPath).toHaveBeenCalledTimes(1)
+  })
+
   it('uploads SSH worktree paths and attaches the remote results', async () => {
     mocks.resolveNativeChatAttachmentOwner.mockReturnValue({
       kind: 'ssh',
@@ -276,6 +292,29 @@ describe('useNativeChatExternalAttachments', () => {
     await act(async () => {
       resolveUpload(['/remote/wt/.orca/drops/a.txt'])
     })
+    expect(attachResolvedPaths).not.toHaveBeenCalled()
+  })
+
+  it('drops an upload that resolves after the SSH owner generation changes', async () => {
+    const initialOwner = {
+      kind: 'ssh' as const,
+      connectionId: 'conn-1',
+      worktreePath: '/remote/wt',
+      expectedExecutionHostId: 'ssh:conn-1' as const,
+      expectedSshTargetId: 'conn-1',
+      expectedSshConnectionGeneration: 4
+    }
+    mocks.resolveNativeChatAttachmentOwner
+      .mockReturnValueOnce(initialOwner)
+      .mockReturnValue({ ...initialOwner, expectedSshConnectionGeneration: 5 })
+    const upload = deferred<string[]>()
+    mocks.uploadNativeChatAttachmentPaths.mockReturnValue(upload.promise)
+    const attachResolvedPaths = vi.fn()
+    const probe = await renderProbe({ attachResolvedPaths })
+
+    act(() => probe.latest().attachExternalPaths(['/local/a.txt']))
+    await act(async () => upload.resolve(['/remote/wt/.orca/drops/a.txt']))
+
     expect(attachResolvedPaths).not.toHaveBeenCalled()
   })
 })

@@ -13,8 +13,9 @@ import { NATIVE_FILE_DROP_MAX_PATHS } from '../../../../shared/native-file-drop'
 vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
 }))
+const runtimeTarget = vi.hoisted(() => ({ remote: false }))
 vi.mock('@/runtime/runtime-terminal-inspection', () => ({
-  isRemoteRuntimePtyId: () => false
+  isRemoteRuntimePtyId: () => runtimeTarget.remote
 }))
 
 type AttachmentApi = ReturnType<typeof useNativeChatComposerAttachments>
@@ -129,6 +130,7 @@ async function renderProbe(
 
 describe('useNativeChatComposerAttachments', () => {
   afterEach(() => {
+    runtimeTarget.remote = false
     clearNativeChatAttachmentCacheForTests()
     document.body.replaceChildren()
   })
@@ -166,6 +168,61 @@ describe('useNativeChatComposerAttachments', () => {
     })
 
     expect(probe.latest().imageAttachments).toMatchObject([{ path: '/tmp/structured-image.png' }])
+    act(() => probe.root.unmount())
+  })
+
+  it('accepts only ownership-validated paths for a remote runtime target', async () => {
+    runtimeTarget.remote = true
+    const probe = await renderProbe('remote-pty')
+
+    act(() => probe.latest().attachResolvedPaths(['/remote/untrusted.txt']))
+    expect(probe.draft()).toBe('')
+    expect(probe.notice()).toBe('Local attachments are not available for remote sessions.')
+
+    act(() =>
+      probe.latest().attachResolvedPaths(['/remote/trusted.txt'], undefined, {
+        targetOwnerIsCurrent: () => true
+      })
+    )
+    expect(probe.draft()).toBe('@/remote/trusted.txt ')
+    act(() => probe.root.unmount())
+  })
+
+  it('rejects an ownership-validated path when its owner changes before IME flush', async () => {
+    let composing = true
+    let ownerCurrent = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
+
+    act(() =>
+      probe.latest().attachResolvedPaths(['/remote/trusted.txt'], undefined, {
+        targetOwnerIsCurrent: () => ownerCurrent
+      })
+    )
+    ownerCurrent = false
+    composing = false
+    act(() => probe.latest().flushPendingAttachments())
+
+    expect(probe.draft()).toBe('')
+    expect(probe.notice()).toBe('Files can only be attached to their source workspace.')
+    act(() => probe.root.unmount())
+  })
+
+  it('rejects a mixed queued batch after the target becomes remote', async () => {
+    let composing = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
+
+    act(() => {
+      probe.latest().attachResolvedPaths(['/remote/trusted.txt'], undefined, {
+        targetOwnerIsCurrent: () => true
+      })
+      probe.latest().attachResolvedPaths(['/local/untrusted.txt'])
+    })
+    runtimeTarget.remote = true
+    composing = false
+    act(() => probe.latest().flushPendingAttachments())
+
+    expect(probe.draft()).toBe('')
+    expect(probe.notice()).toBe('Local attachments are not available for remote sessions.')
     act(() => probe.root.unmount())
   })
 
