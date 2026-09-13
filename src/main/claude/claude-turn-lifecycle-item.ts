@@ -10,8 +10,9 @@ export type ClaudeCurrentTurn = {
   sessionId: string
   turnId: string
   startedAt: number
-  /** Provider key of the user echo that opened the turn. */
-  userItemId: string
+  /** Provider key of the user echo that opened the turn. Absent when the
+   *  provider resumed the work itself and there is no user row to anchor to. */
+  userItemId?: string
 }
 
 export type ClaudeTurnEnd = {
@@ -71,10 +72,15 @@ export function claudeTurnLifecycleItem(
             state: end.state,
             startedAt,
             completedAt: end.completedAt,
-            userItemId,
+            ...(userItemId === undefined ? {} : { userItemId }),
             ...(end.durationMs === undefined ? {} : { durationMs: end.durationMs })
           }
-        : { turnId, state: 'running', startedAt, userItemId }
+        : {
+            turnId,
+            state: 'running',
+            startedAt,
+            ...(userItemId === undefined ? {} : { userItemId })
+          }
     ),
     // The running row's ts is the turn start itself, so clients read no append lag.
     options: end ? {} : { observedAt: startedAt },

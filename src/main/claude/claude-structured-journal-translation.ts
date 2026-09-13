@@ -10,7 +10,6 @@ import type { ClaudeStructuredSessionEvent } from './claude-structured-session-s
 import {
   claudeMessageBody,
   claudeMessageIdentity,
-  claudeHasReplayContent,
   claudeOutputEnvelope,
   claudeStreamingMessageBody,
   claudeThinkingIdentity,
@@ -39,6 +38,7 @@ import {
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
+import { claudeTurnOpenedByFrame } from './claude-turn-opening'
 import {
   claudeTurnEndForResult,
   claudeTurnLifecycleItem,
@@ -189,25 +189,24 @@ export function createClaudeJournalTranslator(
       changed = true
     }
     changed = appendUnmodeledClaudeContent(providerFallback, outputEnvelope, message) || changed
-    if (
-      envelope.role === 'user' &&
-      startsTurn &&
-      claudeHasReplayContent(envelope) &&
-      message.parent_tool_use_id === null
-    ) {
+    const opened = claudeTurnOpenedByFrame({
+      envelope,
+      frame: message,
+      startsTurn,
+      producedContent: changed,
+      hasOpenTurn: currentTurn !== null,
+      observedAt,
+      // A user echo lands on its own message identity, so this is the user row's key.
+      userItemId: agentJournalItemKey(identity)
+    })
+    if (opened) {
       if (currentTurn) {
         // A new turn starting is the only end the previous one gets when its
         // result never arrives; settling it later would sweep THIS turn.
         subagents.settleTurn(groupKeyOf(currentTurn))
         publishLifecycle(currentTurn, { state: 'interrupted', completedAt: observedAt })
       }
-      currentTurn = {
-        sessionId: envelope.sessionId,
-        turnId: envelope.uuid,
-        startedAt: observedAt,
-        // A user echo lands on its own message identity, so this is the user row's key.
-        userItemId: agentJournalItemKey(identity)
-      }
+      currentTurn = opened
       publishLifecycle(currentTurn)
       deps.sink.setActivity?.(null)
     }

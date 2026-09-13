@@ -568,7 +568,11 @@ describe('Claude structured journal translation', () => {
 
     translator.handle(message('assistant', 'assistant-thinking', [{ type: 'thinking', thinking }]))
 
-    expect(state.items.at(-1)?.body).toEqual({
+    // The frame also opens the turn it produced in, so pick the reasoning row itself.
+    const reasoning = state.items.find(
+      (item) => item.body.kind === 'message' && item.body.role === 'reasoning'
+    )
+    expect(reasoning?.body).toEqual({
       kind: 'message',
       role: 'reasoning',
       blocks: [
