@@ -27,7 +27,9 @@ export type AiVaultServiceOperation =
   | 'searchStatus'
   | 'searchReconcile'
 
-const AI_VAULT_SERVICE_OPERATIONS: readonly AiVaultServiceOperation[] = [
+// Typed from the union so a new operation cannot be added without landing here,
+// and held as strings so recognising one costs no assertion.
+const AI_VAULT_SERVICE_OPERATIONS: ReadonlySet<string> = new Set<AiVaultServiceOperation>([
   'scan',
   'titles',
   'subagents',
@@ -35,7 +37,7 @@ const AI_VAULT_SERVICE_OPERATIONS: readonly AiVaultServiceOperation[] = [
   'searchSessions',
   'searchStatus',
   'searchReconcile'
-]
+])
 
 export type AiVaultServiceSubagentRequest = {
   agent: 'claude' | 'omp'
@@ -122,11 +124,14 @@ export function isAiVaultServiceRequest(value: unknown): value is AiVaultService
   if (!value || typeof value !== 'object') {
     return false
   }
-  const message = value as Record<string, unknown>
   return (
-    message.type === 'request' &&
-    Number.isSafeInteger(message.id) &&
-    AI_VAULT_SERVICE_OPERATIONS.includes(message.operation as AiVaultServiceOperation)
+    'type' in value &&
+    value.type === 'request' &&
+    'id' in value &&
+    Number.isSafeInteger(value.id) &&
+    'operation' in value &&
+    typeof value.operation === 'string' &&
+    AI_VAULT_SERVICE_OPERATIONS.has(value.operation)
   )
 }
 

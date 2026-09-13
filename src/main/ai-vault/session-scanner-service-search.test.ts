@@ -10,6 +10,9 @@ import {
 import {
   AI_VAULT_SERVICE_PROTOCOL_VERSION,
   type AiVaultServiceChildMessage,
+  type AiVaultServiceParentMessage,
+  type AiVaultServiceRequestBody,
+  type AiVaultServiceResultValue,
   type AiVaultSessionSearchInit
 } from './session-scanner-service-protocol'
 
@@ -26,13 +29,14 @@ let originalSend: typeof process.send
 const sent: AiVaultServiceChildMessage[] = []
 let nextId = 1
 
-function emit(message: unknown): void {
-  process.emit('message', message as never, undefined as never)
+function emit(message: AiVaultServiceParentMessage): void {
+  process.emit('message', message, undefined)
 }
 
-async function call<T>(body: Record<string, unknown>): Promise<T> {
+/** One request, and the reply the child sent for it, still discriminated by operation. */
+async function call(body: AiVaultServiceRequestBody): Promise<AiVaultServiceResultValue> {
   const id = nextId++
-  emit({ type: 'request', id, ...body })
+  emit({ ...body, id })
   const reply = await vi.waitFor(() => {
     const found = sent.find((message) => 'id' in message && message.id === id)
     expect(found).toBeDefined()
@@ -41,7 +45,26 @@ async function call<T>(body: Record<string, unknown>): Promise<T> {
   if (reply.type === 'error') {
     throw new Error(reply.message)
   }
-  return (reply as unknown as { value: T }).value
+  if (reply.type !== 'result') {
+    throw new Error(`expected a result, got ${reply.type}`)
+  }
+  return reply
+}
+
+async function searchStatus(): Promise<AiVaultSearchStatus> {
+  const reply = await call({ type: 'request', operation: 'searchStatus' })
+  if (reply.operation !== 'searchStatus') {
+    throw new Error(`expected searchStatus, got ${reply.operation}`)
+  }
+  return reply.value
+}
+
+async function searchSessions(query: string): Promise<AiVaultSearchResponse> {
+  const reply = await call({ type: 'request', operation: 'searchSessions', request: { query } })
+  if (reply.operation !== 'searchSessions') {
+    throw new Error(`expected searchSessions, got ${reply.operation}`)
+  }
+  return reply.value
 }
 
 function searchInit(enabled: boolean): AiVaultSessionSearchInit {
@@ -60,10 +83,11 @@ beforeAll(async () => {
     SESSION_ID
   )
   originalSend = process.send
-  process.send = ((message: AiVaultServiceChildMessage) => {
+  const record: NonNullable<typeof process.send> = (message) => {
     sent.push(message)
     return true
-  }) as typeof process.send
+  }
+  process.send = record
   await import('./session-scanner-service-entry')
   emit({
     type: 'init',
@@ -82,7 +106,7 @@ afterAll(async () => {
 
 it('reports the indexer phase and a live generation over the protocol', async () => {
   const status = await vi.waitFor(async () => {
-    const value = await call<AiVaultSearchStatus>({ operation: 'searchStatus' })
+    const value = await searchStatus()
     expect(value.filesIndexed).toBeGreaterThan(0)
     return value
   })
@@ -93,11 +117,13 @@ it('reports the indexer phase and a live generation over the protocol', async ()
 })
 
 it('answers a search and a reconcile over the protocol', async () => {
-  expect(await call({ operation: 'searchReconcile' })).toBeNull()
-  const response = await call<AiVaultSearchResponse>({
-    operation: 'searchSessions',
-    request: { query: 'distinctive' }
+  expect(await call({ type: 'request', operation: 'searchReconcile' })).toEqual({
+    operation: 'searchReconcile',
+    value: null,
+    type: 'result',
+    id: expect.any(Number)
   })
+  const response = await searchSessions('distinctive')
   expect(response.kind).toBe('results')
   if (response.kind === 'results') {
     expect(response.hits.map((hit) => hit.sessionId)).toEqual([SESSION_ID])
@@ -106,19 +132,9 @@ it('answers a search and a reconcile over the protocol', async () => {
 
 it('answers disabled once consent is withdrawn, without a respawn', async () => {
   emit({ type: 'sessionSearch', init: searchInit(false) })
-  expect(await call({ operation: 'searchSessions', request: { query: 'distinctive' } })).toEqual({
-    kind: 'unavailable',
-    reason: 'disabled'
-  })
-  expect(await call<AiVaultSearchStatus>({ operation: 'searchStatus' })).toMatchObject({
-    enabled: false,
-    phase: 'idle'
-  })
+  expect(await searchSessions('distinctive')).toEqual({ kind: 'unavailable', reason: 'disabled' })
+  expect(await searchStatus()).toMatchObject({ enabled: false, phase: 'idle' })
   // Re-consenting reuses the index that was left on disk rather than rebuilding it.
   emit({ type: 'sessionSearch', init: searchInit(true) })
-  const response = await call<AiVaultSearchResponse>({
-    operation: 'searchSessions',
-    request: { query: 'distinctive' }
-  })
-  expect(response.kind).toBe('results')
+  expect((await searchSessions('distinctive')).kind).toBe('results')
 })

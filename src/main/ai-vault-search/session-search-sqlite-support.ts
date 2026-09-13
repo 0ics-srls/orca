@@ -13,8 +13,13 @@ export function sessionSearchSqliteAvailable(): boolean {
     return false
   }
   try {
-    const sqlite = process.getBuiltinModule('node:sqlite') as { DatabaseSync?: unknown } | undefined
-    return typeof sqlite?.DatabaseSync === 'function'
+    const sqlite: unknown = process.getBuiltinModule('node:sqlite')
+    return (
+      typeof sqlite === 'object' &&
+      sqlite !== null &&
+      'DatabaseSync' in sqlite &&
+      typeof sqlite.DatabaseSync === 'function'
+    )
   } catch {
     return false
   }

@@ -14,7 +14,10 @@ it('reads anything that is not an explicit opt-in as off', () => {
   expect(resolveAiVaultSearchSettings({ aiVaultSearch: null })).toEqual(
     DEFAULT_AI_VAULT_SEARCH_SETTINGS
   )
-  expect(resolveAiVaultSearchSettings({ aiVaultSearch: { enabled: 'yes' } as never })).toEqual(
+  expect(resolveAiVaultSearchSettings({ aiVaultSearch: { enabled: 'yes' } })).toEqual(
+    DEFAULT_AI_VAULT_SEARCH_SETTINGS
+  )
+  expect(resolveAiVaultSearchSettings({ aiVaultSearch: 'on' })).toEqual(
     DEFAULT_AI_VAULT_SEARCH_SETTINGS
   )
 })
@@ -40,7 +43,7 @@ it('normalizes a history bound and drops anything that is not one', () => {
 it('keeps only the two fields the indexer is constructed from', () => {
   expect(
     resolveAiVaultSearchSettings({
-      aiVaultSearch: { enabled: true, historyDays: 90, paused: true } as never
+      aiVaultSearch: { enabled: true, historyDays: 90, paused: true }
     })
   ).toEqual({ enabled: true, historyDays: 90 })
 })

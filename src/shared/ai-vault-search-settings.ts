@@ -38,14 +38,22 @@ export function normalizeAiVaultSearchHistoryDays(value: unknown): number | null
   return days <= 0 ? null : Math.min(HISTORY_DAYS_MAX, days)
 }
 
-/** The persisted shape, from whatever a settings write or an old profile left behind. */
+/**
+ * The persisted shape, from whatever a settings write or an old profile left behind.
+ *
+ * The input is `unknown` on purpose: this is the sanitizer, and what it reads is a
+ * JSON profile that may predate either field or hold a value no version wrote.
+ */
 export function resolveAiVaultSearchSettings(
-  settings: { aiVaultSearch?: Partial<AiVaultSearchSettings> | null } | null | undefined
+  settings: { aiVaultSearch?: unknown } | null | undefined
 ): AiVaultSearchSettings {
   const raw = settings?.aiVaultSearch
+  if (typeof raw !== 'object' || raw === null) {
+    return { ...DEFAULT_AI_VAULT_SEARCH_SETTINGS }
+  }
   return {
-    enabled: raw?.enabled === true,
-    historyDays: normalizeAiVaultSearchHistoryDays(raw?.historyDays)
+    enabled: 'enabled' in raw && raw.enabled === true,
+    historyDays: normalizeAiVaultSearchHistoryDays('historyDays' in raw ? raw.historyDays : null)
   }
 }
 
