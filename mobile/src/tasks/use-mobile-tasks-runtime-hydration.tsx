@@ -1,3 +1,4 @@
+import { settingsRead } from '../transport/settings-read-operations'
 import type { ClientSettingsActionsModel } from './use-mobile-tasks-client-settings-actions'
 import {
   MOBILE_TASKS_CAPABILITY,
@@ -250,7 +251,7 @@ export function useMobileTasksRuntimeHydration(model: ClientSettingsActionsModel
       setError('')
       const [settingsResponse, uiResponse, preflightResponse, linearStatusResponse] =
         await Promise.all([
-          client.sendRequest('settings.get'),
+          settingsRead.request(client),
           client.sendRequest('ui.get'),
           client.sendRequest('preflight.check'),
           client.sendRequest('linear.status')
@@ -259,9 +260,9 @@ export function useMobileTasksRuntimeHydration(model: ClientSettingsActionsModel
         return
       }
 
-      const settings = isSuccess(settingsResponse)
-        ? (((settingsResponse.result as { settings?: RuntimeTaskSettings }).settings ??
-            {}) as RuntimeTaskSettings)
+      const settingsResult = settingsResponse.interpret()
+      const settings = settingsResult.accepted
+        ? ((settingsResult.value ?? {}) as RuntimeTaskSettings)
         : {}
       setRuntimeTaskSettings(settings)
       const uiState = isSuccess(uiResponse)
