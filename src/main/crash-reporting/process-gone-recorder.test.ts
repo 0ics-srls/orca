@@ -523,6 +523,33 @@ describe('recordProcessGoneCrash', () => {
       ...overrides
     })
 
+  // Report 7056ae89 (v1.4.200) carried exit -36863 with no decoded attribute at
+  // all, because this short-circuited on win32 the way the report text used to.
+  it('names the decoded Windows status code on the span and keeps the stored code raw', async () => {
+    const record = vi.fn().mockResolvedValue({ id: 'report-win' })
+
+    withStubbedPlatform('win32', () => {
+      recordProcessGoneCrash(
+        { record } as never,
+        nonRecoverableChildExit({ reason: 'crashed', exitCode: -36863 }),
+        new ProcessGoneDedupe()
+      )
+    })
+
+    await vi.waitFor(() => expect(record).toHaveBeenCalledOnce())
+    expect(record).toHaveBeenCalledWith(expect.objectContaining({ exitCode: -36863 }))
+    expect(sink.records).toEqual([
+      expect.objectContaining({
+        name: 'electron.process_gone',
+        attributes: expect.objectContaining({
+          'crash.exit_code': -36863,
+          'crash.exit_code_decoded':
+            '0xFFFF7001, crash handler unreachable; client self-terminated without a minidump'
+        })
+      })
+    ])
+  })
+
   it('names the decoded POSIX wait status on the span and keeps the stored code raw', async () => {
     const record = vi.fn().mockResolvedValue({ id: 'report-1' })
 
@@ -547,7 +574,7 @@ describe('recordProcessGoneCrash', () => {
     ])
   })
 
-  it('leaves Windows exit codes and launch-failed codes undecoded', async () => {
+  it('leaves UNDECODABLE Windows exit codes and launch-failed codes undecoded', async () => {
     const record = vi.fn().mockResolvedValue({ id: 'report-1' })
 
     withStubbedPlatform('win32', () => {
