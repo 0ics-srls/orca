@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
+import type * as AttachmentUploadModule from './native-chat-attachment-upload'
 
 const mocks = vi.hoisted(() => ({
   authorizeExternalPath: vi.fn(),
@@ -13,12 +14,12 @@ vi.mock('@/store', () => ({
   useAppStore: { getState: () => ({}) }
 }))
 
-vi.mock('./native-chat-attachment-upload', () => ({
-  nativeChatLocalAttachmentUnsupportedNotice: () =>
-    'Local attachments are not available for remote sessions.',
+// Real notice strings, so the tests below assert what a user would actually read
+// and a newly added notice cannot go missing from this mock.
+vi.mock('./native-chat-attachment-upload', async (importOriginal) => ({
+  ...(await importOriginal<typeof AttachmentUploadModule>()),
   resolveNativeChatAttachmentOwner: mocks.resolveNativeChatAttachmentOwner,
-  uploadNativeChatAttachmentPaths: mocks.uploadNativeChatAttachmentPaths,
-  nativeChatWorktreeNotReadyNotice: () => 'Worktree not ready — try again in a moment.'
+  uploadNativeChatAttachmentPaths: mocks.uploadNativeChatAttachmentPaths
 }))
 
 import { useNativeChatExternalAttachments } from './use-native-chat-external-attachments'
@@ -160,7 +161,11 @@ describe('useNativeChatExternalAttachments', () => {
     mocks.resolveNativeChatAttachmentOwner.mockImplementation(() => owner)
     mocks.authorizeExternalPath.mockReturnValueOnce(authorization.promise)
     const attachResolvedPaths = vi.fn()
-    const probe = await renderProbe({ attachResolvedPaths })
+    const notices: (string | null)[] = []
+    const probe = await renderProbe({
+      attachResolvedPaths,
+      setNotice: (notice) => notices.push(notice)
+    })
 
     act(() => probe.latest().attachExternalPaths(['/external/a.png', '/external/b.png']))
     owner = { kind: 'runtime' }
@@ -168,6 +173,9 @@ describe('useNativeChatExternalAttachments', () => {
 
     expect(attachResolvedPaths).not.toHaveBeenCalled()
     expect(mocks.authorizeExternalPath).toHaveBeenCalledTimes(1)
+    expect(notices.at(-1)).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
   })
 
   it('uploads SSH worktree paths and attaches the remote results', async () => {
@@ -310,11 +318,18 @@ describe('useNativeChatExternalAttachments', () => {
     const upload = deferred<string[]>()
     mocks.uploadNativeChatAttachmentPaths.mockReturnValue(upload.promise)
     const attachResolvedPaths = vi.fn()
-    const probe = await renderProbe({ attachResolvedPaths })
+    const notices: (string | null)[] = []
+    const probe = await renderProbe({
+      attachResolvedPaths,
+      setNotice: (notice) => notices.push(notice)
+    })
 
     act(() => probe.latest().attachExternalPaths(['/local/a.txt']))
     await act(async () => upload.resolve(['/remote/wt/.orca/drops/a.txt']))
 
     expect(attachResolvedPaths).not.toHaveBeenCalled()
+    expect(notices.at(-1)).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
   })
 })
