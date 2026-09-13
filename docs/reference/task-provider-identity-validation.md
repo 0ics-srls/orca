@@ -77,5 +77,5 @@ All commands ran with `ORCA_BACKGROUND_LAUNCH=1`.
 - Isolated retry of `structured-agent-session-adoption-replay.test.ts`: exit 0;
   one test passed, with the test body completing in 358 ms.
 - Full RPC retry with `pnpm exec vitest run src/main/runtime/rpc --maxWorkers=4`:
-  exit 0; all 278 files passed, 2,463 tests passed, one skipped (97.24 seconds).
+  exit 0; all 278 files passed, 2,470 tests passed, one skipped (97.24 seconds).
   The bounded-concurrency rerun resolved the timeout without changing test code.
