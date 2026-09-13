@@ -52,17 +52,29 @@ export function readJournalEpochRows(
   sessionId: string,
   epoch: string
 ): JournalStoredRow[] {
-  return [...iterateJournalEpochRows(db, sessionId, epoch)]
+  return toStoredRows(db.prepare(SELECT_EPOCH_ROWS).all(sessionId, epoch))
 }
 
-/** Consume synchronously: closing or breaking the loop releases SQLite's read snapshot. */
+// Why pages, not `.iterate()`: a lazily consumed cursor pins a read snapshot for as long as the
+// consumer reduces, and a WAL checkpoint cannot pass an open snapshot. Each page is one completed
+// statement, so the consumer's memory is bounded by a page while no snapshot outlives a fetch.
+const EPOCH_ROW_PAGE_SIZE = 128
+
+/** Epoch rows in sequence order, fetched one completed statement at a time. */
 export function* iterateJournalEpochRows(
   db: Database.Database,
   sessionId: string,
   epoch: string
 ): Generator<JournalStoredRow> {
-  for (const row of db.prepare(SELECT_EPOCH_ROWS).iterate(sessionId, epoch)) {
-    yield toStoredRow(row)
+  let afterSeq = Number.MIN_SAFE_INTEGER
+  for (;;) {
+    const page = readJournalRowsAfter(db, sessionId, epoch, afterSeq, EPOCH_ROW_PAGE_SIZE)
+    yield* page
+    const last = page.at(-1)
+    if (page.length < EPOCH_ROW_PAGE_SIZE || last === undefined) {
+      return
+    }
+    afterSeq = last.seq
   }
 }
 
@@ -103,10 +115,8 @@ export function deleteJournalRowSuffix(
 }
 
 function toStoredRows(rows: readonly unknown[]): JournalStoredRow[] {
-  return rows.map(toStoredRow)
-}
-
-function toStoredRow(entry: unknown): JournalStoredRow {
-  const record = entry as { epoch: string; seq: number; ts: number; row_json: string }
-  return { epoch: record.epoch, seq: record.seq, ts: record.ts, rowJson: record.row_json }
+  return rows.map((entry) => {
+    const record = entry as { epoch: string; seq: number; ts: number; row_json: string }
+    return { epoch: record.epoch, seq: record.seq, ts: record.ts, rowJson: record.row_json }
+  })
 }

@@ -73,11 +73,13 @@ describe('streaming journal replay', () => {
     gc()
     const initial = process.memoryUsage().heapUsed
     let peak = initial
+    let applied = 0
     const apply = reducer.applyJournalRow
     const spy = vi.spyOn(reducer, 'applyJournalRow')
     spy.mockImplementation((state, row) => {
       // The probe must not retain old row bodies in Vitest's call history.
       spy.mockClear()
+      applied += 1
       if (row.seq % 256 === 0) {
         gc()
         peak = Math.max(peak, process.memoryUsage().heapUsed)
@@ -88,7 +90,27 @@ describe('streaming journal replay', () => {
     expect(loaded.state.items.size).toBe(1)
     expect(loaded.state.items.get('message-1')?.revision).toBe(2049)
     expect(loaded.state.lastSequence).toBe(2049)
+    // The probe must have measured every row, or the heap bound above is vacuous.
+    expect(applied).toBe(2049)
     expect(peak - initial).toBeLessThan(8 * 1024 * 1024)
+  })
+
+  it('holds no read snapshot while reducing, so a checkpoint can pass mid-replay', () => {
+    put(anchor())
+    for (let seq = 2; seq <= 300; seq++) {
+      put(revision(seq))
+    }
+    const apply = reducer.applyJournalRow
+    const checkpoints: { busy: number }[] = []
+    vi.spyOn(reducer, 'applyJournalRow').mockImplementation((state, row) => {
+      if (row.seq === 2 || row.seq === 200) {
+        checkpoints.push(...(opened.db.pragma('wal_checkpoint(PASSIVE)') as { busy: number }[]))
+      }
+      apply(state, row)
+    })
+    const loaded = replayJournal(opened.db, false, sessionId)!
+    expect(loaded.state.lastSequence).toBe(300)
+    expect(checkpoints.map((entry) => entry.busy)).toEqual([0, 0])
   })
 
   it('keeps the prefix but latches read-only for a future row beyond a gap', () => {

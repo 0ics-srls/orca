@@ -27,7 +27,7 @@
         "https://github.com/stablyai/orca/blob/main/src/main/native-chat/agent-session-journal/journal-open.ts"
       ],
       "invariant": "Replay preserves latest revisions, original item order, fences, aliases, submissions, repair precedence, read-only schema latching and cursor cleanup while retaining live items rather than all historical bodies.",
-      "oracle": "Replay 2,048 16 KiB revisions into one latest item with less than 8 MiB sampled live heap growth; preserve prefix and future-schema latching after a gap, malformed suffix repair precedence, and release SQLite read cursors on early exit. Existing journal and subscriber tests cover replayed content and recovery.",
+      "oracle": "Replay 2,048 16 KiB revisions into one latest item with less than 8 MiB sampled live heap growth; preserve prefix and future-schema latching after a gap, malformed suffix repair precedence, and hold no SQLite read snapshot across reduction (a mid-replay checkpoint is not busy). Existing journal and subscriber tests cover replayed content and recovery.",
       "commands": [
         "ORCA_BACKGROUND_LAUNCH=1 pnpm test src/main/native-chat/agent-session-journal src/main/native-chat/agent-session-wire/agent-session-history-page.test.ts src/main/native-chat/agent-session-wire/agent-session-history-forward-read-budget.test.ts src/main/native-chat/agent-session-wire/structured-agent-session-subscribers.test.ts src/main/native-chat/agent-session-wire/agent-session-journal-recovery.test.ts",
         "ORCA_BACKGROUND_LAUNCH=1 pnpm test src/main/native-chat/agent-session-journal/journal-streaming-replay.test.ts src/main/native-chat/agent-session-journal/journal-corruption-repair.test.ts"
@@ -41,6 +41,7 @@
           "file": "src/main/native-chat/agent-session-journal/journal-streaming-replay.test.ts",
           "assertions": [
             "releases superseded revision bodies while reducing a long journal",
+            "holds no read snapshot while reducing, so a checkpoint can pass mid-replay",
             "keeps the prefix but latches read-only for a future row beyond a gap",
             "keeps gap repair precedence when a later row is malformed",
             "rejects an unanchored prefix before a later gap"
@@ -72,7 +73,7 @@
       },
       "performanceBudget": {
         "required": true,
-        "evidence": "Synchronous SQLite iteration and immediate reduction retain reduced state plus the current row. No cooperative await pins the cursor; no new polling, subprocess, provider call or wire change."
+        "evidence": "Paged SQLite reads (one completed statement per page) and immediate reduction retain reduced state plus one page of rows. No cursor or read snapshot outlives its statement, so a WAL checkpoint can pass mid-replay; no new polling, subprocess, provider call or wire change."
       },
       "knownGaps": [
         "No Windows/Linux runtime execution or real remote-host validation.",
