@@ -2,6 +2,7 @@ import {
   AGENT_SESSION_MAX_NEW_OPERATION_AGE_MS,
   parseAgentSessionOperationTimestamp
 } from '../../../src/shared/agent-session-host-authority'
+import { agentSessionRefusalOperationState } from '../../../src/shared/agent-session-refusal-retry'
 import type { AgentSessionMutationResult } from '../../../src/shared/agent-session-wire'
 import {
   createStructuredAgentSessionOperationId,
@@ -139,8 +140,8 @@ export async function requestStructuredAgentSessionMutation<TValue>(args: {
     )
     if (
       !result.ok &&
-      method === 'agentSession.conversationCommand' &&
-      result.refusal.code === 'agent_session_operation_unknown'
+      (method === 'agentSession.conversationCommand' || method === 'agentSession.cancel') &&
+      agentSessionRefusalOperationState(method, result.refusal.code) === 'unknown'
     ) {
       return { status: 'unknown' }
     }
