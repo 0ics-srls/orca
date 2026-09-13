@@ -40,9 +40,52 @@ Malformed cursors and cursors for a different query yield
 index changes during retrieval. Generation is a fence, not a retained snapshot:
 a client cannot ask the host to recreate a previous generation.
 
-Pages are per host only. A remote client asks one host at a time. Ordering is
-local to that host's query; merged cross-host ordering and a merged cross-host
-cursor are out of scope. Clients must discard cursors when changing hosts.
+Pages are per host only. Ordering is local to that host's query. Clients must
+discard cursors when changing hosts. The `all` scope below is the one exception,
+and it merges responses the hosts each paged independently.
+
+## Execution host routing
+
+Search is addressed by execution host ID, the same vocabulary the session list
+uses: `local`, `ssh:<target>`, `runtime:<environmentId>`, or the `all` scope.
+An omitted scope means `local`. An ID that names no host is refused with the
+list's wording, never widened to `all`. Status describes one index, so it accepts
+an execution host ID but never `all`.
+
+- `local` searches this machine's index over desktop IPC.
+- `ssh:<target>` asks that relay session and nothing else.
+- `runtime:<environmentId>` asks that paired runtime over its RPC. A paired
+  runtime answers for itself and never forwards: one host, one answer, so a
+  two-hop search through another desktop is not supported, same as the list.
+- `all` fans out on the desktop to the local index, every active SSH host, and
+  every saved runtime environment, in parallel and under a per-leg timeout.
+
+Each hit may carry `executionHostId`. It is always set under `all` and on a
+single-host remote answer, which the desktop stamps itself rather than trusting
+the ID the far side returned; a purely local answer may omit it. Old hosts that
+send no `executionHostId` still parse.
+
+An `all` response merges by recency: hits interleave on `updatedAt` descending
+with nulls last, then cut to `limit`. Relevance scores from different indexes are
+not comparable, so `all` ignores `sort: 'relevance'` and asks every leg for
+`newest`. `generation` is the local host's; the per-host generations live inside
+the cursor. `truncated` is the OR (and, for `snippets`, the sum) across legs.
+`durationMs` measures the whole fan-out. No `debug` report is attached, because a
+merge has no single query route.
+
+The merged cursor is an opaque base64url JSON map from execution host ID to that
+host's own cursor, holding only the hosts that reported `hasMore`. A follow-up
+request carrying it fans out to exactly those hosts, each with its own cursor;
+`page.hasMore` is true if any leg reported more. A cursor that names a host which
+has since gone away reports that host as `unreachable`. Because each leg resumes
+where its own previous page ended, hits that lost the recency cut on an earlier
+page do not reappear on a later one; a caller that needs them raises `limit`.
+
+An `all` results response carries `hosts`, one entry per leg:
+`{ executionHostId, outcome }` where outcome is `results`, `stale-cursor`,
+`malformed-cursor`, `unavailable`, or `unreachable`. A stale, unavailable or
+unreachable leg does not fail the merged response. It is reported there and its
+hits are simply absent. `hosts` is absent on single-host responses.
 
 ## Evidence and exposure
 
@@ -60,6 +103,11 @@ a source missing.
 | Desktop IPC on the same machine           | Included when known, under source    | Included only for present sources | Included                      |
 | Runtime RPC on the same machine           | Included when known, under source    | Included only for present sources | Included                      |
 | Relay or paired runtime/web/mobile client | Withheld; source keeps presence only | Withheld                          | Withheld                      |
+
+Under `all` the policy is per leg, not per response: remote legs arrive already
+redacted by their host and the desktop applies the relay redactor again, while
+the local leg keeps its IPC exposure. One merged response therefore carries
+`filePath` for local hits and presence only for remote ones.
 
 `cwd`, titles, snippets, and other hit metadata remain visible to paired clients.
 Snippets cross the authenticated transport as indexed; this contract does not
@@ -100,10 +148,11 @@ empty, current index. A registered service may report disabled or not-ready.
 
 - Desktop: `aiVault:searchSessions` and `aiVault:searchStatus`, via preload.
 - Runtime and relay: `aiVault.searchSessions` and `aiVault.searchStatus`.
-- Desktop preload optionally accepts an SSH target ID as a separate routing
-  argument. It addresses exactly that relay; missing connections never fall back
-  to the local index. The web preload addresses its selected paired runtime and
-  rejects an SSH routing argument.
+- Desktop preload optionally accepts an execution host scope as a separate
+  routing argument. It addresses exactly that host; missing connections never
+  fall back to the local index. The web preload addresses its own paired runtime,
+  treats `all` as that one host, and answers any other scope with
+  `unavailable/no-service` rather than an error.
 
 Requests and responses are parsed where received from another process. Existing
 relay JSON-RPC request/response framing needs no new stream opcode. Following the
