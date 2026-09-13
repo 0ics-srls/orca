@@ -149,11 +149,17 @@ rewritten call site produce the same sender calls, settlements, state and effect
 It is not a substitute for reading the diff. Two facts bound it, both learned the hard way:
 
 - **It was blind to refusal ordering.** Reordering the settings and sibling refusal checks in
-  `mobile-new-tab-agent-loader.ts` survived all 64 goldens as they shipped. A human reviewer caught
-  that class by reading #20499. Every pre-probe "refused" scenario refuses on the _first_ request,
-  and every correlated-failure schedule rejects at the transport, where neither check is reached.
-- **It could not see data loss on refresh.** Same cause: with no prior success there is nothing for
-  a refusal to discard, so "does this screen keep its data or blank it?" had no observation.
+  `mobile-new-tab-agent-loader.ts` survives every golden except `probe-new-tab-both-refused` —
+  measured by applying the reorder to the real source: 1 failure in 84 tests, and the one failure
+  is a probe. Every pre-probe "refused" scenario refuses on the _first_ request, and every
+  correlated-failure schedule rejects at the transport, where neither check is reached. A human
+  reviewer caught that class by reading #20499.
+- **It did not observe data loss on refresh.** No pre-probe golden records state after a refused
+  _refresh_, so "does this screen keep its data or blank it?" was undocumented. This one is an
+  observational gap, not a proven detection gap: publishing an unaccepted read in
+  `use-new-workspace-runtime-context.ts` is caught by the refuse-after-data probe _and_ by
+  `matrix-settings.workspace-context`, because a refusal from cold publishes `null` over a non-null
+  initial value. Claim the recorded behaviour, not blindness.
 
 `probe-hole-witness.test.ts` closes both and keeps them closed. It asserts the hole and the closure
 together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
