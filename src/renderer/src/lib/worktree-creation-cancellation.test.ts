@@ -262,6 +262,49 @@ describe('worktree creation cancellation', () => {
     expect(toast.error).not.toHaveBeenCalled()
   })
 
+  it('keeps blocking retry until a failed deferred rollback actually removes its workspace', async () => {
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = worktree
+    })
+    state.removeWorktree.mockResolvedValue({ ok: false, error: 'Host unavailable' })
+
+    const firstRetry = vi.fn()
+    await expect(withWorktreeCreationCancellation('creation', firstRetry)).rejects.toThrow(
+      'Could not clean up'
+    )
+    expect(firstRetry).not.toHaveBeenCalled()
+
+    // The workspace still exists, so the obligation must survive the first retry
+    // rather than letting the next one create a second workspace beside it.
+    const secondRetry = vi.fn()
+    await expect(withWorktreeCreationCancellation('creation', secondRetry)).rejects.toThrow(
+      'Could not clean up'
+    )
+    expect(secondRetry).not.toHaveBeenCalled()
+
+    state.removeWorktree.mockResolvedValue({ ok: true })
+    const finalRetry = vi.fn()
+    await withWorktreeCreationCancellation('creation', finalRetry)
+    expect(finalRetry).toHaveBeenCalledOnce()
+  })
+
+  it('lets retry proceed once an unidentifiable workspace has been reported', async () => {
+    const unstamped = makeWorktree({ id: 'repo::/workspace', repoId: 'repo', hostId: 'ssh:owner' })
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = unstamped
+    })
+    const blocked = vi.fn()
+    await expect(withWorktreeCreationCancellation('creation', blocked)).rejects.toThrow(
+      'Could not clean up'
+    )
+    // No removal was attempted, so retrying can never discharge it — do not
+    // block the user forever behind an obligation nothing can satisfy.
+    const retry = vi.fn()
+    await withWorktreeCreationCancellation('creation', retry)
+    expect(retry).toHaveBeenCalledOnce()
+    expect(state.removeWorktree).not.toHaveBeenCalled()
+  })
+
   it('lets retry proceed after the rollback found its workspace already replaced', async () => {
     await withWorktreeCreationCancellation('creation', async (attempt) => {
       attempt.worktree = worktree

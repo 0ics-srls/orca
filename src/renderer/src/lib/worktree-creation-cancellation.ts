@@ -38,10 +38,20 @@ export async function withWorktreeCreationCancellation(
       await execute(attempt)
     }
   } finally {
-    const cleanup = (deferred: boolean): Promise<boolean> =>
-      removeCancelledCreation(attempt, deferred).finally(() =>
+    const cleanup = async (deferred: boolean): Promise<boolean> => {
+      const outcome = await removeCancelledCreation(attempt, deferred)
+      // Why: a deferred rollback whose removal call failed still owns a real
+      // workspace, and its attempt is the only record of it. Dropping that record
+      // would let the next retry create a second workspace beside the first, so
+      // keep the obligation until a removal actually discharges it. An unidentified
+      // workspace is exempt: no call was made, so retrying can never discharge it.
+      if (deferred && !outcome.ok && outcome.retryable) {
+        attempt.cleanupAfterSettlement = () => cleanup(deferred)
+      } else {
         releaseActiveWorktreeCreation(creationId, attempt)
-      )
+      }
+      return outcome.ok
+    }
     if (!attempt.completed && attempt.isCancelled()) {
       await cleanup(false)
     } else if (!attempt.completed && attempt.worktree) {
@@ -53,6 +63,9 @@ export async function withWorktreeCreationCancellation(
   }
 }
 
+/** `retryable` is false when no removal was attempted, so retrying cannot help. */
+type CancelledCreationCleanup = { ok: boolean; retryable: boolean }
+
 /**
  * `deferred` marks a rollback that outlived its attempt, waiting behind an error
  * panel. Only that one can sit long enough for the user to delete and recreate at
@@ -62,11 +75,14 @@ export async function withWorktreeCreationCancellation(
 async function removeCancelledCreation(
   attempt: WorktreeCreationAttempt,
   deferred: boolean
-): Promise<boolean> {
+): Promise<CancelledCreationCleanup> {
   const { worktree } = attempt
+  let retryable = true
   try {
     if (worktree) {
       if (deferred && !worktree.instanceId) {
+        // No removal is attempted, so no later retry can discharge this.
+        retryable = false
         throw new Error(
           'it could not be identified on the host, so it was left in place. Delete it manually if unwanted.'
         )
@@ -92,7 +108,7 @@ async function removeCancelledCreation(
       )
     }
     await attempt.cleanupRuntime?.()
-    return true
+    return { ok: true, retryable }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('worktree create: cancellation cleanup failed', worktree?.id, error)
@@ -105,6 +121,6 @@ async function removeCancelledCreation(
     toast.error(`Could not remove the cancelled workspace: ${message}${runtimeHint}`, {
       duration: Infinity
     })
-    return false
+    return { ok: false, retryable }
   }
 }
