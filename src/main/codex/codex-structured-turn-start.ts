@@ -7,6 +7,7 @@ import {
 } from './codex-app-server-connection'
 import { isCodexAppServerUnsupportedError } from './codex-app-server-session'
 import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
+import { DISPATCH_REJECTED_CODEX_QUEUE_FULL } from '../../shared/structured-agent-session-dispatch-rejection'
 
 // Writing a Codex turn and learning which message landed where, which are not
 // the same event. `turn/start` answers as soon as Codex owns the message, but a
@@ -90,7 +91,7 @@ export async function dispatchCodexTurn(
 ): Promise<AgentSessionDispatchOutcome> {
   try {
     if (!(await startCodexTurn(session, { ...input, timeoutMs }))) {
-      return { state: 'rejected', reason: 'codex structured dispatch queue is full' }
+      return { state: 'rejected', reason: DISPATCH_REJECTED_CODEX_QUEUE_FULL }
     }
   } catch (error) {
     if (isCodexAppServerRequestError(error) || isCodexAppServerUnsupportedError(error)) {
