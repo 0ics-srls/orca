@@ -17,9 +17,9 @@ const hash = (parts: string[] | string): string =>
     .digest('hex')
 
 // Bound settings requests change source signatures; their behavior is covered by settings-read-operations.test.ts.
-const SETTINGS_RPC_SCREEN_HOOKS = 'b8b0b30b32532b051d0ad9641c92e900319372096e3875eb58773cfe83bc3479'
+const SETTINGS_RPC_SCREEN_HOOKS = '354a07651467449c1738c9a20f4416db941db864cdd46fb0fe817ea1af7d7204'
 const PRE_REFACTOR_DIFF_HOOKS = '93c7189b32bed8456cc51814fffa8ce80cf62011ef968a9d53ddec2b9686f58f'
-const SETTINGS_RPC_STATEMENTS = 'eb37b187b3fcf5abe9a80ad7c990fcc7decc473297597b3fccb0bc7bb09f3298'
+const SETTINGS_RPC_STATEMENTS = '26e38e86ca0275fb283236cb8eef2ed54a18d622d0eae25c8ded9f1cf4fe9208'
 const MAIN_REBASED_DECLARATIONS = '6ad0397123e59fc1047a14049c86ff31d81723673a7a7f5c41677471aec58415'
 const SETTINGS_RPC_SEMANTICS = '2431b1c07dfe9a9c94f5d3f4e91415ed99bd9e1bce3794f8bd5f094a29134d77'
 const PRE_REFACTOR_STYLES = '1db6af69c791d9963928541ad5310942fcbda6d984b422c90b6eb92b6816579a'
