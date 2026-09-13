@@ -55,9 +55,12 @@ identities for all four providers, required GitHub fields, every declared field'
 type, optional/null non-GitHub fields, unknown-field preservation, explicit GitLab
 discrimination with owner/repo present, local/SSH folder contexts, and update patches.
 
-The focused run passed 74 tests. Temporarily replacing GitHub's field validators
-with optional `z.unknown()` validators (discriminant-only acceptance) caused 16
-failures and 58 passes. The mutation was restored before running the gates.
+The focused run passed 81 tests. Temporarily replacing GitHub's field validators
+with optional `z.unknown()` validators (discriminant-only acceptance) caused 17
+failures and 64 passes. The mutation was restored before running the gates.
+
+Counts re-measured at `cf4f77f` after the blank-field commit added seven tests;
+the earlier 74/16/58 figures described the commit before it.
 
 ## Gate results
 
