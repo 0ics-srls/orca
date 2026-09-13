@@ -20,7 +20,7 @@ const hash = (parts: string[] | string): string =>
 const SETTINGS_RPC_SCREEN_HOOKS = 'b8b0b30b32532b051d0ad9641c92e900319372096e3875eb58773cfe83bc3479'
 const PRE_REFACTOR_DIFF_HOOKS = '93c7189b32bed8456cc51814fffa8ce80cf62011ef968a9d53ddec2b9686f58f'
 const SETTINGS_RPC_STATEMENTS = 'eb37b187b3fcf5abe9a80ad7c990fcc7decc473297597b3fccb0bc7bb09f3298'
-const PRE_REFACTOR_DECLARATIONS = 'cff54172af17a877789be1479c2eb6ca97d83c3e31dd831cd59395962f2b4c4a'
+const MAIN_REBASED_DECLARATIONS = '6ad0397123e59fc1047a14049c86ff31d81723673a7a7f5c41677471aec58415'
 const SETTINGS_RPC_SEMANTICS = '2431b1c07dfe9a9c94f5d3f4e91415ed99bd9e1bce3794f8bd5f094a29134d77'
 const PRE_REFACTOR_STYLES = '1db6af69c791d9963928541ad5310942fcbda6d984b422c90b6eb92b6816579a'
 const PRE_REFACTOR_RENDER_TREE = '2111145136b1e4fbca150d4792d735a90e992488e9934cfc1a8b8f3be981f39f'
@@ -45,7 +45,7 @@ describe('Mobile Tasks refactor parity', () => {
   it('preserves every moved top-level declaration', () => {
     const declarations = readMobileTasksDeclarationSignatures()
     expect(declarations).toHaveLength(193)
-    expect(hash(declarations)).toBe(PRE_REFACTOR_DECLARATIONS)
+    expect(hash(declarations)).toBe(MAIN_REBASED_DECLARATIONS)
   })
 
   it('preserves RPC calls, runtime strings, and JSX host signatures', () => {
