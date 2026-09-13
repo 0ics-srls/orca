@@ -140,6 +140,69 @@ CI does not set `RPC_FOUNDATION_REFERENCE_ROOT`. These three checks remain opt-i
 in-memory mutant checks run in CI. No archived-tree checks are registered for other
 families because no reference states are defined for them.
 
+## What this oracle does and does not see
+
+It replays 46 scenarios against frozen goldens and fails on any divergence: 73 goldens over 118
+tests, all inside `pnpm --dir mobile test`. For a migration it answers one question — does the
+rewritten call site produce the same sender calls, settlements, state and effects as main did?
+
+It is not a substitute for reading the diff. Two facts bound it, both learned the hard way:
+
+- **It was blind to refusal ordering.** Reordering the settings and sibling refusal checks in
+  `mobile-new-tab-agent-loader.ts` survived all 64 goldens as they shipped. A human reviewer caught
+  that class by reading #20499. Every pre-probe "refused" scenario refuses on the _first_ request,
+  and every correlated-failure schedule rejects at the transport, where neither check is reached.
+- **It could not see data loss on refresh.** Same cause: with no prior success there is nothing for
+  a refusal to discard, so "does this screen keep its data or blank it?" had no observation.
+
+`probe-hole-witness.test.ts` closes both and keeps them closed. It asserts the hole and the closure
+together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
+must still survive it. A probe that stops being load-bearing fails instead of lingering.
+
+What is still not covered: what the count-based raw-port inventory covers instead (which files
+reach `sendRequest`, and how often), native storage, transport skew, the `subscribe`/
+`sendUnsubscribe` ports, and the two mutations under _Known-open holes_ below. Four of the nine
+probes pin behaviour with no demonstrated mutation — the two mixed reject/refusal new-tab orders
+and the home-providers and resume-metadata refresh refusals; they are frozen observations, not
+proven defect detectors. `settings.resume-metadata` projects `{}` as its state, so its probe
+observes only sender calls and settlements.
+
+### Recorded finding: a refused refresh is not handled the same way twice
+
+The five refuse-after-data probes record `settingsRead` refusing a _refresh_ after a success.
+Four call sites retain what they had. `use-mobile-tasks-runtime-hydration.tsx` does not: it
+publishes `{}`, so a refused refresh wipes the runtime task settings. That divergence is recorded,
+not repaired — `settings-task-hydration-refuse-after-data.json` is the observation, and changing
+the behaviour is a product change with its own re-record.
+
+## Running it for a step-4 migration
+
+```sh
+# 1. Before touching the call site, confirm the oracle is green on your branch.
+ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile test src/test-support/rpc-recording
+
+# 2. Migrate the call site. Re-run. Any divergence is your diff, reported down to the JSON path.
+
+# 3. If a divergence is intended, say so deliberately. Recording refuses to run unless the
+#    product tree matches the pinned baseline, so bump `baseline` in pilot-scenarios.json to the
+#    commit you are recording from first.
+ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 \
+  pnpm --dir mobile exec tsx scripts/rpc-recording.mts --record
+```
+
+A re-record is a claim about behaviour. State the cause in the commit; every golden the refresh
+moves should have one.
+
+If your call site carries a mutation anchor in `operation-mutations.ts`, rewriting it will make the
+anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:
+#20499 broke five anchors that way, and each one had a new home.
+
+`live-probe/` holds the runtime companion: `mock-desktop-settings-reply-modes.patch` teaches the
+mock desktop server to answer `settings.get` with a refusal, `method_not_found`, a null or absent
+result, absent settings, or silence, and `settings-get-reply-probe.mts` drives a real socket
+through the migrated acceptance layer. Opt-in, never applied by the suite, because the patch is a
+product-tree edit.
+
 ## Known-open holes
 
 Two behavioural mutations are not caught by any golden. Both were confirmed by mutating product
