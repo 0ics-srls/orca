@@ -50,7 +50,7 @@ allowBuilds:
   node-pty: true
   sherpa-onnx: true
   ssh2: false
-  windows-native-registry: false
+  "@orca/windows-registry": false
 
 overrides:
   monaco-editor>dompurify: 3.4.14
