@@ -34,7 +34,7 @@ vi.mock('./mobile-tasks-legacy-foundation', async () => {
   const linear = await import('./mobile-tasks-reviewer-linear')
   return {
     ...options,
-    compareLinearIssues: linear.compareLinearIssues,
+    ...linear,
     groupLinearIssues: (issues: LinearIssue[], groupBy: LinearGroupBy, orderBy: LinearOrderBy) => {
       groupingInputSizes.push(issues.length)
       return linear.groupLinearIssues(issues, groupBy, orderBy)
@@ -42,7 +42,7 @@ vi.mock('./mobile-tasks-legacy-foundation', async () => {
   }
 })
 
-const { compareLinearIssues, groupLinearIssues } = await import('./mobile-tasks-legacy-foundation')
+const { sortLinearIssues, groupLinearIssues } = await import('./mobile-tasks-legacy-foundation')
 const { useMobileTasksProviderViewProjection } =
   await import('./use-mobile-tasks-provider-view-projection')
 
@@ -190,10 +190,14 @@ function legacyProjection(input: ProbeInput): {
   listSections: LinearIssueSection[]
   boardSections: LinearIssueSection[]
 } {
-  const issuesForView = input.items
-    .filter((item): item is Extract<TaskItem, { provider: 'linear' }> => item.provider === 'linear')
-    .map((item) => item.source)
-    .sort((a, b) => compareLinearIssues(a, b, input.linearOrderBy))
+  const issuesForView = sortLinearIssues(
+    input.items
+      .filter(
+        (item): item is Extract<TaskItem, { provider: 'linear' }> => item.provider === 'linear'
+      )
+      .map((item) => item.source),
+    input.linearOrderBy
+  )
   return {
     issuesForView,
     listSections: groupLinearIssues(issuesForView, input.linearGroupBy, input.linearOrderBy),
