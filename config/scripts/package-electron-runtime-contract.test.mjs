@@ -21,9 +21,7 @@ describe('Electron runtime package contract', () => {
   it('keeps the native Windows registry addon optional and platform-gated', () => {
     const rebuildScript = readProject('config/scripts/rebuild-native-deps.mjs')
     const ensureScript = readProject('config/scripts/ensure-native-runtime.mjs')
-    expect(packageJson.optionalDependencies['@orca/windows-registry']).toBe(
-      'file:./native/windows-registry'
-    )
+    expect(packageJson.optionalDependencies['@orca/windows-registry']).toBe('workspace:*')
     // Why: pnpm installs optional target architectures on every host; the root
     // Windows-only rebuild owns this addon so macOS/Linux never run node-gyp for it.
     expect(pnpmWorkspace.allowBuilds['@orca/windows-registry']).toBe(false)

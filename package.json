@@ -295,7 +295,7 @@
     "zustand": "^5.0.14"
   },
   "optionalDependencies": {
-    "@orca/windows-registry": "file:./native/windows-registry",
+    "@orca/windows-registry": "workspace:*",
     "@vscode/windows-process-tree": "0.8.0",
     "sherpa-onnx-darwin-arm64": "1.12.37",
     "sherpa-onnx-darwin-x64": "1.12.37",
