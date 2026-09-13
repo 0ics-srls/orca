@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { MALFORMED_CURSOR_MESSAGE, SEARCH_HANDLERS } from './search'
+import { AiVaultSearchResponseSchema } from '../../shared/ai-vault-search-contract'
 import type { AiVaultSearchResponse, AiVaultSearchStatus } from '../../shared/ai-vault-search-types'
 import { REPEATED_FLAG_SEPARATOR } from '../args'
 import { RuntimeClientError } from '../runtime/types'
@@ -67,12 +68,33 @@ async function runSearch(
     lines.push(String(value))
   })
   await SEARCH_HANDLERS.search!({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the handler reads only `call` and `isRemote`; a real RuntimeClient would resolve runtime metadata and open a socket.
     client: { call, isRemote: options.isRemote ?? false } as never,
     cwd: '/workspace',
     flags: new Map(flags),
     json: options.json ?? false
   })
   return { call, output: lines.join('\n') }
+}
+
+type CliFlags = [string, string | boolean][]
+
+/** The printed envelope, narrowed by shape rather than asserted. */
+function printedEnvelope(output: string): { keys: string[]; result: unknown } {
+  const parsed: unknown = JSON.parse(output)
+  if (typeof parsed !== 'object' || parsed === null || !('result' in parsed)) {
+    throw new Error(`Not an RPC envelope: ${output}`)
+  }
+  return { keys: Object.keys(parsed), result: parsed.result }
+}
+
+/** Re-reads the printed result through the contract, so the shape is checked, not claimed. */
+function printedResults(output: string): Extract<AiVaultSearchResponse, { kind: 'results' }> {
+  const parsed = AiVaultSearchResponseSchema.parse(printedEnvelope(output).result)
+  if (parsed.kind !== 'results') {
+    throw new Error(`Expected results, got ${parsed.kind}`)
+  }
+  return parsed
 }
 
 describe('orca search over the runtime RPC', () => {
@@ -83,7 +105,7 @@ describe('orca search over the runtime RPC', () => {
     expect(call).toHaveBeenCalledWith('aiVault.searchSessions', { query: 'resize race', limit: 20 })
   })
 
-  it.each([
+  const flagCases: [string, CliFlags, Record<string, unknown>][] = [
     [
       'scope and freshness',
       [
@@ -130,8 +152,10 @@ describe('orca search over the runtime RPC', () => {
       ],
       { query: 'q', limit: 20, debug: true }
     ]
-  ])('sends %s', async (_name, flags, params) => {
-    const { call } = await runSearch(flags as [string, string | boolean][])
+  ]
+
+  it.each(flagCases)('sends %s', async (_name, flags, params) => {
+    const { call } = await runSearch(flags)
 
     expect(call).toHaveBeenCalledWith('aiVault.searchSessions', params)
   })
@@ -222,18 +246,16 @@ describe('orca search over the runtime RPC', () => {
 
   it('applies the paired-client exposure policy for a remote runtime', async () => {
     const { output } = await runSearch([['query', 'q']], { isRemote: true, json: true })
-    const parsed = JSON.parse(output) as { result: typeof resultsResponse }
 
-    expect(parsed.result.hits[0]).not.toHaveProperty('resumeCommand')
-    expect(parsed.result.hits[0]?.source).toEqual({ presence: 'present' })
+    expect(printedResults(output).hits[0]).not.toHaveProperty('resumeCommand')
+    expect(printedResults(output).hits[0]?.source).toEqual({ presence: 'present' })
   })
 
   it('keeps the local resume command and source path for a same-machine host', async () => {
     const { output } = await runSearch([['query', 'q']], { json: true })
-    const parsed = JSON.parse(output) as { result: typeof resultsResponse }
 
-    expect(parsed.result.hits[0]?.resumeCommand).toBe('claude --resume session-1')
-    expect(parsed.result.hits[0]?.source).toEqual({
+    expect(printedResults(output).hits[0]?.resumeCommand).toBe('claude --resume session-1')
+    expect(printedResults(output).hits[0]?.source).toEqual({
       presence: 'present',
       filePath: '/transcripts/session-1.jsonl'
     })
@@ -243,11 +265,11 @@ describe('orca search over the runtime RPC', () => {
 describe('orca search --json', () => {
   it('hands back the contract response unchanged under the CLI envelope', async () => {
     const { output } = await runSearch([['query', 'q']], { json: true })
-    const parsed = JSON.parse(output) as Record<string, unknown>
+    const printed = printedEnvelope(output)
 
-    expect(Object.keys(parsed)).toEqual(['id', 'ok', 'result', '_meta'])
-    expect(parsed.result).toEqual(resultsResponse)
-    expect(JSON.stringify(parsed.result)).toBe(JSON.stringify(resultsResponse))
+    expect(printed.keys).toEqual(['id', 'ok', 'result', '_meta'])
+    expect(printed.result).toEqual(resultsResponse)
+    expect(JSON.stringify(printed.result)).toBe(JSON.stringify(resultsResponse))
   })
 
   it('drops the debug block the caller did not ask for', async () => {
@@ -260,9 +282,7 @@ describe('orca search --json', () => {
     }
     const { output } = await runSearch([['query', 'q']], { json: true, result: withDebug })
 
-    expect((JSON.parse(output) as { result: Record<string, unknown> }).result).not.toHaveProperty(
-      'debug'
-    )
+    expect(printedEnvelope(output).result).not.toHaveProperty('debug')
   })
 
   it('keeps the debug block the caller asked for', async () => {
@@ -281,9 +301,7 @@ describe('orca search --json', () => {
       { json: true, result: withDebug }
     )
 
-    expect((JSON.parse(output) as { result: typeof withDebug }).result.debug).toEqual(
-      withDebug.debug
-    )
+    expect(printedResults(output).debug).toEqual(withDebug.debug)
   })
 
   it('hands back the status response unchanged', async () => {
@@ -292,6 +310,6 @@ describe('orca search --json', () => {
       result: statusResponse
     })
 
-    expect((JSON.parse(output) as { result: unknown }).result).toEqual(statusResponse)
+    expect(printedEnvelope(output).result).toEqual(statusResponse)
   })
 })

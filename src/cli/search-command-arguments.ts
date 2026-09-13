@@ -40,13 +40,21 @@ function readEnum<TValue extends string>(
   if (value === undefined) {
     return undefined
   }
-  if (!(allowed as readonly string[]).includes(value)) {
+  // Why find and not includes: the match carries the narrow type, so nothing is asserted.
+  const matched = allowed.find((candidate) => candidate === value)
+  if (matched === undefined) {
     throw new RuntimeClientError(
       'invalid_argument',
       `Unsupported --${name} "${value}". Use ${allowed.join(' or ')}.`
     )
   }
-  return value as TValue
+  return matched
+}
+
+const KNOWN_AGENTS = new Set<string>(AI_VAULT_AGENTS)
+
+function isAiVaultAgent(value: string): value is AiVaultAgent {
+  return KNOWN_AGENTS.has(value)
 }
 
 function readAgents(flags: Map<string, string | boolean>): AiVaultAgent[] | undefined {
@@ -54,14 +62,14 @@ function readAgents(flags: Map<string, string | boolean>): AiVaultAgent[] | unde
   if (agents.length === 0) {
     return undefined
   }
-  const unknown = agents.filter((agent) => !(AI_VAULT_AGENTS as readonly string[]).includes(agent))
+  const unknown = agents.filter((agent) => !isAiVaultAgent(agent))
   if (unknown.length > 0) {
     throw new RuntimeClientError(
       'invalid_argument',
       `Unknown --agent ${unknown.map((agent) => `"${agent}"`).join(', ')}. Known agents: ${AI_VAULT_AGENTS.join(', ')}.`
     )
   }
-  return agents as AiVaultAgent[]
+  return agents.filter(isAiVaultAgent)
 }
 
 function readScopePaths(flags: Map<string, string | boolean>): string[] | undefined {
