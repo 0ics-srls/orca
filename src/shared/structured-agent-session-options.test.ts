@@ -110,4 +110,75 @@ describe('structured agent session options', () => {
     expect(snapshot.every((descriptor) => descriptor.settable)).toBe(true)
     expect(snapshot.every((descriptor) => descriptor.action === undefined)).toBe(true)
   })
+
+  it('projects Fast mode only from positive session and model capability', () => {
+    const supported = applyStructuredAgentSessionOptions(
+      createStructuredAgentSessionOptionState('codex'),
+      CODEX_SESSION_OPTION_CATALOG,
+      {
+        models: [
+          {
+            id: 'account-model',
+            label: 'Account Model',
+            isDefault: true,
+            efforts: [],
+            supportsFastMode: true
+          }
+        ],
+        fastModeSupport: { supported: true },
+        current: { model: 'account-model', fastMode: false, confirmed: ['fastMode'] }
+      }
+    )
+    expect(structuredAgentSessionOptionSnapshot(supported)).toContainEqual(
+      expect.objectContaining({
+        id: 'fastMode',
+        kind: { type: 'boolean', currentValue: false },
+        valueSource: 'reported',
+        settable: true
+      })
+    )
+
+    const absent = applyStructuredAgentSessionOptions(supported, CODEX_SESSION_OPTION_CATALOG, {
+      models: [
+        {
+          id: 'account-model',
+          label: 'Account Model',
+          isDefault: true,
+          efforts: [],
+          supportsFastMode: true
+        }
+      ],
+      current: { model: 'account-model' }
+    })
+    expect(structuredAgentSessionOptionSnapshot(absent).map(({ id }) => id)).toEqual(['model'])
+    expect(absent.record.valuesByModel['account-model']?.fastMode).toBeUndefined()
+  })
+
+  it('keeps Fast unselected when support is known but the current value is absent', () => {
+    const state = applyStructuredAgentSessionOptions(
+      createStructuredAgentSessionOptionState('codex'),
+      CODEX_SESSION_OPTION_CATALOG,
+      {
+        models: [
+          {
+            id: 'account-model',
+            label: 'Account Model',
+            isDefault: true,
+            efforts: [],
+            supportsFastMode: true
+          }
+        ],
+        fastModeSupport: { supported: true },
+        current: { model: 'account-model' }
+      }
+    )
+
+    expect(structuredAgentSessionOptionSnapshot(state)).toContainEqual(
+      expect.objectContaining({
+        id: 'fastMode',
+        kind: { type: 'boolean' },
+        valueSource: 'unknown'
+      })
+    )
+  })
 })

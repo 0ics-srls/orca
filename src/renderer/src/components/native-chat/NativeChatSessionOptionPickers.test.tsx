@@ -83,14 +83,17 @@ vi.mock('@/components/ui/dropdown-menu', () => {
     DropdownMenuRadioGroup: ({
       children,
       value,
-      onValueChange
+      onValueChange,
+      'aria-label': ariaLabel
     }: {
       children: React.ReactNode
       value?: string
       onValueChange?: (value: string) => void
+      'aria-label'?: string
     }) => (
       <div
         role="radiogroup"
+        aria-label={ariaLabel}
         data-radio-value={value ?? ''}
         data-on-value-change={onValueChange ? '1' : '0'}
       >
@@ -478,6 +481,7 @@ describe('NativeChatSessionOptionPickers', () => {
     const fastGroup = onRadio.parentElement
     expect(fastGroup?.getAttribute('data-radio-value')).toBe('on')
     expect(fastGroup?.getAttribute('data-on-value-change')).toBe('1')
+    expect(screen.getByRole('radiogroup', { name: 'Fast mode' })).toBe(fastGroup)
     screen.getByRole('radio', { name: 'Off' }).click()
     await waitFor(() => expect(setOption).toHaveBeenCalledWith('fastMode', false))
 

@@ -92,9 +92,7 @@ describe('resolveStructuredLaunchSeedOptions', () => {
     ).toEqual({ model: 'gpt-5.6-sol', effort: 'medium' })
   })
 
-  it('drops ids the providers only accept mid-session', () => {
-    // `fastMode` is a boolean and `personality` is settable only mid-session;
-    // neither belongs in the reservation's Record<string, string>.
+  it('encodes Fast mode while dropping ids the providers only accept mid-session', () => {
     expect(
       resolveStructuredLaunchSeedOptions(
         persistedCodex({
@@ -102,7 +100,7 @@ describe('resolveStructuredLaunchSeedOptions', () => {
         }),
         'codex'
       )
-    ).toEqual({ model: 'gpt-5.6-sol', effort: 'high' })
+    ).toEqual({ model: 'gpt-5.6-sol', effort: 'high', fastMode: 'true' })
   })
 
   it('drops a seeded id whose persisted value is not a usable string', () => {
@@ -142,16 +140,19 @@ describe('resolveStructuredLaunchSeedOptions', () => {
 
 describe('narrowStructuredLaunchSeedOptions', () => {
   it('keeps the seedable ids an explicit selection names', () => {
-    expect(narrowStructuredLaunchSeedOptions({ model: 'opus', effort: 'high' })).toEqual({
+    expect(
+      narrowStructuredLaunchSeedOptions({ model: 'opus', effort: 'high', fastMode: false })
+    ).toEqual({
       model: 'opus',
-      effort: 'high'
+      effort: 'high',
+      fastMode: 'false'
     })
   })
 
   it('drops ids no structured create may seed', () => {
-    expect(
-      narrowStructuredLaunchSeedOptions({ model: 'opus', mode: 'plan', fastMode: true })
-    ).toEqual({ model: 'opus' })
+    expect(narrowStructuredLaunchSeedOptions({ model: 'opus', mode: 'plan' })).toEqual({
+      model: 'opus'
+    })
   })
 
   it.each([

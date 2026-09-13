@@ -6,12 +6,15 @@ import {
 } from '../native-chat/agent-session-wire/structured-agent-session-option-error'
 import {
   readClaudeCurrentModel,
+  readClaudeModelFastModeSupport,
   readClaudeModelEffortLevels,
-  readClaudeSettingsEffort
+  readClaudeSettingsEffort,
+  readClaudeSettingsFastMode
 } from './claude-structured-session-options'
 import type { ClaudeSession } from './claude-structured-session-state'
+import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
 
-const OPTION_ORDER = ['model', 'effort', 'permissionMode'] as const
+const OPTION_ORDER = ['model', 'effort', 'fastMode', 'permissionMode'] as const
 
 /**
  * Efforts the settings readback cannot report. `max` applies for the rest of the
@@ -37,6 +40,10 @@ export async function setClaudeStructuredOption(
   input: { key: string; value: string },
   timeoutMs: number | undefined
 ): Promise<Readonly<Record<string, string>>> {
+  const fastMode =
+    input.key === 'fastMode'
+      ? decodeStructuredAgentSessionOptionValue('fastMode', input.value)
+      : null
   const apply =
     input.key === 'model'
       ? () => session.connection.setModel(input.value, { timeoutMs })
@@ -48,7 +55,9 @@ export async function setClaudeStructuredOption(
                 { effortLevel: input.value as EffortLevel },
                 { timeoutMs }
               )
-          : null
+          : input.key === 'fastMode' && typeof fastMode === 'boolean'
+            ? () => session.connection.applyFlagSettings({ fastMode }, { timeoutMs })
+            : null
   if (!apply) {
     throw new AgentSessionOptionRejectedError(
       `claude stream-json has no session option named ${input.key}`
@@ -66,6 +75,30 @@ export async function setClaudeStructuredOption(
       )
     }
   }
+  if (input.key === 'fastMode') {
+    if (typeof fastMode !== 'boolean') {
+      throw new AgentSessionOptionRejectedError('claude fast mode must be encoded as true or false')
+    }
+    const support = await readClaudeModelFastModeSupport(session, timeoutMs)
+    if (fastMode && support.supported !== true) {
+      throw new AgentSessionOptionRejectedError(
+        `claude model ${support.modelId ?? 'current'} does not support Fast mode`
+      )
+    }
+    if (
+      fastMode &&
+      session.fastModeDisabledReason &&
+      !['preference', 'sdk_opt_in_required'].includes(session.fastModeDisabledReason)
+    ) {
+      throw new AgentSessionOptionRejectedError(
+        `claude Fast mode is unavailable (${session.fastModeDisabledReason})`
+      )
+    }
+  }
+  const modelFastModeSupport =
+    input.key === 'model' && session.options.get('fastMode') === 'true'
+      ? await readClaudeModelFastModeSupport(session, timeoutMs, input.value)
+      : null
   const modelWasConfirmed = readClaudeCurrentModel(session).confirmed
   const mutationSequence = ++session.optionMutationSequence
   // Only a model write can stale the model report — an effort or permission-mode
@@ -77,6 +110,22 @@ export async function setClaudeStructuredOption(
   }
   try {
     await apply()
+    if (
+      input.key === 'model' &&
+      session.options.get('fastMode') === 'true' &&
+      modelFastModeSupport?.supported === false
+    ) {
+      if (mutationSequence !== session.optionMutationSequence) {
+        return Object.fromEntries(session.options)
+      }
+      session.options.set('model', input.value)
+      session.options.set('fastMode', 'false')
+      session.confirmedOptions.delete('effort')
+      session.confirmedOptions.delete('fastMode')
+      // The requested model is already accepted; a cleanup failure cannot reject that write.
+      await session.connection.applyFlagSettings({ fastMode: false }, { timeoutMs }).catch(() => {})
+      return Object.fromEntries(session.options)
+    }
   } catch (error) {
     if (error instanceof ClaudeControlRequestError) {
       throw new AgentSessionOptionRejectedError(error)
@@ -86,26 +135,39 @@ export async function setClaudeStructuredOption(
   // apply_flag_settings answers `success` for an effort it then ignores, so the
   // absence of a throw proves nothing. Ask what the child actually holds.
   const adopted =
-    input.key === 'effort' && !UNREPORTED_EFFORTS.has(input.value)
+    (input.key === 'effort' && !UNREPORTED_EFFORTS.has(input.value)) || input.key === 'fastMode'
       ? await session.connection
           .getSettings({ timeoutMs })
-          .then(readClaudeSettingsEffort)
+          .then((settings) =>
+            input.key === 'fastMode'
+              ? readClaudeSettingsFastMode(settings)
+              : readClaudeSettingsEffort(settings)
+          )
           .catch(() => null)
       : null
   if (mutationSequence !== session.optionMutationSequence) {
     return Object.fromEntries(session.options)
   }
+  if (input.key === 'fastMode' && typeof adopted === 'boolean') {
+    session.reportedOptions.fastMode = adopted
+  }
   // A disagreement stops main vouching for the value, it does not veto the write:
   // the pre-flight guard already refuses levels the model advertises no control
   // for, and no other client refuses on a readback. Keep the child's own answer so
   // the disagreement survives as the level a later read falls back to.
-  if (adopted !== null && adopted !== input.value) {
-    session.reportedOptions.effort = adopted
+  const decodedInput = input.key === 'fastMode' ? fastMode : input.value
+  if (adopted !== null && adopted !== decodedInput) {
+    if (typeof adopted === 'string') {
+      session.reportedOptions.effort = adopted
+    }
   }
-  session.options.set(input.key, input.value)
+  session.options.set(
+    input.key,
+    input.key === 'fastMode' && typeof adopted === 'boolean' ? String(adopted) : input.value
+  )
   // Only a readback that agreed is adoption evidence; one that disagreed or could
   // not be taken records the value but must not also claim the provider vouched for it.
-  if (adopted !== null && adopted === input.value) {
+  if (adopted !== null && adopted === decodedInput) {
     session.confirmedOptions.add(input.key)
   } else {
     session.confirmedOptions.delete(input.key)
@@ -115,6 +177,7 @@ export async function setClaudeStructuredOption(
   // it, and vouching for it would show a confirmed effort no readback covers.
   if (input.key === 'model') {
     session.confirmedOptions.delete('effort')
+    session.confirmedOptions.delete('fastMode')
   }
   return Object.fromEntries(session.options)
 }

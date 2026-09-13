@@ -159,7 +159,11 @@ function DescriptorMenuRows(props: {
             )}
           </DropdownMenuLabel>
         ) : null}
-        <DropdownMenuRadioGroup value={selected} onValueChange={(next) => setValue(next === 'on')}>
+        <DropdownMenuRadioGroup
+          aria-label={nativeChatSessionOptionLabel(descriptor)}
+          value={selected}
+          onValueChange={(next) => setValue(next === 'on')}
+        >
           <DropdownMenuRadioItem value="on" disabled={!descriptor.settable || pending}>
             {translate('components.native-chat.composer.optionValue.on', 'On')}
           </DropdownMenuRadioItem>
@@ -172,6 +176,7 @@ function DescriptorMenuRows(props: {
   }
   return (
     <DropdownMenuRadioGroup
+      aria-label={nativeChatSessionOptionLabel(descriptor)}
       value={descriptor.kind.currentValue}
       onValueChange={(value) => setValue(value)}
     >
