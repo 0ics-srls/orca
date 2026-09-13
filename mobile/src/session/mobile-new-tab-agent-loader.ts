@@ -32,6 +32,7 @@ export async function loadMobileNewTabAgentOptions(args: {
     throw new Error((detectedResponse as RpcFailure).error.message)
   }
   return buildMobileNewTabAgentOptions(
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
     readSettings() as MobileNewTabAgentSettings | undefined,
     (detectedResponse as RpcSuccess).result as unknown[]
   )

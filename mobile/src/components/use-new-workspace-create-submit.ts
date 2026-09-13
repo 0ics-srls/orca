@@ -91,6 +91,7 @@ export function useNewWorkspaceCreateSubmit(args: {
         const settingsReply = await settingsRead.request(client)
         const settings = settingsRead.interpret(settingsReply)
         if (settings.accepted) {
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
           latestRuntimeSettings = settings.value as NewWorktreeRuntimeSettings
           args.setRuntimeSettings(latestRuntimeSettings)
         }

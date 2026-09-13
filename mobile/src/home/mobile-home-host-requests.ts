@@ -84,7 +84,8 @@ export function fetchMobileHomeTaskProviders(
       }
       const settingsResult = settingsRead.interpret(settingsResponse)
       const settings = settingsResult.accepted
-        ? ((settingsResult.value ?? {}) as HomeTaskSettings)
+        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          ((settingsResult.value ?? {}) as HomeTaskSettings)
         : {}
       const preflight = preflightResponse.ok
         ? (preflightResponse.result as HomePreflightStatus)

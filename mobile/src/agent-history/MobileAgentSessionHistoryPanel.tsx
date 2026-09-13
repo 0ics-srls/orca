@@ -408,7 +408,8 @@ async function loadMobileResumeMetadata(client: Pick<RpcClient, 'sendRequest'>):
       : null
   const settingsResult = settingsResponse ? optionalSettingsRead.interpret(settingsResponse) : null
   const settings = settingsResult?.accepted
-    ? (settingsResult.value as MobileAiVaultResumeSettings | null | undefined)
+    ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+      (settingsResult.value as MobileAiVaultResumeSettings | null | undefined)
     : null
   const worktreeResult =
     worktreeResponse?.ok === true ? (worktreeResponse.result as { worktrees?: Worktree[] }) : null

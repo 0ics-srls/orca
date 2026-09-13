@@ -48,9 +48,10 @@ export function useNewWorkspaceRuntimeContext(
       }
 
       const settingsResult =
-        settingsRes.status === 'fulfilled' ? settingsRes.value.interpret() : null
+        settingsRes.status === 'fulfilled' ? settingsRead.interpret(settingsRes.value) : null
       const settingsValue = settingsResult?.accepted
-        ? (settingsResult.value as NewWorktreeRuntimeSettings & { visibleTaskProviders?: unknown })
+        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          (settingsResult.value as NewWorktreeRuntimeSettings & { visibleTaskProviders?: unknown })
         : null
       if (settingsValue) {
         setRuntimeSettings(settingsValue)

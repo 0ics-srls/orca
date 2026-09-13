@@ -76,6 +76,7 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
           const settingsReply = await settingsRead.request(client)
           const settingsResult = settingsRead.interpret(settingsReply)
           if (settingsResult.accepted) {
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
             latestRuntimeTaskSettings = (settingsResult.value ?? {}) as RuntimeTaskSettings
             setRuntimeTaskSettings(latestRuntimeTaskSettings)
           }

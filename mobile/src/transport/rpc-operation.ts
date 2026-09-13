@@ -177,6 +177,7 @@ export async function runRpcOperation<
   options?: SendRequestOptions
 ): Promise<RpcVerdict<Acceptance, Value>> {
   const outcome = await request(client, operation, params, options)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
   return interpretRpcOutcome(operation, outcome) as RpcVerdict<Acceptance, Value>
 }
 
@@ -275,6 +276,7 @@ export function bindDeferredRpcOperation<
       return sendSingleFlightRequest(client, hostId, operation.method, args[0])
     },
     interpret(response: RpcResponse): Verdict {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
       return interpretRpcOutcome(operation, classifyRpcReply(operation, response)) as Verdict
     }
   })

@@ -48,6 +48,7 @@ function readHostPlatform(result: unknown): NodeJS.Platform | null {
 }
 
 function readHostSettingOverrides(result: unknown): unknown {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
   return (result as { hostSettingOverrides?: unknown } | null)?.hostSettingOverrides
 }
 
