@@ -90,6 +90,7 @@ import {
   resolveRuntimeAiVaultSessionTitles,
   scanRuntimeAiVaultSessions
 } from '../../ai-vault/runtime-session-scanner'
+import { callRuntimeSessionSearch } from '../../ai-vault/runtime-session-search-call'
 import type { PluginService } from '../../plugins/plugin-service'
 import type { PluginMarketplaceHandlerServices } from '../plugin-marketplaces'
 
@@ -215,7 +216,12 @@ export function registerCoreHandlers(
   registerRuntimeHandlers(runtime)
   registerRuntimeEnvironmentHandlers(store)
   registerEphemeralVmHandlers(store, pluginService)
-  registerAiVaultSearchHandlers()
+  registerAiVaultSearchHandlers({
+    getActiveRuntimeAiVaultHostInfos: () =>
+      getSavedRuntimeAiVaultHostInfos(app.getPath('userData')),
+    callRuntimeSearch: (environmentId, method, params, timeoutMs) =>
+      callRuntimeSessionSearch(app.getPath('userData'), environmentId, method, params, timeoutMs)
+  })
   registerAiVaultHandlers({
     ensureStructuredSessionOwnership: () => runtime.ensureStructuredAgentSessionHost(),
     getAdditionalCodexHomePaths: lifecycleOptions.getAdditionalAiVaultCodexHomePaths,
