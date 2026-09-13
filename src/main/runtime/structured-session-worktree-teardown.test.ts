@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentSessionRecord } from '../../shared/agent-session-record'
+import type { IPtyProvider } from '../providers/types'
 
 const hostRef: { current: unknown } = { current: null }
 
@@ -8,6 +9,7 @@ vi.mock('../native-chat/agent-session-wire/structured-agent-session-registry', (
 }))
 
 const { killAllProcessesForWorktree } = await import('./worktree-teardown')
+type TeardownRuntime = NonNullable<Parameters<typeof killAllProcessesForWorktree>[1]['runtime']>
 const {
   classifyWorktreeForceDeleteReason,
   isProvenLiveStructuredSessionRemovalError,
@@ -140,6 +142,17 @@ function destructiveDeps(extra: { allowUnverifiedStop?: boolean; timeoutMs?: num
     includeLocalRegistry: false as const,
     ...extra
   }
+}
+
+function runtimeDouble(hooks: object): TeardownRuntime {
+  return Object.assign(Object.create(null), hooks)
+}
+
+function livePtyProvider(): IPtyProvider {
+  return Object.assign(Object.create(null), {
+    listProcesses: async () => [{ id: 'pty-1' }],
+    shutdown: async () => {}
+  })
 }
 
 /** The structured sweep's own warn — a forced removal can emit a PTY-sweep one onto the same spy. */
@@ -324,13 +337,12 @@ describe('worktree teardown and structured agent sessions', () => {
     installHost({ records: [record('s1', WORKTREE)], stuck: new Set(['s1']), visible: ['s1'] })
     const result = await killAllProcessesForWorktree(WORKTREE, {
       ...destructiveDeps({ allowUnverifiedStop: true }),
-      runtime: {
+      runtime: runtimeDouble({
         retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
           retired.push(sessionId)
           return true
         }
-        // SAFETY: this test double implements only the optional tab-retirement hook.
-      } as never
+      })
     })
     expect(result.structuredStopped).toBeUndefined()
     // The live arm of that record, carrying the verdict the refusal would have shown.
@@ -696,7 +708,7 @@ describe('worktree teardown and structured agent sessions', () => {
     // the per-PTY verdict so a structured refusal can outrank a terminal one — which means a tab
     // retired at the end of it would still be ahead of a gate that can refuse the whole removal,
     // and this workspace survives with its chats gone.
-    const runtime = {
+    const runtime = runtimeDouble({
       stopTerminalsForWorktree: async (
         _worktreeId: string,
         options: { stopPty: (ptyId: string, stop: () => Promise<boolean>) => Promise<unknown> }
@@ -704,11 +716,8 @@ describe('worktree teardown and structured agent sessions', () => {
         await options.stopPty('pty-1', async () => false)
         return { stopped: 0 }
       }
-    } as never
-    const livePtyProvider = {
-      listProcesses: async () => [{ id: 'pty-1' }],
-      shutdown: async () => {}
-    } as never
+    })
+    const liveProvider = livePtyProvider()
     const host = installHost({
       records: [record('s1', WORKTREE)],
       detached: new Set(['s1']),
@@ -716,7 +725,7 @@ describe('worktree teardown and structured agent sessions', () => {
     })
     await expect(
       killAllProcessesForWorktree(WORKTREE, {
-        localProvider: livePtyProvider,
+        localProvider: liveProvider,
         requirePhysicalStop: true,
         includeProviderInventory: false,
         includeLocalRegistry: false,
@@ -767,13 +776,12 @@ describe('worktree teardown and structured agent sessions', () => {
       includeProviderInventory: false as const,
       includeLocalRegistry: false as const,
       closeStructuredSessions: true,
-      runtime: {
+      runtime: runtimeDouble({
         retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
           retired.push(sessionId)
           return true
         }
-        // SAFETY: this test double implements only the optional tab-retirement hook.
-      } as never
+      })
     })
     expect([...host.visible]).toEqual([])
     expect(retired).toEqual(['s1'])
@@ -804,13 +812,12 @@ describe('worktree teardown and structured agent sessions', () => {
           includeProviderInventory: true,
           includeLocalRegistry: false,
           closeStructuredSessions: true,
-          runtime: {
+          runtime: runtimeDouble({
             retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
               retired.push(sessionId)
               return true
             }
-            // SAFETY: this test double implements only the optional tab-retirement hook.
-          } as never
+          })
         })
       ).rejects.toThrow('terminal inventory unavailable')
     } finally {
