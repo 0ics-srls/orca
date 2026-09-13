@@ -31,7 +31,7 @@ const WSL_HOME = '\\\\wsl.localhost\\Ubuntu\\home\\ada'
 function wslSpawns(): string[][] {
   return execFileMock.mock.calls
     .filter(([command]) => command === 'wsl.exe')
-    .map(([, args]) => args as string[])
+    .flatMap(([, args]) => (Array.isArray(args) ? [args.map(String)] : []))
 }
 
 // Why the real wsl module: the point is the wsl.exe spawn count across the WHOLE
