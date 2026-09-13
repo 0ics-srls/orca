@@ -45,7 +45,14 @@ export async function withWorktreeCreationCancellation(
       // would let the next retry create a second workspace beside the first, so
       // keep the obligation until a removal actually discharges it. An unidentified
       // workspace is exempt: no call was made, so retrying can never discharge it.
-      if (deferred && !outcome.ok && outcome.retryable) {
+      // The entry check separates retry (kept, so it can re-attempt) from dismissal
+      // (already gone, so a re-armed hook could never run again).
+      if (
+        deferred &&
+        !outcome.ok &&
+        outcome.retryable &&
+        useAppStore.getState().pendingWorktreeCreations[creationId]
+      ) {
         attempt.cleanupAfterSettlement = () => cleanup(deferred)
       } else {
         releaseActiveWorktreeCreation(creationId, attempt)

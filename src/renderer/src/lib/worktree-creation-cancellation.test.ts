@@ -288,6 +288,19 @@ describe('worktree creation cancellation', () => {
     expect(finalRetry).toHaveBeenCalledOnce()
   })
 
+  it('does not arm an unreachable cleanup when a dismissal rollback fails', async () => {
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = worktree
+    })
+    state.removeWorktree.mockResolvedValue({ ok: false, error: 'Host unavailable' })
+    // Dismissal removes the pending entry first, so nothing could ever invoke a
+    // re-armed hook again — holding the attempt would strand it for the session.
+    delete state.pendingWorktreeCreations.creation
+    expect(cancelActiveWorktreeCreation('creation')).toBe(true)
+    await vi.waitFor(() => expect(state.removeWorktree).toHaveBeenCalledOnce())
+    await vi.waitFor(() => expect(cancelActiveWorktreeCreation('creation')).toBe(false))
+  })
+
   it('lets retry proceed once an unidentifiable workspace has been reported', async () => {
     const unstamped = makeWorktree({ id: 'repo::/workspace', repoId: 'repo', hostId: 'ssh:owner' })
     await withWorktreeCreationCancellation('creation', async (attempt) => {
