@@ -1,5 +1,11 @@
 import { createSessionSearchClient } from '../../shared/ai-vault-search-client'
 import type { AiVaultSearchRequest } from '../../shared/ai-vault-search-types'
+import {
+  ALL_EXECUTION_HOSTS_SCOPE,
+  LOCAL_EXECUTION_HOST_ID,
+  type ExecutionHostId,
+  type ExecutionHostScope
+} from '../../shared/execution-host'
 import { ipcRenderer } from 'electron'
 import type {
   AiVaultDeleteSessionArgs,
@@ -14,20 +20,29 @@ import type { AiVaultSessionTitlesArgs } from '../../shared/ai-vault-session-tit
 import type { AiVaultPrepareSessionResumeArgs } from '../../shared/ai-vault-resume-preparation'
 import type { PreloadApi } from '../api-types'
 
-function searchClient(sshTargetId?: string): ReturnType<typeof createSessionSearchClient> {
+// Main already applied the per-leg policy to an `all` merge, so re-redacting it
+// here as `relay` would strip the local host's own paths back out.
+function searchClient(
+  executionHostScope?: ExecutionHostScope
+): ReturnType<typeof createSessionSearchClient> {
+  const remote =
+    executionHostScope !== undefined &&
+    executionHostScope !== ALL_EXECUTION_HOSTS_SCOPE &&
+    executionHostScope !== LOCAL_EXECUTION_HOST_ID
   return createSessionSearchClient(
     (method, params) =>
       method === 'aiVault.searchSessions'
-        ? ipcRenderer.invoke('aiVault:searchSessions', params, sshTargetId)
-        : ipcRenderer.invoke('aiVault:searchStatus', sshTargetId),
-    sshTargetId ? 'relay' : 'ipc'
+        ? ipcRenderer.invoke('aiVault:searchSessions', params, executionHostScope)
+        : ipcRenderer.invoke('aiVault:searchStatus', executionHostScope),
+    remote ? 'relay' : 'ipc'
   )
 }
 
 export const aiVaultApi = {
-  searchSessions: (request: AiVaultSearchRequest, sshTargetId?: string) =>
-    searchClient(sshTargetId).searchSessions(request),
-  searchStatus: (sshTargetId?: string) => searchClient(sshTargetId).searchStatus(),
+  searchSessions: (request: AiVaultSearchRequest, executionHostScope?: ExecutionHostScope) =>
+    searchClient(executionHostScope).searchSessions(request),
+  searchStatus: (executionHostScope?: ExecutionHostId) =>
+    searchClient(executionHostScope).searchStatus(),
   listSessions: (args?: AiVaultListArgs) => ipcRenderer.invoke('aiVault:listSessions', args),
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) =>
     ipcRenderer.invoke('aiVault:resolveSessionTitles', args),

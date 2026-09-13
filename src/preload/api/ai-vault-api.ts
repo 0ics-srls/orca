@@ -23,13 +23,16 @@ import type {
   AiVaultPrepareSessionResumeArgs,
   AiVaultPrepareSessionResumeResult
 } from '../../shared/ai-vault-resume-preparation'
+import type { ExecutionHostId, ExecutionHostScope } from '../../shared/execution-host'
 
 export type AiVaultApi = {
+  /** Omitted scope means this host; `all` fans out and merges by recency. */
   searchSessions: (
     request: AiVaultSearchRequest,
-    sshTargetId?: string
+    executionHostScope?: ExecutionHostScope
   ) => Promise<AiVaultSearchResponse>
-  searchStatus: (sshTargetId?: string) => Promise<AiVaultSearchStatus>
+  /** Status describes one index, so it never accepts the `all` scope. */
+  searchStatus: (executionHostScope?: ExecutionHostId) => Promise<AiVaultSearchStatus>
   listSessions: (args?: AiVaultListArgs) => Promise<AiVaultListResult>
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) => Promise<AiVaultSessionTitlesResult>
   cancelListSessions: (args: { requestToken: string }) => Promise<void>
