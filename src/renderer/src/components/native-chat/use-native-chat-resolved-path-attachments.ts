@@ -83,6 +83,8 @@ export function useNativeChatResolvedPathAttachments({
       if (resolvedPaths.length === 0) {
         return
       }
+      // A failed ownership verdict refuses the whole completion (see the limit
+      // rejection below): an ordered batch is never partially applied.
       if (resolvedPaths.some(({ targetOwnerIsCurrent }) => targetOwnerIsCurrent?.() === false)) {
         setNotice(nativeChatWorkspaceAttachmentMismatchNotice())
         return
