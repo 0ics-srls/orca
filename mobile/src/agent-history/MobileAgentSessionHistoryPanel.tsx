@@ -406,7 +406,7 @@ async function loadMobileResumeMetadata(client: Pick<RpcClient, 'sendRequest'>):
     projectGroupResponse?.ok === true
       ? (projectGroupResponse.result as { groups?: MobileAiVaultResumeProjectGroup[] })
       : null
-  const settingsResult = settingsResponse?.interpret()
+  const settingsResult = settingsResponse ? optionalSettingsRead.interpret(settingsResponse) : null
   const settings = settingsResult?.accepted
     ? (settingsResult.value as MobileAiVaultResumeSettings | null | undefined)
     : null

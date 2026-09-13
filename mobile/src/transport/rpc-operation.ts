@@ -25,8 +25,7 @@ import type {
   RequireResultRpcDefinition,
   StreamOpenerRpcDefinition,
   RpcVerdict,
-  LegacyResultRpcDefinition,
-  DeferredRpcInterpretation
+  LegacyResultRpcDefinition
 } from './rpc-operation-contract'
 
 type RpcOperationDefinitionInput =
@@ -253,7 +252,7 @@ type RpcSendArguments<Method extends RpcMethodName> =
     ? [params?: RpcSendParams<Method>, options?: SendRequestOptions]
     : [params: RpcSendParams<Method>, options?: SendRequestOptions]
 
-/** Binds sending and interpretation without exposing envelopes or capturing transport failures. */
+/** Binds sending and interpretation while preserving the transport promise identity. */
 export function bindDeferredRpcOperation<
   Method extends RpcMethodName,
   Acceptance extends RpcAcceptanceName,
@@ -261,14 +260,10 @@ export function bindDeferredRpcOperation<
   Value
 >(operation: RpcOperation<Method, Acceptance, Variant, Value, 'after-caller-barrier'>) {
   type Verdict = RpcVerdict<Acceptance, Value>
-  const defer = (response: RpcResponse): DeferredRpcInterpretation<Verdict> => ({
-    interpret: () =>
-      interpretRpcOutcome(operation, classifyRpcReply(operation, response)) as Verdict
-  })
   return Object.freeze({
     operation,
     request(client: UnvalidatedRpcRequestPort, ...args: RpcSendArguments<Method>) {
-      return client.sendRequest(operation.method, ...args).then(defer)
+      return client.sendRequest(operation.method, ...args)
     },
     requestSingleFlight(
       client: RpcClient,
@@ -277,7 +272,10 @@ export function bindDeferredRpcOperation<
         ? [params?: RpcSendParams<Method>]
         : [params: RpcSendParams<Method>]
     ) {
-      return sendSingleFlightRequest(client, hostId, operation.method, args[0]).then(defer)
+      return sendSingleFlightRequest(client, hostId, operation.method, args[0])
+    },
+    interpret(response: RpcResponse): Verdict {
+      return interpretRpcOutcome(operation, classifyRpcReply(operation, response)) as Verdict
     }
   })
 }

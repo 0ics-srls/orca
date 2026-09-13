@@ -89,7 +89,7 @@ export function useNewWorkspaceCreateSubmit(args: {
       let latestRuntimeSettings = args.runtimeSettings
       try {
         const settingsReply = await settingsRead.request(client)
-        const settings = settingsReply.interpret()
+        const settings = settingsRead.interpret(settingsReply)
         if (settings.accepted) {
           latestRuntimeSettings = settings.value as NewWorktreeRuntimeSettings
           args.setRuntimeSettings(latestRuntimeSettings)

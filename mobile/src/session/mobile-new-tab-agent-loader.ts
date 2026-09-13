@@ -27,7 +27,7 @@ export async function loadMobileNewTabAgentOptions(args: {
     newTabSettingsRead.request(client),
     detectedAgentsRequest
   ])
-  const readSettings = settingsResponse.interpret()
+  const readSettings = newTabSettingsRead.interpret(settingsResponse)
   if (!detectedResponse.ok) {
     throw new Error((detectedResponse as RpcFailure).error.message)
   }

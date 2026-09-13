@@ -82,7 +82,7 @@ export function fetchMobileHomeTaskProviders(
       if (disposed()) {
         return
       }
-      const settingsResult = settingsResponse.interpret()
+      const settingsResult = settingsRead.interpret(settingsResponse)
       const settings = settingsResult.accepted
         ? ((settingsResult.value ?? {}) as HomeTaskSettings)
         : {}

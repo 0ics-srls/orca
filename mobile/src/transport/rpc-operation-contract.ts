@@ -178,6 +178,3 @@ export type LegacyResultRpcDefinition<
   acceptance: Acceptance
   read: RpcCompatibleReader<unknown, Variant, Value>
 }
-
-/** Only the bound policy can turn this opaque reply into a value, after caller guards. */
-export type DeferredRpcInterpretation<Value> = { readonly interpret: () => Value }

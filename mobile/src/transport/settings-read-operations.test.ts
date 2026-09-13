@@ -51,14 +51,14 @@ describe('settings historical acceptance', () => {
   it('distinguishes a skipped refusal from an accepted absent settings member', async () => {
     const skipped = await settingsRead.request(replyWith(refusal()))
     const missing = await settingsRead.request(replyWith(success({})))
-    expect(skipped.interpret()).toEqual({ accepted: false })
-    expect(missing.interpret()).toEqual({ accepted: true, value: undefined })
+    expect(settingsRead.interpret(skipped)).toEqual({ accepted: false })
+    expect(settingsRead.interpret(missing)).toEqual({ accepted: true, value: undefined })
   })
 
   it('retains opaque settings fields and reference identity without tightening acceptance', async () => {
     const value = { futureField: { nested: ['kept'] }, disabledTuiAgents: 'legacy-value' }
     const reply = await settingsRead.request(replyWith(success({ settings: value })))
-    const result = reply.interpret()
+    const result = settingsRead.interpret(reply)
     expect(result.accepted && result.value).toBe(value)
   })
 
@@ -66,29 +66,29 @@ describe('settings historical acceptance', () => {
     'preserves the unguarded settings read for %s only when interpreted',
     async (value) => {
       const reply = await settingsRead.request(replyWith(success(value)))
-      expect(() => reply.interpret()).toThrow(TypeError)
-      expect(() => reply.interpret()).toThrow(
+      expect(() => settingsRead.interpret(reply)).toThrow(TypeError)
+      expect(() => settingsRead.interpret(reply)).toThrow(
         `Cannot read properties of ${String(value)} (reading 'settings')`
       )
       const optional = await optionalSettingsRead.request(replyWith(success(value)))
-      expect(optional.interpret()).toEqual({ accepted: true, value: undefined })
+      expect(optionalSettingsRead.interpret(optional)).toEqual({ accepted: true, value: undefined })
     }
   )
 
   it.each([true, false, 0, 'text', []])('preserves property boxing for %j', async (value) => {
     const reply = await settingsRead.request(replyWith(success(value)))
-    expect(reply.interpret()).toEqual({ accepted: true, value: undefined })
+    expect(settingsRead.interpret(reply)).toEqual({ accepted: true, value: undefined })
   })
 
   it('filters bot logins while distinguishing a refused refresh', async () => {
     const reply = await botOverridesRead.request(
       replyWith(success({ settings: { prBotAuthorOverrides: ['bot', 3, null, ''] } }))
     )
-    expect(reply.interpret()).toEqual({ accepted: true, value: ['bot', ''] })
+    expect(botOverridesRead.interpret(reply)).toEqual({ accepted: true, value: ['bot', ''] })
     const refused = await botOverridesRead.request(replyWith(refusal()))
-    expect(refused.interpret()).toEqual({ accepted: false })
+    expect(botOverridesRead.interpret(refused)).toEqual({ accepted: false })
     const empty = await botOverridesRead.request(replyWith(success(null)))
-    expect(empty.interpret()).toEqual({ accepted: true, value: [] })
+    expect(botOverridesRead.interpret(empty)).toEqual({ accepted: true, value: [] })
   })
 
   it('does not read a stale payload until its caller permits interpretation', async () => {
@@ -103,7 +103,7 @@ describe('settings historical acceptance', () => {
       )
     )
     expect(read).not.toHaveBeenCalled()
-    reply.interpret()
+    settingsRead.interpret(reply)
     expect(read).toHaveBeenCalledOnce()
   })
 
@@ -194,7 +194,7 @@ describe('new-tab settlement barriers', () => {
     )
     await expect(load(client)).rejects.toThrow('agents refused')
     const reply = await newTabSettingsRead.request(replyWith(success(null)))
-    const readSettings = reply.interpret()
+    const readSettings = newTabSettingsRead.interpret(reply)
     expect(() => readSettings()).toThrow(TypeError)
   })
 })

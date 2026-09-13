@@ -133,7 +133,9 @@ export function useHostRepoMetadata(args: {
             if (clientRef.current !== requestClient || hostId !== requestHostId) {
               return
             }
-            const hostSettingsResult = hostSettings?.interpret()
+            const hostSettingsResult = hostSettings
+              ? optionalSettingsRead.interpret(hostSettings)
+              : null
             setHostLabelById(
               buildHostLabelById({
                 sshTargets: readSshTargets(sshTargets?.ok ? sshTargets.result : null),

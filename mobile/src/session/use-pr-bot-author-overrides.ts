@@ -39,7 +39,7 @@ export function usePRBotAuthorOverrides(
         if (stale) {
           return
         }
-        const overrides = response.interpret()
+        const overrides = botOverridesRead.interpret(response)
         if (overrides.accepted) {
           setLogins(overrides.value)
         }

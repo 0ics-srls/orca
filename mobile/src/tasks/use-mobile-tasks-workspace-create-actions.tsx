@@ -74,7 +74,7 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
         let latestRuntimeTaskSettings = runtimeTaskSettings
         try {
           const settingsReply = await settingsRead.request(client)
-          const settingsResult = settingsReply.interpret()
+          const settingsResult = settingsRead.interpret(settingsReply)
           if (settingsResult.accepted) {
             latestRuntimeTaskSettings = (settingsResult.value ?? {}) as RuntimeTaskSettings
             setRuntimeTaskSettings(latestRuntimeTaskSettings)
