@@ -104,6 +104,9 @@ describe('Grok vendor hook replay guard', () => {
 
     expectGuardBeforeTransport(claude, WINDOWS_GROK_GUARD, 'echo {}')
     expectGuardBeforeTransport(cursor, WINDOWS_GROK_GUARD, '(echo {})')
+    const backgroundWorkerGuardIndex = claude.indexOf('CLAUDE_JOB_DIR')
+    expect(backgroundWorkerGuardIndex).toBeGreaterThan(-1)
+    expect(backgroundWorkerGuardIndex).toBeLessThan(claude.indexOf(WINDOWS_GROK_GUARD))
   })
 
   it.skipIf(process.platform === 'win32')(
