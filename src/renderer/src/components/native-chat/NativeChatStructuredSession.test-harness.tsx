@@ -9,6 +9,18 @@ import type { NativeChatLaunchSeed } from './native-chat-composer-types'
 // Why: a named spy type keeps the harness's inferred return type portable across the test files.
 type StructuredSessionSpy = Mock
 
+type StructuredSessionMessageListProps = {
+  allowFileUriLinks?: boolean
+  onLinkClick?: (...args: unknown[]) => void
+  showTurnStatus?: boolean
+  showLiveTurnActivity?: boolean
+  isWorking?: boolean
+  runtimeContext?: unknown
+}
+
+const initialMessageListProps: StructuredSessionMessageListProps | null = null
+const initialApprovalCardProps: NativeChatApprovalCardProps | null = null
+
 /**
  * Shared mock state and `vi.mock` factories for the NativeChatStructuredSession test files.
  * Load it through `await vi.hoisted(async () => (await import(...)).createStructuredSessionMocks())`
@@ -21,20 +33,13 @@ export function createStructuredSessionMocks() {
     mode: 'static' as 'static' | 'outbox',
     status: 'ready' as 'idle' | 'loading' | 'ready' | 'error',
     messages: null as null | unknown[],
-    messageListProps: null as null | {
-      allowFileUriLinks?: boolean
-      onLinkClick?: (...args: unknown[]) => void
-      showTurnStatus?: boolean
-      showLiveTurnActivity?: boolean
-      isWorking?: boolean
-      runtimeContext?: unknown
-    },
+    messageListProps: initialMessageListProps,
     composerProps: null as null | {
       launchSeed?: NativeChatLaunchSeed
       structuredTransport?: Record<string, unknown>
       isWorking?: boolean
     },
-    approvalCardProps: null as NativeChatApprovalCardProps | null,
+    approvalCardProps: initialApprovalCardProps,
     questionCardProps: null as NativeChatQuestionCardProps | null,
     promptItems: [] as AgentJournalRenderItem[],
     respond: vi.fn() as StructuredSessionSpy,
