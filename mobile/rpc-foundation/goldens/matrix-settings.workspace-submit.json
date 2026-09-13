@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "aba77d5babfeb3988a8ad39a16a1bc5af86ebf80",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "7e0a108ee845d832862a65830eb318f7d8970ce4abf4a974898fc4a33fbf459d",
+  "recorderSha256": "70e4ea4590f92a02dd93cf9212d0160f9bc194fbd59eee746c917e9dc42c5718",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
@@ -398,6 +398,167 @@
         "$rpc": "undefined"
       }
     },
+    "7d3f625823b0": [
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "refused"
+            }
+          }
+        }
+      },
+      {
+        "name": "worktree.create#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.create"
+          },
+          {
+            "name": "params",
+            "value": {
+              "createdWithAgent": "claude",
+              "displayName": "recorded",
+              "displayNameKind": "user",
+              "name": "recorded",
+              "repo": "id:repo-1",
+              "setupDecision": "inherit",
+              "startupAgent": "claude"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "timeoutMs": 600000
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "804e01fabd3a": [
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "inner refused",
+              "ok": false
+            }
+          }
+        }
+      },
+      {
+        "name": "worktree.create#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.create"
+          },
+          {
+            "name": "params",
+            "value": {
+              "createdWithAgent": "claude",
+              "displayName": "recorded",
+              "displayNameKind": "user",
+              "name": "recorded",
+              "repo": "id:repo-1",
+              "setupDecision": "inherit",
+              "startupAgent": "claude"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "timeoutMs": 600000
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "979a2540cb0d": [
+      {
+        "name": "error",
+        "value": ""
+      },
+      {
+        "name": "runtimeSettings",
+        "value": {
+          "$rpc": "undefined"
+        }
+      },
+      {
+        "name": "error",
+        "value": "Connection closed"
+      }
+    ],
     "9c753d3a11f2": [
       {
         "name": "settings.get#1",
@@ -512,6 +673,114 @@
             },
             "id": "frame-1",
             "ok": false
+          }
+        }
+      }
+    ],
+    "d0feb81f9400": [
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "e0e544213c3c": [
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": {
+                "message": "inner refused"
+              },
+              "ok": false
+            }
+          }
+        }
+      },
+      {
+        "name": "worktree.create#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.create"
+          },
+          {
+            "name": "params",
+            "value": {
+              "createdWithAgent": "claude",
+              "displayName": "recorded",
+              "displayNameKind": "user",
+              "name": "recorded",
+              "repo": "id:repo-1",
+              "setupDecision": "inherit",
+              "startupAgent": "claude"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "timeoutMs": 600000
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
           }
         }
       }
@@ -645,6 +914,16 @@
         }
       },
       {
+        "id": "settings-workspace-submit-fulfilled.prelude:cleanup",
+        "observation": {
+          "sender": "d0feb81f9400",
+          "payloads": "9e493785145e",
+          "settlements": "6dfef4ef572b",
+          "state": "13c996e4ec2b",
+          "effects": "0e315dbfe7a8"
+        }
+      },
+      {
         "id": "settings-workspace-submit-fulfilled.normal:settled",
         "observation": {
           "sender": "9c753d3a11f2",
@@ -685,6 +964,16 @@
         }
       },
       {
+        "id": "settings-workspace-submit-fulfilled.inner-ok-missing:cleanup",
+        "observation": {
+          "sender": "7d3f625823b0",
+          "payloads": "20a67073e822",
+          "settlements": "6dfef4ef572b",
+          "state": "7b1c9637063f",
+          "effects": "979a2540cb0d"
+        }
+      },
+      {
         "id": "settings-workspace-submit-fulfilled.inner-false-string-error:settled",
         "observation": {
           "sender": "fa75111ee066",
@@ -695,6 +984,16 @@
         }
       },
       {
+        "id": "settings-workspace-submit-fulfilled.inner-false-string-error:cleanup",
+        "observation": {
+          "sender": "804e01fabd3a",
+          "payloads": "20a67073e822",
+          "settlements": "6dfef4ef572b",
+          "state": "7b1c9637063f",
+          "effects": "979a2540cb0d"
+        }
+      },
+      {
         "id": "settings-workspace-submit-fulfilled.inner-false-object-error:settled",
         "observation": {
           "sender": "4d460234095c",
@@ -702,6 +1001,16 @@
           "settlements": "f117d93cf44a",
           "state": "7b1c9637063f",
           "effects": "450706871c5d"
+        }
+      },
+      {
+        "id": "settings-workspace-submit-fulfilled.inner-false-object-error:cleanup",
+        "observation": {
+          "sender": "e0e544213c3c",
+          "payloads": "20a67073e822",
+          "settlements": "6dfef4ef572b",
+          "state": "7b1c9637063f",
+          "effects": "979a2540cb0d"
         }
       },
       {

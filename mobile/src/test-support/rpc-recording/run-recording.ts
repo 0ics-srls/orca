@@ -32,6 +32,13 @@ export async function runRecording(
   let mounted: MountedOperation | undefined
   const ids = new Set<string>()
   let advanced = 0
+  let cleaned = false
+  const teardown = async (): Promise<void> => {
+    cleaned = true
+    await mounted?.dispose()
+    transport.dispose()
+    await scheduler.flush()
+  }
   try {
     mounted = mount({ client: transport.client, effect })
     for (const step of scenario.steps) {
@@ -87,31 +94,38 @@ export async function runRecording(
     if (!recording.checkpoints.length) {
       throw new Error(`No checkpoints: ${scenario.id}`)
     }
+    // Why cleanup runs here and not only in `finally`: each checkpoint clones `effects`, so a
+    // rejection or state write produced by dispose, transport teardown or the final flush landed
+    // after the recording was built and never reached a golden. Unmount leaks are exactly what
+    // this oracle exists to catch, so teardown happens on the recorded path and anything it
+    // observes becomes its own checkpoint. `state` is captured before dispose because the
+    // operation is gone afterwards.
+    const beforeCleanup = effects.length
+    const stateAtCleanup = captureValue(mounted.state())
+    await teardown()
+    if (effects.length !== beforeCleanup) {
+      recording.checkpoints.push({
+        id: 'cleanup',
+        observation: {
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a structured clone of recorded requests is recorded data.
+          sender: structuredClone(transport.requests) as unknown as RecordedValue,
+          payloads: structuredClone(transport.payloads),
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a structured clone of recorded settlements is recorded data.
+          settlements: structuredClone(settlements) as unknown as RecordedValue,
+          state: stateAtCleanup,
+          effects: structuredClone(effects)
+        }
+      })
+    }
     return recording
   } finally {
-    // Why the count: every checkpoint already structuredClone'd `effects`, so anything cleanup
-    // appends lands after the recording was built and would be silently absent from it. A
-    // rejection thrown by dispose or a detached effect is exactly what this oracle exists to
-    // catch, so surface it instead of dropping it.
-    const beforeCleanup = effects.length
     try {
-      await mounted?.dispose()
-      transport.dispose()
-      await scheduler.flush()
+      if (!cleaned) {
+        await teardown()
+      }
     } finally {
       stopUnhandled()
       scheduler.stop()
-    }
-    if (effects.length !== beforeCleanup) {
-      // Known and unresolved: six scenarios land here today (see the README's cleanup-observation
-      // note). Warning rather than throwing keeps the gap visible without asserting a shape for
-      // these observations, which would change every golden. Deciding that is its own change.
-      console.warn(
-        `[rpc-recording] cleanup observations dropped from ${scenario.id}: ${effects
-          .slice(beforeCleanup)
-          .map((entry) => entry.name)
-          .join(', ')}`
-      )
     }
   }
 }

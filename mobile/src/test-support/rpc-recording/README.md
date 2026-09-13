@@ -230,25 +230,18 @@ The original settings slice coverage maps nine host-RPC callers in
 instruction. Later manifest additions require new scenarios and remain uncovered until
 those recordings land. This runner does not certify native storage or transport skew.
 
-## Cleanup observations are not recorded (known gap)
+## The cleanup checkpoint
 
-Every checkpoint `structuredClone`s the effects array, so anything appended after the final
-checkpoint — during `dispose()`, the transport teardown, or the last `scheduler.flush()` — lands
-after the recording was built and never reaches a golden. `run-recording.ts` now warns when this
-happens instead of dropping it silently.
+Teardown runs on the recorded path, not only in `finally`. Each checkpoint clones the effects
+array, so a rejection or state write produced by `dispose()`, the transport teardown or the final
+`scheduler.flush()` used to land after the recording was built and never reached a golden — and an
+unmount leak is exactly what this oracle exists to catch.
 
-Six scenarios trip it today, and the dropped names are not noise:
+When teardown observes anything, it becomes a checkpoint with id `cleanup`. `state` is captured
+before dispose, because the operation is gone afterwards.
 
-| Scenario | Dropped observations |
-|---|---|
-| `b2.prelude` | `projectRowDetailError`, `projectMutating` |
-| `settings-repo-metadata-fulfilled.prelude` | `hostLabelById`, `hostPlatform` |
-| `settings-repo-metadata-fulfilled.reject-peer-pending` | `hostLabelById`, `hostPlatform` |
-| `settings-task-workspace-fulfilled.prelude` | `workspaceAgent`, `workspaceAgentOverridden`, `error`, `creatingKey` |
-| `settings-workspace-submit-fulfilled` | `error` |
-| `settings-workspace-submit-fulfilled.prelude` | `selectedAgent`, `agentOverridden`, `error` |
-
-A rejection or state write on unmount is exactly what this oracle should catch, so this is a real
-hole, not a nuisance. Closing it means either recording a cleanup checkpoint or folding these into
-the final one — both change what every golden contains, which is a deliberate change of its own
-rather than something to slip in here.
+Five goldens carry one today, covering six scenarios whose dropped observations were not noise:
+`projectRowDetailError`, `projectMutating`, `hostLabelById`, `hostPlatform`, `workspaceAgent`,
+`workspaceAgentOverridden`, `creatingKey`, `selectedAgent`, `agentOverridden` and `error`. A
+scenario that stops leaking loses its checkpoint, which is a visible golden diff rather than a
+silent improvement.

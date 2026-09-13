@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "aba77d5babfeb3988a8ad39a16a1bc5af86ebf80",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "7e0a108ee845d832862a65830eb318f7d8970ce4abf4a974898fc4a33fbf459d",
+  "recorderSha256": "70e4ea4590f92a02dd93cf9212d0160f9bc194fbd59eee746c917e9dc42c5718",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
@@ -282,6 +282,59 @@
         "itemType": "ISSUE"
       }
     },
+    "602c739007cd": [
+      {
+        "name": "projectMutating",
+        "value": true
+      },
+      {
+        "name": "projectRowDetailError",
+        "value": "Connection closed"
+      },
+      {
+        "name": "projectMutating",
+        "value": false
+      }
+    ],
+    "699c2c3a725a": [
+      {
+        "name": "github.project.updateIssueBySlug#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "github.project.updateIssueBySlug"
+          },
+          {
+            "name": "params",
+            "value": {
+              "host": "github.enterprise.test",
+              "number": 1,
+              "owner": "owner",
+              "repo": "repo",
+              "updates": {
+                "addLabels": ["recorded"]
+              }
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "timeoutMs": 30000
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "Connection closed",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
     "6dfef4ef572b": {
       "mount": {
         "status": "fulfilled",
@@ -755,6 +808,16 @@
           "settlements": "f117d93cf44a",
           "state": "0c4dced3e005",
           "effects": "3b9a7724526d"
+        }
+      },
+      {
+        "id": "b2.prelude:cleanup",
+        "observation": {
+          "sender": "699c2c3a725a",
+          "payloads": "0318f81a142b",
+          "settlements": "6dfef4ef572b",
+          "state": "0c4dced3e005",
+          "effects": "602c739007cd"
         }
       },
       {
