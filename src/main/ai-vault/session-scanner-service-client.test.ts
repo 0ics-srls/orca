@@ -14,7 +14,7 @@ function setup(idleTimeoutMs?: number): {
   const child = new AiVaultServiceTestChild()
   const client = new AiVaultScannerServiceClient({
     processFactory: () => child.asChildProcess(),
-    init: { sessionParseCache: null },
+    init: () => ({ sessionParseCache: null, sessionSearch: null }),
     idleTimeoutMs
   })
   return { child, client }
@@ -135,7 +135,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null }
+      init: () => ({ sessionParseCache: null, sessionSearch: null })
     })
     const titles = client.request({ type: 'request', operation: 'titles', requests: [] })
     expect(children).toHaveLength(1)
@@ -167,7 +167,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null }
+      init: () => ({ sessionParseCache: null, sessionSearch: null })
     })
     const titles = client.request({ type: 'request', operation: 'titles', requests: [] })
 
@@ -190,7 +190,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null }
+      init: () => ({ sessionParseCache: null, sessionSearch: null })
     })
     const titles = client.request({ type: 'request', operation: 'titles', requests: [] })
 
@@ -224,7 +224,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null }
+      init: () => ({ sessionParseCache: null, sessionSearch: null })
     })
     // Each request retries its cold start once, so two requests spend the three
     // faults the circuit breaker needs.
@@ -314,7 +314,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null }
+      init: () => ({ sessionParseCache: null, sessionSearch: null })
     })
     const invalidation = client.invalidate(['/tmp/deleted.jsonl'])
     readyAiVaultServiceChild(children[0]!)
@@ -350,7 +350,7 @@ describe('AiVaultScannerServiceClient', () => {
         children.push(child)
         return child.asChildProcess()
       },
-      init: { sessionParseCache: null },
+      init: () => ({ sessionParseCache: null, sessionSearch: null }),
       idleTimeoutMs: 100
     })
 
@@ -389,6 +389,75 @@ describe('AiVaultScannerServiceClient', () => {
 
     await expect(request).rejects.toThrow('malformed')
     expect(child.killed).toBe(true)
+    client.dispose()
+  })
+
+  // The child holds the index while the setting is on, and its reconcile loop is
+  // invisible from here: retiring it would stop indexing until the next scan
+  // happened to respawn one, which is not a guarantee anyone stated.
+  it('spawns a child for the index and never retires it while the index is on', async () => {
+    vi.useFakeTimers()
+    const { child, client } = setup(100)
+    const on = {
+      databasePath: '/data/ai-vault/session-search.sqlite',
+      settings: { enabled: true, historyDays: null },
+      roots: {}
+    }
+
+    // No request outstanding: turning the index on is itself what spawns a child.
+    client.updateSessionSearch(on)
+    readyAiVaultServiceChild(child)
+    await Promise.resolve()
+    expect(child.sent).toContainEqual(expect.objectContaining({ type: 'init' }))
+
+    vi.advanceTimersByTime(10_000)
+    expect(child.sent).not.toContainEqual({ type: 'shutdown' })
+
+    // A live child hears the change directly rather than waiting for a respawn.
+    const narrowed = { ...on, settings: { enabled: true, historyDays: 30 } }
+    client.updateSessionSearch(narrowed)
+    expect(child.sent).toContainEqual({ type: 'sessionSearch', init: narrowed })
+    vi.advanceTimersByTime(10_000)
+    expect(child.sent).not.toContainEqual({ type: 'shutdown' })
+
+    client.updateSessionSearch({ ...on, settings: { enabled: false, historyDays: null } })
+    vi.advanceTimersByTime(100)
+    expect(child.sent).toContainEqual({ type: 'shutdown' })
+    client.dispose()
+  })
+
+  it('re-reads the init frame on every spawn so a respawn sees current consent', async () => {
+    const children: AiVaultServiceTestChild[] = []
+    let enabled = false
+    const client = new AiVaultScannerServiceClient({
+      processFactory: () => {
+        const child = new AiVaultServiceTestChild(12_345 + children.length)
+        children.push(child)
+        return child.asChildProcess()
+      },
+      init: () => ({
+        sessionParseCache: null,
+        sessionSearch: {
+          databasePath: '/data/ai-vault/session-search.sqlite',
+          settings: { enabled, historyDays: null },
+          roots: {}
+        }
+      })
+    })
+
+    const first = client.request({ type: 'request', operation: 'titles', requests: [] })
+    readyAiVaultServiceChild(children[0]!)
+    await Promise.resolve()
+    expect(children[0]!.sent[0]).toMatchObject({ sessionSearch: { settings: { enabled: false } } })
+
+    enabled = true
+    children[0]!.emit('error', new Error('crashed'))
+    await expect(first).rejects.toThrow('crashed')
+    void client.request({ type: 'request', operation: 'titles', requests: [] }).catch(() => {})
+    await vi.waitFor(() => expect(children.length).toBeGreaterThan(1))
+    for (const respawned of children.slice(1)) {
+      expect(respawned.sent[0]).toMatchObject({ sessionSearch: { settings: { enabled: true } } })
+    }
     client.dispose()
   })
 

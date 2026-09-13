@@ -4,6 +4,13 @@ import type {
   AiVaultSessionTitleRequest,
   AiVaultSessionTitlesResult
 } from '../../shared/ai-vault-session-title'
+import type {
+  AiVaultSearchRequest,
+  AiVaultSearchResponse,
+  AiVaultSearchStatus
+} from '../../shared/ai-vault-search-types'
+import type { AiVaultSearchSettings } from '../../shared/ai-vault-search-settings'
+import type { SessionSearchScanRoots } from '../ai-vault-search/session-search-scan-roots'
 import type { ReadAiVaultFirstUserPromptArgs } from './session-first-user-prompt-read'
 import type { SessionParseCachePersistenceOptions } from './session-parse-cache-persistence'
 import type { AiVaultWorkerScanOptions } from './session-scanner-worker-protocol'
@@ -11,17 +18,48 @@ import type { AiVaultWorkerScanOptions } from './session-scanner-worker-protocol
 export const AI_VAULT_SERVICE_PROTOCOL_VERSION = 1
 
 export type AiVaultServiceLane = 'cache' | 'interactive'
-export type AiVaultServiceOperation = 'scan' | 'titles' | 'subagents' | 'firstPrompt'
+export type AiVaultServiceOperation =
+  | 'scan'
+  | 'titles'
+  | 'subagents'
+  | 'firstPrompt'
+  | 'searchSessions'
+  | 'searchStatus'
+  | 'searchReconcile'
+
+const AI_VAULT_SERVICE_OPERATIONS: readonly AiVaultServiceOperation[] = [
+  'scan',
+  'titles',
+  'subagents',
+  'firstPrompt',
+  'searchSessions',
+  'searchStatus',
+  'searchReconcile'
+]
 
 export type AiVaultServiceSubagentRequest = {
   agent: 'claude' | 'omp'
   parentFilePath: string
 }
 
+/**
+ * Everything the child needs to own this host's index.
+ *
+ * The parent resolves the scan roots because it is what resolves them for a list
+ * scan; sending them keeps the index enumerating exactly the trees the session
+ * list does. Read fresh on every spawn so a respawned child sees current consent.
+ */
+export type AiVaultSessionSearchInit = {
+  databasePath: string
+  settings: AiVaultSearchSettings
+  roots: SessionSearchScanRoots
+}
+
 export type AiVaultServiceInit = {
   type: 'init'
   protocol: typeof AI_VAULT_SERVICE_PROTOCOL_VERSION
   sessionParseCache: SessionParseCachePersistenceOptions | null
+  sessionSearch: AiVaultSessionSearchInit | null
 }
 
 export type AiVaultServiceRequestBody =
@@ -41,6 +79,9 @@ export type AiVaultServiceRequestBody =
       operation: 'firstPrompt'
       request: ReadAiVaultFirstUserPromptArgs
     }
+  | { type: 'request'; operation: 'searchSessions'; request: AiVaultSearchRequest }
+  | { type: 'request'; operation: 'searchStatus' }
+  | { type: 'request'; operation: 'searchReconcile' }
 
 export type AiVaultServiceRequest = AiVaultServiceRequestBody & { id: number }
 
@@ -49,6 +90,8 @@ export type AiVaultServiceParentMessage =
   | AiVaultServiceRequest
   | { type: 'cancel'; id: number }
   | { type: 'invalidate'; generation: number; paths: string[] }
+  // Fire-and-forget: the child closes the live pair and constructs from this.
+  | { type: 'sessionSearch'; init: AiVaultSessionSearchInit }
   | { type: 'shutdown' }
 
 export type AiVaultServiceResultValue =
@@ -56,6 +99,9 @@ export type AiVaultServiceResultValue =
   | { operation: 'titles'; value: AiVaultSessionTitlesResult }
   | { operation: 'subagents'; value: AiVaultSubagentListResult }
   | { operation: 'firstPrompt'; value: { prompt: string | null } }
+  | { operation: 'searchSessions'; value: AiVaultSearchResponse }
+  | { operation: 'searchStatus'; value: AiVaultSearchStatus }
+  | { operation: 'searchReconcile'; value: null }
 
 export type AiVaultServiceChildMessage =
   | {
@@ -67,8 +113,9 @@ export type AiVaultServiceChildMessage =
   | { type: 'error'; id: number; message: string; retryable: boolean }
   | { type: 'invalidated'; generation: number }
 
+/** Everything but the two bulk reads is interactive: a search must not queue behind a scan. */
 export function aiVaultServiceLane(operation: AiVaultServiceOperation): AiVaultServiceLane {
-  return operation === 'subagents' || operation === 'firstPrompt' ? 'interactive' : 'cache'
+  return operation === 'scan' || operation === 'titles' ? 'cache' : 'interactive'
 }
 
 export function isAiVaultServiceRequest(value: unknown): value is AiVaultServiceRequest {
@@ -79,10 +126,7 @@ export function isAiVaultServiceRequest(value: unknown): value is AiVaultService
   return (
     message.type === 'request' &&
     Number.isSafeInteger(message.id) &&
-    (message.operation === 'scan' ||
-      message.operation === 'titles' ||
-      message.operation === 'subagents' ||
-      message.operation === 'firstPrompt')
+    AI_VAULT_SERVICE_OPERATIONS.includes(message.operation as AiVaultServiceOperation)
   )
 }
 

@@ -6,6 +6,7 @@ import {
 } from './session-parse-cache-persistence'
 import { scanAiVaultSessions } from './session-scanner'
 import { invalidateSessionParseCacheEntry } from './session-scanner-parse-cache'
+import { SessionScannerServiceSearch } from './session-scanner-service-search'
 import {
   AI_VAULT_SERVICE_PROTOCOL_VERSION,
   aiVaultServiceLane,
@@ -29,6 +30,7 @@ const cancelled = new Set<number>()
 const pending = new Set<number>()
 const titleIndex = new Map<string, AiVaultSessionTitle>()
 const invalidatedPaths = new Set<string>()
+const sessionSearch = new SessionScannerServiceSearch()
 let initialized = false
 let shuttingDown = false
 let cacheLane = Promise.resolve()
@@ -43,6 +45,9 @@ function titleKey(request: { agent: string; sessionId: string }): string {
 }
 
 async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultServiceResultValue> {
+  if (sessionSearch.handles(request)) {
+    return sessionSearch.execute(request)
+  }
   const controller = new AbortController()
   controllers.set(request.id, controller)
   try {
@@ -149,6 +154,7 @@ async function shutdown(): Promise<void> {
   for (const controller of controllers.values()) {
     controller.abort()
   }
+  sessionSearch.close()
   await Promise.allSettled([cacheLane, interactiveLane])
   await flushSessionParseCachePersist()
   process.disconnect?.()
@@ -163,6 +169,9 @@ process.on('message', (raw: AiVaultServiceParentMessage) => {
     initialized = true
     if (raw.sessionParseCache) {
       initSessionParseCachePersistence(raw.sessionParseCache)
+    }
+    if (raw.sessionSearch) {
+      sessionSearch.apply(raw.sessionSearch)
     }
     send({ type: 'ready', protocol: AI_VAULT_SERVICE_PROTOCOL_VERSION, pid: process.pid })
     return
@@ -190,6 +199,10 @@ process.on('message', (raw: AiVaultServiceParentMessage) => {
     }
     titleIndex.clear()
     send({ type: 'invalidated', generation: raw.generation })
+    return
+  }
+  if (raw?.type === 'sessionSearch') {
+    sessionSearch.apply(raw.init)
     return
   }
   if (raw?.type === 'shutdown') {
