@@ -178,6 +178,31 @@ describe('useNativeChatExternalAttachments', () => {
     )
   })
 
+  // The owner flipping during the LAST path has no next iteration to catch it,
+  // so the post-loop check is the only thing standing between a one-file drop
+  // and a path attached to a host that no longer owns it.
+  it('reports a one-file drop whose owner changes during its authorization', async () => {
+    const authorization = deferred<void>()
+    let owner: { kind: 'local' } | { kind: 'runtime' } = { kind: 'local' }
+    mocks.resolveNativeChatAttachmentOwner.mockImplementation(() => owner)
+    mocks.authorizeExternalPath.mockReturnValueOnce(authorization.promise)
+    const attachResolvedPaths = vi.fn()
+    const notices: (string | null)[] = []
+    const probe = await renderProbe({
+      attachResolvedPaths,
+      setNotice: (notice) => notices.push(notice)
+    })
+
+    act(() => probe.latest().attachExternalPaths(['/external/only.pdf']))
+    owner = { kind: 'runtime' }
+    await act(async () => authorization.resolve())
+
+    expect(attachResolvedPaths).not.toHaveBeenCalled()
+    expect(notices.at(-1)).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
+  })
+
   it('uploads SSH worktree paths and attaches the remote results', async () => {
     mocks.resolveNativeChatAttachmentOwner.mockReturnValue({
       kind: 'ssh',
