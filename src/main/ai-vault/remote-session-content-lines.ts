@@ -28,7 +28,18 @@ async function* cancellableContentLines(
   for (let index = 0; index <= content.length; index++) {
     if (index < content.length && content.charCodeAt(index) !== 10) {
       const newline = content.indexOf('\n', index)
-      index = newline === -1 ? content.length : newline
+      const lineBreak = newline === -1 ? content.length : newline
+      // Bound the jump so a newline-free segment still observes cancellation.
+      const windowEnd = yieldStart + REMOTE_CONTENT_YIELD_CHAR_COUNT
+      if (lineBreak > windowEnd) {
+        await yieldUnlessCancelled(signal)
+        linesSinceYield = 0
+        yieldStart = windowEnd
+        // Resume the search at windowEnd itself; the loop increment lands there.
+        index = windowEnd - 1
+        continue
+      }
+      index = lineBreak
     }
     const lineEnd = index > lineStart && content.charCodeAt(index - 1) === 13 ? index - 1 : index
     yield content.slice(lineStart, lineEnd)
@@ -38,11 +49,15 @@ async function* cancellableContentLines(
       linesSinceYield >= REMOTE_CONTENT_YIELD_LINE_COUNT ||
       index - yieldStart >= REMOTE_CONTENT_YIELD_CHAR_COUNT
     ) {
-      throwIfAiVaultScanCancelled(signal)
-      await yieldToEventLoop()
-      throwIfAiVaultScanCancelled(signal)
+      await yieldUnlessCancelled(signal)
       linesSinceYield = 0
       yieldStart = index
     }
   }
+}
+
+async function yieldUnlessCancelled(signal: AbortSignal): Promise<void> {
+  throwIfAiVaultScanCancelled(signal)
+  await yieldToEventLoop()
+  throwIfAiVaultScanCancelled(signal)
 }
