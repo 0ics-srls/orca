@@ -20,7 +20,16 @@ const capturedHooks = readFileSync(
 )
   .trim()
   .split('\n')
-  .map((line) => JSON.parse(line) as Record<string, unknown>)
+  .map(parseCapturedHook)
+
+function parseCapturedHook(line: string): Record<string, unknown> {
+  // JSON.parse returns any; the runtime guard below is what actually proves the shape.
+  const parsed: Record<string, unknown> = JSON.parse(line)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Captured Grok hook must be an object')
+  }
+  return parsed
+}
 
 type MockStoreState = {
   settings: {
@@ -154,11 +163,32 @@ describe('Grok hook completion notifications', () => {
     expect(await play(shutdownTail)).toHaveLength(0)
   })
 
-  // Pins grok-events.ts failure/cancellation bypass plus hook-observer.ts explicit decision path; applying finite-work suppression must redden.
+  // Pins grok-events.ts failure/cancellation bypass plus hook-observer.ts explicit decision path; these events have no background inventory in Grok.
   it.each([
-    { eventName: 'StopFailure', outcome: 'failed', interrupted: undefined },
-    { eventName: 'StopCancelled', outcome: 'cancelled', interrupted: true }
-  ])('announces $eventName despite running finite work', async (scenario) => {
+    {
+      eventName: 'StopFailure',
+      outcome: 'failed',
+      interrupted: undefined,
+      payload: {
+        error: 'server_error',
+        errorDetails: 'upstream failed',
+        lastAssistantMessage: 'The request failed.',
+        subagentType: 'primary'
+      }
+    },
+    {
+      eventName: 'StopCancelled',
+      outcome: 'cancelled',
+      interrupted: true,
+      payload: {
+        reason: 'user_interrupt',
+        cancelledBy: 'user',
+        cancelTrigger: 'stop_gesture',
+        reasonDetails: 'user interrupted the turn',
+        lastAssistantMessage: 'Stopped by user.'
+      }
+    }
+  ])('announces real-shaped $eventName payloads', async (scenario) => {
     const notifications = await play([
       {
         hookEventName: 'UserPromptSubmit',
@@ -168,7 +198,7 @@ describe('Grok hook completion notifications', () => {
       {
         hookEventName: scenario.eventName,
         timestamp: '2026-09-12T03:00:01.000Z',
-        backgroundTasks: [{ type: 'shell', status: 'running' }]
+        ...scenario.payload
       }
     ])
 
@@ -184,10 +214,18 @@ describe('Grok hook completion notifications', () => {
   it.each([
     {
       label: 'monitor',
-      backgroundTasks: [{ type: 'monitor', status: 'running' }],
+      backgroundTasks: [
+        { id: 'monitor-1', type: 'monitor', status: 'running', description: 'watch the build' }
+      ],
       sessionCrons: []
     },
-    { label: 'cron', backgroundTasks: [], sessionCrons: [{ id: 'cron-1' }] }
+    {
+      label: 'cron',
+      backgroundTasks: [],
+      sessionCrons: [
+        { id: 'cron-1', schedule: 'every minute', recurring: true, prompt: 'check the build' }
+      ]
+    }
   ])('announces with only a running $label outstanding', async (scenario) => {
     const notifications = await play([
       {
@@ -198,6 +236,8 @@ describe('Grok hook completion notifications', () => {
       {
         hookEventName: 'Stop',
         timestamp: '2026-09-12T03:01:01.000Z',
+        reason: 'end_turn',
+        stopHookActive: false,
         backgroundTasks: scenario.backgroundTasks,
         sessionCrons: scenario.sessionCrons
       }

@@ -266,9 +266,8 @@ export {
   isFreshNonDoneAgentStatus
 } from './agent-status-freshness'
 
-// Why: ReadonlySet<string> so .has() accepts any string without a cast here; the narrowing cast stays on the return line where it's proven safe.
+// Why: keep validation explicit so unknown strings never cross the status boundary.
 const VALID_STATES: ReadonlySet<string> = new Set<string>(AGENT_STATUS_STATES)
-const VALID_COMPLETION_OUTCOMES: ReadonlySet<string> = new Set<string>(AGENT_COMPLETION_OUTCOMES)
 /** Maximum character length for the agentType label. Truncated on parse. */
 export const AGENT_TYPE_MAX_LENGTH = 40
 export const AGENT_MODEL_MAX_LENGTH = 120
@@ -281,6 +280,18 @@ export const AGENT_STATUS_JSON_STRUCTURE_LIMITS = {
   nestingDepth: 16
 } as const
 const AGENT_SUBAGENT_ID_MAX_LENGTH = 64
+
+function normalizeCompletionOutcome(value: unknown): AgentCompletionOutcome | undefined {
+  switch (value) {
+    case 'succeeded':
+    case 'failed':
+    case 'cancelled':
+    case 'session-ended':
+      return value
+    default:
+      return undefined
+  }
+}
 
 function normalizeSubagentSnapshot(value: unknown): AgentSubagentSnapshot | null {
   if (typeof value !== 'object' || value === null) {
@@ -404,11 +415,7 @@ function normalizeAgentStatusObject(parsed: unknown): ParsedAgentStatusPayload |
     interrupted: obj.interrupted === true && state === 'done' ? true : undefined,
     sessionBoundary: obj.sessionBoundary === true && state === 'done' ? true : undefined,
     completionOutcome:
-      state === 'done' &&
-      typeof obj.completionOutcome === 'string' &&
-      VALID_COMPLETION_OUTCOMES.has(obj.completionOutcome)
-        ? (obj.completionOutcome as AgentCompletionOutcome)
-        : undefined,
+      state === 'done' ? normalizeCompletionOutcome(obj.completionOutcome) : undefined,
     announceCompletion:
       state === 'done' && typeof obj.announceCompletion === 'boolean'
         ? obj.announceCompletion

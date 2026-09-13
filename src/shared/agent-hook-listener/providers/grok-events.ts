@@ -29,6 +29,10 @@ function aliasedField(
   return { present: false }
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 function grokTerminalOutcome(eventName: unknown): AgentCompletionOutcome | undefined {
   if (isGrokEvent(eventName, 'stop_failure')) {
     return 'failed'
@@ -49,13 +53,14 @@ function shouldAnnounceGrokTerminal(
   eventName: unknown,
   hookPayload: Record<string, unknown>
 ): boolean {
+  // Why: failures and cancellations carry no background inventory and must never be hidden.
+  if (isGrokEvent(eventName, 'stop_failure', 'stop_cancelled')) {
+    return true
+  }
   const backgroundTasks = aliasedField(hookPayload, 'backgroundTasks', 'background_tasks')
   // Why: Grok's shutdown Stop omits this field; a present but unknown value fails open.
   if (!backgroundTasks.present) {
     return false
-  }
-  if (isGrokEvent(eventName, 'stop_failure', 'stop_cancelled')) {
-    return true
   }
   const stopHookActive = aliasedField(hookPayload, 'stopHookActive', 'stop_hook_active')
   if (stopHookActive.value === true) {
@@ -64,14 +69,12 @@ function shouldAnnounceGrokTerminal(
   if (!Array.isArray(backgroundTasks.value)) {
     return true
   }
-  return !backgroundTasks.value.some(
-    (task) =>
-      typeof task === 'object' &&
-      task !== null &&
-      ((task as Record<string, unknown>).type === 'shell' ||
-        (task as Record<string, unknown>).type === 'subagent') &&
-      (task as Record<string, unknown>).status === 'running'
-  )
+  return !backgroundTasks.value.some((task) => {
+    if (!isRecord(task)) {
+      return false
+    }
+    return (task.type === 'shell' || task.type === 'subagent') && task.status === 'running'
+  })
 }
 
 export function normalizeGrokEvent(

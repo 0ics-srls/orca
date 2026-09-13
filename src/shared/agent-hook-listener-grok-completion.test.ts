@@ -14,7 +14,16 @@ const capturedHooks = readFileSync(
 )
   .trim()
   .split('\n')
-  .map((line) => JSON.parse(line) as Record<string, unknown>)
+  .map(parseCapturedHook)
+
+function parseCapturedHook(line: string): Record<string, unknown> {
+  // JSON.parse returns any; the runtime guard below is what actually proves the shape.
+  const parsed: Record<string, unknown> = JSON.parse(line)
+  if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+    throw new Error('Captured Grok hook must be an object')
+  }
+  return parsed
+}
 
 function capturedHook(predicate: (payload: Record<string, unknown>) => boolean) {
   const hook = capturedHooks.find(predicate)
@@ -90,13 +99,15 @@ describe('Grok completion observations', () => {
     })
   })
 
-  // Pins grok-events.ts: StopFailure bypass; applying the finite-work veto before failure handling must redden.
-  it('announces StopFailure even while finite work remains', () => {
+  // Pins grok-events.ts: StopFailure has no background inventory, so its outcome check must win over field absence.
+  it('announces the real-shaped StopFailure payload', () => {
     expect(
       normalize({
         hookEventName: 'StopFailure',
-        backgroundTasks: [{ type: 'shell', status: 'running' }],
-        error: 'api timeout'
+        error: 'server_error',
+        errorDetails: 'upstream failed',
+        lastAssistantMessage: 'The request failed.',
+        subagentType: 'primary'
       })
     ).toMatchObject({
       state: 'done',
@@ -105,12 +116,15 @@ describe('Grok completion observations', () => {
     })
   })
 
-  // Pins grok-events.ts: StopCancelled outcome/interrupted mapping; mapping it to succeeded or suppressing it must redden.
-  it('announces StopCancelled as a non-success terminal outcome', () => {
+  // Pins grok-events.ts: StopCancelled has no background inventory, so its outcome check must win over field absence.
+  it('announces the real-shaped StopCancelled payload as a non-success outcome', () => {
     expect(
       normalize({
         hookEventName: 'StopCancelled',
-        backgroundTasks: [{ type: 'subagent', status: 'running' }],
+        reason: 'user_interrupt',
+        cancelledBy: 'user',
+        cancelTrigger: 'stop_gesture',
+        reasonDetails: 'user interrupted the turn',
         lastAssistantMessage: 'Stopped by user.'
       })
     ).toMatchObject({
@@ -126,13 +140,27 @@ describe('Grok completion observations', () => {
   it.each([
     {
       label: 'monitor-only',
-      backgroundTasks: [{ type: 'monitor', status: 'running' }],
+      backgroundTasks: [
+        { id: 'monitor-1', type: 'monitor', status: 'running', description: 'watch the build' }
+      ],
       sessionCrons: []
     },
-    { label: 'cron-only', backgroundTasks: [], sessionCrons: [{ id: 'cron-1' }] }
+    {
+      label: 'cron-only',
+      backgroundTasks: [],
+      sessionCrons: [
+        { id: 'cron-1', schedule: 'every minute', recurring: true, prompt: 'check the build' }
+      ]
+    }
   ])('announces when outstanding work is $label', ({ backgroundTasks, sessionCrons }) => {
     expect(
-      normalize({ hookEventName: 'Stop', backgroundTasks, sessionCrons })?.announceCompletion
+      normalize({
+        hookEventName: 'Stop',
+        reason: 'end_turn',
+        stopHookActive: false,
+        backgroundTasks,
+        sessionCrons
+      })?.announceCompletion
     ).toBe(true)
   })
 
@@ -143,14 +171,25 @@ describe('Grok completion observations', () => {
     { backgroundTasks: [], stopHookActive: 'true' },
     { background_tasks: [], stop_hook_active: false }
   ])('fails open for unknown or legacy optional fields %#', (payload) => {
-    expect(normalize({ hookEventName: 'Stop', ...payload })?.announceCompletion).toBe(true)
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        reason: 'end_turn',
+        stopHookActive: false,
+        ...payload
+      })?.announceCompletion
+    ).toBe(true)
   })
 
   // Pins grok-events.ts: stopHookActive strict-true veto; removing that veto must redden.
   it('suppresses a Stop whose Stop hook is keeping the turn active', () => {
     expect(
-      normalize({ hookEventName: 'Stop', backgroundTasks: [], stopHookActive: true })
-        ?.announceCompletion
+      normalize({
+        hookEventName: 'Stop',
+        reason: 'end_turn',
+        backgroundTasks: [],
+        stopHookActive: true
+      })?.announceCompletion
     ).toBe(false)
   })
 
@@ -165,21 +204,27 @@ describe('Grok completion observations', () => {
       notificationType: 'idle_prompt',
       message: 'Grok needs your feedback before the next prompt'
     })
-    const staleProse = normalize({ hookEventName: 'Notification', message: 'Type your message' })
+    const agentError = normalize({
+      hookEventName: 'Notification',
+      notificationType: 'agent_error',
+      message: 'The agent failed unexpectedly.',
+      level: 'error'
+    })
 
     expect(taskComplete).toBeUndefined()
     expect(idlePrompt).toBeUndefined()
     expect(idlePromptWithQuestionCopy).toBeUndefined()
-    expect(staleProse).toBeUndefined()
+    expect(agentError).toBeUndefined()
   })
 
   // Pins grok-events.ts: permission/question branch ordering; gating waiting notifications on background work must redden.
-  it('leaves the needs-input notification path ungated', () => {
+  it('leaves the real ask-user-question notification path ungated', () => {
     expect(
       normalize({
         hookEventName: 'Notification',
-        notificationType: 'question',
-        message: 'Grok needs your feedback to proceed'
+        notificationType: 'elicitation_dialog',
+        message: 'User question requested',
+        level: 'info'
       })
     ).toMatchObject({ state: 'waiting', agentType: 'grok' })
   })
