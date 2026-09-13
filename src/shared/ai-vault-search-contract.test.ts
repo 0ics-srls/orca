@@ -41,6 +41,33 @@ describe('session search public contract', () => {
     )
     expect(AiVaultSearchResponseSchema.safeParse({ kind: 'results', hits: [] }).success).toBe(false)
   })
+  it('keeps host attribution optional in both wire directions', () => {
+    const legacy = searchResults()
+    expect(AiVaultSearchResponseSchema.parse(legacy)).toEqual(legacy)
+    expect(legacy.hits[0]).not.toHaveProperty('executionHostId')
+    expect(legacy).not.toHaveProperty('hosts')
+    const merged = {
+      ...searchResults(),
+      hits: [{ ...searchHit(), executionHostId: 'runtime:env-1' }],
+      hosts: [
+        { executionHostId: 'local', outcome: 'results' },
+        { executionHostId: 'ssh:box', outcome: 'unreachable' }
+      ]
+    }
+    expect(AiVaultSearchResponseSchema.parse(merged)).toEqual(merged)
+    expect(
+      AiVaultSearchResponseSchema.safeParse({
+        ...searchResults(),
+        hosts: [{ executionHostId: 'local', outcome: 'exploded' }]
+      }).success
+    ).toBe(false)
+    expect(
+      AiVaultSearchResponseSchema.safeParse({
+        ...searchResults(),
+        hits: [{ ...searchHit(), executionHostId: '' }]
+      }).success
+    ).toBe(false)
+  })
   it('never accepts resume commands for an unverified or missing source', () => {
     for (const presence of ['unverifiable', 'missing'] as const) {
       const response = searchResults()

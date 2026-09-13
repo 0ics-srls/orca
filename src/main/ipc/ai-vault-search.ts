@@ -52,11 +52,12 @@ let handlerOptions: AiVaultSearchHandlerOptions = {}
 
 export function registerAiVaultSearchHandlers(options: AiVaultSearchHandlerOptions = {}): void {
   handlerOptions = options
-  ipcMain.handle('aiVault:searchSessions', (_event, raw: unknown, rawScope?: unknown) => {
+  // Async so a refused scope reaches the renderer as a rejection, like every other parse failure.
+  ipcMain.handle('aiVault:searchSessions', async (_event, raw: unknown, rawScope?: unknown) => {
     const scope = requestedSearchScope(rawScope)
     return searchByExecutionHostScope(AiVaultSearchRequestSchema.parse(raw), scope)
   })
-  ipcMain.handle('aiVault:searchStatus', (_event, rawScope?: unknown) => {
+  ipcMain.handle('aiVault:searchStatus', async (_event, rawScope?: unknown) => {
     const scope = requestedSearchScope(rawScope)
     // Status describes one index; there is nothing to merge across hosts.
     if (scope === ALL_EXECUTION_HOSTS_SCOPE) {

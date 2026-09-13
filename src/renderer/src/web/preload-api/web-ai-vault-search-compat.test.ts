@@ -45,16 +45,29 @@ describe('web session search preload compatibility', () => {
     await expect(api.searchSessions({ query: 'needle' })).rejects.toThrow('disconnected')
     await expect(api.searchStatus()).rejects.toThrow('disconnected')
   })
-  it('rejects invalid host responses and unsupported SSH selection', async () => {
+  it('rejects invalid host responses', async () => {
     const api = createWebAiVaultApi()
     callRuntimeResult.mockResolvedValue({ kind: 'results' })
     await expect(api.searchSessions({ query: 'needle' })).rejects.toThrow()
     await expect(api.searchStatus()).rejects.toThrow()
+  })
+  it('answers for its own runtime and for `all`, and reports any other host unavailable', async () => {
+    const api = createWebAiVaultApi()
+    callRuntimeResult.mockResolvedValue(searchResults())
+    for (const scope of ['runtime:owning-host', 'all'] as const) {
+      expect(await api.searchSessions({ query: 'needle' }, scope)).toMatchObject({
+        kind: 'results'
+      })
+    }
+    expect(callRuntimeResult).toHaveBeenCalledTimes(2)
     callRuntimeResult.mockClear()
-    await expect(api.searchSessions({ query: 'needle' }, 'other-host')).rejects.toThrow(
-      'transcript-owning runtime'
-    )
-    await expect(api.searchStatus('other-host')).rejects.toThrow('transcript-owning runtime')
+    for (const scope of ['runtime:other-host', 'ssh:box', 'local'] as const) {
+      expect(await api.searchSessions({ query: 'needle' }, scope)).toEqual({
+        kind: 'unavailable',
+        reason: 'no-service'
+      })
+      expect(await api.searchStatus(scope)).toEqual(unavailableSessionSearchStatus())
+    }
     expect(callRuntimeResult).not.toHaveBeenCalled()
   })
 })
