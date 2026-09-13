@@ -762,4 +762,43 @@ describe('AutomationService', () => {
     )
     expect(logged).toHaveBeenCalled()
   })
+
+  // A send that throws is a dispatch failure, not an unreadable schedule: the run must land on
+  // dispatch_failed rather than being left 'dispatching' beside a bogus skipped_unavailable row.
+  it('marks the run dispatch_failed when the renderer send throws', async () => {
+    vi.setSystemTime(new Date('2026-05-13T08:59:00'))
+    const store = await createStore()
+    store.addRepo(makeRepo())
+    const automation = store.createAutomation({
+      name: 'Renderer gone',
+      prompt: 'Check the repo',
+      agentId: 'claude',
+      projectId: 'r1',
+      workspaceMode: 'existing',
+      workspaceId: 'wt1',
+      timezone: 'UTC',
+      rrule: '0 9 * * *',
+      dtstart: new Date('2026-05-12T00:00:00').getTime()
+    })
+    const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+    logged.mockClear()
+
+    vi.setSystemTime(new Date('2026-05-13T09:01:00'))
+    const send = vi.fn(() => {
+      throw new Error('renderer is gone')
+    })
+    const service = new AutomationService(store, { tickMs: 60_000 })
+    service.setWebContents({ isDestroyed: () => false, send })
+
+    service.start()
+    service.setRendererReady()
+    await vi.waitFor(() => expect(send).toHaveBeenCalled())
+    service.stop()
+
+    const runs = store.listAutomationRuns(automation.id)
+    expect(runs).toHaveLength(1)
+    expect(runs[0]?.status).toBe('dispatch_failed')
+    expect(runs[0]?.error).toBe('renderer is gone')
+    expect(logged).not.toHaveBeenCalled()
+  })
 })

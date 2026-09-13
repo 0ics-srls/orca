@@ -5,8 +5,13 @@
  * coalescing folds repeats only on byte-identical text, so a reason that varied
  * per occurrence would write a row each.
  */
+import type { WebContents } from 'electron'
 import type { Store } from '../persistence'
-import type { Automation } from '../../shared/automations-types'
+import type {
+  Automation,
+  AutomationDispatchRequest,
+  AutomationRun
+} from '../../shared/automations-types'
 import { resolveAutomationRunTarget, type AutomationRunTargetResult } from './run-target-resolution'
 import type { AutomationRunWriter } from './automation-run-writer'
 
@@ -89,5 +94,28 @@ export function recordUnevaluableAutomation(input: {
       input.error,
       writeError
     )
+  }
+}
+
+/**
+ * Sends the dispatch request through the renderer channel, closing the run out as
+ * `dispatch_failed` when the send throws — a failed send is not an unreadable schedule.
+ */
+export function sendRendererDispatch(
+  channel: Pick<WebContents, 'send'> | null,
+  payload: AutomationDispatchRequest,
+  runs: AutomationRunWriter,
+  run: AutomationRun
+): AutomationRun {
+  try {
+    channel?.send('automations:dispatchRequested', payload)
+    return run
+  } catch (error) {
+    return runs.updateRun({
+      runId: run.id,
+      status: 'dispatch_failed',
+      workspaceId: run.workspaceId,
+      error: error instanceof Error ? error.message : String(error)
+    })
   }
 }

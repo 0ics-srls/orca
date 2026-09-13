@@ -29,6 +29,7 @@ import {
   describeScheduledRefusal,
   recordRefusedAutomationRun,
   recordUnevaluableAutomation,
+  sendRendererDispatch,
   NO_DISPATCH_HOST
 } from './dispatch-refusal'
 import type {
@@ -335,7 +336,6 @@ export class AutomationService {
       run: updated,
       dispatchToken: createAutomationDispatchToken(automation.id, updated.id)
     }
-    this.webContents?.send('automations:dispatchRequested', payload)
-    return updated
+    return sendRendererDispatch(this.webContents, payload, this.runs, updated)
   }
 }
