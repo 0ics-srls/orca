@@ -55,6 +55,23 @@ export function writeWorkspaceFileDragSource(
   dataTransfer.setData(WORKSPACE_FILE_DRAG_SOURCE_MIME, JSON.stringify({ ...source, version: 1 }))
 }
 
+/** Stamp only when both halves resolve: an unstamped drag fails closed at the
+ *  composer, which is the right answer for an owner we could not name. */
+export function writeWorkspaceFileDragSourceIfResolved(
+  dataTransfer: Pick<DataTransfer, 'setData'>,
+  workspaceId: string | null | undefined,
+  executionHostId: ExecutionHostId | null | undefined
+): void {
+  if (
+    !workspaceId ||
+    !executionHostId ||
+    !isResolvedWorkspaceFileDragExecutionHost(executionHostId)
+  ) {
+    return
+  }
+  writeWorkspaceFileDragSource(dataTransfer, { executionHostId, workspaceId })
+}
+
 export function readWorkspaceFileDragSource(
   dataTransfer: Pick<DataTransfer, 'getData'>
 ): WorkspaceFileDragSource | null {

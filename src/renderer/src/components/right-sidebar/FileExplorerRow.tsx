@@ -5,10 +5,9 @@ import { cn } from '@/lib/utils'
 import { getFileTypeIcon } from '@/lib/file-type-icons'
 import {
   encodeWorkspaceFilePaths,
-  isResolvedWorkspaceFileDragExecutionHost,
   WORKSPACE_FILE_PATH_MIME,
   WORKSPACE_FILE_PATHS_MIME,
-  writeWorkspaceFileDragSource
+  writeWorkspaceFileDragSourceIfResolved
 } from '@/lib/workspace-file-drag'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 import type { GitFileStatus } from '../../../../shared/git-status-types'
@@ -37,7 +36,8 @@ export type FileExplorerRowProps = {
   deleteShortcutLabel: string
   connectionId?: string | null
   sourceWorkspaceId?: string | null
-  sourceExecutionHostId?: ExecutionHostId | null
+  /** Resolved at dragstart so the virtualized list pays nothing per render. */
+  resolveDragSourceHostId?: (paths: readonly string[]) => ExecutionHostId | null
   runtimeDownloadContext?: RuntimeFileOperationArgs | null
   supportsFolderDownload?: boolean
   canOpenInOrcaBrowser: boolean
@@ -80,7 +80,7 @@ export function FileExplorerRow({
   deleteShortcutLabel,
   connectionId,
   sourceWorkspaceId,
-  sourceExecutionHostId,
+  resolveDragSourceHostId,
   runtimeDownloadContext,
   supportsFolderDownload = false,
   canOpenInOrcaBrowser,
@@ -160,16 +160,11 @@ export function FileExplorerRow({
             if (paths.length > 1) {
               event.dataTransfer.setData(WORKSPACE_FILE_PATHS_MIME, encodeWorkspaceFilePaths(paths))
             }
-            if (
-              sourceWorkspaceId &&
-              sourceExecutionHostId &&
-              isResolvedWorkspaceFileDragExecutionHost(sourceExecutionHostId)
-            ) {
-              writeWorkspaceFileDragSource(event.dataTransfer, {
-                executionHostId: sourceExecutionHostId,
-                workspaceId: sourceWorkspaceId
-              })
-            }
+            writeWorkspaceFileDragSourceIfResolved(
+              event.dataTransfer,
+              sourceWorkspaceId,
+              resolveDragSourceHostId?.(paths)
+            )
             event.dataTransfer.effectAllowed = 'copyMove'
             onDragSourceChange(node.path)
 

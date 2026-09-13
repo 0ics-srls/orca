@@ -59,12 +59,14 @@ type FileExplorerVirtualRowsProps = {
   nativeDropTargetDir: string | null
 }
 
-function getSelectedSourceExecutionHostId(
+/** Null unless every dragged row came from one host: a mixed-owner drag has no
+ *  single source to stamp, so it must fail closed at the drop target. */
+function resolveDragSourceExecutionHostId(
   rowProjection: FileExplorerRowProjection,
-  selectedPaths: ReadonlySet<string>
+  paths: readonly string[]
 ): ExecutionHostId | null {
   let sourceExecutionHostId: ExecutionHostId | null = null
-  for (const path of selectedPaths) {
+  for (const path of paths) {
     const executionHostId = getFileExplorerOperationExecutionHostId(
       rowProjection.getRowByPath(path)?.operationOwner
     )
@@ -125,10 +127,10 @@ export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): Re
   } = props
 
   const visibleSelectionCount = rowProjection.countVisiblePaths(selectedPaths)
-  const selectedSourceExecutionHostId = getSelectedSourceExecutionHostId(
-    rowProjection,
-    selectedPaths
-  )
+  // Resolved at dragstart, not per render: the virtualizer re-renders on every
+  // scroll frame and only a drag ever reads this.
+  const resolveDragSourceHostId = (paths: readonly string[]): ExecutionHostId | null =>
+    resolveDragSourceExecutionHostId(rowProjection, paths)
 
   return (
     <div className="relative w-full" style={{ height: `${virtualizer.getTotalSize()}px` }}>
@@ -207,11 +209,7 @@ export function FileExplorerVirtualRows(props: FileExplorerVirtualRowsProps): Re
               deleteShortcutLabel={deleteShortcutLabel}
               connectionId={connectionId}
               sourceWorkspaceId={sourceWorkspaceId}
-              sourceExecutionHostId={
-                selectedPaths.has(n.path) && selectedPaths.size > 1
-                  ? selectedSourceExecutionHostId
-                  : getFileExplorerOperationExecutionHostId(n.operationOwner)
-              }
+              resolveDragSourceHostId={resolveDragSourceHostId}
               runtimeDownloadContext={runtimeDownloadContext}
               supportsFolderDownload={supportsFolderDownload}
               canOpenInOrcaBrowser={canOpenInOrcaBrowser(n.path)}

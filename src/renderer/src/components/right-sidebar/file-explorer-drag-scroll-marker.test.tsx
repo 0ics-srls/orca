@@ -50,7 +50,11 @@ const directoryNode: TreeNode = {
 
 function virtualRowsElement(
   nodes: TreeNode[],
-  options: { selectedPaths?: Set<string>; sourceWorkspaceId?: string } = {}
+  options: {
+    selectedPaths?: Set<string>
+    sourceWorkspaceId?: string
+    rowProjection?: ReturnType<typeof createFileExplorerRowProjection>
+  } = {}
 ): React.JSX.Element {
   return FileExplorerVirtualRows({
     virtualizer: {
@@ -60,7 +64,7 @@ function virtualRowsElement(
       measureElement: vi.fn()
     } as never,
     inlineInputIndex: -1,
-    rowProjection: createFileExplorerRowProjection(nodes),
+    rowProjection: options.rowProjection ?? createFileExplorerRowProjection(nodes),
     inlineInput: null,
     handleInlineSubmit: vi.fn(),
     dismissInlineInput: vi.fn(),
@@ -156,6 +160,35 @@ describe('file explorer draggable rows carry the wheel-scroll marker', () => {
     container.querySelector('[data-file-explorer-row]')?.dispatchEvent(event)
 
     expect(readWorkspaceFileDragSource(transfer)).toBeNull()
+  })
+
+  // The virtualizer re-renders on every scroll frame; a per-render owner scan
+  // over the whole selection would be paid on each of them.
+  it('resolves drag ownership at dragstart, not while rendering rows', async () => {
+    const localNode: TreeNode = { ...fileNode, operationOwner: { kind: 'local' } }
+    const otherNode: TreeNode = { ...directoryNode, operationOwner: { kind: 'local' } }
+    const projection = createFileExplorerRowProjection([localNode, otherNode])
+    const getRowByPath = vi.fn(projection.getRowByPath)
+    const container = await renderToBody(
+      virtualRowsElement([localNode, otherNode], {
+        rowProjection: { ...projection, getRowByPath },
+        selectedPaths: new Set([localNode.path, otherNode.path]),
+        sourceWorkspaceId: 'workspace-1'
+      })
+    )
+
+    expect(getRowByPath).not.toHaveBeenCalled()
+
+    const transfer = new DataTransfer()
+    const event = new Event('dragstart', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+    container.querySelector('[data-file-explorer-row]')?.dispatchEvent(event)
+
+    expect(getRowByPath.mock.calls.map(([path]) => path)).toEqual([localNode.path, otherNode.path])
+    expect(readWorkspaceFileDragSource(transfer)).toEqual({
+      executionHostId: 'local',
+      workspaceId: 'workspace-1'
+    })
   })
 })
 

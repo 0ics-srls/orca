@@ -1,17 +1,16 @@
 import { useAppStore } from '@/store'
 import { getExecutionHostIdForWorktree } from './worktree-runtime-owner'
-import {
-  isResolvedWorkspaceFileDragExecutionHost,
-  writeWorkspaceFileDragSource
-} from './workspace-file-drag'
+import { writeWorkspaceFileDragSourceIfResolved } from './workspace-file-drag'
 
+/** Source-control rows list the live workspace, so the owner is resolved now
+ *  rather than captured with the listing (unlike the explorer's cached tree). */
 export function writeWorkspaceFileDragSourceForWorkspace(
   dataTransfer: Pick<DataTransfer, 'setData'>,
   workspaceId: string
 ): void {
-  const executionHostId = getExecutionHostIdForWorktree(useAppStore.getState(), workspaceId)
-  if (!isResolvedWorkspaceFileDragExecutionHost(executionHostId)) {
-    return
-  }
-  writeWorkspaceFileDragSource(dataTransfer, { executionHostId, workspaceId })
+  writeWorkspaceFileDragSourceIfResolved(
+    dataTransfer,
+    workspaceId,
+    getExecutionHostIdForWorktree(useAppStore.getState(), workspaceId)
+  )
 }

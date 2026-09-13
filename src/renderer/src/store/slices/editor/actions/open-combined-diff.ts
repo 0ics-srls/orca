@@ -18,6 +18,8 @@ function captureCombinedDiffOperationProvenance(
   try {
     return captureEditorFileOperationProvenance(state, worktreeId, runtimeEnvironmentId, true)
   } catch {
+    // Unlike open-file-apply this stays quiet: a combined diff never mutates,
+    // so the only cost is an unstamped drag, which the composer reports itself.
     return undefined
   }
 }

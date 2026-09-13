@@ -6,9 +6,8 @@ import { getFileTypeIcon } from '@/lib/file-type-icons'
 import { basename, dirname, joinPath } from '@/lib/path'
 import { cn } from '@/lib/utils'
 import {
-  isResolvedWorkspaceFileDragExecutionHost,
   WORKSPACE_FILE_PATH_MIME,
-  writeWorkspaceFileDragSource
+  writeWorkspaceFileDragSourceIfResolved
 } from '@/lib/workspace-file-drag'
 import type { ExecutionHostId } from '../../../../../../shared/execution-host'
 import type { GitBranchChangeEntry } from '../../../../../../shared/git-diff-compare-types'
@@ -71,16 +70,11 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
         draggable
         onDragStart={(event) => {
           event.dataTransfer.setData(WORKSPACE_FILE_PATH_MIME, joinPath(worktreePath, node.path))
-          if (
-            sourceWorkspaceId &&
-            sourceExecutionHostId &&
-            isResolvedWorkspaceFileDragExecutionHost(sourceExecutionHostId)
-          ) {
-            writeWorkspaceFileDragSource(event.dataTransfer, {
-              executionHostId: sourceExecutionHostId,
-              workspaceId: sourceWorkspaceId
-            })
-          }
+          writeWorkspaceFileDragSourceIfResolved(
+            event.dataTransfer,
+            sourceWorkspaceId,
+            sourceExecutionHostId
+          )
           event.dataTransfer.effectAllowed = 'copy'
         }}
       >
@@ -136,16 +130,11 @@ export const CombinedDiffFileTreeRow = memo(function CombinedDiffFileTreeRow({
           WORKSPACE_FILE_PATH_MIME,
           joinPath(worktreePath, node.entry.path)
         )
-        if (
-          sourceWorkspaceId &&
-          sourceExecutionHostId &&
-          isResolvedWorkspaceFileDragExecutionHost(sourceExecutionHostId)
-        ) {
-          writeWorkspaceFileDragSource(event.dataTransfer, {
-            executionHostId: sourceExecutionHostId,
-            workspaceId: sourceWorkspaceId
-          })
-        }
+        writeWorkspaceFileDragSourceIfResolved(
+          event.dataTransfer,
+          sourceWorkspaceId,
+          sourceExecutionHostId
+        )
         event.dataTransfer.effectAllowed = 'copy'
       }}
       onClick={() => onNavigate(node.entry)}
