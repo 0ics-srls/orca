@@ -29,6 +29,22 @@ export function isTestFile(relativePath: string): boolean {
 
 export type ScannedFile = { path: string; relativePath: string; source: string }
 
+/** The three readdir type predicates the walk consults. */
+type DirentTypeProbe = {
+  isSymbolicLink(): boolean
+  isFile(): boolean
+  isDirectory(): boolean
+}
+
+/**
+ * Links need a stat to follow them, and so does DT_UNKNOWN (every predicate
+ * false) -- filesystems that do not report d_type would otherwise have a real
+ * directory silently dropped from the scan.
+ */
+export function directoryEntryNeedsStat(entry: DirentTypeProbe): boolean {
+  return entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())
+}
+
 /**
  * Every `.ts`/`.tsx` file under `root`, with its text.
  *
@@ -52,11 +68,8 @@ export function scanSourceTree(
         continue
       }
       const path = join(directory, name)
-      // Ordinary entries carry their type from readdir. Links need a stat to follow
-      // them, and so does DT_UNKNOWN (every predicate false), or a real directory
-      // would be silently dropped from the scan.
-      const needsStat = entry.isSymbolicLink() || (!entry.isFile() && !entry.isDirectory())
-      if (needsStat ? statSync(path).isDirectory() : entry.isDirectory()) {
+      // Ordinary entries carry their type from readdir.
+      if (directoryEntryNeedsStat(entry) ? statSync(path).isDirectory() : entry.isDirectory()) {
         visit(path)
         continue
       }

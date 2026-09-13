@@ -11,7 +11,7 @@ import type * as Fs from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { scanSourceTree } from './source-tree-scan'
+import { directoryEntryNeedsStat, scanSourceTree } from './source-tree-scan'
 
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof Fs>()
@@ -21,8 +21,6 @@ vi.mock('node:fs', async (importOriginal) => {
     statSync: vi.fn(actual.statSync)
   }
 })
-
-const actualFs = await vi.importActual<typeof Fs>('node:fs')
 
 let root: string
 
@@ -110,30 +108,6 @@ describe('scanSourceTree filesystem traversal', () => {
     expect(statSync).toHaveBeenCalledExactlyOnceWith(join(root, 'alias'))
   })
 
-  it('stats an entry whose type readdir could not report instead of dropping its subtree', () => {
-    mkdirSync(join(root, 'nested'))
-    file(join('nested', 'inner.ts'), 'inner source')
-    // Filesystems without d_type yield a Dirent where every predicate is false.
-    vi.mocked(readdirSync).mockImplementationOnce(((directory: Fs.PathLike) =>
-      actualFs.readdirSync(directory, { withFileTypes: true }).map((entry) =>
-        entry.name === 'nested'
-          ? Object.assign(Object.create(Object.getPrototypeOf(entry)), entry, {
-              isFile: () => false,
-              isDirectory: () => false,
-              isSymbolicLink: () => false
-            })
-          : entry
-      )) as typeof readdirSync)
-
-    expect(scanSourceTree(root)).toEqual([
-      {
-        path: join(root, 'nested', 'inner.ts'),
-        relativePath: 'nested/inner.ts',
-        source: 'inner source'
-      }
-    ])
-    expect(statSync).toHaveBeenCalledExactlyOnceWith(join(root, 'nested'))
-  })
 
   it('still reports a broken link instead of silently dropping it', () => {
     const target = join(root, '.target')
@@ -143,5 +117,28 @@ describe('scanSourceTree filesystem traversal', () => {
 
     expect(() => scanSourceTree(root)).toThrow(/ENOENT/)
     expect(statSync).toHaveBeenCalledExactlyOnceWith(join(root, 'alias'))
+  })
+})
+
+describe('directoryEntryNeedsStat', () => {
+  const probe = (kind: 'file' | 'dir' | 'link' | 'unknown') => ({
+    isFile: () => kind === 'file',
+    isDirectory: () => kind === 'dir',
+    isSymbolicLink: () => kind === 'link'
+  })
+
+  it('skips the stat for entries readdir already typed', () => {
+    expect(directoryEntryNeedsStat(probe('file'))).toBe(false)
+    expect(directoryEntryNeedsStat(probe('dir'))).toBe(false)
+  })
+
+  it('stats links so they are followed', () => {
+    expect(directoryEntryNeedsStat(probe('link'))).toBe(true)
+  })
+
+  // Filesystems without d_type report DT_UNKNOWN: every predicate is false, and
+  // without the stat a real directory's whole subtree is silently dropped.
+  it('stats an entry whose type readdir could not report', () => {
+    expect(directoryEntryNeedsStat(probe('unknown'))).toBe(true)
   })
 })
