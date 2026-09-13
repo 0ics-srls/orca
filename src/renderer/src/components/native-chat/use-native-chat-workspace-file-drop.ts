@@ -1,4 +1,4 @@
-import { useCallback, type DragEventHandler } from 'react'
+import { useCallback, useLayoutEffect, useRef, type DragEventHandler } from 'react'
 import { useAppStore } from '@/store'
 import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 import {
@@ -67,6 +67,14 @@ export function useNativeChatWorkspaceFileDrop({
   structuredWorktreeId,
   terminalTabId
 }: Args): WorkspaceFileDropHandlers {
+  // The IME-flush check runs against a closure captured at drop time. Reading
+  // the prop through a ref keeps "is this still my workspace?" a real question
+  // rather than a comparison of one captured value against itself.
+  const structuredWorktreeIdRef = useRef(structuredWorktreeId)
+  useLayoutEffect(() => {
+    structuredWorktreeIdRef.current = structuredWorktreeId
+  }, [structuredWorktreeId])
+
   const onDragOverCapture = useCallback<DragEventHandler<HTMLDivElement>>(
     (event) => {
       if (!hasWorkspaceFileDragType(event.dataTransfer)) {
@@ -130,7 +138,7 @@ export function useNativeChatWorkspaceFileDrop({
       const targetOwnerIsCurrent = (): boolean => {
         const currentState = useAppStore.getState()
         const currentWorkspaceId =
-          structuredWorktreeId ??
+          structuredWorktreeIdRef.current ??
           findTerminalTabWorktreeId(currentState.tabsByWorktree, terminalTabId)
         if (currentWorkspaceId !== source.workspaceId) {
           return false
@@ -139,7 +147,7 @@ export function useNativeChatWorkspaceFileDrop({
         const currentOwner = resolveNativeChatAttachmentOwnerForWorktree(
           currentState,
           currentWorkspaceId,
-          structuredWorktreeId ? undefined : terminalTabId
+          structuredWorktreeIdRef.current ? undefined : terminalTabId
         )
         return (
           isResolvedWorkspaceFileDragExecutionHost(currentHostId) &&

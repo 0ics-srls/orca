@@ -111,6 +111,8 @@ type ProbeProps = {
   disabled?: boolean
   initialDraft?: string
   structured?: boolean
+  /** Overrides only the structured target, leaving the pane's scope key alone. */
+  structuredWorkspaceId?: string
   workspaceId?: string
 }
 
@@ -121,6 +123,7 @@ function ComposerProbe({
   disabled = false,
   initialDraft = '',
   structured = true,
+  structuredWorkspaceId,
   workspaceId = 'worktree-1'
 }: ProbeProps): React.JSX.Element {
   const [draft, setDraft] = useState(initialDraft)
@@ -143,7 +146,7 @@ function ComposerProbe({
   })
   const workspaceFileDropHandlers = useNativeChatWorkspaceFileDrop({
     terminalTabId: 'terminal-tab-1',
-    structuredWorktreeId: structured ? workspaceId : undefined,
+    structuredWorktreeId: structured ? (structuredWorkspaceId ?? workspaceId) : undefined,
     disabled,
     attachResolvedPaths: attachments.attachResolvedPaths,
     setNotice
@@ -244,6 +247,7 @@ describe('native chat workspace file drops', () => {
     testState.ownerSshGeneration = 4
     testState.ownerWorktreePath = '/remote/repo'
     testState.targetIsRemoteRuntime = false
+    testState.store.tabsByWorktree = { 'worktree-1': [{ id: 'terminal-tab-1' }] }
     latestInput = null
     bubbledDrop.mockReset()
   })
@@ -419,6 +423,21 @@ describe('native chat workspace file drops', () => {
     )
 
     testState.ownerSshGeneration = 5
+    fireEvent.compositionEnd(input, { data: '' })
+
+    expect(screen.getByTestId('draft').textContent).toBe('preedit')
+    expect(screen.getByText('Files can only be attached to their source workspace.')).toBeTruthy()
+  })
+
+  // The queued check must ask which workspace this composer serves NOW. Comparing
+  // a captured id against itself would pass no matter where the pane ended up.
+  it('rejects an IME-queued path when the pane changes workspace before settling', () => {
+    const view = render(<ComposerProbe initialDraft="preedit" />)
+    const input = editor()
+    fireEvent.compositionStart(input)
+    dispatchDragEvent('drop', input, internalTransfer(['/repo/a.ts']))
+
+    view.rerender(<ComposerProbe initialDraft="preedit" structuredWorkspaceId="worktree-2" />)
     fireEvent.compositionEnd(input, { data: '' })
 
     expect(screen.getByTestId('draft').textContent).toBe('preedit')
