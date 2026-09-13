@@ -2,6 +2,7 @@ import { useAppStore } from '@/store'
 import { ensureWorktreeHasInitialTerminal } from '@/lib/worktree-initial-terminal-seeding'
 import { activateAndRevealWorktree, type ActivateAndRevealResult } from '@/lib/worktree-activation'
 import {
+  isStructuredAgentLegacyFallbackSettlement,
   structuredAgentLegacyFallbackFromSettlement,
   type StructuredAgentLegacyFallbackResult
 } from '@/lib/structured-agent-launch-settlement'
@@ -170,8 +171,8 @@ export async function launchStructuredWorktreeSession(
   if (!settlement) {
     return { ...settled, activation, primaryTabId }
   }
-  const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
-  if (legacyFallback) {
+  if (isStructuredAgentLegacyFallbackSettlement(settlement)) {
+    const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
     return {
       ...settled,
       accepted: false,
@@ -201,8 +202,6 @@ export async function launchStructuredWorktreeSession(
     case 'structured':
     case 'failed':
       // Why: a failed launch has always reported as accepted here; the launch layer toasts it.
-      return { ...settled, activation, primaryTabId }
-    default:
       return { ...settled, activation, primaryTabId }
   }
 }

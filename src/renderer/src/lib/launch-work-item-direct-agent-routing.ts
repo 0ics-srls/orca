@@ -13,7 +13,10 @@ import type { AgentSessionLaunchPlan } from '@/lib/agent-session-launch-plan'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
 import { preflightAgentTrust } from '@/lib/agent-trust-preflight'
-import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
+import {
+  isStructuredAgentLegacyFallbackSettlement,
+  structuredAgentLegacyFallbackFromSettlement
+} from '@/lib/structured-agent-launch-settlement'
 
 export function buildDirectWorkItemStartup(args: {
   agent: TuiAgent | null
@@ -170,8 +173,8 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
   if (!settlement) {
     return notLaunched(true)
   }
-  const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
-  if (legacyFallback) {
+  if (isStructuredAgentLegacyFallbackSettlement(settlement)) {
+    const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
     return {
       completed: false,
       structuredLaunch: false,
@@ -200,8 +203,6 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
     case 'failed':
     case 'cancelled':
       // Why: the launch layer already toasted the failure.
-      return withoutAgentSurface
-    default:
       return withoutAgentSurface
   }
 }

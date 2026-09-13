@@ -34,6 +34,11 @@ export type StructuredAgentLaunchSettlement =
   | { kind: 'visibility-unknown'; sessionId: string }
   | { kind: 'failed'; error: unknown }
 
+type StructuredAgentLegacyFallbackSettlement = Extract<
+  StructuredAgentLaunchSettlement,
+  { kind: 'refused-then-legacy' | 'deadline-then-legacy' }
+>
+
 // Why: the healthy rig opens its tab in ~1.5s; 30s leaves room above the provider's 15s auth-settle
 // and 10s init bounds while still giving a stalled launch a bounded, usable fallback.
 export const STRUCTURED_AGENT_LAUNCH_DEADLINE_MS = 30_000
@@ -68,27 +73,39 @@ export type StructuredAgentLaunchHooks = {
   clock?: StructuredAgentLaunchDeadlineClock
 }
 
-export function structuredAgentLegacyFallbackFromSettlement(
-  settlement: StructuredAgentLaunchSettlement | null | undefined
-): StructuredAgentLegacyFallbackResult | null {
-  if (!settlement) {
-    return null
-  }
+export function isStructuredAgentLegacyFallbackSettlement(
+  settlement: StructuredAgentLaunchSettlement
+): settlement is StructuredAgentLegacyFallbackSettlement {
   switch (settlement.kind) {
     case 'refused-then-legacy':
     case 'deadline-then-legacy':
-      return {
-        ...(settlement.activation !== undefined ? { activation: settlement.activation } : {}),
-        primaryTabId: settlement.primaryTabId,
-        ...(settlement.promptDeliveryResult
-          ? { promptDeliveryResult: settlement.promptDeliveryResult }
-          : {})
-      }
+      return true
     case 'structured':
     case 'cancelled':
     case 'visibility-unknown':
     case 'failed':
-      return null
+      return false
+  }
+}
+
+export function structuredAgentLegacyFallbackFromSettlement(
+  settlement: StructuredAgentLegacyFallbackSettlement
+): StructuredAgentLegacyFallbackResult
+export function structuredAgentLegacyFallbackFromSettlement(
+  settlement: StructuredAgentLaunchSettlement | null | undefined
+): StructuredAgentLegacyFallbackResult | null
+export function structuredAgentLegacyFallbackFromSettlement(
+  settlement: StructuredAgentLaunchSettlement | null | undefined
+): StructuredAgentLegacyFallbackResult | null {
+  if (!settlement || !isStructuredAgentLegacyFallbackSettlement(settlement)) {
+    return null
+  }
+  return {
+    ...(settlement.activation !== undefined ? { activation: settlement.activation } : {}),
+    primaryTabId: settlement.primaryTabId,
+    ...(settlement.promptDeliveryResult
+      ? { promptDeliveryResult: settlement.promptDeliveryResult }
+      : {})
   }
 }
 
