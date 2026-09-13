@@ -6,8 +6,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { FileExplorerVirtualRows } from './FileExplorerVirtualRows'
 import { useFileExplorerHandlers } from './useFileExplorerHandlers'
 import { createFileExplorerRowProjection } from './file-explorer-row-projection'
+import { createVisibleFileExplorerRowProjection } from './useFileExplorerVisibleRowProjection'
 import { FILE_EXPLORER_DRAGGABLE_SELECTOR } from './file-explorer-drag-scroll-marker'
-import type { TreeNode } from './file-explorer-types'
+import type { DirCache, TreeNode } from './file-explorer-types'
 import { readWorkspaceFileDragSource } from '@/lib/workspace-file-drag'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
@@ -51,6 +52,7 @@ const directoryNode: TreeNode = {
 function virtualRowsElement(
   nodes: TreeNode[],
   options: {
+    dirCache?: Record<string, DirCache>
     selectedPaths?: Set<string>
     sourceWorkspaceId?: string
     rowProjection?: ReturnType<typeof createFileExplorerRowProjection>
@@ -78,6 +80,7 @@ function virtualRowsElement(
     flashingPath: null,
     deleteShortcutLabel: 'Del',
     sourceWorkspaceId: options.sourceWorkspaceId,
+    dirCache: options.dirCache,
     onClick: vi.fn(),
     onDoubleClick: vi.fn(),
     onContextMenuSelect: vi.fn(),
@@ -160,6 +163,67 @@ describe('file explorer draggable rows carry the wheel-scroll marker', () => {
     container.querySelector('[data-file-explorer-row]')?.dispatchEvent(event)
 
     expect(readWorkspaceFileDragSource(transfer)).toBeNull()
+  })
+
+  // A selection outlives the rows that showed it: nothing prunes selectedPaths
+  // when a directory collapses, and the drag still carries every selected path.
+  // Resolving only against visible rows refused a drag whose owner the cache
+  // knows perfectly well.
+  it('stamps a selection that reaches under a collapsed directory', async () => {
+    const owner = { kind: 'local' } as const
+    const collapsedChild: TreeNode = {
+      name: 'a.ts',
+      path: '/repo/src/a.ts',
+      relativePath: 'src/a.ts',
+      isDirectory: false,
+      depth: 1,
+      operationOwner: owner
+    }
+    const readme: TreeNode = {
+      name: 'README.md',
+      path: '/repo/README.md',
+      relativePath: 'README.md',
+      isDirectory: false,
+      depth: 0,
+      operationOwner: owner
+    }
+    const dirCache = {
+      '/repo': {
+        children: [{ ...directoryNode, operationOwner: owner }, readme],
+        operationOwner: owner
+      },
+      '/repo/src': { children: [collapsedChild], operationOwner: owner }
+    }
+    // `expanded` is empty, so /repo/src is collapsed and a.ts is not a row.
+    const projection = createVisibleFileExplorerRowProjection(
+      { dirCache, expanded: new Set<string>(), worktreePath: '/repo' },
+      {
+        ignoredSet: new Set<string>(),
+        nameFilter: null,
+        showDotfiles: true,
+        showGitIgnoredFiles: true
+      }
+    )
+    expect(projection.getRowByPath(collapsedChild.path)).toBeNull()
+
+    const container = await renderToBody(
+      virtualRowsElement([directoryNode, readme], {
+        dirCache,
+        rowProjection: projection,
+        selectedPaths: new Set([readme.path, collapsedChild.path]),
+        sourceWorkspaceId: 'workspace-1'
+      })
+    )
+    const transfer = new DataTransfer()
+    const event = new Event('dragstart', { bubbles: true, cancelable: true })
+    Object.defineProperty(event, 'dataTransfer', { value: transfer })
+
+    container.querySelectorAll('[data-file-explorer-row]')[1]?.dispatchEvent(event)
+
+    expect(readWorkspaceFileDragSource(transfer)).toEqual({
+      executionHostId: 'local',
+      workspaceId: 'workspace-1'
+    })
   })
 
   // The virtualizer re-renders on every scroll frame; a per-render owner scan
