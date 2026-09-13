@@ -1,3 +1,4 @@
+import type { ReadableAgentAttentionUnread } from '@/attention/agent-attention-contract'
 import { isExplicitAgentStatusFresh } from '@/lib/agent-status'
 import { resolveWorktreeStatus, type WorktreeStatus } from '@/lib/worktree-status'
 import {
@@ -255,8 +256,8 @@ export function terminalTabHasUnreadActivity({
   unreadAgentCompletionPanes
 }: {
   terminalTabId: string
-  unreadTerminalTabs: Record<string, boolean | undefined>
-  unreadAgentCompletionPanes: Record<string, boolean | undefined>
+  unreadTerminalTabs: Record<string, ReadableAgentAttentionUnread>
+  unreadAgentCompletionPanes: Record<string, ReadableAgentAttentionUnread>
 }): boolean {
   return (
     unreadTerminalTabs[terminalTabId] === true ||
@@ -266,12 +267,12 @@ export function terminalTabHasUnreadActivity({
 
 // Why: production writes replace this map; WeakMap supports retained snapshots without pinning them.
 let unreadAgentCompletionTabIdsBySnapshot = new WeakMap<
-  Record<string, boolean | undefined>,
+  Record<string, ReadableAgentAttentionUnread>,
   ReadonlySet<string>
 >()
 
 function getUnreadAgentCompletionTabIds(
-  unreadAgentCompletionPanes: Record<string, boolean | undefined>
+  unreadAgentCompletionPanes: Record<string, ReadableAgentAttentionUnread>
 ): ReadonlySet<string> {
   const cached = unreadAgentCompletionTabIdsBySnapshot.get(unreadAgentCompletionPanes)
   if (cached) {
@@ -293,7 +294,7 @@ function getUnreadAgentCompletionTabIds(
 
 /** Match pane-level unread completion markers to their owning terminal tab. */
 export function hasUnreadAgentCompletionForTerminalTab(
-  unreadAgentCompletionPanes: Record<string, boolean | undefined> | undefined,
+  unreadAgentCompletionPanes: Record<string, ReadableAgentAttentionUnread> | undefined,
   tabId: string
 ): boolean {
   return unreadAgentCompletionPanes

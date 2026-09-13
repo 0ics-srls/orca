@@ -336,7 +336,7 @@ describe('hasUnreadAgentCompletionForTerminalTab', () => {
   it('changes only the owning tab when immutable marker snapshots add and clear unread', () => {
     const before = { [`tab-2:${SECOND_LEAF_ID}`]: true }
     const added = { ...before, [`${TAB_ID}:${FIRST_LEAF_ID}`]: true }
-    const cleared = { ...added, [`${TAB_ID}:${FIRST_LEAF_ID}`]: false }
+    const cleared = { ...added, [`${TAB_ID}:${FIRST_LEAF_ID}`]: undefined }
 
     expect(hasUnreadAgentCompletionForTerminalTab(before, TAB_ID)).toBe(false)
     expect(hasUnreadAgentCompletionForTerminalTab(added, TAB_ID)).toBe(true)
