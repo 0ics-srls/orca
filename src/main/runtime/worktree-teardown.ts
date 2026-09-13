@@ -244,6 +244,12 @@ export async function killAllProcessesForWorktree(
         registrySweep
       ])
     } catch (error) {
+      // Folder/orphan removals intentionally continue after a best-effort PTY failure and purge
+      // workspace metadata in their caller. Retire tabs before rethrowing so a swallowed teardown
+      // error cannot leave chats pointing at the forgotten workspace.
+      if (!deps.requirePhysicalStop) {
+        await retireStructuredSessionTabsForWorktree(structured.retirable, deps.runtime)
+      }
       // Why (#11960): this rejection is the provider's own wording, which the force
       // classifier cannot recognise — so the wedge Force Delete exists for was the one
       // failure that never offered it. Re-word it, keeping the original as the cause.
@@ -306,13 +312,9 @@ type StructuredSweepOutcome = {
   /** Sessions this sweep proved closed — the count the removal log and result report. */
   closed: number
   /**
-   * The workspace's sessions the close loop never had anything to close: no attached child, so
-   * nothing hid their chat tab and nothing will. Exactly the complement of the close list, so each
-   * session's tab is handled once, by one mechanism.
-   *
-   * Carried out to the caller rather than acted on here, because this sweep is joined BEFORE the
-   * unstopped-PTY verdict: retiring a tab at the end of this function would still be ahead of a
-   * gate that can refuse the whole removal.
+   * Sessions whose tabs still need retirement once this removal is committed: detached members,
+   * plus live members left unclosed by a forced/best-effort removal. Carried to the caller because
+   * this sweep is joined BEFORE the unstopped-PTY verdict, which may still refuse the removal.
    */
   retirable: readonly StructuredSessionInWorkspace[]
 }
@@ -405,5 +407,8 @@ async function sweepStructuredSessions(
   console.warn(
     `[worktree-teardown] forcing removal of ${worktreeId}${UNSTOPPED_PTY_DETAIL_SEPARATOR}${describeUnclosedStructuredSessions(unstopped)}`
   )
-  return { closed, retirable }
+  // A best-effort or forced removal still discards the workspace when a live close remains
+  // unproven. Its close path intentionally leaves the live snapshot tab in place, so carry those
+  // sessions into the post-removal retirement pass alongside the detached members.
+  return { closed, retirable: [...retirable, ...unstopped] }
 }

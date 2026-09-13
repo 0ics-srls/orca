@@ -320,14 +320,22 @@ describe('worktree teardown and structured agent sessions', () => {
 
   it('still removes under force when a close does not settle, and says so', async () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    installHost({ records: [record('s1', WORKTREE)], stuck: new Set(['s1']) })
-    const result = await killAllProcessesForWorktree(
-      WORKTREE,
-      destructiveDeps({ allowUnverifiedStop: true })
-    )
+    const retired: string[] = []
+    installHost({ records: [record('s1', WORKTREE)], stuck: new Set(['s1']), visible: ['s1'] })
+    const result = await killAllProcessesForWorktree(WORKTREE, {
+      ...destructiveDeps({ allowUnverifiedStop: true }),
+      runtime: {
+        retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
+          retired.push(sessionId)
+          return true
+        }
+        // SAFETY: this test double implements only the optional tab-retirement hook.
+      } as never
+    })
     expect(result.structuredStopped).toBeUndefined()
     // The live arm of that record, carrying the verdict the refusal would have shown.
     expect(structuredSessionWarning(warn)).toContain('still live: 1 agent session (claude)')
+    expect(retired).toEqual(['s1'])
     warn.mockRestore()
   })
 
@@ -744,6 +752,72 @@ describe('worktree teardown and structured agent sessions', () => {
       closeStructuredSessions: true
     })
     expect([...host.visible]).toEqual([])
+  })
+
+  it('retires a live snapshot tab when folder cleanup cannot close its child', async () => {
+    const retired: string[] = []
+    const host = installHost({
+      records: [record('s1', WORKTREE)],
+      stuck: new Set(['s1']),
+      visible: ['s1']
+    })
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await killAllProcessesForWorktree(WORKTREE, {
+      localProvider,
+      includeProviderInventory: false as const,
+      includeLocalRegistry: false as const,
+      closeStructuredSessions: true,
+      runtime: {
+        retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
+          retired.push(sessionId)
+          return true
+        }
+        // SAFETY: this test double implements only the optional tab-retirement hook.
+      } as never
+    })
+    expect([...host.visible]).toEqual([])
+    expect(retired).toEqual(['s1'])
+    warn.mockRestore()
+  })
+
+  it('retires tabs before propagating a best-effort PTY sweep failure', async () => {
+    const host = installHost({
+      records: [record('s1', WORKTREE)],
+      detached: new Set(['s1']),
+      visible: ['s1']
+    })
+    const retired: string[] = []
+    const settleModule = await import('./settle-before-deadline')
+    const settle = settleModule.settleBeforeDeadline
+    const rejection = vi
+      .spyOn(settleModule, 'settleBeforeDeadline')
+      .mockImplementation((run, fallback, deadline, failClosedError, failClosedOnRunError) => {
+        if (fallback === 0) {
+          return Promise.reject(new Error('terminal inventory unavailable'))
+        }
+        return settle(run, fallback, deadline, failClosedError, failClosedOnRunError)
+      })
+    try {
+      await expect(
+        killAllProcessesForWorktree(WORKTREE, {
+          localProvider,
+          includeProviderInventory: true,
+          includeLocalRegistry: false,
+          closeStructuredSessions: true,
+          runtime: {
+            retireStructuredAgentSessionTabFromSnapshot: (sessionId: string) => {
+              retired.push(sessionId)
+              return true
+            }
+            // SAFETY: this test double implements only the optional tab-retirement hook.
+          } as never
+        })
+      ).rejects.toThrow('terminal inventory unavailable')
+    } finally {
+      rejection.mockRestore()
+    }
+    expect([...host.visible]).toEqual([])
+    expect(retired).toEqual(['s1'])
   })
 
   it('retires nothing on a reconciliation sweep, which deletes no workspace', async () => {
