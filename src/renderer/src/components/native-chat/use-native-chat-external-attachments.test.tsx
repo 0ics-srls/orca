@@ -248,6 +248,39 @@ describe('useNativeChatExternalAttachments', () => {
     )
   })
 
+  // The upload window is the long one: the paths go to the remote worktree the
+  // attach captured, so a pane that moved workspaces meanwhile must not receive
+  // remote paths that live under the workspace it left.
+  it('does not attach uploaded paths when the pane changes workspace during upload', async () => {
+    const sshOwner = {
+      kind: 'ssh',
+      connectionId: 'conn-1',
+      worktreePath: '/remote/wt',
+      expectedExecutionHostId: 'ssh:conn-1',
+      expectedSshTargetId: 'conn-1',
+      expectedSshConnectionGeneration: 4
+    } as const
+    mocks.resolveNativeChatAttachmentOwnerForWorktree.mockReturnValue(sshOwner)
+    const upload = deferred<string[]>()
+    mocks.uploadNativeChatAttachmentPaths.mockReturnValueOnce(upload.promise)
+    const attachResolvedPaths = vi.fn()
+    const notices: (string | null)[] = []
+    const probe = await renderProbe({
+      structuredWorktreeId: 'worktree-1',
+      attachResolvedPaths,
+      setNotice: (notice) => notices.push(notice)
+    })
+
+    act(() => probe.latest().attachExternalPaths(['/local/a.txt']))
+    await probe.setStructuredWorktreeId('worktree-2')
+    await act(async () => upload.resolve(['/remote/wt/.orca/drops/a.txt']))
+
+    expect(attachResolvedPaths).not.toHaveBeenCalled()
+    expect(notices.at(-1)).toBe(
+      'This workspace changed hosts while attaching — drop the files again.'
+    )
+  })
+
   it('uploads SSH worktree paths and attaches the remote results', async () => {
     mocks.resolveNativeChatAttachmentOwner.mockReturnValue({
       kind: 'ssh',
