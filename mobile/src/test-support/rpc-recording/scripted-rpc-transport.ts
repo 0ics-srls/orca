@@ -38,6 +38,7 @@ export class ScriptedRpcTransport {
     },
     deviceToken: 'recording-device',
     sendEncrypted: (value) => {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the physical client publishes the frame this transport just serialized.
       const payload = value as { id: string; method: string; params: unknown }
       const name = this.wireNames.shift()
       if (!name) {
@@ -64,6 +65,7 @@ export class ScriptedRpcTransport {
         const request = {
           name,
           args: captureArguments(args),
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a pending settlement has no settledAt yet.
           settlement: { status: 'pending', startedAt: this.now() } as Settlement
         }
         this.requests.push(request)
@@ -148,8 +150,10 @@ export class ScriptedRpcTransport {
       }
       // Resolve the physical tracker to cancel its deadline before injecting the scripted rejection.
       this.rejects.get(name)?.(error)
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scenario asked for a null result, which is a reply shape a host can send.
       this.tracker.resolve({ id: binding.id, ok: true, result: null } as RpcResponse)
     } else {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scenario supplies the reply as JSON; the wire id is the transport’s.
       this.tracker.resolve({ ...(reply as object), id: binding.id } as RpcResponse)
     }
   }

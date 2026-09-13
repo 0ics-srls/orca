@@ -61,6 +61,7 @@ export function operationModuleLoader(root: string, mutation?: Mutation) {
                 (item) => item.name.text === key && !item.isTypeOnly
               )
               if (binding) {
+                // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the barrel target is a module this loader evaluated.
                 return (imported(file, name) as OperationModule)[
                   binding.propertyName?.text ?? String(key)
                 ]
@@ -119,6 +120,7 @@ export function operationModuleLoader(root: string, mutation?: Mutation) {
   }
   return {
     load: <T = OperationModule>(path: string): T =>
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a VM-evaluated module has no static type; the caller names the shape it mounts.
       load(pathFor(resolve(root, path))) as unknown as T,
     assertMutationApplied: () => {
       if (mutation && mutationCount !== 1) {

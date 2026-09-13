@@ -34,6 +34,7 @@ export function workspaceSettingsMounts(
       })
       let state: ReturnType<typeof useSubmit>
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         state = useSubmit(model as unknown as Parameters<typeof useSubmit>[0])
       })
       return {
@@ -85,6 +86,7 @@ export function workspaceSettingsMounts(
       })
       let actions: ReturnType<typeof useCreate>
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         actions = useCreate(model as unknown as Parameters<typeof useCreate>[0])
       })
       return {
@@ -94,6 +96,7 @@ export function workspaceSettingsMounts(
           }
           if (name === 'submit') {
             return actions.createWorkspace(
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scenario supplies the action item as JSON, not as a typed model.
               { key: 'linear:1', provider: 'linear', source: { id: 'issue-1' } } as Parameters<
                 typeof actions.createWorkspace
               >[0],

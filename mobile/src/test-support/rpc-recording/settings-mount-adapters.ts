@@ -122,6 +122,7 @@ export function settingsMountAdapters(
           client: context.client,
           connState: 'connected',
           hostId: 'host-1',
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
           state: state as unknown as Parameters<typeof useMetadata>[0]['state']
         })
       })
@@ -161,6 +162,7 @@ export function settingsMountAdapters(
         visibleProviders: ['github']
       })
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         useHydration(model as unknown as Parameters<typeof useHydration>[0])
       })
       return {

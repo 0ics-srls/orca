@@ -24,9 +24,11 @@ export function canonicalJson(value: RecordedValue): string {
   if (Array.isArray(value)) {
     return `[${value.map(canonicalJson).join(',')}]`
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: canonicalJson only reaches here for a plain object observation.
   const record = value as Record<string, RecordedValue>
   return `{${Object.keys(record)
     .sort()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a recorded object holds recorded values.
     .map((key) => `${JSON.stringify(key)}:${canonicalJson(record[key] as RecordedValue)}`)
     .join(',')}}`
 }
@@ -42,6 +44,7 @@ export function internRecording(recording: Recording): {
   const pool: ValuePool = {}
   const canonical = new Map<string, string>()
   const checkpoints = recording.checkpoints.map((checkpoint) => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every observation field is assigned below before the value is read.
     const observation = {} as InternedObservation
     for (const field of OBSERVATION_FIELDS) {
       const value = checkpoint.observation[field]
@@ -61,6 +64,7 @@ export function internRecording(recording: Recording): {
   const values = Object.fromEntries(
     Object.keys(pool)
       .sort()
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: pool entries are the recorded values that were interned into it.
       .map((hash) => [hash, pool[hash] as RecordedValue])
   )
   return { values, recording: { scenario: recording.scenario, checkpoints } }
@@ -70,6 +74,7 @@ export function resolveRecording(values: ValuePool, recording: InternedRecording
   return {
     scenario: recording.scenario,
     checkpoints: recording.checkpoints.map((checkpoint) => {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every observation field is assigned below before the value is read.
       const observation = {} as Observation
       for (const field of OBSERVATION_FIELDS) {
         const hash = checkpoint.observation[field]
@@ -78,6 +83,7 @@ export function resolveRecording(values: ValuePool, recording: InternedRecording
             `Golden value ${hash} is missing from the pool (${checkpoint.id}.${field})`
           )
         }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hash was resolved against the same pool that interned it.
         observation[field] = values[hash] as RecordedValue
       }
       return { id: checkpoint.id, observation }

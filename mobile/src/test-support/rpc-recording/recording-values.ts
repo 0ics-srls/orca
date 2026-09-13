@@ -26,6 +26,7 @@ export function captureValue(value: unknown): RecordedValue {
     }
     const entries = Object.keys(value)
       .sort()
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the plain-object branch above already narrowed the container.
       .map((key) => [key, captureValue((value as Record<string, unknown>)[key])] as const)
     return '$rpc' in value
       ? { $rpc: 'object', entries: entries.map(([key, entry]) => [key, entry]) }
@@ -49,6 +50,7 @@ export function captureArguments(args: readonly unknown[]): RecordedValue {
 
 /** `code` and `cause` are recorded only when present, so an error without them keeps three fields. */
 export function captureError(error: unknown, depth = 0): RecordedValue {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: code and cause are read defensively; a thrown value carries neither by type.
   const detail = error as { code?: unknown; cause?: unknown }
   const code = error instanceof Error ? detail.code : undefined
   const cause = error instanceof Error && depth < 4 ? detail.cause : undefined

@@ -73,8 +73,10 @@ export async function runRecording(
         recording.checkpoints.push({
           id: step.checkpoint,
           observation: {
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a structured clone of recorded requests is recorded data.
             sender: structuredClone(transport.requests) as unknown as RecordedValue,
             payloads: structuredClone(transport.payloads),
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a structured clone of recorded settlements is recorded data.
             settlements: structuredClone(settlements) as unknown as RecordedValue,
             state: captureValue(mounted.state()),
             effects: structuredClone(effects)

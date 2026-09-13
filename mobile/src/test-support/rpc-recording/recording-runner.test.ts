@@ -150,6 +150,7 @@ describe('recording boundaries', () => {
   it('pools repeated observation values and still resolves them for comparison', () => {
     const golden = sampleGolden('pooled')
     golden.recording.checkpoints.push({ id: 'again', observation: observation('idle') })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the bytes were just produced by goldenBytes, so the pool is present.
     const file = JSON.parse(goldenBytes(golden)) as {
       values: Record<string, unknown>
       recording: { checkpoints: { observation: Observation }[] }
@@ -158,6 +159,7 @@ describe('recording boundaries', () => {
     expect(second!.observation).toEqual(first!.observation)
     // [] is shared by three fields; {} and the state object are the other two pool entries.
     expect(Object.keys(file.values)).toHaveLength(3)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an interned observation field is a pool hash at rest.
     expect(file.values[first!.observation.state as unknown as string]).toEqual({ phase: 'idle' })
   })
 

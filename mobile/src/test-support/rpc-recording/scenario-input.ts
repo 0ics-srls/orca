@@ -14,6 +14,7 @@ function decode(value: unknown): unknown {
   return value
 }
 export function readScenarios(path: string): { baseline: string; scenarios: RecordingScenario[] } {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the manifest shape is validated on the next lines.
   const input = decode(JSON.parse(readFileSync(path, 'utf8'))) as {
     baseline: string
     scenarios: RecordingScenario[]

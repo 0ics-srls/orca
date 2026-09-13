@@ -66,6 +66,7 @@ export function goldenBytes(golden: GoldenRecording): string {
   return `${JSON.stringify({ ...header, values: interned.values, recording: interned.recording }, null, 2)}\n`
 }
 export function readGolden(directory: string, id: string): GoldenRecording {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the file is validated against GoldenFile on the next lines.
   const file = JSON.parse(readFileSync(goldenPath(directory, id), 'utf8')) as Partial<GoldenFile>
   if (file.goldenFormatVersion !== GOLDEN_FORMAT_VERSION) {
     throw new Error(
@@ -75,6 +76,7 @@ export function readGolden(directory: string, id: string): GoldenRecording {
   if (!file.values || !file.recording) {
     throw new Error(`Golden ${id} is missing its value pool or recording`)
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: goldenFormatVersion was just checked, so the pool is present.
   const { values: _pool, ...header } = file as GoldenFile
   return { ...header, recording: resolveRecording(file.values, file.recording) }
 }
@@ -108,6 +110,7 @@ export function compareGolden(expected: GoldenRecording, actual: GoldenRecording
   const { recording: _expectedRecording, ...expectedHeader } = pinned
   const { recording: _actualRecording, ...actualHeader } = actual
   for (const [key, value] of Object.entries(expectedHeader)) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: header keys are compared as data, not consumed as fields.
     const found = (actualHeader as Record<string, unknown>)[key]
     if (JSON.stringify(found) !== JSON.stringify(value)) {
       throw new Error(
@@ -158,27 +161,32 @@ function firstDifference(
   }
   if (Array.isArray(expected) && Array.isArray(actual)) {
     const index = expected.findIndex(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: both sides are recorded observations, so every member is a RecordedValue.
       (entry, at) => canonicalJson(entry) !== canonicalJson(actual[at] as RecordedValue)
     )
     return index === -1 || index >= actual.length
       ? here
       : firstDifference(
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: both sides are recorded observations, so every member is a RecordedValue.
           expected[index] as RecordedValue,
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: both sides are recorded observations, so every member is a RecordedValue.
           actual[index] as RecordedValue,
           `${path}[${index}]`
         )
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the array branch above already rejected a non-object pair.
   const left = expected as Record<string, RecordedValue>
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the array branch above already rejected a non-object pair.
   const right = actual as Record<string, RecordedValue>
-  const key = [...new Set([...Object.keys(left), ...Object.keys(right)])]
-    .sort()
-    .find(
-      (name) =>
-        canonicalJson(left[name] as RecordedValue) !== canonicalJson(right[name] as RecordedValue)
-    )
+  const key = [...new Set([...Object.keys(left), ...Object.keys(right)])].sort().find(
+    (name) =>
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: both sides are recorded observations, so every member is a RecordedValue.
+      canonicalJson(left[name] as RecordedValue) !== canonicalJson(right[name] as RecordedValue)
+  )
   return key === undefined || !(key in left) || !(key in right)
     ? here
-    : firstDifference(left[key] as RecordedValue, right[key] as RecordedValue, `${path}.${key}`)
+    : // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: both sides are recorded observations, so every member is a RecordedValue.
+      firstDifference(left[key] as RecordedValue, right[key] as RecordedValue, `${path}.${key}`)
 }
 function excerpt(value: RecordedValue): string {
   const json = JSON.stringify(value)

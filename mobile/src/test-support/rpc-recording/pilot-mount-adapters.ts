@@ -25,6 +25,7 @@ export function pilotMountAdapters(
       let workspace = 'A'
       let state: ReturnType<typeof useSearch>
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         state = useSearch({ client, operations, worktreeId: workspace } as Parameters<
           typeof useSearch
         >[0])
@@ -92,6 +93,7 @@ export function pilotMountAdapters(
       }
       let actions: ReturnType<typeof useMetadata>
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         actions = useMetadata(model as unknown as Parameters<typeof useMetadata>[0])
       })
       return {
@@ -101,6 +103,7 @@ export function pilotMountAdapters(
           }
           if (name === 'submit') {
             return actions.mutateProjectRowMetadata(
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the scenario supplies the row as JSON, not as a typed model.
               row as unknown as Parameters<typeof actions.mutateProjectRowMetadata>[0],
               { addLabels: ['recorded'] }
             )
@@ -138,6 +141,7 @@ export function pilotMountAdapters(
         }
       }
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         useDetail(model as unknown as Parameters<typeof useDetail>[0])
       })
       return {
@@ -198,6 +202,7 @@ export function pilotMountAdapters(
       })
       let actions: ReturnType<typeof usePreferences>
       const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
         actions = usePreferences(model as unknown as Parameters<typeof usePreferences>[0])
       })
       return {
@@ -207,6 +212,7 @@ export function pilotMountAdapters(
           }
           if (name === 'write') {
             return actions.persistDefaultGitHubPreset(
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the preset arrives from the scenario JSON as a string.
               args.preset as Parameters<typeof actions.persistDefaultGitHubPreset>[0]
             )
           }

@@ -63,6 +63,7 @@ function rawReply(): Promise<unknown> {
       if (plain === null) {
         return
       }
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a thrown value is not an Error by type; only its constructor name and message are printed.
       const frame = JSON.parse(plain) as { type?: string; id?: string }
       if (frame.type === 'e2ee_authenticated') {
         ws.send(
@@ -86,11 +87,14 @@ function describe(label: string, run: () => unknown): string {
     const value = run()
     return `${label}=${JSON.stringify(value)}`
   } catch (error) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the probe prints whatever the host sent, so the frame is read as a bag of fields.
     return `${label}=THREW ${(error as Error).constructor.name}: ${(error as Error).message}`
   }
 }
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the probe substitutes one recorded reply for the whole client surface.
 const reply = (await rawReply()) as Record<string, unknown>
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the probe substitutes one recorded reply for the whole client surface.
 const client = {
   sendRequest: async () => reply
 } as unknown as Parameters<typeof settingsRead.request>[0]
@@ -109,6 +113,7 @@ if (reply.__outcome) {
     const response = await op.request(client)
     lines.push(
       describe(name, () => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each operation is driven through its own declared reply type in turn.
         const outcome = op.interpret(response as never) as
           | (() => unknown)
           | { accepted?: boolean; value?: unknown }
