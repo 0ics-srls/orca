@@ -32,6 +32,7 @@ import {
 } from './worktree-create-parent-pick'
 
 import { repoHostId, withRepoHostOwnership } from '../listing/worktree-host-ownership'
+import { WorktreeCreationCancelledError } from '@/lib/worktree-creation-attempt'
 
 type RuntimeTarget = ReturnType<typeof getActiveRuntimeTarget>
 
@@ -193,7 +194,7 @@ export function createCreateWorktree(
       for (let attempt = 0; attempt < CLIENT_WORKTREE_CREATE_MAX_ATTEMPTS; attempt += 1) {
         try {
           if (options?.isCancelled?.()) {
-            throw new Error('Worktree creation cancelled.')
+            throw new WorktreeCreationCancelledError('Worktree creation cancelled.')
           }
           const outcome = await runCreateAttempt(
             request,

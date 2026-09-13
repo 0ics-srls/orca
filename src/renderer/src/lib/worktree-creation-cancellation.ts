@@ -2,15 +2,18 @@ import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 
 import {
-  activeWorktreeCreationAttempts as activeAttempts,
+  getActiveWorktreeCreation,
+  registerActiveWorktreeCreation,
+  releaseActiveWorktreeCreation,
   type WorktreeCreationAttempt
 } from './worktree-creation-attempt'
+import { WORKTREE_INSTANCE_REPLACED_ERROR } from '@/store/slices/worktree-removal-options'
 
 export async function withWorktreeCreationCancellation(
   creationId: string,
   execute: (attempt: WorktreeCreationAttempt) => Promise<void>
 ): Promise<void> {
-  const previous = activeAttempts.get(creationId)
+  const previous = getActiveWorktreeCreation(creationId)
   if (previous && !previous.completed && !previous.cleanupAfterSettlement) {
     return
   }
@@ -29,33 +32,45 @@ export async function withWorktreeCreationCancellation(
     isCancelled: () =>
       attempt.cancelled || !useAppStore.getState().pendingWorktreeCreations[creationId]
   }
-  activeAttempts.set(creationId, attempt)
+  registerActiveWorktreeCreation(creationId, attempt)
   try {
     if (!attempt.isCancelled()) {
       await execute(attempt)
     }
   } finally {
-    const cleanup = (): Promise<boolean> =>
-      removeCancelledCreation(attempt).finally(() => {
-        if (activeAttempts.get(creationId) === attempt) {
-          activeAttempts.delete(creationId)
-        }
-      })
+    const cleanup = (deferred: boolean): Promise<boolean> =>
+      removeCancelledCreation(attempt, deferred).finally(() =>
+        releaseActiveWorktreeCreation(creationId, attempt)
+      )
     if (!attempt.completed && attempt.isCancelled()) {
-      await cleanup()
+      await cleanup(false)
     } else if (!attempt.completed && attempt.worktree) {
       // Failed post-create startup still owns a workspace when its error panel is dismissed.
-      attempt.cleanupAfterSettlement = cleanup
-    } else if (activeAttempts.get(creationId) === attempt) {
-      activeAttempts.delete(creationId)
+      attempt.cleanupAfterSettlement = () => cleanup(true)
+    } else {
+      releaseActiveWorktreeCreation(creationId, attempt)
     }
   }
 }
 
-async function removeCancelledCreation(attempt: WorktreeCreationAttempt): Promise<boolean> {
+/**
+ * `deferred` marks a rollback that outlived its attempt, waiting behind an error
+ * panel. Only that one can sit long enough for the user to delete and recreate at
+ * the same path, so only it refuses to force-delete a workspace it cannot prove is
+ * the one it created — a host too old to stamp `instanceId` leaves no other proof.
+ */
+async function removeCancelledCreation(
+  attempt: WorktreeCreationAttempt,
+  deferred: boolean
+): Promise<boolean> {
   const { worktree } = attempt
   try {
     if (worktree) {
+      if (deferred && !worktree.instanceId) {
+        throw new Error(
+          'it could not be identified on the host, so it was left in place. Delete it manually if unwanted.'
+        )
+      }
       const result = await useAppStore
         .getState()
         .removeWorktree({ id: worktree.id, executionHostId: worktree.hostId ?? 'local' }, true, {
@@ -63,16 +78,31 @@ async function removeCancelledCreation(attempt: WorktreeCreationAttempt): Promis
           suppressPreservedBranchToast: true,
           ...(worktree.instanceId ? { expectedInstanceId: worktree.instanceId } : {})
         })
-      if (!result.ok) {
+      // A replaced instance means this attempt's workspace is already gone, so
+      // there is nothing left to roll back — not a cleanup failure.
+      if (!result.ok && result.error !== WORKTREE_INSTANCE_REPLACED_ERROR) {
         throw new Error(result.error)
       }
+    }
+    // Why: cancelling before the host answered leaves no row to remove, but the
+    // host may still have finished. Say so rather than reporting a clean rollback.
+    if (!worktree && attempt.createOutcomeUnknown) {
+      toast.warning(
+        'Cancelled before the host confirmed the workspace. If it appears, delete it manually.'
+      )
     }
     await attempt.cleanupRuntime?.()
     return true
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error)
     console.error('worktree create: cancellation cleanup failed', worktree?.id, error)
-    toast.error(`Could not remove the cancelled workspace: ${message}`, {
+    // Why: the runtime is deliberately left running — tearing down a VM whose
+    // workspace deletion never confirmed could destroy a workspace that survived.
+    // Deleting the still-visible row is what releases both, so say so.
+    const runtimeHint = attempt.cleanupRuntime
+      ? ' Its runtime is still running; deleting the workspace releases it.'
+      : ''
+    toast.error(`Could not remove the cancelled workspace: ${message}${runtimeHint}`, {
       duration: Infinity
     })
     return false

@@ -3,13 +3,14 @@ import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import { toast } from 'sonner'
 import { cancelActiveWorktreeCreation } from './worktree-creation-attempt'
 import { withWorktreeCreationCancellation } from './worktree-creation-cancellation'
+import { WORKTREE_INSTANCE_REPLACED_ERROR } from '@/store/slices/worktree-removal-options'
 
 const state = vi.hoisted(() => ({
   pendingWorktreeCreations: {} as Record<string, unknown>,
   removeWorktree: vi.fn()
 }))
 vi.mock('@/store', () => ({ useAppStore: { getState: () => state } }))
-vi.mock('sonner', () => ({ toast: { error: vi.fn() } }))
+vi.mock('sonner', () => ({ toast: { error: vi.fn(), warning: vi.fn() } }))
 
 function deferred() {
   let resolve!: () => void
@@ -18,7 +19,12 @@ function deferred() {
   })
   return { promise, resolve }
 }
-const worktree = makeWorktree({ id: 'repo::/workspace', repoId: 'repo', hostId: 'ssh:owner' })
+const worktree = makeWorktree({
+  id: 'repo::/workspace',
+  repoId: 'repo',
+  hostId: 'ssh:owner',
+  instanceId: 'instance-1'
+})
 beforeEach(() => {
   vi.clearAllMocks()
   state.pendingWorktreeCreations = { creation: {}, other: {} }
@@ -65,7 +71,11 @@ describe('worktree creation cancellation', () => {
     expect(state.removeWorktree).toHaveBeenCalledExactlyOnceWith(
       { id: worktree.id, executionHostId: 'ssh:owner' },
       true,
-      { skipArchiveHooks: true, suppressPreservedBranchToast: true }
+      {
+        skipArchiveHooks: true,
+        suppressPreservedBranchToast: true,
+        expectedInstanceId: 'instance-1'
+      }
     )
     expect(cleanup).toHaveBeenCalledOnce()
     expect(state.pendingWorktreeCreations.other).toBeDefined()
@@ -171,6 +181,95 @@ describe('worktree creation cancellation', () => {
       expect.stringContaining('Host unavailable'),
       expect.objectContaining({ duration: Infinity })
     )
+    // The retained runtime is invisible otherwise, so the toast must say how to release it.
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.stringContaining('deleting the workspace releases it'),
+      expect.anything()
+    )
     expect(cancelActiveWorktreeCreation('creation')).toBe(false)
+  })
+
+  it('omits the runtime hint when the cancelled creation had no runtime', async () => {
+    state.removeWorktree.mockResolvedValue({ ok: false, error: 'Host unavailable' })
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = worktree
+      cancelActiveWorktreeCreation('creation')
+    })
+    expect(toast.error).toHaveBeenCalledWith(
+      expect.not.stringContaining('runtime is still running'),
+      expect.anything()
+    )
+  })
+
+  it('warns instead of claiming a clean rollback when the host never confirmed', async () => {
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.createOutcomeUnknown = true
+      cancelActiveWorktreeCreation('creation')
+    })
+    expect(state.removeWorktree).not.toHaveBeenCalled()
+    expect(toast.warning).toHaveBeenCalledWith(expect.stringContaining('delete it manually'))
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('stays silent when cancellation is known to have preceded the create', async () => {
+    await withWorktreeCreationCancellation('creation', async () => {
+      cancelActiveWorktreeCreation('creation')
+    })
+    expect(toast.warning).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('treats a replaced instance as nothing left to roll back, not a cleanup failure', async () => {
+    const cleanup = vi.fn()
+    state.removeWorktree.mockResolvedValue({
+      ok: false,
+      error: WORKTREE_INSTANCE_REPLACED_ERROR
+    })
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = worktree
+      attempt.cleanupRuntime = cleanup
+      cancelActiveWorktreeCreation('creation')
+    })
+    expect(cleanup).toHaveBeenCalledOnce()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('refuses a deferred rollback the host left unidentifiable rather than force-deleting', async () => {
+    const unstamped = makeWorktree({ id: 'repo::/workspace', repoId: 'repo', hostId: 'ssh:owner' })
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = unstamped
+    })
+    expect(cancelActiveWorktreeCreation('creation')).toBe(true)
+    await vi.waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(
+        expect.stringContaining('Delete it manually'),
+        expect.objectContaining({ duration: Infinity })
+      )
+    )
+    expect(state.removeWorktree).not.toHaveBeenCalled()
+  })
+
+  it('still rolls back an unidentifiable workspace when cancelled in flight', async () => {
+    const unstamped = makeWorktree({ id: 'repo::/workspace', repoId: 'repo', hostId: 'ssh:owner' })
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = unstamped
+      cancelActiveWorktreeCreation('creation')
+    })
+    // In-flight cancellation cannot race a replacement, so it must not fail closed.
+    expect(state.removeWorktree).toHaveBeenCalledOnce()
+    expect(toast.error).not.toHaveBeenCalled()
+  })
+
+  it('lets retry proceed after the rollback found its workspace already replaced', async () => {
+    await withWorktreeCreationCancellation('creation', async (attempt) => {
+      attempt.worktree = worktree
+    })
+    state.removeWorktree.mockResolvedValueOnce({
+      ok: false,
+      error: WORKTREE_INSTANCE_REPLACED_ERROR
+    })
+    const retry = vi.fn()
+    await withWorktreeCreationCancellation('creation', retry)
+    expect(retry).toHaveBeenCalledOnce()
   })
 })

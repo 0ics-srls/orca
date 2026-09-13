@@ -1,5 +1,9 @@
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 
+/** The rollback target was replaced, so its workspace is already gone. */
+export const WORKTREE_INSTANCE_REPLACED_ERROR =
+  'Workspace instance changed before cancellation cleanup.'
+
 export type RemoveWorktreeOptions = {
   // 'forget-local' drops the workspace from Orca only (no remote Git/FS work)
   // for workspaces pinned to a removed/disconnected SSH host. Reuses the same

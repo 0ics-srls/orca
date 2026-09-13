@@ -15,7 +15,6 @@ import {
 } from '@/lib/worktree-operation-route'
 import {
   beginHostQualifiedRemoval,
-  assertWorktreeRemovalInstance,
   completeSameIdHostScopedRemoval,
   findWorktreeOnConfirmedHost,
   prepareHostScopedRemovalCompletion,
@@ -59,7 +58,8 @@ export function createRemoveWorktree(
       worktreeId,
       requiredExecutionHostId,
       forgetLocalOnly,
-      options?.ignoreWorkspaceCleanupScanSurvivors === true
+      options?.ignoreWorkspaceCleanupScanSurvivors === true,
+      options?.expectedInstanceId
     )
     if (!start.ok) {
       return { ok: false, error: start.error }
@@ -107,7 +107,6 @@ export function createRemoveWorktree(
         worktreeId,
         requiredExecutionHostId
       )
-      assertWorktreeRemovalInstance(worktreeBeforeRemoval, options?.expectedInstanceId)
       const terminalPtyIdsBeforeRemoval = (get().tabsByWorktree[worktreeId] ?? []).flatMap(
         (tab) => get().ptyIdsByTabId[tab.id] ?? []
       )

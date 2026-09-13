@@ -1,7 +1,10 @@
 import { dispatchWorktreeCreation } from './worktree-creation-dispatch'
 import { toast } from 'sonner'
 import { withWorktreeCreationCancellation } from './worktree-creation-cancellation'
-import type { WorktreeCreationAttempt } from './worktree-creation-attempt'
+import {
+  WorktreeCreationCancelledError,
+  type WorktreeCreationAttempt
+} from './worktree-creation-attempt'
 import { useAppStore } from '@/store'
 import { preflightAgentTrust } from '@/lib/agent-trust-preflight'
 import { activateAndRevealWorktree, type ActivateAndRevealResult } from '@/lib/worktree-activation'
@@ -70,6 +73,9 @@ async function executeWorktreeCreationAttempt(
     // Why: a missing entry means the user cancelled mid-flight — abandon
     // silently rather than surfacing an error for work they already dismissed.
     if (!useAppStore.getState().pendingWorktreeCreations[creationId]) {
+      // A dispatched call that failed proves nothing about the host: it may have
+      // finished and lost the response, so cleanup must not claim the path is clear.
+      attempt.createOutcomeUnknown = !(error instanceof WorktreeCreationCancelledError)
       return
     }
     if (preparedRequest.ephemeralVmRuntimeId) {
