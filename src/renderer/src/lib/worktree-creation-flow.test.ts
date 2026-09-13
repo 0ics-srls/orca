@@ -79,6 +79,19 @@ beforeEach(() => {
   vi.mocked(ensureWorktreeHasInitialTerminal).mockReturnValue('tab-1')
 })
 
+/** Invoke the renderer-only `onCreated` callback the create call was handed. */
+function reportCreatedWorktree(createCall: unknown[], worktree: unknown): void {
+  const options = createCall[25]
+  const onCreated =
+    typeof options === 'object' && options !== null && 'onCreated' in options
+      ? options.onCreated
+      : undefined
+  if (typeof onCreated !== 'function') {
+    throw new Error('createWorktree was not given an onCreated callback')
+  }
+  onCreated(worktree)
+}
+
 async function flushAsyncWorktreeCreation(): Promise<void> {
   await Promise.resolve()
   await Promise.resolve()
@@ -549,10 +562,11 @@ describe('staged background worktree creation', () => {
 
     expect(started).toBe(true)
     await vi.waitFor(() => expect(markTrusted).toHaveBeenCalledTimes(1))
-    const options = (store.createWorktree.mock.calls[0] as unknown[])[25] as {
-      onCreated: (worktree: unknown) => void
-    }
-    options.onCreated({ id: 'wt-1', repoId: 'repo-1', hostId: 'local' })
+    reportCreatedWorktree(store.createWorktree.mock.calls[0], {
+      id: 'wt-1',
+      repoId: 'repo-1',
+      hostId: 'local'
+    })
     delete store.pendingWorktreeCreations['creation-1']
     store.activePendingCreationId = null
     resolveTrust()

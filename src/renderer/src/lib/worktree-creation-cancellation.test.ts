@@ -1,14 +1,16 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
 import { toast } from 'sonner'
 import { cancelActiveWorktreeCreation } from './worktree-creation-attempt'
 import { withWorktreeCreationCancellation } from './worktree-creation-cancellation'
 import { WORKTREE_INSTANCE_REPLACED_ERROR } from '@/store/slices/worktree-removal-options'
 
-const state = vi.hoisted(() => ({
-  pendingWorktreeCreations: {} as Record<string, unknown>,
-  removeWorktree: vi.fn()
-}))
+const state = vi.hoisted(
+  (): { pendingWorktreeCreations: Record<string, unknown>; removeWorktree: Mock } => ({
+    pendingWorktreeCreations: {},
+    removeWorktree: vi.fn()
+  })
+)
 vi.mock('@/store', () => ({ useAppStore: { getState: () => state } }))
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), warning: vi.fn() } }))
 

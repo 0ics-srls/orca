@@ -41,7 +41,7 @@ describe('removeWorktree state cleanup', () => {
       repoId: 'repo1',
       instanceId: 'new-instance'
     })
-    store.setState({ worktreesByRepo: { repo1: [replacement] } } as Partial<AppState>)
+    store.setState({ worktreesByRepo: { repo1: [replacement] } })
     const result = await store
       .getState()
       .removeWorktree({ id: replacement.id, executionHostId: 'local' }, true, {
@@ -60,7 +60,7 @@ describe('removeWorktree state cleanup', () => {
 
   it('does not read an absent row as a replacement during cancellation cleanup', async () => {
     const store = createTestStore()
-    store.setState({ worktreesByRepo: { repo1: [] } } as Partial<AppState>)
+    store.setState({ worktreesByRepo: { repo1: [] } })
     const result = await store
       .getState()
       .removeWorktree({ id: 'repo1::/path/gone', executionHostId: 'local' }, true, {

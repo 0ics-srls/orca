@@ -30,6 +30,20 @@ function create(store: ReturnType<typeof createTestStore>, options: CreateWorktr
   return store.getState().createWorktree(...args)
 }
 
+type TestRepo = AppState['repos'][number]
+
+function makeRepo(executionHostId: TestRepo['executionHostId'], connectionId: string): TestRepo {
+  return {
+    id: 'repo1',
+    displayName: 'repo',
+    badgeColor: '',
+    addedAt: 1,
+    path: '/repo',
+    executionHostId,
+    connectionId
+  }
+}
+
 describe('createWorktree cancellation boundaries', () => {
   it('does not dispatch an already cancelled request', async () => {
     const store = createTestStore()
@@ -50,35 +64,11 @@ describe('createWorktree cancellation boundaries', () => {
 
   it('captures the creation host before focus changes and keeps callbacks off the wire', async () => {
     const store = createTestStore()
-    store.setState({
-      repos: [
-        {
-          id: 'repo1',
-          displayName: 'repo',
-          badgeColor: '',
-          addedAt: 1,
-          path: '/repo',
-          executionHostId: 'ssh:original',
-          connectionId: 'original'
-        }
-      ]
-    } as Partial<AppState>)
+    store.setState({ repos: [makeRepo('ssh:original', 'original')] })
     const worktree = makeWorktree({ id: 'repo1::/repo/feature', repoId: 'repo1' })
     const onCreated = vi.fn()
     mockApi.worktrees.create.mockImplementationOnce(async () => {
-      store.setState({
-        repos: [
-          {
-            id: 'repo1',
-            displayName: 'repo',
-            badgeColor: '',
-            addedAt: 1,
-            path: '/repo',
-            executionHostId: 'ssh:other',
-            connectionId: 'other'
-          }
-        ]
-      } as Partial<AppState>)
+      store.setState({ repos: [makeRepo('ssh:other', 'other')] })
       return { worktree }
     })
     await create(store, { isCancelled: () => false, onCreated })
