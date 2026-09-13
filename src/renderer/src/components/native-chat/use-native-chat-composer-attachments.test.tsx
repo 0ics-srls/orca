@@ -207,7 +207,9 @@ describe('useNativeChatComposerAttachments', () => {
     act(() => probe.root.unmount())
   })
 
-  it('rejects a mixed queued batch after the target becomes remote', async () => {
+  // Ownership is per path: the target-owned drop still lands, the client-local
+  // paste is refused, and the refusal is reported rather than hidden.
+  it('keeps the owned half of a mixed queued batch after the target becomes remote', async () => {
     let composing = true
     const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
 
@@ -217,6 +219,20 @@ describe('useNativeChatComposerAttachments', () => {
       })
       probe.latest().attachResolvedPaths(['/local/untrusted.txt'])
     })
+    runtimeTarget.remote = true
+    composing = false
+    act(() => probe.latest().flushPendingAttachments())
+
+    expect(probe.draft()).toBe('@/remote/trusted.txt ')
+    expect(probe.notice()).toBe('Local attachments are not available for remote sessions.')
+    act(() => probe.root.unmount())
+  })
+
+  it('refuses a wholly client-local queued batch on a remote target', async () => {
+    let composing = true
+    const probe = await renderProbe('pty-1', false, { isComposing: () => composing })
+
+    act(() => probe.latest().attachResolvedPaths(['/local/untrusted.txt']))
     runtimeTarget.remote = true
     composing = false
     act(() => probe.latest().flushPendingAttachments())

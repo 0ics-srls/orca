@@ -80,28 +80,41 @@ export function useNativeChatResolvedPathAttachments({
 
   const applyResolvedPaths = useCallback(
     (resolvedPaths: ResolvedAttachmentPath[], focus: boolean, preserveNotice = false) => {
-      const targetOwnership = resolvedPaths.map(({ targetOwnerIsCurrent }) =>
-        targetOwnerIsCurrent ? targetOwnerIsCurrent() : null
-      )
-      if (targetOwnership.some((isCurrent) => isCurrent === false)) {
+      if (resolvedPaths.length === 0) {
+        return
+      }
+      if (resolvedPaths.some(({ targetOwnerIsCurrent }) => targetOwnerIsCurrent?.() === false)) {
         setNotice(nativeChatWorkspaceAttachmentMismatchNotice())
         return
       }
-      if (attachmentTargetBlocked(targetOwnership.every((isCurrent) => isCurrent === true))) {
+      // Ownership is per path, so the verdict is too: a queued batch can mix a
+      // workspace drop the target owns with a client-local paste it does not,
+      // and one verdict for the batch would refuse the drop the user can make.
+      const owned = resolvedPaths.filter(({ targetOwnerIsCurrent }) => targetOwnerIsCurrent)
+      const clientLocal = resolvedPaths.filter(({ targetOwnerIsCurrent }) => !targetOwnerIsCurrent)
+      const ownedBlocked = owned.length > 0 && attachmentTargetBlocked(true)
+      const clientLocalBlocked = clientLocal.length > 0 && attachmentTargetBlocked(false)
+      const attachable = [
+        ...(ownedBlocked ? [] : owned),
+        ...(clientLocalBlocked ? [] : clientLocal)
+      ]
+      if (attachable.length === 0) {
         noteAttachmentTargetBlocked()
         return
       }
-      const imagePaths = resolvedPaths.filter(({ path }) => isNativeChatImageAttachmentPath(path))
-      const filePaths = resolvedPaths
+      const imagePaths = attachable.filter(({ path }) => isNativeChatImageAttachmentPath(path))
+      const filePaths = attachable
         .filter(({ path }) => !isNativeChatImageAttachmentPath(path))
         .map(({ path }) => path)
       // Images ride along on submit so chips and the TUI input cannot diverge.
       appendImageAttachments(imagePaths.map(({ path, connectionId }) => ({ path, connectionId })))
       insertFileReferences(filePaths)
-      if (!preserveNotice) {
+      if (ownedBlocked || clientLocalBlocked) {
+        noteAttachmentTargetBlocked()
+      } else if (!preserveNotice) {
         setNotice(null)
       }
-      if (focus && resolvedPaths.length > 0) {
+      if (focus) {
         requestAnimationFrame(() => textareaRef.current?.focus())
       }
     },
