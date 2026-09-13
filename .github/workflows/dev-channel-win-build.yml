@@ -219,13 +219,15 @@ jobs:
       # Why retried: pnpm install triggers electron's postinstall, which pulls the
       # Electron binary from GitHub release assets, and that CDN returns transient
       # 504s often enough to lose a build to it.
+      # Why host-only: this job packages only for its own runner OS and
+      # architecture, so the default host-scoped install is deliberate.
       - name: Install dependencies
         uses: nick-fields/retry@v4
         with:
           timeout_minutes: 10
           max_attempts: 3
           retry_wait_seconds: 30
-          command: pnpm install --frozen-lockfile --os=current,darwin,linux,win32 --cpu=current,x64,arm64
+          command: pnpm install --frozen-lockfile
 
       # Why the packaging check runs before the 20-minute build: it only needs
       # node_modules, and a stale config should cost seconds rather than a build.

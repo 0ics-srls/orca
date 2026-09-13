@@ -7,6 +7,7 @@ const {
   verifyPackagedDaemonEntryBoots
 } = require('./scripts/verify-packaged-daemon-entry.cjs')
 const {
+  assertPackagedNativeVariantsInstalled,
   createPackagedRuntimeNodeModuleResources,
   prunePackagedRuntimeNodeModules,
   verifyPackagedMainRuntimeDeps
@@ -147,7 +148,8 @@ const rpmElectronRuntimeDependencies = [
 // config/nsis/orca-installer-hooks.nsh, which registers the same set on Windows.
 const MARKDOWN_FILE_EXTENSIONS = ['md', 'markdown', 'mdx']
 
-// Loading the config for a host-only install must not resolve unused Windows addons.
+// Why: the config must load on a host-only install without resolving unused Windows addons.
+// This is load-time tolerance only; beforePack enforces that the target's natives are installed.
 const windowsRuntimeResources = ['@vscode/windows-process-tree', 'windows-native-registry'].every(
   (name) => existsSync(join(__dirname, '..', 'node_modules', name, 'package.json'))
 )
@@ -286,11 +288,7 @@ module.exports = {
     }
   },
   beforePack: (context) => {
-    if (context.electronPlatformName === 'win32' && windowsRuntimeResources.length === 0) {
-      throw new Error(
-        'Windows packaging dependencies are missing. Run pnpm install:release --frozen-lockfile.'
-      )
-    }
+    assertPackagedNativeVariantsInstalled(context.electronPlatformName, context.arch)
   },
   afterPack: async (context) => {
     const resourcesDir =
@@ -333,9 +331,9 @@ module.exports = {
     // Why: a Linux runner-image glibc bump silently shipped a node-pty pty.node
     // requiring GLIBC_2.34, crashing the app on startup on Ubuntu 20.04 (#9902).
     // Fail packaging if any bundled native binary exceeds the supported floor.
-    // Why after the prune: cross-builds intentionally install every optional
-    // native variant, so an arm64 slice still carries the x64 @parcel/watcher
-    // until prunePackagedRuntimeNodeModules drops it.
+    // Why after the prune: `pnpm install:release` widens the CPU set for cross-builds,
+    // so an arm64 slice can still carry the x64 @parcel/watcher until
+    // prunePackagedRuntimeNodeModules drops it.
     if (context.electronPlatformName === 'linux') {
       // Why the arch is passed: symbol-version checks pass happily on a wrong-architecture binary,
       // so a cross-built slice could ship the host's pty.node and only fail at runtime.

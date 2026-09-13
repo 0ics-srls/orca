@@ -68,13 +68,15 @@ jobs:
           restore-keys: |
             electron-builder-win-
 
+      # Why host-only: this job packages only for its own runner OS and
+      # architecture, so the default host-scoped install is deliberate.
       - name: Install dependencies
         uses: nick-fields/retry@v4
         with:
           timeout_minutes: 10
           max_attempts: 3
           retry_wait_seconds: 30
-          command: pnpm install --frozen-lockfile --os=current,darwin,linux,win32 --cpu=current,x64,arm64
+          command: pnpm install --frozen-lockfile
 
       # Why: rehearsal builds are never published, so the official-build
       # secrets (telemetry key, diagnostics URL) are intentionally omitted.

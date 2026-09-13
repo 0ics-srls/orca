@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { cp, mkdir, mkdtemp, readFile, readdir, rm, stat, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
@@ -20,6 +20,12 @@ const {
   prunePackagedZodSources,
   verifyPackagedMainRuntimeDeps
 } = require('../packaged-runtime-node-modules.cjs')
+
+// Why not process.platform: the win32 plan resolves wherever its node-gyp addons are
+// installed, which a cross-architecture release install can also produce off Windows.
+const windowsAddonsInstalled = ['@vscode/windows-process-tree', 'windows-native-registry'].every(
+  (name) => existsSync(join(projectRoot, 'node_modules', name, 'package.json'))
+)
 
 describe('packaged runtime resources', () => {
   it('verifies packaged main runtime deps from Windows-style asar entries', async () => {
@@ -264,7 +270,7 @@ describe('packaged runtime resources', () => {
   })
 
   it('includes the Claude agent SDK in every desktop package plan', () => {
-    for (const platform of process.platform === 'win32'
+    for (const platform of windowsAddonsInstalled
       ? ['darwin', 'linux', 'win32']
       : ['darwin', 'linux']) {
       const packagedTargets = createPackagedRuntimeNodeModuleResources(platform).map(
@@ -567,7 +573,7 @@ describe('lazily required packages reach Resources/node_modules', () => {
         destinations[platform].has(`node_modules/${packageName}`) ||
         destinations[platform].has(`node_modules/${specifier}`)
       // The Windows CI lane checks the full closure with its native addons installed.
-      if (process.platform === 'win32') {
+      if (windowsAddonsInstalled) {
         expect(
           covered('win'),
           `${source} lazily requires '${specifier}', but nothing copies it to Resources/node_modules`
