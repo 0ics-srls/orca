@@ -74,12 +74,27 @@ the cursor. `truncated` is the OR (and, for `snippets`, the sum) across legs.
 merge has no single query route.
 
 The merged cursor is an opaque base64url JSON map from execution host ID to that
-host's own cursor, holding only the hosts that reported `hasMore`. A follow-up
-request carrying it fans out to exactly those hosts, each with its own cursor;
-`page.hasMore` is true if any leg reported more. A cursor that names a host which
-has since gone away reports that host as `unreachable`. Because each leg resumes
-where its own previous page ended, hits that lost the recency cut on an earlier
-page do not reappear on a later one; a caller that needs them raises `limit`.
+host's resume point, `{ c, e }`. `c` is the host cursor that produced the page
+being consumed, null for that host's first page, and `e` is how many of that
+page's hits the merge has already emitted. A follow-up request refetches each
+listed host with `c`, skips `e`, and keeps merging, so a hit that lost the
+recency cut on one page is emitted on a later one rather than dropped. Every leg
+is asked for the merged `limit`. When a leg's current page runs out and it
+reported `hasMore`, the same request reads its next page, up to three pages per
+host per request. Hosts that are fully drained leave the map; `page.hasMore` is
+true while any entry remains.
+
+Refetching with `c` relies on host cursors being deterministic within a
+generation. A host whose generation moved refuses its cursor, which appears as
+`stale-cursor` for that leg and removes it from the map, since a refused cursor
+stays refused. A first page carries no cursor, so a resumed first page is fenced
+only by the host's own generation checks.
+
+A leg that fails mid-walk is reported `unreachable` and keeps its entry, so a
+later request can retry it instead of losing the hits it still owes; that
+includes a cursor naming a host that has since gone away. A leg that fails on the
+very first page of a fresh query is reported and not carried, because the caller
+can see the failure and re-issue.
 
 An `all` results response carries `hosts`, one entry per leg:
 `{ executionHostId, outcome }` where outcome is `results`, `stale-cursor`,

@@ -14,6 +14,17 @@ export type SessionSearchHostLeg = {
   search: (request: AiVaultSearchRequest) => Promise<AiVaultSearchResponse>
 }
 
+/**
+ * `c` is the host cursor that produced the page currently being consumed, null
+ * for that host's first page; `e` is how many of that page's hits the merge has
+ * already emitted. Refetch with `c`, skip `e`, and no hit is ever skipped over.
+ */
+export type MergedSearchCursorEntry = { c: string | null; e: number }
+export type MergedSearchCursorMap = Record<string, MergedSearchCursorEntry>
+
+// One merged request reads at most this many pages from any single host.
+const MAX_HOST_PAGES_PER_REQUEST = 3
+
 // Never trust a host id the far side returned; this parent owns which host it addressed.
 export function withSearchExecutionHost(
   response: AiVaultSearchResponse,
@@ -24,11 +35,11 @@ export function withSearchExecutionHost(
     : response
 }
 
-export function encodeMergedSearchCursor(byHost: Readonly<Record<string, string>>): string {
-  return Buffer.from(JSON.stringify(byHost), 'utf8').toString('base64url')
+export function encodeMergedSearchCursor(map: Readonly<MergedSearchCursorMap>): string {
+  return Buffer.from(JSON.stringify(map), 'utf8').toString('base64url')
 }
 
-export function decodeMergedSearchCursor(cursor: string): Record<string, string> | null {
+export function decodeMergedSearchCursor(cursor: string): MergedSearchCursorMap | null {
   let parsed: unknown
   try {
     parsed = JSON.parse(Buffer.from(cursor, 'base64url').toString('utf8'))
@@ -39,14 +50,45 @@ export function decodeMergedSearchCursor(cursor: string): Record<string, string>
     return null
   }
   const entries = Object.entries(parsed)
-  return entries.every(([, value]) => typeof value === 'string')
-    ? (Object.fromEntries(entries) as Record<string, string>)
+  return entries.every(([, value]) => isMergedCursorEntry(value))
+    ? (Object.fromEntries(entries) as MergedSearchCursorMap)
     : null
+}
+
+function isMergedCursorEntry(value: unknown): boolean {
+  if (!value || typeof value !== 'object') {
+    return false
+  }
+  const entry = value as Partial<MergedSearchCursorEntry>
+  return (
+    (entry.c === null || typeof entry.c === 'string') &&
+    typeof entry.e === 'number' &&
+    Number.isInteger(entry.e) &&
+    entry.e >= 0
+  )
+}
+
+type HostWalk = {
+  executionHostId: ExecutionHostId
+  leg: SessionSearchHostLeg
+  baseRequest: AiVaultSearchRequest
+  outcome: AiVaultSearchHostOutcome['outcome']
+  cursor: string | null
+  emitted: number
+  pending: AiVaultSearchHit[]
+  nextCursor: string | null
+  pages: number
+  // This host still owes hits that this request could not read; keep its entry.
+  carry: boolean
+  generation: number
+  truncated: { candidates: boolean; snippets: number; query: boolean; freshness: boolean }
 }
 
 /**
  * Why: relevance scores come from independent indexes and are not comparable, so
- * the merge orders by recency only and asks every leg for that same order.
+ * the merge orders by recency only and asks every leg for that same order. Legs
+ * are walked page by page, so a hit that lost the cut on one page is emitted on
+ * the next instead of being dropped.
  */
 export async function searchAllExecutionHosts(
   request: AiVaultSearchRequest,
@@ -57,86 +99,178 @@ export async function searchAllExecutionHosts(
   if (request.cursor !== undefined && !resumed) {
     return { kind: 'malformed-cursor' }
   }
-  const legRequest: AiVaultSearchRequest = {
+  const baseRequest: AiVaultSearchRequest = {
     ...request,
     filters: { ...request.filters, sort: 'newest' }
   }
-  delete legRequest.cursor
-  const targeted = resumed
-    ? legs.filter((leg) => resumed[leg.executionHostId] !== undefined)
-    : [...legs]
-  const settled = await Promise.all(
-    targeted.map(async (leg) => {
-      const hostCursor = resumed?.[leg.executionHostId]
-      const hostRequest =
-        hostCursor === undefined ? legRequest : { ...legRequest, cursor: hostCursor }
-      try {
-        return { leg, response: await withLegTimeout(leg.search(hostRequest), leg.timeoutMs) }
-      } catch (error) {
-        console.error(`[ai-vault-search] ${leg.executionHostId} leg failed:`, error)
-        return { leg, response: null }
-      }
+  delete baseRequest.cursor
+  const walks = legs
+    .filter((leg) => !resumed || resumed[leg.executionHostId] !== undefined)
+    .map((leg) => newHostWalk(leg, baseRequest))
+  // A cursor can name a host that has since gone away; keep its place rather than lose its hits.
+  const carried = Object.entries(resumed ?? {}).filter(
+    ([executionHostId]) => !legs.some((leg) => leg.executionHostId === executionHostId)
+  )
+  await Promise.all(
+    walks.map((walk) => {
+      const entry = resumed?.[walk.executionHostId]
+      return fetchHostPage(walk, entry?.c ?? null, entry?.e ?? 0, resumed !== null)
     })
   )
-  return mergeHostSearchResults(settled, {
-    limit: resolveSessionSearchLimit(request.limit),
-    durationMs: Date.now() - startedAt,
-    // A cursor may name a host that has since disconnected; report it, don't fail the merge.
-    unreachable: resumed
-      ? Object.keys(resumed).filter((id) => !legs.some((leg) => leg.executionHostId === id))
-      : []
-  })
+  const hits = await drainMergedPage(walks, resolveSessionSearchLimit(request.limit))
+  return mergedSearchResponse(walks, carried, hits, Date.now() - startedAt)
 }
 
-type SettledHostLeg = { leg: SessionSearchHostLeg; response: AiVaultSearchResponse | null }
+function newHostWalk(leg: SessionSearchHostLeg, baseRequest: AiVaultSearchRequest): HostWalk {
+  return {
+    executionHostId: leg.executionHostId,
+    leg,
+    baseRequest,
+    outcome: 'results',
+    cursor: null,
+    emitted: 0,
+    pending: [],
+    nextCursor: null,
+    pages: 0,
+    carry: false,
+    generation: 0,
+    truncated: { candidates: false, snippets: 0, query: false, freshness: false }
+  }
+}
 
-function mergeHostSearchResults(
-  settled: readonly SettledHostLeg[],
-  merge: { limit: number; durationMs: number; unreachable: readonly string[] }
-): AiVaultSearchResponse {
+async function fetchHostPage(
+  walk: HostWalk,
+  cursor: string | null,
+  skip: number,
+  resumable: boolean
+): Promise<void> {
+  walk.cursor = cursor
+  walk.emitted = skip
+  walk.pages += 1
+  let response: AiVaultSearchResponse
+  try {
+    response = await withLegTimeout(
+      walk.leg.search(cursor === null ? walk.baseRequest : { ...walk.baseRequest, cursor }),
+      walk.leg.timeoutMs
+    )
+  } catch (error) {
+    console.error(`[ai-vault-search] ${walk.executionHostId} leg failed:`, error)
+    walk.outcome = 'unreachable'
+    walk.pending = []
+    walk.nextCursor = null
+    // Only a leg that was already mid-walk owes hits; a failed first page is just reported.
+    walk.carry = resumable
+    return
+  }
+  walk.outcome = response.kind
+  if (response.kind !== 'results') {
+    walk.pending = []
+    walk.nextCursor = null
+    // A refused cursor stays refused, so there is nothing to resume.
+    walk.carry = false
+    return
+  }
+  walk.pending = stampExecutionHost(response.hits, walk.executionHostId).slice(skip)
+  walk.nextCursor = response.page.hasMore ? response.page.cursor : null
+  walk.generation = response.generation
+  walk.carry = false
+  walk.truncated.candidates ||= response.truncated.candidates
+  walk.truncated.snippets += response.truncated.snippets
+  walk.truncated.query ||= response.truncated.query
+  walk.truncated.freshness ||= response.truncated.freshness
+}
+
+async function advanceHostWalk(walk: HostWalk): Promise<void> {
+  while (walk.pending.length === 0 && walk.nextCursor !== null) {
+    if (walk.pages >= MAX_HOST_PAGES_PER_REQUEST) {
+      // Budget spent; the unread page's cursor is already this walk's nextCursor.
+      walk.carry = true
+      return
+    }
+    await fetchHostPage(walk, walk.nextCursor, 0, true)
+  }
+}
+
+async function drainMergedPage(walks: HostWalk[], limit: number): Promise<AiVaultSearchHit[]> {
   const hits: AiVaultSearchHit[] = []
-  const hosts: AiVaultSearchHostOutcome[] = []
-  const nextCursors: Record<string, string> = {}
+  while (hits.length < limit) {
+    // Every head must be known before picking, so a lagging host is never skipped over.
+    for (const walk of walks) {
+      await advanceHostWalk(walk)
+    }
+    const next = mostRecentWalk(walks)
+    if (!next) {
+      return hits
+    }
+    hits.push(next.pending.shift()!)
+    next.emitted += 1
+  }
+  return hits
+}
+
+function mostRecentWalk(walks: readonly HostWalk[]): HostWalk | null {
+  let best: HostWalk | null = null
+  for (const walk of walks) {
+    const head = walk.pending[0]
+    if (head && (!best || byRecencyDescending(head, best.pending[0]!) < 0)) {
+      best = walk
+    }
+  }
+  return best
+}
+
+function mergedSearchResponse(
+  walks: readonly HostWalk[],
+  carried: readonly [string, MergedSearchCursorEntry][],
+  hits: AiVaultSearchHit[],
+  durationMs: number
+): AiVaultSearchResponse {
+  const hosts: AiVaultSearchHostOutcome[] = walks.map((walk) => ({
+    executionHostId: walk.executionHostId,
+    outcome: walk.outcome
+  }))
+  const nextMap: MergedSearchCursorMap = {}
   const truncated = { candidates: false, snippets: 0, query: false, freshness: false }
   let generation = 0
-  let hasMore = false
-  for (const { leg, response } of settled) {
-    const executionHostId = leg.executionHostId
-    if (!response) {
-      hosts.push({ executionHostId, outcome: 'unreachable' })
-      continue
+  for (const walk of walks) {
+    const entry = nextCursorEntry(walk)
+    if (entry) {
+      nextMap[walk.executionHostId] = entry
     }
-    hosts.push({ executionHostId, outcome: response.kind })
-    if (response.kind !== 'results') {
-      continue
-    }
-    hits.push(...stampExecutionHost(response.hits, executionHostId))
-    hasMore ||= response.page.hasMore
-    if (response.page.hasMore && response.page.cursor !== null) {
-      nextCursors[executionHostId] = response.page.cursor
-    }
-    truncated.candidates ||= response.truncated.candidates
-    truncated.snippets += response.truncated.snippets
-    truncated.query ||= response.truncated.query
-    truncated.freshness ||= response.truncated.freshness
-    if (executionHostId === LOCAL_EXECUTION_HOST_ID) {
-      generation = response.generation
+    truncated.candidates ||= walk.truncated.candidates
+    truncated.snippets += walk.truncated.snippets
+    truncated.query ||= walk.truncated.query
+    truncated.freshness ||= walk.truncated.freshness
+    if (walk.executionHostId === LOCAL_EXECUTION_HOST_ID) {
+      generation = walk.generation
     }
   }
-  for (const executionHostId of merge.unreachable) {
+  for (const [executionHostId, entry] of carried) {
     hosts.push({ executionHostId, outcome: 'unreachable' })
+    nextMap[executionHostId] = entry
   }
-  const hasNextCursors = Object.keys(nextCursors).length > 0
+  const hasMore = Object.keys(nextMap).length > 0
   return {
     kind: 'results',
-    hits: hits.sort(byRecencyDescending).slice(0, merge.limit),
-    page: { cursor: hasNextCursors ? encodeMergedSearchCursor(nextCursors) : null, hasMore },
+    hits,
+    page: { cursor: hasMore ? encodeMergedSearchCursor(nextMap) : null, hasMore },
     // Per-host generations live inside the cursor; the merged fence is the local host's.
     generation,
     truncated,
-    durationMs: merge.durationMs,
+    durationMs,
     hosts
   }
+}
+
+// Resume where this request stopped: mid-page by skip count, else the unread page.
+function nextCursorEntry(walk: HostWalk): MergedSearchCursorEntry | null {
+  if (walk.pending.length > 0) {
+    return { c: walk.cursor, e: walk.emitted }
+  }
+  if (walk.nextCursor !== null) {
+    return { c: walk.nextCursor, e: 0 }
+  }
+  return walk.carry ? { c: walk.cursor, e: walk.emitted } : null
 }
 
 function stampExecutionHost(

@@ -172,6 +172,28 @@ describe('desktop IPC and preload search boundary', () => {
   })
 })
 
+// Serves `pages` in order; page N+1 is addressed by the cursor page N handed back.
+function pagedHost(key: string, pages: (string | null)[][]) {
+  return (cursor: string | undefined): AiVaultSearchResponse => {
+    const index = cursor === undefined ? 0 : Number(cursor.slice(`${key}-p`.length))
+    const hasMore = index + 1 < pages.length
+    return {
+      ...searchResults(),
+      hits: (pages[index] ?? []).map((updatedAt) => ({ ...searchHit(), updatedAt })),
+      page: { cursor: hasMore ? `${key}-p${index + 1}` : null, hasMore }
+    }
+  }
+}
+
+function pagedService(responder: (cursor: string | undefined) => AiVaultSearchResponse) {
+  return { ...fakeSearchService(), search: vi.fn(async (request) => responder(request.cursor)) }
+}
+
+function mergedCursorOf(response: AiVaultSearchResponse) {
+  const cursor = response.kind === 'results' ? response.page.cursor : null
+  return cursor === null ? null : decodeMergedSearchCursor(cursor)
+}
+
 describe('all-hosts search fan-out', () => {
   beforeEach(() => {
     sshHostInfos.mockReturnValue([{ targetId: 'ssh-host' }])
@@ -199,8 +221,7 @@ describe('all-hosts search fan-out', () => {
     ])
     expect(result.generation).toBe(7)
     expect(result.page).toEqual({ cursor: null, hasMore: false })
-    const localHit = result.hits.find((hit) => hit.executionHostId === 'local')
-    expect(localHit?.source).toEqual({
+    expect(result.hits.find((hit) => hit.executionHostId === 'local')?.source).toEqual({
       presence: 'present',
       filePath: '/host/transcript.jsonl',
       codexHome: '/host/codex'
@@ -227,45 +248,104 @@ describe('all-hosts search fan-out', () => {
       filters: { sort: 'newest' }
     })
   })
-  it('round-trips a per-host cursor map and re-asks only the hosts with more', async () => {
-    setSessionSearchService(
-      serviceReturning(
-        resultsAt('2026-01-02T00:00:00.000Z', { cursor: 'local-page-2', hasMore: true })
+
+  describe('a lagging host whose page-1 hits all lose the first cut', () => {
+    let local: ReturnType<typeof pagedService>
+
+    beforeEach(() => {
+      runtimeHostInfos.mockReturnValue([])
+      // Every hit host A holds is older than both of host B's first-page hits.
+      local = pagedService(
+        pagedHost('local', [['2026-01-02T00:00:00.000Z', '2026-01-01T00:00:00.000Z']])
       )
-    )
-    sshSearch.mockResolvedValue(resultsAt('2026-01-03T00:00:00.000Z'))
-    runtimeSearch.mockResolvedValue(
-      resultsAt('2026-01-01T00:00:00.000Z', { cursor: 'runtime-page-2', hasMore: true })
-    )
-    const first = await aiVaultApi.searchSessions({ query: 'needle' }, 'all')
-    const cursor = first.kind === 'results' ? first.page.cursor : null
-    expect(first.kind === 'results' && first.page.hasMore).toBe(true)
-    expect(decodeMergedSearchCursor(cursor!)).toEqual({
-      local: 'local-page-2',
-      'runtime:env-1': 'runtime-page-2'
+      setSessionSearchService(local)
+      const ssh = pagedHost('ssh', [
+        ['2026-01-05T00:00:00.000Z', '2026-01-04T00:00:00.000Z'],
+        ['2026-01-03T00:00:00.000Z']
+      ])
+      sshSearch.mockImplementation(async (_target, _method, params) => ssh(params.cursor))
     })
 
-    sshSearch.mockClear()
-    runtimeSearch.mockClear()
-    const second = await aiVaultApi.searchSessions({ query: 'needle', cursor: cursor! }, 'all')
-    expect(sshSearch).not.toHaveBeenCalled()
-    expect(runtimeSearch).toHaveBeenCalledWith(
-      'env-1',
-      'aiVault.searchSessions',
-      { query: 'needle', limit: 20, cursor: 'runtime-page-2', filters: { sort: 'newest' } },
-      10_000
-    )
-    expect(second.kind === 'results' && second.hosts).toEqual([
-      { executionHostId: 'local', outcome: 'results' },
-      { executionHostId: 'runtime:env-1', outcome: 'results' }
-    ])
+    it('surfaces every hit exactly once across pages, in global recency order', async () => {
+      const seen: (string | null)[] = []
+      let cursor: string | undefined
+      for (let page = 0; page < 4; page += 1) {
+        const result = await aiVaultApi.searchSessions({ query: 'needle', limit: 2, cursor }, 'all')
+        seen.push(...updatedAtOf(result))
+        cursor = result.kind === 'results' ? (result.page.cursor ?? undefined) : undefined
+        if (!cursor) {
+          break
+        }
+      }
+      expect(cursor).toBeUndefined()
+      expect(seen).toEqual([
+        '2026-01-05T00:00:00.000Z',
+        '2026-01-04T00:00:00.000Z',
+        '2026-01-03T00:00:00.000Z',
+        '2026-01-02T00:00:00.000Z',
+        '2026-01-01T00:00:00.000Z'
+      ])
+    })
+    it('records the unread page for one host and a mid-page skip for the other', async () => {
+      const first = await aiVaultApi.searchSessions({ query: 'needle', limit: 2 }, 'all')
+      expect(updatedAtOf(first)).toEqual(['2026-01-05T00:00:00.000Z', '2026-01-04T00:00:00.000Z'])
+      // Host A emitted nothing yet, so it resumes at its first page with no skip.
+      expect(mergedCursorOf(first)).toEqual({
+        local: { c: null, e: 0 },
+        'ssh:ssh-host': { c: 'ssh-p1', e: 0 }
+      })
+
+      const cursor = first.kind === 'results' ? first.page.cursor! : ''
+      const second = await aiVaultApi.searchSessions({ query: 'needle', limit: 2, cursor }, 'all')
+      expect(updatedAtOf(second)).toEqual(['2026-01-03T00:00:00.000Z', '2026-01-02T00:00:00.000Z'])
+      expect(mergedCursorOf(second)).toEqual({ local: { c: null, e: 1 } })
+      expect(local.search).toHaveBeenLastCalledWith(
+        expect.objectContaining({ query: 'needle', limit: 2 })
+      )
+      expect(sshSearch).toHaveBeenLastCalledWith(
+        'ssh-host',
+        'aiVault.searchSessions',
+        expect.objectContaining({ cursor: 'ssh-p1' })
+      )
+    })
+    it('reports a leg that goes stale mid-walk without losing the other host', async () => {
+      const first = await aiVaultApi.searchSessions({ query: 'needle', limit: 2 }, 'all')
+      sshSearch.mockResolvedValue({ kind: 'stale-cursor', generation: 9 })
+      const cursor = first.kind === 'results' ? first.page.cursor! : ''
+      const second = await aiVaultApi.searchSessions({ query: 'needle', limit: 2, cursor }, 'all')
+      expect(second.kind === 'results' && second.hosts).toEqual([
+        { executionHostId: 'local', outcome: 'results' },
+        { executionHostId: 'ssh:ssh-host', outcome: 'stale-cursor' }
+      ])
+      expect(updatedAtOf(second)).toEqual(['2026-01-02T00:00:00.000Z', '2026-01-01T00:00:00.000Z'])
+      // A refused cursor stays refused, so only the healthy host is left to resume.
+      expect(mergedCursorOf(second)).toBeNull()
+    })
   })
-  it('reports a cursor for a host that has gone away without failing the merge', async () => {
+
+  it('bounds the pages one host contributes to a single merged request', async () => {
+    sshHostInfos.mockReturnValue([])
+    runtimeHostInfos.mockReturnValue([])
+    const local = pagedService(
+      pagedHost('local', [
+        ['2026-01-05T00:00:00.000Z'],
+        ['2026-01-04T00:00:00.000Z'],
+        ['2026-01-03T00:00:00.000Z'],
+        ['2026-01-02T00:00:00.000Z']
+      ])
+    )
+    setSessionSearchService(local)
+    const result = await aiVaultApi.searchSessions({ query: 'needle', limit: 20 }, 'all')
+    expect(local.search).toHaveBeenCalledTimes(3)
+    expect(updatedAtOf(result)).toHaveLength(3)
+    expect(mergedCursorOf(result)).toEqual({ local: { c: 'local-p3', e: 0 } })
+  })
+  it('keeps a cursor for a host that has gone away rather than dropping its hits', async () => {
     sshHostInfos.mockReturnValue([])
     runtimeHostInfos.mockReturnValue([])
     setSessionSearchService(serviceReturning(resultsAt('2026-01-02T00:00:00.000Z')))
     const cursor = Buffer.from(
-      JSON.stringify({ local: 'local-page-2', 'ssh:gone': 'gone-page-2' }),
+      JSON.stringify({ local: { c: null, e: 0 }, 'ssh:gone': { c: 'gone-p1', e: 2 } }),
       'utf8'
     ).toString('base64url')
     const result = await aiVaultApi.searchSessions({ query: 'needle', cursor }, 'all')
@@ -274,24 +354,32 @@ describe('all-hosts search fan-out', () => {
       { executionHostId: 'ssh:gone', outcome: 'unreachable' }
     ])
     expect(updatedAtOf(result)).toEqual(['2026-01-02T00:00:00.000Z'])
+    expect(mergedCursorOf(result)).toEqual({ 'ssh:gone': { c: 'gone-p1', e: 2 } })
   })
-  it('reports a stale, unavailable or unreachable leg without failing the merge', async () => {
+  it('reports an unreachable first page without carrying it forward', async () => {
     setSessionSearchService(serviceReturning(resultsAt('2026-01-02T00:00:00.000Z')))
-    sshSearch.mockResolvedValue({ kind: 'stale-cursor', generation: 3 })
+    sshSearch.mockRejectedValue(new Error('SSH relay is not ready'))
     runtimeSearch.mockRejectedValue(new Error('runtime disconnected'))
     const result = await aiVaultApi.searchSessions({ query: 'needle' }, 'all')
     expect(result.kind === 'results' && result.hosts).toEqual([
       { executionHostId: 'local', outcome: 'results' },
-      { executionHostId: 'ssh:ssh-host', outcome: 'stale-cursor' },
+      { executionHostId: 'ssh:ssh-host', outcome: 'unreachable' },
       { executionHostId: 'runtime:env-1', outcome: 'unreachable' }
     ])
     expect(updatedAtOf(result)).toEqual(['2026-01-02T00:00:00.000Z'])
+    expect(mergedCursorOf(result)).toBeNull()
   })
   it('refuses a merged cursor it did not mint', async () => {
     setSessionSearchService(serviceReturning(resultsAt(null)))
     expect(
       await aiVaultApi.searchSessions({ query: 'needle', cursor: 'not-a-map' }, 'all')
     ).toEqual({ kind: 'malformed-cursor' })
+    const legacy = Buffer.from(JSON.stringify({ local: 'plain-cursor' }), 'utf8').toString(
+      'base64url'
+    )
+    expect(await aiVaultApi.searchSessions({ query: 'needle', cursor: legacy }, 'all')).toEqual({
+      kind: 'malformed-cursor'
+    })
     expect(sshSearch).not.toHaveBeenCalled()
   })
 })
