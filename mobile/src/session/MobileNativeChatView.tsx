@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import {
   ActivityIndicator,
   FlatList,
@@ -25,6 +25,7 @@ import {
   type MobileNativeChatPendingItem
 } from './mobile-native-chat-render-data'
 import { useMobileNativeChatPinchGesture } from './use-mobile-native-chat-pinch-gesture'
+import { useMobileNativeChatTailFollow } from './use-mobile-native-chat-tail-follow'
 import { useMobileNativeChatTurnDisclosure } from './use-mobile-native-chat-turn-disclosure'
 import { useSettledMobileNativeChatInputLock } from './use-mobile-native-chat-input-lease'
 import { MobileNativeChatTurnStatus } from './MobileNativeChatTurnStatus'
@@ -185,14 +186,10 @@ export function MobileNativeChatView({
   keyboardInset = 0
 }: Props): React.JSX.Element {
   const insets = useSafeAreaInsets()
-  const listRef = useRef<FlatList<NativeChatMessage>>(null)
   const [toolsExpanded, setToolsExpanded] = useState(false)
   // Lift the composer clear of the keyboard, plus the bottom safe-area so it
   // never sits under the home indicator / nav bar (mirrors the terminal dock).
   const bottomPad = keyboardInset > 0 ? keyboardInset + insets.bottom : insets.bottom
-  const [followingTail, setFollowingTail] = useState(true)
-  const atBottomRef = useRef(true)
-  const followingTailRef = useRef(true)
   const { fontScale, pinchGesture } = useMobileNativeChatPinchGesture()
 
   // `data` is the list source: folded transcript + synthetic streaming bubble +
@@ -209,22 +206,16 @@ export function MobileNativeChatView({
       }),
     [messages, folded, streaming, pending, imagePreviewsByMessageId]
   )
-  const hasDataRef = useRef(false)
-  hasDataRef.current = data.length > 0
-
-  const pinToTail = useCallback(() => {
-    if (!followingTailRef.current || !hasDataRef.current) {
-      return
-    }
-    listRef.current?.scrollToEnd({ animated: false })
-  }, [])
-
-  const jumpToTail = useCallback(() => {
-    followingTailRef.current = true
-    atBottomRef.current = true
-    setFollowingTail(true)
-    pinToTail()
-  }, [pinToTail])
+  const {
+    listRef,
+    following: followingTail,
+    pinToTail,
+    jumpToTail,
+    beginUserScroll,
+    finishUserScroll,
+    detachFromTail,
+    recordScrollMetrics
+  } = useMobileNativeChatTailFollow<NativeChatMessage>({ hasItems: data.length > 0 })
 
   const handleSend = useCallback(
     async (text: string): Promise<boolean> => {
@@ -242,35 +233,21 @@ export function MobileNativeChatView({
     [onSend, onClearSendError, jumpToTail]
   )
 
-  const beginUserScroll = useCallback(() => {
-    followingTailRef.current = false
-    setFollowingTail(false)
-  }, [])
-
-  const finishUserScroll = useCallback(() => {
-    followingTailRef.current = atBottomRef.current
-    setFollowingTail(atBottomRef.current)
-  }, [])
-
   const loadEarlier = useCallback(() => {
-    followingTailRef.current = false
-    atBottomRef.current = false
-    setFollowingTail(false)
+    detachFromTail()
     onLoadEarlier?.()
-  }, [onLoadEarlier])
+  }, [detachFromTail, onLoadEarlier])
 
   const onScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent
-      const distanceFromBottom = contentSize.height - (contentOffset.y + layoutMeasurement.height)
-      const isAtBottom = distanceFromBottom < 80
-      atBottomRef.current = isAtBottom
+      recordScrollMetrics(contentSize.height - (contentOffset.y + layoutMeasurement.height))
       // Near the top — page in older history.
       if (contentOffset.y < 60 && hasMore && !loadingEarlier) {
         loadEarlier()
       }
     },
-    [hasMore, loadingEarlier, loadEarlier]
+    [hasMore, loadingEarlier, loadEarlier, recordScrollMetrics]
   )
 
   // Per-turn status rows: one live indicator while the turn runs, then a settled
