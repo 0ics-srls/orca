@@ -159,6 +159,38 @@ describe('parked terminal watcher sync entries', () => {
     expect([...lastSyncEntries().get(surfaceIds[1])!.parkedTabIds]).toEqual(['background-agent'])
   })
 
+  it.each(['paired capability', 'SSH parking setting'])(
+    'reconciles never-mounted remote tabs when %s changes',
+    async (input) => {
+      const overrides = {
+        pairedRuntimeParkingEnvironmentIds: new Set<string>(),
+        terminalSshParkingEnabled: false,
+        tabsByWorktree: { [surfaceIds[1]]: [{ id: 'remote-agent', ptyId: 'remote-pty' }] }
+      } as unknown as Partial<TerminalColdActivationController>
+      mocks.canCover.mockReturnValue(false)
+      await renderWatcherEffects(overrides)
+      expect(lastSyncEntries().get(surfaceIds[1])!.parkedTabIds.size).toBe(0)
+
+      mocks.canCover.mockReturnValue(true)
+      if (input === 'paired capability') {
+        overrides.pairedRuntimeParkingEnvironmentIds = new Set(['paired-host'])
+      } else {
+        overrides.terminalSshParkingEnabled = true
+      }
+      await rerenderWatcher()
+      expect([...lastSyncEntries().get(surfaceIds[1])!.parkedTabIds]).toEqual(['remote-agent'])
+
+      mocks.canCover.mockReturnValue(false)
+      if (input === 'paired capability') {
+        overrides.pairedRuntimeParkingEnvironmentIds = new Set()
+      } else {
+        overrides.terminalSshParkingEnabled = false
+      }
+      await rerenderWatcher()
+      expect(lastSyncEntries().get(surfaceIds[1])!.parkedTabIds.size).toBe(0)
+    }
+  )
+
   it('leaves activity-portal terminals with their existing consumer', async () => {
     await renderWatcherEffects({
       tabsByWorktree: { [surfaceIds[1]]: [{ id: 'portal-agent', ptyId: 'live-pty' }] },
