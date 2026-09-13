@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import { resolveSessionSearchLimit } from '../../shared/ai-vault-search-limit'
 import type {
   AiVaultSearchHit,
@@ -21,6 +22,11 @@ export type SessionSearchHostLeg = {
  */
 export type MergedSearchCursorEntry = { c: string | null; e: number }
 export type MergedSearchCursorMap = Record<string, MergedSearchCursorEntry>
+// Parsed with a schema so a legacy string-valued map is refused without a cast.
+const mergedCursorMapSchema = z.record(
+  z.string(),
+  z.object({ c: z.string().nullable(), e: z.number().int().nonnegative() })
+)
 
 // One merged request reads at most this many pages from any single host.
 const MAX_HOST_PAGES_PER_REQUEST = 3
@@ -46,26 +52,8 @@ export function decodeMergedSearchCursor(cursor: string): MergedSearchCursorMap 
   } catch {
     return null
   }
-  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
-    return null
-  }
-  const entries = Object.entries(parsed)
-  return entries.every(([, value]) => isMergedCursorEntry(value))
-    ? (Object.fromEntries(entries) as MergedSearchCursorMap)
-    : null
-}
-
-function isMergedCursorEntry(value: unknown): boolean {
-  if (!value || typeof value !== 'object') {
-    return false
-  }
-  const entry = value as Partial<MergedSearchCursorEntry>
-  return (
-    (entry.c === null || typeof entry.c === 'string') &&
-    typeof entry.e === 'number' &&
-    Number.isInteger(entry.e) &&
-    entry.e >= 0
-  )
+  const result = mergedCursorMapSchema.safeParse(parsed)
+  return result.success ? result.data : null
 }
 
 type HostWalk = {
