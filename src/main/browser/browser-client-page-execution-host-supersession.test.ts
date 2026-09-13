@@ -128,7 +128,7 @@ function createPageCommand(
       userAgentMode: 'clean',
       executionHostKey
     }
-  } as Partial<BrowserClientHostCommandEvent>)
+  })
 }
 
 function createPage(

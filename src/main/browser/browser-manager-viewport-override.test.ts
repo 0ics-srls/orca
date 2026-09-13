@@ -90,7 +90,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-mobile',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       webContentsFromIdMock.mockReset()
@@ -132,7 +132,7 @@ describe('browserManager', () => {
           browserPageId: `tab-native-${mobile}`,
           sessionProfileId: 'native-profile',
           userAgentMode: 'native',
-          webContentsId: guest.id as number,
+          webContentsId: guest.id,
           rendererWebContentsId
         })
 
@@ -154,13 +154,13 @@ describe('browserManager', () => {
 
     it('preserves native mode resolved from the local Session when registration omits the mode', async () => {
       const { guest, debuggerSendCommand } = makeGuest(4246)
-      setBrowserSessionUserAgentMode(guest.session as Electron.Session, 'native')
+      setBrowserSessionUserAgentMode(guest.session, 'native')
       webContentsFromIdMock.mockReturnValue(guest)
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-native-session-mode',
         sessionProfileId: 'native-profile',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
 
@@ -190,7 +190,7 @@ describe('browserManager', () => {
         browserManager.attachGuestPolicies(guest as never)
         browserManager.registerGuest({
           browserPageId: `tab-auth-${mobile}`,
-          webContentsId: guest.id as number,
+          webContentsId: guest.id,
           rendererWebContentsId
         })
 
@@ -213,7 +213,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-auth-nav',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -287,7 +287,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-race-onto-auth',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -319,7 +319,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-race-off-auth',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -373,7 +373,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-pending-cleared',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -440,7 +440,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-overlapping-navs',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -496,7 +496,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-auth-redirect',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -555,7 +555,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-clear-on-auth',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -641,7 +641,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-final-apply-race',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -671,7 +671,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-final-clear-race',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -717,7 +717,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-failed-clear',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -760,7 +760,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-no-preset',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -780,7 +780,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-cleared-preset',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -811,7 +811,7 @@ describe('browserManager', () => {
         browserPageId: 'tab-native-nav',
         sessionProfileId: 'native-profile',
         userAgentMode: 'native',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
       const didStartNavigation = guestOnMock.mock.calls.find(
@@ -839,7 +839,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-clear',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
 
@@ -863,7 +863,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-attach',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
 
@@ -893,7 +893,7 @@ describe('browserManager', () => {
       browserManager.attachGuestPolicies(guest as never)
       browserManager.registerGuest({
         browserPageId: 'tab-attach-throws',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         rendererWebContentsId
       })
 

@@ -82,6 +82,8 @@ describe('BrowserClientPageCommandExecutor', () => {
   it('rejects a page command from a host that omitted the negotiated user-agent contract', async () => {
     const { dependencies, executor } = createHarness()
     const command = createCommand('createPage', { userAgentContractVersion: undefined })
+    // Simulates a host that never sent the negotiated field, which the executor must reject.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: narrowing to the one optional member being deleted; every other member of the command union is left untouched.
     delete (command.command as { userAgentMode?: string }).userAgentMode
 
     await expect(executor.handle(command, new AbortController().signal)).resolves.toEqual({

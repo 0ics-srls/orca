@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
+import { asBrowserSessionDouble } from './browser-session-test-doubles'
 import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { buildViewportUserAgentOverride } from './browser-viewport-user-agent'
@@ -18,10 +19,13 @@ type RequestListener = (
   callback: (response: { requestHeaders: Record<string, string> }) => void
 ) => void
 
+// Typed so the listener comes back as a RequestListener instead of being asserted at each grab.
+const onBeforeSendHeadersMock = () => vi.fn<(filter: unknown, listener: RequestListener) => void>()
+
 function install(
   resolveRequestUserAgent?: Parameters<typeof installBrowserSessionUserAgentExceptions>[1]
 ) {
-  const onBeforeSendHeaders = vi.fn()
+  const onBeforeSendHeaders = onBeforeSendHeadersMock()
   const sess = {
     getUserAgent: vi.fn(
       () =>
@@ -29,8 +33,8 @@ function install(
     ),
     webRequest: { onBeforeSendHeaders }
   }
-  installBrowserSessionUserAgentExceptions(sess as never, resolveRequestUserAgent)
-  return onBeforeSendHeaders.mock.calls[0][1] as RequestListener
+  installBrowserSessionUserAgentExceptions(asBrowserSessionDouble(sess), resolveRequestUserAgent)
+  return onBeforeSendHeaders.mock.calls[0][1]
 }
 
 function runRequest(listener: RequestListener, details: RequestDetails): Record<string, string> {
@@ -41,11 +45,11 @@ function runRequest(listener: RequestListener, details: RequestDetails): Record<
 
 describe('browser session request identity', () => {
   it('returns an ordinary request with the exact header object and contents unchanged', () => {
-    const onBeforeSendHeaders = vi.fn()
+    const onBeforeSendHeaders = onBeforeSendHeadersMock()
     const sess = { webRequest: { onBeforeSendHeaders } }
     const resolver = vi.fn(() => undefined)
-    const dispose = installBrowserSessionUserAgentExceptions(sess as never, resolver)
-    const listener = onBeforeSendHeaders.mock.calls[0][1] as RequestListener
+    const dispose = installBrowserSessionUserAgentExceptions(asBrowserSessionDouble(sess), resolver)
+    const listener = onBeforeSendHeaders.mock.calls[0][1]
     const requestHeaders = {
       'User-Agent': 'arbitrary incoming identity',
       'sec-ch-ua': 'browser-owned',
@@ -86,14 +90,14 @@ describe('browser session request identity', () => {
   })
 
   it('keeps every native request untouched, including Google auth', () => {
-    const onBeforeSendHeaders = vi.fn()
+    const onBeforeSendHeaders = onBeforeSendHeadersMock()
     const sess = { webRequest: { onBeforeSendHeaders } }
-    setBrowserSessionUserAgentMode(sess as never, 'native')
+    setBrowserSessionUserAgentMode(asBrowserSessionDouble(sess), 'native')
     installBrowserSessionUserAgentExceptions(
-      sess as never,
+      asBrowserSessionDouble(sess),
       vi.fn(() => ({ userAgent: 'wrong' }))
     )
-    const listener = onBeforeSendHeaders.mock.calls[0][1] as RequestListener
+    const listener = onBeforeSendHeaders.mock.calls[0][1]
     const requestHeaders = {
       'User-Agent': 'Orca/1 Chrome/134 Electron/30',
       'sec-ch-ua': 'browser-owned'
@@ -161,7 +165,7 @@ describe('browser session request identity', () => {
         'sec-ch-ua': 'browser-owned',
         'sec-ch-ua-platform': '"macOS"'
       },
-      webContents: { getUserAgent: () => googleAuthUserAgent() } as never
+      webContents: { getUserAgent: () => googleAuthUserAgent() }
     })
     expect(headers['User-Agent']).toBe(googleAuthUserAgent())
     expect(headers['sec-ch-ua']).toBeUndefined()

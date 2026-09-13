@@ -32,6 +32,16 @@ export type BrowserSessionUaWireProbeServer = Readonly<{
   close: () => Promise<void>
 }>
 
+// A server listening on a TCP port always reports an AddressInfo; a string or null means the
+// listen never took effect, which is worth failing on loudly rather than building a bad origin.
+function boundPort(server: { address: () => AddressInfo | string | null }): number {
+  const address = server.address()
+  if (address === null || typeof address === 'string') {
+    throw new Error('wire_probe_server_not_listening_on_tcp')
+  }
+  return address.port
+}
+
 export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSessionUaWireProbeServer> {
   const receipts: WireProbeReceipt[] = []
   const identities: WireProbeJavaScriptIdentity[] = []
@@ -94,8 +104,8 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
   installWebSocketResponder(https, 'wss', receipts, upgradedSockets)
   await Promise.all([listen(http), listen(https)])
   origins = {
-    http: `http://127.0.0.1:${(http.address() as AddressInfo).port}`,
-    https: `https://127.0.0.1:${(https.address() as AddressInfo).port}`
+    http: `http://127.0.0.1:${boundPort(http)}`,
+    https: `https://127.0.0.1:${boundPort(https)}`
   }
   return {
     httpOrigin: origins.http,

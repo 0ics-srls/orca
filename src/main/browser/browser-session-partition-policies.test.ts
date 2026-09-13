@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BrowserSessionProfile } from '../../shared/browser-workspace-types'
+import { asBrowserSessionDouble } from './browser-session-test-doubles'
 
 const mocks = vi.hoisted(() => ({
   handleGuestWillDownload: vi.fn(),
@@ -248,8 +249,8 @@ describe('partition user-agent exception lifecycle', () => {
     const { clearBrowserSessionPartitionPolicies } =
       await import('./browser-session-partition-policies')
 
-    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', sess as never)
-    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', sess as never)
+    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', asBrowserSessionDouble(sess))
+    clearBrowserSessionPartitionPolicies('persist:browsing-ua-clear', asBrowserSessionDouble(sess))
 
     expect(mocks.disposeUserAgentExceptions).toHaveBeenCalledOnce()
   })

@@ -93,16 +93,16 @@ describe('browserManager', () => {
     browserManager.attachGuestPolicies(guest as never)
     browserManager.registerGuest({
       browserPageId: 'tab-request-identity',
-      webContentsId: guest.id as number,
+      webContentsId: guest.id,
       rendererWebContentsId
     })
 
     // Negative control: with no exception, the request hook must remain a pass-through.
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://example.com/logo.png',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         currentUserAgent: GUEST_CLEAN_UA,
         baseUserAgent: GUEST_ELECTRON_UA
       })
@@ -111,9 +111,9 @@ describe('browserManager', () => {
     await browserManager.setViewportOverride('tab-request-identity', MOBILE_VIEWPORT_OVERRIDE)
     await flushViewportOps()
     const mobile = browserManager.resolveBrowserGuestRequestUserAgent({
-      session: guest.session as Electron.Session,
+      session: guest.session,
       url: 'https://example.com/logo.png',
-      webContentsId: guest.id as number,
+      webContentsId: guest.id,
       currentUserAgent: GUEST_CLEAN_UA,
       baseUserAgent: GUEST_ELECTRON_UA
     })
@@ -127,7 +127,7 @@ describe('browserManager', () => {
 
     // A service-worker request has no webContentsId; the Session is its only surviving owner.
     const workerMobile = browserManager.resolveBrowserGuestRequestUserAgent({
-      session: guest.session as Electron.Session,
+      session: guest.session,
       url: 'https://example.com/worker-beacon',
       baseUserAgent: GUEST_ELECTRON_UA
     })
@@ -137,7 +137,7 @@ describe('browserManager', () => {
     // A numeric id proves this is a WebContents (for example, a popup), not an unattributed worker.
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://example.com/unregistered-popup',
         webContentsId: 999_999,
         baseUserAgent: GUEST_ELECTRON_UA
@@ -147,9 +147,9 @@ describe('browserManager', () => {
     // Negative control: auth-document fan-out remains Firefox even while mobile emulation is active.
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://www.gstatic.com/_/signin/log',
-        webContentsId: guest.id as number,
+        webContentsId: guest.id,
         currentUserAgent: GUEST_ELECTRON_UA,
         effectiveUserAgent: googleAuthUserAgent(),
         baseUserAgent: GUEST_ELECTRON_UA
@@ -159,7 +159,7 @@ describe('browserManager', () => {
     await browserManager.setViewportOverride('tab-request-identity', null)
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://example.com/worker-beacon',
         baseUserAgent: GUEST_ELECTRON_UA
       })
@@ -169,7 +169,7 @@ describe('browserManager', () => {
     browserManager.unregisterGuest('tab-request-identity')
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://example.com/worker-after-tab-close',
         baseUserAgent: GUEST_ELECTRON_UA
       })
@@ -180,7 +180,7 @@ describe('browserManager', () => {
     const { guest } = makeViewportGuest(4246)
     expect(
       browserManager.resolveBrowserGuestRequestUserAgent({
-        session: guest.session as Electron.Session,
+        session: guest.session,
         url: 'https://example.com/desktop-worker',
         baseUserAgent: GUEST_ELECTRON_UA
       })
@@ -362,6 +362,7 @@ describe('browserManager', () => {
     didStartNavigation(null, 'https://accounts.google.com/', false, true)
     await expect(sendCommand.mock.results.at(-1)?.value).resolves.toBeUndefined()
     expect(attach).toHaveBeenCalledOnce()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial WebContents double; acquireElectronDebugger reads only the `debugger` member wired above.
     const cookieDebuggerLease = acquireElectronDebugger(guest as never)
 
     didStartNavigation(null, 'https://example.com/', false, true)
@@ -709,7 +710,7 @@ describe('browserManager', () => {
     browserManager.attachGuestPolicies(guest as never)
     browserManager.registerGuest({
       browserPageId: 'tab-auth-then-preset',
-      webContentsId: guest.id as number,
+      webContentsId: guest.id,
       rendererWebContentsId
     })
     await browserManager.setViewportOverride('tab-auth-then-preset', {

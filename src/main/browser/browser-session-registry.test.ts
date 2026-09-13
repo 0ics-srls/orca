@@ -34,6 +34,7 @@ vi.mock('./browser-manager', () => ({
 import { browserSessionRegistry } from './browser-session-registry'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
 import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
+import { asBrowserSessionDouble } from './browser-session-test-doubles'
 import { setBrowserNetworkProxySettingsResolver } from './browser-session-proxy'
 import { handleElectronProxyLogin } from '../network/electron-proxy-credentials'
 import { applyProxySettingsToSession } from '../network/proxy-settings'
@@ -535,7 +536,7 @@ describe('BrowserSessionRegistry', () => {
     ): (details: unknown, callback: ReturnType<typeof vi.fn>) => void {
       const onBeforeSendHeaders = vi.fn()
       installBrowserSessionUserAgentExceptions(
-        { webRequest: { onBeforeSendHeaders } } as never,
+        asBrowserSessionDouble({ webRequest: { onBeforeSendHeaders } }),
         resolveRequestUserAgent
       )
       expect(onBeforeSendHeaders).toHaveBeenCalledWith(

@@ -40,6 +40,12 @@ const AUDITED_GLOBAL_FETCH_LINES = new Map<string, number>([
   // call this process makes
   ['main/amp/agent-status-plugin-source.ts', 1],
   ['main/browser/browser-route-h3-egress-electron-main.ts', 1],
+  // Electron-test helper: the CDP poll cancels its unread body, and the version probe
+  // consumes the body through response.json().
+  ['main/browser/browser-session-ua-cdp-collector.ts', 2],
+  // Every hit is inside an injected page/worker script source string, not a call this
+  // process makes.
+  ['main/browser/browser-session-ua-wire-probe-server.ts', 8],
   ['main/browser/browser-route-persisted-worker-fixture.ts', 3],
   ['main/browser/browser-route-tcp-egress-fixture.ts', 1],
   ['main/opencode/status-plugin-post-source.ts', 1],

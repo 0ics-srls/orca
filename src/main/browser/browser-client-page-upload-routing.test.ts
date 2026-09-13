@@ -24,7 +24,8 @@ afterEach(async () => {
 })
 
 function command(
-  overrides: Partial<BrowserClientHostCommandEvent> & { commandSequence: number; commandId: string }
+  overrides: Partial<BrowserClientHostCommandEvent> &
+    Pick<BrowserClientHostCommandEvent, 'command' | 'commandSequence' | 'commandId'>
 ): BrowserClientHostCommandEvent {
   return {
     type: 'command',
@@ -37,7 +38,7 @@ function command(
     browserPageId: 'page-a',
     pageHostGeneration: 7,
     ...overrides
-  } as BrowserClientHostCommandEvent
+  }
 }
 
 const createPage = command({
@@ -49,14 +50,14 @@ const createPage = command({
     userAgentMode: 'clean',
     executionHostKey: 'execution-a'
   }
-} as never)
+})
 
 function uploadCommand(files: string[], commandSequence = 2): BrowserClientHostCommandEvent {
   return command({
     commandSequence,
     commandId: `upload-${commandSequence}`,
     command: { type: 'automation', method: 'browser.upload', params: { element: '#f', files } }
-  } as never)
+  })
 }
 
 function closePageCommand(): BrowserClientHostCommandEvent {

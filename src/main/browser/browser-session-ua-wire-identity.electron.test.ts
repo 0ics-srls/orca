@@ -193,6 +193,7 @@ async function runProbe(arm: ProbeArm): Promise<ProbeResult> {
       `${fixtureResult}\n${processResult.stderr}\n${JSON.stringify({ diagnostics: collector.diagnostics, receipts: server.receipts, identities: server.identities })}`
     ).toBe(0)
     await new Promise((resolve) => setTimeout(resolve, 100))
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON.parse is untyped; the fixture writes exactly this shape with JSON.stringify, and the assertions below fail loudly on a missing member.
     const parsed = JSON.parse(fixtureResult) as Omit<
       ProbeResult,
       'receipts' | 'identities' | 'cdpRequests' | 'cdpDiagnostics'

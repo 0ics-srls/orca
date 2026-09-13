@@ -34,7 +34,7 @@ export function createCommand(
           }
         : { type: 'navigate', url: 'example.internal/path' },
     ...overrides
-  } as BrowserClientHostCommandEvent
+  }
 }
 
 export function createLifecycleClaim(

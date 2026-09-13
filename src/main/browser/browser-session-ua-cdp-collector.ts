@@ -1,4 +1,5 @@
 import WebSocket from 'ws'
+import { cancelUnreadResponseBody } from '../lib/unread-response-body'
 
 export type BrowserSessionUaCdpRequest = Readonly<{
   targetType: string
@@ -13,6 +14,35 @@ type PendingRequest = {
   resourceType?: string
   url?: string
   headers?: Record<string, string>
+}
+
+// CDP payloads are untyped JSON. Narrow once behind a runtime check instead of asserting a
+// shape at each read, so a protocol change surfaces as a missing value rather than a lie.
+function readRecord(value: unknown): Record<string, unknown> | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined
+  }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: guarded by the object/null check above; every member is read back through its own typeof check.
+  return value as Record<string, unknown>
+}
+
+function readString(record: Record<string, unknown> | undefined, key: string): string | undefined {
+  const value = record?.[key]
+  return typeof value === 'string' ? value : undefined
+}
+
+function readStringRecord(value: unknown): Record<string, string> | undefined {
+  const record = readRecord(value)
+  if (!record) {
+    return undefined
+  }
+  const strings: Record<string, string> = {}
+  for (const [key, entry] of Object.entries(record)) {
+    if (typeof entry === 'string') {
+      strings[key] = entry
+    }
+  }
+  return strings
 }
 
 type CdpMessage = {
@@ -36,14 +66,21 @@ export class BrowserSessionUaCdpCollector {
   private nextCommandId = 1
 
   private constructor(private readonly socket: WebSocket) {
-    socket.on('message', (data) => this.handleMessage(JSON.parse(data.toString()) as CdpMessage))
+    socket.on('message', (data) =>
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON.parse is untyped; CdpMessage is all-optional, so every member is still guarded before use in handleMessage.
+      this.handleMessage(JSON.parse(data.toString()) as CdpMessage)
+    )
   }
 
   static async connect(port: number): Promise<BrowserSessionUaCdpCollector> {
-    const version = (await fetch(`http://127.0.0.1:${port}/json/version`).then((response) =>
-      response.json()
-    )) as { webSocketDebuggerUrl: string }
-    const socket = new WebSocket(version.webSocketDebuggerUrl)
+    const version = readRecord(
+      await fetch(`http://127.0.0.1:${port}/json/version`).then((response) => response.json())
+    )
+    const webSocketDebuggerUrl = readString(version, 'webSocketDebuggerUrl')
+    if (!webSocketDebuggerUrl) {
+      throw new Error('cdp_version_missing_websocket_debugger_url')
+    }
+    const socket = new WebSocket(webSocketDebuggerUrl)
     await new Promise<void>((resolve, reject) => {
       socket.once('open', resolve)
       socket.once('error', reject)
@@ -124,15 +161,13 @@ export class BrowserSessionUaCdpCollector {
       return
     }
     if (message.method === 'Target.attachedToTarget') {
-      const params = message.params as
-        | { sessionId?: string; targetInfo?: { type?: string } }
-        | undefined
-      if (params?.sessionId) {
-        this.diagnostics.push(
-          `attached:${params.targetInfo?.type ?? 'unknown'}:${params.sessionId}`
-        )
-        this.targetsBySessionId.set(params.sessionId, params.targetInfo?.type ?? 'unknown')
-        void this.prepareTarget(params.sessionId)
+      const params = readRecord(message.params)
+      const attachedSessionId = readString(params, 'sessionId')
+      if (attachedSessionId) {
+        const targetType = readString(readRecord(params?.targetInfo), 'type') ?? 'unknown'
+        this.diagnostics.push(`attached:${targetType}:${attachedSessionId}`)
+        this.targetsBySessionId.set(attachedSessionId, targetType)
+        void this.prepareTarget(attachedSessionId)
       }
       return
     }
@@ -148,14 +183,14 @@ export class BrowserSessionUaCdpCollector {
     }
     const key = `${sessionId}:${requestId}`
     if (message.method === 'Network.requestWillBeSent') {
-      const request = params.request as { url?: string } | undefined
+      const request = readRecord(params.request)
       const hops = this.requests.get(key) ?? []
       const pending = hops.find((candidate) => candidate.url === undefined)
       const hop = pending ?? this.createPending(sessionId)
       if (!pending) {
         hops.push(hop)
       }
-      hop.url = request?.url
+      hop.url = readString(request, 'url')
       hop.resourceType = typeof params.type === 'string' ? params.type : 'Other'
       this.requests.set(key, hops)
     } else if (message.method === 'Network.requestWillBeSentExtraInfo') {
@@ -165,7 +200,7 @@ export class BrowserSessionUaCdpCollector {
       if (!pending) {
         hops.push(hop)
       }
-      hop.headers = (params.headers as Record<string, string> | undefined) ?? {}
+      hop.headers = readStringRecord(params.headers) ?? {}
       this.requests.set(key, hops)
     } else if (message.method === 'Network.webSocketCreated') {
       const pending = this.webSockets.get(key) ?? this.createPending(sessionId)
@@ -173,9 +208,8 @@ export class BrowserSessionUaCdpCollector {
       pending.resourceType = 'WebSocket'
       this.webSockets.set(key, pending)
     } else if (message.method === 'Network.webSocketWillSendHandshakeRequest') {
-      const request = params.request as { headers?: Record<string, string> } | undefined
       const pending = this.webSockets.get(key) ?? this.createPending(sessionId)
-      pending.headers = request?.headers ?? {}
+      pending.headers = readStringRecord(readRecord(params.request)?.headers) ?? {}
       this.webSockets.set(key, pending)
     }
   }
@@ -204,6 +238,8 @@ export async function waitForBrowserCdpEndpoint(port: number): Promise<void> {
   while (Date.now() < deadline) {
     try {
       const targets = await fetch(`http://127.0.0.1:${port}/json/version`)
+      // The probe only needs the status; an unread body can crash the process (orca#8695).
+      await cancelUnreadResponseBody(targets)
       if (targets.ok) {
         return
       }

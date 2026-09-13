@@ -14,8 +14,15 @@ export async function flushViewportOps(): Promise<void> {
   }
 }
 
+// Pins the two members call sites actually reach for; the rest of the guest stays open so
+// each test can poke at whatever mock it wired.
+export type ViewportGuestDouble = Record<string, unknown> & {
+  id: number
+  session: Electron.Session
+}
+
 export type ViewportGuestHandle = {
-  guest: Record<string, unknown>
+  guest: ViewportGuestDouble
   debuggerSendCommand: ReturnType<typeof vi.fn>
   debuggerIsAttached: ReturnType<typeof vi.fn>
   debuggerAttach: ReturnType<typeof vi.fn>
@@ -59,7 +66,8 @@ export function createViewportGuestFactory(
       }
     }
     return {
-      guest,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial WebContents/Session double; the viewport and identity paths call only the members wired above, and a missing one throws here rather than passing silently.
+      guest: guest as unknown as ViewportGuestDouble,
       debuggerSendCommand,
       debuggerIsAttached,
       debuggerAttach,

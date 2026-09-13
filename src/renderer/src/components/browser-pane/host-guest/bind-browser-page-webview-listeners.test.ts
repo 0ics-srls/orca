@@ -69,10 +69,11 @@ describe('initial browser webview navigation', () => {
       })
     )
     const container = document.createElement('div')
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the DOM lib has no <webview> element type; Electron registers the tag at runtime and the binder reads only the listener members jsdom already provides.
     const webview = document.createElement('webview') as Electron.WebviewTag
     const webviewRef = { current: webview }
     const trackNextLoadingEventRef = { current: false }
-    const lastKnownWebviewUrlRef = { current: null as string | null }
+    const lastKnownWebviewUrlRef: { current: string | null } = { current: null }
     const validateVisibleGuestRegistrationRef = { current: vi.fn() }
     const retryGuestRecoveryRef = { current: vi.fn() }
     const cleanup = bindBrowserPageWebviewListeners({
@@ -82,6 +83,7 @@ describe('initial browser webview navigation', () => {
       onContainerDragOver: vi.fn(),
       onContainerDrop: vi.fn(),
       dismissAddressBarSuggestions: vi.fn(),
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial args double; bindBrowserPageWebviewListeners reads only the refs and handlers wired below, and a member it reached that is missing throws here rather than passing silently.
       args: {
         browserTabId: 'page-a',
         initialBrowserUrlRef: { current: 'example.com/path' },

@@ -478,8 +478,9 @@ function lease(pageInventory: ReturnType<typeof inventory>[]) {
 
 function inventory(
   state: 'active' | 'outcomeUnknown',
-  disagreement: Record<string, string | number> = {}
+  disagreement: Partial<Record<keyof ReturnType<typeof exactInventory>, string | number>> = {}
 ) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the point of `disagreement` is to build entries the inventory type forbids (a `native` userAgentMode, a foreign runtime id) so recovery can be shown to reject them; the key type above still pins every perturbed field to a real one.
   return {
     authorityRuntimeId: 'runtime-a',
     authorityEpoch: 'epoch-a',

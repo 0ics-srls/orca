@@ -69,7 +69,7 @@ function command(
     ...authority,
     command: commands[type],
     ...overrides
-  } as BrowserClientHostCommandEvent
+  }
 }
 
 function lifecycleClaim(

@@ -128,6 +128,7 @@ async function runLiveProbe(arm: LiveArm, repetition: number, site: LiveSite): P
     const fixtureResult = existsSync(resultPath) ? readFileSync(resultPath, 'utf8') : 'no result'
     expect(processResult.code, `${fixtureResult}\n${processResult.stderr}`).toBe(0)
     await new Promise((resolve) => setTimeout(resolve, 100))
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON.parse is untyped; the fixture writes exactly this shape with JSON.stringify, and the assertions below fail loudly on a missing member.
     const parsed = JSON.parse(fixtureResult) as Omit<
       LiveRun,
       'arm' | 'site' | 'repetition' | 'requests' | 'diagnostics'

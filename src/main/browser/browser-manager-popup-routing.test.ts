@@ -43,6 +43,7 @@ import { browserManager } from './browser-manager'
 import { setBrowserProcessUserAgentIdentityForTests } from './browser-process-user-agent'
 import { setBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 import { MAX_PAGE_INITIATED_TABS_PER_WINDOW } from './browser-page-initiated-tab-budget'
+import { asBrowserSessionDouble } from './browser-session-test-doubles'
 import {
   rendererWebContentsId,
   resetBrowserManagerMocks,
@@ -603,7 +604,7 @@ describe('browserManager', () => {
     })
 
     const popupSession = {}
-    setBrowserSessionUserAgentMode(popupSession as never, 'native')
+    setBrowserSessionUserAgentMode(asBrowserSessionDouble(popupSession), 'native')
     const popupSetUserAgent = vi.fn()
     const popupContents = {
       id: 151,
