@@ -46,6 +46,7 @@ export function createDaemonInitModuleFactories(state: DaemonInitMockState) {
     defaultListSessionsSessions,
     listProcessesControl,
     getLocalPtyProviderMock,
+    getInProcessPtyProviderMock,
     setLocalPtyProviderMock,
     unbindLocalProviderListenersMock,
     rebindLocalProviderListenersMock,
@@ -223,6 +224,7 @@ export function createDaemonInitModuleFactories(state: DaemonInitMockState) {
     }),
     ipcPty: () => ({
       getLocalPtyProvider: getLocalPtyProviderMock,
+      getInProcessPtyProvider: getInProcessPtyProviderMock,
       setLocalPtyProvider: setLocalPtyProviderMock,
       unbindLocalProviderListeners: unbindLocalProviderListenersMock,
       rebindLocalProviderListeners: rebindLocalProviderListenersMock
