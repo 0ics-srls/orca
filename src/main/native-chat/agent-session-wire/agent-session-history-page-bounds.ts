@@ -23,8 +23,15 @@ export const HISTORY_PAGE_CONTENT_BUDGET_BYTES =
 /** Head kept of a dispatch `reason` on the wire. Every retained submission rides on
  *  every replacing page, so this bound is multiplied by the whole retained window: at
  *  the 16 KiB default inline head that is 4 MiB of reasons on one page, past the
- *  outbound channel cap. An eighth of the budget spread over the window is still far
- *  above any real provider error, and clipping is marked, never silent. */
+ *  outbound channel cap. The divisor reads as an eighth of the budget but bounds raw
+ *  bytes, while the page is priced in JSON: escaping multiplies it, and a reason of
+ *  control characters serializes at six bytes a character, measured at 79% of the
+ *  budget across a full window. That still fits, because the reserve prices the
+ *  serialized record — the conservative divisor is what buys that headroom. A kilobyte
+ *  stays far above any real provider error, and clipping is marked, never silent. The
+ *  bound must also stay head-preserving: `dispatchRejectionWasTransportWriteFailure`
+ *  prefix-matches this string, and a tail-preserving one would reclassify a clipped
+ *  transport failure as the provider's own words and show internal text to a person. */
 export const DISPATCH_REASON_PAGE_LIMITS: JournalPayloadLimits = {
   inlineHeadBytes: Math.floor(HISTORY_PAGE_CONTENT_BUDGET_BYTES / 8 / MAX_RETAINED_SUBMISSIONS)
 }
