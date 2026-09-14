@@ -21,11 +21,7 @@ import {
   readClaudeMessageEnvelope,
   type ClaudeToolUse
 } from './claude-structured-item-translation'
-import {
-  claudeApprovalItem,
-  claudePromptIdentity,
-  claudeQuestionItems
-} from './claude-structured-prompt-items'
+import { journalClaudePrompt } from './claude-prompt-journaling'
 import type { ClaudePromptRegistry } from './claude-structured-prompt-replies'
 import { claudeProviderFrameActivity } from '../native-chat/agent-session-wire/provider-frame-activity'
 import {
@@ -110,6 +106,19 @@ export function createClaudeJournalTranslator(
     deps.sink.publish({ coalescingKey: item.publishCoalescingKey })
   }
 
+  /** Open a turn, ending whichever one was still open. A new turn starting is the
+   *  only end the previous one gets when its result never arrives; settling it
+   *  later would sweep THIS turn. */
+  const openTurn = (turn: ClaudeCurrentTurn, observedAt: number): void => {
+    if (currentTurn) {
+      subagents.settleTurn(groupKeyOf(currentTurn))
+      publishLifecycle(currentTurn, { state: 'interrupted', completedAt: observedAt })
+    }
+    currentTurn = turn
+    publishLifecycle(turn)
+    deps.sink.setActivity?.(null)
+  }
+
   const publishActivity = (kind: string, payload: unknown): void => {
     if (!currentTurn) {
       return
@@ -149,6 +158,21 @@ export function createClaudeJournalTranslator(
       (body && envelope.role === 'assistant' ? streamedBlocks.reconcile(envelope) : null) ??
       claudeMessageIdentity(envelope)
     streamedText.forget(agentJournalItemKey(identity))
+    const opened = claudeTurnOpenedByFrame({
+      envelope,
+      frame: message,
+      startsTurn,
+      hasOpenTurn: currentTurn !== null,
+      observedAt,
+      // A user echo lands on its own message identity, so this is the user row's key.
+      userItemId: agentJournalItemKey(identity)
+    })
+    // A resumed turn has no user row to anchor it, so it must bracket its own
+    // first output: every reader that stops at the turn record scanning back
+    // would otherwise look straight past the tool call that opened it.
+    if (opened && opened.userItemId === undefined) {
+      openTurn(opened, observedAt)
+    }
     if (body) {
       deps.sink.appendItem(identity, body)
       changed = true
@@ -189,55 +213,14 @@ export function createClaudeJournalTranslator(
       changed = true
     }
     changed = appendUnmodeledClaudeContent(providerFallback, outputEnvelope, message) || changed
-    const opened = claudeTurnOpenedByFrame({
-      envelope,
-      frame: message,
-      startsTurn,
-      producedContent: changed,
-      hasOpenTurn: currentTurn !== null,
-      observedAt,
-      // A user echo lands on its own message identity, so this is the user row's key.
-      userItemId: agentJournalItemKey(identity)
-    })
-    if (opened) {
-      if (currentTurn) {
-        // A new turn starting is the only end the previous one gets when its
-        // result never arrives; settling it later would sweep THIS turn.
-        subagents.settleTurn(groupKeyOf(currentTurn))
-        publishLifecycle(currentTurn, { state: 'interrupted', completedAt: observedAt })
-      }
-      currentTurn = opened
-      publishLifecycle(currentTurn)
-      deps.sink.setActivity?.(null)
+    // The send's turn is anchored to the user row journaled just above it.
+    if (opened?.userItemId !== undefined) {
+      openTurn(opened, observedAt)
     }
     if (changed) {
       deps.sink.publish()
     }
     return true
-  }
-
-  const handlePrompt = (event: Extract<ClaudeStructuredSessionEvent, { type: 'prompt' }>): void => {
-    const identities: AgentJournalItemIdentity[] = []
-    if (event.prompt.kind === 'question') {
-      for (const question of claudeQuestionItems({
-        sessionId: event.sessionId,
-        prompt: event.prompt
-      })) {
-        identities.push(question.identity)
-        deps.sink.appendItem(question.identity, question.body)
-        deps.bindPromptItemId?.(agentJournalItemKey(question.identity), event.prompt.promptKey)
-      }
-    } else {
-      const identity = claudePromptIdentity({
-        sessionId: event.sessionId,
-        promptKey: event.prompt.promptKey
-      })
-      identities.push(identity)
-      deps.sink.appendItem(identity, claudeApprovalItem(event.prompt))
-      deps.bindPromptItemId?.(agentJournalItemKey(identity), event.prompt.promptKey)
-    }
-    promptItems.set(event.prompt.promptKey, identities)
-    deps.sink.publish()
   }
 
   return {
@@ -262,7 +245,7 @@ export function createClaudeJournalTranslator(
       }
       streamedText.flush()
       if (event.type === 'prompt') {
-        handlePrompt(event)
+        journalClaudePrompt({ ...deps, promptItems }, event)
       } else if (event.type === 'prompt-cancelled') {
         for (const identity of promptItems.get(event.promptKey) ?? []) {
           deps.sink.appendTombstone(identity)

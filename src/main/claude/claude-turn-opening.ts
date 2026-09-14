@@ -1,15 +1,18 @@
-// Which provider frame opens a Claude turn.
+// Which provider frame opens a Claude turn, and what it opens.
 //
 // Orca's own send echo used to be the only opener, while any `result` frame
 // closed the turn. That asymmetry is what leaves a working session reading
 // idle: the provider resumes on its own — a background task reports in and
 // wakes the agent after a `result` settled the turn — and nothing Orca sent
-// ever arrives to reopen one. The model's own output is the evidence that a
-// turn is running, the way Codex's `turn/start` is, so it opens one here.
-// Whichever opened it, the next `result` settles it.
+// ever arrives to reopen one. The model's own output is the evidence a turn is
+// running, so it opens one; whichever opened it, the next `result` settles it.
 
 import {
   claudeHasReplayContent,
+  claudeMessageBody,
+  claudeOutputEnvelope,
+  claudeThinkingText,
+  claudeToolUses,
   type ClaudeMessageEnvelope
 } from './claude-structured-item-translation'
 import type { ClaudeCurrentTurn } from './claude-turn-lifecycle-item'
@@ -21,12 +24,22 @@ export type ClaudeTurnOpeningInput = {
   frame: Record<string, unknown>
   /** Orca dispatched this send and the provider is replaying it back. */
   startsTurn: boolean
-  /** The frame appended journal content, so the provider produced just now. */
-  producedContent: boolean
   hasOpenTurn: boolean
   observedAt: number
   /** Provider key of the user row, used only by the send echo. */
   userItemId: string
+}
+
+/** Whether this frame carries model output, which is what makes it evidence of a
+ *  running turn. Provider traffic the host cannot model is not: an unmodeled
+ *  frame reaching the bounded fallback says nothing about whether work resumed. */
+function producesModelOutput(envelope: ClaudeMessageEnvelope): boolean {
+  const output = claudeOutputEnvelope(envelope)
+  return (
+    claudeMessageBody(output) !== null ||
+    claudeToolUses(output).length > 0 ||
+    claudeThinkingText(output) !== null
+  )
 }
 
 export function claudeTurnOpenedByFrame(input: ClaudeTurnOpeningInput): ClaudeCurrentTurn | null {
@@ -41,8 +54,8 @@ export function claudeTurnOpenedByFrame(input: ClaudeTurnOpeningInput): ClaudeCu
       ? { ...turn, userItemId: input.userItemId }
       : null
   }
-  // Resumed work has no user row to anchor to. Reopening only when no turn is
-  // open keeps every frame of one reply inside the turn its first frame opened,
-  // and keeps this off the path of a turn Orca is already tracking.
-  return !input.hasOpenTurn && input.producedContent ? turn : null
+  // Reopening only when no turn is open keeps every frame of one reply inside the
+  // turn its first frame opened, and keeps this off the path of a turn Orca is
+  // already tracking.
+  return !input.hasOpenTurn && producesModelOutput(envelope) ? turn : null
 }

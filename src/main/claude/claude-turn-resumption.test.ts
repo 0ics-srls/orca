@@ -15,8 +15,10 @@ import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key
 import { readAgentJournalTurn } from '../../shared/agent-session-turn-record'
 import {
   hasUnansweredStructuredAgentSessionDispatch,
-  projectStructuredAgentSessionStatus
+  projectStructuredAgentSessionStatus,
+  projectStructuredAgentSessionStatusSummary
 } from '../../shared/structured-agent-session-projection'
+import { activeStructuredAgentSessionToolCall } from '../../shared/structured-agent-session-live-turn'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { createClaudeJournalTranslator } from './claude-structured-journal-translation'
 
@@ -175,5 +177,26 @@ describe('a Claude turn the provider resumed on its own', () => {
     expect(running).toHaveLength(1)
     expect(readAgentJournalTurn(running[0]!.body)?.turnId).toBe('u1')
     expect(projected(items())).toBe('working')
+  })
+
+  it('reports the first tool call of a resumed turn as the live tool', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    // A real first turn leaves prose behind, which is what makes the session listable.
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'Launched it.' }]))
+    translator.handle(result('r1'))
+
+    // The provider resumes straight into a tool call, with no prose first. The
+    // turn has to bracket its own first output or every reader that stops at the
+    // turn record looks straight past it.
+    translator.handle(
+      frame('assistant', 'a1', [
+        { type: 'tool_use', id: 'toolu_1', name: 'Bash', input: { command: 'rg foo' } }
+      ])
+    )
+
+    expect(projected(items())).toBe('working')
+    expect(activeStructuredAgentSessionToolCall(items())?.name).toBe('Bash')
+    expect(projectStructuredAgentSessionStatusSummary(items(), [], null).toolName).toBe('Bash')
   })
 })
