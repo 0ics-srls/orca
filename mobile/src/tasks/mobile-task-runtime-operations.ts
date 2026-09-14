@@ -1,8 +1,6 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import {
-  rpcPayloadMember,
-  rpcReadUnchecked,
+  rpcUncheckedMemberReader,
   rpcUncheckedPayloadReader
 } from '../transport/rpc-reader-payload'
 
@@ -23,9 +21,6 @@ export const taskRuntimeStatusRead = bindDeferredRpcOperation(
   })
 )
 
-const persistedUiStateReader: RpcCompatibleReader<unknown, 'ui-state-member', unknown> = (raw) =>
-  rpcReadUnchecked('ui-state-member', rpcPayloadMember(raw, 'ui'))
-
 /**
  * Persisted UI state, read at the hydration barrier alongside preflight and Linear status. A
  * refused read leaves the screen on its defaults rather than failing hydration, so it is a skip.
@@ -36,7 +31,7 @@ export const taskUiStateRead = bindDeferredRpcOperation(
     method: 'ui.get',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: persistedUiStateReader
+    read: rpcUncheckedMemberReader('ui-state-member', 'ui')
   })
 )
 

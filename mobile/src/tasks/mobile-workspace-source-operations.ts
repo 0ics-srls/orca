@@ -1,17 +1,13 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import {
-  rpcPayloadMember,
-  rpcReadUnchecked,
+  rpcUncheckedMemberReader,
   rpcUncheckedPayloadReader
 } from '../transport/rpc-reader-payload'
 
 // The repo and SSH reads the workspace-create drawer runs: connection state, agent detection,
 // repo-owned setup hooks, sparse presets and base-branch search.
 
-const sshConnectionStateReader: RpcCompatibleReader<unknown, 'ssh-connection-state', unknown> = (
-  raw
-) => rpcReadUnchecked('ssh-connection-state', rpcPayloadMember(raw, 'state'))
+const sshConnectionStateReader = rpcUncheckedMemberReader('ssh-connection-state', 'state')
 
 /** Connecting an SSH repo before create. The reply's only read field is `state`. */
 export const sshRepoConnectRun = bindDeferredRpcOperation(
@@ -69,22 +65,15 @@ export const repoSetupHooksRead = bindDeferredRpcOperation(
   })
 )
 
-const sparsePresetListReader: RpcCompatibleReader<unknown, 'sparse-presets', unknown> = (raw) =>
-  rpcReadUnchecked('sparse-presets', rpcPayloadMember(raw, 'presets'))
-
 export const repoSparsePresetListRead = bindDeferredRpcOperation(
   defineRpcOperation({
     name: 'repo.sparse-preset-list',
     method: 'repo.sparsePresets',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: sparsePresetListReader
+    read: rpcUncheckedMemberReader('sparse-presets', 'presets')
   })
 )
-
-const savedSparsePresetReader: RpcCompatibleReader<unknown, 'saved-sparse-preset', unknown> = (
-  raw
-) => rpcReadUnchecked('saved-sparse-preset', rpcPayloadMember(raw, 'preset'))
 
 export const repoSparsePresetSaveRun = bindDeferredRpcOperation(
   defineRpcOperation({
@@ -92,7 +81,7 @@ export const repoSparsePresetSaveRun = bindDeferredRpcOperation(
     method: 'repo.saveSparsePreset',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: savedSparsePresetReader
+    read: rpcUncheckedMemberReader('saved-sparse-preset', 'preset')
   })
 )
 
