@@ -233,10 +233,18 @@ export function settleCancelledClaudeDispatchWaiters(
   onSettledLate?: ClaudeLateDispatchSettlement
 ): void {
   const cancelled = new Set(cancelledUuids)
-  const waiters = session.dispatchWaiters.filter((waiter) => cancelled.has(waiter.sentUuid))
-  for (const waiter of waiters) {
+  const activeWaiters = session.dispatchWaiters.filter((waiter) => cancelled.has(waiter.sentUuid))
+  const retiredWaiters = session.retiredDispatchWaiters.filter((waiter) =>
+    cancelled.has(waiter.sentUuid)
+  )
+  for (const waiter of activeWaiters) {
     forgetWaiter(session, waiter)
     waiter.resolve(null)
+  }
+  for (const waiter of retiredWaiters) {
+    forgetRetiredWaiter(session, waiter)
+  }
+  for (const waiter of [...activeWaiters, ...retiredWaiters]) {
     if (waiter.clientMessageId) {
       onSettledLate?.({
         clientMessageId: waiter.clientMessageId,

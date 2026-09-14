@@ -216,6 +216,9 @@ export class ClaudePromptRegistry {
     this.prompts.clear()
     this.journalBindings.clear()
     this.claims.clear()
+    for (const prompt of pending) {
+      this.cancellationObservations.get(prompt)?.resolve()
+    }
     return pending
   }
 }
