@@ -336,6 +336,19 @@ function findWaitSwitch(container: HTMLElement): HTMLButtonElement | null {
 }
 
 describe('NewWorkspaceComposerCard folder task source mode', () => {
+  it.each(['pi', 'omp'] as const)('forwards availability for detected %s', (agent) => {
+    current = renderCard({ detectedAgentIds: new Set([agent]) })
+    const missing = agent === 'pi' ? 'omp' : 'pi'
+    expect(storeMocks.pickerProps).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        agents: [expect.objectContaining({ id: agent })],
+        unavailableAgents: expect.arrayContaining([
+          { agent: expect.objectContaining({ id: missing }), reason: 'not-detected' }
+        ])
+      })
+    )
+  })
+
   beforeEach(() => {
     ;(window as unknown as { api: unknown }).api = {
       runtimeEnvironments: {
@@ -927,25 +940,4 @@ describe('NewWorkspaceComposerCard note sizing', () => {
     expect(className).toContain('scrollbar-sleek')
     expect(className).not.toContain('overflow-hidden')
   })
-})
-
-it('passes the selected host availability through the workspace agent section', () => {
-  renderCard({ detectedAgentIds: new Set(['pi']) })
-  expect(storeMocks.pickerProps).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      agents: [expect.objectContaining({ id: 'pi' })],
-      unavailableAgents: expect.arrayContaining([
-        { agent: expect.objectContaining({ id: 'omp' }), reason: 'not-detected' }
-      ])
-    })
-  )
-  renderCard({ detectedAgentIds: new Set(['omp']) })
-  expect(storeMocks.pickerProps).toHaveBeenLastCalledWith(
-    expect.objectContaining({
-      agents: [expect.objectContaining({ id: 'omp' })],
-      unavailableAgents: expect.arrayContaining([
-        { agent: expect.objectContaining({ id: 'pi' }), reason: 'not-detected' }
-      ])
-    })
-  )
 })
