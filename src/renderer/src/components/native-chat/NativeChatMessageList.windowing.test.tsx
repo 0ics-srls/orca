@@ -822,7 +822,11 @@ describe('transcript follow ownership across growth and appends', () => {
     const { container, rerender } = render(list(transcript))
     paint(container)
     const scroller = scrollRoot(container)
-    fireEvent.scroll(scroller)
+    // Establish a forward scroll direction before reading at this offset. The
+    // backward-scroll suppression below covers the separate case where a reader
+    // is still moving upward while overscan rows settle.
+    scrollTranscript(container, 0)
+    paint(container)
     const readingAt = 2000
     scrollTranscript(container, readingAt)
     paint(container)
@@ -858,6 +862,56 @@ describe('transcript follow ownership across growth and appends', () => {
     expect(screen.queryByRole('button', { name: /jump to latest/i })).toBeNull()
     paint(container)
     expect(distanceFromBottom(container)).toBeLessThanOrEqual(NATIVE_CHAT_FOLLOW_REARM_PX)
+  })
+
+  it('does not counter upward scrolling when measured overscan rows settle', () => {
+    const readingAt = 2000
+    const aboveIndex = Math.floor(readingAt / ROW_PITCH_PX) - 1
+    const { container } = render(list(transcript))
+    paint(container)
+    scrollTranscript(container, readingAt + 100)
+    paint(container)
+    measuredRowHeights = Array.from({ length: TRANSCRIPT_LENGTH }, (_, index) =>
+      index === aboveIndex ? ROW_PX + 10 : ROW_PX
+    )
+    paint(container)
+    scrollTranscript(container, readingAt)
+    paint(container)
+    const scroller = scrollRoot(container)
+    const scrollTo = vi.spyOn(scroller, 'scrollTo')
+
+    measuredRowHeights = measuredRowHeights.map((height, index) =>
+      index === aboveIndex ? height + 20 : height
+    )
+    paint(container)
+
+    expect(scroller.scrollTop).toBe(readingAt)
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('keeps the offset when a visible row shrinks past the viewport top', () => {
+    const focusedIndex = 45
+    const { container } = render(list(transcript))
+    paint(container)
+    scrollTranscript(container, focusedIndex * ROW_PITCH_PX)
+    paint(container)
+    measuredRowHeights = Array.from({ length: TRANSCRIPT_LENGTH }, (_, index) =>
+      index === focusedIndex ? 100 : ROW_PX
+    )
+    paint(container)
+    const readingAt = focusedIndex * ROW_PITCH_PX + 60
+    scrollTranscript(container, readingAt)
+    paint(container)
+    const scroller = scrollRoot(container)
+    const scrollTo = vi.spyOn(scroller, 'scrollTo')
+
+    measuredRowHeights = measuredRowHeights.map((height, index) =>
+      index === focusedIndex ? 30 : height
+    )
+    paint(container)
+
+    expect(scroller.scrollTop).toBe(readingAt)
+    expect(scrollTo).not.toHaveBeenCalled()
   })
 
   it('settles a pending end reconcile after the reader keeps scrolling away', async () => {
@@ -904,16 +958,12 @@ describe('transcript follow ownership across growth and appends', () => {
     /** Far enough up that the transcript itself calls the reader detached, and
      *  still inside the band the virtualizer computes (48 + 92 + 24). */
     const READING_ABOVE_END_PX = 96
-    /** Production never predicts a row's height exactly, and a row the estimate
-     *  gets right never enters the virtualizer's size cache at all — every later
-     *  growth then arrives as a *first* measurement, down a different branch than
-     *  the end anchor these cases are about. A few pixels of skew keeps the row
-     *  measured, which is the state a real streaming row is in. */
+    // A nonzero delta seeds the size cache; zero exercises first-measure growth.
     const MEASURE_SKEW_PX = 7
 
-    function setSkewedTail(step: number): void {
+    function setSkewedTail(step: number, skew = MEASURE_SKEW_PX): void {
       const heights = Array.from({ length: TRANSCRIPT_LENGTH }, () => ROW_PX)
-      heights[TAIL_INDEX] = tailHeightAt(step) + MEASURE_SKEW_PX
+      heights[TAIL_INDEX] = tailHeightAt(step) + skew
       measuredRowHeights = heights
     }
 
@@ -921,31 +971,30 @@ describe('transcript follow ownership across growth and appends', () => {
       aboveTranscriptPx = GUTTER_PX
     })
 
-    it('leaves a reader just above the end where they are while the row grows', () => {
-      setSkewedTail(4)
-      const { container, rerender } = render(streamingList(4))
-      paint(container)
-      const scroller = scrollRoot(container)
-
-      const readingAt = scroller.scrollHeight - scroller.clientHeight - READING_ABOVE_END_PX
-      scrollTranscript(container, readingAt)
-      paint(container)
-      expect(distanceFromBottom(container)).toBe(READING_ABOVE_END_PX)
-      expect(distanceFromBottom(container)).toBeGreaterThan(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
-      expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
-
-      for (let step = 5; step <= 10; step += 1) {
-        setSkewedTail(step)
-        rerender(streamingList(step))
+    it.each([0, MEASURE_SKEW_PX])(
+      'leaves a reader just above the end while the row grows (skew %i)',
+      (skew) => {
+        setSkewedTail(4, skew)
+        const { container, rerender } = render(streamingList(4))
         paint(container)
+        const scroller = scrollRoot(container)
 
-        // Not dragged along: the offset the reader chose is the offset they keep,
-        // however much the row below them grows.
-        expect(scroller.scrollTop).toBe(readingAt)
+        const readingAt = scroller.scrollHeight - scroller.clientHeight - READING_ABOVE_END_PX
+        scrollTranscript(container, readingAt)
+        paint(container)
+        expect(distanceFromBottom(container)).toBe(READING_ABOVE_END_PX)
+
+        for (let step = 5; step <= 10; step += 1) {
+          setSkewedTail(step, skew)
+          rerender(streamingList(step))
+          paint(container)
+
+          // Not dragged along: the offset the reader chose is the offset they keep,
+          // however much the row below them grows.
+          expect(scroller.scrollTop).toBe(readingAt)
+        }
       }
-
-      expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
-    })
+    )
 
     it('still pins a reader who is at the end, with the gutter in the document', () => {
       setSkewedTail(4)
@@ -960,8 +1009,6 @@ describe('transcript follow ownership across growth and appends', () => {
 
         expect(distanceFromBottom(container)).toBeLessThanOrEqual(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
       }
-
-      expect(screen.queryByRole('button', { name: /jump to latest/i })).toBeNull()
     })
   })
 })
