@@ -209,10 +209,8 @@ export async function executeWorktreeCreation(
             result.setup,
             preparedRequest.issueCommand,
             result.defaultTabs,
-            {
-              ...(preparedRequest.agent !== null ? { callerProvidesSurface: true } : {}),
-              ...(backendSpawned ? { backendStartupTerminalSpawned: true } : {})
-            }
+            // Activation failed before providing its promised surface, so recovery must seed one.
+            backendSpawned ? { backendStartupTerminalSpawned: true } : undefined
           )
         } catch (recoveryError) {
           console.error(

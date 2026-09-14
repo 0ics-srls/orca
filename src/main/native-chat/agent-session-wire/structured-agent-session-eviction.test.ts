@@ -34,6 +34,9 @@ function context(): StructuredAgentSessionEvictionContext & { order: string[] } 
       order.push('forget')
     }),
     discardSink: vi.fn(() => order.push('discardSink')),
+    settleWork: vi.fn(async () => {
+      order.push('settleWork')
+    }),
     releaseLease: vi.fn(async () => {
       order.push('releaseLease')
     })
@@ -54,6 +57,7 @@ describe('structured agent session eviction', () => {
     expect(ctx.order).toEqual([
       'closeSession',
       'drained',
+      'settleWork',
       'unbind',
       'close',
       'discardSink',
@@ -80,6 +84,7 @@ describe('structured agent session eviction', () => {
     expect(STRUCTURED_AGENT_SESSION_EVICTION_STEPS.map((step) => step.name)).toEqual([
       'stop-provider-child',
       'drain-published',
+      'settle-dead-generation',
       'stop-publishing',
       'close-sink',
       'discard-sink',
@@ -153,6 +158,7 @@ describe('a child that will not stop', () => {
 
     expect(ctx.order).toEqual([
       'drained',
+      'settleWork',
       'unbind',
       'close',
       'discardSink',

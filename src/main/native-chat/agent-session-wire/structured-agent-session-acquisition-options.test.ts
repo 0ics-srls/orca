@@ -72,6 +72,7 @@ function attachParams(
 function adapter(input: {
   origin: 'created' | 'resumed'
   options?: AgentSessionOptionsResult
+  restoreFailures?: readonly string[]
 }): StructuredAgentSessionAdapter {
   return {
     acquire: vi
@@ -92,6 +93,9 @@ function adapter(input: {
         }
       })),
     ...(input.options ? { readOptions: vi.fn(async () => input.options!) } : {}),
+    ...(input.restoreFailures
+      ? { readOptionRestoreFailures: vi.fn(() => input.restoreFailures!) }
+      : {}),
     dispatch: vi.fn(),
     cancelTurn: vi.fn(),
     answerPrompt: vi.fn(),
@@ -217,7 +221,7 @@ describe('structured session acquisition options', () => {
       hostId: 'local'
     })
     const sessionAdapter = adapter({ origin: 'created' })
-    const options = { model: 'gpt-5.6-sol', effort: 'medium' }
+    const options = { model: 'gpt-5.6-sol', effort: 'medium', fastMode: 'false' }
     const recordPhase = vi.fn<AgentSessionCreatePhaseRecorder>()
 
     const created = await performAttach({
@@ -303,7 +307,7 @@ describe('structured session acquisition options', () => {
     await store.replaceSessionOptions({
       sessionId: SESSION,
       fence: store.getRecord(SESSION)?.lease.runtimeFence ?? 0,
-      options: { approvalPolicy: 'on-request', personality: 'concise' },
+      options: { approvalPolicy: 'on-request', personality: 'concise', fastMode: 'true' },
       now: NOW
     })
 
@@ -321,7 +325,7 @@ describe('structured session acquisition options', () => {
       adapter: adapter({
         origin: 'resumed',
         options: {
-          current: { model: 'gpt-5.6-terra', effort: 'medium' },
+          current: { model: 'gpt-5.6-terra', effort: 'medium', fastMode: false },
           models: []
         }
       }),
@@ -344,8 +348,44 @@ describe('structured session acquisition options', () => {
       approvalPolicy: 'on-request',
       personality: 'concise',
       model: 'gpt-5.6-terra',
-      effort: 'medium'
+      effort: 'medium',
+      fastMode: 'false'
     })
+  })
+
+  it('clears a rejected Fast restore instead of retaining the prior encoded value', async () => {
+    root = await mkdtemp(join(tmpdir(), 'orca-acquisition-fast-restore-'))
+    const store = await AgentSessionRecordStore.open({
+      directory: join(root, 'store'),
+      hostId: 'local'
+    })
+    const sessionAdapter = adapter({
+      origin: 'created',
+      options: { current: { model: 'gpt-standard' }, models: [] },
+      restoreFailures: ['fastMode']
+    })
+
+    const created = await performAttach({
+      store,
+      adapter: sessionAdapter,
+      journalRoot: root,
+      authority: {
+        spawnToken: 'spawn-a',
+        claimKeyId: 'key-1',
+        handoffOperationId: CREATE_OPERATION,
+        probe: { outcome: 'reservation-unused' }
+      },
+      callerKey: 'client-1',
+      params: attachParams(CREATE_OPERATION, null, {
+        model: 'gpt-standard',
+        fastMode: 'true'
+      }),
+      now: () => NOW,
+      onAttached: () => {}
+    })
+
+    expect(created).toMatchObject({ ok: true })
+    expect(store.getRecord(SESSION)?.options).toEqual({ model: 'gpt-standard' })
   })
 
   it('releases an acquisition when provider options cannot be read', async () => {
