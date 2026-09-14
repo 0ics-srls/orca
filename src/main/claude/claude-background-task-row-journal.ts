@@ -38,7 +38,10 @@ export function claudeBackgroundTaskBody(
 export function writeClaudeBackgroundTaskRow(
   sink: StructuredAgentSessionEventSink,
   id: string,
-  row: ClaudeBackgroundTaskRow
+  row: ClaudeBackgroundTaskRow,
+  /** Runs only when a row is really appended, so a duplicate delivery that
+   *  changes nothing never opens a turn. */
+  beforeAppend?: () => void
 ): void {
   const body = claudeBackgroundTaskBody(row.block)
   const serialized = JSON.stringify(body)
@@ -46,6 +49,7 @@ export function writeClaudeBackgroundTaskRow(
     return
   }
   row.lastSerialized = serialized
+  beforeAppend?.()
   const identity = claudeBackgroundTaskIdentity(id, row.generation)
   sink.appendItem(identity, body, {
     // Keyed per RUN, not per task: sharing one key across generations would let

@@ -45,6 +45,10 @@ export type ClaudeBackgroundTaskRowsDeps = {
    *  reached the transcript is a nested child, and a top-level row minted for it
    *  would claim an invocation the user never saw. */
   isForwardedParentTool: (toolUseId: string) => boolean
+  /** Opens a turn for the frame being journaled. A typed row is provider
+   *  output, so writing one must reopen a turn the provider resumed itself —
+   *  otherwise the session renders the row while reporting idle. */
+  openOutputTurn?: (frame: Record<string, unknown>, observedAt: number) => void
   now?: () => number
 }
 
@@ -66,7 +70,20 @@ export class ClaudeBackgroundTaskRows {
     this.now = deps.now ?? (() => Date.now())
   }
 
-  observe(message: Record<string, unknown>): boolean {
+  /** The frame being journaled right now, so a write can open its turn. Null
+   *  outside `observe`: a teardown sweep must never open one. */
+  private journaling: { frame: Record<string, unknown>; observedAt: number } | null = null
+
+  observe(message: Record<string, unknown>, observedAt: number = this.now()): boolean {
+    this.journaling = { frame: message, observedAt }
+    try {
+      return this.observeFrame(message)
+    } finally {
+      this.journaling = null
+    }
+  }
+
+  private observeFrame(message: Record<string, unknown>): boolean {
     if (message.type !== 'system') {
       return false
     }
@@ -332,6 +349,11 @@ export class ClaudeBackgroundTaskRows {
     if (!row) {
       return
     }
-    writeClaudeBackgroundTaskRow(this.deps.sink, id, row)
+    const journaling = this.journaling
+    writeClaudeBackgroundTaskRow(this.deps.sink, id, row, () => {
+      if (journaling) {
+        this.deps.openOutputTurn?.(journaling.frame, journaling.observedAt)
+      }
+    })
   }
 }
