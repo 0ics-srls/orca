@@ -187,9 +187,9 @@ export function useMobileTasksItemDetailLoading(model: ItemDetailMetadataEffects
         return
       }
 
-      // Raw requests inside the group on purpose: this Promise.all rejects as soon as one leg's
-      // transport does, and interpreting only after both settled is what makes the issue error
-      // win over the comments error. startRpcOperation would wait for the slower peer.
+      // Interpretation is deferred past the group on purpose: this Promise.all rejects as soon as
+      // one leg's transport does, and interpreting only after both settled is what makes the issue
+      // error win over the comments error. startRpcOperation would wait for the slower peer.
       const [issueReply, commentsReply] = await Promise.all([
         linearIssueRead.request(
           client,

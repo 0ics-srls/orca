@@ -9,8 +9,8 @@ import { rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 /**
  * Linear account status for provider hydration, the second of two policies on this method. The
  * Tasks screen cannot list Linear issues without knowing the workspace and surfaces the host's
- * message; the home screen's probe in mobile-task-runtime-operations.ts treats an unanswered
- * probe as "not connected" and degrades. One reader serves both.
+ * message; the runtime hydration hook's probe in mobile-task-runtime-operations.ts treats an
+ * unanswered probe as "not connected" and degrades. One reader serves both.
  */
 export const linearAccountStatusRead = bindDeferredRpcOperation(
   defineRpcOperation({
