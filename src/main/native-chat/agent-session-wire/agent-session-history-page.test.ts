@@ -14,6 +14,7 @@ import type {
 } from '../../../shared/agent-session-journal-types'
 import { AGENT_SESSION_JOURNAL_SCHEMA_VERSION } from '../../../shared/agent-session-journal-types'
 import { AGENT_SESSION_HISTORY_MAX_LIMIT } from '../../../shared/agent-session-wire'
+import { MAX_RETAINED_SUBMISSIONS } from '../../../shared/structured-agent-session-submission-retention'
 import {
   REMOTE_RUNTIME_MAX_OUTBOUND_JSON_BYTES,
   serializeRemoteRuntimePayload
@@ -24,11 +25,14 @@ import { journalDatabaseFile } from '../agent-session-journal/journal-paths'
 import { insertJournalRow } from '../agent-session-journal/journal-row-table'
 import { createTrackedJournalOpener } from '../agent-session-journal/journal-store-test-open'
 import type {
+  JournalDispatchRow,
   JournalItemRow,
   JournalRow,
+  JournalSubmissionRow,
   JournalTombstoneRow
 } from '../agent-session-journal/journal-row-schema'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
+import { DISPATCH_REASON_PAGE_LIMITS } from './agent-session-history-page-bounds'
 import { projectJournalBatch } from './agent-session-journal-batch'
 import { readAgentSessionHistory, resolveHistoryLimit } from './agent-session-history-page'
 
@@ -228,6 +232,13 @@ describe('readAgentSessionHistory', () => {
     })
     // Past the window `refreshTail` actually requests, so the user bubble ages out.
     await appendItems(AGENT_SESSION_HISTORY_MAX_LIMIT + 10)
+    // A second submission whose own item IS on the page, to pin union order and keying.
+    await journal.appendSubmission({
+      clientMessageId: 'msg-2',
+      payloadFingerprint: 'd'.repeat(64),
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'again' }] },
+      fence: 1
+    })
 
     const page = readAgentSessionHistory(journal, {
       sessionId: 'session-1',
@@ -243,8 +254,153 @@ describe('readAgentSessionHistory', () => {
     // Without it the renderer keeps the stale `pending` forever: it overwrites a
     // submission only on key collision, and no later page ever names this one.
     expect(page.page.submissions).toMatchObject([
-      { clientMessageId: 'msg-1', dispatchState: 'accepted' }
+      { clientMessageId: 'msg-1', dispatchState: 'accepted' },
+      { clientMessageId: 'msg-2', dispatchState: 'pending' }
     ])
+    // `msg-2` satisfies both arms of the union: concatenating them would duplicate it.
+    expect(page.page.submissions.map((entry) => entry.clientMessageId)).toEqual(['msg-1', 'msg-2'])
+  })
+
+  it('holds a forward catch-up page to its own item window', async () => {
+    await journal.appendSubmission({
+      clientMessageId: 'msg-1',
+      payloadFingerprint: 'c'.repeat(64),
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'hi' }] },
+      fence: 1
+    })
+    await journal.resolveDispatch({
+      clientMessageId: 'msg-1',
+      state: 'accepted',
+      providerIdentity: {
+        provider: 'codex',
+        threadId: 'thread-1',
+        turnId: 'turn-accept',
+        ordinal: 1
+      },
+      fence: 1
+    })
+    await appendItems(1)
+    // Both rows for msg-1 sit behind the cursor, so the page projects neither.
+    const cursor = journal.cursor()
+    await journal.appendItem(item(2), body('after-cursor'), { fence: 1 })
+
+    const page = readAgentSessionHistory(journal, {
+      sessionId: 'session-1',
+      direction: 'after',
+      cursor
+    })
+    if (!page.ok) {
+      throw new Error(`expected a page, got reset ${page.reset}`)
+    }
+    expect(page.page.items.map((entry) => entry.itemId)).toEqual(['codex:thread-1:turn-1:2'])
+    // Widening this direction would put submissions on every streaming frame, minting a
+    // new array identity per frame and re-running every consumer for the whole turn.
+    expect(page.page.submissions).toEqual([])
+  })
+
+  it('still serves a real tail page when every retained submission carries a long reason', async () => {
+    // A provider error is arbitrary text, so one adapter can do this for real. Unbounded,
+    // the retained window alone is 4 MiB and no tail page can be sent at all.
+    const reason = 'x'.repeat(16 * 1024)
+    for (let index = 0; index < MAX_RETAINED_SUBMISSIONS; index += 1) {
+      await journal.appendSubmission({
+        clientMessageId: `msg-${index}`,
+        payloadFingerprint: 'e'.repeat(64),
+        body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'hi' }] },
+        fence: 1
+      })
+      await journal.resolveDispatch({
+        clientMessageId: `msg-${index}`,
+        state: 'rejected',
+        reason,
+        fence: 1
+      })
+    }
+    await appendItems(10)
+
+    const page = readAgentSessionHistory(journal, {
+      sessionId: 'session-1',
+      direction: 'tail',
+      limit: 40
+    })
+    if (!page.ok) {
+      throw new Error(`expected a page, got reset ${page.reset}`)
+    }
+    serializeRemoteRuntimePayload(page.page)
+    expect(page.page.items.every((entry) => entry.body.kind === 'message')).toBe(true)
+    expect(page.page.items.length).toBeGreaterThan(10)
+    // The field is bounded, the set is not: dropping records to make the page fit would
+    // withhold exactly the settlements a re-attaching pane never received.
+    expect(page.page.submissions).toHaveLength(MAX_RETAINED_SUBMISSIONS)
+    expect(page.page.submissions.every((entry) => entry.dispatchState === 'rejected')).toBe(true)
+  })
+})
+
+describe('dispatch reason bounding', () => {
+  const HUGE_REASON = 'x'.repeat(64 * 1024)
+
+  // Two bounds, two levers. The page-side one alone would look sufficient to any test
+  // that reads a page, so the write-site lever reads the reduced snapshot instead and
+  // the page-side lever starts from a row inserted behind the write site's back.
+  it('bounds a reason as it is written, before any page reads it', async () => {
+    await journal.appendSubmission({
+      clientMessageId: 'msg-1',
+      payloadFingerprint: 'e'.repeat(64),
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'hi' }] },
+      fence: 1
+    })
+    await journal.resolveDispatch({
+      clientMessageId: 'msg-1',
+      state: 'rejected',
+      reason: HUGE_REASON,
+      fence: 1
+    })
+
+    const settled = journal.snapshot().submissions[0]
+    expect(settled?.reason?.length).toBeLessThan(HUGE_REASON.length)
+    expect(settled?.dispatchState).toBe('rejected')
+  })
+
+  it('bounds a reason already persisted unbounded, keeping the record', async () => {
+    const seq = journal.cursor().sequence
+    const reopened = await reopenWithRawRows([
+      {
+        kind: 'submission',
+        clientMessageId: 'msg-1',
+        payloadFingerprint: 'e'.repeat(64),
+        providerHandle: IDENTITY.providerHandle,
+        body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'hi' }] },
+        seq: seq + 1
+      },
+      {
+        kind: 'dispatch',
+        clientMessageId: 'msg-1',
+        state: 'rejected',
+        providerItemId: null,
+        reason: HUGE_REASON,
+        seq: seq + 2
+      }
+    ])
+    // The row bypassed the write site, so only the page-side bound can hold here.
+    expect(reopened.snapshot().submissions[0]?.reason).toBe(HUGE_REASON)
+
+    const tail = readAgentSessionHistory(reopened, {
+      sessionId: 'session-1',
+      direction: 'tail',
+      limit: 40
+    })
+    if (!tail.ok) {
+      throw new Error(`expected a page, got reset ${tail.reset}`)
+    }
+    serializeRemoteRuntimePayload(tail.page)
+    const shipped = tail.page.submissions[0]
+    expect(tail.page.submissions).toHaveLength(1)
+    expect(shipped?.clientMessageId).toBe('msg-1')
+    expect(shipped?.dispatchState).toBe('rejected')
+    expect(shipped?.reason?.length).toBeLessThan(HUGE_REASON.length)
+    expect(
+      shipped?.reason?.startsWith('x'.repeat(DISPATCH_REASON_PAGE_LIMITS.inlineHeadBytes))
+    ).toBe(true)
   })
 })
 
@@ -505,6 +661,8 @@ function serializedPageBytes(value: unknown): number {
 type RawSeedRow =
   | Omit<JournalItemRow, 'v' | 'epoch' | 'fence' | 'ts'>
   | Omit<JournalTombstoneRow, 'v' | 'epoch' | 'fence' | 'ts'>
+  | Omit<JournalSubmissionRow, 'v' | 'epoch' | 'fence' | 'ts'>
+  | Omit<JournalDispatchRow, 'v' | 'epoch' | 'fence' | 'ts'>
 
 /** Simulate rows admitted before identity bounding existed: written straight
  *  into the log, then loaded by a fresh journal instance. */

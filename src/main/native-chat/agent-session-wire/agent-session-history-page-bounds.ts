@@ -7,6 +7,11 @@ import type {
   AgentJournalSubmission
 } from '../../../shared/agent-session-journal-types'
 import { REMOTE_RUNTIME_MAX_OUTBOUND_JSON_BYTES } from '../../../shared/remote-runtime-memory-limits'
+import { MAX_RETAINED_SUBMISSIONS } from '../../../shared/structured-agent-session-submission-retention'
+import {
+  boundInlineText,
+  type JournalPayloadLimits
+} from '../agent-session-journal/journal-payload-bounds'
 
 export const AGENT_SESSION_HISTORY_MAX_PAGE_BYTES = REMOTE_RUNTIME_MAX_OUTBOUND_JSON_BYTES / 2
 
@@ -14,6 +19,43 @@ const HISTORY_PAGE_ENVELOPE_RESERVE_BYTES = 64 * 1024
 
 export const HISTORY_PAGE_CONTENT_BUDGET_BYTES =
   AGENT_SESSION_HISTORY_MAX_PAGE_BYTES - HISTORY_PAGE_ENVELOPE_RESERVE_BYTES
+
+/** Head kept of a dispatch `reason` on the wire. Every retained submission rides on
+ *  every replacing page, so this bound is multiplied by the whole retained window: at
+ *  the 16 KiB default inline head that is 4 MiB of reasons on one page, past the
+ *  outbound channel cap. An eighth of the budget spread over the window is still far
+ *  above any real provider error, and clipping is marked, never silent. */
+export const DISPATCH_REASON_PAGE_LIMITS: JournalPayloadLimits = {
+  inlineHeadBytes: Math.floor(HISTORY_PAGE_CONTENT_BUDGET_BYTES / 8 / MAX_RETAINED_SUBMISSIONS)
+}
+
+// Bounding once per snapshot: `submissionBytesByItemId` prices what the page ships, and
+// a stable array identity keeps both its cache and the retained window stable.
+const boundedBySubmissions = new WeakMap<
+  readonly AgentJournalSubmission[],
+  readonly AgentJournalSubmission[]
+>()
+
+/** Page records with an oversized `reason` clipped. Rows persisted before the write-site
+ *  bound still carry unbounded ones, so the page cannot trust what it reads. Every record
+ *  survives — dropping one re-opens the settlement hole a replacing page exists to fill. */
+export function boundedPageSubmissions(
+  submissions: readonly AgentJournalSubmission[]
+): readonly AgentJournalSubmission[] {
+  const cached = boundedBySubmissions.get(submissions)
+  if (cached) {
+    return cached
+  }
+  const bounded = submissions.map((submission) => {
+    if (submission.reason === null) {
+      return submission
+    }
+    const { text } = boundInlineText(submission.reason, DISPATCH_REASON_PAGE_LIMITS)
+    return text === submission.reason ? submission : { ...submission, reason: text }
+  })
+  boundedBySubmissions.set(submissions, bounded)
+  return bounded
+}
 
 export function historyEntryBytes(
   item: AgentJournalRenderItem,
@@ -37,7 +79,7 @@ export function submissionBytesByItemId(
     return cached
   }
   const bytes = new Map(
-    submissions.map((submission) => [
+    boundedPageSubmissions(submissions).map((submission) => [
       agentJournalSubmissionKey(submission.clientMessageId),
       Buffer.byteLength(JSON.stringify(submission), 'utf8')
     ])

@@ -29,6 +29,7 @@ import {
   boundHistoryItemsByBytes,
   HISTORY_PAGE_CONTENT_BUDGET_BYTES,
   historyEntryBytes,
+  boundedPageSubmissions,
   newestWholeSequenceGroups,
   oversizedHistoryItem,
   submissionBytesByItemId
@@ -299,14 +300,18 @@ function pageSubmissions(
 ): AgentJournalSubmission[] {
   const onPage = (submission: AgentJournalSubmission): boolean =>
     pageItemIds.has(agentJournalSubmissionKey(submission.clientMessageId))
+  // Bounded, never dropped: a record the page withheld is exactly one that would not
+  // reach a re-attaching pane. Only `reason` is clipped, and only when oversized.
+  const bounded = boundedPageSubmissions(submissions)
   if (direction === 'after') {
-    return submissions.filter(onPage)
+    return bounded.filter(onPage)
   }
-  // Snapshot submissions are already `submittedAt` ascending; filtering keeps that.
+  // One filter over the `submittedAt`-ascending source, so the union stays ordered and
+  // cannot duplicate an entry that satisfies both arms.
   const retained = new Set(
-    retainedSubmissionWindow(submissions).map((submission) => submission.clientMessageId)
+    retainedSubmissionWindow(bounded).map((submission) => submission.clientMessageId)
   )
-  return submissions.filter(
+  return bounded.filter(
     (submission) => retained.has(submission.clientMessageId) || onPage(submission)
   )
 }
@@ -314,7 +319,8 @@ function pageSubmissions(
 /** Item budget once the retained submissions are priced. `historyEntryBytes` prices a
  *  submission against its own item, so the ones riding with an off-window item are
  *  invisible to it. Ones that are on-window get charged twice; over-reserving a few
- *  hundred bytes each is the safe direction against the envelope reserve. */
+ *  hundred bytes each is the safe direction against the envelope reserve. `submissionBytes`
+ *  prices the clipped records, so the reserve is bounded by construction. */
 function itemBudgetBytes(
   submissions: readonly AgentJournalSubmission[],
   submissionBytes: ReadonlyMap<string, number>

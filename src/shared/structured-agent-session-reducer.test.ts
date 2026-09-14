@@ -54,6 +54,40 @@ function hydrationPage(
 }
 
 describe('structured agent session reducer', () => {
+  it('settles a submission a head-parked pane missed, then stops churning', () => {
+    const pending = { ...submission(1), dispatchState: 'pending' as const, resolvedAt: null }
+    const attached = reduceStructuredAgentSession(EMPTY_STRUCTURED_AGENT_SESSION, {
+      type: 'event',
+      event: {
+        type: 'snapshot',
+        sessionId: 'session-a',
+        fence: 1,
+        page: hydrationPage([item('a', 5)], [pending])
+      }
+    })
+    expect(attached.cursor).toEqual({ epoch: 'epoch-a', sequence: 5 })
+    expect(attached.submissions[0]?.dispatchState).toBe('pending')
+
+    // The pane's cursor already sits at the page's head, so this never replaces state.
+    const settled = reduceStructuredAgentSession(attached, {
+      type: 'tail-page',
+      page: hydrationPage([item('a', 5)], [submission(1)])
+    })
+    expect(settled.submissions[0]).toMatchObject({
+      clientMessageId: 'client-1',
+      dispatchState: 'accepted'
+    })
+
+    // A page that corrects nothing must not re-render the transcript, even though the
+    // wire hands it a fresh object for every submission.
+    expect(
+      reduceStructuredAgentSession(settled, {
+        type: 'tail-page',
+        page: hydrationPage([item('a', 5)], [submission(1)])
+      })
+    ).toBe(settled)
+  })
+
   it('keeps the ownership fence when a tail refresh replaces the page without one', () => {
     const attached = reduceStructuredAgentSession(EMPTY_STRUCTURED_AGENT_SESSION, {
       type: 'event',
@@ -65,8 +99,8 @@ describe('structured agent session reducer', () => {
       }
     })
     expect(attached.fence).toBe(7)
-    // `agentSession.history` never stamps a fence, so nulling it here would hold the
-    // outbox pump and the unconfirmed probe with nothing shown in the UI.
+    // A page whose record is gone or whose lease carries no runtime fence omits it;
+    // nulling the known-good fence would hold the outbox pump and the unconfirmed probe.
     const refreshed = reduceStructuredAgentSession(attached, {
       type: 'tail-page',
       page: hydrationPage([item('a', 1), item('b', 2)])

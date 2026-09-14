@@ -12,6 +12,7 @@ import type {
   AgentSessionTurnActivity
 } from './agent-session-wire'
 import { backgroundTaskStatesEqual } from './agent-session-background-task-state-equality'
+import { submissionListsEqual } from './agent-session-submission-equality'
 import { agentJournalSubmissionKey } from './agent-session-journal-item-key'
 import { MAX_RETAINED_SUBMISSIONS } from './structured-agent-session-submission-retention'
 
@@ -177,10 +178,18 @@ export function reduceStructuredAgentSession(
       const backgroundTasksChanged =
         action.page.backgroundTasks !== undefined &&
         !backgroundTaskStatesEqual(action.page.backgroundTasks, state.backgroundTasks)
+      // A head-parked pane never leaves this branch, so a settlement it missed can only
+      // land here. Retention filters against `state.items`: the page's window can be
+      // narrower, and evicting a retained submission would re-open the hole.
+      const submissions = mergeSubmissions(state.submissions, action.page.submissions, state.items)
+      const submissionsChanged = !submissionListsEqual(submissions, state.submissions)
+      // Equal cursor only: dispatch states are not monotone — a proven retry returns to
+      // `pending` — so a strictly-behind page could clobber a fresh `accepted`.
       if (
         pageCursor?.sequence === state.cursor.sequence &&
         ((action.page.fence !== undefined && action.page.fence !== state.fence) ||
-          backgroundTasksChanged)
+          backgroundTasksChanged ||
+          submissionsChanged)
       ) {
         return {
           ...state,
@@ -188,6 +197,7 @@ export function reduceStructuredAgentSession(
           ...(action.page.backgroundTasks !== undefined
             ? { backgroundTasks: action.page.backgroundTasks }
             : {}),
+          ...(submissionsChanged ? { submissions } : {}),
           ...hostClockField(action.page.hostNow, receivedAt, state.hostClock),
           status: 'ready',
           error: undefined
@@ -199,8 +209,8 @@ export function reduceStructuredAgentSession(
     return {
       epoch: action.page.epoch,
       cursor: action.page.liveCursor ?? null,
-      // A tail refresh carries no fence; only a hydration page does. Nulling it here
-      // would silently hold the outbox pump and the unconfirmed probe.
+      // A page omits its fence only when the record is gone or its lease carries none.
+      // Nulling a live fence on that page silently holds the outbox pump and the probe.
       fence: action.page.fence ?? state.fence,
       items: action.page.items,
       submissions: sameEpoch
