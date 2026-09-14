@@ -14,6 +14,7 @@ vi.mock('../browser/browser-manager', async () =>
   (await import('./createMainWindow-test-harness')).browserManagerMock()
 )
 
+import { app } from 'electron'
 import { createMainWindow } from './createMainWindow'
 import { resetExpectedTeardownStateForTest } from '../crash-reporting/expected-teardown-state'
 import {
@@ -366,6 +367,92 @@ describe('createMainWindow', () => {
       windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
 
       expect(browserWindowInstance.show).not.toHaveBeenCalled()
+    })
+  })
+
+  // Closing a window kills its renderer, so the pre-paint reveal must not re-show what the user just
+  // closed. This pins the isWindowClosing half of the guard; the quitting half is pinned above.
+  it('does not reveal when the renderer dies while the window is closing', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    const showInactive = vi.fn()
+    Object.assign(browserWindowInstance, { showInactive })
+
+    withPlatform('darwin', () => {
+      createMainWindow(null)
+      // Why before-quit: the auto-updater strips 'close' listeners, so this is where the latch is set.
+      const freezeBoundsOnQuit = (
+        app.on as unknown as { mock: { calls: [string, () => void][] } }
+      ).mock.calls.findLast(([event]) => event === 'before-quit')?.[1]
+      expect(freezeBoundsOnQuit).toBeTypeOf('function')
+      freezeBoundsOnQuit?.()
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
+
+      expect(browserWindowInstance.show).not.toHaveBeenCalled()
+      expect(showInactive).not.toHaveBeenCalled()
+    })
+  })
+
+  // The liveness probes cannot catch a frame that dies between the check and the send, so the send is
+  // wrapped too. Without the wrapper the throw escapes maximize() and starves the reveal again.
+  it('reveals the window when the maximize notification throws despite a live-looking frame', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    browserWindowInstance.webContents.send.mockImplementation(() => {
+      throw new Error('Render frame was disposed before WebFrameMain could be accessed')
+    })
+
+    withPlatform('darwin', () => {
+      createMainWindow(createStartupRevealStore(true) as never)
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
+
+      expect(browserWindowInstance.webContents.send).toHaveBeenCalledWith(
+        'window:maximize-changed',
+        true
+      )
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // Pins the isDestroyed term: a destroyed frame must be skipped outright, not probed by the try/catch.
+  it('skips the maximize notification when the renderer frame is destroyed', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    browserWindowInstance.webContents.isDestroyed.mockReturnValue(true)
+
+    withPlatform('darwin', () => {
+      createMainWindow(createStartupRevealStore(true) as never)
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
+
+      expect(browserWindowInstance.webContents.send).not.toHaveBeenCalledWith(
+        'window:maximize-changed',
+        true
+      )
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // The send sits BEFORE bounds persistence on the unmaximize path, so an unwrapped throw would lose the
+  // user's restored window size. This is what the try/catch inside sendMaximizeChanged actually buys.
+  it('still persists restored bounds when the unmaximize notification throws', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    Object.assign(browserWindowInstance, {
+      getBounds: vi.fn(() => ({ x: 10, y: 20, width: 1100, height: 700 }))
+    })
+    browserWindowInstance.webContents.send.mockImplementation(() => {
+      throw new Error('Render frame was disposed before WebFrameMain could be accessed')
+    })
+    const store = createStartupRevealStore(false)
+
+    withPlatform('darwin', () => {
+      createMainWindow(store as never)
+      windowHandlers['unmaximize']()
+
+      expect(store.updateUI).toHaveBeenCalledWith({
+        windowMaximized: false,
+        windowBounds: { x: 10, y: 20, width: 1100, height: 700 }
+      })
     })
   })
 
