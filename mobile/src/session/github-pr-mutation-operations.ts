@@ -1,7 +1,11 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
 import type { RpcMethodName } from '../transport/rpc-params-contract'
 import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
-import { rpcPayloadMember, rpcReadUnchecked } from '../transport/rpc-reader-payload'
+import {
+  rpcPayloadMember,
+  rpcReadUnchecked,
+  rpcUncheckedPayloadReader
+} from '../transport/rpc-reader-payload'
 
 // Host-state changes on the `github.*` PR surface. A lost reply here is *unknown*, never failed:
 // none of these operations interprets a transport rejection, so the rejection object — and the
@@ -103,19 +107,13 @@ export const githubPrIssueCommentDelete = mutationStatusOperation(
 // The two mutations whose host result is a bare boolean rather than a status envelope. Their
 // payload is unread here on purpose: `=== true` is the caller's confirmation rule, and reading it
 // as a status would turn a `false` into the "no structured status" success the envelope methods get.
-const mutationConfirmationReader: RpcCompatibleReader<
-  unknown,
-  'pr-mutation-confirmation',
-  unknown
-> = (raw) => rpcReadUnchecked('pr-mutation-confirmation', raw)
-
 export const githubPrTitleSet = bindDeferredRpcOperation(
   defineRpcOperation({
     name: 'github.update-pr-title',
     method: 'github.updatePRTitle',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: mutationConfirmationReader
+    read: rpcUncheckedPayloadReader('pr-mutation-confirmation')
   })
 )
 
@@ -125,6 +123,6 @@ export const githubPrReviewThreadResolve = bindDeferredRpcOperation(
     method: 'github.resolveReviewThread',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: mutationConfirmationReader
+    read: rpcUncheckedPayloadReader('pr-mutation-confirmation')
   })
 )
