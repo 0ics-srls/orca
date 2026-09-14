@@ -35,6 +35,12 @@ const TRANSCRIPT_LENGTH = 200
 const BELOW_TRANSCRIPT_PX = 24
 let belowTranscriptPx = BELOW_TRANSCRIPT_PX
 
+/** Everything the document holds above the spacer: the scroll root's top gutter,
+ *  and the "load earlier" block whenever there is older history to page in. This
+ *  is the virtualizer's `scrollMargin`, and it is the larger half of the gap
+ *  between the document's end and the end the virtualizer computes. */
+let aboveTranscriptPx = 0
+
 /** Heights the stubbed layout reports per row index, when a case wants a row to
  *  measure as something other than its estimate. Empty means "every row at its
  *  estimate", which is what every non-growth case wants. */
@@ -91,9 +97,13 @@ function reservedTranscriptHeight(root: ParentNode): number {
 // bottom and the cases above are about where the window sits, not where it lands.
 function stubLayout({
   scrollGeometry = false,
+  offsetChain = false,
   viewportHeight = () => VIEWPORT_PX
 }: {
   scrollGeometry?: boolean
+  /** Give the spacer an `offsetTop` and a chain to walk up to the scroll root,
+   *  so `scrollMargin` can be something other than zero. */
+  offsetChain?: boolean
   viewportHeight?: () => number
 } = {}): () => void {
   const scrollTops = new WeakMap<HTMLElement, number>()
@@ -128,7 +138,7 @@ function stubLayout({
       overrideLayoutProperty('scrollHeight', {
         get(this: HTMLElement): number {
           return this.hasAttribute('data-native-chat-scroll')
-            ? reservedTranscriptHeight(this) + belowTranscriptPx
+            ? aboveTranscriptPx + reservedTranscriptHeight(this) + belowTranscriptPx
             : 0
         }
       }),
@@ -141,6 +151,22 @@ function stubLayout({
           // the view past the end and every distance-from-bottom would read 0.
           const max = Math.max(0, this.scrollHeight - this.clientHeight)
           scrollTops.set(this, Math.min(Math.max(0, value), max))
+        }
+      })
+    )
+  }
+  if (offsetChain) {
+    restores.push(
+      overrideLayoutProperty('offsetTop', {
+        get(this: HTMLElement): number {
+          return this.hasAttribute('data-native-chat-window') ? aboveTranscriptPx : 0
+        }
+      }),
+      // happy-dom has no `offsetParent` at all, so production's walk to the
+      // scroll root ends before it starts and every margin reads zero.
+      overrideLayoutProperty('offsetParent', {
+        get(this: HTMLElement): HTMLElement | null {
+          return this.parentElement?.closest<HTMLElement>('[data-native-chat-scroll]') ?? null
         }
       })
     )
@@ -572,9 +598,10 @@ describe('transcript follow ownership across growth and appends', () => {
   let restoreLayout = (): void => {}
   let restoreResizeObserver = (): void => {}
   beforeEach(() => {
-    restoreLayout = stubLayout({ scrollGeometry: true })
+    restoreLayout = stubLayout({ scrollGeometry: true, offsetChain: true })
     restoreResizeObserver = stubResizeObserver()
     belowTranscriptPx = BELOW_TRANSCRIPT_PX
+    aboveTranscriptPx = 0
     setMeasuredTail(0)
   })
   afterEach(() => {
@@ -582,6 +609,7 @@ describe('transcript follow ownership across growth and appends', () => {
     restoreLayout()
     measuredRowHeights = []
     belowTranscriptPx = BELOW_TRANSCRIPT_PX
+    aboveTranscriptPx = 0
     vi.restoreAllMocks()
   })
 
@@ -862,5 +890,78 @@ describe('transcript follow ownership across growth and appends', () => {
     expect(scheduledFrames).toBeLessThanOrEqual(8)
     expect(scroller.scrollTop).toBe(1800)
     expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
+  })
+
+  // With something above the spacer, the two parties stop agreeing on where the
+  // end is: the transcript measures it from the document, the virtualizer from
+  // the spacer's own height against a container-absolute offset. The second is
+  // short by everything outside the spacer, so it reads a reader who is clearly
+  // above the end as sitting on it.
+  describe('with a gutter above the transcript', () => {
+    /** `pt-10` plus the "Load earlier" block and its gap — what sits above the
+     *  spacer once a resumed session still has older history to page in. */
+    const GUTTER_PX = 92
+    /** Far enough up that the transcript itself calls the reader detached, and
+     *  still inside the band the virtualizer computes (48 + 92 + 24). */
+    const READING_ABOVE_END_PX = 96
+    /** Production never predicts a row's height exactly, and a row the estimate
+     *  gets right never enters the virtualizer's size cache at all — every later
+     *  growth then arrives as a *first* measurement, down a different branch than
+     *  the end anchor these cases are about. A few pixels of skew keeps the row
+     *  measured, which is the state a real streaming row is in. */
+    const MEASURE_SKEW_PX = 7
+
+    function setSkewedTail(step: number): void {
+      const heights = Array.from({ length: TRANSCRIPT_LENGTH }, () => ROW_PX)
+      heights[TAIL_INDEX] = tailHeightAt(step) + MEASURE_SKEW_PX
+      measuredRowHeights = heights
+    }
+
+    beforeEach(() => {
+      aboveTranscriptPx = GUTTER_PX
+    })
+
+    it('leaves a reader just above the end where they are while the row grows', () => {
+      setSkewedTail(4)
+      const { container, rerender } = render(streamingList(4))
+      paint(container)
+      const scroller = scrollRoot(container)
+
+      const readingAt = scroller.scrollHeight - scroller.clientHeight - READING_ABOVE_END_PX
+      scrollTranscript(container, readingAt)
+      paint(container)
+      expect(distanceFromBottom(container)).toBe(READING_ABOVE_END_PX)
+      expect(distanceFromBottom(container)).toBeGreaterThan(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
+      expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
+
+      for (let step = 5; step <= 10; step += 1) {
+        setSkewedTail(step)
+        rerender(streamingList(step))
+        paint(container)
+
+        // Not dragged along: the offset the reader chose is the offset they keep,
+        // however much the row below them grows.
+        expect(scroller.scrollTop).toBe(readingAt)
+      }
+
+      expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
+    })
+
+    it('still pins a reader who is at the end, with the gutter in the document', () => {
+      setSkewedTail(4)
+      const { container, rerender } = render(streamingList(4))
+      paint(container)
+      expect(distanceFromBottom(container)).toBeLessThanOrEqual(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
+
+      for (let step = 5; step <= 10; step += 1) {
+        setSkewedTail(step)
+        rerender(streamingList(step))
+        paint(container)
+
+        expect(distanceFromBottom(container)).toBeLessThanOrEqual(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
+      }
+
+      expect(screen.queryByRole('button', { name: /jump to latest/i })).toBeNull()
+    })
   })
 })
