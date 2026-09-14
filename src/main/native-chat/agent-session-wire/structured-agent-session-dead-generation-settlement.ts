@@ -19,10 +19,17 @@ import {
 export const UNEXPECTED_PROVIDER_EXIT_OUTCOME =
   'The provider stopped while this response was in progress. You can continue in this conversation.'
 
+/** A provider may put a whole stderr dump in its exit reason; unbounded it would push the
+ *  actionable tail past the row's byte cap and lose it to truncation. */
+export const MAX_UNEXPECTED_EXIT_REASON_CHARS = 512
+
 /** The cause is the only thing separating an auth failure from an OOM kill, so it is carried
  *  into the copy rather than left in the durable record nothing renders. */
 export function unexpectedProviderExitOutcome(reason?: string): string {
-  const detail = reason?.trim().replace(/[.\s]+$/, '')
+  const detail = reason
+    ?.slice(0, MAX_UNEXPECTED_EXIT_REASON_CHARS)
+    .trim()
+    .replace(/[.\s]+$/, '')
   return detail
     ? `The provider stopped while this response was in progress: ${detail}. You can continue in this conversation.`
     : UNEXPECTED_PROVIDER_EXIT_OUTCOME

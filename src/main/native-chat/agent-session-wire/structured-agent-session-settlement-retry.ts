@@ -6,7 +6,11 @@ import type {
 } from './structured-agent-session-host-types'
 import type { StructuredAgentSessionLeaseStore } from './structured-agent-session-lease-release'
 import { turnVerdictFromDeathEvidence } from './structured-agent-session-stale-turn-verdict'
-import { settleStructuredAgentSessionDeadGeneration } from './structured-agent-session-dead-generation-settlement'
+import {
+  captureUnfinishedStructuredAgentSessionWork,
+  settleStructuredAgentSessionDeadGeneration,
+  unfinishedStructuredAgentSessionWorkWasInterrupted
+} from './structured-agent-session-dead-generation-settlement'
 
 export async function retryPendingStructuredAgentSessionSettlement(input: {
   deps: StructuredAgentSessionHostDeps
@@ -80,8 +84,16 @@ export async function retryLoadedStructuredAgentSessionSettlement(input: {
     pendingSubmissionReason: 'provider_exited_before_acknowledgement',
     verdict,
     // The same evidence decides the copy: only a witnessed death is worth telling the user
-    // about. An unverifiable one is a restart artefact, and the session stays sendable.
-    showUnexpectedExitOutcome: verdict.state === 'interrupted',
+    // about. An unverifiable one is a restart artefact, and the session stays sendable. The
+    // work check matches the live exit path — a provider that died waiting on a prompt
+    // interrupted no response, so it must not claim one was in progress.
+    showUnexpectedExitOutcome:
+      verdict.state === 'interrupted' &&
+      unfinishedStructuredAgentSessionWorkWasInterrupted(
+        captureUnfinishedStructuredAgentSessionWork(retrySession.journal),
+        retrySession.journal,
+        verdict.completedAt
+      ),
     ...(record.lease.deathEvidence?.detail
       ? { unexpectedExitReason: record.lease.deathEvidence.detail }
       : {}),

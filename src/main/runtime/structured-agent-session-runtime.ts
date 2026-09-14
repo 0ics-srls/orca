@@ -178,18 +178,19 @@ async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
   // first would hand every one of those steps a vacuous receipt from an already-closed router,
   // and would race the attach drain the host runs in the same teardown.
   //
-  // The constraint the old order protected — observe a final exit callback before journals close
-  // — no longer binds: every session the host indexed is stopped and settled by the time
-  // `closeAll` runs, so what `closeAll` still reaches is an acquisition the host never indexed,
-  // which owns no journal for a tail row to land in. The drain below keeps that late callback
-  // from outliving the runtime.
+  // Tail rows are protected by eviction's own per-session ordering — stop the child, drain what
+  // it already published, settle, then unbind the sink — not by which of the two teardowns runs
+  // first. `closeAll` is only a backstop for children eviction never took: an acquisition that
+  // failed before the host indexed it, or a session whose eviction was refused and left indexed.
+  // A row a child delivers during that backstop close is not captured, and was not captured
+  // under the old order either. The drain below keeps a late callback from outliving the runtime.
   try {
     await installed.host.flushAllStreamedEvents()
   } catch (error) {
     failures.push(error)
   }
   try {
-    // Backstop acquisitions that failed before the host indexed their journal.
+    // Backstop for children eviction never took: unindexed acquisitions and refused evictions.
     await installed.adapter.closeAll()
   } catch (error) {
     failures.push(error)

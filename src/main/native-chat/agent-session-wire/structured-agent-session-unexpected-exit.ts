@@ -7,6 +7,7 @@ import {
 import type { StructuredAgentSessionSinkBarrier } from './structured-agent-session-event-sink'
 import {
   captureUnfinishedStructuredAgentSessionWork,
+  MAX_UNEXPECTED_EXIT_REASON_CHARS,
   settleStructuredAgentSessionDeadGeneration,
   type DeadGenerationJournal,
   unfinishedStructuredAgentSessionWorkWasInterrupted
@@ -118,7 +119,7 @@ export async function settleUnexpectedStructuredAgentSessionExit<
                 settlementRetry: {
                   settlementId: stableSettlementId,
                   // Bare cause: the retry renders it, and `exit-observed` already says the rest.
-                  detail: unexpectedEvent.reason.slice(0, 512)
+                  detail: unexpectedEvent.reason.slice(0, MAX_UNEXPECTED_EXIT_REASON_CHARS)
                 }
               }
             : {})

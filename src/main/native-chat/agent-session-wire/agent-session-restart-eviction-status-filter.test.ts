@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { agentJournalItemKey } from '../../../shared/agent-session-journal-item-key'
 import { openAgentSessionJournal } from '../agent-session-journal/journal-store-factory'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
+import { UNEXPECTED_PROVIDER_EXIT_OUTCOME } from './structured-agent-session-dead-generation-settlement'
 import {
   readAgentSessionHistory,
   readAgentSessionHydrationPage
@@ -66,6 +67,15 @@ describe('restart-eviction status filtering', () => {
     }
     // The row stays in durable history; only the projection drops it.
     expect(journal.snapshot().items.map((item) => item.itemId)).toContain(orcaItemKey(hidden))
+  })
+
+  it('renders a genuine provider death settled under the same identity shape', async () => {
+    // The `restart-eviction:` id is still minted, so only the retired copy may be filtered.
+    const shared = `restart-eviction:${SESSION}:8`
+    await appendStatus(shared, UNEXPECTED_PROVIDER_EXIT_OUTCOME)
+
+    const itemIds = readAgentSessionHydrationPage(journal).items.map((item) => item.itemId)
+    expect(itemIds).toContain(orcaItemKey(shared))
   })
 
   it('hides it on forward catch-up without stalling the cursor', async () => {

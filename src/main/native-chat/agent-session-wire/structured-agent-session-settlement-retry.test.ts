@@ -69,13 +69,31 @@ beforeEach(async () => {
     journalDir: root,
     now: () => 1_000
   })
-  // A turn the dead generation left running: work to settle either way.
+})
+
+/** A turn the dead generation left running: work to settle either way. */
+async function seedRunningTurn(): Promise<void> {
   await journal.appendItem(
     { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 1 },
     { kind: 'turn', turnId: 'turn-1', state: 'running', startedAt: 900 },
     { fence: FENCE }
   )
-})
+}
+
+/** The provider died while the user, not the provider, held the conversation. */
+async function seedIdlePendingApproval(): Promise<void> {
+  await journal.appendItem(
+    { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 1 },
+    {
+      kind: 'approval',
+      title: 'Run command?',
+      detail: null,
+      options: [{ id: 'yes', label: 'Allow' }],
+      resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
+    },
+    { fence: FENCE }
+  )
+}
 
 afterEach(async () => {
   await journal.close()
@@ -84,6 +102,8 @@ afterEach(async () => {
 
 describe('pending settlement retry', () => {
   it('writes no status row when the death was only adjudicated, not witnessed', async () => {
+    await seedRunningTurn()
+
     await expect(
       retry(`restart-eviction:${SESSION}:${FENCE}`, {
         kind: 'pid-absent',
@@ -100,6 +120,8 @@ describe('pending settlement retry', () => {
   })
 
   it('writes no status row for an identity mismatch either', async () => {
+    await seedRunningTurn()
+
     await expect(
       retry(`restart-eviction:${SESSION}:${FENCE}`, {
         kind: 'identity-mismatch',
@@ -114,6 +136,8 @@ describe('pending settlement retry', () => {
   it('reads the evidence, not the settlement id, when deciding to speak', async () => {
     // Pins the discriminator: the id shape that normally accompanies a witnessed exit must not
     // earn the notice on its own.
+    await seedRunningTurn()
+
     await expect(
       retry(`provider-exit:${SESSION}:${FENCE}:generation-1`, {
         kind: 'pid-absent',
@@ -126,6 +150,8 @@ describe('pending settlement retry', () => {
   })
 
   it('writes user-facing copy carrying the cause when the exit was observed', async () => {
+    await seedRunningTurn()
+
     await expect(
       retry(`provider-exit:${SESSION}:${FENCE}:generation-1`, {
         kind: 'exit-observed',
@@ -139,6 +165,26 @@ describe('pending settlement retry', () => {
     ])
     expect(journal.snapshot().items.map((item) => item.body)).toContainEqual(
       expect.objectContaining({ kind: 'turn', state: 'interrupted', completedAt: 1_500 })
+    )
+  })
+
+  it('stays silent about a witnessed exit that interrupted nothing but a waiting prompt', async () => {
+    await seedIdlePendingApproval()
+
+    await expect(
+      retry(`provider-exit:${SESSION}:${FENCE}:generation-1`, {
+        kind: 'exit-observed',
+        detail: 'transport closed',
+        observedAt: 1_500
+      })
+    ).resolves.toBe(true)
+
+    expect(statusTexts()).toEqual([])
+    expect(journal.snapshot().items.map((item) => item.body)).toContainEqual(
+      expect.objectContaining({
+        kind: 'approval',
+        resolution: expect.objectContaining({ state: 'cancelled' })
+      })
     )
   })
 })

@@ -7,6 +7,7 @@ import type { AgentJournalRenderItem } from '../../../shared/agent-session-journ
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import {
   captureUnfinishedStructuredAgentSessionWork,
+  MAX_UNEXPECTED_EXIT_REASON_CHARS,
   settleStructuredAgentSessionDeadGeneration,
   UNEXPECTED_PROVIDER_EXIT_OUTCOME,
   unfinishedStructuredAgentSessionWorkWasInterrupted
@@ -139,6 +140,33 @@ describe('dead structured-session generation settlement', () => {
             item.body.kind === 'status' && item.body.text === UNEXPECTED_PROVIDER_EXIT_OUTCOME
         )
     ).toHaveLength(1)
+  })
+
+  it('keeps the actionable tail when the provider dumps a stderr wall into its exit reason', async () => {
+    await seedUnfinishedWork()
+
+    await expect(
+      settleStructuredAgentSessionDeadGeneration({
+        journal,
+        sessionId: SESSION,
+        fence: 7,
+        settlementId: `provider-exit:${SESSION}:7:generation-1`,
+        pendingSubmissionReason: 'provider_exited_before_acknowledgement',
+        verdict: { state: 'interrupted', completedAt: 1_000 },
+        showUnexpectedExitOutcome: true,
+        unexpectedExitReason: 'stack frame '.repeat(4_000)
+      })
+    ).resolves.toBe(true)
+
+    const statuses = journal
+      .snapshot()
+      .items.flatMap((item) => (item.body.kind === 'status' ? [item.body.text] : []))
+    expect(statuses).toHaveLength(1)
+    // The cause is bounded before composing, so the row never reaches the byte cap that would
+    // truncate the sentence telling the user the conversation is still usable.
+    expect(statuses[0]).toContain('stack frame')
+    expect(statuses[0]).toMatch(/You can continue in this conversation\.$/)
+    expect(statuses[0]?.length).toBeLessThan(MAX_UNEXPECTED_EXIT_REASON_CHARS * 2)
   })
 
   it('retries an already settled expected close without writing through a closed journal gate', async () => {
