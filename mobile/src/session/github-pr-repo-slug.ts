@@ -40,7 +40,7 @@ const METHODS_ACCEPTING_PR_REPO = new Set<string>([
 // does not), so headSha is forwarded just to that read. Check runs are commit-keyed.
 const METHODS_ACCEPTING_HEAD_SHA = new Set<string>(['github.prChecks'])
 
-export type GitHubPrParamOptions = {
+type GitHubPrParamOptions = {
   prRepo?: GitHubPrRepoSlug | null
   headSha?: string | null
 }
@@ -66,12 +66,8 @@ export function buildGithubPrParams(
 
 /**
  * The same record, presented as one method's send params — the single seam where the PR surface's
- * record-shaped builder meets the typed operations.
- *
- * The builder cannot be typed per method: `repo` is prepended and `prRepo`/`headSha` appended from
- * an allow-list, so the key order is a property of the builder rather than of any call site, and
- * the wire payload is recorded as JSON with that order intact. Writing each call site's literal
- * instead would reorder the bytes. One assertion here rather than one per wrapper.
+ * record-shaped builder meets the typed operations. The builder is method-generic and returns a
+ * record, so it cannot be typed per method; one assertion here rather than one per wrapper.
  */
 export function githubPrRequestParams<Method extends RpcMethodName>(
   method: Method,
@@ -79,6 +75,6 @@ export function githubPrRequestParams<Method extends RpcMethodName>(
   params: Record<string, unknown>,
   options?: GitHubPrParamOptions
 ): RpcSendParams<Method> {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the caller supplies the method's own declared fields; this adds only `repo`, and `prRepo`/`headSha` for the methods whose schema declares them. The sender recordings pin the bytes.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the caller supplies the method's own declared fields; this adds only `repo`, and `prRepo`/`headSha` for the methods whose schema declares them.
   return buildGithubPrParams(method, worktreeId, params, options) as RpcSendParams<Method>
 }
