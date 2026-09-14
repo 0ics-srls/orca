@@ -76,20 +76,20 @@ describe('nextFollowingEnd', () => {
     expect(nextFollowingEnd({ ...following, geometry: wellAway })).toBe(false)
   })
 
-  it('does not re-attach a detached reader from an application write', () => {
-    expect(nextFollowingEnd({ following: false, programmatic: true, geometry: wellAway })).toBe(
-      false
-    )
-  })
+  it.each([0, NATIVE_CHAT_FOLLOW_REARM_PX, 400])(
+    'does not reattach a detached reader from an application write %i px from the end',
+    (distance) => {
+      expect(
+        nextFollowingEnd({ following: false, programmatic: true, geometry: parkedAbove(distance) })
+      ).toBe(false)
+    }
+  )
 
-  // The park bug. The near-bottom band is slack for a streaming row's jitter;
-  // re-arming on it meant every step off the end smaller than that slack still
-  // counted as following, so the next chunk of stream took the reader back down.
+  // The jump affordance's wider band must not decide whether a reader follows.
   it('lets the reader park just inside the near-bottom band', () => {
     expect(NATIVE_CHAT_FOLLOW_REARM_PX).toBeLessThan(NATIVE_CHAT_BOTTOM_THRESHOLD_PX)
     const parked = parkedAbove(NATIVE_CHAT_BOTTOM_THRESHOLD_PX - 1)
     expect(nextFollowingEnd({ ...following, geometry: parked })).toBe(false)
-    // The pin and the affordance keep their own, wider band: only follow moved.
     expect(isNearBottom(parked)).toBe(true)
     expect(shouldShowJumpToLatest(false, parked)).toBe(false)
   })

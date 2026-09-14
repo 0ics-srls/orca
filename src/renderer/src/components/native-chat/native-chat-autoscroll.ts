@@ -11,11 +11,7 @@ export type ScrollGeometry = {
   clientHeight: number
 }
 
-/** Pixels from the bottom within which we treat the view as "at the bottom" and
- *  keep it pinned as content arrives. A small slack absorbs sub-pixel rounding
- *  and the height jitter of a streaming last message. Whether a reader's own
- *  scroll leaves us following is a separate, stricter question — see
- *  `NATIVE_CHAT_FOLLOW_REARM_PX`. */
+/** Hide the jump affordance while the latest output is still nearby. */
 export const NATIVE_CHAT_BOTTOM_THRESHOLD_PX = 48
 
 /** Distance in px from the bottom edge of the scroll range. */
@@ -23,8 +19,7 @@ export function distanceFromBottom(geometry: ScrollGeometry): number {
   return Math.max(0, geometry.scrollHeight - geometry.clientHeight - geometry.scrollTop)
 }
 
-/** True when the viewport is close enough to the bottom that new content should
- *  keep it pinned (auto-scroll "attached"). */
+/** Whether the viewport is inside the requested distance from the bottom. */
 export function isNearBottom(
   geometry: ScrollGeometry,
   threshold: number = NATIVE_CHAT_BOTTOM_THRESHOLD_PX
@@ -45,20 +40,7 @@ export function shouldShowJumpToLatest(
   return distanceFromBottom(geometry) > threshold
 }
 
-/** Pixels from the bottom within which a reader's own scroll still counts as
- *  following the end.
- *
- *  Deliberately far stricter than `NATIVE_CHAT_BOTTOM_THRESHOLD_PX`, because the
- *  two answer different questions: that one asks whether the view is close
- *  enough to the end to keep pinning it there, this one asks whether the reader
- *  meant to stay. Sharing the wider band meant any step off the end smaller than
- *  it still counted as following, so every later chunk of stream carried the
- *  reader back down and there was no way to park just above the latest message.
- *
- *  Sized to cover only what is not a decision: fractional-pixel and zoom
- *  rounding at the true end, at twice the epsilon the scroll marks already treat
- *  as offset noise, and well inside one line of prose so scrolling up a single
- *  line parks. */
+/** Allow bottom rounding noise without following a reader who moved up a line. */
 export const NATIVE_CHAT_FOLLOW_REARM_PX = 4
 
 export type FollowIntent = {
