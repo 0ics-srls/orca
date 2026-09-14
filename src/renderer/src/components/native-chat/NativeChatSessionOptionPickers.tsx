@@ -18,6 +18,7 @@ import { translate } from '@/i18n/i18n'
 import { sortNativeChatSessionOptions } from '../../../../shared/native-chat-session-option-snapshot'
 import {
   sessionOptionDispatchUnconfirmed,
+  sessionOptionValueMarker,
   type SessionOptionDescriptor,
   type SessionOptionsSurface,
   type SessionOptionValue
@@ -143,31 +144,39 @@ function DescriptorMenuRows(props: {
   }
   // Why one switch row and not On/Off: the option is binary, so a single control
   // carries it. The row owns the label, which is why the caller drops its header.
-  // An unknown value still shows the caption — the switch alone cannot say "unset".
+  // The value always renders; the marker is what keeps an unpicked one from
+  // reading as confirmed, since the switch itself cannot say "nobody said".
   if (descriptor.kind.type === 'boolean') {
-    const checked = descriptor.kind.currentValue === true
+    const checked = descriptor.kind.currentValue
+    const label = nativeChatSessionOptionLabel(descriptor)
+    const marker = sessionOptionValueMarker(descriptor)
     return (
-      <>
-        {descriptor.kind.currentValue === undefined ? (
-          <DropdownMenuLabel className="font-normal text-muted-foreground">
-            {translate('components.native-chat.composer.valueUnknown', 'Current value unknown')}
-          </DropdownMenuLabel>
-        ) : null}
-        <DropdownMenuItem
-          role="switch"
-          aria-checked={checked}
-          disabled={!descriptor.settable || pending}
-          // Keep the menu open: the write is async and its result lands in this row.
-          onSelect={(event) => {
-            event.preventDefault()
-            setValue(!checked)
-          }}
-          className="justify-between gap-2"
-        >
-          <span>{nativeChatSessionOptionLabel(descriptor)}</span>
+      <DropdownMenuItem
+        role="switch"
+        aria-checked={checked}
+        // Named explicitly: the marker qualifies where the value came from, and
+        // folding it into the name would read as part of the control's label.
+        aria-label={label}
+        disabled={!descriptor.settable || pending}
+        // Keep the menu open: the write is async and its result lands in this row.
+        onSelect={(event) => {
+          event.preventDefault()
+          setValue(!checked)
+        }}
+        className="justify-between gap-2"
+      >
+        <span>{label}</span>
+        <span className="flex items-center gap-1.5">
+          {marker ? (
+            <span aria-hidden="true" className="text-[11px] text-muted-foreground">
+              {marker === 'default'
+                ? translate('components.native-chat.composer.valueIsDefault', 'Default')
+                : translate('components.native-chat.composer.valueNotReported', 'Not reported')}
+            </span>
+          ) : null}
           <SwitchIndicator checked={checked} />
-        </DropdownMenuItem>
-      </>
+        </span>
+      </DropdownMenuItem>
     )
   }
   return (
@@ -284,7 +293,9 @@ function NativeChatSessionOptionPickersInner({
                 <div key={descriptor.id}>
                   {index > 0 ? <DropdownMenuSeparator /> : null}
                   {descriptor.kind.type === 'boolean' && !descriptor.action ? null : (
-                    <DropdownMenuLabel>{nativeChatSessionOptionLabel(descriptor)}</DropdownMenuLabel>
+                    <DropdownMenuLabel>
+                      {nativeChatSessionOptionLabel(descriptor)}
+                    </DropdownMenuLabel>
                   )}
                   {reason && !descriptor.settable ? (
                     <DropdownMenuLabel className="font-normal">{reason}</DropdownMenuLabel>

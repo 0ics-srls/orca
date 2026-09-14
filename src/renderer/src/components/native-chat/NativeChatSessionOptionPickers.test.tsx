@@ -79,7 +79,11 @@ vi.mock('@/components/ui/dropdown-menu', () => {
     }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
       onSelect?: (event: { preventDefault: () => void }) => void
     }) => (
-      <button {...rest} disabled={disabled} onClick={() => onSelect?.({ preventDefault: () => {} })}>
+      <button
+        {...rest}
+        disabled={disabled}
+        onClick={() => onSelect?.({ preventDefault: () => {} })}
+      >
         {children}
       </button>
     ),
@@ -179,21 +183,27 @@ function model(overrides: Partial<SessionOptionDescriptor> = {}): SessionOptionD
   }
 }
 
+const EFFORT_CHOICES = [
+  { value: 'low', label: 'Low' },
+  { value: 'high', label: 'High' }
+]
+
 const effort: SessionOptionDescriptor = {
   id: 'effort',
   label: 'Effort',
   category: 'thought_level',
-  kind: {
-    type: 'select',
-    currentValue: 'high',
-    choices: [
-      { value: 'low', label: 'Low' },
-      { value: 'high', label: 'High' }
-    ]
-  },
+  kind: { type: 'select', currentValue: 'high', choices: EFFORT_CHOICES },
   valueSource: 'applied',
   transport: 'catalog',
   settable: true
+}
+
+/** A select with nothing picked. Only a select can be in this shape: it renders
+ *  "nothing selected" truthfully, which is why the boolean kind requires a value. */
+const unknownEffort: SessionOptionDescriptor = {
+  ...effort,
+  kind: { type: 'select', choices: EFFORT_CHOICES },
+  valueSource: 'unknown'
 }
 
 const fast: SessionOptionDescriptor = {
@@ -303,10 +313,7 @@ describe('NativeChatSessionOptionPickers', () => {
     render(
       <NativeChatSessionOptionPickers
         surface={surface}
-        snapshot={[
-          model(),
-          { ...effort, kind: { ...effort.kind, currentValue: undefined }, valueSource: 'unknown' }
-        ]}
+        snapshot={[model(), unknownEffort]}
         isWorking={false}
       />
     )
@@ -339,7 +346,7 @@ describe('NativeChatSessionOptionPickers', () => {
             kind: { type: 'select', choices: [] },
             valueSource: 'unknown'
           }),
-          { ...effort, kind: { ...effort.kind, currentValue: undefined }, valueSource: 'unknown' }
+          unknownEffort
         ]}
         isWorking={false}
       />
@@ -445,7 +452,7 @@ describe('NativeChatSessionOptionPickers', () => {
           model(),
           {
             ...fast,
-            kind: { type: 'boolean' },
+            kind: { type: 'boolean', currentValue: false },
             valueSource: 'unknown',
             action: { type: 'toggle-command' }
           }
@@ -485,9 +492,9 @@ describe('NativeChatSessionOptionPickers', () => {
     expect(screen.queryByRole('radio', { name: 'Off' })).toBeNull()
     const fastSwitch = screen.getByRole('switch', { name: 'Fast mode' })
     expect(fastSwitch.getAttribute('aria-checked')).toBe('true')
-    expect(fastSwitch.querySelector('[data-slot="switch-indicator"]')?.getAttribute('data-state')).toBe(
-      'checked'
-    )
+    expect(
+      fastSwitch.querySelector('[data-slot="switch-indicator"]')?.getAttribute('data-state')
+    ).toBe('checked')
     // The label is not duplicated by a separate group header.
     expect(screen.getAllByText('Fast mode')).toHaveLength(1)
     fastSwitch.click()
@@ -503,7 +510,9 @@ describe('NativeChatSessionOptionPickers', () => {
             id: 'thinking',
             label: 'Thinking',
             category: 'mode',
-            kind: { type: 'boolean' },
+            // What the producer now emits for an unreported `thinking`: the
+            // catalog default, with provenance still saying nothing confirmed it.
+            kind: { type: 'boolean', currentValue: true },
             valueSource: 'unknown',
             transport: 'catalog',
             settable: true
@@ -512,13 +521,59 @@ describe('NativeChatSessionOptionPickers', () => {
         isWorking={false}
       />
     )
-    // Unknown composed boolean: the caption says so, and the switch reads unchecked
-    // rather than claiming a value; toggling it commits an explicit on.
-    expect(screen.getByText('Current value unknown')).not.toBeNull()
+    // The producer resolves the value, so the row renders it instead of a caption
+    // apologising for a switch that had already collapsed to off.
+    expect(screen.queryByText('Current value unknown')).toBeNull()
     const thinkingSwitch = screen.getByRole('switch', { name: 'Thinking' })
-    expect(thinkingSwitch.getAttribute('aria-checked')).toBe('false')
+    expect(thinkingSwitch.getAttribute('aria-checked')).toBe('true')
     thinkingSwitch.click()
-    await waitFor(() => expect(setOption).toHaveBeenCalledWith('thinking', true))
+    await waitFor(() => expect(setOption).toHaveBeenCalledWith('thinking', false))
+  })
+
+  // Both arms: `default` and `unreported` make opposite claims, and only
+  // `unreported` is reachable in the structured lane, so one arm proves nothing.
+  it.each([
+    {
+      name: 'a live unreported boolean is never labelled a default',
+      valueSource: 'unknown',
+      transport: 'agent-session',
+      shown: 'Not reported',
+      hidden: 'Default'
+    },
+    {
+      name: 'a draft catalog default says so',
+      valueSource: 'default',
+      transport: 'catalog',
+      shown: 'Default',
+      hidden: 'Not reported'
+    }
+  ] as const)('$name', ({ valueSource, transport, shown, hidden }) => {
+    render(
+      <NativeChatSessionOptionPickers
+        surface={surface}
+        snapshot={[
+          model(),
+          { ...fast, kind: { type: 'boolean', currentValue: false }, valueSource, transport }
+        ]}
+        isWorking={false}
+      />
+    )
+    expect(screen.getAllByText(shown).length).toBeGreaterThan(0)
+    expect(screen.queryByText(hidden)).toBeNull()
+    // The marker qualifies the value; it must not become part of the control's name.
+    expect(screen.getByRole('switch', { name: 'Fast mode' })).not.toBeNull()
+  })
+
+  it('drops the marker once something has picked the value', () => {
+    render(
+      <NativeChatSessionOptionPickers
+        surface={surface}
+        snapshot={[model(), { ...fast, valueSource: 'reported' }]}
+        isWorking={false}
+      />
+    )
+    expect(screen.queryByText('Default')).toBeNull()
+    expect(screen.queryByText('Not reported')).toBeNull()
   })
 
   it('tooltips a dispatched option pill with the category alone', () => {

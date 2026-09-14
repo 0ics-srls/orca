@@ -154,7 +154,7 @@ describe('structured agent session options', () => {
     expect(absent.record.valuesByModel['account-model']?.fastMode).toBeUndefined()
   })
 
-  it('keeps Fast unselected when support is known but the current value is absent', () => {
+  it('renders Fast off but marked unreported when support is known and no value is', () => {
     const state = applyStructuredAgentSessionOptions(
       createStructuredAgentSessionOptionState('codex'),
       CODEX_SESSION_OPTION_CATALOG,
@@ -173,10 +173,14 @@ describe('structured agent session options', () => {
       }
     )
 
+    // The switch has no third position, so the value resolves to the catalog's
+    // own `false`. `unknown` is what stops any surface calling that a default:
+    // `default` is unreachable in this lane (it is hardcoded `mode: 'live'`), and
+    // nothing here has reported the tier the thread is actually routing.
     expect(structuredAgentSessionOptionSnapshot(state)).toContainEqual(
       expect.objectContaining({
         id: 'fastMode',
-        kind: { type: 'boolean' },
+        kind: { type: 'boolean', currentValue: false },
         valueSource: 'unknown'
       })
     )
