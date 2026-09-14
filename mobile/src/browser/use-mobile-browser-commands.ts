@@ -1,7 +1,6 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import type { BrowserScreencastFrameMetadata } from '../transport/browser-screencast-protocol'
 import {
   browserDialogAccept,
@@ -37,24 +36,6 @@ type SendBrowserRequest = (
   send: BrowserPageCommandSend,
   options?: { showBusy?: boolean; suppressError?: boolean; timeoutMs?: number }
 ) => Promise<unknown | null>
-
-/**
- * The host's own refusal message, or this command's copy when it sent none — what `assertRpcOk`
- * did before the acceptance moved into the operation. The reply is interpreted after the await, not
- * inside it, so a transport rejection still reaches the caller as the object the transport threw
- * and keeps its delivery-unknown mark.
- */
-function assertBrowserCommandAccepted(
-  command: { interpret: (reply: RpcResponse) => unknown },
-  reply: RpcResponse,
-  fallback: string
-): void {
-  try {
-    command.interpret(reply)
-  } catch (error) {
-    throw new Error(refusedRpcMessageOrFallback(error, fallback))
-  }
-}
 
 type MobileBrowserCommandArgs = {
   client: RpcClient | null
@@ -105,22 +86,22 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
     wheelCommandInFlightRef.current = true
     void (async () => {
       try {
-        assertBrowserCommandAccepted(
-          browserPointerMove,
-          await browserPointerMove.request(client, {
-            ...pending.base,
-            x: pending.point.x,
-            y: pending.point.y
-          }),
+        const moveReply = await browserPointerMove.request(client, {
+          ...pending.base,
+          x: pending.point.x,
+          y: pending.point.y
+        })
+        interpretOrThrowRefusalMessage(
+          () => browserPointerMove.interpret(moveReply),
           'Browser pointer move failed'
         )
-        assertBrowserCommandAccepted(
-          browserPointerWheel,
-          await browserPointerWheel.request(client, {
-            ...pending.base,
-            dx: pending.dx,
-            dy: pending.dy
-          }),
+        const wheelReply = await browserPointerWheel.request(client, {
+          ...pending.base,
+          dx: pending.dx,
+          dy: pending.dy
+        })
+        interpretOrThrowRefusalMessage(
+          () => browserPointerWheel.interpret(wheelReply),
           'Browser scroll failed'
         )
         setError(null)
@@ -171,19 +152,23 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
         return
       }
       try {
-        assertBrowserCommandAccepted(
-          browserPointerMove,
-          await browserPointerMove.request(client, { ...base, x: point.x, y: point.y }),
+        const moveReply = await browserPointerMove.request(client, {
+          ...base,
+          x: point.x,
+          y: point.y
+        })
+        interpretOrThrowRefusalMessage(
+          () => browserPointerMove.interpret(moveReply),
           'Browser pointer move failed'
         )
-        assertBrowserCommandAccepted(
-          browserPointerDown,
-          await browserPointerDown.request(client, { ...base, button }),
+        const downReply = await browserPointerDown.request(client, { ...base, button })
+        interpretOrThrowRefusalMessage(
+          () => browserPointerDown.interpret(downReply),
           'Browser pointer down failed'
         )
-        assertBrowserCommandAccepted(
-          browserPointerUp,
-          await browserPointerUp.request(client, { ...base, button }),
+        const upReply = await browserPointerUp.request(client, { ...base, button })
+        interpretOrThrowRefusalMessage(
+          () => browserPointerUp.interpret(upReply),
           'Browser pointer up failed'
         )
         setError(null)

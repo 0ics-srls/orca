@@ -1,7 +1,7 @@
 import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 import type { RpcClient } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import {
   dictationConfigWrite,
@@ -46,7 +46,7 @@ export async function fetchDictationSetup(client: RpcClient): Promise<MobileSpee
     throw new Error(LEGACY_DESKTOP_SPEECH_SETUP_MESSAGE)
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-  return interpretDictationReply(
+  return interpretOrThrowRefusalMessage(
     () => dictationSetupRead.interpret(reply),
     'Failed to load dictation models'
   ) as MobileSpeechSetup
@@ -65,18 +65,12 @@ async function requestDictationSetupReply(client: RpcClient): Promise<RpcRespons
   }
 }
 
-/** The host's own refusal message, or the sheet's copy when it sent none. */
-function interpretDictationReply(interpret: () => unknown, fallback: string): unknown {
-  try {
-    return interpret()
-  } catch (error) {
-    throw new Error(refusedRpcMessageOrFallback(error, fallback))
-  }
-}
-
 export async function downloadDictationModel(client: RpcClient, modelId: string): Promise<void> {
   const reply = await dictationModelDownload.request(client, { modelId })
-  interpretDictationReply(() => dictationModelDownload.interpret(reply), 'Failed to start download')
+  interpretOrThrowRefusalMessage(
+    () => dictationModelDownload.interpret(reply),
+    'Failed to start download'
+  )
 }
 
 export async function deleteDictationModel(
@@ -85,7 +79,7 @@ export async function deleteDictationModel(
 ): Promise<MobileSpeechSetup> {
   const reply = await dictationModelDelete.request(client, { modelId })
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-  return interpretDictationReply(
+  return interpretOrThrowRefusalMessage(
     () => dictationModelDelete.interpret(reply),
     'Failed to delete model'
   ) as MobileSpeechSetup
@@ -97,7 +91,7 @@ export async function setDictationConfig(
 ): Promise<MobileSpeechSetup> {
   const reply = await dictationConfigWrite.request(client, params)
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-  return interpretDictationReply(
+  return interpretOrThrowRefusalMessage(
     () => dictationConfigWrite.interpret(reply),
     'Failed to update dictation settings'
   ) as MobileSpeechSetup

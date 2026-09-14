@@ -12,7 +12,7 @@ import {
   agentHistoryHostStatusRead,
   agentHistorySessionScan
 } from './mobile-agent-history-operations'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { MOBILE_AI_VAULT_CAPABILITY } from './agent-history-capability'
 
 export { MOBILE_AI_VAULT_CAPABILITY }
@@ -96,13 +96,11 @@ export function useMobileAgentHistoryState(params: MobileAgentHistoryStateParams
         if (!isCurrent()) {
           return
         }
-        let status: StatusWithCapabilities
-        try {
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          status = agentHistoryHostStatusRead.interpret(statusReply) as StatusWithCapabilities
-        } catch (error) {
-          throw new Error(refusedRpcMessageOrFallback(error, 'Unable to reach host'))
-        }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+        const status = interpretOrThrowRefusalMessage(
+          () => agentHistoryHostStatusRead.interpret(statusReply),
+          'Unable to reach host'
+        ) as StatusWithCapabilities
         setHostStatusResult(status)
         if (!status.capabilities?.includes(MOBILE_AI_VAULT_CAPABILITY)) {
           setScreenState({ kind: 'unsupported' })
@@ -129,13 +127,11 @@ export function useMobileAgentHistoryState(params: MobileAgentHistoryStateParams
         if (!isCurrent()) {
           return
         }
-        let result: AiVaultListResult
-        try {
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          result = agentHistorySessionScan.interpret(reply) as AiVaultListResult
-        } catch (error) {
-          throw new Error(refusedRpcMessageOrFallback(error, 'Unable to load agent sessions'))
-        }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+        const result = interpretOrThrowRefusalMessage(
+          () => agentHistorySessionScan.interpret(reply),
+          'Unable to load agent sessions'
+        ) as AiVaultListResult
         setScreenState({ kind: 'ready', sessions: result.sessions, issues: result.issues })
       } catch (err) {
         if (!isCurrent()) {

@@ -1,5 +1,5 @@
 import { optionalSettingsRead } from '../transport/settings-read-operations'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { rpcPayloadMember } from '../transport/rpc-reader-payload'
 import { readAcceptedResumeList } from './resume-metadata-lists'
 import {
@@ -396,12 +396,10 @@ async function loadMobileResumeMetadata(client: RpcClient): Promise<{
         .request(client, { limit: 10000 }, { timeoutMs: RESUME_RPC_TIMEOUT_MS })
         .catch(() => null)
     ])
-  let repoResult: unknown
-  try {
-    repoResult = resumeRepoListRead.interpret(repoReply)
-  } catch (error) {
-    throw new Error(refusedRpcMessageOrFallback(error, 'Unable to load workspace metadata.'))
-  }
+  const repoResult = interpretOrThrowRefusalMessage(
+    () => resumeRepoListRead.interpret(repoReply),
+    'Unable to load workspace metadata.'
+  )
   const folderWorkspaceResult =
     folderWorkspaceReply && resumeFolderWorkspaceListRead.interpret(folderWorkspaceReply)
   const projectGroupResult =
