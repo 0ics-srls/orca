@@ -187,12 +187,7 @@ describe('orca search over the runtime RPC', () => {
       result: { kind: 'unavailable', reason: 'disabled' }
     })
 
-    expect(output).toBe(
-      [
-        'Session search is off on this host.',
-        'Turn on Agent Session History in Orca settings to build the index.'
-      ].join('\n')
-    )
+    expect(output).toBe('Session search is off on this host.')
   })
 
   it('renders a stale cursor as guidance to re-run without one', async () => {

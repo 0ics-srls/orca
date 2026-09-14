@@ -78,10 +78,7 @@ function formatDebug(debug: SessionSearchResults['debug']): string[] {
 
 function formatUnavailable(reason: 'disabled' | 'not-ready' | 'no-service'): string {
   if (reason === 'disabled') {
-    return [
-      'Session search is off on this host.',
-      'Turn on Agent Session History in Orca settings to build the index.'
-    ].join('\n')
+    return 'Session search is off on this host.'
   }
   if (reason === 'not-ready') {
     return 'Session search is not ready on this host yet. Try again once its index has started.'
