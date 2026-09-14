@@ -433,6 +433,82 @@ describe('revealing a diff from a turn rollup', () => {
   })
 })
 
+// The rail borrows the reveal's pin to reach a row the window has left behind.
+// Borrowing the pin means it also has to give it back: the request is what
+// outranks a later reveal, and `slots` is rebuilt every render, so an effect that
+// merely watched it would re-scroll forever.
+describe('jumping to a message from the rail', () => {
+  let restoreLayout = (): void => {}
+  beforeEach(() => {
+    restoreLayout = stubLayout()
+  })
+  afterEach(() => {
+    restoreLayout()
+    vi.useRealTimers()
+    vi.restoreAllMocks()
+  })
+
+  function userMarker(index: number): NativeChatMessage {
+    return {
+      id: `message-${index}`,
+      role: 'user',
+      blocks: [{ type: 'text', text: `prompt-${index}` }],
+      timestamp: index + 1,
+      source: 'transcript'
+    }
+  }
+
+  const conversation = Array.from({ length: TRANSCRIPT_LENGTH }, (_, index) =>
+    index % 10 === 0 ? userMarker(index) : marker(index)
+  )
+
+  /** Open the hover panel through the trigger and click the first prompt. */
+  function jumpToFirstPrompt(): void {
+    fireEvent.focus(screen.getByRole('button', { name: 'Your messages' }))
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+    fireEvent.click(screen.getByRole('button', { name: 'prompt-0' }))
+    act(() => {
+      vi.advanceTimersByTime(300)
+    })
+  }
+
+  it('scrolls once for a selection, not again on every later render', () => {
+    vi.useFakeTimers()
+    const scrollTo = vi.fn()
+    vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(scrollTo)
+    const { container, rerender } = render(list(conversation))
+    scrollTranscript(container, 6000)
+
+    jumpToFirstPrompt()
+    expect(scrollTo).toHaveBeenCalled()
+
+    // A streaming turn re-renders constantly with the same messages. The jump is
+    // spent; nothing here may drag the reader back to the row they left.
+    scrollTo.mockClear()
+    rerender(list(conversation))
+    rerender(list(conversation))
+    expect(scrollTo).not.toHaveBeenCalled()
+  })
+
+  it('releases the pin once the jump is spent', () => {
+    vi.useFakeTimers()
+    const scrollTo = vi.fn()
+    vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(scrollTo)
+    const { container } = render(list(conversation))
+    scrollTranscript(container, 6000)
+
+    jumpToFirstPrompt()
+    expect(scrollTo).toHaveBeenCalled()
+
+    // The request is spent as soon as the scroll is issued, so the row it pinned
+    // is not held in the window afterwards. A pin still standing here would also
+    // still outrank a diff reveal, which shares the same slot.
+    expect(windowState(container).indexes).not.toContain(0)
+  })
+})
+
 describe('transcript with a hidden scroll root', () => {
   const transcript = Array.from({ length: 40 }, (_, index) => marker(index))
 

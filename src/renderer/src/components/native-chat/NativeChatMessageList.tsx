@@ -219,22 +219,34 @@ export function NativeChatMessageList({
     slots,
     virtualItems: transcriptWindow.virtualItems
   })
+  // Monotonic, so releasing the request below cannot hand out a number this
+  // effect has already serviced.
+  const railJumpSeqRef = useRef(0)
+  const servicedRailJumpRef = useRef(0)
   const selectRailItem = useCallback((item: NativeChatRailItem) => {
-    setRailJump((current) => ({ messageId: item.id, requestId: (current?.requestId ?? 0) + 1 }))
+    railJumpSeqRef.current += 1
+    setRailJump({ messageId: item.id, requestId: railJumpSeqRef.current })
   }, [])
   // Pinning the target mounts it in the same commit, so the row exists by the time
   // layout runs. Routed through `scrollMessageToTop` rather than the virtualizer
   // because that is what releases the bottom pin — without it the next streamed
   // token snaps the reader straight back down.
+  //
+  // Serviced once per request, then released. `slots` takes a new identity on
+  // every render, so an effect that merely depended on it would re-scroll to this
+  // row forever; and a request left standing would keep its pin, which outranks
+  // the diff reveal that shares it.
   useLayoutEffect(() => {
-    if (railJump === null) {
+    if (railJump === null || servicedRailJumpRef.current === railJump.requestId) {
       return
     }
+    servicedRailJumpRef.current = railJump.requestId
     const index = nativeChatSlotIndexOf(slots, railJump.messageId)
     const row = scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`)
     if (row) {
       scrollMessageToTop(row)
     }
+    setRailJump(null)
   }, [railJump, scrollMessageToTop, slots])
 
   const rowContext = useMemo<NativeChatTranscriptRowContext>(

@@ -7,6 +7,11 @@ import { translate } from '@/i18n/i18n'
 import type { NativeChatRailItem } from './native-chat-message-rail-items'
 import type { NativeChatMessageRailState } from './use-native-chat-message-rail'
 
+const WHEEL_DELTA_LINE = 1
+const WHEEL_DELTA_PAGE = 2
+/** Nominal line height for line-mode wheel deltas, which arrive as ~3 per notch. */
+const WHEEL_LINE_PX = 16
+
 function railItemLabel(item: NativeChatRailItem): string {
   if (item.text.length > 0) {
     return item.text
@@ -32,16 +37,27 @@ export function NativeChatMessageRail({
   return (
     <HoverCard openDelay={120} closeDelay={120}>
       <HoverCardTrigger asChild>
-        <div
+        <button
+          type="button"
           data-native-chat-rail
           aria-label={translate('components.native-chat.railLabel', 'Your messages')}
+          // A real button, not a div: `asChild` drops the primitive's own focusable
+          // trigger, and the panel is the only way to reach these messages.
           // The rail overlays the transcript without being inside it, so a wheel
-          // here would otherwise land on nothing and freeze the scroll.
+          // here would otherwise land on nothing and freeze the scroll. Deltas
+          // arrive in lines or pages on some platforms, not only in pixels.
           onWheel={(event) => {
             const element = scrollRef.current
-            if (element) {
-              element.scrollTop += event.deltaY
+            if (!element) {
+              return
             }
+            const scale =
+              event.deltaMode === WHEEL_DELTA_LINE
+                ? WHEEL_LINE_PX
+                : event.deltaMode === WHEEL_DELTA_PAGE
+                  ? element.clientHeight
+                  : 1
+            element.scrollTop += event.deltaY * scale
           }}
           className="group/rail absolute inset-y-0 right-[14px] z-10 flex w-4 cursor-default flex-col items-center justify-center gap-2"
         >
@@ -57,7 +73,7 @@ export function NativeChatMessageRail({
               )}
             />
           ))}
-        </div>
+        </button>
       </HoverCardTrigger>
       <HoverCardContent side="left" align="center" className="w-72 p-1">
         <ul className="scrollbar-sleek max-h-64 overflow-y-auto overflow-x-hidden">

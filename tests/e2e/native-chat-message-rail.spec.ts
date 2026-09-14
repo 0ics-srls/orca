@@ -132,8 +132,10 @@ test.describe('Native chat message rail', () => {
     await expect(panel.getByRole('button').first()).toBeVisible()
     await orcaPage.screenshot({ path: path.join(SHOT_DIR, 'rail-02-panel.png') })
 
+    // Exact, not `> ticks`: a panel that listed only the sampled ticks would
+    // still satisfy a loose bound at 20 vs 20.
     const panelCount = await panel.getByRole('button').count()
-    expect(panelCount).toBeGreaterThan(tickCount - 1)
+    expect(panelCount).toBe(TRANSCRIPT_ROWS / 2)
 
     console.log(`[rail] ticks=${tickCount} panelRows=${panelCount} shots=${SHOT_DIR}`)
   })
