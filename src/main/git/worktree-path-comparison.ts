@@ -1,4 +1,5 @@
 import { posix, win32 } from 'node:path'
+import { foldWslUncPathCaseInsensitiveParts } from '../../shared/wsl-paths'
 import type { GitWorktreeExecOptions } from './worktree-operation-options'
 import { translateWslOutputPaths } from './runner'
 
@@ -6,20 +7,45 @@ import { translateWslOutputPaths } from './runner'
  * Normalize a worktree path for cross-platform comparison/keying: resolved, and case-folded on
  * Windows syntax.
  *
- * Why a POSIX-absolute path outranks `platform`: whose filesystem a path names is a property of the
- * path, not of the desktop reading it. A WSL or SSH checkout is spelled `/home/...` on a Windows
- * desktop too, and folding its case there merged two case-variant checkouts into one row — enough
- * for `removeWorktree` to pick the twin and delete its branch. `isSameCommonDirPath` and
- * `ipc/worktree-path-comparison` each carry a local copy of this rule; this is the same rule at the
- * source.
+ * Why the path's own syntax outranks `platform`: whose filesystem a path names is a property of the
+ * path, not of the desktop reading it, and folding a case-sensitive filesystem merges two real
+ * checkouts into one row — enough for `removeWorktree` to pick the twin and delete its branch.
+ *
+ * Two syntaxes name a case-sensitive filesystem. A POSIX-absolute path is one. The other is the WSL
+ * UNC alias, which is the shape that actually reaches removal: `listWorktreesStrict` runs every
+ * listed path through `translateWorktreePath`, so git-in-the-distro's `/home/alice/Feature` arrives
+ * as `\\wsl.localhost\Ubuntu\home\alice\Feature` and a plain `toLowerCase` folded the ext4 tail.
+ * `foldWslUncPathCaseInsensitiveParts` already draws that line — Windows folds the share, the distro
+ * and a drvfs `/mnt/<letter>` tail, and nothing else — and `git-fetch-head-lock` already relies on
+ * it. `isSameCommonDirPath` and `ipc/worktree-path-comparison` carry local copies of the POSIX half;
+ * this is both halves at the source.
  */
 export function canonicalWorktreePath(pathValue: string, platform = process.platform): string {
   if (looksLikePosixAbsolutePath(pathValue)) {
     return posix.normalize(posix.resolve(pathValue))
   }
+  const wslKey = wslUncComparisonKey(pathValue)
+  if (wslKey) {
+    return wslKey
+  }
   return platform === 'win32' || looksLikeWindowsPath(pathValue)
     ? win32.normalize(win32.resolve(pathValue)).toLowerCase()
     : posix.normalize(posix.resolve(pathValue))
+}
+
+/**
+ * The comparison key for a WSL UNC path, or null when it is not one.
+ *
+ * Normalized through `win32` first so `..`/`.` segments and slash style collapse, then folded only
+ * where Windows really folds. The fold is unconditional on platform: a `\\wsl.localhost\...` string
+ * names the same distro filesystem whichever desktop is reading it.
+ */
+function wslUncComparisonKey(pathValue: string): string | null {
+  const folded = foldWslUncPathCaseInsensitiveParts(pathValue)
+  if (!folded) {
+    return null
+  }
+  return foldWslUncPathCaseInsensitiveParts(win32.normalize(pathValue)) ?? folded
 }
 
 export function areWorktreePathsEqual(
