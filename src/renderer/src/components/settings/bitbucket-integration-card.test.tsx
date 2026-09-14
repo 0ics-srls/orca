@@ -18,7 +18,8 @@ vi.mock('./source-control-preflight-card-status', () => ({
   })
 }))
 vi.mock('./bitbucket-credentials-dialog', () => ({
-  BitbucketCredentialsDialog: () => null
+  BitbucketCredentialsDialog: ({ open, initialEmail }: { open: boolean; initialEmail?: string }) =>
+    open ? <div>Credential dialog open {initialEmail}</div> : null
 }))
 
 import { BitbucketIntegrationCard } from './bitbucket-integration-card'
@@ -71,7 +72,15 @@ describe('BitbucketIntegrationCard credential-read failures', () => {
 
     expect(container.textContent).toContain(LOAD_FAILED_TEXT)
     expect(container.textContent).not.toContain('Connect')
+    expect(container.textContent).toContain('Add or replace credentials')
     expect(container.textContent).not.toContain('credentials are configured')
+
+    await act(async () => {
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Add or replace credentials')
+        ?.click()
+    })
+    expect(container.textContent).toContain('Credential dialog open')
   })
 
   it('does not claim a read failure when the status resolves', async () => {
@@ -127,7 +136,7 @@ describe('BitbucketIntegrationCard credential-read failures', () => {
         source: 'stored',
         account: 'stale-account',
         authMode: 'token',
-        email: null,
+        email: 'stale@example.com',
         baseUrl: null
       })
       .mockRejectedValueOnce(new Error('keychain locked'))
@@ -144,6 +153,15 @@ describe('BitbucketIntegrationCard credential-read failures', () => {
     expect(container.textContent).toContain(LOAD_FAILED_TEXT)
     expect(container.textContent).not.toContain('stale-account')
     expect(container.textContent).not.toContain('Edit credentials')
+    expect(container.textContent).toContain('Add or replace credentials')
     expect(container.querySelector('[aria-label="Disconnect Bitbucket"]')).toBeNull()
+
+    await act(async () => {
+      Array.from(container.querySelectorAll('button'))
+        .find((button) => button.textContent === 'Add or replace credentials')
+        ?.click()
+    })
+    expect(container.textContent).toContain('Credential dialog open')
+    expect(container.textContent).not.toContain('stale@example.com')
   })
 })

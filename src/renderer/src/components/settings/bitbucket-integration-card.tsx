@@ -129,18 +129,26 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
       statusTone={connected ? 'connected' : 'attention'}
       statusLabel={tokenProviderStatusLabel({ configured: connected, status })}
       actions={
-        status !== 'checking' && credentialStatusKnown && !envManaged ? (
+        status !== 'checking' && !envManaged && (credentialStatusKnown || connectionLoadFailed) ? (
           <Button
             variant={storedCredential ? 'outline' : 'default'}
             size="sm"
             onClick={() => setDialogOpen(true)}
           >
-            {storedCredential
+            {connectionLoadFailed
               ? translate(
-                  'auto.components.settings.bitbucket.integration.card.edit',
-                  'Edit credentials'
+                  'auto.components.settings.bitbucket.integration.card.replaceCredentials',
+                  'Add or replace credentials'
                 )
-              : translate('auto.components.settings.bitbucket.integration.card.connect', 'Connect')}
+              : storedCredential
+                ? translate(
+                    'auto.components.settings.bitbucket.integration.card.edit',
+                    'Edit credentials'
+                  )
+                : translate(
+                    'auto.components.settings.bitbucket.integration.card.connect',
+                    'Connect'
+                  )}
           </Button>
         ) : null
       }
@@ -223,9 +231,9 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
       <BitbucketCredentialsDialog
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-        initialAuthMode={connection?.authMode}
-        initialEmail={connection?.email}
-        initialBaseUrl={connection?.baseUrl}
+        initialAuthMode={currentConnection?.authMode}
+        initialEmail={currentConnection?.email}
+        initialBaseUrl={currentConnection?.baseUrl}
         environmentManaged={envManaged}
         onConnected={reloadCardState}
       />
