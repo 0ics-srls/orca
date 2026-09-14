@@ -17,7 +17,6 @@ export type OnboardingFolderAgentLaunch = {
   /** Planned before the folder workspace row exists; null when no default agent applies. */
   plan: AgentSessionLaunchPlan | null
   startup?: OnboardingFolderAgentStartup
-  fallbackStartup?: OnboardingFolderAgentStartup
 }
 
 /** Why: lives beside the launch, not the startup builder, because the store root imports that
@@ -47,7 +46,7 @@ export function resolveDismissedOnboardingFolderAgentLaunch(args: {
   return {
     agent,
     plan,
-    ...(plan.route === 'structured-native-chat' ? { fallbackStartup: startup } : { startup })
+    ...(plan.route === 'structured-native-chat' ? {} : { startup })
   }
 }
 
@@ -76,13 +75,5 @@ export async function revealOnboardingFolderWithAgentLaunch(args: {
     return
   }
   // Why: the outcome is not consumed; the workspace is already revealed and the launch layer toasts.
-  await plan.launch(
-    {
-      legacyFallback: async () => {
-        const activation = reveal(args.launch.fallbackStartup)
-        return { activation, primaryTabId: activation === false ? null : activation.primaryTabId }
-      }
-    },
-    { worktreeId: args.worktreeId }
-  )
+  await plan.launch({}, { worktreeId: args.worktreeId })
 }

@@ -143,8 +143,9 @@ export async function executeWorktreeCreation(
     // startup, so both halves of the handoff share one renderer-session token.
     preparedRequest.startupPlan.launchToken = createBrowserUuid()
   }
-  const fallbackStartupOpt = buildWorktreeCreationStartupOpt(preparedRequest, backendSpawned)
-  const startupOpt = structuredLaunch ? undefined : fallbackStartupOpt
+  const startupOpt = structuredLaunch
+    ? undefined
+    : buildWorktreeCreationStartupOpt(preparedRequest, backendSpawned)
 
   if (worktree.path && !structuredLaunch) {
     const repoConnectionId =
@@ -275,9 +276,10 @@ export async function executeWorktreeCreation(
 
   let structuredLaunchAccepted = structuredLaunch
   const { agentLaunchRoute } = preparedRequest
+  const structuredAgent = preparedRequest.agent
   if (
     agentLaunchRoute === 'structured-native-chat' &&
-    isAgentSessionHandleProvider(preparedRequest.agent)
+    isAgentSessionHandleProvider(structuredAgent)
   ) {
     let structuredSession: WorktreeCreationStructuredSessionResult | null = null
     try {
@@ -287,7 +289,6 @@ export async function executeWorktreeCreation(
         agentLaunchRoute,
         worktreeId: worktree.id,
         shouldActivateOnCompletion,
-        fallbackStartupOpt,
         activation,
         primaryTabId
       })
@@ -304,7 +305,7 @@ export async function executeWorktreeCreation(
         return
       }
       if (structuredSession.visibilityUnknown) {
-        markStructuredWorktreeLaunchUnconfirmed(creationId, worktree.id)
+        markStructuredWorktreeLaunchUnconfirmed(creationId, worktree.id, structuredAgent)
         return
       }
     }

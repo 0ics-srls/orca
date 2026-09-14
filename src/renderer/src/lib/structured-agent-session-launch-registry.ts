@@ -30,8 +30,8 @@ export function subscribeStructuredAgentLaunchStatus(listener: () => void): () =
   return () => structuredLaunchListeners.delete(listener)
 }
 
-// Why keyed by agent too: one worktree can hold a Claude and a Codex launch at once.
-// Why keyed by adopted conversation: a resume must not coalesce onto an unrelated blank launch.
+// Why keyed by agent: one worktree can hold a Claude and a Codex launch at once.
+// Why keyed by conversation: a resume must not coalesce onto an unrelated blank launch.
 export function structuredLaunchIdentity(
   worktreeId: string,
   agent: AgentSessionHandleProvider,

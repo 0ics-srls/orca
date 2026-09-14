@@ -223,23 +223,24 @@ describe('structured chat adoption guard on the launch path', () => {
     expect(mockCreateTab).toHaveBeenCalled()
   })
 
-  it('fails a Claude launch closed to the terminal when the host declines create support', async () => {
+  it('keeps a declined Claude launch on the structured path', async () => {
     const { StructuredAgentSessionCreateRefusalError } =
       await import('./launch-structured-agent-session')
-    mockLaunchStructuredCodexSession.mockRejectedValueOnce(
-      new StructuredAgentSessionCreateRefusalError('structured_agent_session_unsupported')
+    const refusal = new StructuredAgentSessionCreateRefusalError(
+      'structured_agent_session_unsupported'
     )
+    mockLaunchStructuredCodexSession.mockRejectedValueOnce(refusal)
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
     const result = launchAgentInNewTab({ agent: 'claude', worktreeId: 'wt-1' })
 
     expect(result).toMatchObject({ tabId: null })
     await expect(result?.structuredSettlement).resolves.toEqual({
-      kind: 'refused-then-legacy',
-      primaryTabId: 'tab-1'
+      kind: 'failed',
+      error: refusal
     })
-    expect(mockCreateTab).toHaveBeenCalledOnce()
-    expect(mockToastError).not.toHaveBeenCalled()
+    expect(mockCreateTab).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(mockToastError).toHaveBeenCalledOnce())
   })
 
   it.each([[], null])(
@@ -274,42 +275,30 @@ describe('structured chat adoption guard on the launch path', () => {
     )
   })
 
-  it('falls back to the preserved terminal launch on a definitive refusal', async () => {
+  it('does not open a terminal on a definitive refusal', async () => {
     const { StructuredAgentSessionCreateRefusalError } =
       await import('./launch-structured-agent-session')
-    mockLaunchStructuredCodexSession.mockRejectedValueOnce(
-      new StructuredAgentSessionCreateRefusalError('provider unavailable')
-    )
+    const refusal = new StructuredAgentSessionCreateRefusalError('provider unavailable')
+    mockLaunchStructuredCodexSession.mockRejectedValueOnce(refusal)
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
     const result = launchAgentInNewTab({ agent: 'codex', worktreeId: 'wt-1' })
 
     expect(result).toMatchObject({ tabId: null, pasteDraftAfterLaunch: false })
     await expect(result?.structuredSettlement).resolves.toEqual({
-      kind: 'refused-then-legacy',
-      primaryTabId: 'tab-1'
+      kind: 'failed',
+      error: refusal
     })
-    expect(mockCreateTab).toHaveBeenCalledOnce()
-    expect(mockCreateTab).toHaveBeenCalledWith(
-      'wt-1',
-      undefined,
-      undefined,
-      expect.objectContaining({ launchAgent: 'codex' })
-    )
-    expect(mockToastError).not.toHaveBeenCalled()
+    expect(mockCreateTab).not.toHaveBeenCalled()
+    await vi.waitFor(() => expect(mockToastError).toHaveBeenCalledOnce())
   })
 
-  it('logs a fallback that throws and never re-enters the terminal launch', async () => {
+  it('reports no prompt delivery from a definitive refusal', async () => {
     const { StructuredAgentSessionCreateRefusalError } =
       await import('./launch-structured-agent-session')
     mockLaunchStructuredCodexSession.mockRejectedValueOnce(
       new StructuredAgentSessionCreateRefusalError('provider unavailable')
     )
-    const tabError = new Error('no tab surface')
-    mockCreateTab.mockImplementationOnce(() => {
-      throw tabError
-    })
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
 
     const result = launchAgentInNewTab({
@@ -319,44 +308,15 @@ describe('structured chat adoption guard on the launch path', () => {
       promptDelivery: 'submit-after-ready'
     })
 
-    await expect(result?.structuredSettlement).resolves.toEqual({
-      kind: 'failed',
-      error: tabError
-    })
     await expect(result?.promptDeliveryResult).resolves.toEqual({
       delivered: false,
       failureNotified: true
     })
-    expect(mockCreateTab).toHaveBeenCalledOnce()
-    expect(consoleError).toHaveBeenCalledWith('Structured agent launch failed', tabError)
-    consoleError.mockRestore()
-  })
-
-  it('reports prompt delivery from the definitive-refusal terminal fallback', async () => {
-    const { StructuredAgentSessionCreateRefusalError } =
-      await import('./launch-structured-agent-session')
-    mockLaunchStructuredCodexSession.mockRejectedValueOnce(
-      new StructuredAgentSessionCreateRefusalError('provider unavailable')
-    )
-    const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
-
-    const result = launchAgentInNewTab({
-      agent: 'codex',
-      worktreeId: 'wt-1',
-      prompt: 'start this task',
-      promptDelivery: 'submit-after-ready'
-    })
-
-    await expect(result?.promptDeliveryResult).resolves.toEqual({
-      delivered: true,
-      failureNotified: false
-    })
     await expect(result?.structuredSettlement).resolves.toMatchObject({
-      kind: 'refused-then-legacy',
-      primaryTabId: 'tab-1'
+      kind: 'failed'
     })
-    expect(mockCreateTab).toHaveBeenCalledOnce()
-    expect(mockPasteDraftWhenAgentReady).toHaveBeenCalledOnce()
+    expect(mockCreateTab).not.toHaveBeenCalled()
+    expect(mockPasteDraftWhenAgentReady).not.toHaveBeenCalled()
   })
 
   it('coalesces repeated structured launches for one worktree while the host is starting', async () => {

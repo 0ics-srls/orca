@@ -2,16 +2,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   settleStructuredAgentLaunch: vi.fn(),
-  activateAndRevealWorktree: vi.fn(),
   activateStructuredAgentSessionById: vi.fn()
 }))
 
 vi.mock('@/lib/structured-agent-launch-settlement', () => ({
   settleStructuredAgentLaunch: mocks.settleStructuredAgentLaunch
-}))
-
-vi.mock('@/lib/worktree-activation', () => ({
-  activateAndRevealWorktree: mocks.activateAndRevealWorktree
 }))
 
 vi.mock('@/lib/structured-agent-session-tab-activation', () => ({
@@ -36,11 +31,7 @@ const plan = (overrides: Partial<AgentSessionLaunchVerdict> = {}) =>
 
 const baseArgs = {
   plan: plan(),
-  agent: 'codex' as const,
-  worktreeId: 'worktree-1',
-  startup: { command: 'codex' } as never,
-  pendingFirstAgentMessageRename: true,
-  applyWorktreeMeta: vi.fn().mockResolvedValue(undefined)
+  worktreeId: 'worktree-1'
 }
 
 describe('settleFullCreationStructuredLaunch', () => {
@@ -76,28 +67,16 @@ describe('settleFullCreationStructuredLaunch', () => {
     })
   })
 
-  it('marks the rename flag and opens the startup terminal as the legacy fallback', async () => {
-    mocks.activateAndRevealWorktree.mockReturnValue({ primaryTabId: 'fallback-tab' })
+  it('does not offer a terminal fallback to the structured launch', async () => {
     mocks.settleStructuredAgentLaunch.mockImplementation(
-      async (_worktreeId, _agent, _options, hooks) => ({
-        kind: 'refused-then-legacy',
-        ...(await hooks.legacyFallback())
-      })
+      async (_worktreeId, _agent, _options, hooks) => {
+        expect(hooks).not.toHaveProperty('legacyFallback')
+        return { kind: 'failed', error: new Error('unsupported') }
+      }
     )
 
-    await expect(settleFullCreationStructuredLaunch(baseArgs)).resolves.toEqual({
-      kind: 'refused-then-legacy',
-      activation: { primaryTabId: 'fallback-tab' },
-      primaryTabId: 'fallback-tab'
-    })
-    expect(baseArgs.applyWorktreeMeta).toHaveBeenCalledWith('worktree-1', {
-      pendingFirstAgentMessageRename: true
-    })
-    expect(mocks.activateAndRevealWorktree).toHaveBeenCalledWith('worktree-1', {
-      sidebarRevealBehavior: 'auto',
-      agent: 'codex',
-      createNewTerminalForStartup: true,
-      startup: baseArgs.startup
+    await expect(settleFullCreationStructuredLaunch(baseArgs)).resolves.toMatchObject({
+      kind: 'failed'
     })
   })
 })

@@ -17,15 +17,12 @@ import {
 import type { StructuredPromptDeliveryResult } from '@/lib/structured-agent-session-launch-prompt'
 import {
   addStructuredLaunchCaller,
-  claimStructuredLaunchCallerFallback,
   createStructuredLaunchCallerGroup,
   releaseStructuredLaunchCallerAfterUnknownOutcome,
-  settleStructuredLaunchCallersWithFallback,
-  settleStructuredLaunchCallersWithoutFallback,
+  settleStructuredLaunchCallers,
   structuredLaunchCallersHavePendingWork,
   type StructuredAgentLaunchOptions,
-  type StructuredLaunchCaller,
-  type StructuredRefusalFallback
+  type StructuredLaunchCaller
 } from '@/lib/structured-agent-session-launch-callers'
 import * as launchDraft from './structured-agent-session-launch-draft'
 import { trackStructuredLaunchFailureToast } from './structured-agent-session-launch-failure-toast'
@@ -47,8 +44,6 @@ export {
   type StructuredAgentLaunchStatus
 } from './structured-agent-session-launch-registry'
 
-export type StructuredLaunchFallbackReason = 'refusal' | 'deadline'
-
 type StructuredLaunchStateResult = {
   state: StructuredLaunchState
   caller: StructuredLaunchCaller
@@ -60,15 +55,6 @@ export type StructuredAgentLaunchResult = {
   promptDeliveryResult?: Promise<StructuredPromptDeliveryResult>
   isVisibilityUnknown: () => boolean
   releaseCallerAfterUnknownOutcome: () => boolean
-  claimFallback: (
-    fallback: StructuredRefusalFallback,
-    reason?: StructuredLaunchFallbackReason
-  ) => Promise<boolean>
-  /** @deprecated Use claimFallback; kept for callers compiled against the prior name. */
-  claimDefinitiveRefusalFallback: (
-    fallback: StructuredRefusalFallback,
-    reason?: StructuredLaunchFallbackReason
-  ) => Promise<boolean>
 }
 
 /** What the outbox must carry: a draft goes to the composer seed instead. */
@@ -100,14 +86,15 @@ function maybeCleanupLaunchState(state: StructuredLaunchState): void {
   cleanupLaunchState(state)
 }
 
-function settleStructuredLaunchFallback(state: StructuredLaunchState): void {
+function settleStructuredLaunchRefusal(state: StructuredLaunchState): void {
   if (state.callers.outcome !== 'pending' && state.callers.outcome !== 'unknown') {
     return
   }
   abandonStructuredAgentSessionLaunchIntent(state.intent)
   discardStructuredAgentSessionLaunchOutbox(state.intent.sessionId)
   launchDraft.clearStructuredAgentLaunchDraft(state.intent.sessionId)
-  settleStructuredLaunchCallersWithFallback(state.callers)
+  settleStructuredLaunchCallers(state.callers, 'failed')
+  cleanupLaunchState(state)
 }
 
 function trackLaunchSettlement(
@@ -119,17 +106,16 @@ function trackLaunchSettlement(
       if (state.promise !== promise) {
         return
       }
-      settleStructuredLaunchCallersWithoutFallback(state.callers, 'published')
-      maybeCleanupLaunchState(state)
+      settleStructuredLaunchCallers(state.callers, 'published')
     },
     (error) => {
       if (state.promise !== promise || state.cancelled) {
         return
       }
       if (error instanceof StructuredAgentSessionCreateRefusalError) {
-        settleStructuredLaunchFallback(state)
+        settleStructuredLaunchRefusal(state)
       } else if (!state.visibilityUnknown) {
-        settleStructuredLaunchCallersWithoutFallback(state.callers, 'failed')
+        settleStructuredLaunchCallers(state.callers, 'failed')
         // Why: the seed lives under a tab that will never open; unknown keeps it for the retry.
         launchDraft.clearStructuredAgentLaunchDraft(state.intent.sessionId)
         maybeCleanupLaunchState(state)
@@ -153,25 +139,15 @@ function structuredAgentLaunchState(
       existing.callers.outcome = 'pending'
       existing.promise = reconcileUnknownLaunch(existing)
       trackLaunchSettlement(existing, existing.promise)
-      trackStructuredLaunchFailureToast(
-        existing.intent.agent,
-        existing.promise,
-        existing.callers.refusalSettlement.promise
-      )
+      trackStructuredLaunchFailureToast(existing.intent.agent, existing.promise)
       notifyStructuredLaunchListeners()
     }
     const joined = joinLaunchDelivery(options, existing.promptDelivery)
-    const refusedAlready = existing.callers.outcome === 'refused'
     const text = outboxPromptText(joined)
-    const stagedPrompt =
-      text && !refusedAlready
-        ? enqueueStructuredAgentSessionLaunchPrompt(existing.intent.sessionId, text)
-        : null
-    // Why: a refused launch is already settled, so nothing would ever clear a new seed — it would
-    // live on under a tab that never opens.
-    if (!refusedAlready) {
-      launchDraft.seedStructuredAgentLaunchDraft(existing.intent.sessionId, agent, joined)
-    }
+    const stagedPrompt = text
+      ? enqueueStructuredAgentSessionLaunchPrompt(existing.intent.sessionId, text)
+      : null
+    launchDraft.seedStructuredAgentLaunchDraft(existing.intent.sessionId, agent, joined)
     return {
       state: existing,
       caller: addStructuredLaunchCaller({
@@ -223,11 +199,7 @@ function structuredAgentLaunchState(
   setStructuredLaunchState(state)
   notifyStructuredLaunchListeners()
   trackLaunchSettlement(state, state.promise)
-  trackStructuredLaunchFailureToast(
-    state.intent.agent,
-    state.promise,
-    state.callers.refusalSettlement.promise
-  )
+  trackStructuredLaunchFailureToast(state.intent.agent, state.promise)
   return {
     state,
     caller
@@ -243,7 +215,7 @@ export function cancelStructuredAgentLaunch(worktreeId: string, sessionId: strin
     return false
   }
   state.cancelled = true
-  settleStructuredLaunchCallersWithoutFallback(state.callers, 'cancelled')
+  settleStructuredLaunchCallers(state.callers, 'cancelled')
   cleanupLaunchState(state)
   discardStructuredAgentSessionLaunchOutbox(state.intent.sessionId)
   launchDraft.clearStructuredAgentLaunchDraft(state.intent.sessionId)
@@ -258,26 +230,12 @@ export function startStructuredAgentLaunch(
   options: StructuredAgentLaunchOptions = {}
 ): StructuredAgentLaunchResult {
   const { state, caller } = structuredAgentLaunchState(worktreeId, agent, options)
-  const claimFallback = (
-    fallback: StructuredRefusalFallback,
-    reason: StructuredLaunchFallbackReason = 'refusal'
-  ): Promise<boolean> => {
-    const claim = claimStructuredLaunchCallerFallback(state.callers, caller, fallback)
-    if (reason === 'deadline') {
-      // Why: clear the focus intent and staged input before the terminal is visible, so a provider
-      // that publishes after the deadline cannot steal focus from the fallback surface.
-      settleStructuredLaunchFallback(state)
-    }
-    return claim
-  }
   return {
     sessionId: state.intent.sessionId,
     launchResult: state.promise,
     ...(caller.promptDeliveryResult ? { promptDeliveryResult: caller.promptDeliveryResult } : {}),
     isVisibilityUnknown: () => state.visibilityUnknown,
     releaseCallerAfterUnknownOutcome: () =>
-      releaseStructuredLaunchCallerAfterUnknownOutcome(state.callers, caller),
-    claimFallback,
-    claimDefinitiveRefusalFallback: claimFallback
+      releaseStructuredLaunchCallerAfterUnknownOutcome(state.callers, caller)
   }
 }

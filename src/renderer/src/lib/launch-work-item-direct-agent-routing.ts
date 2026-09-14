@@ -1,22 +1,12 @@
 import type { TuiAgent } from '../../../shared/tui-agent'
-import type { AgentStartupPlan } from '@/lib/tui-agent-startup'
-import type { LaunchSource } from '../../../shared/telemetry-events'
 import type { AppState } from '@/store/types'
 import { TUI_AGENT_CONFIG } from '../../../shared/tui-agent-config'
 import { isTuiAgentEnabled, pickTuiAgent } from '../../../shared/tui-agent-selection'
-import { activateAndRevealWorktree } from '@/lib/worktree-activation'
-import {
-  buildDirectWorkItemAgentStartupPlan,
-  buildDirectWorkItemStartupOpts
-} from '@/lib/launch-work-item-direct-agent'
+import { buildDirectWorkItemAgentStartupPlan } from '@/lib/launch-work-item-direct-agent'
 import type { AgentSessionLaunchPlan } from '@/lib/agent-session-launch-plan'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
 import { preflightAgentTrust } from '@/lib/agent-trust-preflight'
-import {
-  isStructuredAgentLegacyFallbackSettlement,
-  structuredAgentLegacyFallbackFromSettlement
-} from '@/lib/structured-agent-launch-settlement'
 
 export function buildDirectWorkItemStartup(args: {
   agent: TuiAgent | null
@@ -88,8 +78,7 @@ export async function resolveDirectWorkItemAgent(args: {
   }
 }
 
-/** Why: kept apart from the refusal fallback's preflight because it runs before
- *  launch on the legacy route only; structured chat has no TUI trust menu. */
+/** Why: runs only before the legacy route; structured chat has no TUI trust menu. */
 export async function markDirectWorkItemAgentTrusted(args: {
   structuredLaunch: boolean
   agent: TuiAgent | null
@@ -108,17 +97,12 @@ export async function markDirectWorkItemAgentTrusted(args: {
 
 export async function settleDirectWorkItemStructuredLaunch(args: {
   plan: AgentSessionLaunchPlan | null
-  worktreeId: string
-  workspacePath: string
-  connectionId: string | null
   primaryTabId: string | null
-  startupPlan: AgentStartupPlan | null
-  launchSource: LaunchSource
 }): Promise<{
   completed: boolean
   structuredLaunch: boolean
   visibilityUnknown: boolean
-  /** The structured launch ended without a surface; there is nothing for the legacy path to finish. */
+  /** The structured launch ended without a surface. */
   failed: boolean
   primaryTabId: string | null
 }> {
@@ -133,7 +117,6 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
   if (plan?.route !== 'structured-native-chat') {
     return notLaunched(false)
   }
-  const { agent } = plan
   // Why no tab: the pre-launch tab is the setup shell or default tab, never an agent tab, so
   // handing it back would paste the prompt there.
   const withoutAgentSurface = {
@@ -145,26 +128,7 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
   }
   let settlement: Awaited<ReturnType<typeof plan.launch>>
   try {
-    settlement = await plan.launch({
-      legacyFallback: async () => {
-        await preflightAgentTrust({
-          agent,
-          workspacePath: args.workspacePath,
-          connectionId: args.connectionId
-        })
-        const activation = activateAndRevealWorktree(args.worktreeId, {
-          sidebarRevealBehavior: 'auto',
-          createNewTerminalForStartup: true,
-          ...buildDirectWorkItemStartupOpts(
-            agent,
-            args.startupPlan,
-            args.launchSource,
-            plan.promptDelivery === 'draft' ? plan.prompt : undefined
-          )
-        })
-        return { activation, primaryTabId: activation === false ? null : activation.primaryTabId }
-      }
-    })
+    settlement = await plan.launch({})
   } catch {
     // Why: this runs outside the caller's try, so an escaped throw would surface as an unhandled
     // rejection rather than the failure the caller already knows how to report.
@@ -172,16 +136,6 @@ export async function settleDirectWorkItemStructuredLaunch(args: {
   }
   if (!settlement) {
     return notLaunched(true)
-  }
-  if (isStructuredAgentLegacyFallbackSettlement(settlement)) {
-    const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
-    return {
-      completed: false,
-      structuredLaunch: false,
-      visibilityUnknown: false,
-      failed: false,
-      primaryTabId: legacyFallback.primaryTabId
-    }
   }
   switch (settlement.kind) {
     case 'structured':

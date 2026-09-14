@@ -195,58 +195,6 @@ describe('forkAgentSessionFromPane', () => {
     )
   })
 
-  it('announces the fork when a refused structured launch fell back to a terminal tab', async () => {
-    store.agentStatusByPaneKey = {
-      [`tab-1:${LEAF_ID}`]: { agentType: 'codex' }
-    }
-    mockLaunchAgentInNewTab.mockReturnValue({
-      tabId: null,
-      startupPlan: {},
-      pasteDraftAfterLaunch: false,
-      structuredSettlement: Promise.resolve({ kind: 'refused-then-legacy', primaryTabId: 'tab-2' })
-    })
-    const { startAgentSessionFork, prepareAgentSessionForkFromPane } =
-      await import('./terminal-agent-session-fork')
-
-    const prepared = prepareAgentSessionForkFromPane({
-      pane: makePane('User: compare OAuth options'),
-      tabId: 'tab-1',
-      worktreeId: 'wt-1',
-      groupId: null
-    })
-    await expect(startAgentSessionFork(prepared!)).resolves.toBe(true)
-    expect(mockToast.success).toHaveBeenCalledOnce()
-    expect(mockWriteClipboardText).not.toHaveBeenCalled()
-  })
-
-  it.each(['refused-then-legacy', 'deadline-then-legacy'] as const)(
-    'copies context when the %s fallback opened no terminal tab',
-    async (kind) => {
-      store.agentStatusByPaneKey = {
-        [`tab-1:${LEAF_ID}`]: { agentType: 'codex' }
-      }
-      mockLaunchAgentInNewTab.mockReturnValue({
-        tabId: null,
-        startupPlan: {},
-        pasteDraftAfterLaunch: false,
-        structuredSettlement: Promise.resolve({ kind, primaryTabId: null })
-      })
-      const { forkAgentSessionFromPane } = await import('./terminal-agent-session-fork')
-
-      await forkAgentSessionFromPane({
-        pane: makePane('Assistant: current implementation notes'),
-        tabId: 'tab-1',
-        worktreeId: 'wt-1',
-        groupId: null
-      })
-
-      expect(mockToast.success).not.toHaveBeenCalled()
-      expect(mockWriteClipboardText).toHaveBeenCalledWith(
-        expect.stringContaining('Assistant: current implementation notes')
-      )
-    }
-  )
-
   it.each([
     ['failed', { kind: 'failed', error: new Error('boom') }, true],
     ['cancelled', { kind: 'cancelled', sessionId: 'session-1' }, true],

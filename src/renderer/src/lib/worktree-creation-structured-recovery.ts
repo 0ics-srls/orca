@@ -2,18 +2,22 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
 import { completeWorktreeCreation } from '@/lib/worktree-creation-completion'
-import { buildWorktreeCreationStartupOpt } from '@/lib/worktree-creation-flow-startup'
 import { launchStructuredWorktreeSession } from '@/lib/worktree-creation-structured-session'
+import type { AgentSessionHandleProvider } from '../../../shared/agent-session-provider-handle'
+import { isAgentSessionHandleProvider } from '../../../shared/agent-session-provider-handle'
+import { structuredAgentLabel } from '@/lib/structured-agent-session-launch-label'
 
 export function markStructuredWorktreeLaunchUnconfirmed(
   creationId: string,
-  worktreeId: string
+  worktreeId: string,
+  agent: AgentSessionHandleProvider
 ): void {
   useAppStore.getState().updatePendingWorktreeCreation(creationId, {
     status: 'error',
     error: translate(
       'auto.lib.worktree.creation.flow.structured.launch.unknown',
-      'Could not confirm whether Codex chat opened. Retry to check again.'
+      'Could not confirm whether {{value0}} chat opened. Retry to check again.',
+      { value0: structuredAgentLabel(agent) }
     ),
     structuredLaunchRecoveryWorktreeId: worktreeId
   })
@@ -33,13 +37,16 @@ export async function retryStructuredWorktreeLaunch(
   if (agentLaunchRoute !== 'structured-native-chat') {
     return
   }
+  const agent = request.agent
+  if (!isAgentSessionHandleProvider(agent)) {
+    return
+  }
   const structuredSession = await launchStructuredWorktreeSession({
     creationId,
     request,
     agentLaunchRoute,
     worktreeId,
     shouldActivateOnCompletion: true,
-    fallbackStartupOpt: buildWorktreeCreationStartupOpt(request, false),
     activation: false,
     primaryTabId: null,
     recoverUnknownLaunch: true
@@ -48,7 +55,7 @@ export async function retryStructuredWorktreeLaunch(
     return
   }
   if (structuredSession.visibilityUnknown) {
-    markStructuredWorktreeLaunchUnconfirmed(creationId, worktreeId)
+    markStructuredWorktreeLaunchUnconfirmed(creationId, worktreeId, agent)
     return
   }
   await completeWorktreeCreation({

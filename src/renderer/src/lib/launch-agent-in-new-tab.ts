@@ -62,8 +62,7 @@ export type LaunchAgentInNewTabResult = {
   /** The host will publish and focus a structured tab asynchronously. */
   focusAfterMenuClose?: 'structured-session'
   promptDeliveryResult?: Promise<{ delivered: boolean; failureNotified: boolean }>
-  /** Structured route only: what the launch did once it settled, including whether the terminal
-   *  fallback ran. The call itself stays synchronous. */
+  /** Structured route only: what the launch did once it settled. The call stays synchronous. */
   structuredSettlement?: Promise<StructuredAgentLaunchSettlement>
 } | null
 
@@ -83,10 +82,7 @@ export function shouldQueueTerminalFocusAfterMenuClose(
  *
  * Returns `null` when no startup plan can be built (e.g. a whitespace-only prompt).
  */
-function launchAgentInNewTabInternal(
-  args: LaunchAgentInNewTabArgs,
-  forceLegacy = false
-): LaunchAgentInNewTabResult {
+function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgentInNewTabResult {
   const {
     agent,
     worktreeId,
@@ -196,23 +192,17 @@ function launchAgentInNewTabInternal(
     }
   }
 
-  // Why: the legacy re-entry is the plan's own fallback; deciding a route again would loop.
-  const plan = forceLegacy
-    ? null
-    : planAgentSessionLaunch(store, {
-        agent,
-        workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
-        prompt: trimmedPrompt,
-        promptDelivery: viewModePromptDelivery,
-        tuiCustomization: { cwd: initialCwd, agentArgs },
-        initialSessionOptions: startupPlan.sessionOptions,
-        onPromptDelivered
-      })
+  const plan = planAgentSessionLaunch(store, {
+    agent,
+    workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
+    prompt: trimmedPrompt,
+    promptDelivery: viewModePromptDelivery,
+    tuiCustomization: { cwd: initialCwd, agentArgs },
+    initialSessionOptions: startupPlan.sessionOptions,
+    onPromptDelivered
+  })
   if (plan?.route === 'structured-native-chat') {
-    const structured = launchAgentInStructuredNewTab({
-      plan,
-      legacyLaunch: () => launchAgentInNewTabInternal(args, true)
-    })
+    const structured = launchAgentInStructuredNewTab({ plan })
     return {
       tabId: null,
       startupPlan,

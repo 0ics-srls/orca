@@ -259,12 +259,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
 
   const structuredResult = await settleDirectWorkItemStructuredLaunch({
     plan,
-    worktreeId,
-    workspacePath: worktreePath,
-    connectionId: repoConnectionId,
-    primaryTabId,
-    startupPlan,
-    launchSource
+    primaryTabId
   })
   if (structuredResult.visibilityUnknown || structuredResult.failed) {
     // Why: callers hang irreversible follow-up work off a `true` here, so a structured launch that

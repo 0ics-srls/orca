@@ -39,7 +39,6 @@ import { queueWorkspaceActivationTerminalFocus } from '@/lib/workspace-activatio
 import { useAppStore } from '@/store'
 import { planAgentSessionLaunch } from '@/lib/agent-session-launch-plan'
 import { settleFullCreationStructuredLaunch } from './full-creation-structured-launch'
-import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
 import { finalizeFullCreation } from './full-creation-finalization'
 import { buildFullCreationIssueCommand } from './full-creation-issue-command'
 import { buildFullCreationStartup } from './full-creation-startup'
@@ -231,25 +230,22 @@ export function useFullCreationExecution(input: FullCreationExecutionInput) {
 
       const settlement = await settleFullCreationStructuredLaunch({
         plan: launchPlan,
-        agent: tuiAgent,
-        worktreeId: worktree.id,
-        startup,
-        pendingFirstAgentMessageRename,
-        applyWorktreeMeta
+        worktreeId: worktree.id
       })
 
       // Why: both leave the workspace revealed and the composer text intact; the launch layer has
       // already toasted a failure, and an unknown outcome reconciles on the next click.
-      if (settlement?.kind === 'visibility-unknown' || settlement?.kind === 'failed') {
+      if (
+        settlement?.kind === 'visibility-unknown' ||
+        settlement?.kind === 'failed' ||
+        settlement?.kind === 'cancelled'
+      ) {
         setSidebarOpen(true)
         onCreated?.()
         return
       }
       const structuredLaunchAccepted = settlement?.kind === 'structured'
-      const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
-      // Why: the workspace was already activated before launch; the fallback's activation, when
-      // present, supersedes it.
-      const activation = legacyFallback?.activation ?? initialActivation
+      const activation = initialActivation
 
       if (!structuredLaunchAccepted && startupPlan) {
         const optionScopeKey =

@@ -19,7 +19,6 @@ import {
   toFolderWorkspaceLinkedTask
 } from './folder-workspace-composer-helpers'
 import { planAgentSessionLaunch } from '@/lib/agent-session-launch-plan'
-import { structuredAgentLegacyFallbackFromSettlement } from '@/lib/structured-agent-launch-settlement'
 import { getNewWorkspaceProjectGroupHostId } from '@/lib/new-workspace-project-options'
 import { useAppStore } from '@/store'
 import {
@@ -207,43 +206,16 @@ export async function submitFolderWorkspaceCreate({
       : undefined
   onOpenChange(false)
   try {
-    let activation = activateAndRevealFolderWorkspace(workspace.id, {
+    const activation = activateAndRevealFolderWorkspace(workspace.id, {
       agent: quickAgent,
       ...(!structuredLaunch && startup ? { startup } : {}),
       ...(structuredLaunch ? { providesInitialSurface: true } : {}),
       runtimeEnvironmentId
     })
-    let structuredLaunchAccepted = structuredLaunch
+    const structuredLaunchAccepted = structuredLaunch
     const settlement =
       plan?.route === 'structured-native-chat'
-        ? await plan.launch(
-            {
-              legacyFallback: async () => {
-                if (pendingFirstAgentMessageRename) {
-                  await useAppStore
-                    .getState()
-                    .updateFolderWorkspace(workspace.id, { pendingFirstAgentMessageRename: true })
-                    .catch(() => undefined)
-                }
-                await preflightAgentTrust({
-                  agent: quickAgent,
-                  workspacePath: workspace.folderPath,
-                  connectionId: workspace.connectionId ?? projectGroup.connectionId
-                })
-                const fallbackActivation = activateAndRevealFolderWorkspace(workspace.id, {
-                  agent: quickAgent,
-                  ...(startup ? { startup } : {}),
-                  runtimeEnvironmentId
-                })
-                return {
-                  activation: fallbackActivation,
-                  primaryTabId:
-                    fallbackActivation === false ? null : fallbackActivation.primaryTabId
-                }
-              }
-            },
-            { worktreeId: folderWorkspaceKey(workspace.id) }
-          )
+        ? await plan.launch({}, { worktreeId: folderWorkspaceKey(workspace.id) })
         : null
     if (settlement) {
       // Why: the workspace exists either way. Unknown keeps reporting false and failed true, as
@@ -253,12 +225,6 @@ export async function submitFolderWorkspaceCreate({
       }
       if (settlement.kind === 'failed' || settlement.kind === 'cancelled') {
         return true
-      }
-      const legacyFallback = structuredAgentLegacyFallbackFromSettlement(settlement)
-      if (legacyFallback) {
-        structuredLaunchAccepted = false
-        // Why: this flow's own fallback always activates; `??` only satisfies the shared type.
-        activation = legacyFallback.activation ?? false
       }
     }
     if (
