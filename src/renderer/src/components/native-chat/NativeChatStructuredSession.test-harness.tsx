@@ -24,6 +24,8 @@ export function createStructuredSessionMocks() {
       allowFileUriLinks?: boolean
       onLinkClick?: (...args: unknown[]) => void
       showTurnStatus?: boolean
+      isAwaitingInput?: boolean
+      isWorking?: boolean
       runtimeContext?: unknown
     },
     composerProps: null as null | {
