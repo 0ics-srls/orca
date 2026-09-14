@@ -132,22 +132,22 @@ describe('browser session wire identity under Electron', () => {
     ).toEqual([result.cleanUserAgent, result.cleanUserAgent])
   }, 40_000)
 
-  it('makes the B1 native split deterministic', async () => {
+  it('keeps the process-native identity across documents, frames, and workers', async () => {
     const result = await runProbe('native')
     assertCoverage(result)
     expect(identityForContext(result.identities, 'document').userAgent).toBe(result.rawUserAgent)
     expect(identityForContext(result.identities, 'blob').userAgent).toBe(result.rawUserAgent)
     expect(identityForContext(result.identities, 'shared-worker').userAgent).toBe(
-      result.cleanUserAgent
+      result.rawUserAgent
     )
     expect(identityForContext(result.identities, 'service-worker').userAgent).toBe(
-      result.cleanUserAgent
+      result.rawUserAgent
     )
     expect(userAgentForPath(result.receipts, '/')).toBe(result.rawUserAgent)
     expect(userAgentForPath(result.receipts, '/blob-fetch')).toBe(result.rawUserAgent)
-    expect(userAgentForPath(result.receipts, '/shared-worker-fetch-a')).toBe(result.cleanUserAgent)
-    expect(userAgentForPath(result.receipts, '/service-worker-fetch')).toBe(result.cleanUserAgent)
-    expect(userAgentForPath(result.receipts, '/no-header-fill')).toBe(result.cleanUserAgent)
+    expect(userAgentForPath(result.receipts, '/shared-worker-fetch-a')).toBe(result.rawUserAgent)
+    expect(userAgentForPath(result.receipts, '/service-worker-fetch')).toBe(result.rawUserAgent)
+    expect(userAgentForPath(result.receipts, '/no-header-fill')).toBe(result.rawUserAgent)
   }, 40_000)
 })
 
@@ -274,13 +274,14 @@ function fixtureMain(options: {
 const { app, BrowserWindow, net, session } = require('electron')
 const { existsSync, writeFileSync } = require('node:fs')
 const processIdentity = require(${JSON.stringify(options.processIdentityModulePath)})
-const { cleanElectronUserAgent, installBrowserSessionUserAgentExceptions } = require(${JSON.stringify(options.exceptionModulePath)})
+const { cleanElectronUserAgent } = require(${JSON.stringify(options.exceptionModulePath)})
 const arm = ${JSON.stringify(options.arm)}
 const startupMarks = []
 app.setName('OrcaWireIdentityFixture')
+const preReadyNativeUserAgent = app.userAgentFallback
 let identity
 if (arm !== 'late-session-setter') {
-  identity = processIdentity.initializeBrowserProcessUserAgent()
+  identity = processIdentity.initializeBrowserProcessUserAgent(arm === 'native' ? 'native' : 'clean')
   startupMarks.push('fallback')
 }
 const waitForBarrier = async () => {
@@ -305,7 +306,7 @@ async function run() {
   await waitForBarrier()
   const sess = session.fromPartition('persist:wire-identity-test')
   startupMarks.push('session')
-  const rawUserAgent = identity?.nativeUserAgent ?? sess.getUserAgent()
+  const rawUserAgent = arm === 'clean' ? preReadyNativeUserAgent : app.userAgentFallback
   const cleanUserAgent = identity?.cleanUserAgent ?? cleanElectronUserAgent(rawUserAgent)
   if (arm === 'late-session-setter') sess.setUserAgent(cleanUserAgent)
   sess.setCertificateVerifyProc((_request, callback) => callback(0))
@@ -314,11 +315,24 @@ async function run() {
   const mobileUserAgent = 'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/' + chromeVersion + ' Mobile/15E148 Safari/604.1'
   let mainWebContentsId
   if (arm === 'clean' || arm === 'mobile' || arm === 'mixed-mobile') {
-    installBrowserSessionUserAgentExceptions(sess, request => {
-      if (arm !== 'mobile' && arm !== 'mixed-mobile') return undefined
-      if (request.webContentsId !== undefined && request.webContentsId !== mainWebContentsId) return undefined
-      return { userAgent: mobileUserAgent, userAgentMetadata: { brands: [{ brand: 'Chromium', version: major }, { brand: 'Google Chrome', version: major }, { brand: 'Not/A)Brand', version: '24' }], fullVersionList: [{ brand: 'Chromium', version: chromeVersion }, { brand: 'Google Chrome', version: chromeVersion }, { brand: 'Not/A)Brand', version: '24.0.0.0' }], fullVersion: chromeVersion, platform: 'iOS', platformVersion: '18.5.0', architecture: '', model: 'iPhone', mobile: true } }
-    })
+    sess.webRequest.onBeforeSendHeaders(
+      { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
+      (details, callback) => {
+        const userAgentKey = Object.keys(details.requestHeaders).find(
+          key => key.toLowerCase() === 'user-agent'
+        ) || 'User-Agent'
+        if (arm !== 'mobile' && arm !== 'mixed-mobile') {
+          callback({ requestHeaders: details.requestHeaders })
+          return
+        }
+        if (details.webContentsId !== undefined && details.webContentsId !== mainWebContentsId) {
+          callback({ requestHeaders: details.requestHeaders })
+          return
+        }
+        details.requestHeaders[userAgentKey] = mobileUserAgent
+        callback({ requestHeaders: details.requestHeaders })
+      }
+    )
   }
   const windows = []
   const window = new BrowserWindow({ show: false, webPreferences: { partition: 'persist:wire-identity-test', sandbox: true } })

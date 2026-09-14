@@ -61,7 +61,7 @@ function applyUserAgentMetadataHeaders(
 
 // Desktop client hints remain browser-owned. Mobile overrides carry the same metadata CDP used,
 // so worker requests replace only hints Chromium already chose to emit without inventing them.
-export function installBrowserSessionUserAgentExceptions(
+export function installBrowserSessionUserAgentPolicy(
   sess: Session,
   resolveRequestUserAgent?: BrowserSessionRequestUserAgentResolver
 ): () => void {
@@ -77,8 +77,9 @@ export function installBrowserSessionUserAgentExceptions(
       } catch {
         // The request can race guest teardown; the header and manager state still provide a fallback.
       }
+      // Firefox is delivered per-target and cannot reach workers; keep it clean-only to preserve one
+      // coherent identity per mode instead of pairing a Firefox document with native workers.
       if (
-        // Native is an app-wide request to keep Electron's identity, including on Google auth hosts.
         getBrowserProcessUserAgentIdentity().mode === 'clean' &&
         shouldUseGoogleAuthIdentity(details.url, details.referrer ?? '', details.resourceType ?? '')
       ) {

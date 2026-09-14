@@ -9,7 +9,7 @@ import {
 } from './browser-session-proxy'
 import { hasSystemMediaAccess, requestSystemMediaAccess } from './browser-media-access'
 import { isAutoGrantedBrowserSessionPermission } from './browser-session-permission-policy'
-import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
+import { installBrowserSessionUserAgentPolicy } from './browser-session-ua'
 import { getBrowserProcessUserAgentIdentity } from './browser-process-user-agent'
 import {
   allowsBrowserWebAuthnPermission,
@@ -42,7 +42,7 @@ function configureBrowserSessionUserAgentPolicy(sess: Session, installExceptions
   }
   userAgentPolicyDisposerBySession.set(
     sess,
-    installBrowserSessionUserAgentExceptions(sess, (request) =>
+    installBrowserSessionUserAgentPolicy(sess, (request) =>
       browserManager.resolveBrowserGuestRequestUserAgent(request)
     )
   )

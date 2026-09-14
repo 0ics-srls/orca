@@ -29,7 +29,7 @@ function installModuleMocks(
   copyFailures = new Set<string>()
 ): {
   sessionFromPartitionMock: ReturnType<typeof vi.fn>
-  installBrowserSessionUserAgentExceptionsMock: ReturnType<typeof vi.fn>
+  installBrowserSessionUserAgentPolicyMock: ReturnType<typeof vi.fn>
   browserManagerHandleGuestWillDownloadMock: ReturnType<typeof vi.fn>
   browserManagerNotifyPermissionDeniedMock: ReturnType<typeof vi.fn>
   requestSystemMediaAccessMock: ReturnType<typeof vi.fn>
@@ -47,7 +47,7 @@ function installModuleMocks(
     clearStorageData: vi.fn().mockResolvedValue(undefined),
     clearCache: vi.fn().mockResolvedValue(undefined)
   }))
-  const installBrowserSessionUserAgentExceptionsMock = vi.fn(() => vi.fn())
+  const installBrowserSessionUserAgentPolicyMock = vi.fn(() => vi.fn())
   const browserManagerHandleGuestWillDownloadMock = vi.fn()
   const browserManagerNotifyPermissionDeniedMock = vi.fn()
   const requestSystemMediaAccessMock = vi.fn().mockResolvedValue(true)
@@ -121,7 +121,7 @@ function installModuleMocks(
     requestSystemMediaAccess: requestSystemMediaAccessMock
   }))
   vi.doMock('./browser-session-ua', () => ({
-    installBrowserSessionUserAgentExceptions: installBrowserSessionUserAgentExceptionsMock
+    installBrowserSessionUserAgentPolicy: installBrowserSessionUserAgentPolicyMock
   }))
   vi.doMock('./browser-process-user-agent', () => ({
     getBrowserProcessUserAgentIdentity: () => ({
@@ -164,7 +164,7 @@ function installModuleMocks(
 
   return {
     sessionFromPartitionMock,
-    installBrowserSessionUserAgentExceptionsMock,
+    installBrowserSessionUserAgentPolicyMock,
     browserManagerHandleGuestWillDownloadMock,
     browserManagerNotifyPermissionDeniedMock,
     requestSystemMediaAccessMock
@@ -248,7 +248,7 @@ describe('BrowserSessionRegistry persistence', () => {
 
   it('applies the process identity and request exceptions to new profiles', async () => {
     const fsState = createFsState()
-    const { sessionFromPartitionMock, installBrowserSessionUserAgentExceptionsMock } =
+    const { sessionFromPartitionMock, installBrowserSessionUserAgentPolicyMock } =
       installModuleMocks(fsState)
     const { browserSessionRegistry } = await import('./browser-session-registry')
 
@@ -256,7 +256,7 @@ describe('BrowserSessionRegistry persistence', () => {
 
     const profileSession = sessionFromPartitionMock.mock.results.at(-1)?.value
     expect(profileSession.setUserAgent).toHaveBeenCalledWith(CLEAN_USER_AGENT)
-    expect(installBrowserSessionUserAgentExceptionsMock).toHaveBeenCalledWith(
+    expect(installBrowserSessionUserAgentPolicyMock).toHaveBeenCalledWith(
       profileSession,
       expect.any(Function)
     )
@@ -407,7 +407,7 @@ describe('BrowserSessionRegistry persistence', () => {
       ]
     })
 
-    const { sessionFromPartitionMock, installBrowserSessionUserAgentExceptionsMock } =
+    const { sessionFromPartitionMock, installBrowserSessionUserAgentPolicyMock } =
       installModuleMocks(fsState)
     const { browserSessionRegistry } = await import('./browser-session-registry')
 
@@ -421,7 +421,7 @@ describe('BrowserSessionRegistry persistence', () => {
     // Why: every partition inherits the one process identity rather than an imported value.
     expect(appliedUas.length).toBeGreaterThan(0)
     expect(appliedUas.every((ua) => ua === CLEAN_USER_AGENT)).toBe(true)
-    expect(installBrowserSessionUserAgentExceptionsMock).toHaveBeenCalled()
+    expect(installBrowserSessionUserAgentPolicyMock).toHaveBeenCalled()
   })
 
   it('migrates retired native profiles without choosing the app-wide identity', async () => {
@@ -498,7 +498,7 @@ describe('BrowserSessionRegistry persistence', () => {
       ]
     })
 
-    const { sessionFromPartitionMock, installBrowserSessionUserAgentExceptionsMock } =
+    const { sessionFromPartitionMock, installBrowserSessionUserAgentPolicyMock } =
       installModuleMocks(fsState)
     const { browserSessionRegistry } = await import('./browser-session-registry')
 
@@ -512,7 +512,7 @@ describe('BrowserSessionRegistry persistence', () => {
       importedSessions.every((sess) => sess.setUserAgent.mock.calls[0]?.[0] === CLEAN_USER_AGENT)
     ).toBe(true)
     expect(
-      installBrowserSessionUserAgentExceptionsMock.mock.calls.some(
+      installBrowserSessionUserAgentPolicyMock.mock.calls.some(
         ([sess]) => Reflect.get(sess, 'partition') === importedPartition
       )
     ).toBe(true)

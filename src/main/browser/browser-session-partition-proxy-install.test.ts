@@ -44,7 +44,7 @@ vi.mock('./browser-media-access', () => ({
   requestSystemMediaAccess: vi.fn(async () => false)
 }))
 vi.mock('./browser-session-ua', () => ({
-  installBrowserSessionUserAgentExceptions: vi.fn(() => vi.fn())
+  installBrowserSessionUserAgentPolicy: vi.fn(() => vi.fn())
 }))
 vi.mock('./browser-process-user-agent', () => ({
   getBrowserProcessUserAgentIdentity: () => ({

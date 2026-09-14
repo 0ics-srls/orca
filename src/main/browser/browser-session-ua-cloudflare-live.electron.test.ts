@@ -227,7 +227,7 @@ function fixtureMain(options: {
 const { app, BrowserWindow, session } = require('electron')
 const { existsSync, writeFileSync } = require('node:fs')
 const processIdentity = require(${JSON.stringify(options.processIdentityModulePath)})
-const { installBrowserSessionUserAgentExceptions } = require(${JSON.stringify(options.exceptionModulePath)})
+const { installBrowserSessionUserAgentPolicy } = require(${JSON.stringify(options.exceptionModulePath)})
 const arm = ${JSON.stringify(options.arm)}
 const site = ${JSON.stringify(options.site)}
 app.setName('OrcaCloudflareLiveProbe')
@@ -250,7 +250,7 @@ async function run() {
   const firefoxUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0'
   if (arm === 'origin-main') sess.setUserAgent(cleanUserAgent)
   if (arm === 'branch') {
-    installBrowserSessionUserAgentExceptions(sess, request => {
+    installBrowserSessionUserAgentPolicy(sess, request => {
       if (request.resourceType !== 'mainFrame' && (request.currentUserAgent === firefoxUserAgent || request.effectiveUserAgent === firefoxUserAgent)) {
         return { userAgent: firefoxUserAgent }
       }

@@ -11,6 +11,10 @@ const {
   getMediaAccessStatusMock: vi.fn(),
   removeCertificateRequestGuardMock: vi.fn()
 }))
+const processUserAgentMode = vi.hoisted(() => {
+  const state: { value: 'clean' | 'native' } = { value: 'clean' }
+  return state
+})
 
 vi.mock('electron', () => ({
   session: {
@@ -24,7 +28,7 @@ vi.mock('electron', () => ({
 
 vi.mock('./browser-process-user-agent', () => ({
   getBrowserProcessUserAgentIdentity: () => ({
-    mode: 'clean',
+    mode: processUserAgentMode.value,
     userAgent: 'Mozilla/5.0 Chrome/150.0.0.0 Safari/537.36'
   })
 }))
@@ -40,7 +44,7 @@ vi.mock('./browser-manager', () => ({
 
 import { browserSessionRegistry } from './browser-session-registry'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
-import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
+import { installBrowserSessionUserAgentPolicy } from './browser-session-ua'
 import { setBrowserNetworkProxySettingsResolver } from './browser-session-proxy'
 import { handleElectronProxyLogin } from '../network/electron-proxy-credentials'
 import { applyProxySettingsToSession } from '../network/proxy-settings'
@@ -57,6 +61,7 @@ describe('BrowserSessionRegistry', () => {
     askForMediaAccessMock.mockReset()
     getMediaAccessStatusMock.mockReset()
     removeCertificateRequestGuardMock.mockClear()
+    processUserAgentMode.value = 'clean'
     setBrowserNetworkProxySettingsResolver(null)
     askForMediaAccessMock.mockResolvedValue(true)
     getMediaAccessStatusMock.mockReturnValue('granted')
@@ -529,10 +534,10 @@ describe('BrowserSessionRegistry', () => {
     })
   })
 
-  describe('installBrowserSessionUserAgentExceptions', () => {
+  describe('installBrowserSessionUserAgentPolicy', () => {
     function install(): (details: unknown, callback: ReturnType<typeof vi.fn>) => void {
       const onBeforeSendHeaders = vi.fn()
-      installBrowserSessionUserAgentExceptions(
+      installBrowserSessionUserAgentPolicy(
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only the mocked webRequest member exercised here.
         { webRequest: { onBeforeSendHeaders } } as never,
         (request) =>
@@ -590,6 +595,25 @@ describe('BrowserSessionRegistry', () => {
         false
       )
       expect(modified.Accept).toBe('text/html')
+    })
+
+    it('keeps native requests untouched on Google auth hosts', () => {
+      processUserAgentMode.value = 'native'
+      const callback = vi.fn()
+      install()(
+        {
+          url: 'https://accounts.google.com/v3/signin/identifier',
+          requestHeaders: {
+            'User-Agent': 'NativeElectron/43.0',
+            'sec-ch-ua': 'browser-owned'
+          }
+        },
+        callback
+      )
+      expect(callback.mock.calls[0][0].requestHeaders).toEqual({
+        'User-Agent': 'NativeElectron/43.0',
+        'sec-ch-ua': 'browser-owned'
+      })
     })
 
     it('strips client hints on a cross-host request that carries the Firefox auth UA', () => {

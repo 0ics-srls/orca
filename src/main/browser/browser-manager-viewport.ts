@@ -188,6 +188,8 @@ export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifec
           if (this.authUserAgentOverrideStateByGuestId.has(guest.id)) {
             const url = this.resolveTabNavigationUrl(guest)
             const identity = getBrowserProcessUserAgentIdentity()
+            // Firefox is delivered per-target and cannot reach workers; keep it clean-only to preserve
+            // one coherent identity per mode instead of pairing a Firefox document with native workers.
             const restored = await this.applyAuthUserAgentOverrideOverCdp(
               guest,
               false,

@@ -23,7 +23,8 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
       request.webContentsId === undefined
         ? undefined
         : this.pendingNavigationByGuestId.get(request.webContentsId)
-    // Native mode deliberately keeps the real Electron identity on Google auth hosts too.
+    // Firefox is delivered per-target and cannot reach workers; keep it clean-only to preserve one
+    // coherent identity per mode instead of pairing a Firefox document with native workers.
     const googleAuthEnabled = identity.mode === 'clean'
     if (
       googleAuthEnabled &&
@@ -71,7 +72,6 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
   // Why: navigator.userAgent (read by Google's auth JS) reflects the WebContents UA,
   // not the request header, so the Firefox switch in the session request hook
   // must be matched here per navigation or the two layers disagree — itself a bot tell.
-  // Native process mode skips only this Google exception; viewport identity still follows navigation.
   protected applyGoogleAuthUserAgent(
     guest: Electron.WebContents,
     url: string,
