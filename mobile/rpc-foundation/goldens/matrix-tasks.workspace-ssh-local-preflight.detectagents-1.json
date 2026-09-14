@@ -1,6 +1,6 @@
 {
-  "operation": "settings.bot-overrides",
-  "family": "settings.bot-overrides",
+  "operation": "tasks.workspace-ssh-local",
+  "family": "tasks.workspace-ssh-local",
   "namedDeltas": [],
   "runnerVersion": 1,
   "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
@@ -11,70 +11,12 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 3,
   "values": {
-    "090c88478661": {
-      "name": "settings.get#1",
+    "00d70c40c34c": {
+      "name": "preflight.detectAgents#1",
       "args": [
         {
           "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "pending",
-        "startedAt": 0
-      }
-    },
-    "0fc3e204e7ba": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-1",
-          "ok": true,
-          "result": {
-            "error": "refused"
-          }
-        }
-      }
-    },
-    "127ad2bdc042": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
+          "value": "preflight.detectAgents"
         },
         {
           "name": "params",
@@ -105,220 +47,12 @@
         }
       }
     },
-    "2b3aa0da0852": {
-      "name": "settings.get#1",
+    "0846bea730cf": {
+      "name": "preflight.detectAgents#1",
       "args": [
         {
           "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "",
-          "isRpcDeliveryUnknown": true
-        }
-      }
-    },
-    "4f53cda18c2b": [],
-    "6a98511b6371": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "error": {
-            "code": "refused",
-            "message": ""
-          },
-          "id": "frame-1",
-          "ok": false
-        }
-      }
-    },
-    "7ca23c4c946b": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-1",
-          "ok": true,
-          "result": {
-            "settings": {
-              "defaultTuiAgent": "codex",
-              "disabledTuiAgents": ["claude"],
-              "hostSettingOverrides": {},
-              "prBotAuthorOverrides": ["bot-user"],
-              "visibleTaskProviders": ["github", "linear"]
-            }
-          }
-        }
-      }
-    },
-    "7ddcb1852b39": {
-      "name": "settings.get#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
-    },
-    "8b77098df0c3": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "transport failure",
-          "isRpcDeliveryUnknown": true
-        }
-      }
-    },
-    "8f8296303a77": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "error": {
-            "code": "refused",
-            "message": "outer refused"
-          },
-          "id": "frame-1",
-          "ok": false
-        }
-      }
-    },
-    "b759ab27e4dd": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "error": {
-            "code": "method_not_found",
-            "message": "Unknown method"
-          },
-          "id": "frame-1",
-          "ok": false
-        }
-      }
-    },
-    "d27ce798af34": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
+          "value": "preflight.detectAgents"
         },
         {
           "name": "params",
@@ -347,43 +81,12 @@
         }
       }
     },
-    "d52c8e96e222": ["bot-user"],
-    "e0cf1af55a54": {
-      "name": "settings.get#1",
+    "1317fc33bdbe": {
+      "name": "preflight.detectAgents#1",
       "args": [
         {
           "name": "method",
-          "value": "settings.get"
-        },
-        {
-          "name": "params",
-          "value": {
-            "$rpc": "absent"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-1",
-          "ok": true
-        }
-      }
-    },
-    "e1bd8b4a5d70": {
-      "name": "settings.get#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "settings.get"
+          "value": "preflight.detectAgents"
         },
         {
           "name": "params",
@@ -411,6 +114,239 @@
         }
       }
     },
+    "163b91b6fe9c": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": ""
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "327b46fb8bef": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "error": "refused"
+          }
+        }
+      }
+    },
+    "41b0d115f434": {
+      "name": "workspaceDetectedAgentIds",
+      "value": {
+        "$rpc": "null"
+      }
+    },
+    "6e5fcf24648d": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true
+        }
+      }
+    },
+    "70d128c20ae4": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "71225024ccf5": {
+      "agent": "claude",
+      "connecting": false,
+      "detected": [],
+      "setup": "unresolved",
+      "ssh": {
+        "$rpc": "null"
+      }
+    },
+    "7400f4eebe66": {
+      "agent": "claude",
+      "connecting": false,
+      "detected": ["codex", "claude"],
+      "setup": "unresolved",
+      "ssh": {
+        "$rpc": "null"
+      }
+    },
+    "87d7d24a30d2": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "9f152ed6e897": {
+      "name": "workspaceDetectedAgentIds",
+      "value": []
+    },
+    "cb93b17470e8": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": ["codex", "claude"]
+        }
+      }
+    },
+    "cbb858a786ac": {
+      "name": "workspaceDetectedAgentIds",
+      "value": ["codex", "claude"]
+    },
+    "cf32edc950ac": {
+      "name": "preflight.detectAgents#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"preflight.detectAgents\"}"
+    },
+    "ea709e13f0f0": {
+      "name": "workspaceAgentOverridden",
+      "value": false
+    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -418,153 +354,210 @@
       "value": {
         "$rpc": "undefined"
       }
+    },
+    "ed6189938d78": {
+      "name": "workspaceAgent",
+      "value": "claude"
+    },
+    "fb640b2bca4c": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": "outer refused"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "fbb9eef78275": {
+      "name": "preflight.detectAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
     }
   },
   "recording": {
-    "scenario": "matrix-settings.bot-overrides-settings.get-1",
+    "scenario": "matrix-tasks.workspace-ssh-local-preflight.detectagents-1",
     "checkpoints": [
       {
-        "id": "settings-bot-overrides-fulfilled.prelude:settings-pending",
+        "id": "tw-workspace-ssh-local-agents.normal:local-agents-detected",
         "observation": {
-          "sender": ["090c88478661"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["cb93b17470e8"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "7400f4eebe66",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "cbb858a786ac"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.normal:settled",
+        "id": "tw-workspace-ssh-local-agents.result-absent:local-agents-detected",
         "observation": {
-          "sender": ["7ca23c4c946b"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["6e5fcf24648d"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "d52c8e96e222",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.result-absent:settled",
+        "id": "tw-workspace-ssh-local-agents.result-null:local-agents-detected",
         "observation": {
-          "sender": ["e0cf1af55a54"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["1317fc33bdbe"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.result-null:settled",
+        "id": "tw-workspace-ssh-local-agents.inner-ok-missing:local-agents-detected",
         "observation": {
-          "sender": ["e1bd8b4a5d70"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["327b46fb8bef"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.inner-ok-missing:settled",
+        "id": "tw-workspace-ssh-local-agents.inner-false-string-error:local-agents-detected",
         "observation": {
-          "sender": ["0fc3e204e7ba"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["0846bea730cf"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.inner-false-string-error:settled",
+        "id": "tw-workspace-ssh-local-agents.inner-false-object-error:local-agents-detected",
         "observation": {
-          "sender": ["d27ce798af34"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["00d70c40c34c"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.inner-false-object-error:settled",
+        "id": "tw-workspace-ssh-local-agents.outer-refused:local-agents-detected",
         "observation": {
-          "sender": ["127ad2bdc042"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["fb640b2bca4c"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.outer-refused:settled",
+        "id": "tw-workspace-ssh-local-agents.outer-refused-no-message:local-agents-detected",
         "observation": {
-          "sender": ["8f8296303a77"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["163b91b6fe9c"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.outer-refused-no-message:settled",
+        "id": "tw-workspace-ssh-local-agents.method-not-found:local-agents-detected",
         "observation": {
-          "sender": ["6a98511b6371"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["87d7d24a30d2"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.method-not-found:settled",
+        "id": "tw-workspace-ssh-local-agents.transport-rejection:local-agents-detected",
         "observation": {
-          "sender": ["b759ab27e4dd"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["fbb9eef78275"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       },
       {
-        "id": "settings-bot-overrides-fulfilled.transport-rejection:settled",
+        "id": "tw-workspace-ssh-local-agents.transport-rejection-no-message:local-agents-detected",
         "observation": {
-          "sender": ["8b77098df0c3"],
-          "payloads": ["7ddcb1852b39"],
+          "sender": ["70d128c20ae4"],
+          "payloads": ["cf32edc950ac"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "4f53cda18c2b",
-          "effects": []
-        }
-      },
-      {
-        "id": "settings-bot-overrides-fulfilled.transport-rejection-no-message:settled",
-        "observation": {
-          "sender": ["2b3aa0da0852"],
-          "payloads": ["7ddcb1852b39"],
-          "settlements": {
-            "mount": "eb79a9b3682a"
-          },
-          "state": "4f53cda18c2b",
-          "effects": []
+          "state": "71225024ccf5",
+          "effects": ["ed6189938d78", "ea709e13f0f0", "41b0d115f434", "9f152ed6e897"]
         }
       }
     ]

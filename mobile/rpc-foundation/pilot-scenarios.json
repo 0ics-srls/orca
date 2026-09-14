@@ -6469,6 +6469,31 @@
       ]
     },
     {
+      "id": "tw-workspace-ssh-local-agents",
+      "operation": "tasks.workspace-ssh-local",
+      "version": 1,
+      "family": "tasks.workspace-ssh-local",
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "complete": "preflight.detectAgents#1",
+          "params": { "$undefined": true },
+          "reply": {
+            "ok": true,
+            "result": ["codex", "claude"]
+          }
+        },
+        {
+          "checkpoint": "local-agents-detected"
+        }
+      ]
+    },
+    {
       "id": "tw-task-preferences-resume-write",
       "operation": "settings.task-preferences",
       "version": 1,

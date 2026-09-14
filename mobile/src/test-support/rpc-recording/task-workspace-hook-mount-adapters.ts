@@ -13,6 +13,78 @@ const REPO = 'repo-1'
 export function taskWorkspaceHookMountAdapters(
   modules: ReturnType<typeof operationModuleLoader>
 ): Record<string, MountAdapter> {
+  // The drawer's SSH hook. `connectionId` picks the arm the detection effect takes: a repo on
+  // an SSH connection detects remote agents, one without it detects local agents.
+  function sshStateAdapter(connectionId: string | undefined): MountAdapter {
+    return (context) => {
+      const useSsh = modules.load<
+        typeof import('../../tasks/use-mobile-tasks-workspace-ssh-state')
+      >('mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx').useMobileTasksWorkspaceSshState
+      const repo = { id: REPO, displayName: 'Repo', connectionId }
+      const model = observableModel(context, {
+        client: context.client,
+        tasksSupported: true,
+        runtimeTaskSettings: { disabledTuiAgents: [] },
+        workspaceAgent: null,
+        workspaceAgentOverridden: false,
+        workspaceCreateDraft: { key: 'linear:1' },
+        workspaceCreateRequiresSshConnection: false,
+        workspaceCreateSshStatus: connectionId ? 'connected' : 'idle',
+        workspaceCreateTargetConnectionId: connectionId,
+        workspaceCreateTargetRepo: repo,
+        workspaceDetectedAgentIds: null,
+        workspaceSshState: null,
+        workspaceSshConnecting: false
+      })
+      let actions: ReturnType<typeof useSsh>
+      const hook = hookMount(() => {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
+        actions = useSsh(model as unknown as Parameters<typeof useSsh>[0])
+      })
+      let setup: unknown = 'unresolved'
+      return {
+        action(name) {
+          if (name === 'mount') {
+            return hook.mount()
+          }
+          if (name === 'unmount') {
+            return hook.unmount()
+          }
+          if (name === 'connect') {
+            return performHookAction(() => actions.connectWorkspaceSshRepo())
+          }
+          if (name === 'ensure-ready') {
+            return actions.ensureWorkspaceSshReady(
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only id, displayName and connectionId.
+              repo as Parameters<typeof actions.ensureWorkspaceSshReady>[0]
+            )
+          }
+          if (name === 'resolve-setup') {
+            return actions
+              .resolveCreateSetupDecision(
+                // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: as above.
+                repo as Parameters<typeof actions.resolveCreateSetupDecision>[0]
+              )
+              .then((value: unknown) => {
+                setup = value
+                return value
+              })
+          }
+          throw new Error(`Unknown workspace ssh action: ${name}`)
+        },
+        state: () =>
+          projectObservable({
+            ssh: model.workspaceSshState,
+            connecting: model.workspaceSshConnecting,
+            detected: model.workspaceDetectedAgentIds,
+            agent: model.workspaceAgent,
+            setup
+          }),
+        dispose: hook.unmount
+      }
+    }
+  }
+
   return {
     'tasks.workspace-source': (context) => {
       const useEffects = modules.load<
@@ -123,72 +195,8 @@ export function taskWorkspaceHookMountAdapters(
         dispose: hook.unmount
       }
     },
-    'tasks.workspace-ssh': (context) => {
-      const useSsh = modules.load<
-        typeof import('../../tasks/use-mobile-tasks-workspace-ssh-state')
-      >('mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx').useMobileTasksWorkspaceSshState
-      const repo = { id: REPO, displayName: 'Repo', connectionId: 'ssh-1' }
-      const model = observableModel(context, {
-        client: context.client,
-        tasksSupported: true,
-        runtimeTaskSettings: { disabledTuiAgents: [] },
-        workspaceAgent: null,
-        workspaceAgentOverridden: false,
-        workspaceCreateDraft: { key: 'linear:1' },
-        workspaceCreateRequiresSshConnection: false,
-        workspaceCreateSshStatus: 'connected',
-        workspaceCreateTargetConnectionId: 'ssh-1',
-        workspaceCreateTargetRepo: repo,
-        workspaceDetectedAgentIds: null,
-        workspaceSshState: null,
-        workspaceSshConnecting: false
-      })
-      let actions: ReturnType<typeof useSsh>
-      const hook = hookMount(() => {
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the members the hook reads.
-        actions = useSsh(model as unknown as Parameters<typeof useSsh>[0])
-      })
-      let setup: unknown = 'unresolved'
-      return {
-        action(name) {
-          if (name === 'mount') {
-            return hook.mount()
-          }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
-          if (name === 'connect') {
-            return performHookAction(() => actions.connectWorkspaceSshRepo())
-          }
-          if (name === 'ensure-ready') {
-            return actions.ensureWorkspaceSshReady(
-              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only id, displayName and connectionId.
-              repo as Parameters<typeof actions.ensureWorkspaceSshReady>[0]
-            )
-          }
-          if (name === 'resolve-setup') {
-            return actions
-              .resolveCreateSetupDecision(
-                // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: as above.
-                repo as Parameters<typeof actions.resolveCreateSetupDecision>[0]
-              )
-              .then((value: unknown) => {
-                setup = value
-                return value
-              })
-          }
-          throw new Error(`Unknown workspace ssh action: ${name}`)
-        },
-        state: () =>
-          projectObservable({
-            ssh: model.workspaceSshState,
-            connecting: model.workspaceSshConnecting,
-            detected: model.workspaceDetectedAgentIds,
-            agent: model.workspaceAgent,
-            setup
-          }),
-        dispose: hook.unmount
-      }
-    }
+    'tasks.workspace-ssh': sshStateAdapter('ssh-1'),
+    // The local arm: no connectionId, so the effect calls preflight.detectAgents.
+    'tasks.workspace-ssh-local': sshStateAdapter(undefined)
   }
 }
