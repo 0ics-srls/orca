@@ -65,8 +65,14 @@ describe('generated status input redaction', () => {
   })
 
   it('bounds sparse array serialization and cumulative reserved slots', async () => {
-    expect(await postedInput({ values: new Array(5000) })).toEqual({ redacted: true })
-    const values = Array.from({ length: 8 }, () => new Array(1000))
+    const sparse: unknown[] = []
+    sparse.length = 5000
+    expect(await postedInput({ values: sparse })).toEqual({ redacted: true })
+    const values = Array.from({ length: 8 }, () => {
+      const slots: unknown[] = []
+      slots.length = 1000
+      return slots
+    })
     expect(await postedInput({ values })).toEqual({ redacted: true })
   })
 
