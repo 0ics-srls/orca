@@ -235,12 +235,11 @@ async function runPairing(
   const installed = DeviceCredentialInstalledSchema.parse(
     relayCredentialProvision.interpret(provision)
   )
+  const endpointsReply = await relayPairingEndpointsRead.request(winner.client, {
+    installReqId: journal.metadata.installReqId
+  })
   const endpoints = PairingGetEndpointsResultSchema.parse(
-    relayPairingEndpointsRead.interpret(
-      await relayPairingEndpointsRead.request(winner.client, {
-        installReqId: journal.metadata.installReqId
-      })
-    )
+    relayPairingEndpointsRead.interpret(endpointsReply)
   )
   assertCommittedInstall(endpoints.installStatus, installed)
   if (!endpoints.relay) {

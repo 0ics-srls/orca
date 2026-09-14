@@ -52,14 +52,13 @@ export async function rotateMobileRelayCredential(args: {
   }
   let endpoints = await getEndpoints(args.client, pending.reqId)
   if (endpoints.installStatus?.state !== 'committed') {
+    const installReply = await relayCredentialProvision.request(args.client, {
+      reqId: pending.reqId,
+      newResumeTokenHash: pending.hash,
+      expectedCurrentHash: bundle.current.hash
+    })
     const installed = DeviceCredentialInstalledSchema.parse(
-      relayCredentialProvision.interpret(
-        await relayCredentialProvision.request(args.client, {
-          reqId: pending.reqId,
-          newResumeTokenHash: pending.hash,
-          expectedCurrentHash: bundle.current.hash
-        })
-      )
+      relayCredentialProvision.interpret(installReply)
     )
     endpoints = await getEndpoints(args.client, pending.reqId)
     if (
@@ -167,11 +166,8 @@ export async function persistResumeConfirmation(args: {
 }
 
 async function getEndpoints(client: RpcClient, installReqId: string) {
-  return PairingGetEndpointsResultSchema.parse(
-    relayPairingEndpointsRead.interpret(
-      await relayPairingEndpointsRead.request(client, { installReqId })
-    )
-  )
+  const reply = await relayPairingEndpointsRead.request(client, { installReqId })
+  return PairingGetEndpointsResultSchema.parse(relayPairingEndpointsRead.interpret(reply))
 }
 
 function encodeBase64Url(value: Uint8Array): string {

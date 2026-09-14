@@ -131,13 +131,12 @@ async function runRecovery(
       }
       if (credential.kind === 'invite' && endpoints.installStatus?.state === 'not-found') {
         journal = await transitionToInviteAuthorization(journal, dependencies)
+        const installReply = await relayCredentialProvision.request(client, {
+          reqId: journal.metadata.installReqId,
+          newResumeTokenHash: journal.metadata.pendingResumeTokenHash
+        })
         const installed = DeviceCredentialInstalledSchema.parse(
-          relayCredentialProvision.interpret(
-            await relayCredentialProvision.request(client, {
-              reqId: journal.metadata.installReqId,
-              newResumeTokenHash: journal.metadata.pendingResumeTokenHash
-            })
-          )
+          relayCredentialProvision.interpret(installReply)
         )
         const reconciled = await getRecoveryStatus(client, journal, 'invite')
         assertCommitted(reconciled, installed)
@@ -223,14 +222,11 @@ async function getRecoveryStatus(
   journal: MobileRelayPairingJournal,
   kind: 'resume' | 'invite'
 ) {
-  return PairingGetEndpointsResultSchema.parse(
-    relayPairingEndpointsRead.interpret(
-      await relayPairingEndpointsRead.request(client, {
-        installReqId: journal.metadata.installReqId,
-        ...(kind === 'resume' ? { resumeConfirmReqId: journal.metadata.resumeConfirmReqId } : {})
-      })
-    )
-  )
+  const reply = await relayPairingEndpointsRead.request(client, {
+    installReqId: journal.metadata.installReqId,
+    ...(kind === 'resume' ? { resumeConfirmReqId: journal.metadata.resumeConfirmReqId } : {})
+  })
+  return PairingGetEndpointsResultSchema.parse(relayPairingEndpointsRead.interpret(reply))
 }
 
 async function transitionToInviteAuthorization(
