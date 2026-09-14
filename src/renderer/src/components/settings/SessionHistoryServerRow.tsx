@@ -12,17 +12,13 @@ import {
 } from './runtime-environment-host-details'
 import { SessionHistoryComputerRow } from './SessionHistoryComputerRow'
 import {
+  isHostTooOldError,
   sessionSearchCheckingMessage,
   sessionSearchReadErrorMessage,
   sessionSearchStatusDetails,
   sessionSearchStatusMessage
 } from './session-history-status-copy'
 import { useSessionSearchStatus } from './use-session-search-status'
-
-// IPC wraps a rejection's message, so the host-too-old marker arrives inside a longer string.
-function isHostTooOldError(error: unknown): boolean {
-  return error instanceof Error && error.message.includes('host-too-old')
-}
 
 export function SessionHistoryServerRow({
   environment,
@@ -38,14 +34,16 @@ export function SessionHistoryServerRow({
   const mounted = useMountedRef()
   const openSettingsPage = useAppStore((state) => state.openSettingsPage)
   const openSettingsTarget = useAppStore((state) => state.openSettingsTarget)
-  const [tooOld, setTooOld] = useState(false)
+  const [tooOldOnSet, setTooOldOnSet] = useState(false)
   const [busy, setBusy] = useState(false)
   const connectionState = getRuntimeServerConnectionState(details)
   const connected = isRuntimeServerTransportConnected(connectionState)
-  const { status, failed, adopt } = useSessionSearchStatus({
+  const { status, failed, hostTooOld, adopt } = useSessionSearchStatus({
     executionHostId: hostId,
-    active: connected && !tooOld
+    active: connected && !tooOldOnSet
   })
+  // A status read or a set call can each prove the server predates session search.
+  const tooOld = tooOldOnSet || hostTooOld
   const enabled = status?.enabled === true
 
   async function setEnabled(next: boolean): Promise<void> {
@@ -58,7 +56,7 @@ export function SessionHistoryServerRow({
         return
       }
       if (isHostTooOldError(error)) {
-        setTooOld(true)
+        setTooOldOnSet(true)
         return
       }
       onError(

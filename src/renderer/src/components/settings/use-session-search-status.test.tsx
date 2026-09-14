@@ -235,3 +235,18 @@ it('does not overlap slow status requests and stops polling on unmount', async (
   })
   expect(mocks.status).toHaveBeenCalledTimes(beforeUnmount)
 })
+
+it('marks the host too old on a host-too-old rejection and stops polling', async () => {
+  mocks.status.mockRejectedValue(new Error('Error invoking remote method: host-too-old'))
+  const { result } = poll()
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(0)
+  })
+  expect(result.current.hostTooOld).toBe(true)
+  expect(result.current.failed).toBe(true)
+  const calls = mocks.status.mock.calls.length
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(30_000)
+  })
+  expect(mocks.status.mock.calls.length).toBe(calls)
+})
