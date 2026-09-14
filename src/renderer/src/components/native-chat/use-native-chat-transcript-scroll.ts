@@ -35,6 +35,10 @@ function geometryOf(element: HTMLElement): ScrollGeometry {
   }
 }
 
+function hasMeasurableViewport(element: HTMLElement | null): element is HTMLElement {
+  return element !== null && element.clientHeight > 0
+}
+
 export type NativeChatTranscriptScroll = {
   showJump: boolean
   onScroll: UIEventHandler<HTMLDivElement>
@@ -78,7 +82,7 @@ export function useNativeChatTranscriptScroll({
   const syncScrollState = useCallback(
     (event?: Event): ScrollGeometry | null => {
       const element = scrollRef.current
-      if (!element) {
+      if (!hasMeasurableViewport(element)) {
         return null
       }
       const geometry = geometryOf(element)
@@ -129,11 +133,17 @@ export function useNativeChatTranscriptScroll({
     [hasMore, itemCount, loadEarlier, loadingEarlier, syncScrollState]
   )
 
+  const scrollToEndWhenMeasurable = useCallback(() => {
+    if (hasMeasurableViewport(scrollRef.current)) {
+      scrollToEnd()
+    }
+  }, [scrollRef, scrollToEnd])
+
   const scrollToBottom = useCallback(() => {
     followingRef.current = true
-    scrollToEnd()
+    scrollToEndWhenMeasurable()
     setShowJump(false)
-  }, [scrollToEnd])
+  }, [scrollToEndWhenMeasurable])
 
   const scrollMessageToTop = useCallback(
     (element: HTMLElement) => {
@@ -145,9 +155,9 @@ export function useNativeChatTranscriptScroll({
 
   useLayoutEffect(() => {
     if (followingRef.current) {
-      scrollToEnd()
+      scrollToEndWhenMeasurable()
     }
-  }, [itemCount, isWorking, showTypingIndicator, scrollToEnd])
+  }, [itemCount, isWorking, showTypingIndicator, scrollToEndWhenMeasurable])
 
   useEffect(() => {
     const element = scrollRef.current
@@ -156,7 +166,7 @@ export function useNativeChatTranscriptScroll({
     }
     const observer = new ResizeObserver(() => {
       if (followingRef.current) {
-        scrollToEnd()
+        scrollToEndWhenMeasurable()
       } else {
         syncScrollState()
       }
@@ -168,7 +178,7 @@ export function useNativeChatTranscriptScroll({
       observer.observe(contentRef.current)
     }
     return () => observer.disconnect()
-  }, [contentRef, scrollRef, scrollToEnd, syncScrollState])
+  }, [contentRef, scrollRef, scrollToEndWhenMeasurable, syncScrollState])
 
   return { showJump, onScroll, scrollToBottom, scrollMessageToTop }
 }
