@@ -20,10 +20,7 @@ export type WindowsLaunchFailureDecode = {
 // Why a name AND a description: the enum member is the searchable token, the prose is what
 // makes the report readable without a Chromium checkout to hand.
 const SANDBOX_RESULT_CODES: Record<number, readonly [string, string]> = {
-  1: [
-    'SBOX_ERROR_GENERIC',
-    "error originated in the win32 layer; Chromium's GetLastError() detail is not carried through Electron"
-  ],
+  1: ['SBOX_ERROR_GENERIC', 'generic win32-layer error'],
   2: ['SBOX_ERROR_BAD_PARAMS', 'an invalid combination of parameters was given to the API'],
   3: ['SBOX_ERROR_UNSUPPORTED', 'the desired operation is not supported at this time'],
   4: ['SBOX_ERROR_NO_SPACE', 'the request requires more memory that allocated or available'],
@@ -64,7 +61,7 @@ const SANDBOX_RESULT_CODES: Record<number, readonly [string, string]> = {
   30: ['SBOX_ERROR_SETUP_INTERCEPTION_SERVICE', 'could not setup basic interceptions'],
   31: [
     'SBOX_ERROR_INITIALIZE_INTERCEPTIONS',
-    'could not initialize interceptions. This usually means 3rd party software is stomping on our hooks, or can sometimes mean the syscall format has changed'
+    'could not initialize interceptions, often 3rd-party hooks'
   ],
   32: ['SBOX_ERROR_SETUP_NTDLL_IMPORTS', 'could not setup the imports for ntdll in target process'],
   33: ['SBOX_ERROR_SETUP_HANDLE_CLOSER', 'could not setup the handle closer in target process'],
@@ -123,17 +120,11 @@ const SANDBOX_RESULT_CODES: Record<number, readonly [string, string]> = {
     'SBOX_ERROR_CANNOT_CREATE_LOWBOX_IMPERSONATION_TOKEN',
     'cannot create an impersonation lowbox token'
   ],
-  63: [
-    'SBOX_ERROR_CANNOT_LAUNCH_UNSANDBOXED_PROCESS',
-    'could not create the unsandboxed process. Extended error from base::LaunchProcess will be in GetLastError()'
-  ],
-  64: [
-    'SBOX_ERROR_INVALID_LINK_STATE',
-    'attempt to start a sandboxed process from sandbox code hosted not within the main EXE. This is an unsupported operation by the sandbox'
-  ],
+  63: ['SBOX_ERROR_CANNOT_LAUNCH_UNSANDBOXED_PROCESS', 'could not create the unsandboxed process'],
+  64: ['SBOX_ERROR_INVALID_LINK_STATE', 'sandbox code hosted outside the main EXE'],
   65: [
     'SBOX_ERROR_INVALID_TARGET_BASE_ADDRESS',
-    'the target process main EXE had a different base address to the broker. This should be impossible but might happen if there is a mismatch in the running executable image files vs the one disk'
+    "target EXE base address differs from the broker's"
   ],
   66: ['SBOX_ERROR_CANNOT_READ_SENTINEL_VALUE', 'the target process sentinel value cannot be read'],
   67: ['SBOX_ERROR_INVALID_READ_SENTINEL_SIZE', 'short read of the target process sentinel value'],
@@ -156,19 +147,19 @@ const SANDBOX_RESULT_CODES: Record<number, readonly [string, string]> = {
 // content/browser/child_process_launcher.h. Deliberately disjoint from the sandbox range
 // above — Chromium asserts `LAUNCH_RESULT_START > SBOX_ERROR_LAST` on Windows — so one
 // lookup over both cannot collide.
+// Only the failure member: START (1001) is a range sentinel and SUCCESS (1002) contradicts
+// launch-failed outright, so both are excluded for the same reason SBOX_ALL_OK is.
 const LAUNCH_RESULT_CODES: Record<number, readonly [string, string]> = {
-  1001: ['LAUNCH_RESULT_START', 'launch start sentinel; not a real failure'],
-  1002: ['LAUNCH_RESULT_SUCCESS', 'launch reported success, which contradicts launch-failed'],
   1003: ['LAUNCH_RESULT_FAILURE', 'generic launch failure with no sandbox stage recorded']
 }
 
 /**
  * Decode a win32 `launch-failed` exit code, or null when it is not one we can name.
  *
- * Deliberately absent: SBOX_ALL_OK (0), which paired with launch-failed is self-contradictory
- * rather than informative, and SBOX_ERROR_UNSANDBOXED_PROCESS (62), which sandbox_win.cc
- * returns as ordinary control flow to route a child down the unsandboxed path — naming it an
- * error would report normal behaviour as a fault.
+ * Deliberately absent, on one rule — never name a code that would mislead: SBOX_ALL_OK (0) and
+ * LAUNCH_RESULT_SUCCESS (1002) both contradict launch-failed, LAUNCH_RESULT_START (1001) is a
+ * range sentinel, and SBOX_ERROR_UNSANDBOXED_PROCESS (62) is ordinary control flow that
+ * sandbox_win.cc returns to route a child down the unsandboxed path.
  */
 export function decodeWindowsLaunchFailureCode(
   exitCode: number

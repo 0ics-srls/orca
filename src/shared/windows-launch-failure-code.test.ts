@@ -44,10 +44,10 @@ describe('decodeWindowsLaunchFailureCode', () => {
     expect(decodeWindowsLaunchFailureCode(1004)).toBeNull()
   })
 
-  // Naming these would report normal behaviour, or a contradiction, as a diagnosed fault.
-  it('refuses the two codes that would mislead', () => {
-    expect(decodeWindowsLaunchFailureCode(0)).toBeNull()
-    expect(decodeWindowsLaunchFailureCode(62)).toBeNull()
+  // Naming any of these would report normal behaviour, a sentinel, or a contradiction as a
+  // diagnosed fault — the one rule the table's omissions follow.
+  it.each([[0], [62], [1001], [1002]])('refuses %i, which would mislead', (code) => {
+    expect(decodeWindowsLaunchFailureCode(code)).toBeNull()
   })
 
   // Why no `>>> 0` here, unlike windows-crash-exit-code.ts: unsigned coercion would wrap a
