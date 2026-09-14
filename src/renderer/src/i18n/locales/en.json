@@ -17875,5 +17875,43 @@
       "stopped": "stopped",
       "finished": "finished"
     }
+  },
+  "sessionHistory": {
+    "status": {
+      "checking": "Checking index…",
+      "off": "Search is off. Any existing index copy is kept.",
+      "error": "Could not read index status. Try refreshing.",
+      "indexing": "Indexing transcripts…",
+      "current": "Index is up to date with the last scan.",
+      "degraded": "Some transcript sources could not be indexed.",
+      "unavailable": "Index is not ready or the search service is unavailable.",
+      "title": "Index status",
+      "counts": "Indexed files: {{indexed}} · Due: {{due}} · Failed: {{failed}}",
+      "roots": "Unverified source roots: {{roots}}",
+      "refresh": "Refresh"
+    },
+    "settings": {
+      "saveError": "Could not save session search settings. Try again.",
+      "clearTitle": "Clear this computer’s search index?",
+      "clearEnabled": "The index copy will be deleted and rebuilt because search is enabled. Original transcripts will not be deleted.",
+      "clearDisabled": "The index copy will be deleted. Original transcripts will not be deleted. Search will stay off.",
+      "clear": "Clear index",
+      "cleared": "Search index cleared. Original transcripts were kept.",
+      "clearError": "Could not clear the index. Try again.",
+      "retention": "Searchable history",
+      "enable": "Enable session history search",
+      "webUnsupported": "Manage indexing in the Orca desktop app on the computer that owns the transcripts. These controls are unavailable from a paired client.",
+      "consent": "Create a local index copy of agent transcripts on this computer, including conversation text and tool output as written. Content is not redacted. Turning search off stops indexing and keeps the index copy.",
+      "retentionDescription": "Include transcripts modified within this period. Older content is removed from the index on the next sweep; original transcripts are never deleted.",
+      "all": "All history",
+      "days90": "90 days",
+      "days30": "30 days",
+      "customDays": "{{days}} days",
+      "indexCopy": "Index copy",
+      "clearDescription": "Clear only the search index on this computer. If search is enabled, Orca builds it again.",
+      "title": "Agent Session History",
+      "description": "Manage session search on this computer. These settings do not enable indexing on SSH or paired hosts.",
+      "searchDescription": "Transcript indexing, searchable history retention, index status and clear index."
+    }
   }
 }
