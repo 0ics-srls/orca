@@ -229,6 +229,10 @@ export const createRefreshEventActions = (
         }
       }
 
+      // Why `s` and not `{}`: zustand bails out only on Object.is(next, state). An empty
+      // object is a fresh reference, so `Object.assign({}, state, {})` rebuilds the root
+      // with every field unchanged and still notifies every listener — all of the cost of
+      // an update and none of the content.
       return changed
         ? {
             prRefreshSequences: capPrRefreshSequences(nextSequences),
@@ -237,7 +241,7 @@ export const createRefreshEventActions = (
             prCache: nextPRCache,
             hostedReviewCache: nextHostedReviewCache
           }
-        : {}
+        : s
     })
     if (didUpdatePRCache && event.outcome && event.outcome.kind !== 'upstream-error') {
       debouncedSaveCache(get())

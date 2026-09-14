@@ -79,8 +79,18 @@ export function createUiSurfaceActions(set: UISliceSet, _get: UISliceGet): Parti
               : state.workspacePortScan
         }
       }),
+    // Why guarded like its siblings: zustand bails out only on Object.is(next, state), so
+    // an unconditional `set` builds a fresh root and re-runs every subscribed selector —
+    // measured at ~2.2k (see store-listener-census). Renders are unaffected: the selection
+    // is unchanged, so this is wasted selector CPU, not commit pressure. The scanner drives
+    // this from effect bodies that can re-run with the same value (the `!hasWorktrees`
+    // branch), which is the case the guarded sibling on the line above already covers.
     setWorkspacePortScanRefreshing: (refreshing) =>
-      set({ workspacePortScanRefreshing: refreshing }),
+      set((state) =>
+        state.workspacePortScanRefreshing === refreshing
+          ? state
+          : { workspacePortScanRefreshing: refreshing }
+      ),
 
     // Why: default true so enabling experimentalPet shows the pet immediately (persisted; "Hide pet" flips it false).
     petVisible: true,
