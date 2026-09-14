@@ -267,10 +267,15 @@ describe('crash-reporting shared helpers', () => {
     ).toContain(
       'Exit code: -36863 (0xFFFF7001, crash handler unreachable; client self-terminated without a minidump)\n'
     )
-    // launch-failed carries a Chromium launch error, not a wait status — never decode it.
+    // launch-failed carries a Chromium launch error, not a wait status. On linux (this
+    // report's default platform) Chromium reports no sandbox stage, so it stays raw...
     expect(formatCrashReportText(report({ reason: 'launch-failed', exitCode: 18 }))).toContain(
       'Exit code: 18\n'
     )
+    // ...while on win32 the same number is a named sandbox stage (report a8562106).
+    expect(
+      formatCrashReportText(report({ platform: 'win32', reason: 'launch-failed', exitCode: 18 }))
+    ).toContain('Exit code: 18 (SBOX_ERROR_CREATE_PROCESS, error in creating process)\n')
     // A clean exit(0) must not grow an "(exit status 0)" suffix.
     expect(formatCrashReportText(report({ reason: 'crashed', exitCode: 0 }))).toContain(
       'Exit code: 0\n'

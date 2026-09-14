@@ -135,7 +135,11 @@ describe('formatCrashReportExitCode on win32', () => {
     expect(formatted).toContain('Chromium app-raised out-of-memory')
   })
 
-  it('leaves launch-failed codes undecoded on win32', () => {
+  // The launch table decodes small sandbox codes; an NTSTATUS is far outside its range and
+  // must never fall back to this table, or a launch that never started would be reported as
+  // an access violation. Pinned here as well as in windows-launch-failure-code.test.ts
+  // because this is the table that would be borrowed from.
+  it('does not decode an NTSTATUS carried by a launch-failed report', () => {
     expect(
       formatCrashReportExitCode({
         exitCode: 0xc0000005,
