@@ -86,8 +86,12 @@ golden does not have — while charging every domain that adds a mutant a re-rec
 files.
 The mutant table, the per-family mutant registry, the reference states and the suites that apply
 them all live there. What makes the exclusion sound is that no recording can reach them: the loader
-takes a resolved mutation spec instead of importing a table by name, so nothing on the recording
-path names `mutants/` at all, and `mutants/mutant-seam.test.ts` is the check.
+takes a resolved mutation spec instead of importing a table by name.
+`mutants/mutant-seam.test.ts` is the check, and it proves reachability forward, walking the static
+import graph from the two recording drivers and failing if any module under `mutants/` appears in
+it. Naming the directory is rejected too, in either spelling, for the paths a module can be read by
+rather than imported; `MUTANT_DIRECTORY` is not exported for the same reason. A path assembled at
+runtime from fragments would defeat both, which is the seam's remaining edge.
 
 For the same reason `recorderSha256` pins only the suites in `recording-drivers.ts`. A golden's
 bytes come from `pilot-recordings.test.ts` or `family-recordings.test.ts` and from what they
