@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   applyCodexPromptAnswer,
   CodexPromptRegistry,
+  MAX_CODEX_PROMPT_REGISTRY_BYTES,
   MAX_CODEX_PROMPT_REGISTRY_ENTRIES,
   codexJournalPromptIdPart,
   decodeCodexQuestionOptionId,
@@ -119,6 +120,22 @@ describe('CodexPromptRegistry', () => {
     expect(registry.find('journal-root')).toBeNull()
     expect(registry.find('other-item')?.requestId).toBe(2)
     expect(registry.find('other-thread-item')?.requestId).toBe(3)
+  })
+
+  it('bounds an oversized backfilled turn id and still clears its prompt', () => {
+    const registry = new CodexPromptRegistry()
+    const turnId = 'turn-'.padEnd(MAX_CODEX_PROMPT_REGISTRY_BYTES + 1, 'x')
+    registry.register({
+      id: 1,
+      method: 'item/commandExecution/requestApproval',
+      params: { itemId: 'root-item', threadId: 'thread-1' }
+    })
+
+    registry.bindJournalItemId('journal-root', 'thread-1', 'root-item', turnId)
+
+    expect(registry.bytes).toBeLessThanOrEqual(MAX_CODEX_PROMPT_REGISTRY_BYTES)
+    registry.clearTurn('thread-1', turnId)
+    expect(registry.find('journal-root')).toBeNull()
   })
 
   it('addresses a prompt by its journal item id once bound, and forgets both', () => {
