@@ -225,10 +225,11 @@ export function registerCoreHandlers(
   // Why beside the handlers and not in preflight: the handlers are what answer a
   // search, and this is what gives them something to answer from. Same canonical
   // path the parse cache takes, so both halves of the scanner's state agree.
-  installChildSessionSearchService({
+  const sessionSearch = installChildSessionSearchService({
     dataRoot: getCanonicalUserDataPath(),
     getSettings: () => store.getSettings()
   })
+  app.once('will-quit', () => sessionSearch?.dispose())
   registerAiVaultHandlers({
     ensureStructuredSessionOwnership: () => runtime.ensureStructuredAgentSessionHost(),
     getAdditionalCodexHomePaths: lifecycleOptions.getAdditionalAiVaultCodexHomePaths,

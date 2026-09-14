@@ -5,7 +5,7 @@ import {
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { updateSessionSearchInService } from '../ai-vault/session-scanner-service-spawn'
 import { createChildSessionSearchService } from './session-search-child-service'
-import { installSessionSearchPolicySource } from './session-search-policy'
+import { installSessionSearchPolicySource, sessionSearchPolicy } from './session-search-policy'
 import { setSessionSearchService } from './session-search-service-registry'
 import {
   installSessionSearchDataRoot,
@@ -13,6 +13,17 @@ import {
   sessionSearchServiceInit
 } from './session-search-service-init'
 import { sessionSearchSqliteAvailable } from './session-search-sqlite-support'
+import { sameSessionSearchRoots, type SessionSearchScanRoots } from './session-search-scan-roots'
+
+const ROOT_REFRESH_INTERVAL_MS = 5 * 60_000
+
+type RootRefresh = {
+  controller: AbortController
+  timer: ReturnType<typeof setInterval> | null
+  lastPushedRoots: SessionSearchScanRoots | null
+}
+
+let rootRefresh: RootRefresh | null = null
 
 /**
  * The desktop's one wiring point: search answers from the scanner child, and the
@@ -25,14 +36,32 @@ import { sessionSearchSqliteAvailable } from './session-search-sqlite-support'
 export function installChildSessionSearchService(args: {
   dataRoot: string
   getSettings: () => Pick<GlobalSettings, 'aiVaultSearch'>
-}): void {
+}): { dispose(): void } | null {
   if (!sessionSearchSqliteAvailable()) {
-    return
+    return null
   }
+  const refresh: RootRefresh = {
+    controller: new AbortController(),
+    timer: null,
+    lastPushedRoots: null
+  }
+  rootRefresh = refresh
   installSessionSearchDataRoot(args.dataRoot)
   installSessionSearchPolicySource(args.getSettings)
   setSessionSearchService(createChildSessionSearchService())
-  void pushSessionSearchPolicy()
+  updateRootRefreshTimer(refresh)
+  void pushSessionSearchPolicy(refresh)
+  return {
+    dispose: () => {
+      refresh.controller.abort()
+      if (refresh.timer) {
+        clearInterval(refresh.timer)
+      }
+      if (rootRefresh === refresh) {
+        rootRefresh = null
+      }
+    }
+  }
 }
 
 /**
@@ -51,17 +80,45 @@ export function applySessionSearchSettingsChange(
   ) {
     return
   }
-  void pushSessionSearchPolicy()
+  if (rootRefresh) {
+    updateRootRefreshTimer(rootRefresh)
+    void pushSessionSearchPolicy(rootRefresh)
+  }
 }
 
-/** Roots are re-resolved first: a distro started since boot must be in the new window. */
-async function pushSessionSearchPolicy(): Promise<void> {
+function updateRootRefreshTimer(refresh: RootRefresh): void {
+  if (!sessionSearchPolicy().enabled) {
+    if (refresh.timer) {
+      clearInterval(refresh.timer)
+    }
+    refresh.timer = null
+  } else if (!refresh.timer) {
+    refresh.timer = setInterval(() => {
+      void pushSessionSearchPolicy(refresh, false)
+    }, ROOT_REFRESH_INTERVAL_MS)
+    refresh.timer.unref()
+  }
+}
+
+async function pushSessionSearchPolicy(refresh: RootRefresh, policyChanged = true): Promise<void> {
   try {
     await refreshSessionSearchScanRoots()
-    const init = sessionSearchServiceInit()
-    if (init) {
-      updateSessionSearchInService(init)
+    if (refresh.controller.signal.aborted) {
+      return
     }
+    const init = sessionSearchServiceInit()
+    if (!init) {
+      return
+    }
+    if (
+      !policyChanged &&
+      (!init.settings.enabled ||
+        (refresh.lastPushedRoots && sameSessionSearchRoots(refresh.lastPushedRoots, init.roots)))
+    ) {
+      return
+    }
+    updateSessionSearchInService(init)
+    refresh.lastPushedRoots = init.roots
   } catch (error) {
     console.warn('[ai-vault-search] failed to apply session search settings:', error)
   }

@@ -266,11 +266,9 @@ describe('AiVaultScannerServiceClient', () => {
     vi.advanceTimersByTime(AI_VAULT_SERVICE_READY_TIMEOUT_MS)
     await Promise.resolve()
     vi.advanceTimersByTime(5_000)
-    await expect(blocked).rejects.toThrow('circuit is open')
     expect(children).toHaveLength(3)
 
     client.clearRestartCircuit()
-    const retried = client.request({ type: 'request', operation: 'titles', requests: [] })
     await vi.waitFor(() => expect(children).toHaveLength(4))
     readyAiVaultServiceChild(children[3]!)
     await vi.waitFor(() =>
@@ -282,7 +280,7 @@ describe('AiVaultScannerServiceClient', () => {
       operation: 'titles',
       value: { titles: [] }
     })
-    await expect(retried).resolves.toEqual({ titles: [] })
+    await expect(blocked).resolves.toEqual({ titles: [] })
     client.dispose()
   })
 
@@ -507,6 +505,39 @@ describe('AiVaultScannerServiceClient', () => {
     })
     client.dispose()
   })
+
+  it.each([false, true])(
+    'waits for circuit expiry before restarting a held child (dispose=%s)',
+    async (dispose) => {
+      vi.useFakeTimers()
+      const { children, client } = setupChildren(() => SESSION_SEARCH_ON)
+      try {
+        client.updateSessionSearch(SESSION_SEARCH_ON)
+        for (const delay of [250, 1_000]) {
+          readyAiVaultServiceChild(children.at(-1)!)
+          await Promise.resolve()
+          children.at(-1)!.emit('error', new Error('temporary fault'))
+          await vi.advanceTimersByTimeAsync(delay)
+        }
+        expect(children).toHaveLength(3)
+        readyAiVaultServiceChild(children[2]!)
+        await Promise.resolve()
+        children[2]!.emit('error', new Error('temporary fault'))
+        await vi.advanceTimersByTimeAsync(59_999)
+        expect(children).toHaveLength(3)
+        if (dispose) {
+          client.dispose()
+        }
+        await vi.advanceTimersByTimeAsync(1)
+        expect(children).toHaveLength(dispose ? 3 : 4)
+        if (!dispose) {
+          readyAiVaultServiceChild(children[3]!)
+        }
+      } finally {
+        client.dispose()
+      }
+    }
+  )
 
   it('leaves a faulted idle child dead while the index is off', async () => {
     vi.useFakeTimers()

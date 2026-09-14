@@ -25,6 +25,12 @@ vi.mock('../ai-vault/session-scanner-service-spawn', async (importOriginal) => (
   updateSessionSearchInService
 }))
 
+const localAiVaultScanRoots = vi.hoisted(() => vi.fn())
+vi.mock('../ai-vault/cached-session-list', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  localAiVaultScanRoots
+}))
+
 const ROOT = join(import.meta.dirname, '..', '..', '..')
 
 let harness: SessionSearchIndexerHarness
@@ -36,10 +42,12 @@ beforeEach(async () => {
   updateSessionSearchInService.mockClear()
   harness = await openSessionSearchIndexerHarness('ss-registration')
   installed = null
+  localAiVaultScanRoots.mockReset().mockResolvedValue(harness.roots)
 })
 
 afterEach(async () => {
   installed?.dispose()
+  vi.useRealTimers()
   const { setSessionSearchService } = await import('./session-search-service-registry')
   setSessionSearchService(null)
   resetSessionSearchPolicyForTests()
@@ -58,7 +66,7 @@ it('answers no-service until a host registers one', async () => {
 
 it('registers the desktop service and pushes the stored policy at boot', async () => {
   const { installChildSessionSearchService } = await import('./session-search-enablement')
-  installChildSessionSearchService({
+  installed = installChildSessionSearchService({
     dataRoot: harness.root,
     getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: 30 } })
   })
@@ -77,7 +85,7 @@ it('registers the desktop service and pushes the stored policy at boot', async (
 it('forwards only a real settings change to the child', async () => {
   const { applySessionSearchSettingsChange, installChildSessionSearchService } =
     await import('./session-search-enablement')
-  installChildSessionSearchService({
+  installed = installChildSessionSearchService({
     dataRoot: harness.root,
     getSettings: () => ({ aiVaultSearch: { enabled: false, historyDays: null } })
   })
@@ -94,6 +102,81 @@ it('forwards only a real settings change to the child', async () => {
     { aiVaultSearch: { enabled: true, historyDays: null } }
   )
   await vi.waitFor(() => expect(updateSessionSearchInService).toHaveBeenCalledTimes(2))
+})
+
+it('refreshes enabled roots periodically and only pushes a changed root set', async () => {
+  vi.useFakeTimers()
+  const { installChildSessionSearchService } = await import('./session-search-enablement')
+  installed = installChildSessionSearchService({
+    dataRoot: harness.root,
+    getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: null } })
+  })
+  await vi.advanceTimersByTimeAsync(0)
+  expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
+
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
+  expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
+
+  const newRoots = { ...harness.roots, additionalCodexSessionsDirs: [join(harness.root, 'late')] }
+  localAiVaultScanRoots.mockResolvedValue(newRoots)
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(updateSessionSearchInService).toHaveBeenCalledTimes(2)
+  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
+    expect.objectContaining({ roots: newRoots })
+  )
+
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(updateSessionSearchInService).toHaveBeenCalledTimes(2)
+  installed?.dispose()
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(4)
+})
+
+it('starts root refresh on enable and cancels it on disable', async () => {
+  vi.useFakeTimers()
+  const { installChildSessionSearchService, applySessionSearchSettingsChange } =
+    await import('./session-search-enablement')
+  let settings = { aiVaultSearch: { enabled: false, historyDays: null } }
+  installed = installChildSessionSearchService({
+    dataRoot: harness.root,
+    getSettings: () => settings
+  })
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(1)
+  const before = settings
+  settings = { aiVaultSearch: { enabled: true, historyDays: null } }
+  applySessionSearchSettingsChange(before, settings)
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(3)
+
+  const enabled = settings
+  settings = before
+  applySessionSearchSettingsChange(enabled, settings)
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(4)
+  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
+    expect.objectContaining({ settings: before.aiVaultSearch })
+  )
+  expect(vi.getTimerCount()).toBe(0)
+})
+
+it('does not push a pending root refresh after disposal', async () => {
+  vi.useFakeTimers()
+  const { installChildSessionSearchService } = await import('./session-search-enablement')
+  installed = installChildSessionSearchService({
+    dataRoot: harness.root,
+    getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: null } })
+  })
+  await vi.advanceTimersByTimeAsync(0)
+  const pending = Promise.withResolvers<typeof harness.roots>()
+  localAiVaultScanRoots.mockReturnValueOnce(pending.promise)
+  await vi.advanceTimersByTimeAsync(300_000)
+  installed?.dispose()
+  pending.resolve({ ...harness.roots, additionalCodexSessionsDirs: [join(harness.root, 'late')] })
+  await vi.advanceTimersByTimeAsync(300_000)
+  expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
+  expect(vi.getTimerCount()).toBe(0)
 })
 
 it('registers an in-process service for a host with no scanner child', async () => {
