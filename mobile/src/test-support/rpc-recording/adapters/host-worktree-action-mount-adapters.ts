@@ -3,7 +3,20 @@ import { hookMount, performHookAction } from '../hook-mount'
 import { observableModel, projectObservable } from '../observable-model'
 import type { operationModuleLoader } from '../operation-module-loader'
 
-const ROW = { worktreeId: 'wt-1', displayName: 'marlin', repo: 'repo-1', isPinned: false }
+const ROW = {
+  worktreeId: 'wt-1',
+  repoId: 'repo-1',
+  repo: 'marlin',
+  branch: 'feature/pin',
+  displayName: 'marlin',
+  path: '/repos/marlin/wt-1',
+  liveTerminalCount: 0,
+  hasAttachedPty: false,
+  preview: '',
+  unread: false,
+  isPinned: false,
+  linkedPR: null
+}
 
 /**
  * The host screen's three worktree mutations: pin, delete and open.

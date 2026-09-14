@@ -6,7 +6,7 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "2e90933db32efc17d752cf5d506ecdd9ec54ce53ea30ba55021ea3d1bc1d3fb2",
-  "adapterSha256": "2bc320d05d944b5c47176d4462350c4825e414511af52f7743ec9b6d6ebf93c2",
+  "adapterSha256": "92c29bd78ca0c0d5917e9386fc447bb9a1698b1d1ffaba0db7546eaac60da639",
   "scenarioSha256": "7e842584620018d5ec5560711d63a472302e8da80cfe65dfcd2952aebb509af2",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -186,30 +186,6 @@
         }
       }
     },
-    "32f21eaae959": {
-      "confirmRemoveHost": false,
-      "lastKnownWorktrees": [
-        {
-          "displayName": "marlin",
-          "isPinned": true,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ],
-      "optimisticActiveWorktreeIdentity": {
-        "$rpc": "null"
-      },
-      "pinnedIds": ["wt-1"],
-      "routeActionState": {},
-      "worktrees": [
-        {
-          "displayName": "marlin",
-          "isPinned": true,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ]
-    },
     "403256b7ebef": {
       "name": "worktree.activate#1",
       "args": [
@@ -294,6 +270,27 @@
       "name": "worktree.rm#1",
       "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.rm\",\"params\":{\"worktree\":\"id:wt-1\",\"force\":true}}"
     },
+    "6cfdae6737f2": {
+      "name": "lastKnownWorktrees",
+      "value": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": true,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ]
+    },
     "6e959a9dd70e": {
       "confirmRemoveHost": false,
       "lastKnownWorktrees": [],
@@ -302,20 +299,53 @@
       "routeActionState": {},
       "worktrees": []
     },
-    "7b87f237a7b6": {
-      "name": "worktrees",
-      "value": [
-        {
-          "displayName": "marlin",
-          "isPinned": true,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ]
-    },
     "9270aeb7d9c6": {
       "status": "pending",
       "startedAt": 0
+    },
+    "9a9b0d6699b2": {
+      "confirmRemoveHost": false,
+      "lastKnownWorktrees": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": true,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ],
+      "optimisticActiveWorktreeIdentity": {
+        "$rpc": "null"
+      },
+      "pinnedIds": ["wt-1"],
+      "routeActionState": {},
+      "worktrees": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": true,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ]
     },
     "a0393e57105c": {
       "name": "worktree.activate#1",
@@ -353,17 +383,6 @@
     "b1509905fc66": {
       "name": "optimisticActiveWorktreeIdentity",
       "value": "|wt-1"
-    },
-    "ba357321dd85": {
-      "name": "lastKnownWorktrees",
-      "value": [
-        {
-          "displayName": "marlin",
-          "isPinned": true,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ]
     },
     "bea1b89d2581": {
       "name": "worktree.activate#1",
@@ -430,6 +449,27 @@
     "c3eecb0c6e96": {
       "name": "worktree.activate#1",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.activate\",\"params\":{\"worktree\":\"id:wt-1\",\"notifyClients\":false,\"navigation\":\"caller\"}}"
+    },
+    "cbf8280fdbe7": {
+      "name": "worktrees",
+      "value": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": true,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ]
     },
     "d440bd87d1ce": {
       "name": "worktrees",
@@ -625,8 +665,8 @@
             "mount": "eb79a9b3682a",
             "toggle-pin": "eb79a9b3682a"
           },
-          "state": "32f21eaae959",
-          "effects": ["7b87f237a7b6", "ba357321dd85", "0ebfc1859f18"]
+          "state": "9a9b0d6699b2",
+          "effects": ["cbf8280fdbe7", "6cfdae6737f2", "0ebfc1859f18"]
         }
       },
       {
@@ -642,8 +682,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -664,8 +704,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -686,8 +726,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -708,8 +748,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -730,8 +770,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -752,8 +792,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -774,8 +814,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -796,8 +836,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -818,8 +858,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -840,8 +880,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -862,8 +902,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -884,8 +924,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -906,8 +946,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -928,8 +968,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -950,8 +990,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -972,8 +1012,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -994,8 +1034,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -1016,8 +1056,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -1038,8 +1078,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -1060,8 +1100,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -1082,8 +1122,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",
@@ -1104,8 +1144,8 @@
           },
           "state": "6e959a9dd70e",
           "effects": [
-            "7b87f237a7b6",
-            "ba357321dd85",
+            "cbf8280fdbe7",
+            "6cfdae6737f2",
             "0ebfc1859f18",
             "b1509905fc66",
             "d440bd87d1ce",

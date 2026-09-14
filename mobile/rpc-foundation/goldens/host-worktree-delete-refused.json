@@ -6,7 +6,7 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "2e90933db32efc17d752cf5d506ecdd9ec54ce53ea30ba55021ea3d1bc1d3fb2",
-  "adapterSha256": "2bc320d05d944b5c47176d4462350c4825e414511af52f7743ec9b6d6ebf93c2",
+  "adapterSha256": "92c29bd78ca0c0d5917e9386fc447bb9a1698b1d1ffaba0db7546eaac60da639",
   "scenarioSha256": "5dd5e7eabaabba1e471b13958f59891c3b28f553087c96315598c83a14ded7e7",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -35,24 +35,88 @@
       "status": "pending",
       "startedAt": 0
     },
-    "b569ed5b8bd2": {
+    "a7c564546e94": {
       "name": "worktrees",
       "value": [
         {
+          "branch": "feature/pin",
           "displayName": "marlin",
+          "hasAttachedPty": false,
           "isPinned": false,
-          "repo": "repo-1",
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
           "worktreeId": "wt-1"
         }
       ]
     },
-    "b92861217ed8": {
+    "bcb66b345fcd": {
+      "confirmRemoveHost": false,
+      "lastKnownWorktrees": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": false,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ],
+      "optimisticActiveWorktreeIdentity": {
+        "$rpc": "null"
+      },
+      "pinnedIds": [],
+      "routeActionState": {},
+      "worktrees": [
+        {
+          "branch": "feature/pin",
+          "displayName": "marlin",
+          "hasAttachedPty": false,
+          "isPinned": false,
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
+          "worktreeId": "wt-1"
+        }
+      ]
+    },
+    "c777b17081dd": {
       "name": "lastKnownWorktrees",
       "value": [
         {
+          "branch": "feature/pin",
           "displayName": "marlin",
+          "hasAttachedPty": false,
           "isPinned": false,
-          "repo": "repo-1",
+          "linkedPR": {
+            "$rpc": "null"
+          },
+          "liveTerminalCount": 0,
+          "path": "/repos/marlin/wt-1",
+          "preview": "",
+          "repo": "marlin",
+          "repoId": "repo-1",
+          "unread": false,
           "worktreeId": "wt-1"
         }
       ]
@@ -129,30 +193,6 @@
       "value": {
         "$rpc": "undefined"
       }
-    },
-    "f48071bb2e8c": {
-      "confirmRemoveHost": false,
-      "lastKnownWorktrees": [
-        {
-          "displayName": "marlin",
-          "isPinned": false,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ],
-      "optimisticActiveWorktreeIdentity": {
-        "$rpc": "null"
-      },
-      "pinnedIds": [],
-      "routeActionState": {},
-      "worktrees": [
-        {
-          "displayName": "marlin",
-          "isPinned": false,
-          "repo": "repo-1",
-          "worktreeId": "wt-1"
-        }
-      ]
     }
   },
   "recording": {
@@ -180,8 +220,8 @@
             "mount": "eb79a9b3682a",
             "delete": "eb79a9b3682a"
           },
-          "state": "f48071bb2e8c",
-          "effects": ["d440bd87d1ce", "5c186d67b84c", "b569ed5b8bd2", "b92861217ed8"]
+          "state": "bcb66b345fcd",
+          "effects": ["d440bd87d1ce", "5c186d67b84c", "a7c564546e94", "c777b17081dd"]
         }
       }
     ]

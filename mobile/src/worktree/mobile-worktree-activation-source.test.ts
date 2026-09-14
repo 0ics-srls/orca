@@ -5,6 +5,10 @@ const source = readFileSync(
   new URL('../host-screen/use-host-worktree-actions.ts', import.meta.url),
   'utf8'
 )
+const operations = readFileSync(
+  new URL('../host-screen/host-screen-operations.ts', import.meta.url),
+  'utf8'
+)
 
 function sliceBetween(startPattern: string, endPattern: string): string {
   const start = source.indexOf(startPattern)
@@ -21,8 +25,10 @@ describe('mobile worktree activation', () => {
       'const openFloatingWorkspace = useCallback'
     )
 
-    expect(openSession).toContain("sendRequest('worktree.activate'")
+    expect(openSession).toContain('worktreeActivate')
     expect(openSession).toContain('notifyClients: false')
     expect(openSession).toContain("navigation: 'caller'")
+    // The method moved into the operation; assert it there so the pair still pins the wire.
+    expect(operations).toContain("method: 'worktree.activate'")
   })
 })
