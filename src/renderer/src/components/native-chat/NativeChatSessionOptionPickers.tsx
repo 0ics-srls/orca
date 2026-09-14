@@ -150,13 +150,16 @@ function DescriptorMenuRows(props: {
     const checked = descriptor.kind.currentValue
     const label = nativeChatSessionOptionLabel(descriptor)
     const marker = sessionOptionValueMarker(descriptor)
+    const markerId = `session-option-marker-${descriptor.id}`
     return (
       <DropdownMenuItem
         role="switch"
         aria-checked={checked}
-        // Named explicitly: the marker qualifies where the value came from, and
-        // folding it into the name would read as part of the control's label.
+        // Named explicitly so the marker does not read as part of the control's
+        // label, and described by it so assistive tech still gets the provenance —
+        // hiding it would drop that distinction for screen readers alone.
         aria-label={label}
+        {...(marker ? { 'aria-describedby': markerId } : {})}
         disabled={!descriptor.settable || pending}
         // Keep the menu open: the write is async and its result lands in this row.
         onSelect={(event) => {
@@ -168,7 +171,7 @@ function DescriptorMenuRows(props: {
         <span>{label}</span>
         <span className="flex items-center gap-1.5">
           {marker ? (
-            <span aria-hidden="true" className="text-[11px] text-muted-foreground">
+            <span id={markerId} className="text-[11px] text-muted-foreground">
               {marker === 'default'
                 ? translate('components.native-chat.composer.valueIsDefault', 'Default')
                 : translate('components.native-chat.composer.valueNotReported', 'Not reported')}

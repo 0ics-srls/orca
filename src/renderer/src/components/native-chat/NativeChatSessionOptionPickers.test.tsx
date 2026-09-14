@@ -561,7 +561,12 @@ describe('NativeChatSessionOptionPickers', () => {
     expect(screen.getAllByText(shown).length).toBeGreaterThan(0)
     expect(screen.queryByText(hidden)).toBeNull()
     // The marker qualifies the value; it must not become part of the control's name.
-    expect(screen.getByRole('switch', { name: 'Fast mode' })).not.toBeNull()
+    const control = screen.getByRole('switch', { name: 'Fast mode' })
+    // ...but it must still reach assistive tech: hiding it would leave screen
+    // reader users unable to tell a default from an unreported value at all.
+    const describedBy = control.getAttribute('aria-describedby') ?? ''
+    expect(describedBy).not.toBe('')
+    expect(document.getElementById(describedBy)?.textContent).toBe(shown)
   })
 
   it('drops the marker once something has picked the value', () => {
