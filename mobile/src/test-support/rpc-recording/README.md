@@ -60,7 +60,8 @@ visible, it does not make the reduction itself observable.
 ## Golden schema
 
 Each file records `runnerVersion`, `baseline`, `lockfileSha256` (mobile's lockfile),
-`recorderSha256`, `adapterSha256`, `scenarioSha256`, `platform`, `scenarioVersion`, `projectionVersion`,
+`recorderSha256`, `adapterSha256`, `scenarioSha256`, `platform`, `scenarioVersion`,
+`projectionVersion`,
 `goldenFormatVersion`, `operation`, `family`, and `namedDeltas`. `platform` and `lockfileSha256`
 are provenance and are not compared: a dependency or OS that changes behaviour changes the trace
 itself, so comparing them would only fail candidates on unrelated bumps. The rest are pinned.
@@ -81,7 +82,8 @@ against every domain branch in flight.
 
 `mutants/` is excluded for a different reason: nothing there is pinned by anything. A file that
 cannot change a recording is not provenance for one, and pinning it would claim a provenance the
-golden does not have — while charging every domain that adds a mutant a re-record of all 153 files.
+golden does not have — while charging every domain that adds a mutant a re-record of all 153
+files.
 The mutant table, the per-family mutant registry, the reference states and the suites that apply
 them all live there. What makes the exclusion sound is that no recording can reach them: the loader
 takes a resolved mutation spec instead of importing a table by name, so nothing on the recording
@@ -112,7 +114,8 @@ it. The manifest used to be an input to `recorderSha256` instead, which made eve
 a function of every other family's scenarios: adding one domain's family re-digested all 153 files
 and put a conflict on that line in every domain branch in flight. Which goldens a manifest derives
 lives in `derived-goldens.ts`, so the digest is a function of the same derivation that records the
-file rather than of a restatement of it; `golden-header-digest.test.ts` pins what both separations buy.
+file rather than of a restatement of it; `golden-header-digest.test.ts` pins what both separations
+buy.
 
 Checkpoints contain ordered sender calls and serialized physical application payloads, action and
 request settlements, projected state, and ordered external effects. Sender args have three
@@ -237,7 +240,8 @@ ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile test src/test-support/rpc-recording
 ```
 
 Mutants are the defect evidence. `mutants/operation-mutations.ts` holds one anchored
-source edit per adapter family, and every family's recording must change visible state when its mutant is applied,
+source edit per adapter family, and every family's recording must change visible state when its
+mutant is applied,
 which is what shows that family's `state()` projection observes the operation's real output.
 Anchors are asserted to match exactly one site, because a repeated anchor would half-apply while
 still counting as applied. Mutants replace the expression in memory, then run the same real hook.
@@ -280,7 +284,8 @@ It is not a substitute for reading the diff. Three facts bound it, all learned t
   reply kills it on five matrix goldens. The lesson is about the skip, not about that call site: a
   generator that opts a family out without failing is indistinguishable from coverage.
 
-`mutants/probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole and the closure
+`mutants/probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole
+and the closure
 together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
 must still survive it. A probe that stops being load-bearing fails instead of lingering.
 
@@ -331,12 +336,13 @@ copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scrat
 copy the result back and run the candidate suite here. Format the recorder before recording: an
 `oxfmt` pass afterwards moves `recorderSha256` again. A recorder-only branch that has merged main
 is not the awkward case: its product tree is main's, so repin `baseline` to main's tip and record
-in place — there is no migrated source for the goldens to be recorded against. Adding or editing one domain's module under
-`adapters/` no longer needs any of this: only that domain's goldens move, and they re-record from
-its own branch like any other behaviour change. Adding a mutant, a probe or a suite that does not
-record needs none of it either, and moves no golden at all.
+in place — there is no migrated source for the goldens to be recorded against. Adding or editing
+one domain's module under `adapters/` no longer needs any of this: only that domain's goldens move,
+and they re-record from its own branch like any other behaviour change. Adding a mutant, a probe or
+a suite that does not record needs none of it either, and moves no golden at all.
 
-If your call site carries a mutation anchor in `mutants/operation-mutations.ts`, rewriting it will make the
+If your call site carries a mutation anchor in `mutants/operation-mutations.ts`, rewriting it will
+make the
 anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:
 #20499 broke five anchors that way, and each one had a new home.
 
