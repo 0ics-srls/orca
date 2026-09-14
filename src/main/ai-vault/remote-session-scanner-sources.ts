@@ -25,6 +25,9 @@ import type {
   RemoteSessionSource
 } from './remote-session-scanner-types'
 
+const PI_SESSIONS_SEGMENTS = ['.pi', 'agent', 'sessions']
+const OMP_SESSIONS_SEGMENTS = ['.omp', 'agent', 'sessions']
+
 type RemoteContentParser<T = string> = (
   file: FileWithMtime,
   content: T,
@@ -97,18 +100,12 @@ export function remoteSessionSources(
       ['.json'],
       parseDevinSessionContent
     ),
-    jsonlSource('pi', remoteHome, hostPlatform, ['.pi', 'agent', 'sessions'], piParser),
+    jsonlSource('pi', remoteHome, hostPlatform, PI_SESSIONS_SEGMENTS, piParser),
     ...(ompSessionsDir === ''
       ? []
       : [
           {
-            ...jsonlSource(
-              'omp',
-              remoteHome,
-              hostPlatform,
-              ['.omp', 'agent', 'sessions'],
-              ompParser
-            ),
+            ...jsonlSource('omp', remoteHome, hostPlatform, OMP_SESSIONS_SEGMENTS, ompParser),
             ...(ompSessionsDir === undefined ? {} : { rootDir: ompSessionsDir }),
             partitionSubagentTranscripts: partitionOmpSubagentTranscriptPaths
           }
