@@ -84,6 +84,7 @@ vi.mock('../../shared/runtime-environment-store', () => ({
 }))
 
 import { registerSettingsHandlers } from './settings'
+import type { Store } from '../persistence'
 
 const settingsInvokeEvent = { sender: { id: 1 } }
 type SettingsChangedListener = (
@@ -98,6 +99,23 @@ const store = {
   getGitHubCache: vi.fn(),
   setGitHubCache: vi.fn(),
   onSettingsChanged: vi.fn(() => () => {})
+}
+
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: `store` stubs every Store member registerSettingsHandlers and the handlers it registers reach; nothing else on Store is reachable from these IPC handlers.
+const settingsStoreStub = store as unknown as Store
+
+type SettingsSetHandler = (
+  event: typeof settingsInvokeEvent,
+  args: Record<string, unknown>
+) => Promise<unknown>
+
+// `handleMock` records call arguments untyped, so the annotation — not a cast — is what types the handler.
+function registerAndGetSettingsSetHandler(): SettingsSetHandler {
+  registerSettingsHandlers(settingsStoreStub)
+  const handler: SettingsSetHandler = handleMock.mock.calls.find(
+    (call) => call[0] === 'settings:set'
+  )?.[1]
+  return handler
 }
 
 describe('registerSettingsHandlers', () => {
@@ -203,11 +221,7 @@ describe('registerSettingsHandlers', () => {
     const updated = { computerAwakeMode: 'off', theme: 'dark' }
     store.getSettings.mockReturnValue(before)
     store.updateSettings.mockReturnValue(updated)
-    registerSettingsHandlers(store as never)
-    const handler = handleMock.mock.calls.find((call) => call[0] === 'settings:set')?.[1] as (
-      event: typeof settingsInvokeEvent,
-      args: Record<string, unknown>
-    ) => Promise<unknown>
+    const handler = registerAndGetSettingsSetHandler()
 
     await handler(settingsInvokeEvent, { computerAwakeMode: 'off', theme: 'dark' })
 
@@ -221,11 +235,7 @@ describe('registerSettingsHandlers', () => {
     const unchanged = { editorAutoSave: true }
     store.getSettings.mockReturnValue(unchanged)
     store.updateSettings.mockReturnValue(unchanged)
-    registerSettingsHandlers(store as never)
-    const handler = handleMock.mock.calls.find((call) => call[0] === 'settings:set')?.[1] as (
-      event: typeof settingsInvokeEvent,
-      args: Record<string, unknown>
-    ) => Promise<unknown>
+    const handler = registerAndGetSettingsSetHandler()
 
     await handler(settingsInvokeEvent, { editorAutoSave: true })
 
