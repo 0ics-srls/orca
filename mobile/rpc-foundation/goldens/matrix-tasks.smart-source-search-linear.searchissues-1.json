@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "f670bf3c389a15900ab49ff5ef07a2ee84f54de5b5324c55e5de4f0c605e3638",
+  "recorderSha256": "d21ac54e52f191c80464c1b0a74d84a8425de8e9bf9c3f1d695d0b7026ed2ec2",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
@@ -87,6 +87,16 @@
           }
         }
       }
+    },
+    "26dc3b7c8299": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": [
+        {
+          "id": "issue-3"
+        }
+      ]
     },
     "27fa02820da8": {
       "name": "linear.searchIssues#1",
@@ -471,6 +481,37 @@
         }
       ]
     },
+    "a92cd1dd05af": {
+      "branches": [
+        {
+          "localBranchName": "main",
+          "refName": "main"
+        },
+        {
+          "localBranchName": "release",
+          "refName": "release"
+        }
+      ],
+      "github": [
+        {
+          "number": 1,
+          "repoId": "repo-1",
+          "title": "one"
+        }
+      ],
+      "gitlab": [
+        {
+          "iid": 2,
+          "repoId": "repo-1",
+          "title": "two"
+        }
+      ],
+      "linear": [
+        {
+          "id": "issue-3"
+        }
+      ]
+    },
     "a947768bc0ed": {
       "status": "rejected",
       "startedAt": 0,
@@ -649,6 +690,10 @@
         }
       }
     },
+    "e97e5a589476": {
+      "name": "linear.listIssues#1",
+      "json": "{\"id\":\"frame-5\",\"deviceToken\":\"recording-device\",\"method\":\"linear.listIssues\",\"params\":{\"filter\":\"assigned\",\"limit\":50}}"
+    },
     "ead829dd6d03": {
       "name": "linear.searchIssues#1",
       "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"linear.searchIssues\",\"params\":{\"query\":\"bug\",\"limit\":50,\"workspaceId\":\"linear-workspace\"}}"
@@ -748,6 +793,45 @@
           "ok": false
         }
       }
+    },
+    "fe7f60b5d785": {
+      "name": "linear.listIssues#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "linear.listIssues"
+        },
+        {
+          "name": "params",
+          "value": {
+            "filter": "assigned",
+            "limit": 50,
+            "workspaceId": {
+              "$rpc": "undefined"
+            }
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-5",
+          "ok": true,
+          "result": [
+            {
+              "id": "issue-3"
+            }
+          ]
+        }
+      }
     }
   },
   "recording": {
@@ -808,6 +892,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.normal:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "6107c951646f",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "a4ee5d16b4f6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.result-absent:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "5a41c0588421"],
@@ -833,6 +945,34 @@
             "branches": "b015aaf3a53a"
           },
           "state": "c2b41e1dbaf8",
+          "effects": []
+        }
+      },
+      {
+        "id": "tw-smart-search-all-providers.result-absent:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "5a41c0588421",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "957cc0c5ead6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
           "effects": []
         }
       },
@@ -866,6 +1006,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.result-null:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "78f8899bda05",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "957cc0c5ead6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.inner-ok-missing:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "27fa02820da8"],
@@ -891,6 +1059,34 @@
             "branches": "b015aaf3a53a"
           },
           "state": "c2b41e1dbaf8",
+          "effects": []
+        }
+      },
+      {
+        "id": "tw-smart-search-all-providers.inner-ok-missing:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "27fa02820da8",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "957cc0c5ead6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
           "effects": []
         }
       },
@@ -924,6 +1120,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.inner-false-string-error:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "c770655d7a45",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "957cc0c5ead6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.inner-false-object-error:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "619f7466012f"],
@@ -949,6 +1173,34 @@
             "branches": "b015aaf3a53a"
           },
           "state": "c2b41e1dbaf8",
+          "effects": []
+        }
+      },
+      {
+        "id": "tw-smart-search-all-providers.inner-false-object-error:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "619f7466012f",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "957cc0c5ead6",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
           "effects": []
         }
       },
@@ -982,6 +1234,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.outer-refused:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "3351dd9fcc16",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "32a7c0ae7918",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.outer-refused-no-message:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "fb4807630e1d"],
@@ -1007,6 +1287,34 @@
             "branches": "b015aaf3a53a"
           },
           "state": "c2b41e1dbaf8",
+          "effects": []
+        }
+      },
+      {
+        "id": "tw-smart-search-all-providers.outer-refused-no-message:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "fb4807630e1d",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "f3b516f62081",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
           "effects": []
         }
       },
@@ -1040,6 +1348,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.method-not-found:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "b4185f815a19",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "b948e8307e81",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.transport-rejection:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "99e5be0a1b11"],
@@ -1069,6 +1405,34 @@
         }
       },
       {
+        "id": "tw-smart-search-all-providers.transport-rejection:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "99e5be0a1b11",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "a947768bc0ed",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
+          "effects": []
+        }
+      },
+      {
         "id": "tw-smart-search-all-providers.transport-rejection-no-message:linear-search",
         "observation": {
           "sender": ["5bce68072dc3", "f32ad26605d0", "0914e9c666b1"],
@@ -1094,6 +1458,34 @@
             "branches": "b015aaf3a53a"
           },
           "state": "c2b41e1dbaf8",
+          "effects": []
+        }
+      },
+      {
+        "id": "tw-smart-search-all-providers.transport-rejection-no-message:linear-assigned-listed",
+        "observation": {
+          "sender": [
+            "5bce68072dc3",
+            "f32ad26605d0",
+            "0914e9c666b1",
+            "25f88995b39a",
+            "fe7f60b5d785"
+          ],
+          "payloads": [
+            "ee6fe4f97b01",
+            "3828d5880c35",
+            "ead829dd6d03",
+            "b8b02a30b6b8",
+            "e97e5a589476"
+          ],
+          "settlements": {
+            "github": "36290ab254a4",
+            "gitlab": "6e2d75e3bbd7",
+            "linear": "c7584e82c72f",
+            "branches": "b015aaf3a53a",
+            "linear-assigned": "26dc3b7c8299"
+          },
+          "state": "a92cd1dd05af",
           "effects": []
         }
       }

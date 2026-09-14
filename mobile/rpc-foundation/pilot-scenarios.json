@@ -1831,6 +1831,173 @@
       ]
     },
     {
+      "id": "settings-task-workspace-create-linear",
+      "operation": "settings.task-workspace-create",
+      "version": 1,
+      "family": "settings.task-workspace-create",
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-create-actions.tsx"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "action": "submit",
+          "id": "submit",
+          "args": {
+            "item": {
+              "key": "linear:1",
+              "provider": "linear",
+              "title": "Recorded issue",
+              "source": {
+                "identifier": "ORC-1",
+                "title": "Recorded issue",
+                "url": "https://linear.app/orca/issue/ORC-1"
+              }
+            }
+          }
+        },
+        {
+          "checkpoint": "settings-pending"
+        },
+        {
+          "complete": "settings.get#1",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "settings": {
+                "disabledTuiAgents": [],
+                "defaultTuiAgent": "codex"
+              }
+            }
+          }
+        },
+        {
+          "complete": "worktree.create#1",
+          "params": {
+            "repo": "id:repo-1",
+            "name": "orc-1",
+            "displayName": "ORC-1 Recorded issue",
+            "displayNameKind": "generated",
+            "linkedLinearIssue": "ORC-1",
+            "setupDecision": "inherit",
+            "activate": true,
+            "startupDraft": "https://linear.app/orca/issue/ORC-1",
+            "createdWithAgent": "claude"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "worktree": {
+                "id": "wt-1",
+                "displayName": "ORC-1 Recorded issue"
+              }
+            }
+          }
+        },
+        {
+          "checkpoint": "created"
+        }
+      ]
+    },
+    {
+      "id": "settings-task-workspace-create-pr-start-point",
+      "operation": "settings.task-workspace-create",
+      "version": 1,
+      "family": "settings.task-workspace-create",
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-create-actions.tsx"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "action": "submit",
+          "id": "submit",
+          "args": {
+            "item": {
+              "key": "github:7",
+              "provider": "github",
+              "title": "Recorded pull request",
+              "source": {
+                "type": "pr",
+                "repoId": "repo-1",
+                "number": 7,
+                "title": "Recorded pull request",
+                "url": "https://github.com/o/r/pull/7"
+              }
+            }
+          }
+        },
+        {
+          "checkpoint": "settings-pending"
+        },
+        {
+          "complete": "settings.get#1",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "settings": {
+                "disabledTuiAgents": [],
+                "defaultTuiAgent": "codex"
+              }
+            }
+          }
+        },
+        {
+          "complete": "worktree.resolvePrBase#1",
+          "params": {
+            "repo": "id:repo-1",
+            "prNumber": 7
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "baseBranch": "main"
+            }
+          }
+        },
+        {
+          "checkpoint": "pr-base-resolved"
+        },
+        {
+          "complete": "worktree.create#1",
+          "params": {
+            "repo": "id:repo-1",
+            "name": "pr-7",
+            "displayName": "Recorded pull request",
+            "displayNameKind": "generated",
+            "setupDecision": "inherit",
+            "activate": true,
+            "startupDraft": "https://github.com/o/r/pull/7",
+            "createdWithAgent": "claude",
+            "baseBranch": "main",
+            "linkedPR": 7
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "worktree": {
+                "id": "wt-2"
+              },
+              "warning": "shallow clone"
+            }
+          }
+        },
+        {
+          "checkpoint": "created-from-pr-base"
+        }
+      ]
+    },
+    {
       "id": "settings-new-tab-refused",
       "operation": "settings.new-tab-agents",
       "version": 1,
@@ -5773,6 +5940,35 @@
         },
         {
           "checkpoint": "branch-refs"
+        },
+        {
+          "action": "linear",
+          "id": "linear-assigned",
+          "args": {
+            "query": "  ",
+            "workspace": null
+          }
+        },
+        {
+          "complete": "linear.listIssues#1",
+          "params": {
+            "filter": "assigned",
+            "limit": 50,
+            "workspaceId": {
+              "$undefined": true
+            }
+          },
+          "reply": {
+            "ok": true,
+            "result": [
+              {
+                "id": "issue-3"
+              }
+            ]
+          }
+        },
+        {
+          "checkpoint": "linear-assigned-listed"
         }
       ]
     },
@@ -6482,7 +6678,9 @@
         },
         {
           "complete": "preflight.detectAgents#1",
-          "params": { "$undefined": true },
+          "params": {
+            "$undefined": true
+          },
           "reply": {
             "ok": true,
             "result": ["codex", "claude"]
