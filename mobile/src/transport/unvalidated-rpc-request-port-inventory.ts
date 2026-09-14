@@ -62,10 +62,12 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
 
   // src/components/ — shared widgets that fetch their own data. The New Workspace drawer's
   // execution target, setup hook, runtime context and Codex capability probe migrated in step 4:
-  // see new-workspace-operations.ts, codex-reset-credit-capability-operation.ts, and the SSH and
-  // agent-detection operations in tasks/mobile-workspace-source-operations.ts. Two remain, both
-  // because they reach native storage before or after the send and the recorder refuses to mount
-  // a device store: the reset-credit journal, and the drawer's last-visited repo read.
+  // see new-workspace-operations.ts, codex-reset-credit-capability-operations.ts, and the SSH and
+  // agent-detection operations in tasks/mobile-workspace-source-operations.ts. Two remain. The
+  // reset-credit journal reads and writes native storage around its own send. The repo list is
+  // blocked one module further out: it renders use-last-visited-worktree-repo.ts, whose default
+  // import of async-storage is a property read the recorder's proxy refuses at module load, before
+  // any hostId guard can run.
   { file: 'src/components/codex-reset-credit.ts', references: 3 },
   { file: 'src/components/use-new-workspace-repositories.ts', references: 1 },
 
@@ -90,12 +92,10 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/hooks/mobile-dictation-desktop-start.ts', references: 4 },
   { file: 'src/hooks/use-mobile-dictation.ts', references: 4 },
 
-  // src/host-screen/ — host screen catalog and actions. The repo and label metadata reads and the
-  // desktop view-settings mirror migrated in step 4; see host-screen-operations.ts. The two left
-  // send worktree mutations from a React Native screen and from a hook that also writes native
-  // storage, so neither reaches a recorded wire.
+  // src/host-screen/ — host screen catalog and actions. The repo and label metadata reads, the
+  // desktop view-settings mirror and the list's pin, remove and activate mutations migrated in
+  // step 4; see host-screen-operations.ts. What is left sends from inside a React Native screen.
   { file: 'src/host-screen/host-screen-overlays.tsx', references: 1 },
-  { file: 'src/host-screen/use-host-worktree-actions.ts', references: 3 },
 
   // src/notifications/ — push registration and delivery
   { file: 'src/notifications/mobile-notifications.ts', references: 1 },
