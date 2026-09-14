@@ -34,6 +34,10 @@ async function survivorsAfterDeadline(
     await new Promise((resolve) => setTimeout(resolve, 3_500))
     expect(existsSync(pidFile)).toBe(true)
     pids = readFileSync(pidFile, 'utf8').trim().split(/\s+/).map(Number)
+    // Without this, a script that recorded only the shell leaves `pids[1]` undefined, `alive`
+    // throws, and the missing descendant reads as dead — a test that passes on nothing.
+    expect(pids).toHaveLength(2)
+    expect(pids.every((pid) => Number.isSafeInteger(pid) && pid > 0)).toBe(true)
     return { shell: alive(pids[0]!), child: alive(pids[1]!), output: result.output, pids }
   } finally {
     for (const pid of pids) {

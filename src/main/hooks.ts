@@ -57,6 +57,26 @@ function classifyHookProcessResult(
 
 const SIGTERM_GRACE_MS = 2_000
 
+/**
+ * `exec` capped output at 1 MiB and killed the hook on overflow; `spawn` has no cap at all, and a
+ * hook flooding stdout for the full deadline can take the main process's heap with it. Retain a
+ * generous prefix and keep draining past it, so a chatty hook is never blocked on a full pipe.
+ */
+const HOOK_OUTPUT_LIMIT = 10 * 1024 * 1024
+
+function boundedStreamText(): { append: (chunk: string) => void; read: () => string } {
+  let text = ''
+  let dropped = 0
+  return {
+    append(chunk) {
+      const room = Math.max(HOOK_OUTPUT_LIMIT - text.length, 0)
+      text += chunk.slice(0, room)
+      dropped += Math.max(chunk.length - room, 0)
+    },
+    read: () => (dropped > 0 ? `${text}\n[output truncated, ${dropped} chars dropped]` : text)
+  }
+}
+
 /** A spawn failure: the process never started, so no exit was ever observed. */
 function hookProcessError(
   error: Error,
@@ -275,24 +295,25 @@ export function runHook(
       // process groups in this sense and where `detached` means a new console instead.
       ...(process.platform === 'win32' ? {} : { detached: true })
     })
-    let stdout = ''
-    let stderr = ''
+    const stdout = boundedStreamText()
+    const stderr = boundedStreamText()
     child.stdout?.setEncoding('utf8')
-    child.stdout?.on('data', (chunk: string) => {
-      stdout += chunk
-    })
+    child.stdout?.on('data', (chunk: string) => stdout.append(chunk))
     child.stderr?.setEncoding('utf8')
-    child.stderr?.on('data', (chunk: string) => {
-      stderr += chunk
-    })
+    child.stderr?.on('data', (chunk: string) => stderr.append(chunk))
     child.on('error', (error) => {
-      settle(hookProcessError(error, stdout, stderr, { hookName, cwd }))
+      settle(hookProcessError(error, stdout.read(), stderr.read(), { hookName, cwd }))
     })
     child.on('close', (code, signal) => {
       settle(
         classifyHookProcessResult(
           // A signalled exit reports no code, which stays `unverifiable` rather than becoming a 0.
-          { code: signal ? null : code, stdout, stderr, timedOut: false },
+          {
+            code: signal ? null : code,
+            stdout: stdout.read(),
+            stderr: stderr.read(),
+            timedOut: false
+          },
           { hookName, cwd, timeoutMs }
         )
       )
@@ -305,7 +326,7 @@ export function runHook(
           classifyHookProcessResult(
             // Keep what the hook printed: it is the only clue to why the removal gate says
             // `unverifiable`.
-            { code: null, stdout, stderr, timedOut: true },
+            { code: null, stdout: stdout.read(), stderr: stderr.read(), timedOut: true },
             { hookName, cwd, timeoutMs }
           )
         )

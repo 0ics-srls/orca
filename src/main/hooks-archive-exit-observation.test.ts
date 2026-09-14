@@ -9,10 +9,26 @@ vi.mock('./effective-hook-config', () => ({
 
 const REPO: Repo = { id: 'r', path: '/repo', displayName: 'r', badgeColor: '#000', addedAt: 0 }
 
+/** Replays its chunks to whoever subscribes; runHook subscribes before the close below fires. */
+function fakeStream(chunks: string[]) {
+  return {
+    setEncoding: () => {},
+    on(event: string, fn: (chunk: string) => void) {
+      if (event === 'data') {
+        for (const chunk of chunks) {
+          fn(chunk)
+        }
+      }
+    }
+  }
+}
+
 /** Minimal ChildProcess stand-in: runHook reads the streams and waits for close/error. */
-function fakeChild(outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error) {
+function fakeChild(
+  outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error,
+  stdoutChunks: string[] = []
+) {
   const listeners: Record<string, ((...args: unknown[]) => void)[]> = {}
-  const stream = { setEncoding: () => {}, on: () => {} }
   queueMicrotask(() => {
     if (outcome instanceof Error) {
       for (const fn of listeners.error ?? []) {
@@ -26,8 +42,8 @@ function fakeChild(outcome: { code?: number | null; signal?: NodeJS.Signals | nu
   })
   return {
     pid: 4242,
-    stdout: stream,
-    stderr: stream,
+    stdout: fakeStream(stdoutChunks),
+    stderr: fakeStream([]),
     exitCode: null,
     signalCode: null,
     kill: () => true,
@@ -39,10 +55,11 @@ function fakeChild(outcome: { code?: number | null; signal?: NodeJS.Signals | nu
 }
 
 async function runArchiveWith(
-  outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error
-): Promise<{ success: boolean; exitCode?: number }> {
+  outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error,
+  stdoutChunks?: string[]
+): Promise<{ success: boolean; output: string; exitCode?: number }> {
   const { runHook } = await import('./hooks')
-  spawnMock.mockImplementationOnce(() => fakeChild(outcome))
+  spawnMock.mockImplementationOnce(() => fakeChild(outcome, stdoutChunks))
   const result = await runHook('archive', '/repo/wt', REPO)
   // Guard against a vacuous pass: if the mock stops intercepting, a real shell would run.
   expect(spawnMock).toHaveBeenCalled()
@@ -68,9 +85,23 @@ describe('archive hook exit observation', () => {
     })
   })
 
+  it('caps what it retains from a hook that floods stdout', async () => {
+    // `exec`'s 1 MiB maxBuffer is gone with `spawn`; without a cap a flooding hook grows the main
+    // process's heap for the whole 120 s deadline.
+    const megabyte = 'x'.repeat(1024 * 1024)
+    const result = await runArchiveWith(
+      { code: 0 },
+      Array.from({ length: 12 }, () => megabyte)
+    )
+    expect(result.output.length).toBeLessThan(11 * 1024 * 1024)
+    expect(result.output).toContain('output truncated')
+  })
+
   it.each([
     ['was killed by a signal', { code: null, signal: 'SIGKILL' as const }],
-    ['never started', new Error('spawn /bin/bash ENOENT')]
+    // A real spawn failure carries a STRING code; the guard under test is `typeof code ===
+    // 'number'`, so a bare Error would pass even if that guard regressed.
+    ['never started', Object.assign(new Error('spawn /bin/bash ENOENT'), { code: 'ENOENT' })]
   ])('withholds the exit code when the hook %s', async (_label, outcome) => {
     const result = await runArchiveWith(outcome)
     expect(result.success).toBe(false)
