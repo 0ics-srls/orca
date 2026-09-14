@@ -1,5 +1,5 @@
 import { classifyMobileArtifact } from '../session/mobile-artifact-kind'
-import type { RpcFailure, RpcResponse, RpcSuccess } from '../transport/types'
+import type { RpcFailure, RpcResponse } from '../transport/types'
 import { isMarkdownPath } from './file-tree'
 import { isTerminalArtifactGrantError } from './terminal-artifact-grant-error'
 
