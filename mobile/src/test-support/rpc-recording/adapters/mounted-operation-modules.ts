@@ -4,6 +4,8 @@ import { newTabAgentMountAdapters } from './new-tab-agent-mount-adapters'
 import { settingsMountAdapters, settingsMountExposures } from './settings-mount-adapters'
 import { sourceControlMountAdapters } from './source-control-mount-adapters'
 import { taskMountAdapters } from './task-mount-adapters'
+import { taskWorkspaceHookMountAdapters } from './task-workspace-hook-mount-adapters'
+import { taskWorkspaceSenderMountAdapters } from './task-workspace-sender-mount-adapters'
 import { workspaceSettingsMounts } from './workspace-settings-mounts'
 import type { MountedOperationModule } from '../mounted-operation-module'
 
@@ -23,5 +25,13 @@ export const MOUNTED_OPERATION_MODULES: readonly MountedOperationModule[] = [
   },
   { source: 'source-control-mount-adapters.ts', mounts: sourceControlMountAdapters },
   { source: 'task-mount-adapters.ts', mounts: taskMountAdapters },
+  {
+    source: 'task-workspace-hook-mount-adapters.ts',
+    mounts: taskWorkspaceHookMountAdapters
+  },
+  {
+    source: 'task-workspace-sender-mount-adapters.ts',
+    mounts: taskWorkspaceSenderMountAdapters
+  },
   { source: 'workspace-settings-mounts.ts', mounts: workspaceSettingsMounts }
 ]

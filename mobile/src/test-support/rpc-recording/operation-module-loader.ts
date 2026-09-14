@@ -3,6 +3,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import * as React from 'react'
 import ts from 'typescript'
+import * as deliveryAmbiguity from '../../transport/rpc-delivery-ambiguity'
 
 export type OperationModule = Record<string, (...args: any[]) => unknown>
 /** One anchored in-memory source edit, resolved by the caller so the loader needs no mutant table. */
@@ -16,6 +17,11 @@ export type OperationMutation = {
 /** Source appended to a mounted module after transpile, keyed by the file suffix it applies to. */
 export type OperationExposure = readonly [suffix: string, source: string]
 
+// Why shared rather than evaluated: the delivery-unknown mark is a WeakSet keyed on the rejection
+// object, so a second copy of the module has a second, empty registry and every marked rejection
+// reads as a definite failure inside the mounted operation. Same reason React is shared.
+const SHARED_MODULE = 'mobile/src/transport/rpc-delivery-ambiguity.ts'
+
 // Only mounting boundaries are substituted; every operation and projection is loaded from source.
 export function operationModuleLoader(
   root: string,
@@ -23,6 +29,7 @@ export function operationModuleLoader(
   exposures: readonly OperationExposure[] = []
 ) {
   const cache = new Map<string, OperationModule>()
+  const sharedModulePath = resolve(root, SHARED_MODULE)
   let mutationCount = 0
   function pathFor(base: string): string {
     const file = ['', '.ts', '.tsx', '/index.ts']
@@ -36,6 +43,9 @@ export function operationModuleLoader(
   function imported(base: string, name: string): unknown {
     if (name === 'react') {
       return React
+    }
+    if (name.startsWith('.') && pathFor(resolve(dirname(base), name)) === sharedModulePath) {
+      return deliveryAmbiguity
     }
     if (!name.startsWith('.')) {
       return new Proxy(
