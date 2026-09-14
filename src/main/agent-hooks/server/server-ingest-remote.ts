@@ -35,6 +35,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       hookEventName?: string
       source?: unknown
       providerPromptId?: unknown
+      grokPromptBoundary?: unknown
       compactTrigger?: unknown
       toolUseId?: string
       toolAgentId?: string
@@ -110,6 +111,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
         : source === 'grok'
           ? normalizeGrokPromptId(envelope.providerPromptId)
           : undefined
+    const grokPromptBoundary =
+      source === 'grok' && envelope.grokPromptBoundary === true ? true : undefined
     const compactTrigger =
       source === 'claude' &&
       (envelope.compactTrigger === 'manual' || envelope.compactTrigger === 'auto')
@@ -245,7 +248,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       env: envelope.env,
       expectedEnv: this.env
     })
-    const event = {
+    const event: AgentHookEventPayload = {
       paneKey,
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
@@ -256,6 +259,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       promptInteractionKey,
       hookEventName,
       providerPromptId,
+      grokPromptBoundary,
       compactTrigger,
       toolUseId,
       toolAgentId,
@@ -269,7 +273,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
           ? envelope.claudeRunningNonAgentTask
           : undefined,
       payload: normalizedPayload
-    } as AgentHookEventPayload
+    }
     this.recordCurrentAuthorityObservation(event)
     this.applyNormalizedStatus(
       event,

@@ -272,7 +272,51 @@ describe('Grok completion observations', () => {
     ).toBe('done')
   })
 
-  it('carries the normalized Grok prompt id to the execution host', () => {
+  it('rejects an identified old turn end after an id-less replacement prompt', () => {
+    normalize({
+      hookEventName: 'UserPromptSubmit',
+      sessionId: 'session-1',
+      promptId: 'prompt-old',
+      prompt: 'old turn'
+    })
+    const replacement = normalizeHookPayload(
+      state,
+      'grok',
+      {
+        paneKey: PANE_KEY,
+        payload: {
+          hookEventName: 'UserPromptSubmit',
+          sessionId: 'session-1',
+          promptId: '\u0000invalid',
+          prompt: 'new turn'
+        }
+      },
+      'production'
+    )
+    expect(replacement).toMatchObject({
+      grokPromptBoundary: true,
+      payload: { state: 'working', prompt: 'new turn' }
+    })
+    expect(replacement?.providerPromptId).toBeUndefined()
+
+    expect(
+      normalize({
+        hookEventName: 'StopCancelled',
+        sessionId: 'session-1',
+        promptId: 'prompt-old',
+        reason: 'user_interrupt'
+      })
+    ).toBeUndefined()
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        sessionId: 'session-1',
+        reason: 'end_turn'
+      })?.state
+    ).toBe('done')
+  })
+
+  it('carries the active Grok prompt boundary through hooks without ids', () => {
     const event = normalizeHookPayload(
       state,
       'grok',
@@ -288,7 +332,28 @@ describe('Grok completion observations', () => {
       'production'
     )
 
-    expect(event?.providerPromptId).toBe('prompt-new')
+    expect(event).toMatchObject({
+      providerPromptId: 'prompt-new',
+      grokPromptBoundary: true
+    })
+
+    const toolEvent = normalizeHookPayload(
+      state,
+      'grok',
+      {
+        paneKey: PANE_KEY,
+        payload: {
+          hookEventName: 'PreToolUse',
+          sessionId: 'session-1',
+          toolName: 'run_terminal_command'
+        }
+      },
+      'production'
+    )
+    expect(toolEvent).toMatchObject({
+      providerPromptId: 'prompt-new',
+      grokPromptBoundary: true
+    })
   })
 
   it.each(['Stop', 'StopFailure', 'StopCancelled', 'SessionEnd'])(

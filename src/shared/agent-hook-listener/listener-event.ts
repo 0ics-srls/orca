@@ -23,6 +23,8 @@ export type AgentHookEventPayload = {
   hookEventName?: string
   /** Provider-owned turn identity (Claude UUID or opaque Grok prompt id). */
   providerPromptId?: string
+  /** This row belongs to an observed Grok prompt boundary even when its opaque id is absent. */
+  grokPromptBoundary?: true
   /** Active Claude compact generation, keyed by provider prompt identity. */
   compactTrigger?: 'manual' | 'auto'
   /** Claude tool-use identifier when the hook source exposes one. */

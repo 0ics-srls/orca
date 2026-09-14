@@ -121,6 +121,7 @@ export function sanitizeHydratedEntry(
     hasExplicitPrompt: record.hasExplicitPrompt === true ? true : undefined,
     hookEventName: typeof record.hookEventName === 'string' ? record.hookEventName : undefined,
     providerPromptId,
+    grokPromptBoundary: source === 'grok' && record.grokPromptBoundary === true ? true : undefined,
     compactTrigger,
     toolUseId: typeof record.toolUseId === 'string' ? record.toolUseId : undefined,
     toolAgentId: typeof record.toolAgentId === 'string' ? record.toolAgentId : undefined,

@@ -11,10 +11,12 @@ export function isStaleGrokTurnEnd(
     previous.payload.state === 'done' ||
     incoming.source !== 'grok' ||
     !isGrokEvent(incoming.hookEventName, 'stop', 'stop_failure', 'stop_cancelled') ||
-    !previous.providerPromptId ||
     !incoming.providerPromptId
   ) {
     return false
+  }
+  if (!previous.providerPromptId) {
+    return previous.grokPromptBoundary === true
   }
   const differentSession = Boolean(
     previous.providerSession?.id &&

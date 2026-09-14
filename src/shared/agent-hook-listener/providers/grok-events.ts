@@ -60,12 +60,9 @@ function recordGrokTurn(
 ): void {
   state.grokActiveTurnByPaneKey.delete(paneKey)
   const promptId = grokPromptId(hookPayload)
-  if (!promptId) {
-    return
-  }
   const sessionId = grokIdentityField(hookPayload, 'sessionId', 'session_id')
   state.grokActiveTurnByPaneKey.set(paneKey, {
-    promptId,
+    ...(promptId ? { promptId } : {}),
     ...(sessionId ? { sessionId } : {})
   })
 }
@@ -82,6 +79,9 @@ function grokTurnEndApplies(
   const active = state.grokActiveTurnByPaneKey.get(paneKey)
   if (!active) {
     return true
+  }
+  if (!active.promptId) {
+    return false
   }
   const sessionId = grokIdentityField(hookPayload, 'sessionId', 'session_id')
   return (

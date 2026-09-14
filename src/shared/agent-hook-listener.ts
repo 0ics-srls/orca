@@ -133,6 +133,7 @@ export function normalizeHookPayload(
   if (!transportPayload) {
     return null
   }
+  const grokActiveTurn = source === 'grok' ? state.grokActiveTurnByPaneKey.get(paneKey) : undefined
 
   return {
     paneKey,
@@ -157,7 +158,9 @@ export function normalizeHookPayload(
           ),
     promptInteractionKey: dispatched.promptInteractionKey,
     hookEventName: typeof eventName === 'string' ? eventName : undefined,
-    providerPromptId,
+    providerPromptId:
+      source === 'grok' ? (grokActiveTurn?.promptId ?? providerPromptId) : providerPromptId,
+    grokPromptBoundary: grokActiveTurn ? true : undefined,
     compactTrigger,
     toolUseId: readFirstString(hookPayloadRecord, ['tool_use_id', 'toolUseId']),
     toolAgentId: readFirstString(hookPayloadRecord, ['agent_id', 'agentId']),

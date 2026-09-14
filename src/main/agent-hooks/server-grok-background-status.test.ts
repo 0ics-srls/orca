@@ -130,7 +130,7 @@ describe('Grok background status ownership', () => {
     })
   })
 
-  it('retains the Grok turn fence across status hydration', async () => {
+  it('retains an id-less Grok turn fence across status hydration', async () => {
     const userDataPath = mkdtempSync(join(tmpdir(), 'orca-grok-status-'))
     const firstServer = new AgentHookServer()
     const restoredServer = new AgentHookServer()
@@ -143,7 +143,7 @@ describe('Grok background status ownership', () => {
           worktreeId: 'wt-1',
           source: 'grok',
           hookEventName: 'UserPromptSubmit',
-          providerPromptId: 'prompt-new',
+          grokPromptBoundary: true,
           providerSession: { key: 'session_id', id: 'session-1' },
           payload: { state: 'working', prompt: 'new turn', agentType: 'grok' }
         },
@@ -173,9 +173,26 @@ describe('Grok background status ownership', () => {
       )
 
       expect(restoredServer._getStateForTests().lastStatusByPaneKey.get(PANE)).toMatchObject({
-        providerPromptId: 'prompt-new',
+        grokPromptBoundary: true,
         payload: { state: 'working', prompt: 'new turn' }
       })
+
+      restoredServer.ingestRemote(
+        {
+          paneKey: PANE,
+          tabId: 'tab-1',
+          worktreeId: 'wt-1',
+          source: 'grok',
+          hookEventName: 'Stop',
+          grokPromptBoundary: true,
+          providerSession: { key: 'session_id', id: 'session-1' },
+          payload: { state: 'done', prompt: 'new turn', agentType: 'grok' }
+        },
+        'conn-1'
+      )
+      expect(restoredServer.getStatusSnapshot()).toEqual([
+        expect.objectContaining({ state: 'done', prompt: 'new turn', agentType: 'grok' })
+      ])
     } finally {
       firstServer.stop()
       restoredServer.stop()

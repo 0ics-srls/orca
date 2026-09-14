@@ -40,7 +40,7 @@ export type HookListenerState = {
 }
 
 export type GrokActiveTurn = {
-  promptId: string
+  promptId?: string
   sessionId?: string
 }
 
