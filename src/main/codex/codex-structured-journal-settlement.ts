@@ -3,7 +3,6 @@ import type {
   AgentJournalItemIdentity,
   AgentJournalTurnLifecycle
 } from '../../shared/agent-session-journal-types'
-import { partitionJournalLifecycleMutations } from '../native-chat/agent-session-journal/journal-lifecycle-batch-partition'
 import type { JournalLifecycleMutationInput } from '../native-chat/agent-session-journal/journal-row-builders'
 import type {
   StructuredAgentSessionEventSink,
@@ -28,6 +27,7 @@ import {
 } from './codex-structured-journal-translation-turns'
 import { collectCodexTurnPromptCancellations } from './codex-structured-prompt-turn-settlement'
 import type { CodexPendingJournalPrompt } from './codex-structured-prompt-turn-settlement'
+import { appendCodexLifecycleMutations } from './codex-structured-journal-sink'
 
 export type CodexActiveJournalItem = {
   threadId: string
@@ -36,6 +36,7 @@ export type CodexActiveJournalItem = {
   item: CodexThreadItem
 }
 
+export type { CodexPendingJournalPrompt } from './codex-structured-prompt-turn-settlement'
 const ADMITTED: StructuredAgentSessionSinkAdmission = { accepted: true }
 
 export function settleCodexJournalSession(input: {
@@ -94,7 +95,11 @@ export function settleCodexJournalSession(input: {
       turnOrdinalsToForget.push({ threadId, turnId })
     }
   }
-  const admission = appendLifecycleMutations(input.sink, exitSettlementId(input.event), mutations)
+  const admission = appendCodexLifecycleMutations(
+    input.sink,
+    exitSettlementId(input.event),
+    mutations
+  )
   if (!admission.accepted) {
     return admission
   }
@@ -104,20 +109,23 @@ export function settleCodexJournalSession(input: {
   return ADMITTED
 }
 
-export function settleCodexJournalTurn(
-  input: {
-    sessionId: string
-    threadId: string
-    turnId: string
-    turnLifecycle: AgentJournalTurnLifecycle | null
-    sink: StructuredAgentSessionEventSink
-    streams: CodexStructuredItemStreams
-    activeItems: Map<string, CodexActiveJournalItem>
-    pendingPrompts: Map<string, CodexPendingJournalPrompt>
-  } & Parameters<typeof collectCodexTurnPromptCancellations>[0]
-): StructuredAgentSessionSinkAdmission {
+export function settleCodexJournalTurn(input: {
+  sessionId: string
+  threadId: string
+  turnId: string
+  turnLifecycle: AgentJournalTurnLifecycle | null
+  sink: StructuredAgentSessionEventSink
+  streams: CodexStructuredItemStreams
+  activeItems: Map<string, CodexActiveJournalItem>
+  pendingPrompts?: Map<string, CodexPendingJournalPrompt>
+  clearPromptTurn?: (threadId: string, turnId: string) => void
+  resolvedBy?: string
+  resolvedAt?: number
+  settlementId?: string
+}): StructuredAgentSessionSinkAdmission {
   const mutations: JournalLifecycleMutationInput[] = []
   const activeItemsToForget: { key: string; threadId: string; itemId: string }[] = []
+  const pendingPrompts = input.pendingPrompts ?? new Map<string, CodexPendingJournalPrompt>()
   for (const [key, active] of input.activeItems) {
     if (active.threadId !== input.threadId || active.turnId !== input.turnId) {
       continue
@@ -135,7 +143,14 @@ export function settleCodexJournalTurn(
     }
     activeItemsToForget.push({ key, threadId: active.threadId, itemId: active.item.id })
   }
-  const promptCancellations = collectCodexTurnPromptCancellations(input)
+  const promptCancellations = collectCodexTurnPromptCancellations({
+    threadId: input.threadId,
+    turnId: input.turnId,
+    pendingPrompts,
+    ...(input.resolvedBy ? { resolvedBy: input.resolvedBy } : {}),
+    ...(input.resolvedAt !== undefined ? { resolvedAt: input.resolvedAt } : {}),
+    ...(input.settlementId ? { settlementId: input.settlementId } : {})
+  })
   mutations.push(...promptCancellations.mutations)
   if (input.turnLifecycle) {
     mutations.push({
@@ -144,10 +159,7 @@ export function settleCodexJournalTurn(
       body: codexTurnLifecycleBody(input.turnLifecycle)
     })
   }
-  if (mutations.length === 0) {
-    return ADMITTED
-  }
-  const admission = appendLifecycleMutations(
+  const admission = appendCodexLifecycleMutations(
     input.sink,
     input.settlementId ?? `turn-completed:${input.sessionId}:${input.threadId}:${input.turnId}`,
     mutations
@@ -160,8 +172,9 @@ export function settleCodexJournalTurn(
     input.activeItems.delete(active.key)
   }
   for (const itemId of promptCancellations.itemIds) {
-    input.pendingPrompts.delete(itemId)
+    pendingPrompts.delete(itemId)
   }
+  input.clearPromptTurn?.(input.threadId, input.turnId)
   return ADMITTED
 }
 
@@ -197,7 +210,7 @@ export function settleCodexOversizedNotification(input: {
   if (mutations.length === 0) {
     return ADMITTED
   }
-  const admission = appendLifecycleMutations(
+  const admission = appendCodexLifecycleMutations(
     input.sink,
     `oversized-notification:${input.sessionId}:${input.threadId}:${input.method}`,
     mutations
@@ -238,54 +251,6 @@ function oversizedStreamItemType(method: string): CodexThreadItem['type'] | null
     return 'reasoning'
   }
   return null
-}
-
-function appendLifecycleMutations(
-  sink: StructuredAgentSessionEventSink,
-  settlementId: string,
-  mutations: readonly JournalLifecycleMutationInput[]
-): StructuredAgentSessionSinkAdmission {
-  const chunks = partitionJournalLifecycleMutations(settlementId, mutations)
-  for (const { settlementId: id, mutations: chunk } of chunks) {
-    let admission: StructuredAgentSessionSinkAdmission = ADMITTED
-    if (sink.tryAppendLifecycleBatch) {
-      admission = sink.tryAppendLifecycleBatch(id, chunk, { lifecycle: true })
-    } else if (sink.appendLifecycleBatch) {
-      admission = sink.appendLifecycleBatch(id, chunk, { lifecycle: true }) ?? ADMITTED
-    } else {
-      for (const mutation of chunk) {
-        if (mutation.kind === 'item') {
-          if (sink.tryAppendItem) {
-            admission = sink.tryAppendItem(mutation.identity, mutation.body, { lifecycle: true })
-            if (!admission.accepted) {
-              return admission
-            }
-          } else {
-            sink.appendItem(mutation.identity, mutation.body, { lifecycle: true })
-          }
-        } else {
-          if (sink.tryAppendTombstone) {
-            admission = sink.tryAppendTombstone(mutation.identity, { lifecycle: true })
-            if (!admission.accepted) {
-              return admission
-            }
-          } else {
-            sink.appendTombstone(mutation.identity, { lifecycle: true })
-          }
-        }
-      }
-    }
-    if (!admission.accepted) {
-      return admission
-    }
-    const publishAdmission = sink.tryPublish
-      ? sink.tryPublish({ lifecycle: true })
-      : (sink.publish({ lifecycle: true }), ADMITTED)
-    if (!publishAdmission.accepted) {
-      return publishAdmission
-    }
-  }
-  return ADMITTED
 }
 
 function interruptedBody(body: AgentJournalItemBody | null): AgentJournalItemBody | null {

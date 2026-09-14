@@ -36,3 +36,17 @@ export function codexPromptCancellationForItem(
       .map(([itemId]) => itemId)
   }
 }
+
+export function clearCodexPromptTurn(
+  prompts: Iterable<CodexPendingPrompt>,
+  threadId: string,
+  turnId: string,
+  forget: (prompt: CodexPendingPrompt) => void
+): void {
+  const settled = new Set(
+    [...prompts].filter((prompt) => prompt.threadId === threadId && prompt.turnId === turnId)
+  )
+  for (const prompt of settled) {
+    forget(prompt)
+  }
+}

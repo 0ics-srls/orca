@@ -3,6 +3,7 @@ import { readCodexTurnId } from './codex-structured-thread-facts'
 import { isBoundedAgentSessionOperationProviderId } from '../../shared/agent-session-operation-ledger'
 import {
   bindCodexPromptCancellationTurn,
+  clearCodexPromptTurn,
   codexPromptCancellationForItem
 } from './codex-prompt-cancellation-registry'
 import {
@@ -10,6 +11,8 @@ import {
   MAX_CODEX_PROMPT_JOURNAL_BINDINGS,
   MAX_CODEX_PROMPT_REGISTRY_BYTES,
   MAX_CODEX_PROMPT_REGISTRY_ENTRIES,
+  codexPromptBytes,
+  codexRetainedPromptBytes,
   codexJournalPromptIdPart,
   readQuestionIds,
   readQuestionOptionAnswers
@@ -114,31 +117,8 @@ export class CodexPromptRegistry {
     return this.retainedPromptBytes()
   }
 
-  private promptBytes(prompt: CodexPendingPrompt): number {
-    let bytes = 0
-    for (const value of [
-      prompt.threadId,
-      prompt.turnId ?? '',
-      prompt.codexItemId,
-      prompt.promptKey
-    ]) {
-      bytes += Buffer.byteLength(value, 'utf8')
-    }
-    for (const id of prompt.questionIds) {
-      bytes += Buffer.byteLength(id, 'utf8')
-    }
-    for (const entry of prompt.optionAnswers.values()) {
-      bytes += Buffer.byteLength(entry.questionId, 'utf8') + Buffer.byteLength(entry.answer, 'utf8')
-    }
-    for (const value of prompt.answers.values()) {
-      bytes += Buffer.byteLength(value, 'utf8')
-    }
-    return bytes
-  }
-
   private retainedPromptBytes(): number {
-    const prompts = new Set([...this.byAddress.values(), ...this.boundPrompts.values()])
-    return [...prompts].reduce((total, prompt) => total + this.promptBytes(prompt), 0)
+    return codexRetainedPromptBytes([...this.byAddress.values(), ...this.boundPrompts.values()])
   }
 
   private trim(): void {
@@ -209,7 +189,7 @@ export class CodexPromptRegistry {
       optionAnswers,
       answers: new Map()
     }
-    const promptBytes = this.promptBytes(prompt)
+    const promptBytes = codexPromptBytes(prompt)
     if (promptBytes > MAX_CODEX_PROMPT_REGISTRY_BYTES) {
       return null
     }
@@ -287,6 +267,16 @@ export class CodexPromptRegistry {
         this.boundPrompts.delete(journalItemId)
       }
     }
+  }
+
+  /** Drops requests that belonged to a turn which the provider has settled. */
+  clearTurn(threadId: string, turnId: string): void {
+    clearCodexPromptTurn(
+      [...this.byAddress.values(), ...this.boundPrompts.values()],
+      threadId,
+      turnId,
+      (prompt) => this.forget(prompt)
+    )
   }
 
   clear(): void {

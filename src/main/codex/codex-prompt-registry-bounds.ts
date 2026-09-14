@@ -2,6 +2,7 @@ import {
   boundPayload,
   digestPayload
 } from '../native-chat/agent-session-journal/journal-payload-bounds'
+import type { CodexPendingPrompt } from './codex-structured-prompt-replies'
 
 export const CODEX_JOURNAL_PROMPT_ID_COMPONENT_MAX_BYTES = 256
 export const CODEX_JOURNAL_PROMPT_OPTION_ID_MAX_BYTES = 1024
@@ -13,6 +14,29 @@ export const CODEX_PROMPT_MAX_ANSWER_BYTES = 64 * 1024
 export const MAX_CODEX_PROMPT_REGISTRY_ENTRIES = 128
 export const MAX_CODEX_PROMPT_JOURNAL_BINDINGS = 256
 export const MAX_CODEX_PROMPT_REGISTRY_BYTES = 4 * 1024 * 1024
+
+export function codexPromptBytes(prompt: CodexPendingPrompt): number {
+  const values = [prompt.threadId, prompt.turnId ?? '', prompt.codexItemId, prompt.promptKey]
+  return (
+    values.reduce((total, value) => total + Buffer.byteLength(value, 'utf8'), 0) +
+    prompt.questionIds.reduce((total, id) => total + Buffer.byteLength(id, 'utf8'), 0) +
+    [...prompt.optionAnswers.values()].reduce(
+      (total, entry) =>
+        total +
+        Buffer.byteLength(entry.questionId, 'utf8') +
+        Buffer.byteLength(entry.answer, 'utf8'),
+      0
+    ) +
+    [...prompt.answers.values()].reduce(
+      (total, value) => total + Buffer.byteLength(value, 'utf8'),
+      0
+    )
+  )
+}
+
+export function codexRetainedPromptBytes(prompts: Iterable<CodexPendingPrompt>): number {
+  return [...new Set(prompts)].reduce((total, prompt) => total + codexPromptBytes(prompt), 0)
+}
 
 export function codexJournalPromptIdPart(value: string): string {
   if (Buffer.byteLength(value, 'utf8') <= CODEX_JOURNAL_PROMPT_ID_COMPONENT_MAX_BYTES) {

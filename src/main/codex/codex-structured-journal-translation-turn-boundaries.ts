@@ -38,6 +38,7 @@ export class CodexJournalTurnBoundaries {
       activeTurns: CodexJournalActiveTurns
       items: Pick<CodexJournalItems, 'streams' | 'activeItems' | 'ordinals'>
       prompts: Pick<CodexJournalPrompts, 'pending'>
+      clearPromptTurn?: (threadId: string, turnId: string) => void
       flushSuppression: () => CodexJournalTranslationAdmission
       resetActivity: (threadId: string) => void
       now?: () => number
@@ -102,7 +103,8 @@ export class CodexJournalTurnBoundaries {
       pendingPrompts: this.deps.prompts.pending,
       ...(event.settlementId ? { settlementId: event.settlementId } : {}),
       ...(event.resolvedBy ? { resolvedBy: event.resolvedBy } : {}),
-      ...(event.resolvedAt !== undefined ? { resolvedAt: event.resolvedAt } : {})
+      ...(event.resolvedAt !== undefined ? { resolvedAt: event.resolvedAt } : {}),
+      ...(this.deps.clearPromptTurn ? { clearPromptTurn: this.deps.clearPromptTurn } : {})
     })
     if (admission.accepted) {
       this.deps.items.ordinals.forgetTurn(event.threadId, turnId)

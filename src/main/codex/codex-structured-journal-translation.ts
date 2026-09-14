@@ -85,6 +85,7 @@ export function createCodexJournalTranslator(
     activeTurns,
     items,
     prompts,
+    ...(deps.clearPromptTurn ? { clearPromptTurn: deps.clearPromptTurn } : {}),
     flushSuppression: () => genericFrames.flush(),
     resetActivity,
     ...(deps.now ? { now: deps.now } : {})
