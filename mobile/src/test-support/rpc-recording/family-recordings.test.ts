@@ -2,7 +2,10 @@ import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { readScenarios } from './scenario-input'
 import { driveReplyMatrix, replyMatrixGoldenId, replyMatrixSites } from './reply-matrix'
-import { replyMatrixNormalResult } from './reply-matrix-normal-result'
+import {
+  REPLY_MATRIX_NORMAL_RESULT_INVENTORY,
+  replyMatrixNormalResult
+} from './reply-matrix-normal-result'
 import {
   bindCompletions,
   interruptionSchedules,
@@ -68,11 +71,19 @@ describe('family reply partitions and owned schedules', () => {
     families.set(scenario.family, [...(families.get(scenario.family) ?? []), scenario])
   }
   const goldenIds = new Set<string>()
-  const matrixed: string[] = []
-  // A census, not a count: the mechanism this replaced skipped families, so "every family has a
-  // matrix" is the property to assert rather than infer from however many tests got generated.
+  // Filled only when a site actually generates a test, so the census below is independent of
+  // replyMatrixSites throwing on an empty list: the mechanism this replaced skipped families.
+  const matrixed = new Set<string>()
+  const liveSites = new Set<string>()
   it('matrices every family in the manifest', () => {
-    expect(matrixed).toEqual([...families.keys()])
+    expect([...matrixed]).toEqual([...families.keys()])
+  })
+  // The inventory is only consulted for a live site, so a stale entry would retire silently.
+  it('lists only live matrix sites in the normal-result inventory', () => {
+    const stale = REPLY_MATRIX_NORMAL_RESULT_INVENTORY.filter(
+      (entry) => !liveSites.has(`${entry.family}\0${entry.request}`)
+    ).map((entry) => `${entry.family} ${entry.request}`)
+    expect(stale).toEqual([])
   })
   for (const [family, scenarios] of families) {
     const base = scenarios[0]!
@@ -82,6 +93,8 @@ describe('family reply partitions and owned schedules', () => {
         throw new Error(`Two matrix sites share a golden: ${id}`)
       }
       goldenIds.add(id)
+      matrixed.add(family)
+      liveSites.add(`${family}\0${request}`)
       it(`${family}: reply partitions at ${request}`, async () => {
         await certify(
           id,
@@ -89,7 +102,6 @@ describe('family reply partitions and owned schedules', () => {
         )
       }, 30_000)
     }
-    matrixed.push(family)
   }
   for (const id of [
     'b3',

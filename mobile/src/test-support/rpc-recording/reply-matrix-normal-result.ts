@@ -5,7 +5,8 @@ import type { RecordingScenario } from './recording-scenario'
  * to invent a plausible payload per domain. A few sites have no recorded success to replay, and
  * those are inventoried here rather than skipped: a new domain whose scenarios only record failures
  * fails the suite until it is given a fulfilled scenario or a line below. Both directions are
- * checked — an entry whose family has since recorded a success fails too, so the list only shrinks.
+ * checked — an entry whose family has since recorded a success fails too, and family-recordings
+ * asserts every entry names a live matrix site — so the list only shrinks.
  */
 export type ReplyMatrixNormalResult = {
   readonly family: string

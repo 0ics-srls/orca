@@ -134,7 +134,7 @@ export function resolveRecording(values: ValuePool, recording: InternedRecording
   }
   const referenced = new Set<string>()
   const resolve = (hash: unknown, at: string): RecordedValue => {
-    if (typeof hash !== 'string' || !(hash in values)) {
+    if (typeof hash !== 'string' || !Object.hasOwn(values, hash)) {
       throw new Error(`Golden value ${JSON.stringify(hash)} is missing from the pool (${at})`)
     }
     referenced.add(hash)
