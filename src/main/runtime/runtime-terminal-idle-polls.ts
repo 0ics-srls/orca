@@ -19,8 +19,11 @@ import {
 import type { TuiAgent } from '../../shared/tui-agent'
 
 /**
- * Why null counts as quiet: a record with no output timestamp has produced nothing since
- * it was created, which is the quietest a pane can be. Reading it as `0ms since output`
+ * Why null counts as quiet: a record with no output timestamp has produced nothing the
+ * RUNTIME OBSERVED since it was created. That is not the same as silence — the reachable
+ * case is a daemon-hosted pane whose bytes never reach the runtime, which may still be
+ * streaming. The trade is deliberate: "never settles" becomes "settles uncorroborated",
+ * the caller keeps its timeout, and delivery cannot reach this lane. Reading it as `0ms since output`
  * inverted that — `0 >= quiescenceMs` is false forever, so an adopted pane that never
  * emitted could not settle no matter how long the caller waited.
  */

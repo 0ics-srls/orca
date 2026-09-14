@@ -39,11 +39,7 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
     }
     try {
       const leaf = this.deps.getLiveLeafForHandle(terminalHandle)
-      if (
-        leaf.lastAgentStatus !== 'idle' ||
-        !leaf.lastAgentStatusObservedLive ||
-        !this.deps.isAgentSettledForDelivery(leaf)
-      ) {
+      if (leaf.lastAgentStatus !== 'idle' || !leaf.lastAgentStatusObservedLive) {
         return
       }
       const mailboxHandle = this.deps.mailboxOwner.resolve(leaf, handle)
@@ -72,6 +68,16 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
       return
     }
     if (db.hasOutstandingMailboxDelivery?.(mailboxHandle)) {
+      return
+    }
+    // Why the gate lives HERE and not at each caller: this method is the single point at
+    // which this subsystem commits to typing the pointer into the pane, and it has four
+    // callers (handle delivery, post-probe redelivery, flight settle, and the notification
+    // coordinator's per-leaf path). Gating callers meant each new one silently bypassed the
+    // check; gating the commit point cannot be bypassed. Refusal parks and re-offers rather
+    // than dropping — `isAgentSettledForDelivery` arms the re-check.
+    if (!this.deps.isAgentSettledForDelivery(leaf)) {
+      this.parkRedelivery(mailboxHandle, options.reservedTypes)
       return
     }
     if (leaf.ptyId) {
@@ -230,8 +236,7 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
     if (
       currentLeaf?.ptyId === ptyId &&
       currentLeaf.lastAgentStatus === 'idle' &&
-      currentLeaf.lastAgentStatusObservedLive &&
-      this.deps.isAgentSettledForDelivery(currentLeaf)
+      currentLeaf.lastAgentStatusObservedLive
     ) {
       this.deliver(currentLeaf, { mailboxHandle, skipAbsenceProbe: true })
     }
