@@ -47,7 +47,8 @@ export function useNativeChatTranscriptScroll({
   loadingEarlier,
   loadEarlier,
   alignToViewportTop,
-  scrollToEnd
+  scrollToEnd,
+  cancelScrollReconcile
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>
   contentRef: React.RefObject<HTMLDivElement | null>
@@ -59,6 +60,7 @@ export function useNativeChatTranscriptScroll({
   loadEarlier: () => void
   alignToViewportTop: (element: HTMLElement) => void
   scrollToEnd: () => void
+  cancelScrollReconcile: () => void
 }): NativeChatTranscriptScroll {
   const [showJump, setShowJump] = useState(false)
   const followingRef = useRef(true)
@@ -91,6 +93,7 @@ export function useNativeChatTranscriptScroll({
       return null
     }
     const geometry = geometryOf(element)
+    const wasFollowing = followingRef.current
     const following = nextFollowingEnd({
       following: followingRef.current,
       pinnedOffset: pinnedOffsetRef.current,
@@ -103,9 +106,12 @@ export function useNativeChatTranscriptScroll({
       atEnd: isNearBottom(geometry)
     })
     followingRef.current = following
+    if (wasFollowing && !following) {
+      cancelScrollReconcile()
+    }
     setShowJump(shouldShowJumpToLatest(following, geometry))
     return geometry
-  }, [scrollRef])
+  }, [cancelScrollReconcile, scrollRef])
 
   // Only a real scroll event pages in older history. Every row that resolves its
   // true height moves the content and re-fires the size observers; routing those

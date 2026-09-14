@@ -44,6 +44,8 @@ export type NativeChatTranscriptWindow = {
    *  browser's real max scroll, so this lands where the document bottom is,
    *  trailing chrome included. */
   scrollToEnd: () => void
+  /** Replace any pending programmatic scroll target with the current offset. */
+  cancelScrollReconcile: () => void
 }
 
 /** Distance from a container's scroll origin down to a descendant, in the
@@ -239,6 +241,17 @@ export function useNativeChatTranscriptWindow({
     container.scrollTop = container.scrollHeight
   }, [scrollRef, virtualizer])
 
+  const cancelScrollReconcile = useCallback(() => {
+    const container = scrollRef.current
+    if (!container || !virtualizer.scrollElement) {
+      return
+    }
+    // TanStack keeps a one-frame reconcile target after every imperative scroll.
+    // Rebase that target when the reader takes over so the pending callback cannot
+    // snap the viewport back to the old end on the next animation frame.
+    virtualizer.scrollToOffset(container.scrollTop, { behavior: 'auto' })
+  }, [scrollRef, virtualizer])
+
   return {
     virtualItems: virtualizer.getVirtualItems(),
     totalSize: virtualizer.getTotalSize(),
@@ -246,6 +259,7 @@ export function useNativeChatTranscriptWindow({
     sizerRef,
     measureRow: virtualizer.measureElement,
     alignToViewportTop,
-    scrollToEnd
+    scrollToEnd,
+    cancelScrollReconcile
   }
 }

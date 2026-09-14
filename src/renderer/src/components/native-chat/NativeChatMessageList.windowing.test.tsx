@@ -637,4 +637,24 @@ describe('a row growing in place while the view is pinned to the bottom', () => 
 
     expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
   })
+
+  it('does not let a pending end reconcile snap back after reader scroll-away', async () => {
+    setMeasuredTail(0)
+    const { container } = render(streamingList(0))
+    const scroller = scrollRoot(container)
+    // Trigger a pin outside React's act wrapper so its TanStack rAF reconcile is
+    // still pending when the reader moves away.
+    setMeasuredTail(1)
+    expect(deliverResizes()).toBe(true)
+    const readingAt = 2000
+    scroller.scrollTop = readingAt
+    fireEvent.scroll(scroller)
+
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    })
+
+    expect(scroller.scrollTop).toBe(readingAt)
+    expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
+  })
 })
