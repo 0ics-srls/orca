@@ -105,25 +105,62 @@ export function recordCrashBreadcrumb(
  *
  * Every name appearing once degenerates to the oldest entry, i.e. plain FIFO.
  */
+function evictionGroupKey(entry: CrashReportBreadcrumb): string {
+  // Why origin is part of the group: the snapshot is filtered per reporter, so a name that
+  // is a singleton on THIS surface is not redundant just because a busy popout also emits
+  // it. Counting them together let one surface delete the other's trail.
+  return `${entry.name}\u0000${entry.origin ?? ''}`
+}
+
+/** Whether a coalesce key still owns this entry and has repeats it has not folded in. */
+function ownsUnresolvedRepeats(entry: CrashReportBreadcrumb): boolean {
+  for (const state of coalescedBreadcrumbs.values()) {
+    if (state.emitted === entry && state.suppressed > state.resolved) {
+      return true
+    }
+  }
+  return false
+}
+
 function evictionIndex(ring: CrashReportBreadcrumb[]): number {
   const counts = new Map<string, number>()
   for (const entry of ring) {
-    counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1)
+    const key = evictionGroupKey(entry)
+    counts.set(key, (counts.get(key) ?? 0) + 1)
   }
-  let crowdedIndex = 0
+  let crowdedKey = ''
   let crowdedCount = 0
-  for (let index = 0; index < ring.length; index += 1) {
-    const count = counts.get(ring[index].name) ?? 0
-    // Why strictly greater: `ring` is oldest-first, so the first index holding
-    // the maximum is the OLDEST entry of the most crowded name. Accepting ties
-    // would walk to that name's newest entry and thin the series from the wrong
-    // end, leaving a stale head instead of the minutes before the crash.
+  for (const entry of ring) {
+    const key = evictionGroupKey(entry)
+    const count = counts.get(key) ?? 0
+    // Why strictly greater: `ring` is oldest-first, so the first group to reach the
+    // maximum is the one whose oldest entry is oldest. Accepting ties walks to a later
+    // group and thins the wrong series.
     if (count > crowdedCount) {
-      crowdedIndex = index
+      crowdedKey = key
       crowdedCount = count
     }
   }
-  return crowdedIndex
+  let oldestOfGroup = 0
+  let foundGroup = false
+  // Why the newest entry is never a candidate: it is the crumb that just arrived, and its
+  // coalesce state has not been linked to it yet, so it would always look unowned.
+  for (let index = 0; index < ring.length - 1; index += 1) {
+    if (evictionGroupKey(ring[index]) !== crowdedKey) {
+      continue
+    }
+    if (!foundGroup) {
+      oldestOfGroup = index
+      foundGroup = true
+    }
+    // Why skip a live owner: that entry carries its key's running suppressed count, and a
+    // crash report is the LAST snapshot — "the next emit re-claims it" never happens. Take
+    // the next entry in the same group instead; fall back only if every one is owned.
+    if (!ownsUnresolvedRepeats(ring[index])) {
+      return index
+    }
+  }
+  return oldestOfGroup
 }
 
 export function recordCoalescedCrashBreadcrumb({
