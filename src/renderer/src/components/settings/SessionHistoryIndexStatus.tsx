@@ -3,28 +3,69 @@ import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-typ
 import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import { useWindowStreamVisible } from '@/hooks/use-window-stream-visibility'
 import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
-import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
 import { SettingsRow } from './SettingsFormControls'
 
+const SWEEPING_POLL_MS = 2_000
+const SETTLED_POLL_MS = 10_000
+
+// A pass still has files due, so counts move between polls; a settled index only changes on the next sweep.
+function isSweeping(status: AiVaultSearchStatus | null): boolean {
+  if (!status?.enabled) {
+    return false
+  }
+  return status.phase === 'indexing' || (status.phase === 'degraded' && status.filesDue > 0)
+}
+
+function sweepMessage(status: AiVaultSearchStatus): string {
+  if (status.lastSweepCompletedAt === null) {
+    // No completed sweep yet, so the denominator is still growing and a percentage would mislead.
+    return translate('sessionHistory.status.firstScan', 'Indexing… {{indexed}} files so far', {
+      indexed: status.filesIndexed
+    })
+  }
+  const total = status.filesIndexed + status.filesDue + status.filesFailed
+  const percent = total > 0 ? Math.floor((status.filesIndexed / total) * 100) : 0
+  return translate(
+    'sessionHistory.status.progress',
+    'Indexing · {{percent}}% · {{indexed}} of {{total}} files',
+    { percent, indexed: status.filesIndexed, total }
+  )
+}
+
+function statusMessage(status: AiVaultSearchStatus): string {
+  if (!status.enabled || status.phase === 'idle' || status.phase === 'closed') {
+    return translate(
+      'sessionHistory.status.unavailable',
+      'Index is not ready or the search service is unavailable.'
+    )
+  }
+  if (isSweeping(status)) {
+    return sweepMessage(status)
+  }
+  return translate('sessionHistory.status.upToDate', 'Up to date · {{indexed}} files indexed', {
+    indexed: status.filesIndexed
+  })
+}
+
 export function SessionHistoryIndexStatus({
   enabled,
-  refresh,
-  busy
+  refresh
 }: {
   enabled: boolean
   refresh: number
-  busy: boolean
 }): React.JSX.Element {
   const visible = useWindowStreamVisible(0)
   const [status, setStatus] = useState<AiVaultSearchStatus | null>(null)
   const [failed, setFailed] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [requested, setRequested] = useState(0)
+  const intervalMs = isSweeping(status) ? SWEEPING_POLL_MS : SETTLED_POLL_MS
   useEffect(() => {
-    setStatus(null)
-    setFailed(false)
-    if (!enabled || !visible || busy) {
+    if (!enabled) {
+      setStatus(null)
+      setFailed(false)
+      return
+    }
+    if (!visible) {
       return
     }
     let disposed = false
@@ -34,41 +75,29 @@ export function SessionHistoryIndexStatus({
         return
       }
       inFlight = true
-      setLoading(true)
       try {
         const next = await Promise.resolve().then(() =>
           window.api.aiVault.searchStatus(LOCAL_EXECUTION_HOST_ID)
         )
-        if (disposed) {
-          return
-        }
-        setStatus(next)
-        // Only an observed indexing pass needs live progress; idle state has no timer.
-        if (!next.enabled || next.phase !== 'indexing') {
-          stopPolling()
+        if (!disposed) {
+          setStatus(next)
+          setFailed(false)
         }
       } catch {
         if (!disposed) {
           setStatus(null)
           setFailed(true)
-          stopPolling()
         }
       } finally {
         inFlight = false
-        if (!disposed) {
-          setLoading(false)
-        }
       }
     }
-    const stopPolling = installWindowVisibilityInterval({
-      run: () => void read(),
-      intervalMs: 5_000
-    })
+    const stopPolling = installWindowVisibilityInterval({ run: () => void read(), intervalMs })
     return () => {
       disposed = true
       stopPolling()
     }
-  }, [enabled, visible, busy, refresh, requested])
+  }, [enabled, visible, refresh, intervalMs])
 
   let message = translate('sessionHistory.status.checking', 'Checking index…')
   if (!enabled) {
@@ -77,58 +106,35 @@ export function SessionHistoryIndexStatus({
       'Search is off. Any existing index copy is kept.'
     )
   } else if (failed) {
-    message = translate(
-      'sessionHistory.status.error',
-      'Could not read index status. Try refreshing.'
-    )
+    message = translate('sessionHistory.status.error', 'Could not read index status. Retrying…')
   } else if (status) {
-    switch (status.phase) {
-      case 'indexing':
-        message = translate('sessionHistory.status.indexing', 'Indexing transcripts…')
-        break
-      case 'current':
-        message = translate(
-          'sessionHistory.status.current',
-          'Index is up to date with the last scan.'
-        )
-        break
-      case 'degraded':
-        message = translate(
-          'sessionHistory.status.degraded',
-          'Some transcript sources could not be indexed.'
-        )
-        break
-      case 'idle':
-      case 'closed':
-        message = translate(
-          'sessionHistory.status.unavailable',
-          'Index is not ready or the search service is unavailable.'
-        )
-        break
-    }
-    if (!status.enabled) {
-      message = translate(
-        'sessionHistory.status.unavailable',
-        'Index is not ready or the search service is unavailable.'
-      )
-    }
+    message = statusMessage(status)
   }
+  const live = enabled && status?.enabled === true
   return (
     <SettingsRow
       label={translate('sessionHistory.status.title', 'Index status')}
       description={
         <span role="status" className="space-y-1 block">
           <span className="block">{message}</span>
-          {enabled && status?.enabled && status.phase !== 'idle' && status.phase !== 'closed' ? (
+          {live && status.phase === 'degraded' && status.filesFailed > 0 ? (
             <span className="block">
               {translate(
-                'sessionHistory.status.counts',
-                'Indexed files: {{indexed}} · Due: {{due}} · Failed: {{failed}}',
-                { indexed: status.filesIndexed, due: status.filesDue, failed: status.filesFailed }
+                'sessionHistory.status.unreadable',
+                '{{failed}} files could not be read and will be retried.',
+                { failed: status.filesFailed }
               )}
             </span>
           ) : null}
-          {enabled && status?.enabled && status.degradedRoots.length > 0 ? (
+          {live && isSweeping(status) ? (
+            <span className="block text-muted-foreground">
+              {translate(
+                'sessionHistory.status.stopHint',
+                'Turn off search to stop. Progress is kept and resumes when you turn it back on.'
+              )}
+            </span>
+          ) : null}
+          {live && status.degradedRoots.length > 0 ? (
             <span className="block">
               {translate('sessionHistory.status.roots', 'Unverified source roots: {{roots}}', {
                 roots: status.degradedRoots.length
@@ -137,16 +143,7 @@ export function SessionHistoryIndexStatus({
           ) : null}
         </span>
       }
-      control={
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={!enabled || busy || loading || !visible}
-          onClick={() => setRequested((value) => value + 1)}
-        >
-          {translate('sessionHistory.status.refresh', 'Refresh')}
-        </Button>
-      }
+      control={null}
     />
   )
 }
