@@ -50,9 +50,10 @@ describe('decodeWindowsLaunchFailureCode', () => {
     expect(decodeWindowsLaunchFailureCode(code)).toBeNull()
   })
 
-  // Why no `>>> 0` here, unlike windows-crash-exit-code.ts: unsigned coercion would wrap a
-  // negative status into this table. -36863 is 0xFFFF7001, a Crashpad code with no business
-  // being named a sandbox stage.
+  // These pin the CONTRACT (junk in, null out), not the guard: mutation-tested, deleting either
+  // term of the guard leaves them all green, because the object lookup misses anyway. -36863 is
+  // 0xFFFF7001, the Crashpad code that a `>>> 0` would wrap straight into this table — which is
+  // the regression these rows would start catching the moment anyone adds one.
   it.each([[-1], [-36863], [1.5], [Number.NaN]])('rejects %p rather than coercing it', (value) => {
     expect(decodeWindowsLaunchFailureCode(value)).toBeNull()
   })

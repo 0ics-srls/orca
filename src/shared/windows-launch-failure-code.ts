@@ -167,6 +167,11 @@ export function decodeWindowsLaunchFailureCode(
   // No `>>> 0` normalization here, unlike windows-crash-exit-code.ts: these codes are small
   // positive decimals, and coercing to unsigned would let a negative status such as -36863
   // wrap into this table and be named a sandbox stage it has nothing to do with.
+  //
+  // Deleting either term below leaves every test green, because a plain object lookup already
+  // misses on -1, 1.5 and NaN. Keep it anyway: it is the invariant that makes the paragraph
+  // above true, and the day someone adds `>>> 0` it becomes the only thing standing between
+  // a Crashpad status and a sandbox name. Do not "prove" it dead and remove it.
   if (!Number.isInteger(exitCode) || exitCode < 0) {
     return null
   }
