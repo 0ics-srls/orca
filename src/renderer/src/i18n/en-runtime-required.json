@@ -2610,9 +2610,6 @@
   },
   "components": {
     "native-chat": {
-      "approval": {
-        "cancel": "Cancel"
-      },
       "composer": {
         "effort": "Effort"
       },
