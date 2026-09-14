@@ -14,10 +14,7 @@ import type { AgentJournalRenderItem } from '../../../shared/agent-session-journ
 
 const RETIRED_PROVIDER_EXIT_TEXT_PREFIX = 'Provider exited'
 
-export function isRetiredProviderExitStatusItem(
-  item: AgentJournalRenderItem,
-  sessionId: string
-): boolean {
+function isRetiredProviderExitStatusItem(item: AgentJournalRenderItem, sessionId: string): boolean {
   if (item.body.kind !== 'status') {
     return false
   }

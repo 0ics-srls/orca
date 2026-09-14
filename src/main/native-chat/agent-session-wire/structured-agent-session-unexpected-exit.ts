@@ -177,7 +177,7 @@ export function isStructuredAgentSessionRecoveryTicketCurrent(
   )
 }
 
-export async function retryUnexpectedExitSettlement(input: {
+async function retryUnexpectedExitSettlement(input: {
   context: Pick<StructuredAgentSessionUnexpectedExitContext, 'onBarrierError'>
   event: UnexpectedExitLifecycleEvent
   session: Pick<StructuredAgentSessionUnexpectedExitSession, 'journal' | 'fence'>

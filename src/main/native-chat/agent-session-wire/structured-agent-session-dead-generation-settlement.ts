@@ -62,7 +62,7 @@ export function captureUnfinishedStructuredAgentSessionWork(
   }
 }
 
-export function hasUnfinishedStructuredAgentSessionWork(journal: DeadGenerationJournal): boolean {
+function hasUnfinishedStructuredAgentSessionWork(journal: DeadGenerationJournal): boolean {
   const work = captureUnfinishedStructuredAgentSessionWork(journal)
   return work.hadUnsettledSubmissions || work.items.length > 0
 }
