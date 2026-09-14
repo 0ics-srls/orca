@@ -6802,6 +6802,141 @@
           "checkpoint": "invalid"
         }
       ]
+    },
+    {
+      "id": "diff-review-notes-refused-before-compare",
+      "operation": "session.diff-review-load",
+      "version": 1,
+      "family": "session.diff-review",
+      "sites": ["mobile/src/session/mobile-diff-review-loaders.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "snapshot",
+          "id": "snapshot"
+        },
+        {
+          "complete": "git.status#1",
+          "params": {
+            "worktree": "id:repo-9::/w"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "branch": "feature",
+              "head": "head-sha-1",
+              "entries": [
+                {
+                  "path": "src/app.ts",
+                  "status": "modified",
+                  "area": "unstaged",
+                  "added": 3,
+                  "removed": 1
+                }
+              ],
+              "upstreamStatus": {
+                "hasUpstream": true,
+                "ahead": 1,
+                "behind": 0
+              }
+            }
+          }
+        },
+        {
+          "bind": "base-ref-show",
+          "request": "worktree.show#1",
+          "params": {
+            "worktree": "id:repo-9::/w"
+          }
+        },
+        {
+          "bind": "review-show",
+          "request": "worktree.show#2",
+          "params": {
+            "worktree": "id:repo-9::/w"
+          }
+        },
+        {
+          "complete": "review-show",
+          "params": {
+            "worktree": "id:repo-9::/w"
+          },
+          "reply": {
+            "ok": false,
+            "error": {
+              "code": "internal",
+              "message": "notes unavailable"
+            }
+          }
+        },
+        {
+          "checkpoint": "notes-refused"
+        },
+        {
+          "complete": "base-ref-show",
+          "params": {
+            "worktree": "id:repo-9::/w"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "origin/main",
+                "linkedPR": 12
+              }
+            }
+          }
+        },
+        {
+          "complete": "repo.list#1",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo-9",
+                  "worktreeBaseRef": "origin/main"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "complete": "git.branchCompare#1",
+          "params": {
+            "worktree": "id:repo-9::/w",
+            "baseRef": "origin/main"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "summary": {
+                "baseRef": "origin/main",
+                "baseOid": "base-oid",
+                "compareRef": "feature",
+                "headOid": "head-oid",
+                "mergeBase": "merge-base",
+                "changedFiles": 1,
+                "status": "ready"
+              },
+              "entries": [
+                {
+                  "path": "src/old.ts",
+                  "status": "modified",
+                  "added": 1,
+                  "removed": 0
+                }
+              ]
+            }
+          }
+        },
+        {
+          "checkpoint": "settled"
+        }
+      ]
     }
   ]
 }
