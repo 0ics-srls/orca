@@ -1,28 +1,13 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import {
-  rpcUncheckedMemberReader,
-  rpcUncheckedPayloadReader
-} from '../transport/rpc-reader-payload'
+import { rpcUncheckedMemberReader } from '../transport/rpc-reader-payload'
 
 // The three reads that pin which execution host owns a workspace before a file mutation is sent.
 // All three share one acceptance because the capture is all-or-nothing: any refusal aborts the
 // mutation with the host's own message rather than letting a write land on the wrong host.
 
-/**
- * status.get read for the file-mutation capability gate, a third policy on this method alongside
- * `status.task-runtime` and `status.create-capabilities-or-skip` in the tasks domain. It matches
- * the first exactly; it stays a family of its own because a refused status here blocks a write,
- * and merging the two would tie a files-domain failure to a Tasks-screen decision.
- */
-export const fileOwnershipRuntimeStatusRead = bindDeferredRpcOperation(
-  defineRpcOperation({
-    name: 'status.file-mutation-ownership',
-    method: 'status.get',
-    acceptance: 'require-result-or-throw-message',
-    barrier: 'after-caller-barrier',
-    read: rpcUncheckedPayloadReader('runtime-status')
-  })
-)
+// The runtime status this gate needs is the one the Tasks screen already asks for, field for
+// field. A second operation would only be a second name for the same wire.
+export { taskRuntimeStatusRead as fileOwnershipRuntimeStatusRead } from '../tasks/mobile-task-runtime-operations'
 
 /** The workspace row the mutation targets. A null result throws where `result.worktree` did. */
 export const fileOwnershipWorktreeRead = bindDeferredRpcOperation(
@@ -47,6 +32,4 @@ export const fileOwnershipSshStateRead = bindDeferredRpcOperation(
 )
 
 /** What an ownership capture sends with, named from an operation so no module names the raw port. */
-export type MobileFileOwnershipRpcSender = Parameters<
-  typeof fileOwnershipRuntimeStatusRead.request
->[0]
+export type MobileFileOwnershipRpcSender = Parameters<typeof fileOwnershipWorktreeRead.request>[0]

@@ -20,11 +20,7 @@ import {
   type TerminalArtifactRetryOptions
 } from './mobile-terminal-artifact-grant-refresh'
 
-export {
-  formatPreviewByteLength,
-  normalizeMobileFilePreviewResponse,
-  previewError
-} from './mobile-file-preview-response'
+export { formatPreviewByteLength, previewError } from './mobile-file-preview-response'
 
 export type {
   MobileFilePreviewResult,
@@ -131,7 +127,7 @@ async function sendMobileFilePreviewRead(
 
 function settlePreviewSend(
   reply: RpcResponse,
-  interpret: (reply: RpcResponse) => { accepted: false } | { accepted: true; value: unknown }
+  interpret: (reply: RpcResponse) => ReturnType<typeof filePreviewTextRead.interpret>
 ): MobileFilePreviewOutcome {
   const verdict = interpret(reply)
   return verdict.accepted

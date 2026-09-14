@@ -13,8 +13,6 @@ import type { NewWorktreeRuntimeSettings } from './new-worktree-agent-selection'
 import { newWorkspaceUiStateRead } from './new-workspace-operations'
 
 /** One member off a probe payload the drawer only re-typed, keeping its optional-chaining read. */
-function readProbeMember(payload: unknown, key: 'glab'): { installed?: boolean } | undefined
-function readProbeMember(payload: unknown, key: 'connected'): boolean | undefined
 function readProbeMember(payload: unknown, key: string): unknown {
   return payload == null ? undefined : Object(payload)[key]
 }
@@ -22,7 +20,7 @@ function readProbeMember(payload: unknown, key: string): unknown {
 /** A settled probe's accepted payload, or undefined when it never landed or was refused. */
 function settledValue(
   entry: PromiseSettledResult<RpcResponse>,
-  interpret: (reply: RpcResponse) => { accepted: false } | { accepted: true; value: unknown }
+  interpret: (reply: RpcResponse) => ReturnType<typeof taskPreflightRead.interpret>
 ): unknown {
   if (entry.status !== 'fulfilled') {
     return undefined
@@ -89,8 +87,10 @@ export function useNewWorkspaceRuntimeContext(
         return
       }
       const glabInstalled =
-        readProbeMember(settledValue(preflightRes, taskPreflightRead.interpret), 'glab')
-          ?.installed === true
+        readProbeMember(
+          readProbeMember(settledValue(preflightRes, taskPreflightRead.interpret), 'glab'),
+          'installed'
+        ) === true
       const linearConnected =
         readProbeMember(settledValue(linearRes, taskLinearStatusRead.interpret), 'connected') ===
         true

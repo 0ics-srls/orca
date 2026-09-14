@@ -5,7 +5,7 @@ import { startRuntimeCapabilityProbe } from '../transport/runtime-capability-pro
 import {
   codexResetCreditCapabilityRead,
   type MobileCodexResetCapabilityRpcSender
-} from './codex-reset-credit-capability-operation'
+} from './codex-reset-credit-capability-operations'
 
 // Why: source the capability string from the shared contract so a host bump can never
 // silently drift from the mobile probe.

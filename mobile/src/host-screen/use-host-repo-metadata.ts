@@ -33,7 +33,7 @@ async function settledMetadataReply(send: () => Promise<RpcResponse>): Promise<R
 /** An accepted metadata payload, or null for a refusal or a send that never landed. */
 function acceptedMetadata(
   reply: RpcResponse | null,
-  interpret: (reply: RpcResponse) => { accepted: false } | { accepted: true; value: unknown }
+  interpret: (reply: RpcResponse) => ReturnType<typeof hostRepoCatalogRead.interpret>
 ): unknown {
   if (!reply) {
     return null

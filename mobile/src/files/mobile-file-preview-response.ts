@@ -1,5 +1,5 @@
 import { classifyMobileArtifact } from '../session/mobile-artifact-kind'
-import type { RpcFailure, RpcResponse } from '../transport/types'
+import type { RpcFailure } from '../transport/types'
 import { isMarkdownPath } from './file-tree'
 import { isTerminalArtifactGrantError } from './terminal-artifact-grant-error'
 
@@ -36,16 +36,6 @@ export type MobileFilePreviewResult =
       message: string
       reconnect: boolean
     }
-
-export function normalizeMobileFilePreviewResponse(
-  relativePath: string,
-  response: RpcResponse
-): MobileFilePreviewResult {
-  if (!response.ok) {
-    return previewErrorFromRefusal(response.error)
-  }
-  return normalizeMobileFilePreviewResult(relativePath, response.result)
-}
 
 /** The accepted arm, for a call site whose acceptance policy already admitted the payload. */
 export function normalizeMobileFilePreviewResult(
