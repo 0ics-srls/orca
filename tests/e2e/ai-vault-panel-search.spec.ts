@@ -57,14 +57,18 @@ test('panel consent enables real local transcript search; clearing restores hist
   await expect(input).toHaveValue('')
   await input.fill('nebulariver')
   await orcaPage.getByRole('button', { name: 'Enable', exact: true }).click()
-  await expect(orcaPage.locator('mark').filter({ hasText: 'nebulariver' })).toBeVisible({
-    timeout: 30_000
-  })
-  expect(
-    await orcaPage.evaluate(
-      async () => (await window.api.aiVault.searchStatus('local')).filesIndexed
+  // Indexed searches are snapshots; enabling starts indexing independently of the panel.
+  await expect
+    .poll(
+      () =>
+        orcaPage.evaluate(
+          async () => (await window.api.aiVault.searchStatus('local')).filesIndexed
+        ),
+      { timeout: 30_000 }
     )
-  ).toBeGreaterThan(0)
+    .toBeGreaterThan(0)
+  await orcaPage.getByRole('button', { name: 'Refresh Session History', exact: true }).click()
+  await expect(orcaPage.locator('mark').filter({ hasText: 'nebulariver' })).toBeVisible()
   await expect(orcaPage.getByText('Synthetic panel transcript', { exact: true })).toBeVisible()
   await screenshot('results.png')
   await orcaPage.getByTitle('Drag to resume in a new tab', { exact: true }).click()
