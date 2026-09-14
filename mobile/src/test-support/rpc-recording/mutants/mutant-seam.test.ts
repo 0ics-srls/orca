@@ -25,7 +25,20 @@ function resolved(from: string, specifier: string): string | undefined {
     .find((candidate) => existsSync(candidate) && /\.tsx?$/.test(candidate))
 }
 
-/** Every module a driver pulls in, transitively, by static import or dynamic `import()`. */
+function relative(file: string): string {
+  return file.slice(recorder.length + 1)
+}
+
+/** A suite that records nothing: excluded below, since no driver has reason to reach it. */
+function suite(file: string): boolean {
+  return file.endsWith('.test.ts') && !RECORDING_DRIVERS.some((driver) => file.endsWith(driver))
+}
+
+/**
+ * Every module a driver pulls in, transitively, by static import or dynamic `import()`. Type
+ * positions come along, which is why the graph is an order larger than the recorder itself: a
+ * `typeof import(...)` drags in product modules. Reaching too much only widens what may not appear.
+ */
 function reachable(entries: readonly string[]): Set<string> {
   const seen = new Set<string>()
   const pending = [...entries]
@@ -57,16 +70,19 @@ describe('the mutant seam', () => {
   const outside = sources(recorder).filter((file) => !file.startsWith(`${mutants}${sep}`))
 
   it('is unreachable from every recording driver', () => {
-    const drivers = RECORDING_DRIVERS.map((driver) => join(recorder, driver))
-    const graph = reachable(drivers)
+    const graph = reachable(RECORDING_DRIVERS.map((driver) => join(recorder, driver)))
     const reached = [...graph]
       .filter((file) => file.startsWith(`${mutants}${sep}`))
-      .map((file) => file.slice(recorder.length + 1))
+      .map(relative)
       .sort()
     expect(reached).toEqual([])
-    // A graph that resolved nothing would pass by reaching nothing.
-    expect(drivers.every((driver) => graph.has(driver))).toBe(true)
-    expect(graph.size).toBeGreaterThan(outside.length / 2)
+    // A walk that resolved nothing would pass by reaching nothing, so name what it missed: every
+    // recording file is reachable today, and one that stops being reachable is an orphan.
+    const missed = outside
+      .filter((file) => !suite(file) && !graph.has(file))
+      .map(relative)
+      .sort()
+    expect(missed).toEqual([])
     expect(sources(mutants).length).toBeGreaterThan(1)
   })
 
@@ -78,12 +94,10 @@ describe('the mutant seam', () => {
       .filter(
         (file) =>
           !file.endsWith(EXCLUDER) &&
-          !(
-            file.endsWith('.test.ts') && !RECORDING_DRIVERS.some((driver) => file.endsWith(driver))
-          ) &&
+          !suite(file) &&
           NAMES.some((name) => readFileSync(file, 'utf8').includes(name))
       )
-      .map((file) => file.slice(recorder.length + 1))
+      .map(relative)
     expect(naming).toEqual([])
   })
 })
