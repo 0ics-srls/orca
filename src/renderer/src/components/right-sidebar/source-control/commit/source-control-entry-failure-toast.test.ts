@@ -14,7 +14,10 @@ vi.mock('@/store', () => ({
   useAppStore: Object.assign(() => undefined, { getState: () => storeState })
 }))
 
-import { showSourceControlEntryFailureToast } from './source-control-entry-failure-toast'
+import {
+  dismissSourceControlEntryFailureToast,
+  showSourceControlEntryFailureToast
+} from './source-control-entry-failure-toast'
 
 type FailureToastInput = Parameters<typeof showSourceControlEntryFailureToast>[0]
 
@@ -32,6 +35,12 @@ function show(overrides: Partial<FailureToastInput> = {}): void {
     worktreeName: 'feature-a',
     ...overrides
   })
+}
+
+function clickRetry(): { preventDefault: ReturnType<typeof vi.fn> } {
+  const event = { preventDefault: vi.fn() }
+  lastToast().options.action?.onClick(event)
+  return event
 }
 
 describe('showSourceControlEntryFailureToast', () => {
@@ -88,8 +97,18 @@ describe('showSourceControlEntryFailureToast', () => {
     show({ onRetry })
     expect(lastToast().options.action?.label).toBe('Retry')
     expect(lastToast().options.duration).toBe(10000)
-    lastToast().options.action?.onClick()
+    clickRetry()
     expect(onRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps sonner from auto-dismissing the slot the retry is about to re-raise into', () => {
+    // Why: sonner's post-click removal is scheduled by id, so it would swallow a re-failure raised
+    // within ~200ms; preventDefault hands the slot's lifetime to the retry itself.
+    const onRetry = vi.fn()
+    show({ onRetry })
+
+    expect(clickRetry().preventDefault).toHaveBeenCalledTimes(1)
+    expect(toastDismiss).not.toHaveBeenCalled()
   })
 
   it('retires a Retry action that became stale after a worktree switch', () => {
@@ -97,9 +116,14 @@ describe('showSourceControlEntryFailureToast', () => {
     show({ onRetry })
     storeState.activeWorktreeId = 'wt-2'
 
-    lastToast().options.action?.onClick()
+    clickRetry()
 
     expect(onRetry).not.toHaveBeenCalled()
+    expect(toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
+  })
+
+  it('clears the shared slot when an attempt finally lands', () => {
+    dismissSourceControlEntryFailureToast()
     expect(toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
   })
 

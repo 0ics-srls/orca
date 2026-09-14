@@ -13,7 +13,11 @@ import {
   type RuntimeGitContext
 } from '@/runtime/runtime-git-client'
 import { useAppStore } from '@/store'
-import { showSourceControlEntryFailureToast } from './source-control-entry-failure-toast'
+import { refreshEntryMutationStatus } from './entry-mutation-status-refresh'
+import {
+  dismissSourceControlEntryFailureToast,
+  showSourceControlEntryFailureToast
+} from './source-control-entry-failure-toast'
 
 export function useSourceControlEntryMutations({
   activeRepoSettings,
@@ -27,16 +31,20 @@ export function useSourceControlEntryMutations({
   refreshActiveGitStatusAfterMutation: () => Promise<void>
 }) {
   // Why: named function expression so the failure toast's Retry can re-enter the same attempt.
-  const handleStage = useCallback(
-    async function stageEntry(filePath: string): Promise<void> {
+  const runEntryMutation = useCallback(
+    async function runEntryMutation(
+      operation: 'stage' | 'unstage',
+      filePath: string,
+      mutate: (context: RuntimeGitContext, filePath: string) => Promise<void>
+    ): Promise<void> {
       if (!worktreePath) {
         return
       }
       try {
         const connectionId = getConnectionId(activeWorktreeId ?? null) ?? undefined
-        await stageRuntimeGitPath(
+        await mutate(
           {
-            // Why: route staging by the repo OWNER host, not the focused runtime.
+            // Why: route the mutation by the repo OWNER host, not the focused runtime.
             settings: activeRepoSettings,
             worktreeId: activeWorktreeId,
             worktreePath,
@@ -44,57 +52,36 @@ export function useSourceControlEntryMutations({
           },
           filePath
         )
-        await refreshActiveGitStatusAfterMutation()
       } catch (error) {
-        console.error('[SourceControl] stage failed', error)
+        console.error(`[SourceControl] ${operation} failed`, error)
         showSourceControlEntryFailureToast({
-          operation: 'stage',
+          operation,
           filePath,
           error,
           worktreeId: activeWorktreeId,
           worktreeName: worktreePath ? basename(worktreePath) : null,
           onRetry: () => {
-            void stageEntry(filePath)
+            void runEntryMutation(operation, filePath, mutate)
           }
         })
+        return
       }
+      // Why: the mutation landed, so clear any failure this attempt (or an earlier one) left in the slot.
+      dismissSourceControlEntryFailureToast()
+      await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
     },
     [activeRepoSettings, worktreePath, activeWorktreeId, refreshActiveGitStatusAfterMutation]
   )
 
+  const handleStage = useCallback(
+    (filePath: string): Promise<void> => runEntryMutation('stage', filePath, stageRuntimeGitPath),
+    [runEntryMutation]
+  )
+
   const handleUnstage = useCallback(
-    async function unstageEntry(filePath: string): Promise<void> {
-      if (!worktreePath) {
-        return
-      }
-      try {
-        const connectionId = getConnectionId(activeWorktreeId ?? null) ?? undefined
-        await unstageRuntimeGitPath(
-          {
-            // Why: route unstaging by the repo OWNER host, not the focused runtime.
-            settings: activeRepoSettings,
-            worktreeId: activeWorktreeId,
-            worktreePath,
-            connectionId
-          },
-          filePath
-        )
-        await refreshActiveGitStatusAfterMutation()
-      } catch (error) {
-        console.error('[SourceControl] unstage failed', error)
-        showSourceControlEntryFailureToast({
-          operation: 'unstage',
-          filePath,
-          error,
-          worktreeId: activeWorktreeId,
-          worktreeName: worktreePath ? basename(worktreePath) : null,
-          onRetry: () => {
-            void unstageEntry(filePath)
-          }
-        })
-      }
-    },
-    [activeRepoSettings, worktreePath, activeWorktreeId, refreshActiveGitStatusAfterMutation]
+    (filePath: string): Promise<void> =>
+      runEntryMutation('unstage', filePath, unstageRuntimeGitPath),
+    [runEntryMutation]
   )
 
   // Why: discardSingle throws so bulk callers can aggregate failures into one toast; the per-row caller reports its own.

@@ -7,6 +7,11 @@ export type SourceControlEntryOperation = 'stage' | 'unstage' | 'discard'
 
 const ENTRY_FAILURE_TOAST_ID = 'source-control-entry-mutation'
 
+/** Clears the shared entry-failure slot once an attempt — or its retry — lands. */
+export function dismissSourceControlEntryFailureToast(): void {
+  toast.dismiss(ENTRY_FAILURE_TOAST_ID)
+}
+
 function entryFailureTitle(
   operation: SourceControlEntryOperation,
   filePath: string,
@@ -88,9 +93,13 @@ export function showSourceControlEntryFailureToast({
         offerRetry && onRetry
           ? {
               label: translate('auto.components.right.sidebar.SourceControl.286dbda4d6', 'Retry'),
-              onClick: () => {
+              onClick: (event) => {
+                // Why: sonner dismisses on action click and its pending removal filters by id, so a
+                // retry that re-fails inside that window would take the re-raised toast with it. The
+                // caller owns this slot instead: it dismisses on success and re-raises on failure.
+                event.preventDefault()
                 if (useAppStore.getState().activeWorktreeId !== worktreeId) {
-                  toast.dismiss(ENTRY_FAILURE_TOAST_ID)
+                  dismissSourceControlEntryFailureToast()
                   return
                 }
                 onRetry()

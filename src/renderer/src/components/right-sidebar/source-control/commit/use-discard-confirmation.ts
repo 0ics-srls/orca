@@ -11,8 +11,12 @@ import {
   type DiscardAllArea
 } from './discard-all-sequence'
 import { isDeleteShapedDiscardEntry } from './discard-confirmation'
+import { refreshEntryMutationStatus } from './entry-mutation-status-refresh'
 import { readIpcErrorMessage } from '@/lib/ipc-error'
-import { showSourceControlEntryFailureToast } from './source-control-entry-failure-toast'
+import {
+  dismissSourceControlEntryFailureToast,
+  showSourceControlEntryFailureToast
+} from './source-control-entry-failure-toast'
 import type { PendingDiscardConfirmation } from './discard-dialog'
 import type { SourceControlEntryGroups } from '../listing/section-order'
 
@@ -49,9 +53,10 @@ export function useSourceControlDiscardConfirmation({
 
   const handleDiscard = useCallback(
     async (entry: GitStatusEntry): Promise<void> => {
+      // Why: only the discard itself is caught here — a refresh rejection would otherwise be
+      // reported as "Failed to discard" for a discard that already landed.
       try {
         await discardSingle(entry.path)
-        await refreshActiveGitStatusAfterMutation()
       } catch (error) {
         console.error('[SourceControl] discard failed', error)
         // Why: bulk callers use discardSingle directly so they can aggregate failures into one toast.
@@ -63,7 +68,10 @@ export function useSourceControlDiscardConfirmation({
           worktreeId: activeWorktreeId,
           worktreeName: worktreePath ? basename(worktreePath) : null
         })
+        return
       }
+      dismissSourceControlEntryFailureToast()
+      await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
     },
     [activeWorktreeId, discardSingle, refreshActiveGitStatusAfterMutation, worktreePath]
   )

@@ -7,13 +7,14 @@ import type { SourceControlToastTestOptions } from './source-control-toast-test-
 
 const mocks = vi.hoisted(() => ({
   toastError: vi.fn<(title: string, options?: SourceControlToastTestOptions) => void>(),
+  toastDismiss: vi.fn<(id: string) => void>(),
   stagePath: vi.fn(),
   unstagePath: vi.fn(),
   discardPath: vi.fn()
 }))
 
 vi.mock('sonner', () => ({
-  toast: { error: mocks.toastError, dismiss: vi.fn(), message: vi.fn() }
+  toast: { error: mocks.toastError, dismiss: mocks.toastDismiss, message: vi.fn() }
 }))
 vi.mock('@/lib/connection-context', () => ({ getConnectionId: () => undefined }))
 vi.mock('@/components/editor/editor-autosave', () => ({
@@ -50,6 +51,10 @@ function entry(
 function lastToast(): { title: string; options: SourceControlToastTestOptions } {
   const [title = '', options = {}] = mocks.toastError.mock.lastCall ?? []
   return { title, options }
+}
+
+function clickRetry(): void {
+  lastToast().options.action?.onClick({ preventDefault: () => {} })
 }
 
 function renderMutations() {
@@ -108,13 +113,34 @@ describe('source-control entry mutation failures', () => {
       await result.current.handleStage('src/app.ts')
     })
     await act(async () => {
-      lastToast().options.action?.onClick()
+      clickRetry()
     })
 
     expect(mocks.stagePath).toHaveBeenCalledTimes(2)
     expect(mocks.stagePath.mock.calls[1]?.[1]).toBe('src/app.ts')
-    // Why: the retry succeeded, so no second failure toast.
+    // Why: the retry succeeded, so no second failure toast — and the first one is cleared.
     expect(mocks.toastError).toHaveBeenCalledTimes(1)
+    expect(mocks.toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
+  })
+
+  it('re-raises the failure toast when the retry fails again', async () => {
+    // Why: sonner removes an action-clicked toast by id ~200ms later, so a fast re-failure could be
+    // swallowed; the toast must survive the retry and show the second error.
+    mocks.stagePath.mockRejectedValueOnce(new Error('index.lock exists'))
+    mocks.stagePath.mockRejectedValueOnce(new Error('still locked'))
+    const { result } = renderMutations()
+
+    await act(async () => {
+      await result.current.handleStage('src/app.ts')
+    })
+    await act(async () => {
+      clickRetry()
+    })
+
+    expect(mocks.toastError).toHaveBeenCalledTimes(2)
+    expect(lastToast().options.id).toBe('source-control-entry-mutation')
+    expect(lastToast().options.description).toBe('still locked')
+    expect(mocks.toastDismiss).not.toHaveBeenCalled()
   })
 
   it('reports a failed unstage', async () => {
@@ -128,7 +154,7 @@ describe('source-control entry mutation failures', () => {
     expect(lastToast().title).toBe('Failed to unstage “src/app.ts”')
   })
 
-  it('leaves a successful stage silent', async () => {
+  it('leaves a successful stage silent, and clears a stale failure it supersedes', async () => {
     mocks.stagePath.mockResolvedValue(undefined)
     const { result } = renderMutations()
 
@@ -136,6 +162,57 @@ describe('source-control entry mutation failures', () => {
       await result.current.handleStage('src/app.ts')
     })
 
+    expect(mocks.toastError).not.toHaveBeenCalled()
+    expect(mocks.toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
+  })
+
+  it('reports a post-mutation refresh failure as its own, not as a failed stage', async () => {
+    mocks.stagePath.mockResolvedValue(undefined)
+    const { result } = renderHook(() =>
+      useSourceControlEntryMutations({
+        activeRepoSettings: null,
+        activeWorktreeId: 'wt-1',
+        worktreePath: '/repo',
+        refreshActiveGitStatusAfterMutation: async () => {
+          throw new Error('status refresh failed')
+        }
+      })
+    )
+
+    await act(async () => {
+      await result.current.handleStage('src/app.ts')
+    })
+
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
+  it('does not report a successful discard as failed when the refresh rejects', async () => {
+    const discardSingle = vi.fn(async () => {})
+    const { result } = renderHook(() =>
+      useSourceControlDiscardConfirmation({
+        activeRepoSettings: null,
+        activeWorktreeId: 'wt-1',
+        worktreePath: '/repo',
+        grouped: EMPTY_GROUPS,
+        isExecutingBulk: false,
+        setIsExecutingBulk: () => {},
+        clearSelection: () => {},
+        discardMany: async () => {},
+        discardSingle,
+        refreshActiveGitStatusAfterMutation: async () => {
+          throw new Error('status refresh failed')
+        }
+      })
+    )
+
+    await act(async () => {
+      result.current.requestDiscardEntry(entry('src/app.ts'))
+    })
+    await act(async () => {
+      result.current.confirmPendingDiscard()
+    })
+
+    expect(discardSingle).toHaveBeenCalledTimes(1)
     expect(mocks.toastError).not.toHaveBeenCalled()
   })
 
