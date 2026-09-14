@@ -92,7 +92,8 @@ vi.mock('./ssh', () => ({
   requestActiveSshAiVaultSessionTitles: mocks.requestActiveSshAiVaultSessionTitles
 }))
 
-const { OMP_SESSIONS_DIR } = await import('../ai-vault/session-scanner-roots')
+const { resolveOmpSessionsDir } = await import('../ai-vault/omp-session-root')
+const OMP_SESSIONS_DIR = resolveOmpSessionsDir()
 const { _internals, registerAiVaultHandlers } = await import('./ai-vault')
 const { deleteAiVaultSession: deleteAiVaultSessionWithDeps } = await import('./ai-vault-delete')
 
