@@ -1,3 +1,4 @@
+import { planCommitMessageGeneration } from './commit-message-plan'
 import { describe, expect, it } from 'vitest'
 import { getDefaultSettings } from './constants'
 import { getCommitMessageAgentSpec } from './commit-message-agent-spec'
@@ -48,4 +49,28 @@ describe('OMP Source Control AI', () => {
       )
     ).toEqual([{ id: 'provider/m', label: 'Model', description: 'provider' }])
   })
+  it.each(['escape', 'literal'] as const)(
+    'plans recipe model overrides with %s path parsing',
+    (backslash) => {
+      const prompt = 'diff --git a/a b/a\n' + 'large patch\n'.repeat(10000)
+      const result = planCommitMessageGeneration(
+        {
+          agentId: 'omp',
+          model: 'provider/model',
+          backslash,
+          agentArgs: '--model provider/override'
+        },
+        prompt
+      )
+      expect(result.ok).toBe(true)
+      if (!result.ok) {
+        throw new Error(result.error)
+      }
+      expect(result.plan.stdinPayload).toBe(prompt)
+      expect(result.plan.args).not.toContain(prompt)
+      expect(result.plan.args.filter((arg) => arg === '--model')).toHaveLength(1)
+      expect(result.plan.args).toContain('provider/override')
+      expect(result.plan.args).not.toContain('provider/model')
+    }
+  )
 })
