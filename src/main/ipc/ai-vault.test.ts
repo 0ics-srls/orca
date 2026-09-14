@@ -93,7 +93,6 @@ vi.mock('./ssh', () => ({
 }))
 
 const { resolveOmpSessionsDir } = await import('../ai-vault/omp-session-root')
-const OMP_SESSIONS_DIR = resolveOmpSessionsDir()
 const { _internals, registerAiVaultHandlers } = await import('./ai-vault')
 const { deleteAiVaultSession: deleteAiVaultSessionWithDeps } = await import('./ai-vault-delete')
 
@@ -736,7 +735,7 @@ describe('listAiVaultSubagentSessions gating', () => {
 
   it('lists subagents for a local OMP session inside the sessions root', async () => {
     const parentFilePath = join(
-      OMP_SESSIONS_DIR,
+      resolveOmpSessionsDir(),
       'home-app-85dfa2f0',
       '2026-05-01T10-00-00-000Z_cccccccc-dddd-4eee-8fff-000000000000.jsonl'
     )
@@ -754,7 +753,7 @@ describe('listAiVaultSubagentSessions gating', () => {
   it('returns empty for a remote OMP session without reading the filesystem', async () => {
     const result = await _internals.listAiVaultSubagentSessions({
       agent: 'omp',
-      parentFilePath: join(OMP_SESSIONS_DIR, 'slug', 'sess.jsonl'),
+      parentFilePath: join(resolveOmpSessionsDir(), 'slug', 'sess.jsonl'),
       executionHostId: 'ssh:dev-box'
     })
 
@@ -773,7 +772,7 @@ describe('listAiVaultSubagentSessions gating', () => {
     const traversal = await _internals.listAiVaultSubagentSessions({
       agent: 'omp',
       // Built with sep (not join) so the `..` segments survive into the arg.
-      parentFilePath: [OMP_SESSIONS_DIR, '..', '..', '..', 'etc', 'passwd.jsonl'].join(sep),
+      parentFilePath: [resolveOmpSessionsDir(), '..', '..', '..', 'etc', 'passwd.jsonl'].join(sep),
       executionHostId: 'local'
     })
 
