@@ -40,6 +40,11 @@ import {
   planAgentSessionLaunch,
   type AgentSessionLaunchPlan
 } from '@/lib/agent-session-launch-plan'
+import type { WorkspaceSurfaceProducer } from '@/lib/workspace-surface-production'
+import {
+  beginDirectWorkItemSurfaceProduction,
+  settleDirectWorkItemSurfaceProduction
+} from './direct-work-item-surface-production'
 
 /**
  * "Use" flow: create the workspace, activate it, launch the default agent,
@@ -167,6 +172,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
   let plan: AgentSessionLaunchPlan | null = null
   const draftContent = await getDirectWorkItemDraftContent(item, repoConnectionId)
   let startupPlanFailed = false
+  let structuredProducer: WorkspaceSurfaceProducer | null = null
   try {
     const result = await store.createWorktree(
       repoId,
@@ -229,12 +235,21 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
     startupPlanFailed = launchPreparation.startupPlanFailed
     plan = launchPreparation.plan
 
+    const surfaceProduction = beginDirectWorkItemSurfaceProduction({
+      store: latestStore,
+      structuredLaunch: launchPreparation.structuredLaunch,
+      worktreeId,
+      setup: result.setup,
+      issueCommand: undefined,
+      defaultTabs: result.defaultTabs
+    })
+    structuredProducer = surfaceProduction.producer
     const activation = activateAndRevealWorktree(worktreeId, {
       sidebarRevealBehavior: 'auto',
-      setup: result.setup,
+      setup: surfaceProduction.setupRunsWithoutPrimary ? undefined : result.setup,
       defaultTabs: result.defaultTabs,
       ...(launchPreparation.structuredLaunch
-        ? { providesInitialSurface: true }
+        ? {}
         : buildDirectWorkItemStartupOpts(
             effectiveAgent,
             startupPlan,
@@ -242,7 +257,8 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
             promptDelivery === 'draft' ? draftContent : undefined
           ))
     })
-    if (!activation) {
+    if (activation === false) {
+      structuredProducer?.failed('The workspace is no longer available.')
       // Worktree vanished between create and activate — extremely unlikely but
       // worth handling explicitly rather than silently dropping the draft.
       toast.error(workspaceActivationErrorMessage())
@@ -250,6 +266,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
     }
     primaryTabId = activation.primaryTabId
   } catch (error) {
+    structuredProducer?.failed(error)
     const message = error instanceof Error ? error.message : 'Failed to create workspace.'
     toast.error(message)
     return false
@@ -257,15 +274,25 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
 
   store.setSidebarOpen(true)
 
-  const structuredResult = await settleDirectWorkItemStructuredLaunch({
-    plan,
-    worktreeId,
-    workspacePath: worktreePath,
-    connectionId: repoConnectionId,
-    primaryTabId,
-    startupPlan,
-    launchSource
-  })
+  let structuredResult: Awaited<ReturnType<typeof settleDirectWorkItemStructuredLaunch>>
+  try {
+    structuredResult = await settleDirectWorkItemStructuredLaunch({
+      plan,
+      worktreeId,
+      workspacePath: worktreePath,
+      connectionId: repoConnectionId,
+      primaryTabId,
+      startupPlan,
+      launchSource
+    })
+  } catch (error) {
+    structuredProducer?.failed(error)
+    toast.error(error instanceof Error ? error.message : 'The agent launch failed.')
+    return false
+  }
+  if (structuredProducer) {
+    settleDirectWorkItemSurfaceProduction(structuredProducer, structuredResult)
+  }
   if (structuredResult.visibilityUnknown || structuredResult.failed) {
     // Why: callers hang irreversible follow-up work off a `true` here, so a structured launch that
     // opened no surface must not report the workspace as started.

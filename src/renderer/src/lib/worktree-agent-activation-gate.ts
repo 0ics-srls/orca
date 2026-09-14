@@ -218,9 +218,8 @@ export async function runWorktreeAgentActivationGate(
   }
   let liveSurfaceAdopted = false
   if (liveWorkspaceSessions.length > 0) {
-    // Why: an unreadable census adopts nothing and mints nothing, so reporting 'adopted'
-    // would suppress the caller's seed and leave the workspace with no surface at all —
-    // fail-closed must still leave the user a usable pane (STA-5701).
+    // Why: an unreadable census adopts nothing and mints nothing, so reporting 'adopted' would
+    // falsely settle the request; recovery presents the blocked result without starting a writer.
     const adoption = await adoptLiveWorkspacePtySurfaces(
       deps.getState,
       worktreeId,
@@ -234,6 +233,9 @@ export async function runWorktreeAgentActivationGate(
         worktreeId,
         declinedPtyIds: adoption.declinedPtyIds
       })
+      if (!liveSurfaceAdopted) {
+        return 'blocked'
+      }
     }
     if (liveSurfaceAdopted && !workspaceHasSleepingAgentSessions(deps.getState(), worktreeId)) {
       return 'adopted'

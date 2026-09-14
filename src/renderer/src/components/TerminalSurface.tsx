@@ -5,6 +5,7 @@ import { TerminalSplitWorkspaceSurfaces } from './TerminalSplitWorkspaceSurfaces
 import { TerminalLegacyWorkspaceSurface } from './TerminalLegacyWorkspaceSurface'
 import { TerminalWorkspaceDialogs } from './TerminalWorkspaceDialogs'
 import type { TerminalController } from './use-terminal-controller'
+import { WorkspaceActivationRecoverySurface } from './WorkspaceActivationRecoverySurface'
 
 export function TerminalSurface({
   controller
@@ -17,7 +18,7 @@ export function TerminalSurface({
     <div
       // Why: already out of flow via the workbench container when hidden, so retention only
       // has to drop `hidden` — it does not need to leave the flex column a second time.
-      className={`flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden${
+      className={`relative flex flex-col flex-1 min-w-0 min-h-0 overflow-hidden${
         renderedActiveWorktreeId
           ? ''
           : retainBrowserGuestPaint
@@ -30,6 +31,9 @@ export function TerminalSurface({
       <TerminalTitlebarTabs controller={controller} />
       <TerminalSplitWorkspaceSurfaces controller={controller} />
       <TerminalLegacyWorkspaceSurface controller={controller} />
+      {renderedActiveWorktreeId ? (
+        <WorkspaceActivationRecoverySurface worktreeId={renderedActiveWorktreeId} />
+      ) : null}
       <TerminalWorkspaceDialogs controller={controller} />
     </div>
   )

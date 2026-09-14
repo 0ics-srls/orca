@@ -26,6 +26,13 @@ import {
 import { completeWorktreeCreation } from '@/lib/worktree-creation-completion'
 import { markStructuredWorktreeLaunchUnconfirmed } from '@/lib/worktree-creation-structured-recovery'
 import { ensureWebRuntimeWorktreeTerminalAfterWake } from '@/lib/web-runtime-worktree-terminal-after-wake'
+import { registerWorkspaceSurfaceProducer } from '@/lib/workspace-surface-production'
+import { recoverWorkspaceActivation } from '@/lib/worktree-activation-recovery'
+import {
+  getExecutionHostIdForWorktree,
+  getRuntimeEnvironmentIdForWorktree
+} from '@/lib/worktree-runtime-owner'
+import { queueStandaloneSetupTab } from '@/lib/worktree-setup-issue-command-queue'
 
 // Why: activePendingCreationId can outlive the terminal route when the user
 // switches app views; only the terminal route renders the creation panel.
@@ -199,39 +206,17 @@ export async function executeWorktreeCreation(
         // Startup terminal ids and stamped agent tabs are the only safe primary
         // ids when activation returned no result.
         primaryTabId = verifiedLaunchTabId
-      } else if (existingTabs.length === 0) {
-        try {
-          primaryTabId = ensureWorktreeHasInitialTerminal(
-            useAppStore.getState(),
-            worktree.id,
-            startupOpt,
-            result.setup,
-            preparedRequest.issueCommand,
-            result.defaultTabs,
-            // Activation failed before providing its promised surface, so recovery must seed one.
-            backendSpawned ? { backendStartupTerminalSpawned: true } : undefined
-          )
-        } catch (recoveryError) {
-          console.error(
-            'worktree create: activation recovery seeding failed',
-            worktree.id,
-            recoveryError
-          )
+      } else {
+        const recoveryState = useAppStore.getState()
+        const identity = {
+          workspaceKey: worktree.id,
+          executionHostId: getExecutionHostIdForWorktree(recoveryState, worktree.id),
+          runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(recoveryState, worktree.id),
+          attemptId: createBrowserUuid()
         }
-      }
-      if (!backendSpawned) {
-        try {
-          ensureWebRuntimeWorktreeTerminalAfterWake(worktree.id, {
-            startup: startupOpt,
-            agent: preparedRequest.agent
-          })
-        } catch (recoveryError) {
-          console.error(
-            'worktree create: activation recovery after-wake seeding failed',
-            worktree.id,
-            recoveryError
-          )
-        }
+        const producer = registerWorkspaceSurfaceProducer(identity)
+        producer.failed(error)
+        void recoverWorkspaceActivation(identity, { mode: 'explicit' })
       }
     }
   } else {
@@ -241,19 +226,31 @@ export async function executeWorktreeCreation(
     )
     if (preparedRequest.agent === null || hasExplicitTerminalWork) {
       try {
-        primaryTabId = ensureWorktreeHasInitialTerminal(
-          useAppStore.getState(),
-          worktree.id,
-          startupOpt,
-          result.setup,
-          preparedRequest.issueCommand,
-          result.defaultTabs,
-          {
-            activateCreatedTabs: false,
-            ...(preparedRequest.agent !== null ? { callerProvidesSurface: true } : {}),
-            ...(backendSpawned ? { backendStartupTerminalSpawned: true } : {})
-          }
-        )
+        const seedingState = useAppStore.getState()
+        const setupRunsWithoutPrimary =
+          structuredLaunch &&
+          queueStandaloneSetupTab({
+            store: seedingState,
+            worktreeId: worktree.id,
+            setup: result.setup,
+            issueCommand: preparedRequest.issueCommand,
+            defaultTabs: result.defaultTabs,
+            opts: { activateCreatedTabs: false }
+          })
+        if (!setupRunsWithoutPrimary) {
+          primaryTabId = ensureWorktreeHasInitialTerminal(
+            seedingState,
+            worktree.id,
+            startupOpt,
+            result.setup,
+            preparedRequest.issueCommand,
+            result.defaultTabs,
+            {
+              activateCreatedTabs: false,
+              ...(backendSpawned ? { backendStartupTerminalSpawned: true } : {})
+            }
+          )
+        }
       } catch (error) {
         console.error('worktree create: initial terminal seeding failed', worktree.id, error)
       }

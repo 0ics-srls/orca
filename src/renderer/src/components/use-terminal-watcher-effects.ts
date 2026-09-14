@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { findActivityTerminalPortal } from './activity/activity-terminal-portal'
-import { shouldAutoCreateInitialTerminal } from './terminal/initial-terminal'
 import {
   canWatcherCoverParkedTerminalTab,
   disposeAllParkedTerminalWatchers,
@@ -10,12 +9,15 @@ import {
   type ParkedTerminalTabWatcherSyncEntry
 } from './terminal-pane/terminal-parked-tab-watchers'
 import { useAppStore } from '@/store'
-import { gateWorktreeAgentActivation } from '@/lib/worktree-agent-activation-gate'
 import { resumeSleepingAgentSessionsForWorktree } from '@/lib/resume-sleeping-agent-session'
 import { createWorkspaceTerminalHostAuthoritySelector } from '@/lib/workspace-terminal-host-authority'
-import { getStructuredAgentLaunchStatus } from '@/lib/structured-agent-session-launch'
-import { AGENT_SESSION_PROVIDER_HANDLE_PROVIDERS } from '../../../shared/agent-session-provider-handle'
 import type { TerminalColdActivationController } from './terminal-cold-activation'
+import { recoverWorkspaceActivation } from '@/lib/worktree-activation-recovery'
+import {
+  getExecutionHostIdForWorktree,
+  getRuntimeEnvironmentIdForWorktree
+} from '@/lib/worktree-runtime-owner'
+import { createBrowserUuid } from '@/lib/browser-uuid'
 
 // Why shared: surfaces without watchable live tabs need no per-pass allocation.
 const NO_PARKED_TAB_IDS: ReadonlySet<string> = new Set()
@@ -30,7 +32,6 @@ type TerminalWatcherController = Pick<
   | 'activityTerminalPortals'
   | 'anyMountedWorktreeHasLayout'
   | 'backgroundMountRevision'
-  | 'createTab'
   | 'effectiveParkedTerminalWorktreeIds'
   | 'evictionExemptTerminalTabIds'
   | 'getEffectiveLayoutForWorktree'
@@ -40,7 +41,6 @@ type TerminalWatcherController = Pick<
   | 'mountedWorktreeIdsRef'
   | 'pairedRuntimeParkingEnvironmentIds'
   | 'pendingStartupByTabId'
-  | 'reconcileWorktreeTabModel'
   | 'renderedActiveWorktreeId'
   | 'tabsByWorktree'
   | 'terminalParkingEnabled'
@@ -62,7 +62,6 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     activityTerminalPortals,
     anyMountedWorktreeHasLayout,
     backgroundMountRevision,
-    createTab,
     effectiveParkedTerminalWorktreeIds,
     evictionExemptTerminalTabIds,
     getEffectiveLayoutForWorktree,
@@ -72,7 +71,6 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     mountedWorktreeIdsRef,
     pairedRuntimeParkingEnvironmentIds,
     pendingStartupByTabId,
-    reconcileWorktreeTabModel,
     renderedActiveWorktreeId,
     tabsByWorktree,
     terminalParkingEnabled,
@@ -83,6 +81,7 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     workspaceSessionReady,
     workspaceSurfaceIds
   } = controller
+  const startupRecoverySettledRef = useRef(false)
 
   useEffect(() => {
     pruneParkedTerminalWatchers(terminalWatcherLiveWorkspaceIds(workspaceSurfaceIds))
@@ -183,12 +182,6 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
   ])
   useEffect(() => () => disposeAllParkedTerminalWatchers(), [])
 
-  const startupActivationGateWorktreeIdsRef = useRef(new Set<string>())
-  // Why (main): a missing row means never initialized, an explicit empty row means the user
-  // closed the last terminal — so the gate must not re-seed one in the second case.
-  const activeWorktreeHasTerminalState = activeWorktreeId
-    ? Object.hasOwn(tabsByWorktree, activeWorktreeId)
-    : false
   // Why a store subscription rather than a read inside the effects: the verdict flips to `none` the
   // moment the execution host answers, and that transition is what re-runs the passes below.
   // Why the retained selector: resolution walks the owner catalogs, so recomputing it on every store
@@ -198,53 +191,43 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     [activeWorktreeId]
   )
   const activeWorktreeHostAuthority = useAppStore(hostAuthoritySelector)
+  const activeWorkspaceExecutionHostId = useAppStore(
+    (state) => state.activeWorkspaceExecutionHostId
+  )
 
   useEffect(() => {
-    if (!workspaceSessionReady || !terminalStartupRestorationReady || !activeWorktreeId) {
+    if (!workspaceSessionReady || !terminalStartupRestorationReady) {
+      startupRecoverySettledRef.current = false
       return
     }
-    // Why: the execution host owns terminal creation, and a host that has not answered is not a host
-    // with no terminals — seeding into that gap duplicates its tabs on every launch (STA-4658).
-    if (activeWorktreeHostAuthority !== 'none') {
+    if (!activeWorktreeId || startupRecoverySettledRef.current) {
       return
     }
-    if (startupActivationGateWorktreeIdsRef.current.has(activeWorktreeId)) {
-      return
-    }
-    startupActivationGateWorktreeIdsRef.current.add(activeWorktreeId)
-    let cancelled = false
-    void gateWorktreeAgentActivation(activeWorktreeId).then((outcome) => {
-      if (
-        cancelled ||
-        outcome !== 'empty' ||
-        useAppStore.getState().activeWorktreeId !== activeWorktreeId
-      ) {
-        return
-      }
-      // A pending or unanswered chat create owns the surface even before its tab is published.
-      if (
-        AGENT_SESSION_PROVIDER_HANDLE_PROVIDERS.some(
-          (agent) => getStructuredAgentLaunchStatus(activeWorktreeId, agent) !== 'idle'
-        )
-      ) {
-        return
-      }
-      // Why: the activation gate reconciles durable/live agent state first; only an actually empty, never-visited workspace receives a default shell.
-      const { renderableTabCount } = reconcileWorktreeTabModel(activeWorktreeId)
-      if (shouldAutoCreateInitialTerminal(renderableTabCount, activeWorktreeHasTerminalState)) {
-        // Why: tag this never-visited-worktree tab so its PTY spawn doesn't count as activity and reshuffle the sidebar (explicit New Tab still bumps).
-        createTab(activeWorktreeId, undefined, undefined, { pendingActivationSpawn: true })
-      }
-    })
+    const state = useAppStore.getState()
+    const abort = new AbortController()
+    void recoverWorkspaceActivation(
+      {
+        workspaceKey: activeWorktreeId,
+        executionHostId: getExecutionHostIdForWorktree(state, activeWorktreeId),
+        runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(state, activeWorktreeId),
+        attemptId: createBrowserUuid()
+      },
+      { mode: 'startup', signal: abort.signal }
+    ).then(
+      () => {
+        if (!abort.signal.aborted) {
+          startupRecoverySettledRef.current = true
+        }
+      },
+      () => undefined
+    )
     return () => {
-      cancelled = true
+      abort.abort()
     }
   }, [
-    activeWorktreeId,
-    activeWorktreeHasTerminalState,
+    activeWorkspaceExecutionHostId,
     activeWorktreeHostAuthority,
-    createTab,
-    reconcileWorktreeTabModel,
+    activeWorktreeId,
     terminalStartupRestorationReady,
     workspaceSessionReady
   ])
