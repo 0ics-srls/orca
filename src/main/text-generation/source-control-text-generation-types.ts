@@ -27,7 +27,13 @@ export type GeneratePullRequestFieldsResult<TFields> =
       agentLabel?: string
       branchChangedByPreparation?: boolean
     }
-  | { success: false; error: string; canceled?: boolean; branchChangedByPreparation?: boolean }
+  | {
+      success: false
+      error: string
+      canceled?: boolean
+      branchChangedByPreparation?: boolean
+      failureOutput?: AgentGenerationFailureOutput
+    }
 
 export type RemoteCommitMessageExecResult = {
   stdout: string

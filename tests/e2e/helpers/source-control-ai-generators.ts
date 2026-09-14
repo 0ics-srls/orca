@@ -1,5 +1,10 @@
 import type { Page } from '@stablyai/playwright-test'
 import { writeFileSync } from 'node:fs'
+import {
+  PULL_REQUEST_BODY_MARKER,
+  PULL_REQUEST_END_MARKER,
+  PULL_REQUEST_FIELDS_MARKER
+} from '../../../src/shared/pull-request-fields-envelope'
 
 async function setCustomGenerator(page: Page, scriptPath: string): Promise<void> {
   await page.evaluate(async (scriptPath) => {
@@ -57,18 +62,21 @@ export async function installDelayedPrGenerator(
   callLogPath: string,
   base: string
 ): Promise<void> {
+  // Why: the PR path asks for the marker envelope; the JSON reply stays covered by
+  // source-control-pr-linked-issue-ai.spec.ts, which exercises the legacy fallback.
   writeFileSync(
     generatorScriptPath,
     [
       "const fs = require('fs')",
       `fs.appendFileSync(${JSON.stringify(callLogPath)}, 'start\\n')`,
       'setTimeout(() => {',
-      '  console.log(JSON.stringify({',
-      `    base: ${JSON.stringify(base)},`,
-      "    title: 'Generated PR title after switch',",
-      "    body: 'Generated PR body after switch',",
-      '    draft: false',
-      '  }))',
+      `  console.log(${JSON.stringify(PULL_REQUEST_FIELDS_MARKER)})`,
+      `  console.log(${JSON.stringify(`base: ${base}`)})`,
+      "  console.log('title: Generated PR title after switch')",
+      "  console.log('draft: false')",
+      `  console.log(${JSON.stringify(PULL_REQUEST_BODY_MARKER)})`,
+      "  console.log('Generated PR body after switch')",
+      `  console.log(${JSON.stringify(PULL_REQUEST_END_MARKER)})`,
       `  fs.appendFileSync(${JSON.stringify(callLogPath)}, 'finish\\n')`,
       '}, 1500)'
     ].join('\n')

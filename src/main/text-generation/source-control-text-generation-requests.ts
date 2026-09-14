@@ -176,6 +176,10 @@ export async function generatePullRequestFields(input: {
     return {
       success: false,
       error: 'Generated pull request details could not be parsed.',
+      // Why: a near-correct reply is the whole run; keep it readable instead of discarding it.
+      failureOutput:
+        captureAgentGenerationFailureOutput(planned.plan.label, 0, result.rawOutput, '') ??
+        undefined,
       branchChangedByPreparation: context.branchChangedByPreparation
     }
   }

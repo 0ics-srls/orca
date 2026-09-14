@@ -170,10 +170,16 @@ describe('generateCommitMessageFromContext', () => {
     listeners.get('stdout:data')?.(Buffer.from('not json'))
     listeners.get('close')?.(0)
 
-    await expect(pullRequest).resolves.toEqual({
+    const result = await pullRequest
+    expect(result).toMatchObject({
       success: false,
       error: 'Generated pull request details could not be parsed.',
       branchChangedByPreparation: true
+    })
+    expect(result.success ? null : result.failureOutput).toMatchObject({
+      exitCode: 0,
+      stdout: 'not json',
+      stderr: ''
     })
   })
 })
