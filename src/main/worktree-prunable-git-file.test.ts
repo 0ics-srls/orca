@@ -52,6 +52,10 @@ describe('prunable Git-file registration proof', () => {
       await expect(isPrunableGitFileWorktree(worktree)).resolves.toBe(false)
     }
   )
+  it('leaves a vanished marker to existing missing-path recovery', async () => {
+    statPath.mockRejectedValue(Object.assign(new Error('marker vanished'), { code: 'ENOENT' }))
+    await expect(isPrunableGitFileWorktree(worktree)).resolves.toBe(false)
+  })
   it('does not turn host failure into cleanup permission', async () => {
     statPath.mockRejectedValue(new Error('host unavailable'))
     await expect(isPrunableGitFileWorktree(worktree)).rejects.toThrow('host unavailable')

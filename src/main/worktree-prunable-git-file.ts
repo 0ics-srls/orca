@@ -1,3 +1,4 @@
+import { isENOENT } from './ipc/filesystem-path-containment'
 import type { GitWorktreeInfo } from '../shared/worktree/types'
 import type { LocalWorktreeFilesystemOptions } from './local-worktree-filesystem'
 import { getLocalWorktreePathAccess, toLocalWorktreeRuntimePath } from './local-worktree-filesystem'
@@ -20,7 +21,15 @@ export async function isPrunableGitFileWorktree(
     return false
   }
   const access = getLocalWorktreePathAccess(options)
-  const entry = await access.statPath(toLocalWorktreeRuntimePath(worktree.path, options))
+  const entry = await access
+    .statPath(toLocalWorktreeRuntimePath(worktree.path, options))
+    .catch((error: unknown) => {
+      // A vanished marker leaves missing-path recovery to its existing stricter gate.
+      if (isENOENT(error)) {
+        return null
+      }
+      throw error
+    })
   if (!entry || typeof entry !== 'object') {
     return false
   }
