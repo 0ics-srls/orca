@@ -124,6 +124,8 @@ describe('desktop IPC and preload search boundary', () => {
       kind: 'unavailable',
       reason: 'no-service'
     })
+    // Status is the one read where "no such method" must not collapse into "off".
+    await expect(aiVaultApi.searchStatus('runtime:env-1')).rejects.toThrow('host-too-old')
     runtimeSearch.mockRejectedValue(
       Object.assign(new Error('runtime disconnected'), { code: 'connection_lost' })
     )

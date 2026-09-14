@@ -26,6 +26,7 @@ import {
   toSshExecutionHostId,
   type ParsedExecutionHost
 } from '../../shared/execution-host'
+import { redactStatusForTransport } from '../../shared/ai-vault-search-transport'
 import { requestActiveSshSessionSearch } from './ssh'
 import { clearSessionSearchInService } from '../ai-vault/session-scanner-service-spawn'
 import { searchAllExecutionHosts, type SessionSearchHostLeg } from './ai-vault-search-all-hosts'
@@ -184,12 +185,37 @@ function remoteHostLeg(host: ParsedExecutionHost): SessionSearchHostLeg {
   }
 }
 
-function statusByExecutionHost(scope: ParsedExecutionHost): Promise<AiVaultSearchStatus> {
+async function statusByExecutionHost(scope: ParsedExecutionHost): Promise<AiVaultSearchStatus> {
   if (scope.kind === 'local') {
     return sessionSearchServiceStatus({}, 'ipc')
   }
+  if (scope.kind === 'runtime') {
+    return runtimeHostStatus(scope.environmentId)
+  }
   const client = remoteSearchClient(scope, handlerOptions.callRuntimeSearch)
-  return client ? client.searchStatus() : Promise.resolve(unavailableSessionSearchStatus())
+  return client ? client.searchStatus() : unavailableSessionSearchStatus()
+}
+
+/**
+ * Not through the shared client: it answers an unknown method with `unavailable`, which
+ * the settings pane cannot tell from a current server that is switched off.
+ */
+async function runtimeHostStatus(environmentId: string): Promise<AiVaultSearchStatus> {
+  const call = handlerOptions.callRuntimeSearch
+  if (!call) {
+    return unavailableSessionSearchStatus()
+  }
+  try {
+    return redactStatusForTransport(
+      AiVaultSearchStatusSchema.parse(await call(environmentId, 'aiVault.searchStatus', {})),
+      'relay'
+    )
+  } catch (error) {
+    if (isUnknownSessionSearchMethod(error)) {
+      throw new Error(HOST_TOO_OLD_MESSAGE)
+    }
+    throw error
+  }
 }
 
 // Null for the local host and for a runtime environment with no injected transport.
