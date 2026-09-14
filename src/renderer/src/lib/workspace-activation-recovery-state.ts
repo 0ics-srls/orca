@@ -4,7 +4,7 @@ import { subscribeWorkspaceSurfaceProducers } from './workspace-surface-producti
 import {
   getStructuredAgentLaunchStatus,
   subscribeStructuredAgentLaunchStatus
-} from './structured-agent-session-launch'
+} from './structured-agent-session-launch-status'
 import { AGENT_SESSION_PROVIDER_HANDLE_PROVIDERS } from '../../../shared/agent-session-provider-handle'
 import {
   getExecutionHostIdForWorktree,

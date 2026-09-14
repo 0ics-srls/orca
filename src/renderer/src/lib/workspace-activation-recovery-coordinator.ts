@@ -161,17 +161,17 @@ export async function recoverWorkspaceActivationOwned(
         : producerAssessment.kind === 'complete'
           ? producerAssessment.result
           : null
-    if (producerResult) {
+    const hasSleepingAgentSession = Object.values(
+      useAppStore.getState().sleepingAgentSessionsByPaneKey
+    ).some((record) => record.worktreeId === identity.workspaceKey)
+    if (producerResult && (producerResult.kind !== 'materialized' || !hasSleepingAgentSession)) {
       return producerResult
     }
     if (!isActivationRecoveryFresh(identity, capturedSelectionRevision, context)) {
       return { kind: 'stale' }
     }
-    const state = useAppStore.getState()
     const shouldGate =
-      Object.values(state.sleepingAgentSessionsByPaneKey).some(
-        (record) => record.worktreeId === identity.workspaceKey
-      ) || canInspectAgentActivationInventory()
+      hasSleepingAgentSession || (!producerResult && canInspectAgentActivationInventory())
     if (shouldGate) {
       const gateResult = await runActivationRecoveryGate(identity, context, deadlineAt)
       if (gateResult !== 'empty' && gateResult !== 'produced') {
@@ -183,6 +183,9 @@ export async function recoverWorkspaceActivationOwned(
       const gateSurface = readActivationRenderableSurface(identity)
       if (gateSurface) {
         return activationRecoveryMaterializedResult(identity, gateSurface)
+      }
+      if (producerResult?.kind === 'materialized') {
+        return producerResult
       }
       if (gateResult === 'produced') {
         return waitForActivationProducedSurface(identity, context, deadlineAt)

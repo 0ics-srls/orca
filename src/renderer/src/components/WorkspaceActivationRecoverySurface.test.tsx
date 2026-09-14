@@ -7,26 +7,11 @@ import {
   resetWorkspaceActivationRecoveryPresentationsForTests
 } from '@/lib/workspace-activation-recovery-presentation'
 
-const mocks = vi.hoisted(() => {
-  const state: { unifiedTabsByWorktree: Record<string, unknown[]> } = {
-    unifiedTabsByWorktree: {}
-  }
-  return { state }
-})
-
-vi.mock('@/store', () => ({
-  useAppStore: (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state)
-}))
-vi.mock('@/lib/worktree-runtime-owner', () => ({
-  getExecutionHostIdForWorktree: () => 'local'
-}))
-
 const WORKSPACE_KEY = 'worktree-1'
 
 afterEach(() => {
   cleanup()
   resetWorkspaceActivationRecoveryPresentationsForTests()
-  mocks.state.unifiedTabsByWorktree = {}
 })
 
 describe('WorkspaceActivationRecoverySurface', () => {
@@ -41,7 +26,9 @@ describe('WorkspaceActivationRecoverySurface', () => {
       retry
     })
 
-    render(<WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} />)
+    render(
+      <WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} executionHostId="local" />
+    )
 
     expect(screen.getByRole('alert').getAttribute('data-workspace-activation-recovery')).toBe(
       'producer-failed'
@@ -49,7 +36,6 @@ describe('WorkspaceActivationRecoverySurface', () => {
     expect(screen.getByText('Agent executable was not found.')).not.toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }))
     expect(retry).toHaveBeenCalledOnce()
-    expect(mocks.state.unifiedTabsByWorktree[WORKSPACE_KEY]).toBeUndefined()
   })
 
   it('renders bounded recovery progress as non-tab workspace content', () => {
@@ -61,7 +47,9 @@ describe('WorkspaceActivationRecoverySurface', () => {
       retry: vi.fn()
     })
 
-    render(<WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} />)
+    render(
+      <WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} executionHostId="local" />
+    )
 
     expect(screen.getByRole('status').getAttribute('data-workspace-activation-recovery')).toBe(
       'recovering'
@@ -81,7 +69,9 @@ describe('WorkspaceActivationRecoverySurface', () => {
       retry: vi.fn()
     })
 
-    render(<WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} />)
+    render(
+      <WorkspaceActivationRecoverySurface worktreeId={WORKSPACE_KEY} executionHostId="local" />
+    )
 
     expect(screen.getByRole('heading', { name: title })).not.toBeNull()
   })

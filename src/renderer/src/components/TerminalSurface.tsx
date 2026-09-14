@@ -12,7 +12,7 @@ export function TerminalSurface({
 }: {
   controller: TerminalController
 }): React.JSX.Element {
-  const { renderedActiveWorktreeId } = controller
+  const { activeWorktreeDeferralHostId, renderedActiveWorktreeId } = controller
   const retainBrowserGuestPaint = useAnyBrowserGuestNeedsPaint(!renderedActiveWorktreeId)
   return (
     <div
@@ -31,8 +31,11 @@ export function TerminalSurface({
       <TerminalTitlebarTabs controller={controller} />
       <TerminalSplitWorkspaceSurfaces controller={controller} />
       <TerminalLegacyWorkspaceSurface controller={controller} />
-      {renderedActiveWorktreeId ? (
-        <WorkspaceActivationRecoverySurface worktreeId={renderedActiveWorktreeId} />
+      {renderedActiveWorktreeId && activeWorktreeDeferralHostId ? (
+        <WorkspaceActivationRecoverySurface
+          worktreeId={renderedActiveWorktreeId}
+          executionHostId={activeWorktreeDeferralHostId}
+        />
       ) : null}
       <TerminalWorkspaceDialogs controller={controller} />
     </div>

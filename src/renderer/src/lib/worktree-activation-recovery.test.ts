@@ -145,7 +145,7 @@ vi.mock('./worktree-runtime-owner', () => ({
   getExecutionHostIdForWorktree: () => mocks.state().executionHostId,
   getRuntimeEnvironmentIdForWorktree: () => mocks.state().runtimeEnvironmentId
 }))
-vi.mock('./structured-agent-session-launch', () => ({
+vi.mock('./structured-agent-session-launch-status', () => ({
   getStructuredAgentLaunchStatus: mocks.structuredStatus,
   subscribeStructuredAgentLaunchStatus: mocks.subscribeStructured
 }))

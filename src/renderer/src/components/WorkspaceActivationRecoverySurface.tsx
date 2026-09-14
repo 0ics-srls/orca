@@ -2,8 +2,7 @@ import { useSyncExternalStore } from 'react'
 import { CircleAlert, Loader2, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
-import { useAppStore } from '@/store'
-import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
+import type { ExecutionHostId } from '../../../shared/execution-host'
 import {
   readWorkspaceActivationRecoveryPresentation,
   subscribeWorkspaceActivationRecoveryPresentation,
@@ -71,11 +70,12 @@ function presentationCopy(presentation: WorkspaceActivationRecoveryPresentation)
 }
 
 export function WorkspaceActivationRecoverySurface({
-  worktreeId
+  worktreeId,
+  executionHostId
 }: {
   worktreeId: string
+  executionHostId: ExecutionHostId
 }): React.JSX.Element | null {
-  const executionHostId = useAppStore((state) => getExecutionHostIdForWorktree(state, worktreeId))
   const presentation = useSyncExternalStore(
     subscribeWorkspaceActivationRecoveryPresentation,
     () => readWorkspaceActivationRecoveryPresentation(worktreeId, executionHostId),
