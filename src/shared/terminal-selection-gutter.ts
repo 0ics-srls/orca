@@ -8,8 +8,11 @@
 // selection that starts mid-line, or that covers any column-0 line, shares a
 // run of zero and comes back untouched.
 
-// Terminal cells never hold tabs (the emulator expands them) and xterm folds
-// non-breaking spaces into plain ones, so spaces are the whole alphabet here.
+// Spaces are the whole alphabet here: terminal cells never hold tabs (the
+// emulator expands them), and xterm's selectionText getter already folds every
+// NBSP cell to a plain space on its way out (SelectionService.ts, the
+// ALL_NON_BREAKING_SPACE_REGEX replace) — that is the selection path, not the
+// input path.
 const LEADING_SPACES = /^ */
 
 type SelectionLine = { indent: number; text: string; terminator: string }
