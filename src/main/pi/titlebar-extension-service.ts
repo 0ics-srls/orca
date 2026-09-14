@@ -1,3 +1,8 @@
+import {
+  OMP_FRESH_CONFIG_FILENAME,
+  OMP_FRESH_CONFIG_SOURCE,
+  ORCA_OMP_FRESH_CONFIG_ENV
+} from '../../shared/omp-fresh-launch'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
@@ -183,7 +188,19 @@ export class PiTitlebarExtensionService {
     // The caller resolves the effective launch environment. Reading the
     // daemon's ambient PI_CONFIG_DIR here can select the host profile for a
     // guest/WSL launch whose environment has not been hydrated yet.
-    const sourceAgentDir = existingAgentDir || getDefaultPiAgentDir(kind, options?.configDirName)
+    const freshConfigEnv: Record<string, string> = {}
+    if (kind === 'omp') {
+      const configDir = join(
+        getAppEnvironment().getPath('userData'),
+        OMP_MANAGED_STATUS_EXTENSION_DIR
+      )
+      mkdirSync(configDir, { recursive: true })
+      const configPath = join(configDir, OMP_FRESH_CONFIG_FILENAME)
+      writeFileSync(configPath, OMP_FRESH_CONFIG_SOURCE)
+      freshConfigEnv[ORCA_OMP_FRESH_CONFIG_ENV] = configPath
+    }
+    const sourceAgentDir =
+      existingAgentDir || getDefaultPiAgentDir(kind, options?.configDirName)
     if (kind !== 'prime-agent') {
       try {
         this.safeRemoveOverlay(this.getPtyOverlayDir(ptyId, kind), kind)
@@ -203,7 +220,9 @@ export class PiTitlebarExtensionService {
       if (kind === 'omp') {
         const statusSource = withOrcaManagedExtensionMarker(getPiAgentStatusExtensionSource(kind))
         const statusExtensionPath = this.writeOmpFallbackStatusExtension(statusSource)
-        return statusExtensionPath ? { ORCA_OMP_STATUS_EXTENSION: statusExtensionPath } : {}
+        return statusExtensionPath
+          ? { ...freshConfigEnv, ORCA_OMP_STATUS_EXTENSION: statusExtensionPath }
+          : freshConfigEnv
       }
       return {}
     }
@@ -213,7 +232,7 @@ export class PiTitlebarExtensionService {
     }
 
     const installed = this.installManagedExtensions(sourceAgentDir, kind)
-    const env: Record<string, string> = {}
+    const env: Record<string, string> = { ...freshConfigEnv }
     if (kind === 'omp') {
       env.ORCA_OMP_SOURCE_AGENT_DIR = installed.sourceAgentDir
       if (installed.statusExtensionPath) {
