@@ -8,11 +8,18 @@
 // being the same event and only the latter may ask for another page.
 //
 // The offset belongs to the virtualizer — every pin goes through it, so a scroll
-// it is still reconciling is replaced rather than raced, and its end test is the
-// one this file asks. Whether the reader has left is then a question of
-// provenance, not distance: see `nextFollowingEnd`.
+// it is still reconciling is replaced rather than raced. Its public write adapter
+// marks every application offset; follow intent changes only on an unmarked
+// reader event, never from delayed geometry alone.
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type UIEventHandler
+} from 'react'
 import {
   isNearBottom,
   nextFollowingEnd,
@@ -31,7 +38,7 @@ function geometryOf(element: HTMLElement): ScrollGeometry {
 
 export type NativeChatTranscriptScroll = {
   showJump: boolean
-  onScroll: () => void
+  onScroll: UIEventHandler<HTMLDivElement>
   scrollToBottom: () => void
   /** Align an element inside the transcript with the top of the viewport. */
   scrollMessageToTop: (element: HTMLElement) => void
@@ -48,7 +55,8 @@ export function useNativeChatTranscriptScroll({
   loadEarlier,
   alignToViewportTop,
   scrollToEnd,
-  cancelScrollReconcile
+  consumeProgrammaticScroll,
+  reconcileReaderScroll
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>
   contentRef: React.RefObject<HTMLDivElement | null>
@@ -60,96 +68,77 @@ export function useNativeChatTranscriptScroll({
   loadEarlier: () => void
   alignToViewportTop: (element: HTMLElement) => void
   scrollToEnd: () => void
-  cancelScrollReconcile: () => void
+  consumeProgrammaticScroll: (event: Event) => boolean
+  reconcileReaderScroll: (isTakingOver: boolean) => void
 }): NativeChatTranscriptScroll {
   const [showJump, setShowJump] = useState(false)
   const followingRef = useRef(true)
   const previousScrollTopRef = useRef(0)
   const loadEarlierRequestedAtRef = useRef<number | null>(null)
-  // Where the last pin actually landed, read back rather than assumed: the
-  // virtualizer clamps to the container's real maximum, which is rarely the
-  // offset any caller had in mind.
-  const pinnedOffsetRef = useRef<number | null>(null)
 
-  const pinToEnd = useCallback(() => {
-    scrollToEnd()
-    const element = scrollRef.current
-    if (!element) {
-      return
-    }
-    const geometry = geometryOf(element)
-    // Only a pin that actually reached the end proves we authored this offset.
-    // The virtualizer declines to scroll when it has no measurement for the last
-    // row, and recording that no-op would certify an offset we never chose —
-    // follow state would then hold there for good.
-    if (isNearBottom(geometry)) {
-      pinnedOffsetRef.current = geometry.scrollTop
-    }
-  }, [scrollRef, scrollToEnd])
-
-  const syncScrollState = useCallback((): ScrollGeometry | null => {
-    const element = scrollRef.current
-    if (!element) {
-      return null
-    }
-    const geometry = geometryOf(element)
-    const wasFollowing = followingRef.current
-    const following = nextFollowingEnd({
-      following: followingRef.current,
-      pinnedOffset: pinnedOffsetRef.current,
-      scrollTop: geometry.scrollTop,
-      // Live geometry, never the virtualizer's `isAtEnd`: that one subtracts a
-      // *cached* scroll offset from a *live* maximum, and this handler runs
-      // before the virtualizer's own scroll listener refreshes the cache. On
-      // growth it over-reports the distance and would detach a reader sitting
-      // exactly at the bottom.
-      atEnd: isNearBottom(geometry)
-    })
-    followingRef.current = following
-    if (wasFollowing && !following) {
-      cancelScrollReconcile()
-    }
-    setShowJump(shouldShowJumpToLatest(following, geometry))
-    return geometry
-  }, [cancelScrollReconcile, scrollRef])
+  const syncScrollState = useCallback(
+    (event?: Event): ScrollGeometry | null => {
+      const element = scrollRef.current
+      if (!element) {
+        return null
+      }
+      const geometry = geometryOf(element)
+      if (event) {
+        const wasFollowing = followingRef.current
+        const programmatic = consumeProgrammaticScroll(event)
+        const following = nextFollowingEnd({
+          following: followingRef.current,
+          programmatic,
+          atEnd: isNearBottom(geometry)
+        })
+        followingRef.current = following
+        if (!programmatic) {
+          reconcileReaderScroll(wasFollowing && !following)
+        }
+      }
+      setShowJump(shouldShowJumpToLatest(followingRef.current, geometry))
+      return geometry
+    },
+    [consumeProgrammaticScroll, reconcileReaderScroll, scrollRef]
+  )
 
   // Only a real scroll event pages in older history. Every row that resolves its
   // true height moves the content and re-fires the size observers; routing those
   // through here too would ask for the next page once per measurement.
-  const onScroll = useCallback(() => {
-    const geometry = syncScrollState()
-    if (!geometry) {
-      return
-    }
-    const previousScrollTop = previousScrollTopRef.current
-    previousScrollTopRef.current = geometry.scrollTop
-    if (
-      shouldLoadEarlier({
-        geometry,
-        previousScrollTop,
-        hasMore,
-        loadingEarlier,
-        itemCount,
-        requestedAtItemCount: loadEarlierRequestedAtRef.current
-      })
-    ) {
-      loadEarlierRequestedAtRef.current = itemCount
-      loadEarlier()
-    }
-  }, [hasMore, itemCount, loadEarlier, loadingEarlier, syncScrollState])
+  const onScroll = useCallback<UIEventHandler<HTMLDivElement>>(
+    (event) => {
+      const geometry = syncScrollState(event.nativeEvent)
+      if (!geometry) {
+        return
+      }
+      const previousScrollTop = previousScrollTopRef.current
+      previousScrollTopRef.current = geometry.scrollTop
+      if (
+        shouldLoadEarlier({
+          geometry,
+          previousScrollTop,
+          hasMore,
+          loadingEarlier,
+          itemCount,
+          requestedAtItemCount: loadEarlierRequestedAtRef.current
+        })
+      ) {
+        loadEarlierRequestedAtRef.current = itemCount
+        loadEarlier()
+      }
+    },
+    [hasMore, itemCount, loadEarlier, loadingEarlier, syncScrollState]
+  )
 
   const scrollToBottom = useCallback(() => {
-    pinToEnd()
     followingRef.current = true
+    scrollToEnd()
     setShowJump(false)
-  }, [pinToEnd])
+  }, [scrollToEnd])
 
   const scrollMessageToTop = useCallback(
     (element: HTMLElement) => {
       followingRef.current = false
-      // The reveal owns the offset it is about to scroll to, so no pin of ours
-      // may claim it.
-      pinnedOffsetRef.current = null
       alignToViewportTop(element)
     },
     [alignToViewportTop]
@@ -157,9 +146,9 @@ export function useNativeChatTranscriptScroll({
 
   useLayoutEffect(() => {
     if (followingRef.current) {
-      pinToEnd()
+      scrollToEnd()
     }
-  }, [itemCount, isWorking, showTypingIndicator, pinToEnd])
+  }, [itemCount, isWorking, showTypingIndicator, scrollToEnd])
 
   useEffect(() => {
     const element = scrollRef.current
@@ -168,7 +157,7 @@ export function useNativeChatTranscriptScroll({
     }
     const observer = new ResizeObserver(() => {
       if (followingRef.current) {
-        pinToEnd()
+        scrollToEnd()
       } else {
         syncScrollState()
       }
@@ -180,7 +169,7 @@ export function useNativeChatTranscriptScroll({
       observer.observe(contentRef.current)
     }
     return () => observer.disconnect()
-  }, [contentRef, pinToEnd, scrollRef, syncScrollState])
+  }, [contentRef, scrollRef, scrollToEnd, syncScrollState])
 
   return { showJump, onScroll, scrollToBottom, scrollMessageToTop }
 }

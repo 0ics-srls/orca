@@ -208,7 +208,8 @@ export function NativeChatMessageList({
     loadEarlier,
     alignToViewportTop: transcriptWindow.alignToViewportTop,
     scrollToEnd: transcriptWindow.scrollToEnd,
-    cancelScrollReconcile: transcriptWindow.cancelScrollReconcile
+    consumeProgrammaticScroll: transcriptWindow.consumeProgrammaticScroll,
+    reconcileReaderScroll: transcriptWindow.reconcileReaderScroll
   })
 
   const rowContext = useMemo<NativeChatTranscriptRowContext>(

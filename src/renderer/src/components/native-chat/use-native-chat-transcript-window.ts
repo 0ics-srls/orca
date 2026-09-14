@@ -13,8 +13,9 @@
 // not: mixing the two puts the window out of place by exactly the zoom factor.
 // One path does read rects, and it converts them back before using them.
 
-import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
-import { useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { elementScroll, useVirtualizer, type VirtualItem } from '@tanstack/react-virtual'
+import { createProgrammaticScrollMarks } from '@/hooks/programmatic-scroll-marks'
 import { NATIVE_CHAT_BOTTOM_THRESHOLD_PX } from './native-chat-autoscroll'
 import { NATIVE_CHAT_ROW_GAP_PX } from './native-chat-row-height-estimate'
 import { nativeChatPinnedRowIndexes, nativeChatTranscriptRange } from './native-chat-pinned-rows'
@@ -44,8 +45,10 @@ export type NativeChatTranscriptWindow = {
    *  browser's real max scroll, so this lands where the document bottom is,
    *  trailing chrome included. */
   scrollToEnd: () => void
-  /** Replace any pending programmatic scroll target with the current offset. */
-  cancelScrollReconcile: () => void
+  /** True when this scroll event is the echo of a registered application write. */
+  consumeProgrammaticScroll: (event: Event) => boolean
+  /** Rebase a pending end reconcile while the reader takes over this frame. */
+  reconcileReaderScroll: (isTakingOver: boolean) => void
 }
 
 /** Distance from a container's scroll origin down to a descendant, in the
@@ -94,6 +97,8 @@ export function useNativeChatTranscriptWindow({
 }): NativeChatTranscriptWindow {
   const sizerElementRef = useRef<HTMLDivElement | null>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
+  const [programmaticScrollMarks] = useState(createProgrammaticScrollMarks)
+  const readerTakeoverFrameRef = useRef<number | null>(null)
   const previousMeasurementKeysRef = useRef<ReadonlySet<string> | null>(null)
   const retiredMeasurementCountRef = useRef(0)
   const pinned = useMemo(
@@ -131,8 +136,41 @@ export function useNativeChatTranscriptWindow({
     scrollMargin,
     anchorTo: 'end',
     followOnAppend: true,
-    scrollEndThreshold: NATIVE_CHAT_BOTTOM_THRESHOLD_PX
+    scrollEndThreshold: NATIVE_CHAT_BOTTOM_THRESHOLD_PX,
+    // Every virtualizer write uses this public adapter, including measurement
+    // adjustments and prepend anchoring, so scroll events have one provenance.
+    scrollToFn: (offset, options, instance) => {
+      const target = offset + (options.adjustments ?? 0)
+      const element = instance.scrollElement
+      if (options.behavior === 'smooth') {
+        if (element) {
+          const max = Math.max(0, element.scrollHeight - element.clientHeight)
+          const landing = Math.max(0, Math.min(target, max))
+          if (element.scrollTop !== landing) {
+            programmaticScrollMarks.mark(landing)
+          }
+        }
+        elementScroll(offset, options, instance)
+        return
+      }
+      const previous = element?.scrollTop
+      elementScroll(offset, options, instance)
+      // Scroll events dispatch later; read back now so a clamp against the old
+      // document height stays attributable if content grows before its echo.
+      const landing = element?.scrollTop
+      if (previous !== undefined && landing !== undefined && landing !== previous) {
+        programmaticScrollMarks.mark(landing)
+      }
+    }
   })
+
+  const finishReaderTakeover = useCallback(() => {
+    if (readerTakeoverFrameRef.current !== null) {
+      window.cancelAnimationFrame(readerTakeoverFrameRef.current)
+      readerTakeoverFrameRef.current = null
+    }
+  }, [])
+  useEffect(() => finishReaderTakeover, [finishReaderTakeover])
 
   // Read, never assumed: the "load earlier" button sits above the window and
   // appears exactly when a prepend is about to land, which is the one moment a
@@ -216,15 +254,21 @@ export function useNativeChatTranscriptWindow({
       }
       const top =
         nativeChatScrollOffsetWithin(element, container) ?? rectOffsetWithin(element, container)
+      finishReaderTakeover()
       // Through the virtualizer so a scroll it is still reconciling — the jump
       // that mounted this row in the first place — is replaced rather than raced.
       if (virtualizer.scrollElement) {
         virtualizer.scrollToOffset(top, { align: 'start', behavior: 'smooth' })
       } else {
+        const max = Math.max(0, container.scrollHeight - container.clientHeight)
+        const landing = Math.max(0, Math.min(top, max))
+        if (container.scrollTop !== landing) {
+          programmaticScrollMarks.mark(landing)
+        }
         container.scrollTo({ top, behavior: 'smooth' })
       }
     },
-    [scrollRef, virtualizer]
+    [finishReaderTakeover, programmaticScrollMarks, scrollRef, virtualizer]
   )
 
   const scrollToEnd = useCallback(() => {
@@ -232,25 +276,57 @@ export function useNativeChatTranscriptWindow({
     if (!container) {
       return
     }
+    finishReaderTakeover()
     if (virtualizer.scrollElement) {
       virtualizer.scrollToEnd({ behavior: 'auto' })
       return
     }
     // No virtualizer yet (a container without layout): the document's own bottom
     // is the same offset the virtualizer would resolve for the last row.
+    const previous = container.scrollTop
     container.scrollTop = container.scrollHeight
-  }, [scrollRef, virtualizer])
-
-  const cancelScrollReconcile = useCallback(() => {
-    const container = scrollRef.current
-    if (!container || !virtualizer.scrollElement) {
-      return
+    if (container.scrollTop !== previous) {
+      programmaticScrollMarks.mark(container.scrollTop)
     }
-    // TanStack keeps a one-frame reconcile target after every imperative scroll.
-    // Rebase that target when the reader takes over so the pending callback cannot
-    // snap the viewport back to the old end on the next animation frame.
-    virtualizer.scrollToOffset(container.scrollTop, { behavior: 'auto' })
-  }, [scrollRef, virtualizer])
+  }, [finishReaderTakeover, programmaticScrollMarks, scrollRef, virtualizer])
+
+  const consumeProgrammaticScroll = useCallback(
+    (event: Event): boolean => {
+      const container = scrollRef.current
+      if (!container) {
+        return false
+      }
+      return programmaticScrollMarks.consume(
+        event,
+        container.scrollTop,
+        Math.max(0, container.scrollHeight - container.clientHeight)
+      )
+    },
+    [programmaticScrollMarks, scrollRef]
+  )
+
+  const reconcileReaderScroll = useCallback(
+    (isTakingOver: boolean) => {
+      const container = scrollRef.current
+      if (
+        !container ||
+        !virtualizer.scrollElement ||
+        (!isTakingOver && readerTakeoverFrameRef.current === null)
+      ) {
+        return
+      }
+      virtualizer.scrollToOffset(container.scrollTop, { behavior: 'auto' })
+      if (readerTakeoverFrameRef.current !== null) {
+        return
+      }
+      // The public rebase itself reconciles on the next frame. Keep replacing its
+      // target until that frame so every reader move in the takeover wins.
+      readerTakeoverFrameRef.current = window.requestAnimationFrame(() => {
+        readerTakeoverFrameRef.current = null
+      })
+    },
+    [scrollRef, virtualizer]
+  )
 
   return {
     virtualItems: virtualizer.getVirtualItems(),
@@ -260,6 +336,7 @@ export function useNativeChatTranscriptWindow({
     measureRow: virtualizer.measureElement,
     alignToViewportTop,
     scrollToEnd,
-    cancelScrollReconcile
+    consumeProgrammaticScroll,
+    reconcileReaderScroll
   }
 }
