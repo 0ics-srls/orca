@@ -123,6 +123,17 @@ describe('useStructuredAgentSessionRead history window', () => {
     })
   })
 
+  it('does not invent a writable fence for a mixed-version history page', async () => {
+    mocks.call.mockResolvedValueOnce({ ok: true, page: page('tail', [], false) })
+
+    const { result } = renderHook(() =>
+      useStructuredAgentSessionRead({ sessionId: 'session-a', target: LOCAL_TARGET })
+    )
+
+    await waitFor(() => expect(result.current.state.status).toBe('ready'))
+    expect(result.current.state.fence).toBeNull()
+  })
+
   it('loads each earlier page at the wire maximum', async () => {
     const tailItems = Array.from({ length: 200 }, (_, index) =>
       message(`tail-${index}`, 301 + index, 'assistant')

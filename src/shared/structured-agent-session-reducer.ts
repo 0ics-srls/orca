@@ -45,6 +45,7 @@ export type StructuredAgentSessionAction =
   | { type: 'error'; message: string }
   | { type: 'handoff'; handoff: AgentSessionHandoffStatus }
   | { type: 'event'; event: AgentSessionSubscribeEvent }
+  | { type: 'history-page'; page: AgentSessionHistoryPage }
   | { type: 'older-page'; requestedCursor: AgentJournalCursor; page: AgentSessionHistoryPage }
 
 const MAX_RETAINED_SUBMISSIONS = 256
@@ -76,7 +77,7 @@ function hostClockField(
 
 function replacePage(
   page: AgentSessionHistoryPage,
-  fence: number,
+  fence: number | null,
   handoff?: AgentSessionHandoffStatus,
   backgroundTasks?: AgentSessionBackgroundTaskState | null,
   activity?: AgentSessionTurnActivity | null
@@ -163,6 +164,19 @@ export function reduceStructuredAgentSession(
   }
   if (action.type === 'handoff') {
     return { ...state, handoff: action.handoff }
+  }
+  if (action.type === 'history-page') {
+    return {
+      ...replacePage(
+        action.page,
+        action.page.fence ?? null,
+        state.handoff ?? undefined,
+        state.backgroundTasks,
+        state.activity
+      ),
+      commands: state.commands,
+      ...hostClockField(action.page.hostNow, receivedAt, state.hostClock)
+    }
   }
   if (action.type === 'older-page') {
     const requested = action.requestedCursor

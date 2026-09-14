@@ -118,16 +118,7 @@ function createReadOwner(
     if (shouldStop()) {
       return
     }
-    apply({
-      type: 'event',
-      event: {
-        type: 'snapshot',
-        sessionId,
-        page: result.page,
-        fence: result.page.fence ?? 0,
-        hostNow: result.page.hostNow
-      }
-    })
+    apply({ type: 'history-page', page: result.page })
     if (shouldStop()) {
       return
     }
