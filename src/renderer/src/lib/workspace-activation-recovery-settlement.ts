@@ -1,5 +1,4 @@
 import type { WorkspaceVisibleTabType } from '../../../shared/tab-types'
-import { createBrowserUuid } from './browser-uuid'
 import {
   consumeWorkspaceSurfaceProducerAttempt,
   readWorkspaceSurfaceProducerEntries
@@ -17,25 +16,17 @@ import {
   readStructuredActivationProducerStatus,
   waitForActivationRecoveryChange
 } from './workspace-activation-recovery-state'
-import {
-  recoverWorkspaceActivation,
-  type WorkspaceActivationContext,
-  type WorkspaceActivationIdentity,
-  type WorkspaceActivationRecoveryResult
+import type {
+  WorkspaceActivationIdentity,
+  WorkspaceActivationRecoveryOwnerContext,
+  WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
 
 const failureSurfaceIdsByProducerAttempt = new Map<string, ReadonlySet<string>>()
 
-function retry(identity: WorkspaceActivationIdentity, context: WorkspaceActivationContext): void {
-  void recoverWorkspaceActivation(
-    { ...identity, attemptId: createBrowserUuid() },
-    { mode: context.mode }
-  )
-}
-
 export function publishActivationRecovery(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext,
+  context: WorkspaceActivationRecoveryOwnerContext,
   kind: WorkspaceActivationRecoveryPresentation['kind'],
   detail?: string
 ): void {
@@ -48,7 +39,7 @@ export function publishActivationRecovery(
     attemptId: identity.attemptId,
     kind,
     ...(detail ? { detail } : {}),
-    retry: () => retry(identity, context)
+    retry: context.retry
   })
 }
 
@@ -114,7 +105,7 @@ function materializedAfterProducerFailure(
 
 export function assessActivationProducerAttempts(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext
+  context: WorkspaceActivationRecoveryOwnerContext
 ): ProducerAssessment {
   const entries = readWorkspaceSurfaceProducerEntries(identity)
   const failed = entries.find((entry) => entry.result?.kind === 'failed')
@@ -201,7 +192,7 @@ export function assessActivationProducerAttempts(
 
 export async function waitForActivationProducerAttempts(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext,
+  context: WorkspaceActivationRecoveryOwnerContext,
   deadlineAt: number
 ): Promise<WorkspaceActivationRecoveryResult | null> {
   while (true) {

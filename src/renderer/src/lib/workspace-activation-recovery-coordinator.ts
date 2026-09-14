@@ -7,8 +7,8 @@ import {
   type WorkspaceExecutionEvidence
 } from './workspace-execution-evidence'
 import type {
-  WorkspaceActivationContext,
   WorkspaceActivationIdentity,
+  WorkspaceActivationRecoveryOwnerContext,
   WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
 import {
@@ -40,7 +40,7 @@ let seedingTargetKey: string | null = null
 
 function seedPrivateRecoverySurface(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext,
+  context: WorkspaceActivationRecoveryOwnerContext,
   capturedSelectionRevision: number
 ): WorkspaceActivationRecoveryResult {
   const key = `${identity.executionHostId}|${identity.workspaceKey}`
@@ -127,7 +127,7 @@ function seedPrivateRecoverySurface(
 
 export async function recoverWorkspaceActivationOwned(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext
+  context: WorkspaceActivationRecoveryOwnerContext
 ): Promise<WorkspaceActivationRecoveryResult> {
   installActivationRecoverySelectionTracker()
   markLatestActivationRecoveryAttempt(identity)

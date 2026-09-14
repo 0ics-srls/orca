@@ -1,7 +1,7 @@
 import { gateWorktreeAgentActivation } from './worktree-agent-activation-gate'
 import type {
-  WorkspaceActivationContext,
   WorkspaceActivationIdentity,
+  WorkspaceActivationRecoveryOwnerContext,
   WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
 import {
@@ -20,7 +20,7 @@ import {
 
 export async function runActivationRecoveryGate(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext,
+  context: WorkspaceActivationRecoveryOwnerContext,
   deadlineAt: number
 ): Promise<WorkspaceActivationRecoveryResult | 'empty' | 'produced'> {
   const gate = gateWorktreeAgentActivation(identity.workspaceKey)
@@ -71,7 +71,7 @@ export async function runActivationRecoveryGate(
 
 export async function waitForActivationProducedSurface(
   identity: WorkspaceActivationIdentity,
-  context: WorkspaceActivationContext,
+  context: WorkspaceActivationRecoveryOwnerContext,
   deadlineAt: number
 ): Promise<WorkspaceActivationRecoveryResult> {
   while (true) {

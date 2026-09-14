@@ -1,5 +1,6 @@
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { WorkspaceVisibleTabType } from '../../../shared/tab-types'
+import { createBrowserUuid } from './browser-uuid'
 import { recoverWorkspaceActivationOwned } from './workspace-activation-recovery-coordinator'
 import {
   markLatestActivationRecoveryAttempt,
@@ -22,6 +23,10 @@ export type WorkspaceActivationContext = {
   signal?: AbortSignal
 }
 
+export type WorkspaceActivationRecoveryOwnerContext = WorkspaceActivationContext & {
+  retry: () => void
+}
+
 export type WorkspaceActivationRecoveryResult =
   | {
       kind: 'materialized'
@@ -36,8 +41,17 @@ export async function recoverWorkspaceActivation(
   identity: WorkspaceActivationIdentity,
   context: WorkspaceActivationContext
 ): Promise<WorkspaceActivationRecoveryResult> {
+  const ownerContext: WorkspaceActivationRecoveryOwnerContext = {
+    ...context,
+    retry: () => {
+      void recoverWorkspaceActivation(
+        { ...identity, attemptId: createBrowserUuid() },
+        { mode: context.mode }
+      )
+    }
+  }
   try {
-    return await recoverWorkspaceActivationOwned(identity, context)
+    return await recoverWorkspaceActivationOwned(identity, ownerContext)
   } catch (error) {
     const currentAttemptId = readLatestActivationRecoveryAttempt(identity)
     if (currentAttemptId && currentAttemptId !== identity.attemptId) {
@@ -46,7 +60,7 @@ export async function recoverWorkspaceActivation(
     markLatestActivationRecoveryAttempt(identity)
     const detail = error instanceof Error ? error.message : String(error)
     try {
-      publishActivationRecovery(identity, context, 'unexpected', detail)
+      publishActivationRecovery(identity, ownerContext, 'unexpected', detail)
     } catch (presentationError) {
       console.error('workspace activation recovery presentation failed', presentationError)
     }
