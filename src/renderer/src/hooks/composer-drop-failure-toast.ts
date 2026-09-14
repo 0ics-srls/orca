@@ -1,52 +1,51 @@
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { compactIpcErrorMessage } from '@/lib/ipc-error'
-import type { ComposerDropFailure } from './composer-drop-upload-result'
+import type { ComposerDropFailure } from './composer-drop-result'
+import type { ImportSkipReason } from '../../../shared/filesystem-import-result-types'
 
-function skipReasonText(failure: ComposerDropFailure): string | undefined {
-  if (failure.status === 'failed') {
-    return failure.reason ? compactIpcErrorMessage(failure.reason) : undefined
-  }
-  switch (failure.reason) {
-    case 'missing':
-      return translate(
-        'auto.hooks.useComposerState.attachSkipMissing',
-        'No longer at its original path.'
-      )
-    case 'symlink':
-      return translate(
-        'auto.hooks.useComposerState.attachSkipSymlink',
-        'Symbolic links cannot be attached.'
-      )
-    case 'permission-denied':
-      return translate(
-        'auto.hooks.useComposerState.attachSkipPermissionDenied',
-        'Permission denied.'
-      )
-    case 'unsupported':
-      return translate(
-        'auto.hooks.useComposerState.attachSkipUnsupported',
-        'Unsupported file type.'
-      )
+const SKIP_REASON_COPY: Record<ImportSkipReason, { key: string; fallback: string }> = {
+  missing: {
+    key: 'auto.hooks.useComposerState.attachSkipMissing',
+    fallback: 'No longer at its original path.'
+  },
+  symlink: {
+    key: 'auto.hooks.useComposerState.attachSkipSymlink',
+    fallback: 'Symbolic links cannot be attached.'
+  },
+  'permission-denied': {
+    key: 'auto.hooks.useComposerState.attachSkipPermissionDenied',
+    fallback: 'Permission denied.'
+  },
+  unsupported: {
+    key: 'auto.hooks.useComposerState.attachSkipUnsupported',
+    fallback: 'Unsupported file type.'
   }
 }
 
-/** Reports one gesture-neutral summary for a partially applied attachment batch. */
+function failureDescription(failure: ComposerDropFailure): string | undefined {
+  if (failure.status === 'failed') {
+    return failure.reason ? compactIpcErrorMessage(failure.reason) : undefined
+  }
+  const copy = SKIP_REASON_COPY[failure.reason]
+  return copy ? translate(copy.key, copy.fallback) : undefined
+}
+
 export function showComposerDropFailureToast({
-  skippedOrFailed,
+  failureCount,
   total,
-  uniformFailure
+  commonFailure
 }: {
-  skippedOrFailed: number
+  failureCount: number
   total: number
-  uniformFailure?: ComposerDropFailure
+  commonFailure?: ComposerDropFailure
 }): void {
   toast.error(
     translate(
       'auto.hooks.useComposerState.dropPartiallyAttached',
-      '{{value0}} of {{value1}} item{{value2}} could not be attached.',
-      { value0: skippedOrFailed, value1: total, value2: total === 1 ? '' : 's' }
+      '{{failureCount}} of {{count}} items could not be attached.',
+      { failureCount, count: total }
     ),
-    { description: uniformFailure ? skipReasonText(uniformFailure) : undefined }
+    { description: commonFailure ? failureDescription(commonFailure) : undefined }
   )
 }

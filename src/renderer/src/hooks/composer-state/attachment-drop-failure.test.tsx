@@ -2,6 +2,7 @@
 
 import { act, renderHook } from '@testing-library/react'
 import { createRef } from 'react'
+import type { Dispatch, SetStateAction } from 'react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({ toastError: vi.fn(), importExternalPaths: vi.fn() }))
@@ -44,10 +45,10 @@ function installFsApi(): void {
   })
 }
 
-function renderDropState(setAttachmentPaths: (updater: (current: string[]) => string[]) => void) {
+function renderDropState(setAttachmentPaths: Dispatch<SetStateAction<string[]>>) {
   return renderHook(() =>
     useAttachmentDropState({
-      agentPromptRef: createRef<string>() as never,
+      agentPromptRef: { current: '' },
       cancelPromptCaretFrame: () => {},
       connectionId: null,
       promptCaretFrameRef: { current: null },
@@ -55,21 +56,21 @@ function renderDropState(setAttachmentPaths: (updater: (current: string[]) => st
       selectedRepoPath: '/repo',
       selectedRepoSettings: null,
       setAgentPrompt: () => {},
-      setAttachmentPaths: setAttachmentPaths as never
+      setAttachmentPaths
     })
   )
 }
 
-describe('local composer drop failures', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    installFsApi()
-  })
+beforeEach(() => {
+  vi.clearAllMocks()
+  installFsApi()
+})
 
-  it('reports partially skipped paths in ONE aggregated toast and still attaches the rest', async () => {
+describe('local composer drop failures', () => {
+  it('reports partially skipped paths in one aggregated toast and still attaches the rest', async () => {
     const attached: string[] = []
-    const { result } = renderDropState((updater) => {
-      attached.push(...updater([]))
+    const { result } = renderDropState((next) => {
+      attached.push(...(typeof next === 'function' ? next([]) : next))
     })
 
     await act(async () => {
@@ -77,10 +78,8 @@ describe('local composer drop failures', () => {
     })
 
     expect(mocks.toastError).toHaveBeenCalledTimes(1)
-    const [title, options] = mocks.toastError.mock.calls[0] as [string, { description?: string }]
+    const [title, options] = mocks.toastError.mock.calls[0] ?? []
     expect(title).toBe('3 of 12 items could not be attached.')
-    // Why the translated copy: a local drop classifies ENOENT as a skip, so the user gets the
-    // sentence rather than the errno. All three failures agree, so the reason explains the count.
     expect(options.description).toBe('No longer at its original path.')
     expect(attached).toHaveLength(9)
     expect(attached).not.toContain('/drop/bad-1.png')
@@ -108,15 +107,10 @@ describe('local composer drop failures', () => {
 })
 
 // Why: the upload branch returns early unless a runtime environment or connection is resolved.
-const RUNTIME_SETTINGS = { activeRuntimeEnvironmentId: 'env-1' } as never
+const RUNTIME_SETTINGS = { activeRuntimeEnvironmentId: 'env-1' }
 
 describe('composer upload failures', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-    installFsApi()
-  })
-
-  it('aggregates a mixed runtime import into ONE toast, and withholds a reason that is not shared', async () => {
+  it('aggregates a mixed runtime import into one toast, and withholds a reason that is not shared', async () => {
     mocks.importExternalPaths.mockResolvedValue({
       results: [
         {
@@ -142,10 +136,8 @@ describe('composer upload failures', () => {
     })
 
     expect(mocks.toastError).toHaveBeenCalledTimes(1)
-    const [title, options] = mocks.toastError.mock.calls[0] as [string, { description?: string }]
+    const [title, options] = mocks.toastError.mock.calls[0] ?? []
     expect(title).toBe('2 of 3 items could not be attached.')
-    // Why no description: one was skipped for permission, the other failed for disk space — a
-    // single reason printed under the count would read as the explanation for both.
     expect(options.description).toBeUndefined()
   })
 
@@ -170,6 +162,25 @@ describe('composer upload failures', () => {
     expect(mocks.toastError).not.toHaveBeenCalled()
   })
 
+  it('does not report after the composer that owned the upload is gone', async () => {
+    mocks.importExternalPaths.mockResolvedValue({
+      results: [{ sourcePath: '/b.png', status: 'skipped', reason: 'missing' }]
+    })
+    const { result } = renderDropState(() => {})
+
+    await act(async () => {
+      await result.current.uploadComposerPaths(
+        ['/b.png'],
+        RUNTIME_SETTINGS,
+        null,
+        '/repo',
+        () => false
+      )
+    })
+
+    expect(mocks.toastError).not.toHaveBeenCalled()
+  })
+
   it('does give the shared reason when every uploaded path failed the same way', async () => {
     mocks.importExternalPaths.mockResolvedValue({
       results: [
@@ -188,7 +199,7 @@ describe('composer upload failures', () => {
       )
     })
 
-    const [, options] = mocks.toastError.mock.calls[0] as [string, { description?: string }]
+    const [, options] = mocks.toastError.mock.calls[0] ?? []
     expect(options.description).toBe('Permission denied.')
   })
 })

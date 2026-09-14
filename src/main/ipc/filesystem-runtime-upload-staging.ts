@@ -6,7 +6,7 @@ import { isENOENT } from './filesystem-path-containment'
 import type {
   StagedExternalImportEntry,
   StagedExternalImportSource
-} from './filesystem-import-result-types'
+} from '../../shared/filesystem-import-result-types'
 
 const REMOTE_IMPORT_MAX_FILE_BYTES = 25 * 1024 * 1024
 const REMOTE_IMPORT_MAX_TOTAL_BYTES = 100 * 1024 * 1024

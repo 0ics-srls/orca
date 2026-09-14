@@ -19,7 +19,6 @@ export {
   writeRuntimeFile
 } from './runtime-file-mutation-client'
 export { importExternalPathsToRuntime } from './runtime-file-import-client'
-export type { ImportSkipReason } from '../../../shared/filesystem-import-result-types'
 export {
   cancelRuntimeFileList,
   listRuntimeFiles,

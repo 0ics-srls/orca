@@ -6,6 +6,11 @@ import type {
   MarkdownDocument
 } from '../../shared/filesystem-entry-types'
 import type {
+  ImportItemResult,
+  ResolveDroppedPathsResult,
+  StagedExternalImportSource
+} from '../../shared/filesystem-import-result-types'
+import type {
   LocalLogTailChangedPayload,
   LocalLogTailReadArgs,
   LocalLogTailReadResult,
@@ -134,65 +139,17 @@ export type FilesystemApi = {
         connectionId?: string
         ensureDir?: boolean
       } & SshMutationExpectation
-    ) => Promise<{
-      results: (
-        | {
-            sourcePath: string
-            status: 'imported'
-            destPath: string
-            kind: 'file' | 'directory'
-            renamed: boolean
-          }
-        | {
-            sourcePath: string
-            status: 'skipped'
-            reason: 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
-          }
-        | {
-            sourcePath: string
-            status: 'failed'
-            reason: string
-          }
-      )[]
-    }>
-    stageExternalPathsForRuntimeUpload: (args: { sourcePaths: string[] }) => Promise<{
-      sources: (
-        | {
-            sourcePath: string
-            status: 'staged'
-            name: string
-            kind: 'file' | 'directory'
-            entries: (
-              | { relativePath: string; kind: 'directory' }
-              | { relativePath: string; kind: 'file'; contentBase64: string }
-            )[]
-          }
-        | {
-            sourcePath: string
-            status: 'skipped'
-            reason: 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
-          }
-        | {
-            sourcePath: string
-            status: 'failed'
-            reason: string
-          }
-      )[]
-    }>
+    ) => Promise<{ results: ImportItemResult[] }>
+    stageExternalPathsForRuntimeUpload: (args: {
+      sourcePaths: string[]
+    }) => Promise<{ sources: StagedExternalImportSource[] }>
     resolveDroppedPathsForAgent: (
       args: {
         paths: string[]
         worktreePath: string
         connectionId?: string
       } & SshMutationExpectation
-    ) => Promise<{
-      resolvedPaths: string[]
-      skipped: {
-        sourcePath: string
-        reason: 'missing' | 'symlink' | 'permission-denied' | 'unsupported'
-      }[]
-      failed: { sourcePath: string; reason: string }[]
-    }>
+    ) => Promise<ResolveDroppedPathsResult>
     watchWorktree: (args: { worktreePath: string; connectionId?: string }) => Promise<void>
     unwatchWorktree: (args: { worktreePath: string; connectionId?: string }) => Promise<void>
     onFsChanged: (callback: (payload: FsChangedPayload) => void) => () => void
