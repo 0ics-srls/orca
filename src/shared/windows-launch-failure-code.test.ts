@@ -53,7 +53,7 @@ describe('decodeWindowsLaunchFailureCode', () => {
   // Mutation-tested, and the result is worth stating exactly: adding `>>> 0` alone changes
   // nothing (the guard rejects these first) and removing the guard alone changes nothing (the
   // object lookup misses on a negative or fractional key). Each is individually a no-op, so no
-  // test can catch either on its own. Together they are not, and that is the realistic
+  // test can catch either on its own. Together they are not a no-op, and that is the realistic
   // regression — whoever adds the coercion sees the guard as redundant and drops it. The last
   // two rows catch exactly that, because ToUint32 maps them onto real keys: 1.5 -> 1
   // (SBOX_ERROR_GENERIC) and -4294967278 -> 18 (CREATE_PROCESS).

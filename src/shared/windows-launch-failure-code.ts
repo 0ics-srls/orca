@@ -169,9 +169,9 @@ export function decodeWindowsLaunchFailureCode(
   // `1.5 >>> 0` is 1 (SBOX_ERROR_GENERIC) and `-4294967278 >>> 0` is 18 (CREATE_PROCESS).
   //
   // This guard and that missing coercion are each individually a no-op — the object lookup
-  // already misses on a negative or fractional key — so neither survives mutation alone.
-  // Removing BOTH is the regression, and it is the likely one: adding the coercion makes this
-  // guard look dead. Do not "prove" it dead and remove it; the test file pins the pair.
+  // already misses on a negative or fractional key — so changing either one alone is
+  // undetectable. Removing BOTH is the regression, and it is the likely one: adding the
+  // coercion makes this guard look dead. Do not "prove" it dead; the test file pins the pair.
   if (!Number.isInteger(exitCode) || exitCode < 0) {
     return null
   }
