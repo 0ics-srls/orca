@@ -9,10 +9,14 @@
 
 import {
   claudeHasReplayContent,
+  claudeRecord,
   claudeText,
   type ClaudeMessageEnvelope
 } from './claude-structured-item-translation'
-import type { ClaudeCurrentTurn } from './claude-turn-lifecycle-item'
+import {
+  claudeProviderResumedTurnTimingAnchor,
+  type ClaudeCurrentTurn
+} from './claude-turn-lifecycle-item'
 
 export type ClaudeSendEchoTurnInput = {
   envelope: ClaudeMessageEnvelope
@@ -62,6 +66,16 @@ export function claudeStreamTurnSource(frame: Record<string, unknown>): ClaudeTu
   return sessionId && uuid ? { sessionId, uuid, assistant: true } : null
 }
 
+/** A streamed assistant message has begun, before its first content delta. */
+export function claudeStreamTurnStartSource(
+  frame: Record<string, unknown>
+): ClaudeTurnSource | null {
+  const event = claudeRecord(frame.event)
+  return frame.type === 'stream_event' && event?.type === 'message_start'
+    ? claudeStreamTurnSource(frame)
+    : null
+}
+
 /** The provider produced, so a turn is running. Root-ness first, then the
  *  suppression latch, then idempotency — every frame of one reply stays inside
  *  the turn its first frame opened. */
@@ -69,16 +83,21 @@ export function createClaudeTurnOpener(deps: {
   isTurnOpen: () => boolean
   isSuppressed: () => boolean
   open: (turn: ClaudeCurrentTurn, observedAt: number) => void
-}): (frame: Record<string, unknown>, source: ClaudeTurnSource, observedAt: number) => void {
+}): (frame: Record<string, unknown>, source: ClaudeTurnSource | null, observedAt: number) => void {
   return (frame, source, observedAt) => {
-    if (!source.assistant || !isRootClaudeFrame(frame)) {
+    if (!source?.assistant || !isRootClaudeFrame(frame)) {
       return
     }
     if (deps.isSuppressed() || deps.isTurnOpen()) {
       return
     }
     deps.open(
-      { sessionId: source.sessionId, turnId: source.uuid, startedAt: observedAt },
+      {
+        sessionId: source.sessionId,
+        turnId: source.uuid,
+        startedAt: observedAt,
+        userItemId: claudeProviderResumedTurnTimingAnchor(source.sessionId, source.uuid)
+      },
       observedAt
     )
   }

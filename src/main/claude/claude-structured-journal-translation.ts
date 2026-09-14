@@ -25,7 +25,7 @@ import { journalClaudePrompt } from './claude-prompt-journaling'
 import type { ClaudePromptRegistry } from './claude-structured-prompt-replies'
 import { claudeProviderFrameActivity } from '../native-chat/agent-session-wire/provider-frame-activity'
 import {
-  appendUnmodeledClaudeContent,
+  appendUnmodeledContent,
   claudeProviderFrameKind,
   claudeResultFailure,
   createClaudeProviderFrameFallback,
@@ -35,6 +35,7 @@ import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
 import {
+  claudeStreamTurnStartSource,
   claudeStreamTurnSource,
   claudeTurnOpenedBySendEcho,
   createClaudeTurnOpener,
@@ -150,15 +151,12 @@ export function createClaudeJournalTranslator(
 
   const handleStream = (message: Record<string, unknown>, observedAt: number): boolean => {
     const delta = streamedBlocks.observe(message)
+    // `message_start` is the provider's turn boundary. Keep the first text
+    // delta as a compatibility fallback for streams that omit it.
+    const source = delta ? claudeStreamTurnSource(message) : claudeStreamTurnStartSource(message)
+    ensureTurnOpen(message, source, observedAt)
     if (!delta) {
       return false
-    }
-    // Streamed text is the common first output of a resumed turn, and it is
-    // journaled here; a turn that opened only on the block's final frame would
-    // leave visible partial text reading idle.
-    const source = claudeStreamTurnSource(message)
-    if (source) {
-      ensureTurnOpen(message, source, observedAt)
     }
     streamedText.append(delta.identity, delta.text)
     return true
@@ -190,6 +188,7 @@ export function createClaudeJournalTranslator(
       uuid: envelope.uuid,
       assistant: envelope.role === 'assistant'
     }
+    const openOutputTurn = (): void => ensureTurnOpen(message, source, observedAt)
     if (body) {
       // Opening before the append is what brackets a turn around its own first
       // output; a reader that scans back to the turn record and stops would
@@ -234,7 +233,8 @@ export function createClaudeJournalTranslator(
       })
       changed = true
     }
-    changed = appendUnmodeledClaudeContent(providerFallback, outputEnvelope, message) || changed
+    changed =
+      appendUnmodeledContent(providerFallback, outputEnvelope, message, openOutputTurn) || changed
     // The send's turn is anchored to the user row journaled just above it.
     const sendEchoTurn = claudeTurnOpenedBySendEcho({
       envelope,

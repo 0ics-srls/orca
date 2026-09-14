@@ -220,10 +220,15 @@ describe('Claude structured journal translation', () => {
     for (const event of turn.start) {
       translator.handle(event)
     }
+    expect(lifecycleAppends(state.items)).toEqual([
+      ['turn-lifecycle:msg_01-message-start', 'running']
+    ])
+    expect(assistantMessages(state.items)).toEqual([])
+
     for (const delta of turn.deltas) {
       translator.handle(delta)
     }
-    expect(state.items).toEqual([])
+    expect(assistantMessages(state.items)).toEqual([])
 
     const run = scheduled as (() => void) | null
     run?.()

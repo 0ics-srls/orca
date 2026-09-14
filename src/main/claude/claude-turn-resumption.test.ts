@@ -12,7 +12,11 @@ import type {
   AgentJournalRenderItem
 } from '../../shared/agent-session-journal-types'
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
-import { readAgentJournalTurn } from '../../shared/agent-session-turn-record'
+import {
+  legacyAgentJournalTurnStatusBody,
+  readAgentJournalTurn
+} from '../../shared/agent-session-turn-record'
+import { selectStructuredAgentSettledTurns } from '../../shared/structured-agent-session-turn-timing'
 import {
   hasUnansweredStructuredAgentSessionDispatch,
   projectStructuredAgentSessionStatus,
@@ -108,7 +112,21 @@ function textDelta(uuid: string, messageId: string, text: string) {
   }
 }
 
-function result(uuid: string, parentToolUseId: string | null = null) {
+function streamMessageStart(uuid: string, parentToolUseId: string | null = null) {
+  return {
+    type: 'message' as const,
+    sessionId: 'orca-session',
+    message: {
+      type: 'stream_event',
+      uuid,
+      session_id: SESSION,
+      parent_tool_use_id: parentToolUseId,
+      event: { type: 'message_start', message: { id: `msg-${uuid}`, role: 'assistant' } }
+    }
+  }
+}
+
+function result(uuid: string, parentToolUseId: string | null = null, durationMs = 322_937) {
   return {
     type: 'message' as const,
     sessionId: 'orca-session',
@@ -118,7 +136,7 @@ function result(uuid: string, parentToolUseId: string | null = null) {
       uuid,
       session_id: SESSION,
       parent_tool_use_id: parentToolUseId,
-      duration_ms: 322_937
+      duration_ms: durationMs
     }
   }
 }
@@ -158,7 +176,7 @@ describe('a Claude turn the provider resumed on its own', () => {
     expect(projected(items())).toBe('idle')
   })
 
-  it('gives the resumed turn its own record, with no user row to anchor to', () => {
+  it('gives the resumed turn its own record, anchored away from the preceding user row', () => {
     const { translator, items } = harness()
     translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
     translator.handle(result('r1'))
@@ -170,7 +188,45 @@ describe('a Claude turn the provider resumed on its own', () => {
     })
     expect(turns.map((turn) => turn.state)).toEqual(['completed', 'running'])
     expect(turns[1]?.turnId).toBe('a1')
-    expect(turns[1]?.userItemId).toBeUndefined()
+    expect(turns[1]?.userItemId).toBe('legacy:claude:claude-session:turn-lifecycle%3Aa1')
+  })
+
+  it('does not replace the preceding prompt timing with provider-resumed work', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(result('r1', null, 1_000))
+    translator.handle(frame('assistant', 'a1', [{ type: 'text', text: 'Back on it.' }]))
+    translator.handle(result('r2', null, 9_000))
+
+    const translatedItems = items()
+    const originalTurn = translatedItems
+      .map((item) => readAgentJournalTurn(item.body))
+      .find((turn) => turn?.turnId === 'u1')
+    expect(originalTurn?.userItemId).toBeDefined()
+    if (!originalTurn?.userItemId) {
+      throw new Error('expected the original turn to name its user row')
+    }
+    const userItem: AgentJournalRenderItem = {
+      itemId: originalTurn.userItemId,
+      revision: 1,
+      sequence: -1,
+      observedAt: 0,
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'go' }] }
+    }
+    const currentItems = [userItem, ...translatedItems]
+    expect(selectStructuredAgentSettledTurns(currentItems).get(userItem.itemId)).toMatchObject({
+      workedSeconds: 1
+    })
+
+    const legacyItems = currentItems.map((item) => {
+      const turn = readAgentJournalTurn(item.body)
+      return item.body.kind === 'turn' && turn
+        ? { ...item, body: legacyAgentJournalTurnStatusBody(turn, item.itemId) }
+        : item
+    })
+    expect(selectStructuredAgentSettledTurns(legacyItems).get(userItem.itemId)).toMatchObject({
+      workedSeconds: 1
+    })
   })
 
   it('leaves a settled turn settled when only a subagent is still producing', () => {
@@ -178,10 +234,8 @@ describe('a Claude turn the provider resumed on its own', () => {
     translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
     translator.handle(result('r1'))
 
-    // Children outlive the turn that spawned them; their frames are not a turn.
-    translator.handle(
-      frame('assistant', 'a1', [{ type: 'text', text: 'child work' }], 'toolu_parent')
-    )
+    // Children outlive the turn that spawned them; their streams are not a turn.
+    translator.handle(streamMessageStart('child-start', 'toolu_parent'))
     expect(projected(items())).toBe('idle')
   })
 
@@ -241,7 +295,7 @@ describe('a Claude turn the provider resumed on its own', () => {
     expect(projected(items())).toBe('idle')
 
     // Nothing can close a turn opened now, so nothing may open one.
-    translator.handle(frame('assistant', 'a1', [{ type: 'text', text: 'late frame' }]))
+    translator.handle(streamMessageStart('late-start'))
     expect(projected(items())).toBe('idle')
   })
 
@@ -282,6 +336,50 @@ describe('a Claude turn the provider resumed on its own', () => {
     translator.handle(textDelta('d1', 'msg-1', 'Back '))
     translator.handle(textDelta('d2', 'msg-1', 'on it.'))
     expect(projected(items())).toBe('working')
+  })
+
+  it('opens before a resumed stream produces its first content delta', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(result('r1'))
+
+    translator.handle(streamMessageStart('message-start-1'))
+
+    expect(projected(items())).toBe('working')
+    expect(readAgentJournalTurn(items().at(-1)?.body)?.turnId).toBe('message-start-1')
+    expect(items().some((item) => item.body.kind === 'status')).toBe(false)
+  })
+
+  it('opens before journaling substantive fallback output', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(result('r1'))
+
+    translator.handle(
+      frame('assistant', 'a1', [{ type: 'future_content', message: 'new provider output' }])
+    )
+
+    const resumed = items().slice(-2)
+    expect(readAgentJournalTurn(resumed[0]?.body)?.state).toBe('running')
+    expect(resumed[1]?.body).toMatchObject({
+      kind: 'status',
+      providerFrame: { kind: 'message:assistant:content:future_content' }
+    })
+    expect(projected(items())).toBe('working')
+  })
+
+  it('does not open a turn for an empty assistant placeholder', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(result('r1'))
+
+    translator.handle(frame('assistant', 'empty-1', []))
+
+    expect(projected(items())).toBe('idle')
+    expect(items().at(-1)?.body).toMatchObject({
+      kind: 'status',
+      providerFrame: { kind: 'message:assistant:empty' }
+    })
   })
 
   it('still reports a nested result failure even though it settles no turn', () => {
