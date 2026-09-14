@@ -2,6 +2,11 @@ import { observableModel } from './observable-model'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { settingsMountAdapters } from './settings-mount-adapters'
 import { sourceControlMountAdapters } from './source-control-mount-adapters'
+import { taskItemDetailMountAdapters } from './task-item-detail-mount-adapters'
+import { taskListMountAdapters } from './task-list-mount-adapters'
+import { taskProjectBoardMutationMountAdapters } from './task-project-board-mutation-mount-adapters'
+import { taskProjectBoardReadMountAdapters } from './task-project-board-read-mount-adapters'
+import { taskItemMutationMountAdapters } from './task-item-mutation-mount-adapters'
 import { taskWorkspaceHookMountAdapters } from './task-workspace-hook-mount-adapters'
 import { taskWorkspaceSenderMountAdapters } from './task-workspace-sender-mount-adapters'
 import { workspaceSettingsMounts } from './workspace-settings-mounts'
@@ -20,6 +25,11 @@ export function pilotMountAdapters(
     ...sourceControlMountAdapters(modules),
     ...taskWorkspaceSenderMountAdapters(modules),
     ...taskWorkspaceHookMountAdapters(modules),
+    ...taskItemDetailMountAdapters(modules),
+    ...taskListMountAdapters(modules),
+    ...taskItemMutationMountAdapters(modules),
+    ...taskProjectBoardReadMountAdapters(modules),
+    ...taskProjectBoardMutationMountAdapters(modules),
     ...hostedReviewMountAdapters(modules),
     'workspace.file-inventory': ({ client }) => {
       const useSearch = modules.load<
