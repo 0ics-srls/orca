@@ -81,8 +81,10 @@ export type GitHubProjectView = {
   number: number
   name: string
   layout: GitHubProjectViewLayout
-  /** Normalized to '' when GitHub returns null. Empty/whitespace filters omit
-   *  `items(query:)` so unfiltered boards skip GitHub's search-index lag. */
+  /** Normalized to '' when GitHub returns null. `ProjectV2.items(query:)` is
+   *  declared `String = ""`, so sending '' and omitting the argument are the
+   *  same request — there is no non-search item field to fall back to. '' is
+   *  therefore only a UI signal: it means "this view is unfiltered". */
   filter: string
   fields: GitHubProjectField[]
   groupByFields: GitHubProjectField[]

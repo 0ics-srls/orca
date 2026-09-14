@@ -35,7 +35,6 @@ export {
   normalizeFieldValue
 } from './project-view/project-view-field-normalization'
 export { normalizeItem } from './project-view/project-view-item-normalization'
-export { projectViewItemsUseSearchQuery } from './project-view/project-view-items-search-query'
 export { getProjectViewTable } from './project-view/project-view-table'
 export { listAccessibleProjects } from './project-view/project-view-discovery'
 export { parseProjectPaste, resolveProjectRef } from './project-view/project-view-reference'

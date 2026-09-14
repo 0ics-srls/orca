@@ -17,7 +17,6 @@ import {
   type GhGraphqlErrorShape
 } from './project-error-classification'
 import { ownerQueryRoot } from './project-view-config'
-import { projectViewItemsUseSearchQuery } from './project-view-items-search-query'
 import type { RawItem } from './project-view-item-normalization'
 import {
   FIELD_CONFIG_FRAGMENT,
@@ -59,21 +58,11 @@ export async function fetchItemsPageWithRaw(args: {
   const root = ownerQueryRoot(args.ownerType)
   const afterArg = args.after ? `, after: $after` : ''
   const afterVar = args.after ? `$after:String!, ` : ''
-  // Why: empty query still hits Projects search index and can return 0 during
-  // index lag on unfiltered views; omit query: for no filter (#12648).
-  const filterQuery = args.query.trim()
-  const useSearchQuery = projectViewItemsUseSearchQuery(filterQuery)
-  const queryVars = useSearchQuery
-    ? `${afterVar}$owner:String!, $num:Int!, $q:String!, $first:Int!`
-    : `${afterVar}$owner:String!, $num:Int!, $first:Int!`
-  const itemsArgs = useSearchQuery
-    ? `first:$first${afterArg}, query:$q, orderBy:{ field: POSITION, direction: ASC }`
-    : `first:$first${afterArg}, orderBy:{ field: POSITION, direction: ASC }`
   const query = `
-    query(${queryVars}) {
+    query(${afterVar}$owner:String!, $num:Int!, $q:String!, $first:Int!) {
       ${root}(login:$owner) {
         projectV2(number:$num) {
-          items(${itemsArgs}) {
+          items(first:$first${afterArg}, query:$q, orderBy:{ field: POSITION, direction: ASC }) {
             totalCount
             pageInfo { hasNextPage endCursor }
             nodes {
@@ -92,9 +81,7 @@ export async function fetchItemsPageWithRaw(args: {
   const argsArr: string[] = ['api', 'graphql', '-f', `query=${query}`]
   argsArr.push('-f', `owner=${args.owner}`)
   argsArr.push('-F', `num=${args.projectNumber}`)
-  if (useSearchQuery) {
-    argsArr.push('-f', `q=${filterQuery}`)
-  }
+  argsArr.push('-f', `q=${args.query}`)
   argsArr.push('-F', `first=${args.first}`)
   if (args.after) {
     argsArr.push('-f', `after=${args.after}`)
