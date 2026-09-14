@@ -13,6 +13,7 @@ import type {
 } from './agent-session-wire'
 import { backgroundTaskStatesEqual } from './agent-session-background-task-state-equality'
 import { agentJournalSubmissionKey } from './agent-session-journal-item-key'
+import { MAX_RETAINED_SUBMISSIONS } from './structured-agent-session-submission-retention'
 
 /** The last host clock sample: `hostNow - receivedAt` is the client's skew from the host,
  *  which is what lets a client attaching mid-turn anchor its live counter on the real start. */
@@ -48,7 +49,6 @@ export type StructuredAgentSessionAction =
   | { type: 'tail-page'; page: AgentSessionHistoryPage }
   | { type: 'older-page'; requestedCursor: AgentJournalCursor; page: AgentSessionHistoryPage }
 
-const MAX_RETAINED_SUBMISSIONS = 256
 // Well above the renderer's initial read window (300) plus a page, so only genuinely
 // long live sessions trim; anything trimmed is still reachable by paging older.
 const MAX_RETAINED_ITEMS = 1024
@@ -199,7 +199,9 @@ export function reduceStructuredAgentSession(
     return {
       epoch: action.page.epoch,
       cursor: action.page.liveCursor ?? null,
-      fence: action.page.fence ?? null,
+      // A tail refresh carries no fence; only a hydration page does. Nulling it here
+      // would silently hold the outbox pump and the unconfirmed probe.
+      fence: action.page.fence ?? state.fence,
       items: action.page.items,
       submissions: sameEpoch
         ? mergeSubmissions(state.submissions, action.page.submissions, action.page.items)

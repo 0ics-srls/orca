@@ -11,7 +11,8 @@ import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal
 import type {
   AgentJournalCursor,
   AgentJournalRenderItem,
-  AgentJournalSnapshot
+  AgentJournalSnapshot,
+  AgentJournalSubmission
 } from '../../../shared/agent-session-journal-types'
 import {
   AGENT_SESSION_HISTORY_DEFAULT_LIMIT,
@@ -21,6 +22,7 @@ import {
   type AgentSessionHistoryRequest,
   type AgentSessionHistoryResult
 } from '../../../shared/agent-session-wire'
+import { retainedSubmissionWindow } from '../../../shared/structured-agent-session-submission-retention'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { projectJournalBatch } from './agent-session-journal-batch'
 import {
@@ -70,11 +72,12 @@ export function readAgentSessionHistory(
     ? snapshot.items.filter((item) => item.sequence < cursor.sequence)
     : snapshot.items
   const windowed = newestWholeSequenceGroups(older, limit)
+  const submissionBytes = submissionBytesByItemId(snapshot.submissions)
   const { items, dropped } = boundHistoryItemsByBytes(
     windowed,
     'newest',
-    submissionBytesByItemId(snapshot.submissions),
-    HISTORY_PAGE_CONTENT_BUDGET_BYTES
+    submissionBytes,
+    itemBudgetBytes(snapshot.submissions, submissionBytes)
   )
   return {
     ok: true,
@@ -122,11 +125,12 @@ function buildHydrationPage(
   fence?: number
 ): AgentSessionHistoryPage {
   const items = newestWholeSequenceGroups(snapshot.items, AGENT_SESSION_HISTORY_MAX_LIMIT)
+  const submissionBytes = submissionBytesByItemId(snapshot.submissions)
   const bounded = boundHistoryItemsByBytes(
     items,
     'newest',
-    submissionBytesByItemId(snapshot.submissions),
-    HISTORY_PAGE_CONTENT_BUDGET_BYTES
+    submissionBytes,
+    itemBudgetBytes(snapshot.submissions, submissionBytes)
   )
   return buildPage({
     snapshot,
@@ -267,9 +271,7 @@ function buildPage(input: {
     direction: input.direction,
     items: input.items,
     removedItemIds: input.removedItemIds ?? [],
-    submissions: input.snapshot.submissions.filter((submission) =>
-      pageItemIds.has(agentJournalSubmissionKey(submission.clientMessageId))
-    ),
+    submissions: pageSubmissions(input.snapshot.submissions, input.direction, pageItemIds),
     window: {
       oldest: oldest ? { epoch, sequence: oldest.sequence } : null,
       newest: newest ? { epoch, sequence: newest.sequence } : null,
@@ -279,4 +281,48 @@ function buildPage(input: {
     hasOlder: input.hasOlder,
     hasNewer: input.hasNewer
   }
+}
+
+/**
+ * A replacing page carries the renderer's whole retained submission window, not just
+ * the ones its items reference: the renderer overwrites a submission only on key
+ * collision, so a settlement whose item has aged out of the window would otherwise
+ * never reach a pane that attached after its one streaming frame published.
+ *
+ * `after` keeps the item window. It is the live streaming batch, which already carries
+ * every submission it touches, and widening it would rebuild the array on every frame.
+ */
+function pageSubmissions(
+  submissions: readonly AgentJournalSubmission[],
+  direction: AgentSessionHistoryDirection,
+  pageItemIds: ReadonlySet<string>
+): AgentJournalSubmission[] {
+  const onPage = (submission: AgentJournalSubmission): boolean =>
+    pageItemIds.has(agentJournalSubmissionKey(submission.clientMessageId))
+  if (direction === 'after') {
+    return submissions.filter(onPage)
+  }
+  // Snapshot submissions are already `submittedAt` ascending; filtering keeps that.
+  const retained = new Set(
+    retainedSubmissionWindow(submissions).map((submission) => submission.clientMessageId)
+  )
+  return submissions.filter(
+    (submission) => retained.has(submission.clientMessageId) || onPage(submission)
+  )
+}
+
+/** Item budget once the retained submissions are priced. `historyEntryBytes` prices a
+ *  submission against its own item, so the ones riding with an off-window item are
+ *  invisible to it. Ones that are on-window get charged twice; over-reserving a few
+ *  hundred bytes each is the safe direction against the envelope reserve. */
+function itemBudgetBytes(
+  submissions: readonly AgentJournalSubmission[],
+  submissionBytes: ReadonlyMap<string, number>
+): number {
+  const reserved = retainedSubmissionWindow(submissions).reduce(
+    (total, submission) =>
+      total + (submissionBytes.get(agentJournalSubmissionKey(submission.clientMessageId)) ?? 0),
+    0
+  )
+  return Math.max(0, HISTORY_PAGE_CONTENT_BUDGET_BYTES - reserved)
 }

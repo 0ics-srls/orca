@@ -54,6 +54,27 @@ function hydrationPage(
 }
 
 describe('structured agent session reducer', () => {
+  it('keeps the ownership fence when a tail refresh replaces the page without one', () => {
+    const attached = reduceStructuredAgentSession(EMPTY_STRUCTURED_AGENT_SESSION, {
+      type: 'event',
+      event: {
+        type: 'snapshot',
+        sessionId: 'session-a',
+        fence: 7,
+        page: hydrationPage([item('a', 1)])
+      }
+    })
+    expect(attached.fence).toBe(7)
+    // `agentSession.history` never stamps a fence, so nulling it here would hold the
+    // outbox pump and the unconfirmed probe with nothing shown in the UI.
+    const refreshed = reduceStructuredAgentSession(attached, {
+      type: 'tail-page',
+      page: hydrationPage([item('a', 1), item('b', 2)])
+    })
+    expect(refreshed.items).toHaveLength(2)
+    expect(refreshed.fence).toBe(7)
+  })
+
   it('applies an additive targeted-stop capability update without journal churn', () => {
     const backgroundTasks = {
       state: 'monitoring' as const,

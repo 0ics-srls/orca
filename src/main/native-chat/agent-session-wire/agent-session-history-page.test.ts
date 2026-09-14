@@ -207,6 +207,45 @@ describe('readAgentSessionHistory', () => {
       dispatchState: 'pending'
     })
   })
+
+  it('carries a settled submission whose item aged out of the page', async () => {
+    await journal.appendSubmission({
+      clientMessageId: 'msg-1',
+      payloadFingerprint: 'b'.repeat(64),
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'hi' }] },
+      fence: 1
+    })
+    await journal.resolveDispatch({
+      clientMessageId: 'msg-1',
+      state: 'accepted',
+      providerIdentity: {
+        provider: 'codex',
+        threadId: 'thread-1',
+        turnId: 'turn-accept',
+        ordinal: 1
+      },
+      fence: 1
+    })
+    // Past the window `refreshTail` actually requests, so the user bubble ages out.
+    await appendItems(AGENT_SESSION_HISTORY_MAX_LIMIT + 10)
+
+    const page = readAgentSessionHistory(journal, {
+      sessionId: 'session-1',
+      direction: 'tail',
+      limit: AGENT_SESSION_HISTORY_MAX_LIMIT
+    })
+    if (!page.ok) {
+      throw new Error(`expected a page, got reset ${page.reset}`)
+    }
+    expect(page.page.items.map((entry) => entry.itemId)).not.toContain(
+      agentJournalSubmissionKey('msg-1')
+    )
+    // Without it the renderer keeps the stale `pending` forever: it overwrites a
+    // submission only on key collision, and no later page ever names this one.
+    expect(page.page.submissions).toMatchObject([
+      { clientMessageId: 'msg-1', dispatchState: 'accepted' }
+    ])
+  })
 })
 
 describe('history page byte ceiling', () => {
