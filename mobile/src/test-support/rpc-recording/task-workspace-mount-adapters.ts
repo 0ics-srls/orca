@@ -325,23 +325,21 @@ export function taskWorkspaceMountAdapters(
             return performHookAction(() => actions.connectWorkspaceSshRepo())
           }
           if (name === 'ensure-ready') {
-            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only id, displayName and connectionId.
             return actions.ensureWorkspaceSshReady(
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only id, displayName and connectionId.
               repo as Parameters<typeof actions.ensureWorkspaceSshReady>[0]
             )
           }
           if (name === 'resolve-setup') {
-            return (
-              actions
+            return actions
+              .resolveCreateSetupDecision(
                 // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: as above.
-                .resolveCreateSetupDecision(
-                  repo as Parameters<typeof actions.resolveCreateSetupDecision>[0]
-                )
-                .then((value: unknown) => {
-                  setup = value
-                  return value
-                })
-            )
+                repo as Parameters<typeof actions.resolveCreateSetupDecision>[0]
+              )
+              .then((value: unknown) => {
+                setup = value
+                return value
+              })
           }
           throw new Error(`Unknown workspace ssh action: ${name}`)
         },

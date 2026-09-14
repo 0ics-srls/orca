@@ -5143,9 +5143,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5179,9 +5177,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5215,9 +5211,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5269,9 +5263,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5303,9 +5295,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5334,9 +5324,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5363,9 +5351,7 @@
       "operation": "tasks.worktree-create-retry",
       "version": 1,
       "family": "worktree.create-retry",
-      "sites": [
-        "mobile/src/tasks/worktree-create-retry.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-retry.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5396,9 +5382,7 @@
       "operation": "tasks.worktree-capabilities",
       "version": 1,
       "family": "worktree.runtime-capabilities",
-      "sites": [
-        "mobile/src/tasks/worktree-create-capability.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-capability.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5413,10 +5397,7 @@
           "reply": {
             "ok": true,
             "result": {
-              "capabilities": [
-                "mobile.tasks.v1",
-                "worktree.create-idempotency.v1"
-              ],
+              "capabilities": ["mobile.tasks.v1", "worktree.create-idempotency.v1"],
               "worktreeCreateIdempotency": {
                 "dedupeTtlMs": 45000
               },
@@ -5434,9 +5415,7 @@
       "operation": "tasks.worktree-capabilities",
       "version": 1,
       "family": "worktree.runtime-capabilities",
-      "sites": [
-        "mobile/src/tasks/worktree-create-capability.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-capability.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5451,9 +5430,7 @@
           "reply": {
             "ok": true,
             "result": {
-              "capabilities": [
-                "worktree.create-idempotency.v1"
-              ]
+              "capabilities": ["worktree.create-idempotency.v1"]
             }
           }
         },
@@ -5467,9 +5444,7 @@
       "operation": "tasks.worktree-capabilities",
       "version": 1,
       "family": "worktree.runtime-capabilities",
-      "sites": [
-        "mobile/src/tasks/worktree-create-capability.ts"
-      ],
+      "sites": ["mobile/src/tasks/worktree-create-capability.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5498,9 +5473,7 @@
           "reply": {
             "ok": true,
             "result": {
-              "capabilities": [
-                "mobile.tasks.v1"
-              ]
+              "capabilities": ["mobile.tasks.v1"]
             }
           }
         },
@@ -5514,9 +5487,7 @@
       "operation": "tasks.composer-hosted-base",
       "version": 1,
       "family": "worktree.hosted-base",
-      "sites": [
-        "mobile/src/tasks/composer-source-base-resolve.ts"
-      ],
+      "sites": ["mobile/src/tasks/composer-source-base-resolve.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5569,9 +5540,7 @@
       "operation": "tasks.composer-hosted-base",
       "version": 1,
       "family": "worktree.hosted-base",
-      "sites": [
-        "mobile/src/tasks/composer-source-base-resolve.ts"
-      ],
+      "sites": ["mobile/src/tasks/composer-source-base-resolve.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5623,9 +5592,7 @@
       "operation": "tasks.setup-hook-trust",
       "version": 1,
       "family": "worktree.setup-hook-trust",
-      "sites": [
-        "mobile/src/tasks/setup-hook-trust.ts"
-      ],
+      "sites": ["mobile/src/tasks/setup-hook-trust.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5661,9 +5628,7 @@
       "operation": "tasks.setup-hook-trust",
       "version": 1,
       "family": "worktree.setup-hook-trust",
-      "sites": [
-        "mobile/src/tasks/setup-hook-trust.ts"
-      ],
+      "sites": ["mobile/src/tasks/setup-hook-trust.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5702,9 +5667,7 @@
       "operation": "tasks.smart-source-search",
       "version": 1,
       "family": "tasks.smart-source-search",
-      "sites": [
-        "mobile/src/tasks/smart-source-search-requests.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-search-requests.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5804,10 +5767,7 @@
           "reply": {
             "ok": true,
             "result": {
-              "refs": [
-                "main",
-                "release"
-              ]
+              "refs": ["main", "release"]
             }
           }
         },
@@ -5821,9 +5781,7 @@
       "operation": "tasks.smart-source-search",
       "version": 1,
       "family": "tasks.smart-source-search",
-      "sites": [
-        "mobile/src/tasks/smart-source-search-requests.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-search-requests.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5862,9 +5820,7 @@
       "operation": "tasks.smart-source-search",
       "version": 1,
       "family": "tasks.smart-source-search",
-      "sites": [
-        "mobile/src/tasks/smart-source-search-requests.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-search-requests.ts"],
       "schedules": [],
       "steps": [
         {
@@ -5930,9 +5886,7 @@
       "operation": "tasks.paste-lookup",
       "version": 1,
       "family": "tasks.paste-lookup",
-      "sites": [
-        "mobile/src/tasks/smart-source-paste-intent.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-paste-intent.ts"],
       "schedules": [],
       "steps": [
         {
@@ -6031,9 +5985,7 @@
       "operation": "tasks.paste-lookup",
       "version": 1,
       "family": "tasks.paste-lookup",
-      "sites": [
-        "mobile/src/tasks/smart-source-paste-intent.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-paste-intent.ts"],
       "schedules": [],
       "steps": [
         {
@@ -6070,9 +6022,7 @@
       "operation": "tasks.paste-lookup",
       "version": 1,
       "family": "tasks.paste-lookup",
-      "sites": [
-        "mobile/src/tasks/smart-source-paste-intent.ts"
-      ],
+      "sites": ["mobile/src/tasks/smart-source-paste-intent.ts"],
       "schedules": [],
       "steps": [
         {
@@ -6112,9 +6062,7 @@
       "operation": "tasks.workspace-source",
       "version": 1,
       "family": "tasks.workspace-source",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-source-effects.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-source-effects.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6133,9 +6081,7 @@
                 {
                   "id": "p1",
                   "name": "docs",
-                  "directories": [
-                    "docs"
-                  ]
+                  "directories": ["docs"]
                 }
               ]
             }
@@ -6158,9 +6104,7 @@
           "reply": {
             "ok": true,
             "result": {
-              "refs": [
-                "main"
-              ]
+              "refs": ["main"]
             }
           }
         },
@@ -6174,9 +6118,7 @@
       "operation": "tasks.workspace-source",
       "version": 1,
       "family": "tasks.workspace-source",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-source-effects.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-source-effects.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6206,9 +6148,7 @@
       "operation": "tasks.workspace-sparse",
       "version": 1,
       "family": "tasks.workspace-sparse",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-sparse-actions.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-sparse-actions.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6244,9 +6184,7 @@
           "params": {
             "repo": "id:repo-1",
             "name": "docs",
-            "directories": [
-              "docs"
-            ]
+            "directories": ["docs"]
           },
           "reply": {
             "ok": true,
@@ -6254,9 +6192,7 @@
               "preset": {
                 "id": "p1",
                 "name": "docs",
-                "directories": [
-                  "docs"
-                ]
+                "directories": ["docs"]
               }
             }
           }
@@ -6271,9 +6207,7 @@
       "operation": "tasks.workspace-sparse",
       "version": 1,
       "family": "tasks.workspace-sparse",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-sparse-actions.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-sparse-actions.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6302,9 +6236,7 @@
           "params": {
             "repo": "id:repo-1",
             "name": "docs",
-            "directories": [
-              "docs"
-            ]
+            "directories": ["docs"]
           },
           "reply": {
             "ok": true,
@@ -6321,9 +6253,7 @@
       "operation": "tasks.workspace-ssh",
       "version": 1,
       "family": "tasks.workspace-ssh",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6337,9 +6267,7 @@
           },
           "reply": {
             "ok": true,
-            "result": [
-              "codex"
-            ]
+            "result": ["codex"]
           }
         },
         {
@@ -6405,9 +6333,7 @@
       "operation": "tasks.workspace-ssh",
       "version": 1,
       "family": "tasks.workspace-ssh",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6479,9 +6405,7 @@
       "operation": "tasks.workspace-ssh",
       "version": 1,
       "family": "tasks.workspace-ssh",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-workspace-ssh-state.tsx"],
       "schedules": [],
       "steps": [
         {
@@ -6549,9 +6473,7 @@
       "operation": "settings.task-preferences",
       "version": 1,
       "family": "settings-best-effort",
-      "sites": [
-        "mobile/src/tasks/use-mobile-tasks-client-settings-actions.tsx"
-      ],
+      "sites": ["mobile/src/tasks/use-mobile-tasks-client-settings-actions.tsx"],
       "schedules": [],
       "steps": [
         {
