@@ -198,15 +198,19 @@ describe('typed translator coverage', () => {
   })
 
   it('keeps malformed covered-kind failures eligible for the generic fallback', () => {
+    // Eligibility is all this layer decides. A frame naming no task is not
+    // claimed by the row owner, which withholds the coverage flag so the
+    // failure still reaches the user. The SENTENCE it leads with is Claude's to
+    // supply, through the fallback's display-text seam — proven in
+    // `claude-structured-journal-translation-background-tasks.test.ts`. Teaching
+    // `summary` to the shared key list here would re-rank the row text of every
+    // unmodelled frame on both providers to reach this one case.
     expect(
       unhandledProviderFrameJournalItem('claude', 'message:system:task_notification', {
         status: 'failed',
         summary: 'Background command "Wait" failed with exit code 1'
       })
-    ).toMatchObject({
-      classification: 'error-surface',
-      body: { text: 'Background command "Wait" failed with exit code 1' }
-    })
+    ).toMatchObject({ classification: 'error-surface' })
   })
 
   it('covers Claude only — the same method name on another provider still falls back', () => {
