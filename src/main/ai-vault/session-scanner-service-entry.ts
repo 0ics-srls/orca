@@ -1,3 +1,4 @@
+import { requestSessionSearchRoots } from './session-scanner-service-root-request'
 import type { AiVaultSessionTitle } from '../../shared/ai-vault-session-title'
 import { readAiVaultFirstUserPrompt } from './session-first-user-prompt-read'
 import {
@@ -30,7 +31,7 @@ const cancelled = new Set<number>()
 const pending = new Set<number>()
 const titleIndex = new Map<string, AiVaultSessionTitle>()
 const invalidatedPaths = new Set<string>()
-const sessionSearch = new SessionScannerServiceSearch()
+const sessionSearch = new SessionScannerServiceSearch(requestSessionSearchRoots)
 let initialized = false
 let shuttingDown = false
 let cacheLane = Promise.resolve()

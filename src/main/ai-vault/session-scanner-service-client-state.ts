@@ -1,3 +1,4 @@
+import type { SessionSearchScanRoots } from '../ai-vault-search/session-search-scan-roots'
 import type { ChildProcess } from 'node:child_process'
 import { createAiVaultScanCancelledError } from './ai-vault-scan-cancellation'
 import {
@@ -20,6 +21,7 @@ export type AiVaultServiceClientOptions = {
   processFactory: AiVaultServiceProcessFactory
   /** Resolved per spawn: a respawned child must see current consent, not the first frame's. */
   init: () => Omit<AiVaultServiceInit, 'type' | 'protocol'>
+  resolveSessionSearchRoots?: () => Promise<SessionSearchScanRoots>
   idleTimeoutMs?: number
   onStderr?: (text: string) => void
 }
@@ -303,4 +305,26 @@ export class AiVaultServiceSessionSearchHold {
     child?.send({ type: 'sessionSearch', init })
     return this.enabled
   }
+}
+
+/** Starts the request deadline only once the child is ready to receive it. */
+export function sendAiVaultServiceCall(
+  child: ChildProcess,
+  call: AiVaultServicePendingCall,
+  isActive: () => boolean,
+  onFault: (error: Error) => void
+): void {
+  if (call.cancelled || !isActive()) {
+    return
+  }
+  const timeoutMs =
+    call.request.operation === 'scan'
+      ? AI_VAULT_SERVICE_SCAN_TIMEOUT_MS
+      : AI_VAULT_SERVICE_INTERACTIVE_TIMEOUT_MS
+  call.timer = setTimeout(() => {
+    onFault(new Error(`AI Vault service timed out after ${timeoutMs}ms.`))
+  }, timeoutMs)
+  call.timer.unref?.()
+  call.sent = true
+  child.send(call.request)
 }

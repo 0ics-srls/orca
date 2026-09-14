@@ -1,3 +1,4 @@
+import type { SessionSearchIndexerOptions } from '../ai-vault-search/session-search-indexer-options'
 import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import { AiVaultSearchRequestSchema } from '../../shared/ai-vault-search-contract'
 import { SessionSearchInstance } from '../ai-vault-search/session-search-instance'
@@ -30,6 +31,8 @@ export class SessionScannerServiceSearch {
   private databasePath: string | null = null
   private roots: SessionSearchScanRoots | null = null
 
+  constructor(private readonly resolveRoots?: SessionSearchIndexerOptions['resolveRoots']) {}
+
   /** Applied at init and again on every settings change; both are close-and-construct. */
   apply(init: AiVaultSessionSearchInit): void {
     if (!sessionSearchSqliteAvailable()) {
@@ -50,7 +53,8 @@ export class SessionScannerServiceSearch {
     this.roots = init.roots
     this.instance ??= new SessionSearchInstance({
       databasePath: init.databasePath,
-      roots: init.roots
+      roots: init.roots,
+      resolveRoots: this.resolveRoots
     })
     this.instance.apply(init.settings)
   }

@@ -11,11 +11,13 @@ import { SessionSearchIndexer } from './session-search-indexer'
 import { sessionSearchHistoryCutoffMs } from './session-search-retention-policy'
 import { openSessionSearchDatabase, removeSessionSearchDatabase } from './session-search-schema'
 import type { SessionSearchScanRoots } from './session-search-scan-roots'
+import type { SessionSearchIndexerOptions } from './session-search-indexer-options'
 import { createSessionSearchService, type SessionSearchService } from './session-search-service'
 
 export type SessionSearchInstanceOptions = {
   databasePath: string
   roots: SessionSearchScanRoots
+  resolveRoots?: SessionSearchIndexerOptions['resolveRoots']
   onError?: (error: unknown) => void
   /** Tests only: shortens the loop so a settings change is observable in one tick. */
   reconcileIntervalMs?: number
@@ -115,6 +117,7 @@ export class SessionSearchInstance {
       indexer = new SessionSearchIndexer({
         databasePath: this.options.databasePath,
         roots: this.options.roots,
+        resolveRoots: this.options.resolveRoots,
         historyDays,
         onError: this.onError,
         ...(this.options.reconcileIntervalMs === undefined

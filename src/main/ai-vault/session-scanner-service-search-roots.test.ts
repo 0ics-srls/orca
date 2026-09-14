@@ -5,35 +5,30 @@ import {
   writeMessageGraphTranscript,
   type SessionSearchIndexerHarness
 } from '../ai-vault-search/session-search-indexer-test-fixture'
-import { SessionSearchInstance } from '../ai-vault-search/session-search-instance'
+import { SessionSearchIndexer } from '../ai-vault-search/session-search-indexer'
 import type { SessionSearchScanRoots } from '../ai-vault-search/session-search-scan-roots'
 import { resetSessionParseCacheForTests } from './session-scanner-parse-cache'
 import type { AiVaultSessionSearchInit } from './session-scanner-service-protocol'
 import { SessionScannerServiceSearch } from './session-scanner-service-search'
 import { resetTranscriptConsumersForTests } from './session-transcript-consumers'
 
-/**
- * The parent re-resolves scan roots on every policy push, precisely so a WSL
- * distro or extra Codex home that appeared since the child spawned enters the
- * window. The indexer is immutable, so the only way that root is walked is a
- * rebuild of the pair around the new set — and an unchanged set must not rebuild.
- */
-
 let harness: SessionSearchIndexerHarness
 let subject: SessionScannerServiceSearch
 let spawnRoot: string
 let lateRoot: string
+let currentRoots: SessionSearchScanRoots
 let spawnRoots: SessionSearchScanRoots
 
 beforeEach(async () => {
   resetSessionParseCacheForTests()
   resetTranscriptConsumersForTests()
   harness = await openSessionSearchIndexerHarness('ss-service-roots')
-  subject = new SessionScannerServiceSearch()
+  subject = new SessionScannerServiceSearch(async () => currentRoots)
   const { openclawLegacyStateDir, ...rest } = harness.roots
   spawnRoot = harness.roots.openclawStateDir ?? ''
   lateRoot = openclawLegacyStateDir ?? ''
   spawnRoots = rest
+  currentRoots = rest
 })
 
 afterEach(async () => {
@@ -80,7 +75,7 @@ async function indexedSessions(term: string, expected: string[]): Promise<void> 
   )
 }
 
-it('rebuilds the index around a root that appeared after the child spawned', async () => {
+it('refreshes a late root without rebuilding the index', async () => {
   await writeMessageGraphTranscript(openclawTranscript(spawnRoot, 'early-session'), [
     'a conversation in a root the spawn already knew'
   ])
@@ -91,22 +86,21 @@ it('rebuilds the index around a root that appeared after the child spawned', asy
   subject.apply(init(spawnRoots))
   await indexedSessions('conversation', ['early-session'])
 
-  subject.apply(init(harness.roots))
+  const close = vi.spyOn(SessionSearchIndexer.prototype, 'close')
+  currentRoots = harness.roots
   await indexedSessions('conversation', ['early-session', 'late-session'])
+  expect(close).not.toHaveBeenCalled()
 })
 
-it('leaves the live pair in place when the same roots are pushed again', async () => {
+it('keeps the live indexer when an unchanged root snapshot is refreshed', async () => {
   await writeMessageGraphTranscript(openclawTranscript(spawnRoot, 'early-session'), [
     'a conversation in a root the spawn already knew'
   ])
   subject.apply(init(harness.roots))
   await indexedSessions('conversation', ['early-session'])
 
-  // A re-resolved root set is a new object every time; only a structural change
-  // may close the pair, so re-saving the same value never restarts the index.
-  const close = vi.spyOn(SessionSearchInstance.prototype, 'close')
-  subject.apply(init({ ...harness.roots }))
-
-  expect(close).not.toHaveBeenCalled()
+  const close = vi.spyOn(SessionSearchIndexer.prototype, 'close')
+  currentRoots = { ...spawnRoots }
   await indexedSessions('conversation', ['early-session'])
+  expect(close).not.toHaveBeenCalled()
 })

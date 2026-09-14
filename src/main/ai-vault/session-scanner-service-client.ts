@@ -2,10 +2,8 @@ import type { ChildProcess } from 'node:child_process'
 import { createAiVaultScanCancelledError } from './ai-vault-scan-cancellation'
 import {
   AI_VAULT_SERVICE_IDLE_TIMEOUT_MS,
-  AI_VAULT_SERVICE_INTERACTIVE_TIMEOUT_MS,
   AI_VAULT_SERVICE_MAX_CALLS,
   AI_VAULT_SERVICE_READY_TIMEOUT_MS,
-  AI_VAULT_SERVICE_SCAN_TIMEOUT_MS,
   AiVaultServiceIdleRetirement,
   AiVaultServiceInvalidations,
   AiVaultServiceSessionSearchHold,
@@ -17,6 +15,7 @@ import {
   rejectAiVaultServiceCall,
   requeueOrRejectAiVaultServiceStart,
   retireAiVaultServiceChild,
+  sendAiVaultServiceCall,
   type AiVaultServiceClientOptions,
   type AiVaultServicePendingCall,
   type AiVaultServiceReadyWaiter
@@ -25,7 +24,6 @@ import { AiVaultServiceRestartPolicy } from './session-scanner-service-restart-p
 import {
   aiVaultServiceLane,
   isAiVaultServiceChildMessage,
-  type AiVaultServiceChildMessage,
   type AiVaultSessionSearchInit,
   type AiVaultServiceRequest,
   type AiVaultServiceRequestBody,
@@ -142,7 +140,13 @@ export class AiVaultScannerServiceClient {
       const call = this.queue.splice(index, 1)[0]!
       this.active.set(lane, call)
       void this.ensureChild().then(
-        (child) => this.sendCall(child, call),
+        (child) =>
+          sendAiVaultServiceCall(
+            child,
+            call,
+            () => this.active.get(call.lane) === call,
+            (error) => this.onFault(error)
+          ),
         (error: Error) => {
           if (this.active.get(lane) !== call) {
             return
@@ -170,22 +174,6 @@ export class AiVaultScannerServiceClient {
     void this.ensureChild().catch((error: unknown) => {
       this.options.onStderr?.(`session search child unavailable: ${aiVaultServiceErrorText(error)}`)
     })
-  }
-
-  private sendCall(child: ChildProcess, call: AiVaultServicePendingCall): void {
-    if (call.cancelled || this.active.get(call.lane) !== call) {
-      return
-    }
-    const timeoutMs =
-      call.request.operation === 'scan'
-        ? AI_VAULT_SERVICE_SCAN_TIMEOUT_MS
-        : AI_VAULT_SERVICE_INTERACTIVE_TIMEOUT_MS
-    call.timer = setTimeout(() => {
-      this.onFault(new Error(`AI Vault service timed out after ${timeoutMs}ms.`))
-    }, timeoutMs)
-    call.timer.unref?.()
-    call.sent = true
-    child.send(call.request)
   }
 
   private retryStartOrReject(call: AiVaultServicePendingCall, error: Error): void {
@@ -228,12 +216,24 @@ export class AiVaultScannerServiceClient {
     return waiter.promise
   }
 
-  private onMessage(raw: unknown): void {
-    if (!isAiVaultServiceChildMessage(raw)) {
+  private onMessage(message: unknown): void {
+    if (!isAiVaultServiceChildMessage(message)) {
       this.onFault(new Error('AI Vault service sent a malformed message.'))
       return
     }
-    const message = raw as AiVaultServiceChildMessage
+    if (message.type === 'sessionSearchRoots') {
+      const child = this.child
+      const resolve = this.options.resolveSessionSearchRoots
+      void Promise.resolve()
+        .then(() => (resolve ? resolve() : (this.options.init().sessionSearch?.roots ?? null)))
+        .catch(() => null)
+        .then((roots) => {
+          if (child && this.child === child && child.connected) {
+            child.send({ type: 'sessionSearchRoots', id: message.id, roots }, () => undefined)
+          }
+        })
+      return
+    }
     if (message.type === 'ready') {
       const waiter = this.readyWaiter
       if (!waiter || !this.child) {

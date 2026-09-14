@@ -6,6 +6,7 @@ import { resetTranscriptConsumersForTests } from '../ai-vault/session-transcript
 import { installInProcessSessionSearchService } from './session-search-in-process-service'
 import {
   openSessionSearchIndexerHarness,
+  writeClaudeTranscript,
   type SessionSearchIndexerHarness
 } from './session-search-indexer-test-fixture'
 import { searchSessionService } from './session-search-service-registry'
@@ -104,78 +105,16 @@ it('forwards only a real settings change to the child', async () => {
   await vi.waitFor(() => expect(updateSessionSearchInService).toHaveBeenCalledTimes(2))
 })
 
-it('refreshes enabled roots periodically and only pushes a changed root set', async () => {
+it('does not discover roots or arm a timer during registration', async () => {
   vi.useFakeTimers()
   const { installChildSessionSearchService } = await import('./session-search-enablement')
   installed = installChildSessionSearchService({
     dataRoot: harness.root,
-    getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: null } })
+    getSettings: () => ({ aiVaultSearch: { enabled: false, historyDays: null } })
   })
-  await vi.advanceTimersByTimeAsync(0)
   expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
-
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
-  expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
-
-  const newRoots = { ...harness.roots, additionalCodexSessionsDirs: [join(harness.root, 'late')] }
-  localAiVaultScanRoots.mockResolvedValue(newRoots)
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(updateSessionSearchInService).toHaveBeenCalledTimes(2)
-  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
-    expect.objectContaining({ roots: newRoots })
-  )
-
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(updateSessionSearchInService).toHaveBeenCalledTimes(2)
-  installed?.dispose()
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(4)
-})
-
-it('starts root refresh on enable and cancels it on disable', async () => {
-  vi.useFakeTimers()
-  const { installChildSessionSearchService, applySessionSearchSettingsChange } =
-    await import('./session-search-enablement')
-  let settings = { aiVaultSearch: { enabled: false, historyDays: null } }
-  installed = installChildSessionSearchService({
-    dataRoot: harness.root,
-    getSettings: () => settings
-  })
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(0)
-  const before = settings
-  settings = { aiVaultSearch: { enabled: true, historyDays: null } }
-  applySessionSearchSettingsChange(before, settings)
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
-
-  const enabled = settings
-  settings = before
-  applySessionSearchSettingsChange(enabled, settings)
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
-  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
-    expect.objectContaining({ settings: before.aiVaultSearch })
-  )
-  expect(vi.getTimerCount()).toBe(0)
-})
-
-it('does not push a pending root refresh after disposal', async () => {
-  vi.useFakeTimers()
-  const { installChildSessionSearchService } = await import('./session-search-enablement')
-  installed = installChildSessionSearchService({
-    dataRoot: harness.root,
-    getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: null } })
-  })
-  await vi.advanceTimersByTimeAsync(0)
-  const pending = Promise.withResolvers<typeof harness.roots>()
-  localAiVaultScanRoots.mockReturnValueOnce(pending.promise)
-  await vi.advanceTimersByTimeAsync(300_000)
-  installed?.dispose()
-  pending.resolve({ ...harness.roots, additionalCodexSessionsDirs: [join(harness.root, 'late')] })
-  await vi.advanceTimersByTimeAsync(300_000)
-  expect(updateSessionSearchInService).toHaveBeenCalledTimes(1)
+  await vi.advanceTimersByTimeAsync(600_000)
+  expect(localAiVaultScanRoots).not.toHaveBeenCalled()
   expect(vi.getTimerCount()).toBe(0)
 })
 
@@ -221,27 +160,47 @@ it.each([
   expect(source).toMatch(new RegExp(`${installer}\\(\\{`))
 })
 
-it('disables immediately while an enabled root discovery is pending', async () => {
+it('disables immediately without root discovery', async () => {
   const { installChildSessionSearchService, applySessionSearchSettingsChange } =
     await import('./session-search-enablement')
   let settings = { aiVaultSearch: { enabled: true, historyDays: null } }
-  const pending = Promise.withResolvers<typeof harness.roots>()
-  localAiVaultScanRoots.mockReturnValueOnce(pending.promise)
   installed = installChildSessionSearchService({
     dataRoot: harness.root,
     getSettings: () => settings
   })
+  updateSessionSearchInService.mockClear()
   const before = settings
   settings = { aiVaultSearch: { enabled: false, historyDays: null } }
   applySessionSearchSettingsChange(before, settings)
   expect(updateSessionSearchInService).toHaveBeenCalledExactlyOnceWith(
     expect.objectContaining({ settings: settings.aiVaultSearch })
   )
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(1)
-  pending.resolve(harness.roots)
-  await Promise.resolve()
-  await Promise.resolve()
-  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
-    expect.objectContaining({ settings: settings.aiVaultSearch })
+  expect(localAiVaultScanRoots).not.toHaveBeenCalled()
+})
+
+it('orcad resolves no roots while disabled and discovers late roots when enabled', async () => {
+  const { installOrcadSessionSearchService } = await import('../orcad/orcad-session-search')
+  installed = await installOrcadSessionSearchService({
+    userDataPath: harness.root,
+    getSettings: () => ({ aiVaultSearch: { enabled: false, historyDays: null } })
+  })
+  expect(localAiVaultScanRoots).not.toHaveBeenCalled()
+  installed?.dispose()
+  installed = await installOrcadSessionSearchService({
+    userDataPath: harness.root,
+    getSettings: () => ({ aiVaultSearch: { enabled: true, historyDays: null } })
+  })
+  await searchSessionService({ query: 'latehostroot', freshness: 'wait-until-current' }, 'ipc')
+  const late = join(harness.root, 'late-claude')
+  const id = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
+  await writeClaudeTranscript(join(late, 'project', `${id}.jsonl`), ['latehostroot'], id)
+  localAiVaultScanRoots.mockResolvedValue({ ...harness.roots, claudeProjectsDir: late })
+  const response = await searchSessionService(
+    { query: 'latehostroot', freshness: 'wait-until-current' },
+    'ipc'
   )
+  expect(response.kind).toBe('results')
+  if (response.kind === 'results') {
+    expect(response.hits.map((hit) => hit.sessionId)).toEqual([id])
+  }
 })

@@ -25,6 +25,7 @@ import {
 const SESSION_ID = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
 
 let harness: SessionSearchIndexerHarness
+let currentRoots: SessionSearchIndexerHarness['roots']
 let originalSend: typeof process.send
 const sent: AiVaultServiceChildMessage[] = []
 let nextId = 1
@@ -38,7 +39,9 @@ async function call(body: AiVaultServiceRequestBody): Promise<AiVaultServiceResu
   const id = nextId++
   emit({ ...body, id })
   const reply = await vi.waitFor(() => {
-    const found = sent.find((message) => 'id' in message && message.id === id)
+    const found = sent.find(
+      (message) => (message.type === 'result' || message.type === 'error') && message.id === id
+    )
     expect(found).toBeDefined()
     return found!
   })
@@ -77,6 +80,7 @@ function searchInit(enabled: boolean): AiVaultSessionSearchInit {
 
 beforeAll(async () => {
   harness = await openSessionSearchIndexerHarness('ss-child')
+  currentRoots = harness.roots
   await writeClaudeTranscript(
     join(harness.claudeProjectDir, `${SESSION_ID}.jsonl`),
     ['a distinctive conversation'],
@@ -85,6 +89,11 @@ beforeAll(async () => {
   originalSend = process.send
   const record: NonNullable<typeof process.send> = (message) => {
     sent.push(message)
+    if (message.type === 'sessionSearchRoots') {
+      queueMicrotask(() =>
+        emit({ type: 'sessionSearchRoots', id: message.id, roots: currentRoots })
+      )
+    }
     return true
   }
   process.send = record
@@ -127,6 +136,23 @@ it('answers a search and a reconcile over the protocol', async () => {
   expect(response.kind).toBe('results')
   if (response.kind === 'results') {
     expect(response.hits.map((hit) => hit.sessionId)).toEqual([SESSION_ID])
+  }
+})
+
+it('discovers a new root through the parent exchange on manual reconciliation', async () => {
+  const lateHome = join(harness.root, 'late-home')
+  const id = 'bbbbbbbb-cccc-4ddd-8eee-ffffffffffff'
+  await writeClaudeTranscript(
+    join(lateHome, '.claude', 'projects', 'late', `${id}.jsonl`),
+    ['freshroots'],
+    id
+  )
+  currentRoots = { ...harness.roots, wslHomeDirs: [lateHome] }
+  await call({ type: 'request', operation: 'searchReconcile' })
+  const response = await searchSessions('freshroots')
+  expect(response.kind).toBe('results')
+  if (response.kind === 'results') {
+    expect(response.hits.map((hit) => hit.sessionId)).toEqual([id])
   }
 })
 

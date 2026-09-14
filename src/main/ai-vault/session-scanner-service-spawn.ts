@@ -1,3 +1,4 @@
+import { localAiVaultScanRoots } from './cached-session-list'
 import { fork, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import type {
@@ -48,6 +49,7 @@ let sharedClient: AiVaultScannerServiceClient | null = null
 function getSharedClient(): AiVaultScannerServiceClient {
   sharedClient ??= new AiVaultScannerServiceClient({
     processFactory: spawnAiVaultServiceProcess,
+    resolveSessionSearchRoots: localAiVaultScanRoots,
     init: () => ({
       sessionParseCache: getSessionParseCachePersistenceOptions(),
       sessionSearch: sessionSearchServiceInit()

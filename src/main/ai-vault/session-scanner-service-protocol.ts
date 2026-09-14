@@ -47,9 +47,8 @@ export type AiVaultServiceSubagentRequest = {
 /**
  * Everything the child needs to own this host's index.
  *
- * The parent resolves the scan roots because it is what resolves them for a list
- * scan; sending them keeps the index enumerating exactly the trees the session
- * list does. Read fresh on every spawn so a respawned child sees current consent.
+ * Initial roots also support standalone tests. Production asks the parent for
+ * a fresh snapshot on each full sweep; the parent owns managed account homes.
  */
 export type AiVaultSessionSearchInit = {
   databasePath: string
@@ -94,6 +93,7 @@ export type AiVaultServiceParentMessage =
   | { type: 'invalidate'; generation: number; paths: string[] }
   // Fire-and-forget: the child closes the live pair and constructs from this.
   | { type: 'sessionSearch'; init: AiVaultSessionSearchInit }
+  | { type: 'sessionSearchRoots'; id: number; roots: SessionSearchScanRoots | null }
   | { type: 'shutdown' }
 
 export type AiVaultServiceResultValue =
@@ -106,6 +106,7 @@ export type AiVaultServiceResultValue =
   | { operation: 'searchReconcile'; value: null }
 
 export type AiVaultServiceChildMessage =
+  | { type: 'sessionSearchRoots'; id: number }
   | {
       type: 'ready'
       protocol: typeof AI_VAULT_SERVICE_PROTOCOL_VERSION
@@ -142,6 +143,9 @@ export function isAiVaultServiceChildMessage(value: unknown): value is AiVaultSe
   const message = value as Record<string, unknown>
   if (message.type === 'ready') {
     return message.protocol === AI_VAULT_SERVICE_PROTOCOL_VERSION && Number.isInteger(message.pid)
+  }
+  if (message.type === 'sessionSearchRoots') {
+    return Number.isSafeInteger(message.id)
   }
   if (message.type === 'invalidated') {
     return Number.isSafeInteger(message.generation)

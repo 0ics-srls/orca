@@ -1,3 +1,4 @@
+import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import { resolveAiVaultSearchSettings } from '../../shared/ai-vault-search-settings'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { localAiVaultScanRoots } from '../ai-vault/cached-session-list'
@@ -17,7 +18,8 @@ export async function installOrcadSessionSearchService(args: {
 }): Promise<{ dispose(): void } | null> {
   return installInProcessSessionSearchService({
     dataRoot: args.userDataPath,
-    roots: await localAiVaultScanRoots(),
+    roots: { executionHostId: LOCAL_EXECUTION_HOST_ID },
+    resolveRoots: localAiVaultScanRoots,
     settings: resolveAiVaultSearchSettings(args.getSettings()),
     onError: (error) => console.error('[orcad] session search:', error)
   })
