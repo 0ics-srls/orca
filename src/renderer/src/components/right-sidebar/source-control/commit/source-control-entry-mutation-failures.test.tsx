@@ -2,9 +2,12 @@
 
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
+
+type ToastOptions = { description?: string; action?: { label: string; onClick: () => void } }
 
 const mocks = vi.hoisted(() => ({
-  toastError: vi.fn(),
+  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
   stagePath: vi.fn(),
   unstagePath: vi.fn(),
   discardPath: vi.fn()
@@ -37,11 +40,17 @@ import type { SourceControlEntryGroups } from '../listing/section-order'
 
 const EMPTY_GROUPS: SourceControlEntryGroups = { unstaged: [], staged: [], untracked: [] }
 
-type ToastOptions = { description?: string; action?: { label: string; onClick: () => void } }
+function entry(
+  path: string,
+  status: GitStatusEntry['status'] = 'modified',
+  area: GitStatusEntry['area'] = 'unstaged'
+): GitStatusEntry {
+  return { path, status, area }
+}
 
 function lastToast(): { title: string; options: ToastOptions } {
-  const call = mocks.toastError.mock.calls.at(-1)
-  return { title: String(call?.[0]), options: (call?.[1] ?? {}) as ToastOptions }
+  const [title = '', options = {}] = mocks.toastError.mock.lastCall ?? []
+  return { title, options }
 }
 
 function renderMutations() {
@@ -138,7 +147,7 @@ describe('source-control entry mutation failures', () => {
     const { result } = renderDiscard(discardSingle)
 
     await act(async () => {
-      result.current.requestDiscardEntry({ path: 'src/app.ts' } as never)
+      result.current.requestDiscardEntry(entry('src/app.ts'))
     })
     await act(async () => {
       result.current.confirmPendingDiscard()
@@ -156,7 +165,7 @@ describe('source-control entry mutation failures', () => {
     const { result } = renderDiscard(discardSingle)
 
     await act(async () => {
-      result.current.requestDiscardEntry({ path: 'src/app.ts' } as never)
+      result.current.requestDiscardEntry(entry('src/app.ts'))
     })
     await act(async () => {
       result.current.confirmPendingDiscard()
@@ -172,7 +181,7 @@ describe('source-control entry mutation failures', () => {
     const { result } = renderDiscard(discardSingle)
 
     await act(async () => {
-      result.current.requestDiscardEntry({ path: 'new.ts', status: 'untracked' } as never)
+      result.current.requestDiscardEntry(entry('new.ts', 'untracked', 'untracked'))
     })
     await act(async () => {
       result.current.confirmPendingDiscard()

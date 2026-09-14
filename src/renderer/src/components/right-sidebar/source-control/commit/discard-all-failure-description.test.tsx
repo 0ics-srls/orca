@@ -2,10 +2,18 @@
 
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { DiscardAllDeps, DiscardAllResult, DiscardAllArea } from './discard-all-sequence'
+
+type ToastOptions = { description?: string }
+type DiscardAllRunner = (
+  area: DiscardAllArea,
+  paths: readonly string[],
+  deps: DiscardAllDeps
+) => Promise<DiscardAllResult>
 
 const mocks = vi.hoisted(() => ({
-  toastError: vi.fn(),
-  runDiscardAllForArea: vi.fn()
+  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
+  runDiscardAllForArea: vi.fn<DiscardAllRunner>()
 }))
 
 vi.mock('sonner', () => ({ toast: { error: mocks.toastError, dismiss: vi.fn() } }))
@@ -13,7 +21,8 @@ vi.mock('@/lib/connection-context', () => ({ getConnectionId: () => undefined })
 vi.mock('@/runtime/runtime-git-client', () => ({ bulkUnstageRuntimeGitPaths: vi.fn() }))
 vi.mock('./discard-all-sequence', () => ({
   getDiscardAllPaths: () => [],
-  runDiscardAllForArea: (...args: unknown[]) => mocks.runDiscardAllForArea(...args)
+  runDiscardAllForArea: (area: DiscardAllArea, paths: readonly string[], deps: DiscardAllDeps) =>
+    mocks.runDiscardAllForArea(area, paths, deps)
 }))
 
 import { useSourceControlDiscardConfirmation } from './use-discard-confirmation'
@@ -22,8 +31,7 @@ import type { SourceControlEntryGroups } from '../listing/section-order'
 const EMPTY_GROUPS: SourceControlEntryGroups = { unstaged: [], staged: [], untracked: [] }
 
 function lastDescription(): string | undefined {
-  const call = mocks.toastError.mock.calls.at(-1)
-  return (call?.[1] as { description?: string })?.description
+  return mocks.toastError.mock.lastCall?.[1]?.description
 }
 
 function renderDiscard() {
@@ -65,8 +73,8 @@ describe('discard-all failure descriptions', () => {
 
   it('unwraps the IPC transport noise on a partial failure, like the per-row toast does', async () => {
     mocks.runDiscardAllForArea.mockImplementation(async (_area, _paths, handlers) => {
-      ;(handlers as { onError: (e: unknown) => void }).onError(new Error(WRAPPED))
-      return { aborted: false, failed: ['a.ts'] }
+      handlers.onError?.(new Error(WRAPPED))
+      return { aborted: false, discarded: [], failed: ['a.ts'] }
     })
 
     await confirmDiscardOf(['a.ts'])
@@ -78,8 +86,8 @@ describe('discard-all failure descriptions', () => {
   // Why 'staged': `aborted` is set only by the bulkUnstage pre-step, which runs for staged entries.
   it('unwraps it on the aborted-before-discard path too', async () => {
     mocks.runDiscardAllForArea.mockImplementation(async (_area, _paths, handlers) => {
-      ;(handlers as { onError: (e: unknown) => void }).onError(new Error(WRAPPED))
-      return { aborted: true, failed: [] }
+      handlers.onError?.(new Error(WRAPPED))
+      return { aborted: true, discarded: [], failed: [] }
     })
 
     await confirmDiscardOf(['a.ts'], 'staged')

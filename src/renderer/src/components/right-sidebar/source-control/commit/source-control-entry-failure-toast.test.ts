@@ -2,9 +2,16 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+type ToastOptions = {
+  id?: string
+  description?: string
+  duration?: number
+  action?: { label: string; onClick: () => void }
+}
+
 const { toastError, toastDismiss } = vi.hoisted(() => ({
-  toastError: vi.fn(),
-  toastDismiss: vi.fn()
+  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
+  toastDismiss: vi.fn<(id: string) => void>()
 }))
 vi.mock('sonner', () => ({ toast: { error: toastError, dismiss: toastDismiss } }))
 
@@ -15,19 +22,14 @@ vi.mock('@/store', () => ({
 
 import { showSourceControlEntryFailureToast } from './source-control-entry-failure-toast'
 
-type ToastOptions = {
-  id?: string
-  description?: string
-  duration?: number
-  action?: { label: string; onClick: () => void }
-}
+type FailureToastInput = Parameters<typeof showSourceControlEntryFailureToast>[0]
 
 function lastToast(): { title: string; options: ToastOptions } {
-  const call = toastError.mock.calls.at(-1)
-  return { title: String(call?.[0]), options: (call?.[1] ?? {}) as ToastOptions }
+  const [title = '', options = {}] = toastError.mock.lastCall ?? []
+  return { title, options }
 }
 
-function show(overrides: Record<string, unknown> = {}): void {
+function show(overrides: Partial<FailureToastInput> = {}): void {
   showSourceControlEntryFailureToast({
     operation: 'stage',
     filePath: 'src/app.ts',
@@ -35,7 +37,7 @@ function show(overrides: Record<string, unknown> = {}): void {
     worktreeId: 'wt-1',
     worktreeName: 'feature-a',
     ...overrides
-  } as Parameters<typeof showSourceControlEntryFailureToast>[0])
+  })
 }
 
 describe('showSourceControlEntryFailureToast', () => {
