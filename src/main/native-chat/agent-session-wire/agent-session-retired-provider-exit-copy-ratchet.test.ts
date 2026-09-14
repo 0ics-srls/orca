@@ -5,21 +5,17 @@ import { scanSourceTree, stripComments } from '../../../shared/source-scan/sourc
 /**
  * The retired copy has to stay retired.
  *
- * `withoutRetiredProviderExitStatusItems` hides a status row on TWO facts: a
- * `restart-eviction:<sessionId>:<fence>` item id, and copy that starts with the retired prefix.
- * The identity half is still minted today, so the filter cannot tell a new producer's row from
- * the legacy row it exists to hide — anything that writes this copy again would be dropped from
- * every transcript with no trace. No production writer is left, and this is what keeps it so.
+ * A bare `Provider exited: <reason>` status row is the reported symptom: a chat the user could
+ * not act on, settled by a restart rather than by observed death. Both production writers of that
+ * copy are gone, replaced by outcome copy the death evidence decides. Nothing filters this string
+ * at read time, so a producer that resurrects it reaches the transcript directly — which is why
+ * the guard sits on the writing side.
  *
- * Deliberately narrow: only a literal that OPENS with the prefix, which is exactly what the
- * filter's `startsWith` reads. Prose about the retirement is not a producer.
+ * Deliberately narrow: only a literal that OPENS with the prefix. Prose about the retirement, and
+ * copy that merely mentions a provider exiting, are not producers.
  */
 
 const RETIRED_COPY_PREFIX = 'Provider exited'
-
-/** The filter compares against the prefix rather than writing it, so it owns the one literal. */
-const FILTER_SOURCE_PATH =
-  'main/native-chat/agent-session-wire/agent-session-retired-provider-exit-status-filter.ts'
 
 /** Line numbers of string literals whose first character begins the retired copy. */
 export function findRetiredProviderExitCopyLines(source: string): number[] {
@@ -61,7 +57,7 @@ describe('retired provider-exit copy ratchet', () => {
   })
 
   const repoRoot = resolve(__dirname, '..', '..', '..', '..')
-  // Tests write the retired copy on purpose: that is how the filter is exercised.
+  // Tests assert on the retired copy on purpose; the walk skips them.
   const files = scanSourceTree(join(repoRoot, 'src'))
 
   it('scans a plausible number of files', () => {
@@ -70,17 +66,14 @@ describe('retired provider-exit copy ratchet', () => {
   })
 
   it('has no production writer of the retired copy', () => {
-    const offenders = files
-      .filter(({ relativePath }) => relativePath !== FILTER_SOURCE_PATH)
-      .flatMap(({ relativePath, source }) =>
-        findRetiredProviderExitCopyLines(source).map((line) => `src/${relativePath}:${line}`)
-      )
+    const offenders = files.flatMap(({ relativePath, source }) =>
+      findRetiredProviderExitCopyLines(source).map((line) => `src/${relativePath}:${line}`)
+    )
     expect(
       offenders,
-      `A status row whose copy opens with "${RETIRED_COPY_PREFIX}" is hidden from every transcript by ` +
-        'agent-session-retired-provider-exit-status-filter.ts whenever it also carries a ' +
-        'restart-eviction identity, which is still minted. Write the outcome copy the death ' +
-        'evidence decides instead of resurrecting the retired prefix.'
+      `A status row whose copy opens with "${RETIRED_COPY_PREFIX}" lands in the user's transcript ` +
+        'unfiltered, which is the symptom this chat surface was reported for. Write the outcome ' +
+        'copy the death evidence decides instead of resurrecting the retired prefix.'
     ).toEqual([])
   })
 })
