@@ -160,12 +160,34 @@ export class BrowserSessionUaCdpCollector {
       }
       return
     }
+    if (message.method === 'Target.targetCreated') {
+      const targetInfo = readRecord(message.params)?.targetInfo
+      const info = readRecord(targetInfo)
+      const targetType = readString(info, 'type') ?? 'unknown'
+      const targetId = readString(info, 'targetId') ?? 'unknown'
+      const targetUrl = readString(info, 'url') ?? ''
+      this.diagnostics.push(`target-created:${targetType}:${targetId}:${targetUrl}`)
+      if ((targetType === 'iframe' || targetType === 'worker') && targetId !== 'unknown') {
+        // Electron can report an isolated target before its automatic flattened attachment; attach
+        // explicitly so the frame/worker Network events remain target-scoped and auditable.
+        void this.send('Target.attachToTarget', { targetId, flatten: true }).catch(
+          (error: unknown) => {
+            this.diagnostics.push(`${targetType}-attach-error:${String(error)}`)
+          }
+        )
+      }
+    }
     if (message.method === 'Target.attachedToTarget') {
       const params = readRecord(message.params)
       const attachedSessionId = readString(params, 'sessionId')
       if (attachedSessionId) {
-        const targetType = readString(readRecord(params?.targetInfo), 'type') ?? 'unknown'
-        this.diagnostics.push(`attached:${targetType}:${attachedSessionId}`)
+        const targetInfo = readRecord(params?.targetInfo)
+        const targetType = readString(targetInfo, 'type') ?? 'unknown'
+        const targetId = readString(targetInfo, 'targetId') ?? 'unknown'
+        const targetUrl = readString(targetInfo, 'url') ?? ''
+        this.diagnostics.push(
+          `attached:${targetType}:${targetId}:${targetUrl}:${attachedSessionId}`
+        )
         this.targetsBySessionId.set(attachedSessionId, targetType)
         void this.prepareTarget(attachedSessionId)
       }
