@@ -6,7 +6,7 @@ import type {
 } from '../../shared/ai-vault-search-types'
 import { unavailableSessionSearchStatus } from '../../shared/ai-vault-search-client'
 import type { AiVaultSearchSettings } from '../../shared/ai-vault-search-settings'
-import { SessionSearchEngine, type SessionSearchEngineOptions } from './session-search-engine'
+import { SessionSearchEngine } from './session-search-engine'
 import { SessionSearchIndexer } from './session-search-indexer'
 import { sessionSearchHistoryCutoffMs } from './session-search-retention-policy'
 import { openSessionSearchDatabase, removeSessionSearchDatabase } from './session-search-schema'
@@ -26,9 +26,7 @@ type LiveIndex = {
   engine: SessionSearchEngine
   /** The engine's own handle; the indexer's store keeps a second, private one. */
   db: SyncDatabase
-  engineOptions: SessionSearchEngineOptions
   service: SessionSearchService
-  historyDays: number | null
 }
 
 /**
@@ -82,7 +80,6 @@ export class SessionSearchInstance {
     if (!live) {
       return { kind: 'unavailable', reason: this.settings.enabled ? 'not-ready' : 'disabled' }
     }
-    this.refreshRetentionCutoff(live)
     return live.service.search(request)
   }
 
@@ -125,7 +122,8 @@ export class SessionSearchInstance {
           : { reconcileIntervalMs: this.options.reconcileIntervalMs })
       })
       db = openSessionSearchDatabase(this.options.databasePath)
-      const engineOptions: SessionSearchEngineOptions = {
+      // Later expiry comes from the indexer purge, which also invalidates page cursors.
+      const engineOptions = {
         retentionCutoffMs: sessionSearchHistoryCutoffMs(historyDays, Date.now())
       }
       const engine = new SessionSearchEngine(db, engineOptions)
@@ -133,8 +131,6 @@ export class SessionSearchInstance {
         indexer,
         engine,
         db,
-        engineOptions,
-        historyDays,
         service: createSessionSearchService({ engine, indexer })
       }
       void indexer.start().catch(this.onError)
@@ -146,18 +142,6 @@ export class SessionSearchInstance {
       this.live = null
       this.onError(error)
     }
-  }
-
-  /**
-   * The window moves with the clock. The store re-reads it every pass; the
-   * engine holds its options object, so this is where a long-lived instance's
-   * search stops answering with rows the next purge will delete.
-   */
-  private refreshRetentionCutoff(live: LiveIndex): void {
-    live.engineOptions.retentionCutoffMs = sessionSearchHistoryCutoffMs(
-      live.historyDays,
-      Date.now()
-    )
   }
 
   private closeLive(): void {

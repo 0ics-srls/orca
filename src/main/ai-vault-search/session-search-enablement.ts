@@ -100,6 +100,17 @@ function updateRootRefreshTimer(refresh: RootRefresh, enabled: boolean): void {
 
 async function pushSessionSearchPolicy(refresh: RootRefresh, policyChanged = true): Promise<void> {
   try {
+    const current = sessionSearchServiceInit()
+    if (!current || refresh.disposed) {
+      return
+    }
+    if (!current.settings.enabled) {
+      updateRootRefreshTimer(refresh, false)
+      if (policyChanged) {
+        updateSessionSearchInService(current)
+      }
+      return
+    }
     await refreshSessionSearchScanRoots()
     if (refresh.disposed) {
       return

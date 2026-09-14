@@ -143,18 +143,18 @@ it('starts root refresh on enable and cancels it on disable', async () => {
     getSettings: () => settings
   })
   await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(1)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(0)
   const before = settings
   settings = { aiVaultSearch: { enabled: true, historyDays: null } }
   applySessionSearchSettingsChange(before, settings)
   await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(3)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
 
   const enabled = settings
   settings = before
   applySessionSearchSettingsChange(enabled, settings)
   await vi.advanceTimersByTimeAsync(300_000)
-  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(4)
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(2)
   expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
     expect.objectContaining({ settings: before.aiVaultSearch })
   )
@@ -205,8 +205,8 @@ it('registers an in-process service for a host with no scanner child', async () 
 // host's boot path reaches one, which no unit of either module can show.
 it.each([
   [
-    'desktop main',
-    'src/main/ipc/register-core-handlers/register-core-handlers.ts',
+    'desktop and headless serve',
+    'src/main/startup/main-process-runtime-service.ts',
     'installChildSessionSearchService'
   ],
   ['orcad', 'src/main/orcad/orcad-session-search.ts', 'installInProcessSessionSearchService'],
@@ -219,4 +219,29 @@ it.each([
   const source = readFileSync(join(ROOT, file), 'utf8')
   expect(source).toContain(installer)
   expect(source).toMatch(new RegExp(`${installer}\\(\\{`))
+})
+
+it('disables immediately while an enabled root discovery is pending', async () => {
+  const { installChildSessionSearchService, applySessionSearchSettingsChange } =
+    await import('./session-search-enablement')
+  let settings = { aiVaultSearch: { enabled: true, historyDays: null } }
+  const pending = Promise.withResolvers<typeof harness.roots>()
+  localAiVaultScanRoots.mockReturnValueOnce(pending.promise)
+  installed = installChildSessionSearchService({
+    dataRoot: harness.root,
+    getSettings: () => settings
+  })
+  const before = settings
+  settings = { aiVaultSearch: { enabled: false, historyDays: null } }
+  applySessionSearchSettingsChange(before, settings)
+  expect(updateSessionSearchInService).toHaveBeenCalledExactlyOnceWith(
+    expect.objectContaining({ settings: settings.aiVaultSearch })
+  )
+  expect(localAiVaultScanRoots).toHaveBeenCalledTimes(1)
+  pending.resolve(harness.roots)
+  await Promise.resolve()
+  await Promise.resolve()
+  expect(updateSessionSearchInService).toHaveBeenLastCalledWith(
+    expect.objectContaining({ settings: settings.aiVaultSearch })
+  )
 })

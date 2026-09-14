@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { utimes } from 'node:fs/promises'
 import { join } from 'node:path'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { resetSessionParseCacheForTests } from '../ai-vault/session-scanner-parse-cache'
 import { resetTranscriptConsumersForTests } from '../ai-vault/session-transcript-consumers'
 import { SessionSearchInstance } from './session-search-instance'
@@ -27,6 +27,7 @@ beforeEach(async () => {
 })
 
 afterEach(async () => {
+  vi.restoreAllMocks()
   instance?.close()
   resetTranscriptConsumersForTests()
   resetSessionParseCacheForTests()
@@ -163,5 +164,32 @@ it('removes the database on clear and rebuilds only while consent stands', async
   subject.clear()
   expect(subject.running).toBe(false)
   expect(existsSync(harness.databasePath)).toBe(false)
+  expect(errors).toEqual([])
+})
+
+it('keeps pagination stable when the clock crosses retention before a purge', async () => {
+  for (const id of [RECENT_SESSION_ID, ANCIENT_SESSION_ID]) {
+    await writeClaudeTranscript(transcriptPath(id), [`distinctive conversation ${id}`], id)
+  }
+  const subject = newInstance()
+  subject.apply({ enabled: true, historyDays: 30 })
+  await subject.settled()
+  const first = await subject.search({ query: 'distinctive', limit: 1 })
+  if (first.kind !== 'results') {
+    throw new Error('expected results')
+  }
+  expect(first.page.cursor).toBeTruthy()
+  vi.spyOn(Date, 'now').mockReturnValue(Date.now() + 31 * 86_400_000)
+  const second = await subject.search({
+    query: 'distinctive',
+    limit: 1,
+    cursor: first.page.cursor!
+  })
+  if (second.kind !== 'results') {
+    throw new Error('expected results')
+  }
+  expect(second.generation).toBe(first.generation)
+  expect(second.hits).toHaveLength(1)
+  expect(second.hits[0].sessionId).not.toBe(first.hits[0].sessionId)
   expect(errors).toEqual([])
 })
