@@ -5,22 +5,18 @@ import { isSettledBackgroundTaskState } from '../../shared/native-chat-backgroun
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import {
   classifyClaudeBackgroundTaskKind,
-  liveClaudeTaskRunState,
   record,
   taskDescription,
   taskId as readTaskId,
-  taskName,
-  terminalClaudeTaskRunState
+  taskName
 } from './claude-background-task-frames'
 import {
-  canReopenClaudeBackgroundTaskRowFromAggregate,
   claudeBackgroundTaskNotificationChange,
   claudeBackgroundTaskPatchChange,
   claudeBackgroundTaskToolUseId,
   isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
   newClaudeBackgroundTaskTerminalRow,
-  reopenClaudeBackgroundTaskRow,
   reviseClaudeBackgroundTaskRow,
   shouldRestartClaudeBackgroundTaskRow,
   type ClaudeBackgroundTaskChange,
@@ -276,18 +272,22 @@ export class ClaudeBackgroundTaskRows {
     for (const entry of value) {
       const task = record(entry)
       const id = task === null ? null : readTaskId(task)
-      if (task === null || id === null || !this.rows.has(id)) {
+      if (task === null || id === null || task.ambient === true || !this.rows.has(id)) {
         continue
       }
-      const state = terminalClaudeTaskRunState(task.status) ?? liveClaudeTaskRunState(task.status)
-      const row = this.rows.get(id)
-      if (row && canReopenClaudeBackgroundTaskRowFromAggregate(row, state)) {
-        this.rows.set(id, reopenClaudeBackgroundTaskRow(row, id, task, state, this.now()))
-        this.write(id)
-        continue
-      }
+      // Membership is the ONLY liveness this payload carries: it is the whole
+      // live set after a change, so presence means live and absence means
+      // merely "no longer listed", never an outcome. Its per-entry status is
+      // NOT read, because the payload has no such field — reading one derived a
+      // state that was always undefined and left the reopen branch it guarded
+      // unreachable on every real payload.
+      //
+      // Presence does not revive a settled row either. The payload is a level
+      // signal whose ordering against the start/stop edges is unspecified, and
+      // it carries no evidence of a NEW run — so a row that reported its own
+      // outcome keeps it, and the task's own frames remain the only thing that
+      // opens or settles one. Only the identity fields it really sends are read.
       this.revise(id, {
-        state,
         label: taskDescription(task.description) ?? taskName(task),
         kind:
           task.task_type === undefined

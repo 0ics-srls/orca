@@ -121,35 +121,6 @@ export function newClaudeBackgroundTaskTerminalRow(
   }
 }
 
-export function reopenClaudeBackgroundTaskRow(
-  row: ClaudeBackgroundTaskRow,
-  id: string,
-  message: Record<string, unknown>,
-  state: NativeChatBackgroundTaskBlock['state'],
-  now: number
-): ClaudeBackgroundTaskRow {
-  const kind =
-    'task_type' in message ? classifyClaudeBackgroundTaskKind(message.task_type) : row.block.kind
-  const totalTokens = taskUsageTotalTokens(message)
-  const toolUseId = claudeBackgroundTaskToolUseId(message)
-  return {
-    ...row,
-    ...(toolUseId === undefined ? {} : { toolUseId }),
-    block: {
-      type: 'background-task',
-      taskId: id,
-      kind: kind === 'unknown' ? row.block.kind : kind,
-      label: taskDescription(message.description) ?? taskName(message) ?? row.block.label,
-      ...((toolUseId ?? row.block.parentToolUseId)
-        ? { parentToolUseId: toolUseId ?? row.block.parentToolUseId }
-        : {}),
-      state,
-      startedAt: now,
-      ...(totalTokens === undefined ? {} : { tokens: totalTokens })
-    }
-  }
-}
-
 export function shouldRestartClaudeBackgroundTaskRow(
   row: ClaudeBackgroundTaskRow,
   message: Record<string, unknown>
@@ -159,18 +130,6 @@ export function shouldRestartClaudeBackgroundTaskRow(
   }
   const toolUseId = claudeBackgroundTaskToolUseId(message)
   return toolUseId !== undefined && toolUseId !== row.toolUseId
-}
-
-export function canReopenClaudeBackgroundTaskRowFromAggregate(
-  row: ClaudeBackgroundTaskRow,
-  state: NativeChatBackgroundTaskBlock['state'] | null
-): state is NativeChatBackgroundTaskBlock['state'] {
-  return (
-    state !== null &&
-    !isSettledBackgroundTaskState(state) &&
-    isSettledBackgroundTaskState(row.block.state) &&
-    row.block.state !== 'blocked'
-  )
 }
 
 /** Task types the transcript materializes as a row.

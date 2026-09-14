@@ -269,7 +269,7 @@ describe('claude background task rows', () => {
     rows.observe({
       type: 'system',
       subtype: 'background_tasks_changed',
-      tasks: [{ task_id: 'byjnee2no', status: 'running' }]
+      tasks: [{ task_id: 'byjnee2no', task_type: 'local_bash', description: 'still listed' }]
     })
     expect(latest()).toMatchObject({ state: 'blocked' })
   })
@@ -308,30 +308,63 @@ describe('claude background task rows', () => {
     expect(latest()).toMatchObject({ state: 'blocked', summary: 'second run failed' })
   })
 
-  it('lets an aggregate live roster reopen a settled same-id row', () => {
+  // Entries carry `{task_id, task_type, description, ambient?}` and NOTHING
+  // else — no per-entry status — so these use the real payload shape.
+  it('takes identity from the aggregate roster', () => {
     const { rows, latest } = harness()
-    rows.observe({ ...START_BASH, task_id: 'aggregate-resume' })
+    rows.observe({ ...START_BASH, task_id: 'aggregate-1', description: undefined })
+    expect(latest()).toMatchObject({ label: '', state: 'working' })
+
+    rows.observe({
+      type: 'system',
+      subtype: 'background_tasks_changed',
+      tasks: [{ task_id: 'aggregate-1', task_type: 'local_bash', description: 'Named by roster' }]
+    })
+
+    expect(latest()).toMatchObject({ label: 'Named by roster', state: 'working' })
+  })
+
+  // NOT an ablation of the status-read removal: that removal is behaviour-neutral
+  // on every real payload, which is exactly why the branch it fed was dead. This
+  // pins the standing latch rule instead — presence is a level signal whose
+  // ordering against the start/stop edges is unspecified and which carries no
+  // evidence of a new run, so a row that reported its own outcome keeps it.
+  it('does not let mere presence in the live set revive a settled row', () => {
+    const { rows, latest } = harness()
+    rows.observe({ ...START_BASH, task_id: 'aggregate-2' })
     rows.observe({
       type: 'system',
       subtype: 'task_notification',
-      task_id: 'aggregate-resume',
+      task_id: 'aggregate-2',
       status: 'completed'
     })
+    expect(latest()).toMatchObject({ state: 'done' })
 
+    rows.observe({
+      type: 'system',
+      subtype: 'background_tasks_changed',
+      tasks: [{ task_id: 'aggregate-2', task_type: 'local_bash', description: 'still listed' }]
+    })
+
+    expect(latest()).toMatchObject({ state: 'done' })
+  })
+
+  it('excludes ambient housekeeping from the aggregate roster', () => {
+    const { rows, latest } = harness()
+    rows.observe({ ...START_BASH, task_id: 'aggregate-3', description: undefined })
     rows.observe({
       type: 'system',
       subtype: 'background_tasks_changed',
       tasks: [
         {
-          task_id: 'aggregate-resume',
-          status: 'running',
+          task_id: 'aggregate-3',
           task_type: 'local_bash',
-          description: 'Resumed by roster'
+          description: 'housekeeping name',
+          ambient: true
         }
       ]
     })
-
-    expect(latest()).toMatchObject({ state: 'working', label: 'Resumed by roster' })
+    expect(latest()).toMatchObject({ label: '' })
   })
 
   it('never burns a revision on a duplicate delivery', () => {
