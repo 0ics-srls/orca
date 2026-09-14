@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { makeTuiIdleRuntime } from './tui-idle-wait-test-harness'
 import type { RuntimeSyncWindowGraph } from '../../shared/runtime-types'
 import type { OrcaRuntimeService } from './orca-runtime'
@@ -64,7 +64,17 @@ function watchDelivery(runtime: OrcaRuntimeService) {
     .mockImplementation(() => {})
 }
 
+// Why fake timers: the retry fires on a real 3s quiescence window, and asserting around it
+// with wall-clock sleeps made the result depend on how promptly a loaded CI runner schedules
+// an interval. The clock is the thing under test, so it has to be the deterministic part.
 describe('mailbox delivery honours the tui-idle evidence ranking', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   it('does not deliver into a pane that is only showing its agent name mid-turn', async () => {
     const { runtime } = await makeRuntime('codex')
     const deliver = watchDelivery(runtime)
@@ -100,22 +110,23 @@ describe('mailbox delivery honours the tui-idle evidence ranking', () => {
 
     // Output stops. No further title frame and no renderer graph sync — a daemon-hosted
     // pane has nobody publishing one, so nothing re-fires an edge on its own.
-    await new Promise((resolve) => setTimeout(resolve, 5_000))
+    await vi.advanceTimersByTimeAsync(5_000)
     expect(deliver).toHaveBeenCalled()
-  }, 20_000)
+  })
 
   it('does not retry into a pane that went busy again', async () => {
     const { runtime } = await makeRuntime('codex')
     const deliver = watchDelivery(runtime)
     runtime.onPtyData(PTY_ID, `${osc('Codex')}output\n`, Date.now())
     // Keep the stream alive across the whole retry window.
-    const streaming = setInterval(() => {
+    // Deterministic streaming: one chunk every 250ms of virtual time, so the gap between
+    // chunks can never drift past the quiescence window the way a real interval can.
+    for (let tick = 0; tick < 20; tick += 1) {
       runtime.onPtyData(PTY_ID, 'more output\n', Date.now())
-    }, 250)
-    await new Promise((resolve) => setTimeout(resolve, 5_000))
-    clearInterval(streaming)
+      await vi.advanceTimersByTimeAsync(250)
+    }
     expect(deliver).not.toHaveBeenCalled()
-  }, 20_000)
+  })
 
   // Case B, the mainline path: a hooked Codex emits a name-only frame BEFORE the hook's
   // `Codex ready`. The name-only frame consumes the working->idle transition, leaving the
@@ -128,11 +139,11 @@ describe('mailbox delivery honours the tui-idle evidence ranking', () => {
     runtime.onPtyData(PTY_ID, `${osc('Codex')}out\n`, Date.now())
     expect(deliver).not.toHaveBeenCalled()
 
-    await new Promise((resolve) => setTimeout(resolve, 100))
+    await vi.advanceTimersByTimeAsync(100)
     runtime.onPtyData(PTY_ID, osc('Codex ready'), Date.now())
     // Promptly, on the ready title itself — not after waiting out a quiescence window.
     expect(deliver).toHaveBeenCalled()
-  }, 20_000)
+  })
 
   // Case C: the agent's own status stream vetoes the idle title, then reports done with no
   // edge behind it. `working` stays fresh for 30 minutes, so without a re-offer the veto
@@ -149,9 +160,9 @@ describe('mailbox delivery honours the tui-idle evidence ranking', () => {
     expect(deliver).not.toHaveBeenCalled()
 
     runtime.onPtyData(PTY_ID, agentStatus('done', 'claude'), Date.now())
-    await new Promise((resolve) => setTimeout(resolve, 4_500))
+    await vi.advanceTimersByTimeAsync(4_500)
     expect(deliver).toHaveBeenCalled()
-  }, 20_000)
+  })
 
   it('still delivers for an agent whose name is its only rest signal', async () => {
     const { runtime } = await makeRuntime('grok', 'grok')
