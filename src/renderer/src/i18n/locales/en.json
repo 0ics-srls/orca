@@ -17106,9 +17106,7 @@
           "high": "High",
           "xhigh": "Extra high",
           "max": "Max",
-          "ultra": "Ultra",
-          "on": "On",
-          "off": "Off"
+          "ultra": "Ultra"
         },
         "pendingAttachmentLimit": "Too many attachments are waiting. Finish composing before attaching more.",
         "viewAttachment": "View image",

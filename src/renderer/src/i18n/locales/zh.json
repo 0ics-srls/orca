@@ -14707,9 +14707,7 @@
           "high": "高",
           "xhigh": "极高",
           "max": "最大",
-          "ultra": "极致",
-          "on": "开",
-          "off": "关"
+          "ultra": "极致"
         },
         "noCommandsOrSkills": "没有匹配的命令或技能",
         "commands": "命令",

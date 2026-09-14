@@ -14629,9 +14629,7 @@
           "high": "Alto",
           "xhigh": "Muy alto",
           "max": "Máximo",
-          "ultra": "Supremo",
-          "on": "Activado",
-          "off": "Desactivado"
+          "ultra": "Supremo"
         },
         "noCommandsOrSkills": "No hay comandos o habilidades coincidentes",
         "commands": "Comandos",
