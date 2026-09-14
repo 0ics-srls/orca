@@ -16,6 +16,7 @@ export type WireProbeReceipt = Readonly<{
   protocol: 'http' | 'https' | 'ws' | 'wss'
   path: string
   userAgent: string | null
+  clientHints: Readonly<Record<string, string>>
 }>
 
 export type WireProbeJavaScriptIdentity = Readonly<{
@@ -26,14 +27,12 @@ export type WireProbeJavaScriptIdentity = Readonly<{
 
 export type BrowserSessionUaWireProbeServer = Readonly<{
   httpOrigin: string
+  crossSiteOrigin: string
   httpsOrigin: string
   receipts: WireProbeReceipt[]
   identities: WireProbeJavaScriptIdentity[]
   close: () => Promise<void>
 }>
-
-// A server listening on a TCP port always reports an AddressInfo; a string or null means the
-// listen never took effect, which is worth failing on loudly rather than building a bad origin.
 function boundPort(server: { address: () => AddressInfo | string | null }): number {
   const address = server.address()
   if (address === null || typeof address === 'string') {
@@ -41,7 +40,6 @@ function boundPort(server: { address: () => AddressInfo | string | null }): numb
   }
   return address.port
 }
-
 export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSessionUaWireProbeServer> {
   const receipts: WireProbeReceipt[] = []
   const identities: WireProbeJavaScriptIdentity[] = []
@@ -55,7 +53,8 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
         protocol,
         path,
         userAgent:
-          typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : null
+          typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : null,
+        clientHints: requestClientHints(request)
       })
       if (path.startsWith('/report/')) {
         const body = await readBody(request)
@@ -76,6 +75,17 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
         respondHtml(response, childPage('frame', origins?.http ?? ''))
         return
       }
+      if (path === '/cross-site-frame') {
+        respondHtml(
+          response,
+          childPage('cross-site-frame', origins?.http ?? '', false, origins?.https ?? '')
+        )
+        return
+      }
+      if (path === '/dedicated-worker.js') {
+        respondScript(response, dedicatedWorkerScript(origins?.http ?? ''))
+        return
+      }
       if (path === '/popup') {
         respondHtml(response, childPage('popup', origins?.http ?? '', true))
         return
@@ -90,7 +100,17 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
         return
       }
       if (path === '/') {
-        respondHtml(response, probePage(origins?.http ?? '', origins?.https ?? ''))
+        respondHtml(
+          response,
+          probePage(
+            origins?.http ?? '',
+            origins?.https ?? '',
+            origins?.https ?? '',
+            new URL(request.url ?? '/', 'http://probe.invalid').searchParams.get(
+              'cross-context'
+            ) === '1'
+          )
+        )
         return
       }
       respondText(response, path)
@@ -109,6 +129,7 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
   }
   return {
     httpOrigin: origins.http,
+    crossSiteOrigin: origins.https,
     httpsOrigin: origins.https,
     receipts,
     identities,
@@ -120,11 +141,21 @@ export async function startBrowserSessionUaWireProbeServer(): Promise<BrowserSes
     }
   }
 }
-
-function probePage(httpOrigin: string, httpsOrigin: string): string {
+function probePage(
+  httpOrigin: string,
+  httpsOrigin: string,
+  crossSiteOrigin: string,
+  crossContext: boolean
+): string {
   const blobScript = contextScript('blob', httpOrigin, ['/blob-fetch', '/blob-xhr', '/blob-image'])
   const blobDocument = `<!doctype html><script>${blobScript}</script>`
   const serializedBlobDocument = JSON.stringify(blobDocument).replace('</script>', '<\\/script>')
+  const crossSiteFrameScript = crossContext
+    ? `const crossSiteFrame = document.createElement('iframe'); crossSiteFrame.src = ${JSON.stringify(crossSiteOrigin)} + '/cross-site-frame'; document.body.append(crossSiteFrame)`
+    : ''
+  const dedicatedWorkerScriptText = crossContext
+    ? `const dedicatedDone = message('dedicated-worker'); const dedicated = new Worker(${JSON.stringify(httpOrigin)} + '/dedicated-worker.js'); dedicated.onmessage = event => postMessage(event.data, '*')`
+    : ''
   return `<!doctype html><title>UA wire probe</title><script>
   const identity = () => ({ userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null })
   const report = context => fetch(${JSON.stringify(httpOrigin)} + '/report/' + context, { method: 'POST', body: JSON.stringify(identity()) })
@@ -136,24 +167,34 @@ function probePage(httpOrigin: string, httpsOrigin: string): string {
   window.probePromise = (async () => {
     await report('document')
     const frameDone = message('frame'); const frame = document.createElement('iframe'); frame.src = ${JSON.stringify(httpOrigin)} + '/frame'; document.body.append(frame)
+    ${crossSiteFrameScript}
     const blobDone = message('blob'); const blob = document.createElement('iframe'); blob.src = URL.createObjectURL(new Blob([${serializedBlobDocument}], { type: 'text/html' })); document.body.append(blob)
     const sharedDone = message('shared-worker'); const shared = new SharedWorker(${JSON.stringify(httpOrigin)} + '/shared-worker.js'); shared.port.start(); shared.port.onmessage = event => postMessage(event.data, '*')
+    ${dedicatedWorkerScriptText}
     const serviceDone = message('service-worker'); const registration = await navigator.serviceWorker.register('/service-worker.js'); await navigator.serviceWorker.ready; navigator.serviceWorker.addEventListener('message', event => postMessage(event.data, '*')); (navigator.serviceWorker.controller || registration.active).postMessage('probe')
     const popupDone = message('popup'); window.open(${JSON.stringify(httpOrigin)} + '/popup', '_blank')
     await Promise.all([
       fetchRoute('/document-fetch'), xhrRoute('/document-xhr'), imageRoute('/document-image'),
       socket('ws://' + new URL(${JSON.stringify(httpOrigin)}).host + '/plain-ws'),
       socket('wss://' + new URL(${JSON.stringify(httpsOrigin)}).host + '/secure-ws'),
-      frameDone, blobDone, sharedDone, serviceDone, popupDone
+      frameDone, blobDone, sharedDone${crossContext ? ', dedicatedDone' : ''}, serviceDone, popupDone
     ])
     return true
   })()
   </script>`
 }
-
-function childPage(context: string, httpOrigin: string, popup = false): string {
+function childPage(
+  context: string,
+  httpOrigin: string,
+  popup = false,
+  fetchOrigin = httpOrigin
+): string {
   const extra = popup ? `await fetch(${JSON.stringify(httpOrigin)} + '/popup-fetch')` : ''
-  return `<!doctype html><script>(async () => { const identity = { userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null }; await fetch(${JSON.stringify(httpOrigin)} + '/report/${context}', { method: 'POST', body: JSON.stringify(identity) }); ${extra}; (opener || parent).postMessage({ context: '${context}' }, '*') })()</script>`
+  const crossSiteFetch =
+    context === 'cross-site-frame'
+      ? `await fetch(${JSON.stringify(fetchOrigin)} + '/cross-site-frame-fetch')`
+      : ''
+  return `<!doctype html><script>(async () => { const identity = { userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null }; await fetch(${JSON.stringify(httpOrigin)} + '/report/${context}', { method: 'POST', body: JSON.stringify(identity) }); ${extra} ${crossSiteFetch}; (opener || parent).postMessage({ context: '${context}' }, '*') })()</script>`
 }
 
 function desktopPeerPage(httpOrigin: string): string {
@@ -171,13 +212,14 @@ function desktopPeerPage(httpOrigin: string): string {
   })()
   </script>`
 }
-
 function contextScript(context: string, httpOrigin: string, routes: string[]): string {
   return `(async () => { const identity = { userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null }; await fetch(${JSON.stringify(httpOrigin)} + '/report/${context}', { method: 'POST', body: JSON.stringify(identity) }); await fetch(${JSON.stringify(httpOrigin + routes[0])}); await new Promise((resolve, reject) => { const xhr = new XMLHttpRequest(); xhr.open('GET', ${JSON.stringify(httpOrigin + routes[1])}); xhr.onload = resolve; xhr.onerror = reject; xhr.send() }); await new Promise((resolve, reject) => { const image = new Image(); image.onload = resolve; image.onerror = reject; image.src = ${JSON.stringify(httpOrigin + routes[2])} }); parent.postMessage({ context: '${context}' }, '*') })()`
 }
-
 function sharedWorkerScript(httpOrigin: string): string {
   return `onconnect = event => { const port = event.ports[0]; (async () => { const identity = { userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null }; await fetch(${JSON.stringify(httpOrigin)} + '/report/shared-worker', { method: 'POST', body: JSON.stringify(identity) }); await fetch(${JSON.stringify(httpOrigin)} + '/shared-worker-fetch-a'); await fetch(${JSON.stringify(httpOrigin)} + '/shared-worker-fetch-b'); port.postMessage({ context: 'shared-worker' }) })() }`
+}
+function dedicatedWorkerScript(httpOrigin: string): string {
+  return `const identity = { userAgent: navigator.userAgent, userAgentData: navigator.userAgentData ? { brands: navigator.userAgentData.brands, mobile: navigator.userAgentData.mobile, platform: navigator.userAgentData.platform } : null }; (async () => { await fetch(${JSON.stringify(httpOrigin)} + '/report/dedicated-worker', { method: 'POST', body: JSON.stringify(identity) }); await fetch(${JSON.stringify(httpOrigin)} + '/dedicated-worker-fetch'); postMessage({ context: 'dedicated-worker' }); })();`
 }
 
 function serviceWorkerScript(httpOrigin: string): string {
@@ -198,7 +240,8 @@ function installWebSocketResponder(
       protocol,
       path: new URL(request.url ?? '/', 'http://probe.invalid').pathname,
       userAgent:
-        typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : null
+        typeof request.headers['user-agent'] === 'string' ? request.headers['user-agent'] : null,
+      clientHints: requestClientHints(request)
     })
     if (typeof key !== 'string') {
       socket.destroy()
@@ -240,6 +283,16 @@ function readBody(request: IncomingMessage): Promise<string> {
 function respondText(response: ServerResponse, body: string): void {
   response.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Cache-Control': 'no-store' })
   response.end(body)
+}
+
+function requestClientHints(request: IncomingMessage): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(request.headers).flatMap(([key, value]) =>
+      key.toLowerCase().startsWith('sec-ch-ua') && typeof value === 'string'
+        ? [[key.toLowerCase(), value]]
+        : []
+    )
+  )
 }
 
 function respondHtml(response: ServerResponse, body: string): void {
