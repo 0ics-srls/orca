@@ -703,13 +703,18 @@ describe('Claude live prompt ownership', () => {
     expect(tombstones).toEqual([])
   })
 
-  it('dedupes, bounds, and clears prompt cancellation retries', () => {
+  it('keeps every backpressured prompt cancellation retry in its owned entry', () => {
+    let backpressured = true
+    let lifecycleAttempts = 0
     const prompts = new ClaudeJournalPrompts({
       sink: {
         appendItem: () => {},
         appendTombstone: () => {},
         publish: () => {},
-        tryAppendLifecycleBatch: () => ({ accepted: false, reason: 'backpressure' })
+        tryAppendLifecycleBatch: () => {
+          lifecycleAttempts += 1
+          return backpressured ? { accepted: false, reason: 'backpressure' } : { accepted: true }
+        }
       }
     })
     const registerCancellation = (index: number): void => {
@@ -736,10 +741,24 @@ describe('Claude live prompt ownership', () => {
     for (let index = 1; index < 65; index += 1) {
       registerCancellation(index)
     }
-    expect(prompts.pendingCancellationCount).toBe(64)
+    expect(prompts.pendingCancellationCount).toBe(65)
 
-    prompts.resolve('permission-0')
-    expect(prompts.pendingCancellationCount).toBe(63)
+    backpressured = false
+    const attemptsBeforeRecovery = lifecycleAttempts
+    prompts.retryPendingCancellations()
+    expect(lifecycleAttempts - attemptsBeforeRecovery).toBe(65)
+    expect(prompts.pendingCancellationCount).toBe(0)
+    expect(prompts.size).toBe(0)
+    const attemptsAfterRecovery = lifecycleAttempts
+    prompts.retryPendingCancellations()
+    expect(lifecycleAttempts).toBe(attemptsAfterRecovery)
+
+    backpressured = true
+    registerCancellation(65)
+    expect(prompts.pendingCancellationCount).toBe(1)
+    prompts.resolve('permission-65')
+    expect(prompts.pendingCancellationCount).toBe(0)
+    registerCancellation(66)
     prompts.clear()
     expect(prompts.pendingCancellationCount).toBe(0)
     expect(prompts.size).toBe(0)

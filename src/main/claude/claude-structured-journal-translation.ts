@@ -255,8 +255,8 @@ export function createClaudeJournalTranslator(
 
   return {
     handle: (event) => {
-      prompts.retryPendingCancellations()
       if (event.type === 'ended') {
+        prompts.retryPendingCancellations()
         streamedText.flush()
         // No event will ever settle a child once the provider is gone.
         subagents.settleSession()
@@ -281,6 +281,7 @@ export function createClaudeJournalTranslator(
       if (event.type === 'prompt') {
         prompts.handle(event)
       } else if (event.type === 'prompt-cancelled') {
+        prompts.retryPendingCancellations()
         prompts.cancel(event.promptKey)
       } else if (event.type === 'message' && event.message.type === 'result') {
         // Every turn this translator opens is root by construction, so a nested
@@ -289,6 +290,7 @@ export function createClaudeJournalTranslator(
         // it ends no turn.
         const settlesTurn = isRootClaudeFrame(event.message)
         if (settlesTurn) {
+          prompts.retryPendingCancellations()
           // The turn is over however it ended, so a foreground child still
           // reported as working will never be settled by an event.
           // A turn that failed, or that the user stopped, is not resumed by

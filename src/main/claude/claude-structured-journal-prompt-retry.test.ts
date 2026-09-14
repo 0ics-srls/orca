@@ -23,18 +23,23 @@ function approval(promptKey: string): ClaudePendingPrompt {
   }
 }
 
-function transientBackpressureSink(refusedAt: 'append' | 'publish'): {
+function transientBackpressureSink(
+  refusedAt: 'append' | 'publish',
+  persistent = false
+): {
   sink: StructuredAgentSessionEventSink
   durableApproval: () => AgentJournalItemBody | undefined
   appendAttempts: () => number
   publishAttempts: () => number
   appliedSettlements: Set<string>
+  release: () => void
 } {
   const staged = new Map<string, AgentJournalItemBody>()
   const durable = new Map<string, AgentJournalItemBody>()
   const appliedSettlements = new Set<string>()
   let lifecycleAppendAttempts = 0
   let lifecyclePublishAttempts = 0
+  let released = false
   const persist = (): void => {
     durable.clear()
     for (const [key, body] of staged) {
@@ -51,7 +56,7 @@ function transientBackpressureSink(refusedAt: 'append' | 'publish'): {
       publish: persist,
       tryAppendLifecycleBatch: (settlementId, mutations) => {
         lifecycleAppendAttempts += 1
-        if (refusedAt === 'append' && lifecycleAppendAttempts === 1) {
+        if (refusedAt === 'append' && (persistent ? !released : lifecycleAppendAttempts === 1)) {
           return { accepted: false, reason: 'backpressure' }
         }
         if (!appliedSettlements.has(settlementId)) {
@@ -68,7 +73,7 @@ function transientBackpressureSink(refusedAt: 'append' | 'publish'): {
       },
       tryPublish: () => {
         lifecyclePublishAttempts += 1
-        if (refusedAt === 'publish' && lifecyclePublishAttempts === 1) {
+        if (refusedAt === 'publish' && (persistent ? !released : lifecyclePublishAttempts === 1)) {
           return { accepted: false, reason: 'backpressure' }
         }
         persist()
@@ -78,7 +83,44 @@ function transientBackpressureSink(refusedAt: 'append' | 'publish'): {
     durableApproval: () => [...durable.values()].find((body) => body.kind === 'approval'),
     appendAttempts: () => lifecycleAppendAttempts,
     publishAttempts: () => lifecyclePublishAttempts,
-    appliedSettlements
+    appliedSettlements,
+    release: () => {
+      released = true
+    }
+  }
+}
+
+function rootResult() {
+  return {
+    type: 'message' as const,
+    sessionId: 'orca-session',
+    message: {
+      type: 'result',
+      subtype: 'success',
+      uuid: 'result-success',
+      session_id: 'claude-session',
+      parent_tool_use_id: null,
+      is_error: false,
+      duration_ms: 1
+    }
+  }
+}
+
+function streamDelta(index: number) {
+  return {
+    type: 'message' as const,
+    sessionId: 'orca-session',
+    message: {
+      type: 'stream_event',
+      uuid: `stream-${index}`,
+      session_id: 'claude-session',
+      parent_tool_use_id: null,
+      event: {
+        type: 'content_block_delta',
+        index: 0,
+        delta: { type: 'text_delta', text: 'x' }
+      }
+    }
   }
 }
 
@@ -98,25 +140,39 @@ describe('Claude journal prompt cancellation retry', () => {
       })
       expect(state.durableApproval()).toMatchObject({ resolution: { state: 'pending' } })
 
-      translator.handle({
-        type: 'provider-frame',
-        sessionId: 'orca-session',
-        kind: 'control_request:retry-boundary',
-        payload: {}
-      })
+      translator.handle(rootResult())
       expect(state.durableApproval()).toMatchObject({ resolution: { state: 'cancelled' } })
       expect(state.appendAttempts()).toBe(2)
       expect(state.publishAttempts()).toBe(refusedAt === 'publish' ? 2 : 1)
       expect(state.appliedSettlements).toEqual(new Set(['prompt-cancelled:permission-retry']))
 
-      translator.handle({
-        type: 'provider-frame',
-        sessionId: 'orca-session',
-        kind: 'control_request:after-retry',
-        payload: {}
-      })
+      translator.handle(rootResult())
       expect(state.appendAttempts()).toBe(2)
       expect(state.publishAttempts()).toBe(refusedAt === 'publish' ? 2 : 1)
     }
   )
+
+  it('keeps streaming frames off retry work and recovers at the next root result', () => {
+    const state = transientBackpressureSink('append', true)
+    const translator = createClaudeJournalTranslator({ sink: state.sink })
+    const prompt = approval('permission-streaming')
+
+    translator.handle({ type: 'prompt', sessionId: 'orca-session', prompt })
+    translator.handle({
+      type: 'prompt-cancelled',
+      sessionId: 'orca-session',
+      promptKey: prompt.promptKey
+    })
+    expect(state.appendAttempts()).toBe(1)
+
+    for (let index = 0; index < 100; index += 1) {
+      translator.handle(streamDelta(index))
+    }
+    expect(state.appendAttempts()).toBe(1)
+
+    state.release()
+    translator.handle(rootResult())
+    expect(state.appendAttempts()).toBe(2)
+    expect(state.durableApproval()).toMatchObject({ resolution: { state: 'cancelled' } })
+  })
 })

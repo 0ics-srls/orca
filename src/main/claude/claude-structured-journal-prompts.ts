@@ -18,11 +18,15 @@ import {
 import type { ClaudeStructuredSessionEvent } from './claude-structured-session-state'
 
 const ADMITTED = { accepted: true } as const
-const MAX_PENDING_PROMPT_CANCELLATIONS = 64
 
 type ClaudeJournalPrompt = {
   identity: AgentJournalItemIdentity
   body: AgentJournalApprovalItem | AgentJournalQuestionItem
+}
+
+type ClaudeJournalPromptEntry = {
+  items: ClaudeJournalPrompt[]
+  cancellationPending: boolean
 }
 
 function cancelledPromptBody(
@@ -36,15 +40,15 @@ function cancelledPromptBody(
 }
 
 export class ClaudeJournalPrompts {
-  private readonly items = new Map<string, ClaudeJournalPrompt[]>()
-  private readonly pendingCancellations = new Set<string>()
+  private readonly items = new Map<string, ClaudeJournalPromptEntry>()
+  private pendingCancellationTotal = 0
 
   get size(): number {
     return this.items.size
   }
 
   get pendingCancellationCount(): number {
-    return this.pendingCancellations.size
+    return this.pendingCancellationTotal
   }
 
   constructor(
@@ -79,12 +83,13 @@ export class ClaudeJournalPrompts {
       this.deps.sink.appendItem(identity, body)
       this.deps.bindPromptItemId?.(agentJournalItemKey(identity), event.prompt.promptKey)
     }
-    this.items.set(event.prompt.promptKey, items)
+    this.deletePrompt(event.prompt.promptKey)
+    this.items.set(event.prompt.promptKey, { items, cancellationPending: false })
     this.deps.sink.publish()
   }
 
   private admitCancellation(promptKey: string): StructuredAgentSessionSinkAdmission {
-    const items = this.items.get(promptKey) ?? []
+    const items = this.items.get(promptKey)?.items ?? []
     if (items.length === 0) {
       return ADMITTED
     }
@@ -126,44 +131,61 @@ export class ClaudeJournalPrompts {
       ? this.deps.sink.tryPublish({ lifecycle: true })
       : (this.deps.sink.publish({ lifecycle: true }), ADMITTED)
     if (published.accepted) {
-      this.items.delete(promptKey)
+      this.deletePrompt(promptKey)
     }
     return published
   }
 
+  private deletePrompt(promptKey: string): void {
+    const entry = this.items.get(promptKey)
+    if (entry?.cancellationPending) {
+      this.pendingCancellationTotal -= 1
+    }
+    this.items.delete(promptKey)
+  }
+
+  private setCancellationPending(entry: ClaudeJournalPromptEntry, pending: boolean): void {
+    if (entry.cancellationPending === pending) {
+      return
+    }
+    entry.cancellationPending = pending
+    this.pendingCancellationTotal += pending ? 1 : -1
+  }
+
   cancel(promptKey: string): StructuredAgentSessionSinkAdmission {
     const admission = this.admitCancellation(promptKey)
-    if (admission.accepted || admission.reason !== 'backpressure') {
-      this.pendingCancellations.delete(promptKey)
-    } else if (
-      this.pendingCancellations.has(promptKey) ||
-      this.pendingCancellations.size < MAX_PENDING_PROMPT_CANCELLATIONS
-    ) {
-      this.pendingCancellations.add(promptKey)
+    const entry = this.items.get(promptKey)
+    if (entry) {
+      this.setCancellationPending(entry, !admission.accepted && admission.reason === 'backpressure')
     }
     return admission
   }
 
   retryPendingCancellations(): void {
-    if (this.pendingCancellations.size === 0) {
+    if (this.pendingCancellationTotal === 0) {
       return
     }
-    for (const promptKey of this.pendingCancellations) {
+    for (const [promptKey, entry] of this.items) {
+      if (!entry.cancellationPending) {
+        continue
+      }
       const admission = this.admitCancellation(promptKey)
       if (!admission.accepted && admission.reason === 'backpressure') {
         return
       }
-      this.pendingCancellations.delete(promptKey)
+      const retained = this.items.get(promptKey)
+      if (retained) {
+        this.setCancellationPending(retained, false)
+      }
     }
   }
 
   resolve(promptKey: string): void {
-    this.items.delete(promptKey)
-    this.pendingCancellations.delete(promptKey)
+    this.deletePrompt(promptKey)
   }
 
   clear(): void {
     this.items.clear()
-    this.pendingCancellations.clear()
+    this.pendingCancellationTotal = 0
   }
 }
