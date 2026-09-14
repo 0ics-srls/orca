@@ -3,7 +3,7 @@ import type { GitLabCommentResult, GitLabIssueInfo, MRComment } from '../../shar
 import type { IssueSourcePreference } from '../../shared/repo-types'
 import { mapGitLabIssueInfo } from './mappers'
 // prettier-ignore
-import { glabApiWithHeaders, glabExecFileAsync, acquire, release, getIssueProjectRef, resolveIssueSource, classifyGlabError, classifyListFetchError, getGlabKnownHosts, glabRepoExecOptions, glabHostnameArgs, parseGlabJsonList, parseGlabPaginationHeader, type LocalGitExecOptions, type ProjectRef } from './gl-utils'
+import { glabApiWithHeaders, glabExecFileAsync, acquire, release, getIssueProjectRef, resolveIssueSource, classifyGlabError, classifyListFetchError, getGlabKnownHosts, glabRepoExecOptions, glabHostnameArgs, parseGlabJsonList, parseGlabPaginationHeader, type LocalGitExecOptions, type GitLabProjectRef } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 
 // Why: parallel to GitHub's IssueListResult — distinguishes a successful-
@@ -218,7 +218,7 @@ export async function addIssueComment(
   body: string,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRefOverride?: ProjectRef | null,
+  projectRefOverride?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabCommentResult> {
   const projectRef =

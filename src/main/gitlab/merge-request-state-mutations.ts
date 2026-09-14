@@ -6,7 +6,7 @@ import {
   glabExecFileAsync,
   release,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { withProjectRef } from './merge-request-project-resolution'
 
@@ -15,7 +15,7 @@ export async function closeMR(
   iid: number,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   return withProjectRef<{ ok: true } | { ok: false; error: string }>(
@@ -59,7 +59,7 @@ export async function reopenMR(
   iid: number,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   return withProjectRef<{ ok: true } | { ok: false; error: string }>(
@@ -103,7 +103,7 @@ export async function mergeMR(
   method: 'merge' | 'squash' | 'rebase' = 'merge',
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   return withProjectRef<{ ok: true } | { ok: false; error: string }>(

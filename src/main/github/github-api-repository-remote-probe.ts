@@ -1,4 +1,3 @@
-import type { GitHubApiRepository } from './github-api-repository'
 import {
   getOwnerRepoForRemote,
   type GitHubRemoteIdentityProbeOptions,
@@ -12,12 +11,13 @@ import {
   githubApiRepositoryProbeCacheKey,
   resolveGitHubApiRepositoryProbe
 } from './github-api-repository-probe'
+import type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 
 // Why: cache the uncached Enterprise remote probe used by hot paths.
 const ORIGIN_REPO_CACHE_TTL_MS = 30_000
 const ORIGIN_REPO_CACHE_MAX_ENTRIES = 512
-const originRepoCache = new Map<string, { value: GitHubApiRepository | null; expiresAt: number }>()
-const originRepoInFlight = new Map<string, Promise<GitHubApiRepository | null>>()
+const originRepoCache = new Map<string, { value: GitHubOwnerRepo | null; expiresAt: number }>()
+const originRepoInFlight = new Map<string, Promise<GitHubOwnerRepo | null>>()
 
 /** @internal - exposed for tests only */
 export function _resetOriginGitHubApiRepositoryCache(): void {
@@ -51,7 +51,7 @@ export async function getGitHubApiRepositoryForRemote(
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {},
   probeOptions: GitHubRemoteIdentityProbeOptions = {}
-): Promise<GitHubApiRepository | null> {
+): Promise<GitHubOwnerRepo | null> {
   // Why: generic PR resolution prefers upstream, but this API represents the
   // caller-selected remote exactly (#7331).
   const requireVerifiedSshProbe = probeOptions.requireVerifiedSshProbe === true
@@ -127,6 +127,6 @@ export async function getOriginGitHubApiRepository(
   repoPath: string,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<GitHubApiRepository | null> {
+): Promise<GitHubOwnerRepo | null> {
   return getGitHubApiRepositoryForRemote(repoPath, 'origin', connectionId, localGitOptions)
 }

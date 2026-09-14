@@ -16,10 +16,8 @@ import {
   persistReprovedTuiOwner,
   recoverTuiOwnerOrContinue,
   recoverUnavailableTuiAsNative,
-  type StructuredAgentSessionRestartAccess
+  type RestartAccess
 } from './structured-agent-session-handoff-restart-tui'
-
-type RestartAccess = StructuredAgentSessionRestartAccess
 
 export async function restoreStructuredAgentSessionHandoff(
   input: RestartAccess,

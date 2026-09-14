@@ -1,11 +1,13 @@
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function requestPRReviewers(
   repoPath: string,
   prNumber: number,
   reviewers: string[],
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const logins = reviewers.map((reviewer) => reviewer.trim()).filter(Boolean)
@@ -46,7 +48,7 @@ export async function removePRReviewers(
   prNumber: number,
   reviewers: string[],
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const logins = reviewers.map((reviewer) => reviewer.trim()).filter(Boolean)

@@ -18,7 +18,7 @@ import type { PtyTransport } from './pty-transport'
 import type { PtyTransportRecoveryState } from './pty-transport-types'
 import type { ReplayingPanesRef } from './replay-guard'
 import type { TerminalLinkActionRequester } from './terminal-link-action-request'
-import type { TerminalLinkRoutingPreferenceRequester } from './terminal-url-link-hit-testing'
+import type { HttpLinkRoutingPreferenceRequester } from '@/lib/http-link-destinations'
 import type { SessionRestoredBannerReason } from './session-restored-banner-pane-state'
 
 export type TerminalPaneStartup = Exclude<PtyPaneStartup, null>
@@ -48,7 +48,7 @@ export type UseTerminalPaneLifecycleDeps = {
   systemPrefersDark: boolean
   settings: GlobalSettings | null | undefined
   settingsRef: React.RefObject<GlobalSettings | null | undefined>
-  requestOpenLinksInAppPreference: TerminalLinkRoutingPreferenceRequester
+  requestOpenLinksInAppPreference: HttpLinkRoutingPreferenceRequester
   requestTerminalLinkAction: TerminalLinkActionRequester
   /** Resolved Option-as-Alt: `'auto'` already mapped via the layout probe. */
   effectiveMacOptionAsAlt: EffectiveMacOptionAsAlt

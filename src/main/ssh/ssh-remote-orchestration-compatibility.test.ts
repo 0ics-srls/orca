@@ -59,7 +59,7 @@ function createLegacyRuntime() {
     createdByTerminalHandle: COORDINATOR_HANDLE
   })
   const dispatch = createRootDispatch(db, task.id, WORKER_HANDLE, WORKER_PANE)
-  const sqlite = (db as unknown as { db: Database.Database }).db
+  const sqlite = (db as unknown as { db: Database }).db
   sqlite
     .prepare(
       `UPDATE dispatch_contexts
@@ -319,7 +319,7 @@ describe('legacy SSH orchestration fallback', () => {
     try {
       const first = await runRemoteOrcaCli(runtime, request, LEGACY_FALLBACK_OPTIONS)
       const replay = await runRemoteOrcaCli(runtime, request, LEGACY_FALLBACK_OPTIONS)
-      const sqlite = (db as unknown as { db: Database.Database }).db
+      const sqlite = (db as unknown as { db: Database }).db
 
       const firstResult = JSON.parse(first.stdout) as { messageId: string; timedOut: boolean }
       const replayResult = JSON.parse(replay.stdout) as { messageId: string; timedOut: boolean }
@@ -353,7 +353,7 @@ describe('legacy SSH orchestration fallback', () => {
       consumerGeneration: run.consumer_generation,
       body: 'yes'
     })
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     sqlite
       .prepare(
         `UPDATE messages
@@ -409,7 +409,7 @@ describe('legacy SSH orchestration fallback', () => {
     'refuses a %s --retry-request instead of minting a new send identity',
     async (_label, retryArgv, expectedMessage) => {
       const { db, runtime } = createLegacyRuntime()
-      const sqlite = (db as unknown as { db: Database.Database }).db
+      const sqlite = (db as unknown as { db: Database }).db
       const countMessages = (): number =>
         (sqlite.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number }).count
       const before = countMessages()
@@ -454,7 +454,7 @@ describe('legacy SSH orchestration fallback', () => {
     ['ask', ['orchestration', 'ask', '--from', WORKER_HANDLE, '--question', 'continue?']]
   ])('refuses a valueless --retry-request on orchestration %s', async (_label, commandArgv) => {
     const { db, runtime } = createLegacyRuntime()
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     const countMessages = (): number =>
       (sqlite.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number }).count
     const before = countMessages()

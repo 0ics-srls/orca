@@ -1,3 +1,4 @@
+import type { HostedReviewInfo } from '../../../../../shared/hosted-review'
 import React from 'react'
 import { Check, LoaderCircle, Pencil, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -17,11 +18,10 @@ import { ConflictingFilesSection, MergeConflictNotice } from './conflict-summary
 import { ChecksList } from './checks-list'
 import { PRCommentsList } from './comments-list'
 import { translate } from '@/i18n/i18n'
-import type { ChecksPanelReview } from '../checks-panel-review'
 import type { ChecksPanelHostedReviewModifierDestination } from '../checks-panel-hosted-review-click-routing'
 import type { ChecksPanelActiveContentModel } from './active-content-props'
 type ReviewHeaderComponentProps = {
-  review: ChecksPanelReview
+  review: HostedReviewInfo
   isRefreshing: boolean
   canUnlinkReview: boolean
   modifierHintDestination: ChecksPanelHostedReviewModifierDestination

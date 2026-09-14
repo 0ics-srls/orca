@@ -4,8 +4,10 @@ import {
 } from '../../../shared/agent-process-recognition'
 import { isShellProcess } from '../../../shared/shell-process-detection'
 import type { TuiAgent } from '../../../shared/tui-agent'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
-import { isClientOnlyUnverifiableInspection } from '../../../shared/terminal-process-inspection'
+import {
+  isClientOnlyUnverifiableInspection,
+  type TerminalProcessInspection
+} from '../../../shared/terminal-process-inspection'
 
 function normalizeProcessName(processName: string | null): string | null {
   if (!processName) {
@@ -42,7 +44,7 @@ export function isCodexForegroundProcess(processName: string | null): boolean {
  * that pane means the user exited Codex and is typing at their own program.
  */
 export function isCodexRestartEligiblePane(args: {
-  inspection: RuntimeTerminalProcessInspection
+  inspection: TerminalProcessInspection
   launchAgent: TuiAgent | undefined
 }): boolean {
   if (isClientOnlyUnverifiableInspection(args.inspection)) {

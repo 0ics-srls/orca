@@ -1,11 +1,7 @@
-import type { GitHubPRMergeMethod } from '../../shared/github/pull-request-types'
+import type { GitHubOwnerRepo, GitHubPRMergeMethod } from '../../shared/github/pull-request-types'
 import { ghExecFileAsync } from '../git/runner'
 import { acquire, release } from './gh-utils'
-import {
-  githubHostExecOptions,
-  type GitHubApiRepository,
-  type GitHubRepoExecOptions
-} from './github-api-repository'
+import { githubHostExecOptions, type GitHubRepoExecOptions } from './github-api-repository'
 
 const POLL_INTERVAL_MS = 1_000
 const MAX_POLLS = 180
@@ -72,7 +68,7 @@ async function runStackMergeCommand(
 }
 
 export async function mergeGitHubPRStack(args: {
-  repository: GitHubApiRepository
+  repository: GitHubOwnerRepo
   prNumber: number
   method: GitHubPRMergeMethod
   mergeAction: GitHubPRStackMergeAction

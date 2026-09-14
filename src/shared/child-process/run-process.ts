@@ -10,13 +10,7 @@ import { forceTerminateProcessTree, signalProcessTree } from './process-tree-ter
 import { createOutputSink } from './bounded-output-sink'
 import { createChildTerminationReporter } from './child-termination-reporter'
 
-export type {
-  ChildProcessHandle,
-  SpawnedProcess,
-  ProcessSpec,
-  ProcessTerminationBarrier,
-  ProcessResult
-} from './process-spec'
+export type { ProcessSpec, ProcessTerminationBarrier, ProcessResult } from './process-spec'
 export { DEFAULT_PROCESS_TIMEOUT_MS, DEFAULT_MAX_OUTPUT_BYTES } from './process-spec'
 export { resolveSpawn, type ResolvedSpawn } from './spawn-resolution'
 import type { ProcessSpec, ProcessResult } from './process-spec'

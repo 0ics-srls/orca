@@ -5,7 +5,7 @@ import type {
   AgentCompletionCoordinator,
   AgentCompletionStatusSnapshot
 } from '@/components/terminal-pane/agent-completion-coordinator-types'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../shared/terminal-process-inspection'
 import { dispatchTerminalNotification } from '@/components/terminal-pane/use-notification-dispatch'
 import { collectLeafIdsInOrder } from '@/components/terminal-pane/layout-serialization'
 import { createCodexAutoApprovalHookCompletionSuppressor } from '@/components/terminal-pane/codex-auto-approval-notification-suppression'
@@ -238,7 +238,7 @@ function createCoordinator(paneKey: string, worktreeId: string): AgentCompletion
     statusLane: 'hook',
     getPtyId: () => getPtyIdForPaneKey(paneKey),
     getSettings: () => useAppStore.getState().settings,
-    inspectProcess: async (): Promise<RuntimeTerminalProcessInspection> => ({
+    inspectProcess: async (): Promise<TerminalProcessInspection> => ({
       foregroundProcess: null,
       hasChildProcesses: false
     }),

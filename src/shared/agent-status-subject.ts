@@ -10,19 +10,17 @@ const SUBJECT_KEY_PREFIX = 'agent-status-subject-v1:'
 const MAX_SCOPE_PART_LENGTH = 512
 const MAX_PANE_KEY_LENGTH = 512
 
-export type AgentStatusExecutionScope = AgentSessionExecutionLocation
-
-export type AgentStatusPtyRunSubject = AgentStatusExecutionScope & {
+export type AgentStatusPtyRunSubject = AgentSessionExecutionLocation & {
   kind: 'pty-run'
   runId: AgentStatusRunId
 }
 
-export type AgentStatusPtySubject = AgentStatusExecutionScope & {
+export type AgentStatusPtySubject = AgentSessionExecutionLocation & {
   kind: 'pty'
   paneKey: string
 }
 
-export type AgentStatusStructuredSessionSubject = AgentStatusExecutionScope & {
+export type AgentStatusStructuredSessionSubject = AgentSessionExecutionLocation & {
   kind: 'structured-session'
   sessionId: string
 }
@@ -37,7 +35,7 @@ type AgentStatusSubjectKeyTuple = readonly [
   executionHostId: string,
   wslDistro: string | null,
   workspaceId: string,
-  workspaceKind: AgentStatusExecutionScope['workspaceKind'],
+  workspaceKind: AgentSessionExecutionLocation['workspaceKind'],
   identity: string
 ]
 
@@ -60,7 +58,9 @@ function isBoundedIdentity(value: unknown, maxLength: number): value is string {
   )
 }
 
-function parseExecutionScope(record: Record<string, unknown>): AgentStatusExecutionScope | null {
+function parseExecutionScope(
+  record: Record<string, unknown>
+): AgentSessionExecutionLocation | null {
   if (!isBoundedIdentity(record.executionHostId, MAX_SCOPE_PART_LENGTH)) {
     return null
   }
@@ -89,7 +89,9 @@ function parseExecutionScope(record: Record<string, unknown>): AgentStatusExecut
   }
 }
 
-export function parseAgentStatusExecutionScope(value: unknown): AgentStatusExecutionScope | null {
+export function parseAgentStatusExecutionScope(
+  value: unknown
+): AgentSessionExecutionLocation | null {
   if (
     !isRecord(value) ||
     !hasExactKeys(value, ['executionHostId', 'wslDistro', 'workspaceId', 'workspaceKind'])
@@ -241,7 +243,7 @@ export function agentStatusSubjectsEqual(
 }
 
 export function makePtyRunAgentStatusSubject(
-  scope: AgentStatusExecutionScope,
+  scope: AgentSessionExecutionLocation,
   runId: AgentStatusRunId
 ): AgentStatusPtyRunSubject {
   const subject = parseAgentStatusSubject({ ...scope, kind: 'pty-run', runId })
@@ -252,7 +254,7 @@ export function makePtyRunAgentStatusSubject(
 }
 
 export function makePtyAgentStatusSubject(
-  scope: AgentStatusExecutionScope,
+  scope: AgentSessionExecutionLocation,
   paneKey: string
 ): AgentStatusPtySubject {
   const subject = parseAgentStatusSubject({ ...scope, kind: 'pty', paneKey })
@@ -263,7 +265,7 @@ export function makePtyAgentStatusSubject(
 }
 
 export function makeStructuredAgentStatusSubject(
-  scope: AgentStatusExecutionScope,
+  scope: AgentSessionExecutionLocation,
   sessionId: string
 ): AgentStatusStructuredSessionSubject {
   const subject = parseAgentStatusSubject({ ...scope, kind: 'structured-session', sessionId })

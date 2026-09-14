@@ -18,8 +18,6 @@ import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-option
 import { listLocalRepoWorktreesStrict } from '../repo-worktrees'
 import { listRegisteredPtys, registerPty } from './pty-registry'
 
-type HydrationStore = Store
-
 type DaemonInventory = {
   complete: boolean
   sessions: SessionInfo[]
@@ -37,7 +35,7 @@ export const LOCAL_PTY_REGISTRY_GIT_ENUMERATION_CONCURRENCY = 4
 let hasHydrated = false
 let hydrationInFlight: Promise<void> | null = null
 
-export function hydrateLocalPtyRegistryAtBoot(store: HydrationStore): Promise<void> {
+export function hydrateLocalPtyRegistryAtBoot(store: Store): Promise<void> {
   if (hasHydrated) {
     return Promise.resolve()
   }
@@ -75,10 +73,7 @@ export function hydrateLocalPtyRegistryAtBoot(store: HydrationStore): Promise<vo
   return attempt
 }
 
-async function hydrateLocalPtyRegistry(
-  store: HydrationStore,
-  signal: AbortSignal
-): Promise<boolean> {
+async function hydrateLocalPtyRegistry(store: Store, signal: AbortSignal): Promise<boolean> {
   throwIfSignalAborted(signal)
   const provider = getDaemonProvider()
   if (!provider) {
@@ -215,10 +210,7 @@ function getLocalRepoCatalog(repos: Repo[]): LocalRepoCatalog {
   return { byId, ownerCountById }
 }
 
-function getVerifiedFolderWorktreeIds(
-  store: HydrationStore,
-  repoCatalog: LocalRepoCatalog
-): Set<string> {
+function getVerifiedFolderWorktreeIds(store: Store, repoCatalog: LocalRepoCatalog): Set<string> {
   const verified = new Set<string>()
   const folders = store.getFolderWorkspaces()
   const counts = new Map<string, number>()

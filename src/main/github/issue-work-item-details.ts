@@ -1,8 +1,8 @@
 import type { GitHubIssueTimelineItem, PRComment } from '../../shared/github/comment-types'
-import type { GitHubAssignableUser } from '../../shared/github/pull-request-types'
+import type { GitHubAssignableUser, GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 import { ghExecFileAsync, ghRepoExecOptions, githubRepoContext } from './gh-utils'
 import type { LocalGitExecOptions } from './gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from './github-api-repository'
+import { githubHostExecOptions } from './github-api-repository'
 import { getIssueTimelineItems } from './issue-timeline'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 
@@ -69,7 +69,7 @@ export type CollapsedIssueDetails = {
 export async function getIssueDetailsViaGraphQL(
   repoPath: string,
   issueNumber: number,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<CollapsedIssueDetails | null> {
@@ -151,7 +151,7 @@ export async function getIssueDetailsViaGraphQL(
 export async function getIssueBodyAndComments(
   repoPath: string,
   issueNumber: number,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{

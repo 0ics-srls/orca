@@ -29,9 +29,9 @@ export type {
   GitHubRemoteIdentity,
   GitHubRemoteIdentityProbeOptions,
   GitHubRepoContext,
-  LocalGitExecOptions,
-  OwnerRepo
+  LocalGitExecOptions
 } from './github-repository-identity'
+export type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 export {
   getIssueOwnerRepo,
   getOwnerRepo,

@@ -3,7 +3,7 @@ import { PTY_STARTUP_INGRESS_VERSION } from '../shared/pty-startup-ingress'
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { PtyHandler } from './pty-handler'
@@ -56,15 +56,15 @@ describe('PtyHandler negotiated source publication', () => {
   let originalPlatform: PropertyDescriptor | undefined
   let writes: Buffer[]
   let heldResponseId: number | null
-  let heldResponseSettlements: ((result: SinkWriteSettlement) => void)[]
+  let heldResponseSettlements: ((result: DispatcherWriterSettlement) => void)[]
   let adapter: SshPtyConsumerSessionAdapter
   let pausePty: ReturnType<typeof vi.fn>
   let exitCallback: ((event: { exitCode: number }) => void) | undefined
   let destroyPty: ReturnType<typeof vi.fn>
   let holdDataSettlements: boolean
-  let heldDataSettlements: ((result: SinkWriteSettlement) => void)[]
+  let heldDataSettlements: ((result: DispatcherWriterSettlement) => void)[]
   let holdExitSettlements: boolean
-  let heldExitSettlements: ((result: SinkWriteSettlement) => void)[]
+  let heldExitSettlements: ((result: DispatcherWriterSettlement) => void)[]
   let highWaterMark: number | undefined
 
   beforeEach(async () => {
@@ -225,7 +225,7 @@ describe('PtyHandler negotiated source publication', () => {
   })
 
   async function attachSubscriber(
-    holdDataSettlement?: (settle: (result: SinkWriteSettlement) => void) => boolean
+    holdDataSettlement?: (settle: (result: DispatcherWriterSettlement) => void) => boolean
   ): Promise<Buffer[]> {
     const subscriberWrites: Buffer[] = []
     const clientId = dispatcher.attachClient(

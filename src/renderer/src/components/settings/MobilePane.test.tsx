@@ -13,10 +13,8 @@ import {
 } from '../mobile/paired-mobile-devices'
 import type { MobilePairingConnectionMode } from '../../../../shared/mobile-pairing-connection-mode'
 
-type PairedDevice = PairedMobileDevice
-
 type PairedDevicesProps = {
-  devices: readonly PairedDevice[]
+  devices: readonly PairedMobileDevice[]
   hasQrCode: boolean
   onRevokeDevice: (deviceId: string) => void
 }
@@ -752,7 +750,7 @@ describe('MobilePane pairing connection mode', () => {
 
 const mountedRoots: Root[] = []
 
-function pairedDevice(deviceId: string): PairedDevice {
+function pairedDevice(deviceId: string): PairedMobileDevice {
   return {
     deviceId,
     name: deviceId,

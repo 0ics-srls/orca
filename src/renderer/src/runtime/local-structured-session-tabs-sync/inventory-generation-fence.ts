@@ -1,4 +1,4 @@
-import type { SessionTabsPublicationEpochHistory } from '../web-session-tabs-sync/state'
+import type { RetiredValueHistory } from '../web-session-tabs-sync/state'
 import type { StructuredSessionTabPublicationVersion } from '../local-structured-session-tab-retirement'
 
 // Everything a toggle-off must invalidate: which publisher instance the renderer
@@ -13,10 +13,7 @@ export const localStructuredSessionVersionByWorktree = new Map<
   string,
   StructuredSessionTabPublicationVersion
 >()
-export const localStructuredSessionEpochHistoryByWorktree = new Map<
-  string,
-  SessionTabsPublicationEpochHistory
->()
+export const localStructuredSessionEpochHistoryByWorktree = new Map<string, RetiredValueHistory>()
 
 export function localStructuredSessionGeneration(): number {
   return syncGeneration

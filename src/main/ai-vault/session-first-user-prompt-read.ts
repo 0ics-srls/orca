@@ -19,15 +19,13 @@ export type ReadAiVaultFirstUserPromptArgs = {
   codexHome?: string | null
 }
 
-export type ReadAiVaultFirstUserPromptResult = AiVaultFirstUserPromptResult
-
 /**
  * Re-parse one session transcript under full first-prompt capture and return
  * the untruncated first real user ask for copy/reuse.
  */
 export async function readAiVaultFirstUserPrompt(
   args: ReadAiVaultFirstUserPromptArgs
-): Promise<ReadAiVaultFirstUserPromptResult> {
+): Promise<AiVaultFirstUserPromptResult> {
   const filePath = args.filePath.trim()
   if (!filePath || !args.agent) {
     return { prompt: null }

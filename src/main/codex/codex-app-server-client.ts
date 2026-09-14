@@ -1,4 +1,5 @@
-import type { ChildProcessHandle, ProcessSpec } from '../../shared/child-process/process-spec'
+import type { ProcessSpec } from '../../shared/child-process/process-spec'
+import type { ChildProcess } from 'node:child_process'
 import { spawnProcess } from '../../shared/child-process/run-process'
 import { normalizeHookTrustKeyForLookup } from './config-toml-trust'
 import { runCodexAppServerSession, type CodexAppServerInvocation } from './codex-app-server-session'
@@ -106,12 +107,11 @@ function collectHookListings(result: unknown): CodexHookListing[] {
  */
 export async function runCodexHookTrustGrantSession(
   request: CodexHookTrustGrantRequest,
-  spawnImpl: (
-    program: string,
-    args: string[],
-    options: Record<string, unknown>
-  ) => ChildProcessHandle = (program, args, options) =>
-    spawnProcess({ program, args, ...options } as ProcessSpec)
+  spawnImpl: (program: string, args: string[], options: Record<string, unknown>) => ChildProcess = (
+    program,
+    args,
+    options
+  ) => spawnProcess({ program, args, ...options } as ProcessSpec)
 ): Promise<CodexHookTrustGrantSessionResult> {
   return runCodexAppServerSession(
     request.invocation,

@@ -2,8 +2,6 @@ import { callRuntimeRpc, type RuntimeClientTarget } from '@/runtime/runtime-rpc-
 import type { RuntimeStatus } from '../../../shared/runtime-types'
 import type { WindowsTerminalCapabilities } from './windows-terminal-capabilities'
 
-export type WindowsTerminalCapabilityLoadTarget = RuntimeClientTarget
-
 async function reconcileWslAvailability(
   available: boolean,
   distros: string[],
@@ -17,7 +15,7 @@ async function reconcileWslAvailability(
 }
 
 export async function readWindowsTerminalCapabilities(
-  target: WindowsTerminalCapabilityLoadTarget,
+  target: RuntimeClientTarget,
   sshConnectionId?: string | null
 ): Promise<WindowsTerminalCapabilities> {
   if (sshConnectionId) {

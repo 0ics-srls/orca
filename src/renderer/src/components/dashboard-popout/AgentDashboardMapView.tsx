@@ -1,6 +1,7 @@
 import { Suspense, useMemo, useState, type RefObject } from 'react'
 import type {
   DashboardCard,
+  DashboardRevealAgentArgs,
   DashboardSleepWorkspaceArgs,
   DashboardSnapshot,
   DashboardSpawnAgentArgs
@@ -8,7 +9,7 @@ import type {
 import { cn } from '@/lib/utils'
 import { lazyWithRetry } from '@/lib/lazy-with-retry'
 import { AgentDashboardToolbar } from './AgentDashboardToolbar'
-import { AgentTerminalPanel, type AgentRevealArgs } from './AgentTerminalDialog'
+import { AgentTerminalPanel } from './AgentTerminalDialog'
 import {
   EMPTY_DASHBOARD_FILTERS,
   filterDashboardWorkspaces,
@@ -36,7 +37,7 @@ type AgentDashboardMapViewProps = {
   now: number
   dialogCard: DashboardCard | null
   onDialogOpenChange: (open: boolean) => void
-  onRevealAgent: (args: AgentRevealArgs) => void
+  onRevealAgent: (args: DashboardRevealAgentArgs) => void
   onOpenTerminal: (card: DashboardCard) => void
   onSpawnAgent?: (args: DashboardSpawnAgentArgs) => void
   onSleepWorkspace?: (args: DashboardSleepWorkspaceArgs) => void

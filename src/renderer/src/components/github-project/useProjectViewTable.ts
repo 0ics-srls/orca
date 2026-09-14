@@ -7,7 +7,6 @@ import { useAppStore } from '@/store'
 import { projectViewCacheKey } from '@/store/github/cache-identity'
 import type {
   GitHubProjectSettings,
-  GitHubProjectTable,
   GitHubProjectViewSummary
 } from '../../../../shared/github/project-types'
 import type {
@@ -276,4 +275,3 @@ const EMPTY_PROJECT_SETTINGS: GitHubProjectSettings = {
 }
 
 export type ProjectViewTableState = ReturnType<typeof useProjectViewTable>
-export type ProjectViewTable = GitHubProjectTable

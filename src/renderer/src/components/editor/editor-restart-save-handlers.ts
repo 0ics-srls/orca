@@ -4,10 +4,7 @@ import { canAutoSaveOpenFile } from './editor-autosave'
 import { flushPendingEditorChange } from './editor-pending-flush'
 import { getDuplicateDirtySavePaths } from './editor-autosave-state-projections'
 import type { AppStoreApi, EditorSaveQueue } from './editor-save-queue'
-import type {
-  EditorPrepareHotExitDetail,
-  EditorSaveDirtyFilesDetail
-} from '../../../../shared/editor-save-events'
+import type { EditorSaveDirtyFilesDetail } from '../../../../shared/editor-save-events'
 
 type EditorRestartSaveHandlerOptions = {
   store: AppStoreApi
@@ -73,7 +70,7 @@ export function createEditorRestartSaveHandlers({
   }
 
   const handlePrepareHotExit = async (event: Event): Promise<void> => {
-    const detail = (event as CustomEvent<EditorPrepareHotExitDetail>).detail
+    const detail = (event as CustomEvent<EditorSaveDirtyFilesDetail>).detail
     if (!detail) {
       return
     }

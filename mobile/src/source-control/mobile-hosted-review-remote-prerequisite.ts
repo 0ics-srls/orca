@@ -1,18 +1,18 @@
-import type { MobileGitStatusResult } from './mobile-git-status'
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import type { MobileHostedReviewCreateIntentProgress } from './mobile-hosted-review-create-intent'
-import type { MobilePrPrefill } from './mobile-pr-create'
+import type { MobileHostedReviewPrefill } from './mobile-hosted-review-service'
 import { pushMobileHostedReviewBranch } from './mobile-hosted-review-git-preparation'
 import type { MobileSourceControlRpcSender } from './mobile-source-control-rpc-sender'
 
 type RemotePrerequisiteInput = {
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   onProgress?: (progress: MobileHostedReviewCreateIntentProgress) => void
 }
 
 export async function applyMobileHostedReviewRemotePrerequisite(
   client: MobileSourceControlRpcSender,
   worktreeId: string,
-  prefill: MobilePrPrefill,
+  prefill: MobileHostedReviewPrefill,
   input: RemotePrerequisiteInput
 ): Promise<{ ok: true; ran: boolean } | { ok: false; error: string }> {
   const worktree = `id:${worktreeId}`

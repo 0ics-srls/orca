@@ -5,7 +5,7 @@ import {
   glabRepoExecOptions,
   glabExecFileAsync,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 // ── Discussion → MRComment flattening ──────────────────────────────
@@ -62,7 +62,7 @@ export function flattenDiscussions(discussions: GitLabRawDiscussion[]): MRCommen
 
 export async function fetchDiscussions(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   type: 'issue' | 'mr',
   iid: number,
   connectionId?: string | null,

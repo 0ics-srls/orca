@@ -1,6 +1,6 @@
 import { ActivityIndicator, Pressable, Text, TextInput, View } from 'react-native'
 import { ChevronDown, ChevronUp } from 'lucide-react-native'
-import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import { colors } from '../theme/mobile-theme'
@@ -37,7 +37,7 @@ export function NewWorktreeFormSheet(props: {
   setupCommand: string | null
   setupSource: string | null
   setupRunPolicy: SetupRunPolicy
-  setupDecisionChoice: Exclude<WorkspaceCreateSetupDecision, 'inherit'> | null
+  setupDecisionChoice: Exclude<SetupDecision, 'inherit'> | null
   runSetup: boolean
   error: string
   creating: boolean
@@ -52,7 +52,7 @@ export function NewWorktreeFormSheet(props: {
   onOpenAgent: () => void
   onShowAdvancedChange: (show: boolean) => void
   onNoteChange: (note: string) => void
-  onSetupDecisionChange: (decision: Exclude<WorkspaceCreateSetupDecision, 'inherit'>) => void
+  onSetupDecisionChange: (decision: Exclude<SetupDecision, 'inherit'>) => void
   onRunSetupChange: (run: boolean) => void
   onCreate: () => void
 }) {

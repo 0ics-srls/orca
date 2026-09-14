@@ -8,7 +8,8 @@ import { runWorktreeDelete } from '../sidebar/delete-worktree-flow'
 import { ORPHAN_WORKTREE_ID } from '../../../../shared/constants'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import { UNATTRIBUTED_REPO_ID } from './mergeSnapshotAndSessions'
-import type { DaemonSession, UnifiedSessionRow } from './resource-usage-merge-types'
+import type { UnifiedSessionRow } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 import type { ResourceSessionBindingInputs } from './resource-session-bindings'
 import { selectUnboundDaemonSessions } from './resource-session-bindings'
 import { navigateResourceSessionToTab } from './resource-session-navigation'
@@ -47,7 +48,7 @@ export function useResourceUsageActions({
   refreshSessions: () => Promise<void>
   removeSession: (sessionId: string) => void
   removeSessions: (sessionIds: ReadonlySet<string>) => void
-  sessions: readonly DaemonSession[]
+  sessions: readonly PtyListedSession[]
   resourceSessionBindings: ResourceSessionBindingInputs
   workspaceSessionReady: boolean
   killConfirm: UnifiedSessionRow | null

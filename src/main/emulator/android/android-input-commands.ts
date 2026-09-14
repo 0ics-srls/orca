@@ -6,7 +6,7 @@ import {
   normalizedToDevicePixels,
   type DeviceScreenSize
 } from './android-input-mapping'
-import type { EmulatorGesturePoint } from '../emulator-gesture-sender'
+import type { ServeSimTouchFrame } from '../../../shared/emulator-touch-frame'
 
 // Android control via `adb shell input`, so it works without the scrcpy server.
 // The backend resolves the serial + screen size and delegates here.
@@ -37,7 +37,7 @@ export async function androidSwipe(
   runner: AndroidCommandRunner,
   sdk: AndroidSdkPaths,
   serial: string,
-  points: EmulatorGesturePoint[],
+  points: ServeSimTouchFrame[],
   size: DeviceScreenSize
 ): Promise<void> {
   const first = points[0]

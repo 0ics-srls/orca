@@ -1,6 +1,8 @@
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from '../../rate-limit'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 /**
  * Resolve or unresolve a PR review thread via GraphQL.
  */
@@ -9,7 +11,7 @@ export async function resolveReviewThread(
   threadId: string,
   resolve: boolean,
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<boolean> {
   const mutation = resolve ? 'resolveReviewThread' : 'unresolveReviewThread'

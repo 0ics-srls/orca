@@ -4,9 +4,7 @@ import {
   type ResponsiveLayoutMetrics
 } from './responsive-layout-metrics'
 
-export type ResponsiveLayout = ResponsiveLayoutMetrics
-
-export function useResponsiveLayout(): ResponsiveLayout {
+export function useResponsiveLayout(): ResponsiveLayoutMetrics {
   const { width, height } = useWindowDimensions()
   return getResponsiveLayoutMetrics(width, height)
 }

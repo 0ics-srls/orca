@@ -1,6 +1,6 @@
 import type { AppState } from '@/store'
 import type {
-  RuntimeGeneratePullRequestFieldsOverrides,
+  RuntimeGenerateCommitMessageOverrides,
   RuntimeGitContext
 } from '@/runtime/runtime-git-client'
 import type { Repo } from '../../../../shared/repo-types'
@@ -44,7 +44,7 @@ export type UseCreatePullRequestDialogFieldsOptions = {
     onGenerate: (
       fields: PullRequestDraftFields,
       fieldRevisions: PullRequestFieldRevisions,
-      overrides?: RuntimeGeneratePullRequestFieldsOverrides
+      overrides?: RuntimeGenerateCommitMessageOverrides
     ) => void
     onCancelGenerate: () => void
   }

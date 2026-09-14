@@ -29,7 +29,7 @@ export type JournalReplacementItem = {
 }
 
 export function replaceJournalEpoch(input: {
-  db: Database.Database
+  db: Database
   identity: AgentSessionJournalIdentity
   reason: AgentJournalEpochReason
   fence: number

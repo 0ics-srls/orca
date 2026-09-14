@@ -82,8 +82,6 @@ export type EphemeralVmRecipeCleanupArgs = {
   spawnCommand?: typeof spawn
 }
 
-export type EphemeralVmRecipeLifecycleArgs = EphemeralVmRecipeCleanupArgs
-
 export type EphemeralVmRecipeCleanupResult = {
   ok: boolean
   skipped: boolean
@@ -195,7 +193,7 @@ export async function runEphemeralVmRecipeCleanup(
 }
 
 export async function runEphemeralVmRecipeSuspend(
-  args: EphemeralVmRecipeLifecycleArgs
+  args: EphemeralVmRecipeCleanupArgs
 ): Promise<EphemeralVmRecipeCleanupResult> {
   validateRepoPath(args.repoPath)
   if (!args.recipe.suspend) {
@@ -231,7 +229,7 @@ export async function runEphemeralVmRecipeSuspend(
 }
 
 export async function runEphemeralVmRecipeResume(
-  args: EphemeralVmRecipeLifecycleArgs
+  args: EphemeralVmRecipeCleanupArgs
 ): Promise<EphemeralVmRecipeResumeResult> {
   validateRepoPath(args.repoPath)
   if (!args.recipe.resume) {

@@ -1,10 +1,10 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { describe, expect, it, vi } from 'vitest'
 import {
   buildMobileSourceControlPrimaryAction,
   type MobileSourceControlPrimaryActionArgs,
   type MobileSourceControlPrimaryActionHandlers
 } from './mobile-source-control-primary-action'
-import type { MobileGitStatusResult } from './mobile-git-status'
 
 function handlers(): MobileSourceControlPrimaryActionHandlers {
   return {
@@ -15,7 +15,7 @@ function handlers(): MobileSourceControlPrimaryActionHandlers {
   }
 }
 
-function status(overrides: Partial<MobileGitStatusResult> = {}): MobileGitStatusResult {
+function status(overrides: Partial<GitStatusResult> = {}): GitStatusResult {
   return {
     entries: [],
     conflictOperation: 'unknown',

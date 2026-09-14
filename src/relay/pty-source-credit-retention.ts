@@ -6,8 +6,6 @@ export type PtySourceCreditRetentionSnapshot = Readonly<{
   spans: number
 }>
 
-type RecordRetention = PtySourceCreditRetentionSnapshot
-
 export class PtySourceCreditRetention {
   private sourceSuTotal = 0
   private dataBytesTotal = 0
@@ -53,14 +51,14 @@ export class PtySourceCreditRetention {
     })
   }
 
-  private apply(retention: RecordRetention, direction: 1 | -1): void {
+  private apply(retention: PtySourceCreditRetentionSnapshot, direction: 1 | -1): void {
     this.sourceSuTotal += direction * retention.sourceSu
     this.dataBytesTotal += direction * retention.dataBytes
     this.spansTotal += direction * retention.spans
   }
 }
 
-function recordRetention(record: DeliveryRecord): RecordRetention {
+function recordRetention(record: DeliveryRecord): PtySourceCreditRetentionSnapshot {
   return {
     sourceSu: record.receivedEndSu - record.creditedEndSu,
     dataBytes: record.retainedDataBytes,

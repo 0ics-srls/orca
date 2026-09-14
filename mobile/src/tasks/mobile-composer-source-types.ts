@@ -3,14 +3,14 @@ import type {
   WorkspaceSourceLinkedItem,
   WorkspaceSourceSelection
 } from '../../../src/shared/new-workspace/workspace-source'
-import type { WorkspaceCreateGitPushTarget } from './workspace-create-params'
+import type { GitPushTarget } from '../../../src/shared/worktree/types'
 
 export type { SmartNameMode }
 
 export type ComposerBaseState = {
   baseBranch?: string
   compareBaseRef?: string
-  pushTarget?: WorkspaceCreateGitPushTarget
+  pushTarget?: GitPushTarget
   branchNameOverride?: string
 }
 
@@ -48,7 +48,7 @@ export type MobileComposerCreateSelection =
       item: MobileLinkedWorkItem
       baseBranch?: string
       compareBaseRef?: string
-      pushTarget?: WorkspaceCreateGitPushTarget
+      pushTarget?: GitPushTarget
       branchNameOverride?: string
     }
   | {

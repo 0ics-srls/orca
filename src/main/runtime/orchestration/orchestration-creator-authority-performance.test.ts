@@ -6,8 +6,8 @@ import { createRootDispatch } from './db/root-dispatch-test-fixture'
 const CREATOR_PANE = 'tab-creator:11111111-1111-4111-8111-111111111111'
 const CREATOR_PROCESS = 'pty-creator:incarnation-a'
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
 describe('creator authority lookup performance', () => {

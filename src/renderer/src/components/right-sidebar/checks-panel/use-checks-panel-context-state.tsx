@@ -1,3 +1,4 @@
+import type { HostedReviewInfo } from '../../../../../shared/hosted-review'
 import { useCallback, useEffect, useState } from 'react'
 import { useAppStore } from '@/store'
 import { useNow } from '@/hooks/use-now'
@@ -5,7 +6,7 @@ import { isFolderRepo } from '../../../../../shared/repo-kind'
 import { getGitHubPRCacheKey } from '@/store/slices/github-cache-key'
 import { getHostedReviewCacheKey } from '@/store/slices/hosted-review-cache-identity'
 import { selectReviewCacheEntry } from '../review-cache-entry-selection'
-import { selectChecksPanelReview, type ChecksPanelReview } from '../checks-panel-review'
+import { selectChecksPanelReview } from '../checks-panel-review'
 import { isGitLabChecksPanelReview } from './gitlab-review-client'
 import { clearPendingPRCommentAiAck } from '../pr-comments-ai-launch-ack'
 import {
@@ -222,7 +223,7 @@ export function useChecksPanelContextState(model: ChecksPanelContextStateInput) 
   const linkedBitbucketPR = activeWorktree?.linkedBitbucketPR ?? null
   const linkedAzureDevOpsPR = activeWorktree?.linkedAzureDevOpsPR ?? null
   const linkedGiteaPR = activeWorktree?.linkedGiteaPR ?? null
-  const activeReview: ChecksPanelReview | null = selectChecksPanelReview({
+  const activeReview: HostedReviewInfo | null = selectChecksPanelReview({
     hostedReview,
     pr,
     linkedPR,

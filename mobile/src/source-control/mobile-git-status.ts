@@ -1,34 +1,25 @@
 import type {
   GitFileStatus,
   GitStagingArea,
-  GitStatusEntry,
-  GitStatusResult,
-  GitUpstreamStatus
+  GitStatusEntry
 } from '../../../src/shared/git-status-types'
 import type { RpcResponse } from '../transport/types'
 
-export type MobileGitFileStatus = GitFileStatus
-export type MobileGitStagingArea = GitStagingArea
-export type MobileGitStatusEntry = GitStatusEntry
-export type MobileGitUpstreamStatus = GitUpstreamStatus
-export type MobileGitStatusResult = GitStatusResult
+export type MobileSourceControlSection<TEntry extends GitStatusEntry = GitStatusEntry> = {
+  area: GitStagingArea
+  title: string
+  data: TEntry[]
+}
 
-export type MobileSourceControlSection<TEntry extends MobileGitStatusEntry = MobileGitStatusEntry> =
-  {
-    area: MobileGitStagingArea
-    title: string
-    data: TEntry[]
-  }
+const AREA_ORDER: GitStagingArea[] = ['unstaged', 'untracked', 'staged']
 
-const AREA_ORDER: MobileGitStagingArea[] = ['unstaged', 'untracked', 'staged']
-
-const AREA_TITLES: Record<MobileGitStagingArea, string> = {
+const AREA_TITLES: Record<GitStagingArea, string> = {
   unstaged: 'Changes',
   untracked: 'Untracked Files',
   staged: 'Staged Changes'
 }
 
-export const MOBILE_GIT_STATUS_LABELS: Record<MobileGitFileStatus, string> = {
+export const MOBILE_GIT_STATUS_LABELS: Record<GitFileStatus, string> = {
   modified: 'M',
   added: 'A',
   deleted: 'D',
@@ -37,7 +28,7 @@ export const MOBILE_GIT_STATUS_LABELS: Record<MobileGitFileStatus, string> = {
   copied: 'C'
 }
 
-function getConflictSortRank(entry: MobileGitStatusEntry): number {
+function getConflictSortRank(entry: GitStatusEntry): number {
   if (entry.conflictStatus === 'unresolved') {
     return 0
   }
@@ -47,7 +38,7 @@ function getConflictSortRank(entry: MobileGitStatusEntry): number {
   return 2
 }
 
-export function buildMobileSourceControlSections<TEntry extends MobileGitStatusEntry>(
+export function buildMobileSourceControlSections<TEntry extends GitStatusEntry>(
   entries: readonly TEntry[]
 ): MobileSourceControlSection<TEntry>[] {
   const sections = AREA_ORDER.map((area) => ({
@@ -67,36 +58,36 @@ export function buildMobileSourceControlSections<TEntry extends MobileGitStatusE
   return sections
 }
 
-export function countStagedEntries(entries: readonly MobileGitStatusEntry[]): number {
+export function countStagedEntries(entries: readonly GitStatusEntry[]): number {
   return entries.filter((entry) => entry.area === 'staged').length
 }
 
-export function countUnstagedEntries(entries: readonly MobileGitStatusEntry[]): number {
+export function countUnstagedEntries(entries: readonly GitStatusEntry[]): number {
   return entries.filter((entry) => entry.area === 'unstaged' || entry.area === 'untracked').length
 }
 
-export function getStageablePaths(entries: readonly MobileGitStatusEntry[]): string[] {
+export function getStageablePaths(entries: readonly GitStatusEntry[]): string[] {
   return entries.filter(isMobileGitStageableEntry).map((entry) => entry.path)
 }
 
-export function getUnstageablePaths(entries: readonly MobileGitStatusEntry[]): string[] {
+export function getUnstageablePaths(entries: readonly GitStatusEntry[]): string[] {
   return entries.filter((entry) => entry.area === 'staged').map((entry) => entry.path)
 }
 
-export function isMobileGitStageableEntry(entry: MobileGitStatusEntry): boolean {
+export function isMobileGitStageableEntry(entry: GitStatusEntry): boolean {
   return (
     (entry.area === 'unstaged' || entry.area === 'untracked') &&
     entry.conflictStatus !== 'unresolved'
   )
 }
 
-export function isMobileGitDiscardableEntry(entry: MobileGitStatusEntry): boolean {
+export function isMobileGitDiscardableEntry(entry: GitStatusEntry): boolean {
   return entry.conflictStatus !== 'unresolved' && entry.conflictStatus !== 'resolved_locally'
 }
 
 // Why: unresolved conflicts are not a stable file to open. Deletions are —
 // git.diff still returns the pre-delete side (text or image via modifiedDeleted).
-export function canOpenMobileGitStatusEntry(entry: MobileGitStatusEntry): boolean {
+export function canOpenMobileGitStatusEntry(entry: GitStatusEntry): boolean {
   return entry.conflictStatus !== 'unresolved'
 }
 

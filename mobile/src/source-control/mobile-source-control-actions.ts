@@ -1,4 +1,4 @@
-import type { MobileGitUpstreamStatus } from './mobile-git-status'
+import type { GitUpstreamStatus } from '../../../src/shared/git-status-types'
 
 // Icon identifier resolved to a lucide component by the screen. Kept as a string
 // here so this module stays free of the native lucide import and unit-testable.
@@ -27,7 +27,7 @@ export type MobileSourceControlAction = {
 export type MobileSourceControlActionArgs = {
   commitMessage: string
   stagedCount: number
-  upstream: MobileGitUpstreamStatus | null
+  upstream: GitUpstreamStatus | null
   upstreamKnown: boolean
   busyAction: string | null
   openingPath: string | null

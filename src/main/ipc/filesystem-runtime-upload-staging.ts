@@ -9,14 +9,14 @@ import { basename, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { authorizeExternalPath } from './filesystem-auth'
 import { isENOENT } from './filesystem-path-containment'
 import type {
-  StagedExternalImportEntry,
-  StagedExternalImportSource
-} from './filesystem-import-result-types'
+  StagedRuntimeUploadEntry,
+  StagedRuntimeUploadSource
+} from '../../shared/runtime-upload-staging-contract'
 
 class RuntimeUploadSymlinkError extends Error {}
 
 /** Bytes this source contributes to the drop budget; 0 unless it staged. */
-export function stagedRuntimeUploadByteLength(source: StagedExternalImportSource): number {
+export function stagedRuntimeUploadByteLength(source: StagedRuntimeUploadSource): number {
   if (source.status !== 'staged') {
     return 0
   }
@@ -33,7 +33,7 @@ export function stagedRuntimeUploadByteLength(source: StagedExternalImportSource
 export async function stageOneSourceForRuntimeUpload(
   sourcePath: string,
   totalBytesBefore = 0
-): Promise<StagedExternalImportSource> {
+): Promise<StagedRuntimeUploadSource> {
   const resolvedSource = resolve(sourcePath)
 
   // Why: runtime uploads read client-local paths in the client main process;
@@ -94,8 +94,8 @@ export async function stageOneSourceForRuntimeUpload(
 async function stageDirectoryEntries(
   rootPath: string,
   totalBytesBefore: number
-): Promise<StagedExternalImportEntry[]> {
-  const entries: StagedExternalImportEntry[] = [{ relativePath: '', kind: 'directory' }]
+): Promise<StagedRuntimeUploadEntry[]> {
+  const entries: StagedRuntimeUploadEntry[] = [{ relativePath: '', kind: 'directory' }]
   let totalBytes = totalBytesBefore
   const rootRealPath = await realpath(rootPath)
 
@@ -148,7 +148,7 @@ async function stageFileEntry(
   filePath: string,
   relativePath: string,
   options: { rootRealPath?: string; totalBytesBefore: number }
-): Promise<{ entry: StagedExternalImportEntry; byteLength: number }> {
+): Promise<{ entry: StagedRuntimeUploadEntry; byteLength: number }> {
   const statResult = await lstat(filePath)
   const displayPath = normalizeRelativeUploadPath(relativePath)
   // Why: a dropped file's relative path is '', so errors would name nothing.

@@ -1,6 +1,6 @@
 import type { StateCreator } from 'zustand'
 import type { AppState } from '../types'
-import type { GitHubSlice as GitHubSliceContract } from '../github/slice-types'
+import type { GitHubSlice } from '../github/slice-types'
 import {
   ACTIVE_PR_REFRESH_STATUSES,
   getEffectiveGitHubPRRefreshState,
@@ -23,7 +23,6 @@ import { createStaleWorktreeRefreshActions } from '../github/stale-worktree-refr
 import { createRefreshRoutingActions } from '../github/refresh-routing-actions'
 import { createRefreshEventActions } from '../github/refresh-event-actions'
 import { createRefreshSweepActions } from '../github/refresh-sweep-actions'
-export type GitHubSlice = GitHubSliceContract
 
 export const createGitHubSlice: StateCreator<AppState, [], [], GitHubSlice> = (set, get) => ({
   prCache: {},

@@ -5,8 +5,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ChecksPanelCheckAndReviewActionsInput } from './check-and-review-action-dependencies'
 import { useChecksPanelCheckAndReviewActions } from './use-checks-panel-check-and-review-actions'
 
-type Input = ChecksPanelCheckAndReviewActionsInput
-
 afterEach(cleanup)
 
 const mocks = vi.hoisted(() => ({ toastError: vi.fn() }))
@@ -113,7 +111,9 @@ describe('useChecksPanelCheckAndReviewActions', () => {
   })
 })
 
-function makeInput(overrides: Partial<Input> = {}): Input {
+function makeInput(
+  overrides: Partial<ChecksPanelCheckAndReviewActionsInput> = {}
+): ChecksPanelCheckAndReviewActionsInput {
   const worktree = {
     id: 'repo-1::/workspace/repo',
     repoId: 'repo-1',
@@ -137,7 +137,7 @@ function makeInput(overrides: Partial<Input> = {}): Input {
       updatedAt: null,
       mergeable: 'UNKNOWN'
     },
-    activeWorktree: worktree as Input['activeWorktree'],
+    activeWorktree: worktree as ChecksPanelCheckAndReviewActionsInput['activeWorktree'],
     activeWorktreeId: worktree.id,
     asyncResultKeyRef: { current: '' },
     branch: 'feature/mr',
@@ -166,7 +166,7 @@ function makeInput(overrides: Partial<Input> = {}): Input {
       id: 'repo-1',
       path: '/workspace/repo',
       connectionId: 'ssh-1'
-    } as NonNullable<Input['repo']>,
+    } as NonNullable<ChecksPanelCheckAndReviewActionsInput['repo']>,
     repoConnectionId: 'ssh-1',
     runtimeEnvironmentId: null,
     settings: null,
@@ -179,7 +179,7 @@ function makeInput(overrides: Partial<Input> = {}): Input {
     stateRequestKey: 'state',
     updateWorktreeMeta: vi.fn(),
     ...overrides
-  } as Input
+  } as ChecksPanelCheckAndReviewActionsInput
 }
 
 describe('useChecksPanelCheckAndReviewActions GitLab links', () => {
@@ -223,7 +223,7 @@ describe('useChecksPanelCheckAndReviewActions GitLab links', () => {
         activeWorktree: { ...input.activeWorktree, linkedGitLabMR: 43 },
         linkedGitLabMR: 43,
         panelContextKey: 'context::gitlab::43'
-      } as Input
+      } as ChecksPanelCheckAndReviewActionsInput
     })
     await act(async () => modal.afterSave({ updates: { linkedGitLabMR: 43 } }))
 

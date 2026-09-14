@@ -1,8 +1,8 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { describe, expect, it, vi } from 'vitest'
 import { getMobilePrEligibilityReadiness, readFreshGitStatus } from './mobile-open-pr-prefill'
-import type { MobileGitStatusResult } from './mobile-git-status'
 
-const fallback = { branch: 'old', entries: [] } as unknown as MobileGitStatusResult
+const fallback = { branch: 'old', entries: [] } as unknown as GitStatusResult
 
 describe('readFreshGitStatus', () => {
   it('returns the freshly-read status when parseable', async () => {
@@ -43,7 +43,7 @@ describe('getMobilePrEligibilityReadiness', () => {
     const status = {
       entries: [{ path: 'a.ts' }],
       upstreamStatus: { hasUpstream: true, ahead: 2, behind: 1 }
-    } as unknown as MobileGitStatusResult
+    } as unknown as GitStatusResult
 
     expect(getMobilePrEligibilityReadiness(status)).toEqual({
       hasUncommittedChanges: true,

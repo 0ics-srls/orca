@@ -19,7 +19,7 @@ import {
   release,
   resolveIssueSource,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 import type { IssueListState } from './issues'
@@ -27,7 +27,7 @@ import { listMergeRequests } from './merge-request-list'
 
 export async function getWorkItemByProjectRef(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   type: 'issue' | 'mr',
   connectionId?: string | null,
@@ -150,7 +150,7 @@ export async function listWorkItems(
 
 export async function fetchIssuesAsWorkItems(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   state: IssueListState,
   page: number,
   perPage: number,

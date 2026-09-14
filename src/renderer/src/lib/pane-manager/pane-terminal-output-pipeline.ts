@@ -1,4 +1,7 @@
-import { writeForegroundTerminalChunk } from './pane-terminal-foreground-render-settle'
+import {
+  writeForegroundTerminalChunk,
+  type ForegroundTerminalOutputTarget
+} from './pane-terminal-foreground-render-settle'
 import { runGuardedWriteCompletionStep } from './xterm-write-callback-guard'
 import { registerTerminalOutputAckCredits } from './pane-terminal-output-ack-credit'
 import {
@@ -19,8 +22,7 @@ import {
   queuedByTerminal,
   scheduleDrain,
   type QueueEntry,
-  type TerminalOutputParsedCallback,
-  type TerminalOutputTarget
+  type TerminalOutputParsedCallback
 } from './pane-terminal-output-queue-registry'
 import {
   discardDetachedQueueEntry,
@@ -29,7 +31,7 @@ import {
 
 // Why no per-write scroll enforcement: xterm's BufferService.isUserScrolling owns live follow/pin; app-side enforcement is limited to structural ops xterm can't identify, like replay.
 export function writeBackgroundTerminalChunk(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   data: string,
   onParsed?: TerminalOutputParsedCallback,
   onWriteFailure?: () => void
@@ -69,7 +71,7 @@ function makeParseClockPacer(): () => void {
 }
 
 export function composeParsedCallback(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   onParsed: TerminalOutputParsedCallback | undefined,
   ackCreditsParsed: (() => void) | undefined,
   pacer: (() => void) | undefined
@@ -87,7 +89,7 @@ export function composeParsedCallback(
 }
 
 export function composeWriteFailureCallback(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   ackCreditsParsed: (() => void) | undefined
 ): () => void {
   return () => {

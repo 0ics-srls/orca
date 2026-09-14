@@ -37,7 +37,7 @@ import type { PRCheckDetail } from '../../../../../shared/github/check-types'
 import type { PRComment } from '../../../../../shared/github/comment-types'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { buildMentionOptions } from '../mentions/options'
 import { PRActionsPanel } from '../actions/panel'
 import { PRAssigneesPanel } from '@/components/github/PRAssigneesPanel'
@@ -86,7 +86,7 @@ export function ConversationTab({
   participants: GitHubAssignableUser[]
   localState: GitHubWorkItem['state']
   onStateChange: (state: GitHubWorkItem['state']) => void
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   onMutated: () => void
   onChecksUpdated: (checks: PRCheckDetail[]) => void
   onBodyUpdated: (body: string) => void

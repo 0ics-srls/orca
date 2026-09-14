@@ -15,16 +15,13 @@ import { terminalPreviewUnavailableMessage } from './terminal-preview-unavailabl
 import { translate } from '@/i18n/i18n'
 import { cn } from '@/lib/utils'
 
-/** Routing payload for focusing an agent's pane in the main window. */
-export type AgentRevealArgs = DashboardRevealAgentArgs
-
 type AgentTerminalDialogProps = {
   /** The agent shown in the dialog; null renders the dialog closed. */
   card: DashboardCard | null
   onOpenChange: (open: boolean) => void
   /** Focus the agent's pane. The pop-out relays over IPC; the in-window host
    *  activates the worktree/pane locally. */
-  onReveal: (args: AgentRevealArgs) => void
+  onReveal: (args: DashboardRevealAgentArgs) => void
 }
 
 type AgentTerminalFrameProps = Omit<AgentTerminalDialogProps, 'card'> & {

@@ -6,13 +6,15 @@ import {
   classifyPullRequestUpdateError,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function updatePRState(
   repoPath: string,
   prNumber: number,
   updates: GitHubPullRequestStateUpdate,
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(

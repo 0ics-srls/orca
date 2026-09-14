@@ -1,16 +1,10 @@
 import type { BrowserWorkspace } from '../../../../shared/browser-workspace-types'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { Worktree } from '../../../../shared/worktree/types'
-import type {
-  AgentOwnershipEvidence,
-  PtyListedSession
-} from '../../../../shared/pty-listed-session'
+import type { AgentOwnershipEvidence } from '../../../../shared/pty-listed-session'
 
 /** `null` === "no local sample" (e.g. SSH PTY); UI renders as em-dash. */
 export type Metric = number | null
-
-/** One `pty.listSessions()` row. Aliased so ownership evidence cannot be dropped locally. */
-export type DaemonSession = PtyListedSession
 
 export type UnifiedSessionRow = {
   sessionId: string

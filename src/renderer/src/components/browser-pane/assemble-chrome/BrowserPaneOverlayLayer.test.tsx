@@ -3,7 +3,7 @@ import { cleanup, render } from '@testing-library/react'
 import { Suspense } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BrowserTab as BrowserTabState } from '../../../../../shared/browser-workspace-types'
+import type { BrowserWorkspace as BrowserTabState } from '../../../../../shared/browser-workspace-types'
 import type { Tab, TabGroup } from '../../../../../shared/tab-types'
 
 type MockAppState = {

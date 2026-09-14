@@ -1,11 +1,8 @@
 import type { Mock } from 'vitest'
-import type { SshPtySourceFrame } from '../providers/ssh-pty-source-frame'
 
 // Declared shapes for the SSH IPC mock registry. The suites assert on recorded calls rather
 // than argument types, so every spy stays `Mock` (vi.fn()'s untyped default) — naming the
 // shapes here is what keeps declaration emit from reaching into @vitest/spy internals.
-
-export type SshIpcTestSource = SshPtySourceFrame
 
 /** Callbacks production code hands a manager mock at construction / setCallbacks time. */
 export type MockCallbacksRef = { current: unknown }

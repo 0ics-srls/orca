@@ -1,6 +1,5 @@
 import type {
   BrowserCertificateFailure,
-  BrowserCookieImportResult,
   BrowserLoadError,
   BrowserSessionProfile,
   BrowserSessionProfileSource
@@ -101,7 +100,6 @@ export type BrowserDetectedInfo = {
 }
 
 export type BrowserDetectProfilesResult = { browsers: BrowserDetectedInfo[] }
-export type BrowserProfileImportFromBrowserResult = BrowserCookieImportResult
 export type BrowserProfileClearDefaultCookiesResult = { cleared: boolean }
 export type BrowserHoverResult = { hovered: string }
 export type BrowserDragResult = { dragged: { from: string; to: string } }

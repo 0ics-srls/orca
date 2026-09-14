@@ -28,7 +28,7 @@ import {
 import { requestGitStreamable } from '../main/ssh/ssh-git-response-stream-reader'
 
 import { RelayDispatcher } from './dispatcher'
-import type { SinkWriteSettlement } from './dispatcher'
+import type { DispatcherWriterSettlement } from './dispatcher'
 import { RelayContext } from './context'
 import { GitHandler } from './git-handler'
 import { GIT_RESPONSE_CHUNK_SIZE } from './protocol'
@@ -94,7 +94,7 @@ function createHarness(opts: { congested: boolean }): Harness {
 
   const outQueue: {
     data: Buffer
-    settle: (result: SinkWriteSettlement) => void
+    settle: (result: DispatcherWriterSettlement) => void
   }[] = []
   let queuedBytes = 0
   const drainWaiters = new Set<() => void>()

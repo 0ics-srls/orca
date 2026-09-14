@@ -4,14 +4,15 @@ import { isClientAuthoritativeAgentStatusPane } from '@/components/terminal-pane
 import { normalizeCompatibleAgentStatusEntryForOwner } from '../../../../shared/agent-title-owner'
 import { resolvePaneAgentOwnerRecord } from '../../../../shared/pane-agent-owner'
 import { toWebTerminalSurfaceTabId } from '../web-runtime-session'
-import type { TerminalSurface, WebSessionTabsBatchContext, WebSessionTabsSyncState } from './state'
+import type { WebSessionTabsBatchContext, WebSessionTabsSyncState } from './state'
+import type { RuntimeMobileSessionTerminalClientTab } from '../../../../shared/runtime-types'
 import type { RetiredTerminalTabSweepState } from '../../store/slices/retired-terminal-tab-state-sweep'
 import { buildRetiredTerminalTabStateSweepPatch } from '../../store/slices/retired-terminal-tab-state-sweep'
 import { isMirroredTerminalSurfaceId } from './terminal-surfaces'
 import { isAgentStatusFresh } from './state-equality-core'
 
 export function toMirroredPaneKey(
-  surface: TerminalSurface,
+  surface: RuntimeMobileSessionTerminalClientTab,
   leafId = surface.leafId
 ): string | null {
   if (!isTerminalLeafId(leafId)) {
@@ -22,8 +23,8 @@ export function toMirroredPaneKey(
 
 /** Normalises and mirrors agent status updates from the host payload, preserving ownership metadata. */
 export function remapHostAgentStatus(
-  surface: TerminalSurface,
-  retainedSurface?: TerminalSurface
+  surface: RuntimeMobileSessionTerminalClientTab,
+  retainedSurface?: RuntimeMobileSessionTerminalClientTab
 ): AgentStatusEntry | null {
   if (!surface.agentStatus) {
     return null

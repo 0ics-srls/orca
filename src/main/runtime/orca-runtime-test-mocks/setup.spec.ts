@@ -10,13 +10,11 @@ import type { OrcaRuntimeService as OrcaRuntimeServiceConstructor } from '../orc
 import type { RuntimeMobileSessionTabsResult } from '../../../shared/runtime-types'
 import { setWorktreeWatcherRemoval } from '../../ipc/worktree-watcher-removal'
 
-type TestMock = Mock
-
 export const ORIGINAL_PLATFORM = process.platform
 export const ORIGINAL_PLATFORM_DESCRIPTOR = Object.getOwnPropertyDescriptor(process, 'platform')
 const removeWorktreeLinkedPathsMock: ReturnType<typeof vi.fn> = vi.hoisted(() => vi.fn())
-const findExistingWorktreeSymlinkPathsMock: TestMock = vi.hoisted(() => vi.fn())
-const resolveLocalGitUsernameMock: TestMock = vi.hoisted(() => vi.fn(async () => ''))
+const findExistingWorktreeSymlinkPathsMock: Mock = vi.hoisted(() => vi.fn())
+const resolveLocalGitUsernameMock: Mock = vi.hoisted(() => vi.fn(async () => ''))
 
 vi.mock('../../ipc/worktree-symlinks', () => ({
   createWorktreeCopiedPaths: vi.fn(),
@@ -85,13 +83,13 @@ const electronMocks = vi.hoisted(() => {
   }
 })
 
-const closeLocalWatcherForWorktreePathMock: TestMock = vi.hoisted(() => vi.fn())
-const closeRemoteWatcherForWorktreePathMock: TestMock = vi.hoisted(() => vi.fn())
-const restoreLocalWatcherAfterFailedRemovalMock: TestMock = vi.hoisted(() => vi.fn())
-const restoreRemoteWatcherAfterFailedRemovalMock: TestMock = vi.hoisted(() => vi.fn())
-const forgetLocalWatcherRemovalSnapshotMock: TestMock = vi.hoisted(() => vi.fn())
-const forgetRemoteWatcherRemovalSnapshotMock: TestMock = vi.hoisted(() => vi.fn())
-const scanLocalRepoWorktreesForResolutionMock: TestMock = vi.hoisted(() => vi.fn())
+const closeLocalWatcherForWorktreePathMock: Mock = vi.hoisted(() => vi.fn())
+const closeRemoteWatcherForWorktreePathMock: Mock = vi.hoisted(() => vi.fn())
+const restoreLocalWatcherAfterFailedRemovalMock: Mock = vi.hoisted(() => vi.fn())
+const restoreRemoteWatcherAfterFailedRemovalMock: Mock = vi.hoisted(() => vi.fn())
+const forgetLocalWatcherRemovalSnapshotMock: Mock = vi.hoisted(() => vi.fn())
+const forgetRemoteWatcherRemovalSnapshotMock: Mock = vi.hoisted(() => vi.fn())
+const scanLocalRepoWorktreesForResolutionMock: Mock = vi.hoisted(() => vi.fn())
 
 vi.mock('electron', () => electronMocks)
 // Why install the port instead of mocking ../ipc/filesystem-watcher: the runtime calls
@@ -205,12 +203,12 @@ const {
         isMainWorktree: false
       }
     ],
-    addSparseWorktreeMock: vi.fn() as TestMock,
-    addWorktreeMock: vi.fn() as TestMock,
-    removeWorktreeMock: vi.fn() as TestMock,
-    forceDeleteLocalBranchMock: vi.fn() as TestMock,
-    computeWorktreePathMock: vi.fn() as TestMock,
-    ensurePathWithinWorkspaceMock: vi.fn() as TestMock,
+    addSparseWorktreeMock: vi.fn() as Mock,
+    addWorktreeMock: vi.fn() as Mock,
+    removeWorktreeMock: vi.fn() as Mock,
+    forceDeleteLocalBranchMock: vi.fn() as Mock,
+    computeWorktreePathMock: vi.fn() as Mock,
+    ensurePathWithinWorkspaceMock: vi.fn() as Mock,
     sshGitProviders,
     sshProviderGenerations,
     getSshGitProviderMock: vi.fn((connectionId: string) => sshGitProviders.get(connectionId)),
@@ -229,78 +227,76 @@ const {
         )
       }
     }),
-    getActiveMultiplexerMock: vi.fn() as TestMock,
-    muxRequestMock: vi.fn() as TestMock,
-    invalidateAuthorizedRootsCacheMock: vi.fn() as TestMock,
-    prepareLocalWorktreeRootForRepoMock: vi.fn() as TestMock,
-    createHostedReviewMock: vi.fn() as TestMock,
-    createStackedHostedReviewMock: vi.fn() as TestMock,
-    getHostedReviewCreationEligibilityMock: vi.fn() as TestMock,
-    getHostedReviewForBranchMock: vi.fn() as TestMock,
-    getPRForBranchMock: vi.fn().mockResolvedValue(null) as TestMock,
-    getPRForBranchOutcomeMock: vi
-      .fn()
-      .mockResolvedValue({ kind: 'no-pr', fetchedAt: 0 }) as TestMock,
-    getRepoSlugMock: vi.fn().mockResolvedValue(null) as TestMock,
-    getRepoUpstreamMock: vi.fn().mockResolvedValue(null) as TestMock,
-    getGitHubWorkItemMock: vi.fn() as TestMock,
-    getPullRequestPushTargetMock: vi.fn() as TestMock,
-    getGitHubWorkItemByOwnerRepoMock: vi.fn() as TestMock,
-    getGitHubWorkItemDetailsMock: vi.fn() as TestMock,
-    getGitHubPRFileContentsMock: vi.fn() as TestMock,
-    getGitHubPRChecksMock: vi.fn() as TestMock,
-    rerunGitHubPRChecksMock: vi.fn() as TestMock,
-    getGitHubPRCheckDetailsMock: vi.fn() as TestMock,
-    getGitHubPRCommentsMock: vi.fn() as TestMock,
-    resolveGitHubReviewThreadMock: vi.fn() as TestMock,
-    setGitHubPRFileViewedMock: vi.fn() as TestMock,
-    updateGitHubPRTitleMock: vi.fn() as TestMock,
-    updateGitHubPRDetailsMock: vi.fn() as TestMock,
-    mergeGitHubPRMock: vi.fn() as TestMock,
-    setGitHubPRAutoMergeMock: vi.fn() as TestMock,
-    updateGitHubPRStateMock: vi.fn() as TestMock,
-    requestGitHubPRReviewersMock: vi.fn() as TestMock,
-    removeGitHubPRReviewersMock: vi.fn() as TestMock,
-    addGitHubPRReviewCommentMock: vi.fn() as TestMock,
-    addGitHubPRReviewCommentReplyMock: vi.fn() as TestMock,
-    listGitHubIssuesMock: vi.fn() as TestMock,
-    listGitHubWorkItemsMock: vi.fn() as TestMock,
-    countGitHubWorkItemsMock: vi.fn() as TestMock,
-    createGitHubIssueMock: vi.fn() as TestMock,
-    updateGitHubIssueMock: vi.fn() as TestMock,
-    addGitHubIssueCommentMock: vi.fn() as TestMock,
-    listGitHubLabelsMock: vi.fn() as TestMock,
-    listGitHubAssignableUsersMock: vi.fn() as TestMock,
-    applyAgentStatusHooksEnabledMock: vi.fn() as TestMock,
-    detectInstalledAgentsWithShellPathHydrationMock: vi.fn() as TestMock,
-    detectRemoteAgentsMock: vi.fn() as TestMock,
-    markCodexProjectTrustedMock: vi.fn() as TestMock,
-    markCopilotFolderTrustedMock: vi.fn() as TestMock,
-    markCursorWorkspaceTrustedMock: vi.fn() as TestMock,
-    listGitLabMergeRequestsMock: vi.fn() as TestMock,
-    listGitLabWorkItemsMock: vi.fn() as TestMock,
-    listGitLabIssuesMock: vi.fn() as TestMock,
-    listGitLabLabelsMock: vi.fn() as TestMock,
-    listGitLabTodosMock: vi.fn() as TestMock,
-    getGitLabProjectRefForRemoteMock: vi.fn() as TestMock,
-    getGitLabWorkItemByProjectRefMock: vi.fn() as TestMock,
-    createGitLabIssueMock: vi.fn() as TestMock,
-    updateGitLabIssueMock: vi.fn() as TestMock,
-    addGitLabIssueCommentMock: vi.fn() as TestMock,
-    addGitLabMRCommentMock: vi.fn() as TestMock,
-    addGitLabMRInlineCommentMock: vi.fn() as TestMock,
-    resolveGitLabMRDiscussionMock: vi.fn() as TestMock,
-    getGitLabJobTraceMock: vi.fn() as TestMock,
-    retryGitLabJobMock: vi.fn() as TestMock,
-    mergeGitLabMRMock: vi.fn() as TestMock,
-    closeGitLabMRMock: vi.fn() as TestMock,
-    reopenGitLabMRMock: vi.fn() as TestMock,
-    updateGitLabMRMock: vi.fn() as TestMock,
-    getGlabKnownHostsMock: vi.fn() as TestMock,
-    getGitLabWorkItemDetailsMock: vi.fn() as TestMock,
-    updateGitLabMRReviewersMock: vi.fn() as TestMock,
-    getIssueMock: vi.fn() as TestMock,
-    deleteWorktreeHistoryDirMock: vi.fn() as TestMock
+    getActiveMultiplexerMock: vi.fn() as Mock,
+    muxRequestMock: vi.fn() as Mock,
+    invalidateAuthorizedRootsCacheMock: vi.fn() as Mock,
+    prepareLocalWorktreeRootForRepoMock: vi.fn() as Mock,
+    createHostedReviewMock: vi.fn() as Mock,
+    createStackedHostedReviewMock: vi.fn() as Mock,
+    getHostedReviewCreationEligibilityMock: vi.fn() as Mock,
+    getHostedReviewForBranchMock: vi.fn() as Mock,
+    getPRForBranchMock: vi.fn().mockResolvedValue(null) as Mock,
+    getPRForBranchOutcomeMock: vi.fn().mockResolvedValue({ kind: 'no-pr', fetchedAt: 0 }) as Mock,
+    getRepoSlugMock: vi.fn().mockResolvedValue(null) as Mock,
+    getRepoUpstreamMock: vi.fn().mockResolvedValue(null) as Mock,
+    getGitHubWorkItemMock: vi.fn() as Mock,
+    getPullRequestPushTargetMock: vi.fn() as Mock,
+    getGitHubWorkItemByOwnerRepoMock: vi.fn() as Mock,
+    getGitHubWorkItemDetailsMock: vi.fn() as Mock,
+    getGitHubPRFileContentsMock: vi.fn() as Mock,
+    getGitHubPRChecksMock: vi.fn() as Mock,
+    rerunGitHubPRChecksMock: vi.fn() as Mock,
+    getGitHubPRCheckDetailsMock: vi.fn() as Mock,
+    getGitHubPRCommentsMock: vi.fn() as Mock,
+    resolveGitHubReviewThreadMock: vi.fn() as Mock,
+    setGitHubPRFileViewedMock: vi.fn() as Mock,
+    updateGitHubPRTitleMock: vi.fn() as Mock,
+    updateGitHubPRDetailsMock: vi.fn() as Mock,
+    mergeGitHubPRMock: vi.fn() as Mock,
+    setGitHubPRAutoMergeMock: vi.fn() as Mock,
+    updateGitHubPRStateMock: vi.fn() as Mock,
+    requestGitHubPRReviewersMock: vi.fn() as Mock,
+    removeGitHubPRReviewersMock: vi.fn() as Mock,
+    addGitHubPRReviewCommentMock: vi.fn() as Mock,
+    addGitHubPRReviewCommentReplyMock: vi.fn() as Mock,
+    listGitHubIssuesMock: vi.fn() as Mock,
+    listGitHubWorkItemsMock: vi.fn() as Mock,
+    countGitHubWorkItemsMock: vi.fn() as Mock,
+    createGitHubIssueMock: vi.fn() as Mock,
+    updateGitHubIssueMock: vi.fn() as Mock,
+    addGitHubIssueCommentMock: vi.fn() as Mock,
+    listGitHubLabelsMock: vi.fn() as Mock,
+    listGitHubAssignableUsersMock: vi.fn() as Mock,
+    applyAgentStatusHooksEnabledMock: vi.fn() as Mock,
+    detectInstalledAgentsWithShellPathHydrationMock: vi.fn() as Mock,
+    detectRemoteAgentsMock: vi.fn() as Mock,
+    markCodexProjectTrustedMock: vi.fn() as Mock,
+    markCopilotFolderTrustedMock: vi.fn() as Mock,
+    markCursorWorkspaceTrustedMock: vi.fn() as Mock,
+    listGitLabMergeRequestsMock: vi.fn() as Mock,
+    listGitLabWorkItemsMock: vi.fn() as Mock,
+    listGitLabIssuesMock: vi.fn() as Mock,
+    listGitLabLabelsMock: vi.fn() as Mock,
+    listGitLabTodosMock: vi.fn() as Mock,
+    getGitLabProjectRefForRemoteMock: vi.fn() as Mock,
+    getGitLabWorkItemByProjectRefMock: vi.fn() as Mock,
+    createGitLabIssueMock: vi.fn() as Mock,
+    updateGitLabIssueMock: vi.fn() as Mock,
+    addGitLabIssueCommentMock: vi.fn() as Mock,
+    addGitLabMRCommentMock: vi.fn() as Mock,
+    addGitLabMRInlineCommentMock: vi.fn() as Mock,
+    resolveGitLabMRDiscussionMock: vi.fn() as Mock,
+    getGitLabJobTraceMock: vi.fn() as Mock,
+    retryGitLabJobMock: vi.fn() as Mock,
+    mergeGitLabMRMock: vi.fn() as Mock,
+    closeGitLabMRMock: vi.fn() as Mock,
+    reopenGitLabMRMock: vi.fn() as Mock,
+    updateGitLabMRMock: vi.fn() as Mock,
+    getGlabKnownHostsMock: vi.fn() as Mock,
+    getGitLabWorkItemDetailsMock: vi.fn() as Mock,
+    updateGitLabMRReviewersMock: vi.fn() as Mock,
+    getIssueMock: vi.fn() as Mock,
+    deleteWorktreeHistoryDirMock: vi.fn() as Mock
   }
 })
 

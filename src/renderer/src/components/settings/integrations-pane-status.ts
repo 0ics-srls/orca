@@ -1,9 +1,9 @@
 import type { PreflightStatus } from '../../../../preload/api-types'
 
 export type GhStatus = 'checking' | 'connected' | 'not-installed' | 'not-authenticated'
-// Why: parallel to GhStatus — GitLab uses glab and the same three failure
-// modes (probe in-flight / installed-but-unauth / missing entirely).
-export type GlabStatus = GhStatus
+// Why: spelled out rather than aliased to GhStatus — glab is a separate binary with the same three
+// failure modes (probe in-flight / installed-but-unauth / missing entirely), not the same status.
+export type GlabStatus = 'checking' | 'connected' | 'not-installed' | 'not-authenticated'
 export type BitbucketStatus = 'checking' | 'connected' | 'not-configured' | 'not-authenticated'
 export type AzureDevOpsStatus = 'checking' | 'configured' | 'not-configured' | 'not-authenticated'
 export type GiteaStatus = 'checking' | 'configured' | 'not-configured' | 'not-authenticated'

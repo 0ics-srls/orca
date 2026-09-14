@@ -1,7 +1,9 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { requestMobileCommitMessage } from './mobile-commit-message-ai'
-import { getStageablePaths, type MobileGitStatusResult } from './mobile-git-status'
+import { getStageablePaths } from './mobile-git-status'
 import { getMobilePrEligibilityReadiness } from './mobile-open-pr-prefill'
-import { resolveMobilePrPrefill, type MobilePrPrefill } from './mobile-pr-create'
+import { resolveMobilePrPrefill } from './mobile-pr-create'
+import type { MobileHostedReviewPrefill } from './mobile-hosted-review-service'
 import {
   commitMobileHostedReviewStagedChanges,
   mobileHostedReviewBranchStillMatches,
@@ -24,15 +26,15 @@ type MobileHostedReviewCreateIntentFailure = {
   ok: false
   error: string
   committed?: boolean
-  status?: MobileGitStatusResult | null
+  status?: GitStatusResult | null
   commitMessage?: string
 }
 
 export type MobileHostedReviewCreateIntentOutcome =
   | {
       ok: true
-      prefill: MobilePrPrefill
-      status: MobileGitStatusResult | null
+      prefill: MobileHostedReviewPrefill
+      status: GitStatusResult | null
       committed: boolean
     }
   | MobileHostedReviewCreateIntentFailure
@@ -40,7 +42,7 @@ export type MobileHostedReviewCreateIntentOutcome =
 type PrepareInput = {
   branch: string
   title: string
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   commitMessage?: string
   onProgress?: (progress: MobileHostedReviewCreateIntentProgress) => void
 }
@@ -66,7 +68,7 @@ export function mobileHostedReviewCreateIntentProgressMessage(
   }
 }
 
-function hasUnresolvedConflicts(status: MobileGitStatusResult | null): boolean {
+function hasUnresolvedConflicts(status: GitStatusResult | null): boolean {
   return status?.entries.some((entry) => entry.conflictStatus === 'unresolved') === true
 }
 
@@ -75,8 +77,8 @@ async function resolvePrefillFromStatus(
   worktreeId: string,
   branch: string,
   title: string,
-  status: MobileGitStatusResult | null
-): Promise<MobilePrPrefill> {
+  status: GitStatusResult | null
+): Promise<MobileHostedReviewPrefill> {
   return resolveMobilePrPrefill(client, worktreeId, {
     branch,
     title,
@@ -88,9 +90,9 @@ async function ensureLocalChangesCommitted(
   client: MobileSourceControlRpcSender,
   worktreeId: string,
   input: PrepareInput,
-  currentStatus: MobileGitStatusResult | null
+  currentStatus: GitStatusResult | null
 ): Promise<
-  | { ok: true; status: MobileGitStatusResult | null; committed: boolean }
+  | { ok: true; status: GitStatusResult | null; committed: boolean }
   | MobileHostedReviewCreateIntentFailure
 > {
   if ((currentStatus?.entries.length ?? 0) === 0) {

@@ -132,7 +132,7 @@ describe('federation acknowledgment integrity', () => {
   it('accepts an identical answer that wins between classification and the guarded update', () => {
     const current = createReadyAttachment(3)
     enqueueQuestion(current.db, current.dispatchId, 'question_race')
-    const sqlite = (current.db as unknown as { db: Database.Database }).db
+    const sqlite = (current.db as unknown as { db: Database }).db
     const originalPrepare = sqlite.prepare.bind(sqlite)
     let injected = false
     const prepare = vi.spyOn(sqlite, 'prepare').mockImplementation((sql) => {

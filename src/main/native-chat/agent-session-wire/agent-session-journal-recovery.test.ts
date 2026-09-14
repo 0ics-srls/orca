@@ -102,10 +102,7 @@ async function seedRepairableSession(): Promise<void> {
   await deleteRow(1)
 }
 
-async function withJournalDatabase(
-  directory: string,
-  run: (db: Database.Database) => void
-): Promise<void> {
+async function withJournalDatabase(directory: string, run: (db: Database) => void): Promise<void> {
   const opened = openJournalDatabase(journalDatabaseFile(directory))
   try {
     run(opened.db)

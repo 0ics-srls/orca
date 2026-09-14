@@ -23,13 +23,12 @@ export {
   githubRepositorySlugArg,
   githubRepositoryWebHost
 } from './github-repository-host'
-export type GitHubApiRepository = GitHubOwnerRepo
 export type GitHubRepoExecOptions = ReturnType<typeof ghRepoExecOptions> & {
   host?: string
   env?: NodeJS.ProcessEnv
 }
 export type GitHubRepoExecution = {
-  ownerRepo: GitHubApiRepository | null
+  ownerRepo: GitHubOwnerRepo | null
   ghOptions: GitHubRepoExecOptions
 }
 export {
@@ -43,7 +42,7 @@ export async function getIssueGitHubApiRepository(
   repoPath: string,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<GitHubApiRepository | null> {
+): Promise<GitHubOwnerRepo | null> {
   const originPromise = getGitHubApiRepositoryForRemote(
     repoPath,
     'origin',
@@ -67,8 +66,8 @@ export async function getIssueGitHubApiRepository(
 }
 
 export type GitHubApiRepositoryCandidates = {
-  candidates: GitHubApiRepository[]
-  headRepo: GitHubApiRepository | null
+  candidates: GitHubOwnerRepo[]
+  headRepo: GitHubOwnerRepo | null
 }
 
 /** Hosted mirror of resolvePRRepositoryCandidates: upstream first, then origin. */
@@ -108,7 +107,7 @@ export async function resolveGitHubApiRepositoryCandidates(
   }
   const origin = originResult.value
   const seen = new Set<string>()
-  const candidates: GitHubApiRepository[] = []
+  const candidates: GitHubOwnerRepo[] = []
   for (const candidate of [upstream, origin]) {
     if (!candidate) {
       continue
@@ -124,7 +123,7 @@ export async function resolveGitHubApiRepositoryCandidates(
 }
 
 export type ResolvedGitHubApiRepositorySource = {
-  source: GitHubApiRepository | null
+  source: GitHubOwnerRepo | null
   /** True when explicit upstream is gone and resolver fell back to origin. */
   fellBack: boolean
 }
@@ -173,10 +172,10 @@ export async function resolveIssueGitHubApiRepositorySource(
 
 export async function resolveGitHubApiRepository(
   repoPath: string,
-  repository?: GitHubApiRepository | null,
+  repository?: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<GitHubApiRepository | null> {
+): Promise<GitHubOwnerRepo | null> {
   if (repository && !isValidGitHubApiRepository(repository)) {
     return null
   }

@@ -1,8 +1,8 @@
 import { useCallback } from 'react'
 import { StyleSheet, View } from 'react-native'
 import { TerminalWebView } from '../terminal/TerminalWebView'
+import type { RuntimeMobileTerminalTheme } from '../../../src/shared/runtime-types'
 import type {
-  MobileTerminalTheme,
   TerminalKeyboardAvoidanceMetrics,
   TerminalModes,
   TerminalWebViewHandle
@@ -12,7 +12,7 @@ type TerminalPaneViewProps = {
   handle: string
   active: boolean
   keyboardLift: number
-  terminalTheme?: MobileTerminalTheme
+  terminalTheme?: RuntimeMobileTerminalTheme
   textScale: number
   onRef: (handle: string, ref: TerminalWebViewHandle | null) => void
   onWebReady: (handle: string) => void

@@ -32,7 +32,7 @@ describe('dispatch failure idempotency', () => {
 
   it('rolls back the dispatch when the task update fails', () => {
     const db = new OrchestrationDb(':memory:')
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     const task = db.createTask({ runId: 'run_legacy_local', spec: 'work' })
     const dispatch = createRootDispatch(db, task.id, 'term_worker')
     sqlite.exec(`

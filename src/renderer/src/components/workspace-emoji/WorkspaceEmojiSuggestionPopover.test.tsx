@@ -1,14 +1,14 @@
 // @vitest-environment happy-dom
 
+import type { StandardEmojiShortcodeEntry } from '../../../../shared/emoji-shortcode-catalog'
 import { useRef } from 'react'
 import { cleanup, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { WorkspaceEmojiSuggestionPopover } from './WorkspaceEmojiSuggestionPopover'
-import type { WorkspaceEmojiSuggestion } from '@/lib/workspace-emoji-shortcodes'
 
 Element.prototype.scrollIntoView ??= () => {}
 
-const SUGGESTIONS: WorkspaceEmojiSuggestion[] = [
+const SUGGESTIONS: StandardEmojiShortcodeEntry[] = [
   { shortcode: 'smile', emoji: '😄' },
   { shortcode: 'smiley', emoji: '😃' },
   { shortcode: 'smirk', emoji: '😏' }

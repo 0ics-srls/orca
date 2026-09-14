@@ -9,7 +9,7 @@ import {
   ghRepoExecOptions,
   githubRepoContext,
   type LocalGitExecOptions,
-  type OwnerRepo
+  type GitHubOwnerRepo
 } from '../../gh-utils'
 import { githubHostExecOptions } from '../../github-api-repository'
 import { githubPRStackExecutionScope } from './../github-exec-scope'
@@ -24,8 +24,8 @@ import {
 import { listIssueWorkItemPage } from './work-item-issue-page'
 export async function listRecentWorkItems(
   repoPath: string,
-  issueOwnerRepo: OwnerRepo | null,
-  prOwnerRepo: OwnerRepo | null,
+  issueOwnerRepo: GitHubOwnerRepo | null,
+  prOwnerRepo: GitHubOwnerRepo | null,
   limit: number,
   page: number,
   connectionId?: string | null,
@@ -112,8 +112,8 @@ export async function listRecentWorkItems(
 
 export async function listQueriedWorkItems(
   repoPath: string,
-  issueOwnerRepo: OwnerRepo | null,
-  prOwnerRepo: OwnerRepo | null,
+  issueOwnerRepo: GitHubOwnerRepo | null,
+  prOwnerRepo: GitHubOwnerRepo | null,
   query: ParsedTaskQuery,
   limit: number,
   page?: number,

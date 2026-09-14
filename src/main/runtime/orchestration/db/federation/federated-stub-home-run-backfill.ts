@@ -3,7 +3,7 @@ import { FEDERATED_STUB_HOME_RUN_ID_PREFIX } from '../contract-constants'
 
 // Why: a rolled-back v1.4.198 host inserts attachments with home_run_id='' after user_version is
 // already 40, so this idempotent repair runs on every open, not only inside the v40 migration.
-export function backfillFederatedStubHomeRuns(db: Database.Database): void {
+export function backfillFederatedStubHomeRuns(db: Database): void {
   db.exec(`
     INSERT OR IGNORE INTO runs (id, objective, home_database, consumer_generation, legacy)
     SELECT '${FEDERATED_STUB_HOME_RUN_ID_PREFIX}' || dispatch_id,

@@ -16,7 +16,7 @@ import {
   type GeminiCliOAuthEnabledResolver,
   type NormalizedCodexAccountSelectionTarget,
   type NormalizedClaudeAccountSelectionTarget,
-  type InactiveClaudeAccountInfo,
+  type InactiveClaudeAccount,
   type NetworkProxySettings,
   DEFAULT_POLL_MS
 } from './service-types'
@@ -91,7 +91,7 @@ export abstract class RateLimitServiceState {
   protected openCodeGoConfigResolver: (() => OpenCodeGoRateLimitConfig) | null = null
   protected miniMaxConfigResolver: (() => MiniMaxRateLimitConfig) | null = null
   protected geminiCliOAuthEnabledResolver: GeminiCliOAuthEnabledResolver | null = null
-  protected inactiveClaudeAccountsResolver: (() => InactiveClaudeAccountInfo[]) | null = null
+  protected inactiveClaudeAccountsResolver: (() => InactiveClaudeAccount[]) | null = null
   protected inactiveCodexAccountsResolver: (() => InactiveCodexAccountInfo[]) | null = null
   protected networkProxySettingsResolver: (() => NetworkProxySettings) | null = null
   protected inactiveClaudeCache = new Map<string, ProviderRateLimits>()

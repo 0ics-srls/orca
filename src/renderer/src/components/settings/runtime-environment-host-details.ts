@@ -171,11 +171,9 @@ export function isRuntimeEnvironmentRemovalBlocked(
   return activeRuntimeEnvironmentId === environmentId
 }
 
-export type RuntimeServerConnectionState = RuntimeHostConnectionState
-
 export function getRuntimeServerConnectionState(
   details: RuntimeHostDetails | undefined
-): RuntimeServerConnectionState {
+): RuntimeHostConnectionState {
   if (!details || details.status === 'loading') {
     return 'checking'
   }
@@ -202,11 +200,11 @@ export function getRuntimeServerConnectionState(
   })
 }
 
-export function isRuntimeServerTransportConnected(state: RuntimeServerConnectionState): boolean {
+export function isRuntimeServerTransportConnected(state: RuntimeHostConnectionState): boolean {
   return isConnectedRuntimeHostState(state)
 }
 
-export function getRuntimeServerConnectionLabel(state: RuntimeServerConnectionState): string {
+export function getRuntimeServerConnectionLabel(state: RuntimeHostConnectionState): string {
   switch (state) {
     case 'connected':
       return translate(
@@ -241,7 +239,7 @@ export function getRuntimeServerConnectionLabel(state: RuntimeServerConnectionSt
   }
 }
 
-export function getRuntimeServerDotClass(state: RuntimeServerConnectionState): string {
+export function getRuntimeServerDotClass(state: RuntimeHostConnectionState): string {
   switch (state) {
     case 'connected':
       return 'bg-emerald-500'

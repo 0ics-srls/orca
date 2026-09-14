@@ -5,10 +5,8 @@ import {
   type FolderWorkspaceHostState
 } from '../../../shared/folder-workspace-execution-host'
 
-export type FolderWorkspaceConnectionState = FolderWorkspaceHostState
-
 export function getFolderWorkspaceCandidateRepos(
-  state: FolderWorkspaceConnectionState,
+  state: FolderWorkspaceHostState,
   folderWorkspaceId: string
 ): Repo[] {
   return findFolderWorkspaceCandidateRepos(state, folderWorkspaceId)
@@ -16,7 +14,7 @@ export function getFolderWorkspaceCandidateRepos(
 
 /** Legacy tri-state view of the shared resolution: `undefined` = gone or ambiguous. */
 export function getFolderWorkspaceConnectionId(
-  state: FolderWorkspaceConnectionState,
+  state: FolderWorkspaceHostState,
   folderWorkspaceId: string
 ): string | null | undefined {
   const host = resolveFolderWorkspaceHost(state, folderWorkspaceId)

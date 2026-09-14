@@ -16,7 +16,7 @@ function setDispatchTimes(
   dispatchedAt: string,
   heartbeatAt: string | null = null
 ): void {
-  const sqlite = (d as unknown as { db: Database.Database }).db
+  const sqlite = (d as unknown as { db: Database }).db
   sqlite
     .prepare('UPDATE dispatch_contexts SET dispatched_at = ?, last_heartbeat_at = ? WHERE id = ?')
     .run(dispatchedAt, heartbeatAt, id)
@@ -561,7 +561,7 @@ describe('OrchestrationDb', () => {
 
       // Backdate dispatched_at for a, b, d to long ago so the grace doesn't
       // shield them. c keeps its default (≈now).
-      const sqlite = (d as unknown as { db: Database.Database }).db
+      const sqlite = (d as unknown as { db: Database }).db
       sqlite
         .prepare(
           'UPDATE dispatch_contexts SET dispatched_at = ?, last_heartbeat_at = ? WHERE id = ?'
@@ -816,7 +816,7 @@ describe('OrchestrationDb', () => {
       expect(d.getTask(task.id)?.display_name).toBe('work')
 
       // (c) Indexes still attached to messages post-rebuild.
-      const sqlite = (d as unknown as { db: Database.Database }).db
+      const sqlite = (d as unknown as { db: Database }).db
       const indexes = sqlite
         .prepare(
           `SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'messages' AND name NOT LIKE 'sqlite_%'`

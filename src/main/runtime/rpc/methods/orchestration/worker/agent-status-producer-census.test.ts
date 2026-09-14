@@ -213,7 +213,7 @@ function seedWorker(db: OrchestrationDb): void {
     coordinatorPaneKey: 'tab-coordinator:aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
   })
   const task = db.createTask({ spec: 'census worker', runId: run.id })
-  const sqlite = (db as unknown as { db: Database.Database }).db
+  const sqlite = (db as unknown as { db: Database }).db
   sqlite
     .prepare(
       `INSERT INTO dispatch_contexts (

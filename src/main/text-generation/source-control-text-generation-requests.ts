@@ -35,8 +35,6 @@ import type {
   TextGenerationOperation
 } from './source-control-text-generation-types'
 
-type GenerateParams = ResolvedSourceControlAiGenerationParams
-
 export function trimGeneratedCommitMessage(message: string): string {
   return message.replace(/\s+$/, '')
 }
@@ -49,7 +47,7 @@ export function commandBackslashMode(
 }
 
 async function executeGenerationPlan(input: {
-  params: GenerateParams
+  params: ResolvedSourceControlAiGenerationParams
   plan: CommitMessagePlan
   target: CommitMessageGenerationTarget
   emptyResultName: string
@@ -75,7 +73,7 @@ async function executeGenerationPlan(input: {
 
 export async function generateCommitMessage(input: {
   context: CommitMessageDraftContext
-  params: GenerateParams
+  params: ResolvedSourceControlAiGenerationParams
   target: CommitMessageGenerationTarget
   spawnAgent: SpawnSourceControlAgent
 }): Promise<GenerateCommitMessageResult> {
@@ -120,7 +118,7 @@ export async function generateCommitMessage(input: {
 
 export async function generatePullRequestFields(input: {
   context: PullRequestDraftContext
-  params: GenerateParams
+  params: ResolvedSourceControlAiGenerationParams
   target: CommitMessageGenerationTarget
   spawnAgent: SpawnSourceControlAgent
 }): Promise<GeneratePullRequestFieldsResult<GeneratedPullRequestFields>> {
@@ -183,7 +181,7 @@ export async function generatePullRequestFields(input: {
 
 export async function generateBranchName(input: {
   context: BranchNameWorkContext
-  params: GenerateParams
+  params: ResolvedSourceControlAiGenerationParams
   target: CommitMessageGenerationTarget
   spawnAgent: SpawnSourceControlAgent
 }): Promise<GenerateBranchNameResult> {

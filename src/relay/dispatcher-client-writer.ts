@@ -10,21 +10,20 @@ import { DispatcherWriterLaneScheduler } from './dispatcher-writer-lane-schedule
 import {
   DispatcherWriterSink,
   type RelayClientSinkOptions,
-  type RelayClientWrite,
-  type SinkWriteSettlement
+  type RelayClientWrite
 } from './dispatcher-writer-sink'
+import type { DispatcherWriterSettlement } from './dispatcher-writer-admission'
 
 export {
   DEFAULT_PRODUCER_QUEUE_MAX_BYTES,
   DISPATCHER_CONTROL_QUEUE_MAX_BYTES,
   relayWriterControlReserve
 } from './dispatcher-writer-admission'
+export type { RelayClientSinkOptions, RelayClientWrite } from './dispatcher-writer-sink'
 export type {
-  RelayClientSinkOptions,
-  RelayClientWrite,
-  SinkWriteSettlement
-} from './dispatcher-writer-sink'
-export type { DispatcherWriterLane } from './dispatcher-writer-admission'
+  DispatcherWriterLane,
+  DispatcherWriterSettlement
+} from './dispatcher-writer-admission'
 
 export class DispatcherClientWriter {
   private readonly admission: DispatcherWriterAdmission
@@ -88,7 +87,7 @@ export class DispatcherClientWriter {
     lane: DispatcherWriterLane,
     encode: () => Buffer,
     estimatedBytes: number,
-    onSettled: (result: SinkWriteSettlement) => void = () => {},
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {},
     overflowIsNonFatal = false,
     isStillAdmitted?: () => boolean
   ): boolean {
@@ -212,9 +211,9 @@ export class DispatcherClientWriter {
     }
     this.laneScheduler.recordWrite(entry.lane)
     this.inFlight.add(entry)
-    let callbackResult: SinkWriteSettlement | undefined
+    let callbackResult: DispatcherWriterSettlement | undefined
     let writeReturned = false
-    const onWriteSettled = (result: SinkWriteSettlement): void => {
+    const onWriteSettled = (result: DispatcherWriterSettlement): void => {
       if (!writeReturned) {
         callbackResult = result
         return
@@ -245,7 +244,10 @@ export class DispatcherClientWriter {
     }
   }
 
-  private handleWriteSettlement(entry: DispatcherWriterEntry, result: SinkWriteSettlement): void {
+  private handleWriteSettlement(
+    entry: DispatcherWriterEntry,
+    result: DispatcherWriterSettlement
+  ): void {
     if (!result.ok) {
       this.releaseEntry(entry, result)
       this.close(result.error)
@@ -285,7 +287,7 @@ export class DispatcherClientWriter {
     this.pump()
   }
 
-  private releaseEntry(entry: DispatcherWriterEntry, result: SinkWriteSettlement): void {
+  private releaseEntry(entry: DispatcherWriterEntry, result: DispatcherWriterSettlement): void {
     if (entry.settled) {
       return
     }

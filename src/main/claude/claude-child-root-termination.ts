@@ -1,4 +1,4 @@
-import type { SpawnedProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import type { PosixProcessIdentity } from '../pty-descendant-termination'
 import type {
   WindowsDescendantSnapshot,
@@ -8,7 +8,7 @@ import type {
 export type ClaudeRootIdentity = PosixProcessIdentity | WindowsProcessIdentity
 
 type RootTerminationInput = {
-  child: Pick<SpawnedProcess, 'kill'>
+  child: Pick<ChildProcess, 'kill'>
   exited: () => boolean
 }
 

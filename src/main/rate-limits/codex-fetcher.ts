@@ -44,8 +44,6 @@ const WSL_RPC_TIMEOUT_MS = 25_000
 const RPC_INIT_TIMEOUT_MS = 30_000
 const WSL_RPC_INIT_TIMEOUT_MS = 40_000
 
-export type FetchCodexRateLimitsOptions = CodexRateLimitFetchOptions
-
 function buildWslCodexCommand(
   codexHomePath: string,
   args: string[],
@@ -185,7 +183,7 @@ async function fetchWslBackend(
 }
 
 export async function fetchCodexRateLimits(
-  options?: FetchCodexRateLimitsOptions
+  options?: CodexRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
   if (options?.signal?.aborted) {
     return abortedCodexRateLimitResult()

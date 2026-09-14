@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourcePublication } from './relay-pty-source-publication'
@@ -72,7 +72,7 @@ describe('relay PTY source restore retry', () => {
       })
     )
     await flushRequests()
-    const initialSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const initialSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: 1,
@@ -112,7 +112,7 @@ describe('relay PTY source restore retry', () => {
       })
     )
     await flushRequests()
-    const restoreSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const restoreSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate(
         'pty-1',
@@ -139,7 +139,7 @@ describe('relay PTY source restore retry', () => {
     }
     expect(publication.accepts('pty-1')).toBe(false)
 
-    const retrySettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const retrySettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: recoveredClientId,

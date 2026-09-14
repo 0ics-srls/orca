@@ -5,10 +5,7 @@ import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 import type { RuntimeLeafRecord } from './runtime-terminal-state-records'
 import { isCursorAgentTitle } from '../../shared/agent-detection'
 import { isAbsolute, relative, resolve } from 'node:path'
-import type {
-  RuntimeTerminalDriverState,
-  RuntimeTerminalPresentation
-} from '../../shared/runtime-types'
+import type { RuntimeTerminalPresentation } from '../../shared/runtime-types'
 import type { RuntimeEdgeCommandSurface } from './runtime-edge-command-controller'
 import type { RuntimeLinearCommandSurface } from './runtime-linear-command-surface'
 import type { RuntimeFileCommandSurface } from './runtime-file-command-surface'
@@ -292,17 +289,6 @@ export const AGENT_HOOK_RUNTIME_ENV_KEYS = [
 export type RuntimeWorktreeLifecycleEvent =
   | { kind: 'created'; worktreeId: string; path: string; branch: string }
   | { kind: 'removed'; worktreeId: string; path: string }
-
-// Why: presence-based driver state for the mobile-presence lock. Exactly one
-// driver per PTY at any moment. See docs/mobile-presence-lock.md.
-//   - `idle`: no mobile subscribers; desktop input flows freely
-//   - `desktop`: at least one mobile client subscribed but desktop reclaimed
-//      (or all mobile clients are passive `desktop`-mode watchers); desktop
-//      input flows freely
-//   - `mobile{clientId}`: a mobile client is the active driver; desktop
-//      input/resize are dropped server-side and the lock banner is mounted.
-//      `clientId` is the most recent mobile actor for this PTY.
-export type DriverState = RuntimeTerminalDriverState
 
 // Why: per-PTY layout target — what the PTY *should* be at right now.
 // `desktop` ⇒ runs at the desktop renderer's pane geometry; mobile passive

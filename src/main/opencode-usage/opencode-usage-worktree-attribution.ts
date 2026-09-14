@@ -10,8 +10,6 @@ import {
 import type { UsageScanWorktreeRef } from '../usage/usage-provider-contract'
 import type { OpenCodeUsageAttributedEvent, OpenCodeUsageParsedEvent } from './types'
 
-export type OpenCodeUsageWorktreeRef = UsageScanWorktreeRef
-
 function getDefaultProjectLabel(cwd: string | null): string {
   if (!cwd) {
     return 'Unknown location'
@@ -56,8 +54,8 @@ function isContainingPath(candidatePath: string, targetPath: string): boolean {
 }
 
 export async function buildWorktreesWithCanonicalPaths(
-  worktrees: OpenCodeUsageWorktreeRef[]
-): Promise<(OpenCodeUsageWorktreeRef & { canonicalPath: string })[]> {
+  worktrees: UsageScanWorktreeRef[]
+): Promise<(UsageScanWorktreeRef & { canonicalPath: string })[]> {
   return canonicalizeUsageWorktreePaths(worktrees, canonicalizePath)
 }
 
@@ -71,8 +69,8 @@ async function canonicalizePath(pathValue: string): Promise<string> {
 
 function findContainingWorktree(
   cwd: string,
-  worktrees: (OpenCodeUsageWorktreeRef & { canonicalPath: string })[]
-): OpenCodeUsageWorktreeRef | null {
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[]
+): UsageScanWorktreeRef | null {
   const normalizedCwd = normalizeFsPath(cwd)
   for (const worktree of worktrees) {
     if (areWorktreePathsEqual(worktree.canonicalPath, normalizedCwd)) {
@@ -87,7 +85,7 @@ function findContainingWorktree(
 
 export async function attributeOpenCodeUsageEvent(
   event: OpenCodeUsageParsedEvent,
-  worktrees: (OpenCodeUsageWorktreeRef & { canonicalPath: string })[]
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[]
 ): Promise<OpenCodeUsageAttributedEvent | null> {
   const day = localDayFromTimestamp(event.timestamp)
   if (!day) {

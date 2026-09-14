@@ -24,7 +24,7 @@ import type {
 } from './orca-runtime-test-mocks.spec'
 import { InMemoryOrchestrationMessages } from './orca-runtime-test-orchestration-messages.spec'
 import type { OrchestrationDb } from './orchestration/db'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 
 type RuntimeService = InstanceType<typeof OrcaRuntimeService>
 type HeadlessTerminal = InstanceType<typeof HeadlessEmulator>
@@ -464,7 +464,7 @@ function createRuntimeWithSshLease(
 
 async function createExplicitAgentStatusHarness(options: {
   getForegroundProcess: (ptyId: string) => Promise<string | null>
-  inspectProcess?: (ptyId: string) => Promise<PtyProcessInspection>
+  inspectProcess?: (ptyId: string) => Promise<TerminalProcessInspection>
   confirmForegroundProcess?: (ptyId: string) => Promise<string | null>
   title?: string
 }): Promise<{

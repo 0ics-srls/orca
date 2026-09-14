@@ -1,5 +1,5 @@
 import { ghRepoExecOptions, githubRepoContext, type LocalGitExecOptions } from '../../gh-utils'
-import { getOriginGitHubApiRepository, type GitHubApiRepository } from '../../github-api-repository'
+import { getOriginGitHubApiRepository } from '../../github-api-repository'
 import {
   getRateLimit,
   repositoryRateLimitGuard,
@@ -7,6 +7,8 @@ import {
   type RateLimitBucketKind
 } from '../../rate-limit'
 import type { GhExecOptions } from './../github-exec-scope'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 // Why: a branch lookup prefers REST but can fall back to `gh pr list` and
 // `gh pr view`, so both buckets are guarded and charged. Mirrors the PR refresh
 // coordinator's own estimate.
@@ -55,7 +57,7 @@ export async function getGitHubPRLookupRateLimitBlock(
 
 export async function assertRateLimitBudget(
   bucket: RateLimitBucketKind,
-  repository?: GitHubApiRepository | null,
+  repository?: GitHubOwnerRepo | null,
   executionOptions?: Pick<GhExecOptions, 'cwd' | 'wslDistro'>
 ): Promise<void> {
   if (spendsSharedGitHubComQuota(repository, executionOptions)) {

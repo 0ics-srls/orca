@@ -2,7 +2,7 @@ import type { PRCheckDetail } from '../../../../shared/github/check-types'
 import { GITHUB_WORK_ITEMS_SSH_REMOTE_REQUIRED_MESSAGE } from '../../../../shared/work-items'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
 import { extractExecError } from '../../../git/exec-error'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { mapCheckStatus, mapCheckConclusion } from '../../mappers'
 import { noteRepositoryRateLimitSpend } from '../../rate-limit'
 import type { GhExecOptions } from './../github-exec-scope'
@@ -22,8 +22,10 @@ import {
   getPendingApprovalCheckSuiteUrl
 } from './pr-checks-response-mapping'
 import { parseActionsRunId } from './check-detail-field-mapping'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function getPRChecksViaRestFallback(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   headSha: string | undefined,
   ghOptions: GhExecOptions,
   noCache?: boolean
@@ -124,7 +126,7 @@ export async function getPRChecks(
   repoPath: string,
   prNumber: number,
   headSha?: string,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   options?: { noCache?: boolean },
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

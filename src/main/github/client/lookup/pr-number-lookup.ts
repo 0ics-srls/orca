@@ -1,6 +1,6 @@
 import { ghExecFileAsync } from '../../gh-utils'
-import type { OwnerRepo, ghRepoExecOptions } from '../../gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from '../../github-api-repository'
+import type { GitHubOwnerRepo, ghRepoExecOptions } from '../../gh-utils'
+import { githubHostExecOptions } from '../../github-api-repository'
 import {
   isNoPullRequestError,
   isNotFoundGhError,
@@ -16,7 +16,7 @@ import {
 import { hydratePullRequestLookupData } from './pull-request-lookup-hydration'
 import { isGitObjectId, isUsableRestStackMetadata } from './rest-stack-metadata-validation'
 export async function getRestPRByNumber(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   number: number,
   ghOptions: ReturnType<typeof ghRepoExecOptions>,
   options: { requireUsableStackMetadata?: boolean } = {}
@@ -48,7 +48,7 @@ export async function getRestPRByNumber(
 }
 
 export async function getPRByNumber(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   number: number,
   ghOptions: ReturnType<typeof ghRepoExecOptions>,
   executionScope: string,
@@ -104,11 +104,11 @@ export async function getPRByNumber(
 }
 
 export async function lookupPRByNumber(args: {
-  candidates: OwnerRepo[]
+  candidates: GitHubOwnerRepo[]
   number: number
   ghOptions: ReturnType<typeof ghRepoExecOptions>
   executionScope: string
-}): Promise<{ data: PullRequestLookupData | null; dataRepo: OwnerRepo | null }> {
+}): Promise<{ data: PullRequestLookupData | null; dataRepo: GitHubOwnerRepo | null }> {
   for (const candidate of args.candidates) {
     try {
       const linkedData = await getPRByNumber(

@@ -3,7 +3,7 @@ import { useAppStore } from '@/store'
 import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet'
 import { revealDashboardAgent } from './reveal-dashboard-agent'
 import { AgentKanbanBoard } from '../dashboard-popout/AgentKanbanBoard'
-import type { AgentRevealArgs } from '../dashboard-popout/AgentTerminalDialog'
+import type { DashboardRevealAgentArgs } from '../../../../shared/dashboard-snapshot'
 import {
   isWorkspaceBoardKeepOpenTarget,
   useWorkspaceKanbanOutsideDismiss
@@ -46,7 +46,7 @@ function AgentDashboardDrawerBody({
     useAppStore.getState().acknowledgeAgents([paneKey])
   }, [])
   const handleRevealAgent = useCallback(
-    (args: AgentRevealArgs) => {
+    (args: DashboardRevealAgentArgs) => {
       revealDashboardAgent(args)
       onClose()
     },

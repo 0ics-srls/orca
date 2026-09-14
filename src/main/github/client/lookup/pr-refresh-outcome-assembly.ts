@@ -5,13 +5,13 @@ import type {
   GitHubPRStack
 } from '../../../../shared/github/pull-request-types'
 import { deriveCheckStatus, mapPRState } from '../../mappers'
-import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../gh-utils'
 import type { PullRequestLookupData } from './pull-request-lookup-data'
 
 export function assemblePRRefreshFoundOutcome(args: {
   data: PullRequestLookupData
-  dataRepo: OwnerRepo | null
-  dataHeadRepo: OwnerRepo | null
+  dataRepo: GitHubOwnerRepo | null
+  dataHeadRepo: GitHubOwnerRepo | null
   stack: GitHubPRStack | undefined
   mergeable: PRMergeableState
   stackMergeQueueRequired: boolean | null | undefined

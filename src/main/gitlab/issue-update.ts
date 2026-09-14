@@ -10,7 +10,7 @@ import {
   release,
   resolveIssueSource,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 
@@ -27,7 +27,7 @@ export async function updateIssue(
   updates: GitLabIssueUpdate,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRefOverride?: ProjectRef | null,
+  projectRefOverride?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const projectRef =

@@ -1,6 +1,7 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { RuntimeTerminalDriverState } from '../../shared/runtime-types'
 import { OrcaRuntimeWithMarkPtyLivenessUnverifiable } from './orca-runtime-mark-pty-liveness-unverifiable'
-import type { ApplyLayoutResult, DriverState } from './orca-runtime-core'
+import type { ApplyLayoutResult } from './orca-runtime-core'
 import { clampTerminalViewport } from './terminal-viewport'
 
 export class OrcaRuntimeWithMobileTookFloor extends OrcaRuntimeWithMarkPtyLivenessUnverifiable {
@@ -12,7 +13,7 @@ export class OrcaRuntimeWithMobileTookFloor extends OrcaRuntimeWithMarkPtyLivene
   async mobileTookFloor(
     ptyId: string,
     clientId: string,
-    previousFloor?: DriverState,
+    previousFloor?: RuntimeTerminalDriverState,
     isCurrent: () => boolean = () => true
   ): Promise<void> {
     const inner = this.mobileSubscribers.get(ptyId)

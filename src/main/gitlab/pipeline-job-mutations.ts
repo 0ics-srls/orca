@@ -14,7 +14,7 @@ import {
   isMissingJobLogError,
   release,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 import { withProjectRef } from './merge-request-project-resolution'
@@ -50,7 +50,7 @@ export async function getJobTrace(
   jobId: number,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabJobTraceResult> {
   return withProjectRef<GitLabJobTraceResult>(
@@ -95,7 +95,7 @@ export async function retryJob(
   jobId: number,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabRetryJobResult> {
   return withProjectRef<GitLabRetryJobResult>(

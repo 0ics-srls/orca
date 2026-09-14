@@ -1,7 +1,6 @@
 import type {
   CreateHostedReviewInput,
   CreateHostedReviewResult,
-  CreateStackedHostedReviewInput,
   CreateStackedHostedReviewResult,
   HostedReviewCreationEligibility,
   HostedReviewCreationEligibilityArgs,
@@ -184,7 +183,7 @@ export class RuntimeHostedReviewCommands {
   }
 
   async createStackedHostedReview(
-    args: CreateStackedHostedReviewInput & HostedReviewTargetArgs
+    args: CreateHostedReviewInput & HostedReviewTargetArgs
   ): Promise<CreateStackedHostedReviewResult> {
     const { repo, repoPath } = await this.deps.resolveTarget(args)
     const executionOptions = this.deps.getExecutionOptions(repo, 'interactive')

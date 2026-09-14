@@ -5,7 +5,7 @@ import type { BrowserWorkspace } from '../../../../shared/browser-workspace-type
 import type { MemorySnapshot, WorktreeMemory } from '../../../../shared/process-stats-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
-import type { DaemonSession } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 import { useResourceUsageDerivedModel } from './use-resource-usage-derived-model'
 
 const local = {
@@ -28,7 +28,7 @@ const group = { id: 'group', name: 'Local project', executionHostId: 'local' } a
 
 function derive(
   worktrees: Worktree[],
-  sessions: DaemonSession[] = [],
+  sessions: PtyListedSession[] = [],
   row = sampled,
   projectGroups = [group],
   browserTabsByWorktree: Record<string, BrowserWorkspace[]> = {}

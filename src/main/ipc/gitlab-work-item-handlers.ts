@@ -9,7 +9,7 @@ import {
 import { recordGitLabProjectRecent } from '../gitlab/gitlab-project-recents'
 import { getWorkItemByProjectRef, listWorkItems } from '../gitlab/client'
 import { getWorkItemDetails } from '../gitlab/work-item-details'
-import type { ProjectRef } from '../gitlab/gl-utils'
+import type { GitLabProjectRef } from '../gitlab/gl-utils'
 import type { GitLabRepoSelectorArgs } from './gitlab-repo-access'
 import { assertRegisteredRepo, localGitOptionArgs, repoConnectionId } from './gitlab-repo-access'
 
@@ -79,7 +79,7 @@ export function registerGitLabWorkItemHandlers(store: Store): void {
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
-      const projectRef: ProjectRef = { host: args.host, path: args.path }
+      const projectRef: GitLabProjectRef = { host: args.host, path: args.path }
       const result = await getWorkItemByProjectRef(
         repo.path,
         projectRef,

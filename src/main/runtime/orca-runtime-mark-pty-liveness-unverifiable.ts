@@ -1,7 +1,7 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { RuntimeTerminalDriverState } from '../../shared/runtime-types'
 import { OrcaRuntimeWithOnPtyExit } from './orca-runtime-on-pty-exit'
 import type { PtyLivenessVerdict } from '../../shared/pty-liveness-verdict'
-import type { DriverState } from './orca-runtime-core'
 import { clampTerminalViewport } from './terminal-viewport'
 import { getPtyTerminalState, getTerminalState } from './terminal-wait-results'
 
@@ -147,11 +147,11 @@ export class OrcaRuntimeWithMarkPtyLivenessUnverifiable extends OrcaRuntimeWithO
   //
   // See docs/mobile-presence-lock.md.
 
-  getDriver(ptyId: string): DriverState {
+  getDriver(ptyId: string): RuntimeTerminalDriverState {
     return this.terminalDrivers.get(ptyId)
   }
 
-  protected setDriver(ptyId: string, next: DriverState): void {
+  protected setDriver(ptyId: string, next: RuntimeTerminalDriverState): void {
     this.terminalDrivers.set(ptyId, next)
   }
 

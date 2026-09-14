@@ -1,7 +1,7 @@
 import type { ExecutionHostId } from '../../shared/execution-host'
 import { hostedReviewSshConnectionId } from '../source-control/hosted-review-execution-host'
 import type {
-  CreateStackedHostedReviewInput,
+  CreateHostedReviewInput,
   CreateStackedHostedReviewResult
 } from '../../shared/hosted-review'
 import { isDefaultGitHubHost } from '../../shared/github/repository-identity-key'
@@ -10,11 +10,7 @@ import {
   normalizeHostedReviewHeadRef
 } from '../../shared/hosted-review-refs'
 import { acquire, ghExecFileAsync, ghRepoExecOptions, githubRepoContext, release } from './gh-utils'
-import {
-  getOriginGitHubApiRepository,
-  githubHostExecOptions,
-  type GitHubApiRepository
-} from './github-api-repository'
+import { getOriginGitHubApiRepository, githubHostExecOptions } from './github-api-repository'
 import {
   getHostedReviewLocalGitOptions,
   type HostedReviewExecutionOptions
@@ -26,11 +22,12 @@ import {
   type GitHubStackPullRequest,
   type NumberedHostedReviewSummary
 } from './github-stack-api-responses'
+import type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 
 type StackedPullRequestPlan =
   | {
       ok: true
-      repository: GitHubApiRepository
+      repository: GitHubOwnerRepo
       parentReview: GitHubStackPullRequest
       currentReview: GitHubStackPullRequest | null
     }
@@ -47,7 +44,7 @@ function isStacksUnavailableError(error: unknown): boolean {
 
 function ghOptions(
   repoPath: string,
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
 ) {
@@ -62,7 +59,7 @@ function ghOptions(
 
 async function findOpenPullRequestsForBranch(
   repoPath: string,
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   branch: string,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {},
@@ -80,7 +77,7 @@ async function findOpenPullRequestsForBranch(
 
 async function getStacksForPullRequest(
   repoPath: string,
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   pullRequestNumber: number,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
@@ -117,7 +114,7 @@ function validateParentStack(
 
 export async function prepareGitHubStackedPullRequest(
   repoPath: string,
-  input: CreateStackedHostedReviewInput,
+  input: CreateHostedReviewInput,
   executionHostId: ExecutionHostId,
   options: HostedReviewExecutionOptions = {}
 ): Promise<StackedPullRequestPlan> {
@@ -223,7 +220,7 @@ function registeredStackNumber(
 
 export async function registerGitHubStackedPullRequest(args: {
   repoPath: string
-  repository: GitHubApiRepository
+  repository: GitHubOwnerRepo
   parentReview: NumberedHostedReviewSummary
   currentReview: NumberedHostedReviewSummary
   executionHostId: ExecutionHostId

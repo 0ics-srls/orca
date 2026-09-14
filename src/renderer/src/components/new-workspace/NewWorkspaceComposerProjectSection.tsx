@@ -1,3 +1,4 @@
+import type { NeedsSetupProjectHostOption } from '@/lib/project-host-setup-options'
 import React from 'react'
 import { FolderPlus, LoaderCircle, PlugZap } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,6 @@ import RunTargetCombobox from '@/components/new-workspace/RunTargetCombobox'
 import { translate } from '@/i18n/i18n'
 import type {
   EphemeralVmRecipeOption,
-  NeedsProjectHostOption,
   NewWorkspaceComposerCardProps
 } from './new-workspace-composer-card-props'
 import { EMPTY_PROJECT_OPTIONS } from './new-workspace-composer-card-props'
@@ -40,8 +40,8 @@ type NewWorkspaceComposerProjectSectionProps = Pick<
   handleProjectHostSetupChange: (setupId: string) => void
   handleAddSshHost: () => void
   handleAddRemoteServer: () => void
-  handleConnectRunTargetHost: (option: NeedsProjectHostOption) => Promise<void>
-  handleSetLocation: (option: NeedsProjectHostOption) => void
+  handleConnectRunTargetHost: (option: NeedsSetupProjectHostOption) => Promise<void>
+  handleSetLocation: (option: NeedsSetupProjectHostOption) => void
   sshStatusLabel: string
   connectButtonLabel: string
   selectedProjectName: string

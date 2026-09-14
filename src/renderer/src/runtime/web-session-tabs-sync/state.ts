@@ -1,11 +1,8 @@
 import type { AppState } from '../../store'
 import type {
-  RuntimeMobileSessionAgentTab,
   RuntimeMobileSessionBrowserTab,
   RuntimeMobileSessionFileTab,
   RuntimeMobileSessionMarkdownTab,
-  RuntimeMobileSessionTabGroup,
-  RuntimeMobileSessionTabsRemovedResult,
   RuntimeMobileSessionTabsResult,
   RuntimeMobileSessionTerminalClientTab
 } from '../../../../shared/runtime-types'
@@ -54,15 +51,6 @@ export type RetiredValueHistory = {
   retired: string[]
 }
 
-export type SessionTabsRuntimeHistory = RetiredValueHistory
-
-/**
- * A host restart changes the publication epoch, but frames from the previous
- * epoch can still be queued on a sibling subscription. Keep a small history
- * of epochs that have already been superseded so those delayed frames cannot
- * roll the mirror back after the replacement epoch is accepted.
- */
-export type SessionTabsPublicationEpochHistory = RetiredValueHistory
 export type SessionTabsRecoveryState = { pendingCount: number }
 export type SessionTabsRemovalFence = {
   receivedFrame: number
@@ -95,11 +83,14 @@ export const latestReceivedSessionTabsSnapshotByWorktree = new Map<
   string,
   ReceivedSessionTabsSnapshot
 >()
-export const sessionTabsRuntimeHistoryByEnvironment = new Map<string, SessionTabsRuntimeHistory>()
-export const sessionTabsPublicationEpochHistoryByWorktree = new Map<
-  string,
-  SessionTabsPublicationEpochHistory
->()
+export const sessionTabsRuntimeHistoryByEnvironment = new Map<string, RetiredValueHistory>()
+/**
+ * A host restart changes the publication epoch, but frames from the previous
+ * epoch can still be queued on a sibling subscription. Keep a small history
+ * of epochs that have already been superseded so those delayed frames cannot
+ * roll the mirror back after the replacement epoch is accepted.
+ */
+export const sessionTabsPublicationEpochHistoryByWorktree = new Map<string, RetiredValueHistory>()
 export const latestReceivedSessionTabsFrameByEnvironment = new Map<string, number>()
 export const latestReceivedSessionTabsInventoryFrameByEnvironment = new Map<string, number>()
 export const latestSessionTabsRemovalFenceByWorktree = new Map<string, SessionTabsRemovalFence>()
@@ -141,7 +132,6 @@ export function resetReceivedSessionTabsFrameSequence(): void {
   receivedSessionTabsFrameSequence = 0
 }
 
-export type TerminalSurface = RuntimeMobileSessionTerminalClientTab
 export type ReadyTerminalSurface = RuntimeMobileSessionTerminalClientTab & { status: 'ready' }
 export type ReadyBrowserSurface = RuntimeMobileSessionBrowserTab & { browserPageId: string }
 export type ReadyEditorSurface = RuntimeMobileSessionMarkdownTab | RuntimeMobileSessionFileTab
@@ -152,7 +142,7 @@ export type MirroredTerminalTab = {
   hostTabId: string
   ptyIds: string[]
   layout: TerminalLayoutSnapshot
-  retainedSurfaceByPrunedLeafId?: ReadonlyMap<string, TerminalSurface>
+  retainedSurfaceByPrunedLeafId?: ReadonlyMap<string, RuntimeMobileSessionTerminalClientTab>
 }
 export type MirroredBrowserTab = {
   workspace: BrowserWorkspace
@@ -244,7 +234,3 @@ export type WebSessionTabsBatchContext = {
   changedRecords: Set<WebSessionTabsBatchRecordKey>
   openFilesIndex: WebSessionOpenFilesIndex | null
 }
-
-export type AgentTab = RuntimeMobileSessionAgentTab
-export type TabGroupSnapshot = RuntimeMobileSessionTabGroup
-export type RemovedTabsResult = RuntimeMobileSessionTabsRemovedResult

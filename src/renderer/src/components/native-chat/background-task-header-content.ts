@@ -15,8 +15,6 @@ import {
 } from './background-task-roster'
 
 type TaskKind = AgentSessionBackgroundTask['kind']
-type RunState = AgentSessionBackgroundTaskRunState
-
 function kindCountLabel(kind: TaskKind, count: number): string {
   const value = { value0: count }
   switch (kind) {
@@ -69,7 +67,7 @@ const HEADER_SEGMENT_CAP = 3
 
 /** Done comes last but must be present: the headline counts settled rows too,
  *  so omitting it made the breakdown contradict its own count. */
-const HEADER_STATE_ORDER: readonly RunState[] = [
+const HEADER_STATE_ORDER: readonly AgentSessionBackgroundTaskRunState[] = [
   'working',
   'monitoring',
   'waiting',
@@ -79,7 +77,11 @@ const HEADER_STATE_ORDER: readonly RunState[] = [
   'done'
 ]
 
-const ATTENTION_STATES: ReadonlySet<RunState> = new Set(['waiting', 'unverifiable', 'blocked'])
+const ATTENTION_STATES: ReadonlySet<AgentSessionBackgroundTaskRunState> = new Set([
+  'waiting',
+  'unverifiable',
+  'blocked'
+])
 
 export type BackgroundTasksHeaderSegment = {
   text: string

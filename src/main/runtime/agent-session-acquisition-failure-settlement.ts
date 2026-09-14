@@ -37,9 +37,6 @@ export type AgentSessionFailedAcquisitionSettlement = {
   now: number
 }
 
-export type AgentSessionFailedPostAcquisitionAttachmentSettlement =
-  AgentSessionFailedAcquisitionSettlement
-
 /** Liveness invariant: a settled attach never leaves its reservation in new-owner-proving. */
 export function settleFailedAgentSessionAcquisition(
   state: AgentSessionStoreState,
@@ -62,7 +59,7 @@ export function settleFailedAgentSessionAcquisition(
 /** A proved native owner still is not publishable until its journal attaches. */
 export function settleFailedAgentSessionPostAcquisitionAttachment(
   state: AgentSessionStoreState,
-  args: AgentSessionFailedPostAcquisitionAttachmentSettlement
+  args: AgentSessionFailedAcquisitionSettlement
 ): AgentSessionRecord {
   const operation = state.operations.get(agentSessionOperationKey(args.callerKey, args.operationId))
   if (!operation || operation.outcome.status !== 'pending') {

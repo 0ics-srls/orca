@@ -1,16 +1,14 @@
 import type { WorkspaceVisibleTabType } from '../../../../shared/tab-types'
 
-export type TabCycleType = WorkspaceVisibleTabType
-
 export type TypeCyclableTab = {
-  type: TabCycleType
+  type: WorkspaceVisibleTabType
   id: string
   tabId?: string
 }
 
 type GetNextTabWithinActiveTypeParams = {
   tabs: TypeCyclableTab[]
-  activeTabType: TabCycleType
+  activeTabType: WorkspaceVisibleTabType
   activeTabId: string | null
   activeFileId: string | null
   activeBrowserTabId: string | null
@@ -26,7 +24,7 @@ type GetNextTabWithinActiveTypeParams = {
  * pass it, or a structured tab resolves to a live background terminal (see the branch below).
  */
 export function getActiveEntityIdForTabType(
-  activeTabType: TabCycleType,
+  activeTabType: WorkspaceVisibleTabType,
   activeTabId: string | null,
   activeFileId: string | null,
   activeBrowserTabId: string | null,
@@ -51,7 +49,7 @@ export function getActiveEntityIdForTabType(
 
 type GetNextTabAcrossAllTypesParams = {
   tabs: TypeCyclableTab[]
-  activeTabType: TabCycleType
+  activeTabType: WorkspaceVisibleTabType
   activeTabId: string | null
   activeFileId: string | null
   activeBrowserTabId: string | null

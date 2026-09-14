@@ -1,3 +1,4 @@
+import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 import { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, ScrollView, Switch, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
@@ -8,11 +9,7 @@ import { colors, spacing } from '../theme/mobile-theme'
 import { BottomDrawer } from '../components/BottomDrawer'
 import { VoiceModelList } from '../components/VoiceModelList'
 import { useDictationSetupPoller } from '../dictation/use-dictation-setup-poller'
-import {
-  isModelInFlight,
-  type MobileSpeechModel,
-  type MobileSpeechSetup
-} from '../dictation/mobile-dictation-setup'
+import { isModelInFlight, type MobileSpeechModel } from '../dictation/mobile-dictation-setup'
 
 const POLL_INTERVAL_MS = 1500
 
@@ -33,7 +30,7 @@ export default function VoiceSettingsScreen({
   onBack: () => void
 }): React.JSX.Element {
   const insets = useSafeAreaInsets()
-  const [setup, setSetup] = useState<MobileSpeechSetup | null>(null)
+  const [setup, setSetup] = useState<RuntimeSpeechSetupState | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [busyAction, setBusyAction] = useState<ModelBusyAction | null>(null)

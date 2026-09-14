@@ -55,7 +55,7 @@ function open(): Promise<AgentSessionJournal> {
   })
 }
 
-async function withDatabase(run: (db: Database.Database) => void): Promise<void> {
+async function withDatabase(run: (db: Database) => void): Promise<void> {
   const opened = openJournalDatabase(journalDatabaseFile(root))
   try {
     run(opened.db)

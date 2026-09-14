@@ -151,7 +151,7 @@ export type LinearIssueChild = {
   url: string
 }
 
-export type LinearIssue = LinearMobileIssue
+export type { LinearMobileIssue }
 
 export type LinearState = {
   id: string

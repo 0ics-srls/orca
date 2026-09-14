@@ -17,7 +17,7 @@ type LifecycleWriteTransaction = {
 }
 
 export function beginLifecycleWriteTransaction(
-  db: Database.Database,
+  db: Database,
   savepoint: string
 ): LifecycleWriteTransaction {
   if (!/^[a-z][a-z0-9_]*$/.test(savepoint)) {
@@ -29,14 +29,14 @@ export function beginLifecycleWriteTransaction(
 }
 
 export function commitLifecycleWriteTransaction(
-  db: Database.Database,
+  db: Database,
   transaction: LifecycleWriteTransaction
 ): void {
   db.exec(transaction.savepoint ? `RELEASE ${transaction.savepoint}` : 'COMMIT')
 }
 
 export function rollbackLifecycleWriteTransaction(
-  db: Database.Database,
+  db: Database,
   transaction: LifecycleWriteTransaction
 ): void {
   if (transaction.savepoint) {
@@ -126,7 +126,7 @@ export function transitionLifecycle(
 
 /** DB-shaped variant used by low-level writers and tests. */
 export function transitionLifecycleWithDb(
-  db: Database.Database,
+  db: Database,
   params: LifecycleTransitionParams
 ): { changed: boolean } {
   const entity = ENTITY_TABLE[params.entity]

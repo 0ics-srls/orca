@@ -1,4 +1,4 @@
-import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../gh-utils'
 import {
   authorFieldsFromUnknown,
   extractHeadOwnerLogin,
@@ -36,7 +36,7 @@ export function mapIssueWorkItem(item: Record<string, unknown>): MainWorkItem {
 
 export function mapPullRequestWorkItem(
   item: Record<string, unknown>,
-  baseOwnerRepo: OwnerRepo | null = null
+  baseOwnerRepo: GitHubOwnerRepo | null = null
 ): MainWorkItem {
   // Why: fork PRs are disabled in the Start-from picker; compare head owner to the selected repo's owner.
   const headOwnerLogin = extractHeadOwnerLogin(item)

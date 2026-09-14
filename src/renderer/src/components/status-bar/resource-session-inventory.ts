@@ -1,8 +1,8 @@
-import type { DaemonSession } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 
 /** Last-known daemon terminal inventory for the Resource Manager badge. */
 export type DaemonSessionInventory = {
-  sessions: DaemonSession[]
+  sessions: PtyListedSession[]
   count: number
 }
 
@@ -11,7 +11,9 @@ export const EMPTY_DAEMON_SESSION_INVENTORY: DaemonSessionInventory = {
   count: 0
 }
 
-export function inventoryFromSessions(sessions: readonly DaemonSession[]): DaemonSessionInventory {
+export function inventoryFromSessions(
+  sessions: readonly PtyListedSession[]
+): DaemonSessionInventory {
   return {
     sessions: sessions.slice(),
     count: sessions.length

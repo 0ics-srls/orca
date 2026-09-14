@@ -13,7 +13,7 @@ import {
   queuePendingAgentStartupDelivery,
   resolveAgentStartupTabId
 } from '@/lib/agent-startup-delayed-delivery'
-import type { FolderWorkspaceLinkedTask } from '../../../shared/folder-workspace-types'
+import type { WorkspaceLinkedItem } from '../../../shared/worktree/types'
 import type { OrcaHooks } from '../../../shared/orca-yaml-hook-types'
 import { resolveHookCommandSourcePolicy } from '../../../shared/hook-command-source-policy'
 import { slugifyForWorkspaceName } from '../../../shared/workspace-name'
@@ -32,8 +32,8 @@ export const CLIENT_PLATFORM: NodeJS.Platform = navigator.userAgent.includes('Wi
 
 export { getLinkedWorkItemProvider, isGitLabIssueUrl } from './linked-work-item-provider'
 
-export type LinkedWorkItemSummary = Omit<FolderWorkspaceLinkedTask, 'provider'> & {
-  provider?: FolderWorkspaceLinkedTask['provider']
+export type LinkedWorkItemSummary = Omit<WorkspaceLinkedItem, 'provider'> & {
+  provider?: WorkspaceLinkedItem['provider']
   linearWorkspaceId?: string
   linearOrganizationUrlKey?: string
   linearBranchName?: string
@@ -41,7 +41,7 @@ export type LinkedWorkItemSummary = Omit<FolderWorkspaceLinkedTask, 'provider'> 
 }
 
 export function canUseIssueCommandForLinkedItemProvider(
-  provider: FolderWorkspaceLinkedTask['provider'] | null
+  provider: WorkspaceLinkedItem['provider'] | null
 ): boolean {
   return provider === 'github' || provider === 'gitlab'
 }

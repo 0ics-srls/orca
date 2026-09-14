@@ -150,8 +150,7 @@ export type GitHubPRFileContents = {
   modifiedTooLarge?: boolean
 }
 
-// Why: declared here as a shared shape so IPC return envelopes and renderer
-// slices can reference the same structural type without importing from main.
-// Aliased as `OwnerRepo` in `src/main/github/gh-utils.ts` so main call sites
-// can continue using the short local name.
-export type GitHubOwnerRepo = GitHubRepositoryIdentity
+// Why: `GitHubOwnerRepo` is the long-standing name for this shape across main,
+// renderer, shared, and mobile call sites; both names stay exported so neither
+// side has to import the other's spelling.
+export type { GitHubRepositoryIdentity as GitHubOwnerRepo }

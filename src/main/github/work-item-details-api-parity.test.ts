@@ -1,9 +1,12 @@
 import { describe, expect, expectTypeOf, it } from 'vitest'
-import type { GitHubPRFile, GitHubPRFileContents } from '../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  GitHubPRFile,
+  GitHubPRFileContents
+} from '../../shared/github/pull-request-types'
 import type { GitHubWorkItemDetails } from '../../shared/github/work-item-types'
 import type { IssueSourcePreference } from '../../shared/repo-types'
 import type { LocalGitExecOptions } from './gh-utils'
-import type { GitHubApiRepository } from './github-api-repository'
 import * as workItemDetails from './work-item-details'
 
 type GetWorkItemDetails = (
@@ -19,7 +22,7 @@ type GetPRFileContents = (args: {
   repoPath: string
   connectionId?: string | null
   localGitOptions?: LocalGitExecOptions
-  prRepo?: GitHubApiRepository | null
+  prRepo?: GitHubOwnerRepo | null
   prNumber: number
   path: string
   oldPath?: string

@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from 'vitest'
+import type { HostStackNavigationState } from '../navigation/host-stack-navigation'
 import {
   coordinateMobileTasksNavigation,
   mobileTasksHostRoute,
-  navigateToMobileTasks,
-  type MobileTasksNavigationState
+  navigateToMobileTasks
 } from './mobile-task-navigation'
 
-function navigationHarness(initialState: MobileTasksNavigationState) {
+function navigationHarness(initialState: HostStackNavigationState) {
   let stateListener = () => {}
   let state = initialState
   const unsubscribeState = vi.fn()
@@ -20,7 +20,7 @@ function navigationHarness(initialState: MobileTasksNavigationState) {
   }
   return {
     navigation,
-    setState(nextState: MobileTasksNavigationState) {
+    setState(nextState: HostStackNavigationState) {
       state = nextState
       stateListener()
     },

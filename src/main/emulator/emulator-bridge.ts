@@ -3,7 +3,7 @@ import { EmulatorError } from './emulator-errors'
 import type { EmulatorSessionInfo } from './emulator-types'
 import type { SimulatorDevice } from './simctl-simulator-devices'
 import type { EmulatorBridgeOptions } from './emulator-bridge-types'
-import type { EmulatorGesturePoint } from './emulator-gesture-sender'
+import type { ServeSimTouchFrame } from '../../shared/emulator-touch-frame'
 import { EmulatorSessionRegistry } from './emulator-session-registry'
 import {
   EmulatorStartLeaseRegistry,
@@ -168,7 +168,7 @@ export class EmulatorBridge {
     await backend.tap(device, x, y)
   }
 
-  async gesture(points: EmulatorGesturePoint[], opts?: EmulatorTargetOpts): Promise<void> {
+  async gesture(points: ServeSimTouchFrame[], opts?: EmulatorTargetOpts): Promise<void> {
     if (points.length === 0) {
       return
     }

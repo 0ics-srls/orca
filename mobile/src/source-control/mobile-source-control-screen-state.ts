@@ -1,3 +1,8 @@
+import type {
+  GitFileStatus,
+  GitStatusEntry,
+  GitStatusResult
+} from '../../../src/shared/git-status-types'
 import {
   ArrowDown,
   ArrowDownUp,
@@ -14,23 +19,18 @@ import { colors } from '../theme/mobile-theme'
 import type { MobileSourceControlActionIcon } from './mobile-source-control-actions'
 import type { MobileDiffLine } from '../session/mobile-diff-lines'
 import type { MobileHighlightedDiffLine } from '../session/mobile-file-syntax'
-import type {
-  MobileGitBranchChangeEntry,
-  MobileGitBranchCompareResult,
-  MobileGitBranchCompareSummary
-} from './mobile-branch-compare'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
+import type { GitBranchChangeEntry } from '../../../src/shared/git-diff-compare-types'
+import type { GitBranchCompareSummary } from '../../../src/shared/git-diff-compare-types'
 import {
   canOpenMobileGitStatusEntry,
   isMobileGitDiscardableEntry,
-  isMobileGitStageableEntry,
-  type MobileGitFileStatus,
-  type MobileGitStatusEntry,
-  type MobileGitStatusResult
+  isMobileGitStageableEntry
 } from './mobile-git-status'
 
 export type ScreenState =
   | { kind: 'loading' }
-  | { kind: 'ready'; status: MobileGitStatusResult }
+  | { kind: 'ready'; status: GitStatusResult }
   | { kind: 'unavailable'; message: string }
   | { kind: 'error'; message: string }
 
@@ -49,7 +49,7 @@ export type StatusLoadInFlight = {
 export type GitRequestError = Error & { code?: string }
 export type GitCommitResult = { success: boolean; error?: string }
 
-export type MobileGitStatusEntryView = MobileGitStatusEntry & {
+export type MobileGitStatusEntryView = GitStatusEntry & {
   canDiscard: boolean
   canOpen: boolean
   canStage: boolean
@@ -61,7 +61,7 @@ export type MobileGitStatusEntryView = MobileGitStatusEntry & {
 // Decorate raw status entries with the row-level capability/action-id fields the
 // file list needs. Opener guards must use the same canOpen rule.
 export function buildMobileGitStatusEntryViews(
-  entries: readonly MobileGitStatusEntry[]
+  entries: readonly GitStatusEntry[]
 ): MobileGitStatusEntryView[] {
   return entries.map((entry) => ({
     ...entry,
@@ -77,23 +77,23 @@ export function buildMobileGitStatusEntryViews(
 export type MobileBranchCompareState =
   | { kind: 'idle' }
   | { kind: 'loading' }
-  | { kind: 'ready'; result: MobileGitBranchCompareResult }
+  | { kind: 'ready'; result: GitBranchCompareResult }
   | { kind: 'error'; message: string }
 
-export type MobileBranchEntryView = MobileGitBranchChangeEntry & {
+export type MobileBranchEntryView = GitBranchChangeEntry & {
   canOpen: boolean
 }
 
 export type MobileBranchDiffPreviewState =
-  | { kind: 'loading'; entry: MobileGitBranchChangeEntry }
+  | { kind: 'loading'; entry: GitBranchChangeEntry }
   | {
       kind: 'ready'
-      entry: MobileGitBranchChangeEntry
-      summary: MobileGitBranchCompareSummary
+      entry: GitBranchChangeEntry
+      summary: GitBranchCompareSummary
       lines: MobileHighlightedDiffLine<MobileDiffLine>[]
       truncated: boolean
     }
-  | { kind: 'error'; entry: MobileGitBranchChangeEntry; message: string }
+  | { kind: 'error'; entry: GitBranchChangeEntry; message: string }
 
 export type GitDiffTextResult = {
   kind: 'text'
@@ -134,7 +134,7 @@ export function formatBranchLabel(branch: string | undefined, head: string | und
   return branch || head?.slice(0, 7) || 'No branch'
 }
 
-export function statusColor(status: MobileGitFileStatus): string {
+export function statusColor(status: GitFileStatus): string {
   switch (status) {
     case 'added':
     case 'copied':

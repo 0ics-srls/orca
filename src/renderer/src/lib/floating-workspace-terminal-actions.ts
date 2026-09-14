@@ -1,11 +1,11 @@
+import type { WorkspaceVisibleTabType } from '../../../shared/tab-types'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import type { BrowserTab } from '../../../shared/browser-workspace-types'
+import type { BrowserWorkspace } from '../../../shared/browser-workspace-types'
 import type { TabGroup } from '../../../shared/tab-types'
 import { getGroupVisibleTabOrder } from '@/components/tab-bar/group-tab-order'
 import {
   getNextTabAcrossAllTypes,
   getNextTabWithinActiveType,
-  type TabCycleType,
   type TypeCyclableTab
 } from '@/components/terminal/tab-type-cycle'
 import type { AppState } from '@/store/types'
@@ -114,7 +114,7 @@ function getActiveIdsForFloatingEntry(entry: TypeCyclableTab): {
   activeBrowserTabId: string | null
   activeFileId: string | null
   activeTabId: string | null
-  activeTabType: TabCycleType
+  activeTabType: WorkspaceVisibleTabType
 } {
   return {
     activeBrowserTabId: entry.type === 'browser' ? entry.id : null,
@@ -127,7 +127,7 @@ function getActiveIdsForFloatingEntry(entry: TypeCyclableTab): {
 function getFloatingWorkspaceBrowserTab(
   store: FloatingWorkspaceTabSwitchStore,
   browserTabId: string
-): BrowserTab | null {
+): BrowserWorkspace | null {
   return (
     (store.browserTabsByWorktree[FLOATING_TERMINAL_WORKTREE_ID] ?? []).find(
       (tab) => tab.id === browserTabId

@@ -20,16 +20,16 @@ import type {
   MarkdownDocState,
   MobileDisplayMode,
   MobileNewTabAgentLoadState,
-  MobileSessionTab,
-  Terminal
+  MobileSessionTab
 } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 import { useMobileSessionTabActionTargets } from './use-mobile-session-tab-action-targets'
 import type { MobileSessionFoundationModel } from './use-mobile-session-foundation'
 
 export function useMobileSessionScreenState(scope: MobileSessionFoundationModel) {
   const { worktreeId, hostId, initialCreateWarning } = scope
-  const [terminals, setTerminals] = useState<Terminal[]>([])
-  const terminalsRef = useRef<Terminal[]>([])
+  const [terminals, setTerminals] = useState<TerminalRecord[]>([])
+  const terminalsRef = useRef<TerminalRecord[]>([])
   const [sessionTabs, setSessionTabs] = useState<MobileSessionTab[]>([])
   const sessionTabsRef = useRef<MobileSessionTab[]>([])
   // Why: track the last applied (epoch, version) so a late older snapshot can't overwrite a newer one and resurrect closed tabs (session-tab-snapshot-gate).
@@ -97,7 +97,7 @@ export function useMobileSessionScreenState(scope: MobileSessionFoundationModel)
     { type: 'markdown' }
   > | null>(null)
   const [leaveDrafts, setLeaveDrafts] = useState<DirtyMarkdownDraft[] | null>(null)
-  const [renameTarget, setRenameTarget] = useState<Terminal | null>(null)
+  const [renameTarget, setRenameTarget] = useState<TerminalRecord | null>(null)
   const [customKeys, setCustomKeys] = useState<CustomKey[]>([])
   const [visibleBuiltInIds, setVisibleBuiltInIds] = useState<string[]>(
     getDefaultTerminalAccessoryBuiltInIds

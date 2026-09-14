@@ -1,7 +1,5 @@
 import type { GitLabProjectRef } from '../../shared/gitlab-types'
 
-export type ProjectRef = GitLabProjectRef
-
 /**
  * Hosts always treated as GitLab. Self-hosted instances are added at
  * runtime via `getGlabKnownHosts()`, which inspects `glab auth status`.
@@ -39,7 +37,7 @@ function hostIdentityFromUrl(url: URL): string {
   return url.hostname
 }
 
-function makeProjectRefForTrustedHost(host: string, path: string): ProjectRef | null {
+function makeProjectRefForTrustedHost(host: string, path: string): GitLabProjectRef | null {
   const normalizedHost = normalizeGitLabHost(host)
   const normalizedPath = stripGitSuffix(path.replace(/^\/+/, '')).trim()
   // Reject paths without at least one group segment — `gitlab.com:foo`
@@ -75,7 +73,7 @@ function makeProjectRef(
   host: string,
   path: string,
   knownHosts: readonly string[]
-): ProjectRef | null {
+): GitLabProjectRef | null {
   const normalizedHost = normalizeGitLabHost(host)
   const normalizedKnownHosts = knownHosts.map(normalizeGitLabHost)
   if (!normalizedKnownHosts.some((knownHost) => knownHostMatches(normalizedHost, knownHost))) {
@@ -84,7 +82,7 @@ function makeProjectRef(
   return makeProjectRefForTrustedHost(normalizedHost, path)
 }
 
-export function parseRemoteProjectRefCandidate(remoteUrl: string): ProjectRef | null {
+export function parseRemoteProjectRefCandidate(remoteUrl: string): GitLabProjectRef | null {
   const trimmed = remoteUrl.trim()
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
     const scpLike = trimmed.match(/^(?:[^@/:]+@)?([^:\s/]+):([^\s]+?)(?:\.git)?$/)
@@ -107,7 +105,7 @@ export function parseRemoteProjectRefCandidate(remoteUrl: string): ProjectRef | 
 export function parseGitLabProjectRef(
   remoteUrl: string,
   knownHosts: readonly string[] = DEFAULT_GITLAB_HOSTS
-): ProjectRef | null {
+): GitLabProjectRef | null {
   const trimmed = remoteUrl.trim()
   if (!/^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed)) {
     const scpLike = trimmed.match(/^(?:[^@/:]+@)?([^:\s/]+):([^\s]+?)(?:\.git)?$/)

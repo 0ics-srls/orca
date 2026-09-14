@@ -1,3 +1,4 @@
+import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 import { useCallback, useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { Check, Download } from 'lucide-react-native'
@@ -11,8 +12,7 @@ import {
   fetchDictationSetup,
   isModelInFlight,
   setDictationConfig,
-  type MobileSpeechModel,
-  type MobileSpeechSetup
+  type MobileSpeechModel
 } from '../dictation/mobile-dictation-setup'
 
 const POLL_INTERVAL_MS = 1500
@@ -35,7 +35,7 @@ function formatSize(bytes: number | null): string {
 // Lets the user enable dictation and download a speech model on the paired
 // desktop, from the phone. Polls while a download is in flight.
 export function MobileDictationSetupSheet({ visible, client, onClose, onReady }: Props) {
-  const [setup, setSetup] = useState<MobileSpeechSetup | null>(null)
+  const [setup, setSetup] = useState<RuntimeSpeechSetupState | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const refresh = useCallback(async (): Promise<boolean | undefined> => {

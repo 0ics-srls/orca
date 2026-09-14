@@ -1,3 +1,4 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import type { RpcSendParams } from '../transport/rpc-params-contract'
 import {
   hostReplyErrorTextOrFallback,
@@ -6,11 +7,10 @@ import {
 import type { RpcResponse } from '../transport/types'
 import { gitBulkStageRun, gitCommitRun, gitPushRun } from './mobile-git-mutation-operations'
 import { gitStatusProjectionRead } from './mobile-git-read-operations'
-import type { MobileGitStatusResult } from './mobile-git-status'
 import type { MobileSourceControlRpcSender } from './mobile-source-control-rpc-sender'
 
 export type MobileHostedReviewStatusReadResult =
-  | { ok: true; status: MobileGitStatusResult | null }
+  | { ok: true; status: GitStatusResult | null }
   | { ok: false; error: string }
 
 export type MobileHostedReviewMutationResult = { ok: true } | { ok: false; error: string }
@@ -32,7 +32,7 @@ export async function readMobileHostedReviewGitStatus(
 
 export function mobileHostedReviewBranchStillMatches(
   inputBranch: string,
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
 ): boolean {
   const branch = status?.branch
   return Boolean(branch && (branch === inputBranch || branch === `refs/heads/${inputBranch}`))

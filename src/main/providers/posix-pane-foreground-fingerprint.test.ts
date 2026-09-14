@@ -8,9 +8,7 @@ const SHELL = 4242
 const AGENT = 4300
 const OTHER_PANE = 9000
 
-type Row = PaneFingerprintRow
-
-const shell = (over: Partial<Row> = {}): Row => ({
+const shell = (over: Partial<PaneFingerprintRow> = {}): PaneFingerprintRow => ({
   pid: SHELL,
   ppid: 1,
   pgid: SHELL,
@@ -19,7 +17,7 @@ const shell = (over: Partial<Row> = {}): Row => ({
   startTime: 'Thu Sep 3 16:02:01 2026',
   ...over
 })
-const agent = (over: Partial<Row> = {}): Row => ({
+const agent = (over: Partial<PaneFingerprintRow> = {}): PaneFingerprintRow => ({
   pid: AGENT,
   ppid: SHELL,
   pgid: AGENT,
@@ -28,7 +26,11 @@ const agent = (over: Partial<Row> = {}): Row => ({
   startTime: 'Thu Sep 3 16:02:05 2026',
   ...over
 })
-const child = (pid: number, ppid: number, over: Partial<Row> = {}): Row => ({
+const child = (
+  pid: number,
+  ppid: number,
+  over: Partial<PaneFingerprintRow> = {}
+): PaneFingerprintRow => ({
   pid,
   ppid,
   pgid: AGENT,
@@ -37,7 +39,7 @@ const child = (pid: number, ppid: number, over: Partial<Row> = {}): Row => ({
   startTime: `Thu Sep 3 16:03:${String(pid % 60).padStart(2, '0')} 2026`,
   ...over
 })
-const foreign = (): Row => ({
+const foreign = (): PaneFingerprintRow => ({
   pid: OTHER_PANE,
   ppid: 1,
   pgid: OTHER_PANE,
@@ -46,7 +48,7 @@ const foreign = (): Row => ({
   startTime: 'Thu Sep 3 12:00:00 2026'
 })
 
-const fp = (rows: Row[]): Promise<string | null> =>
+const fp = (rows: PaneFingerprintRow[]): Promise<string | null> =>
   buildPaneProcessFingerprint(rows, SHELL, { platform: 'darwin' })
 
 describe('buildPaneProcessFingerprint', () => {

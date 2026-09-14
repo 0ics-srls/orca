@@ -1,4 +1,4 @@
-import type { BrowserTab as BrowserTabState } from '../../../../shared/browser-workspace-types'
+import type { BrowserWorkspace as BrowserTabState } from '../../../../shared/browser-workspace-types'
 import type { Tab, WorkspaceVisibleTabType } from '../../../../shared/tab-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import { resolveTerminalTabTitle } from '../../../../shared/tab-title-resolution'

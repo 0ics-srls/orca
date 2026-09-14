@@ -36,8 +36,7 @@ import {
 import {
   settleFailedAgentSessionAcquisition,
   settleFailedAgentSessionPostAcquisitionAttachment,
-  type AgentSessionFailedAcquisitionSettlement,
-  type AgentSessionFailedPostAcquisitionAttachmentSettlement
+  type AgentSessionFailedAcquisitionSettlement
 } from './agent-session-acquisition-failure-settlement'
 import {
   renewAgentSessionLeases,
@@ -219,9 +218,8 @@ export class AgentSessionRecordStore {
   settleFailedAcquisition = (args: AgentSessionFailedAcquisitionSettlement) =>
     this.transact(() => settleFailedAgentSessionAcquisition(this.state, args))
 
-  settleFailedPostAcquisitionAttachment = (
-    args: AgentSessionFailedPostAcquisitionAttachmentSettlement
-  ) => this.transact(() => settleFailedAgentSessionPostAcquisitionAttachment(this.state, args))
+  settleFailedPostAcquisitionAttachment = (args: AgentSessionFailedAcquisitionSettlement) =>
+    this.transact(() => settleFailedAgentSessionPostAcquisitionAttachment(this.state, args))
 
   async renewLease(args: AgentSessionLeaseRenewal): Promise<AgentSessionRecord> {
     const [renewed] = await this.renewLeases([args])

@@ -45,7 +45,6 @@ export { projectTerminalTailLines } from './orca-runtime-terminal-projection'
 export { resolveWorktreeScanCacheTtlMs } from './runtime-worktree-scan-cache'
 export type {
   RuntimeWorktreeLifecycleEvent,
-  DriverState,
   PtyLayoutTarget,
   PtyLayoutState,
   ApplyLayoutResult,

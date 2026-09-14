@@ -22,7 +22,7 @@ import {
 import { buildSshPtySpawnRequest } from './ssh-pty-spawn-request'
 import { SshPtySpawnExitRaceTracker } from './ssh-pty-spawn-exit-race'
 import { SshAgentSessionCapabilities } from './ssh-agent-session-capabilities'
-import type { PtyProcessInspection } from './pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 import { spawnWithTerminalRuntimeRepair, type TerminalRepairHook } from './ssh-pty-spawn-repair'
 import { createSshPtyProviderRpcOperations } from './ssh-pty-provider-rpc-operations'
 
@@ -65,7 +65,7 @@ export class SshPtyProvider implements IPtyProvider {
   inspectProcess = (
     id: string,
     options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean }
-  ): Promise<PtyProcessInspection> => this.rpcOperations.inspectProcess(id, options)
+  ): Promise<TerminalProcessInspection> => this.rpcOperations.inspectProcess(id, options)
   serialize = (ids: string[]): Promise<string> => this.rpcOperations.serialize(ids)
   revive = (state: string): Promise<void> => this.rpcOperations.revive(state)
   getDefaultShell = (): Promise<string> => this.rpcOperations.getDefaultShell()

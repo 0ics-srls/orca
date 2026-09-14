@@ -16,8 +16,6 @@ import {
   terminalOutputSchedulerDebugState as debugState
 } from './pane-terminal-output-scheduler-debug'
 
-export type TerminalOutputTarget = ForegroundTerminalOutputTarget
-
 export type TerminalOutputBeforeWrite = (data: string) => void
 type TerminalBacklogRecoveryRequest = () => boolean
 export type TerminalOutputParsedCallback = () => void
@@ -66,7 +64,7 @@ export type QueuedWrite = {
 }
 
 export type QueueEntry = {
-  terminal: TerminalOutputTarget
+  terminal: ForegroundTerminalOutputTarget
   chunks: QueueChunk[]
   chunkIndex: number
   queuedChars: number
@@ -113,10 +111,10 @@ export const FOREGROUND_BACKLOG_WARNING =
   '\x18\x1b[0m\r\n[Orca skipped a burst of terminal output because the backlog grew too large.]\r\n'
 export const ALWAYS_REFRESH_FOREGROUND_SYNCHRONOUSLY = (): boolean => true
 
-export const queuedByTerminal = new Map<TerminalOutputTarget, QueueEntry>()
+export const queuedByTerminal = new Map<ForegroundTerminalOutputTarget, QueueEntry>()
 setTerminalOutputDebugQueueReader(() => queuedByTerminal.values())
 const backlogRecoveryByTerminal = new WeakMap<
-  TerminalOutputTarget,
+  ForegroundTerminalOutputTarget,
   TerminalBacklogRecoveryRequest
 >()
 let drainTimer: ReturnType<typeof setTimeout> | null = null
@@ -210,7 +208,9 @@ export function fireQueuedAckCredits(entry: QueueEntry): void {
   }
 }
 
-export function requestRegisteredTerminalBacklogRecovery(terminal: TerminalOutputTarget): boolean {
+export function requestRegisteredTerminalBacklogRecovery(
+  terminal: ForegroundTerminalOutputTarget
+): boolean {
   const requestRecovery = backlogRecoveryByTerminal.get(terminal)
   if (!requestRecovery) {
     return false
@@ -219,7 +219,7 @@ export function requestRegisteredTerminalBacklogRecovery(terminal: TerminalOutpu
 }
 
 export function registerTerminalBacklogRecovery(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   requestRecovery: TerminalBacklogRecoveryRequest
 ): () => void {
   backlogRecoveryByTerminal.set(terminal, requestRecovery)
@@ -230,7 +230,7 @@ export function registerTerminalBacklogRecovery(
   }
 }
 
-export function discardTerminalOutput(terminal: TerminalOutputTarget): void {
+export function discardTerminalOutput(terminal: ForegroundTerminalOutputTarget): void {
   exposeDebugApi()
   const entry = queuedByTerminal.get(terminal)
   if (entry) {

@@ -1,7 +1,10 @@
-import type { PRConflictSummary } from '../../../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  PRConflictSummary
+} from '../../../../shared/github/pull-request-types'
 import { getPRConflictSummary } from '../../conflict-summary'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { mergeGitHubPRStack } from '../../github-pr-stack'
 import { githubPRStackExecutionScope, type GhExecOptions } from './../github-exec-scope'
 import { detectRepositoryMergeMetadata } from './../detect/repository-merge-metadata'
@@ -17,7 +20,7 @@ export async function mergePR(
   prNumber: number,
   method: 'merge' | 'squash' | 'rebase' = 'squash',
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(
@@ -104,7 +107,7 @@ export async function mergePR(
 export async function getPRMergeBlocker(
   repoPath: string,
   prNumber: number,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

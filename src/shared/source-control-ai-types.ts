@@ -7,7 +7,9 @@ import type {
   SourceControlTextActionId
 } from './source-control-ai-actions'
 
-export type SourceControlAiOperation = SourceControlTextActionId
+// Why: settings and generation call sites spell this "operation"; the action registry spells the
+// same three ids "text action". Both names stay exported rather than forcing one vocabulary.
+export type { SourceControlTextActionId as SourceControlAiOperation }
 
 export type SourceControlAiModelChoice = {
   selectedModelByAgent?: Partial<Record<TuiAgent, string>>
@@ -34,8 +36,8 @@ export type SourceControlAiSettings = {
   >
   selectedThinkingByModel: Record<string, string>
   customAgentCommand: string
-  instructionsByOperation: Partial<Record<SourceControlAiOperation, string>>
-  modelOverridesByOperation?: Partial<Record<SourceControlAiOperation, SourceControlAiModelChoice>>
+  instructionsByOperation: Partial<Record<SourceControlTextActionId, string>>
+  modelOverridesByOperation?: Partial<Record<SourceControlTextActionId, SourceControlAiModelChoice>>
   prCreationDefaults?: SourceControlAiPrCreationDefaults
   /** @deprecated use actions instead. Kept for automatic migration and rollback compatibility. */
   launchActionDefaults?: SourceControlAiActionDefaults
@@ -48,8 +50,8 @@ export type SourceControlAiSettingsPatch =
 export type RepoSourceControlAiOverrides = {
   enabled?: boolean
   customAgentCommand?: string
-  modelOverridesByOperation?: Partial<Record<SourceControlAiOperation, SourceControlAiModelChoice>>
-  instructionsByOperation?: Partial<Record<SourceControlAiOperation, string | null>>
+  modelOverridesByOperation?: Partial<Record<SourceControlTextActionId, SourceControlAiModelChoice>>
+  instructionsByOperation?: Partial<Record<SourceControlTextActionId, string | null>>
   actionOverrides?: Partial<
     Record<
       SourceControlActionId,
@@ -77,8 +79,8 @@ export type CompleteSourceControlActionRecipe = {
 export type WritableRepoSourceControlAiOverrides = {
   enabled?: boolean
   customAgentCommand?: string
-  modelOverridesByOperation?: Partial<Record<SourceControlAiOperation, SourceControlAiModelChoice>>
-  instructionsByOperation?: Partial<Record<SourceControlAiOperation, string>>
+  modelOverridesByOperation?: Partial<Record<SourceControlTextActionId, SourceControlAiModelChoice>>
+  instructionsByOperation?: Partial<Record<SourceControlTextActionId, string>>
   actionOverrides?: Partial<Record<SourceControlActionId, CompleteSourceControlActionRecipe>>
   prCreationDefaults?: SourceControlAiPrCreationDefaults
 }

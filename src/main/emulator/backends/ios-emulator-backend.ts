@@ -21,7 +21,8 @@ import {
   listServeSimHelperProcessesForDevice
 } from '../serve-sim-helper-processes'
 import type { EmulatorBridgeOptions } from '../emulator-bridge-types'
-import { sendEmulatorGestureSequence, type EmulatorGesturePoint } from '../emulator-gesture-sender'
+import { sendEmulatorGestureSequence } from '../emulator-gesture-sender'
+import type { ServeSimTouchFrame } from '../../../shared/emulator-touch-frame'
 import { parseServeSimDetachedSession } from '../serve-sim-detached-session'
 import { requestServeSimAccessibilityTree } from '../serve-sim-accessibility-tree'
 import { hideNativeSimulatorApp } from '../simulator-app-visibility'
@@ -143,7 +144,7 @@ export class IosEmulatorBackend implements EmulatorBackend {
 
   async gesture(
     _deviceId: string,
-    points: EmulatorGesturePoint[],
+    points: ServeSimTouchFrame[],
     wsUrl: string | null
   ): Promise<void> {
     if (points.length === 0) {

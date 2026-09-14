@@ -9,19 +9,13 @@ import {
 } from '@/components/StateIndicatorTooltip'
 import { getWorktreeStatusLabel, type WorktreeStatus } from '@/lib/worktree-status'
 
-// Why: re-export WorktreeStatus under the existing `Status` alias so the
-// sidebar component and the canonical lib share one source of truth — the
-// previous local union could silently drift if one side added a new state
-// (e.g., 'error') and the other didn't.
-export type Status = WorktreeStatus
-
 type StatusIndicatorProps = Omit<React.ComponentProps<'span'>, 'title'> & {
-  status: Status
+  status: WorktreeStatus
   showTooltip?: boolean
   tooltipSide?: StateIndicatorTooltipSide
 }
 
-const AGENT_STATUS_TOOLTIP_STATUSES = new Set<Status>([
+const AGENT_STATUS_TOOLTIP_STATUSES = new Set<WorktreeStatus>([
   'working',
   'monitoring',
   'permission',

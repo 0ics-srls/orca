@@ -1,5 +1,5 @@
 import type { PRRefreshOutcome } from '../../../../shared/github/pull-request-refresh-types'
-import type { ghRepoExecOptions, OwnerRepo } from '../../gh-utils'
+import type { ghRepoExecOptions, GitHubOwnerRepo } from '../../gh-utils'
 import {
   isCommitPartOfMergedPR,
   type MergedPRCommitMembership
@@ -68,8 +68,8 @@ export async function resolvePRForBranchOutcome(input: {
     noteRepositoryRateLimitSpend(headRepo ?? candidates[0], bucket, 1, ghOptions)
   }
   let data: PullRequestLookupData | null = null
-  let dataRepo: OwnerRepo | null = null
-  let dataHeadRepo: OwnerRepo | null = headRepo
+  let dataRepo: GitHubOwnerRepo | null = null
+  let dataHeadRepo: GitHubOwnerRepo | null = headRepo
   let pendingBranchLookupError: unknown
   let hasPendingBranchLookupError = false
   let currentHeadOidForMergedImplicit: string | null | undefined
@@ -83,7 +83,7 @@ export async function resolvePRForBranchOutcome(input: {
   let headDivergedFromMergedPRAtOid: string | null = null
   const mergedPRContainsHead = async (
     candidate: PullRequestLookupData,
-    candidateRepo: OwnerRepo | null,
+    candidateRepo: GitHubOwnerRepo | null,
     headOid: string | null
   ): Promise<MergedPRCommitMembership> => {
     if (!candidateRepo || !headOid) {
@@ -102,7 +102,7 @@ export async function resolvePRForBranchOutcome(input: {
   }
   const recordLinkedMergedPRDivergence = async (
     candidate: PullRequestLookupData | null,
-    candidateRepo: OwnerRepo | null
+    candidateRepo: GitHubOwnerRepo | null
   ): Promise<void> => {
     if (
       typeof linkedPRNumber !== 'number' ||
@@ -125,7 +125,7 @@ export async function resolvePRForBranchOutcome(input: {
   }
   const hideMergedImplicitPR = async (
     candidate: PullRequestLookupData | null,
-    candidateRepo: OwnerRepo | null
+    candidateRepo: GitHubOwnerRepo | null
   ) => {
     if (!candidate || !isMergedImplicitPR(candidate, linkedPRNumber)) {
       return false

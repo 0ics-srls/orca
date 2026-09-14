@@ -1,4 +1,4 @@
-import type { TaskPageLinearCollectionEffectsPreludeModel } from './use-task-page-linear-collection-effects'
+import type { TaskPageLinearInOrcaEffectsModel } from './use-task-page-linear-in-orca-effects'
 import { useEffect } from 'react'
 import {
   LINEAR_CUSTOM_VIEW_MODELS,
@@ -12,9 +12,7 @@ import type {
   LinearProjectSummary
 } from '../../../shared/linear/project-types'
 import { clampLinearIssueListLimit } from '../../../shared/linear/issue-read-limits'
-export function useTaskPageLinearCustomViewEffects(
-  model: TaskPageLinearCollectionEffectsPreludeModel
-) {
+export function useTaskPageLinearCustomViewEffects(model: TaskPageLinearInOrcaEffectsModel) {
   const {
     getCachedLinearCustomViews,
     listLinearCustomViews,

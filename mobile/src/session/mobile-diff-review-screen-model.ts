@@ -1,6 +1,6 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import type { DiffComment, MobileDiffReviewState } from '../../../src/shared/diff-comment-types'
-import type { MobileGitBranchCompareResult } from '../source-control/mobile-branch-compare'
-import type { MobileGitStatusResult } from '../source-control/mobile-git-status'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 import type { MobileDiffLine } from './mobile-diff-lines'
 import type { MobileDiffHunk } from './mobile-diff-hunks'
 import type {
@@ -15,8 +15,8 @@ export type ReviewScreenState =
   | { kind: 'loading' }
   | {
       kind: 'ready'
-      status: MobileGitStatusResult
-      branchCompare: MobileGitBranchCompareResult | null
+      status: GitStatusResult
+      branchCompare: GitBranchCompareResult | null
       branchError?: string
       comments: DiffComment[]
       reviewState: MobileDiffReviewState

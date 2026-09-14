@@ -6,8 +6,6 @@ import type { MobileSocketWiring } from '../rpc/mobile-socket-wiring'
 import type { RelayRegion } from './relay-region-preference'
 import type { RelayRegionDecision, RelayRegionWindow } from './relay-region-correction-protocol'
 
-export type RelayBrokerStatus = MobileRelayStatus
-
 export type RelayIdentity = {
   userId: string
   profileId: string
@@ -27,7 +25,7 @@ export type RelaySessionBrokerOptions = {
   measureRegionDecision?: (window: RelayRegionWindow) => Promise<RelayRegionDecision>
   onAssignedCellActive?: (cellUrl: string) => void
   /** `cellUrl` is absent whenever the host holds no active assignment. */
-  onStatus: (status: RelayBrokerStatus, cellUrl?: string) => void
+  onStatus: (status: MobileRelayStatus, cellUrl?: string) => void
   fetch?: typeof globalThis.fetch
   createControlSocket?: (url: string, relayJwt: string) => WebSocket
   createDataSocket?: (url: string) => WebSocket

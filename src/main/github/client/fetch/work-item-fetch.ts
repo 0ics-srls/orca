@@ -6,7 +6,7 @@ import {
   githubRepoContext,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from '../../github-api-repository'
+import { githubHostExecOptions } from '../../github-api-repository'
 import type { GhExecOptions } from './../github-exec-scope'
 import { resolvePullRequestLookupCandidates } from './../pull-request-lookup-candidates'
 import { detectRepositoryMergeMetadata } from './../detect/repository-merge-metadata'
@@ -17,9 +17,11 @@ import {
   type MainWorkItem
 } from './../map/work-item-field-coercion'
 import { mapIssueWorkItem, mapPullRequestWorkItem } from './../map/work-item'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function fetchIssueWorkItem(
   repoPath: string,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   number: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {},
@@ -60,7 +62,7 @@ export const WORK_ITEM_PR_REVIEW_JSON_FIELDS = 'reviewRequests,latestReviews'
 
 export async function fetchPullRequestReviewFields(
   number: number,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions
 ): Promise<Pick<MainWorkItem, 'reviewRequests' | 'latestReviews'>> {
   try {
@@ -92,7 +94,7 @@ export async function fetchPullRequestReviewFields(
 
 export async function fetchPullRequestWorkItem(
   repoPath: string,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   number: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

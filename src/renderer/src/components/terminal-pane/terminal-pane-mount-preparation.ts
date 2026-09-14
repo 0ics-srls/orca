@@ -15,7 +15,7 @@ import {
 } from './terminal-link-open-hints'
 import type { LinkHandlerDeps } from './terminal-link-handlers'
 import type { TerminalLinkActionContext } from './terminal-link-action-request'
-import type { TerminalHttpLinkActionDestinations } from './terminal-url-link-hit-testing'
+import type { HttpLinkActionDestinations } from '@/lib/http-link-destinations'
 import type { PtyConnectionDeps } from './pty-connection-types'
 import type { UseTerminalPaneLifecycleDeps } from './terminal-pane-lifecycle-types'
 import type { TerminalPaneLifecycleRefs } from './use-terminal-pane-lifecycle-refs'
@@ -54,7 +54,7 @@ export type TerminalPaneMountPreparation = {
     paneId: number
   ) => ReturnType<typeof resolveTerminalHttpLinkSourceOwner>
   canOpenOwnedBrowserForPane: (paneId: number) => boolean
-  getHttpLinkActionDestinations: (paneId: number) => TerminalHttpLinkActionDestinations
+  getHttpLinkActionDestinations: (paneId: number) => HttpLinkActionDestinations
   getLinkActionContext: (paneId: number) => TerminalLinkActionContext | null
   linkDeps: LinkHandlerDeps
   queueResizeAll: (focusActive: boolean) => void
@@ -123,7 +123,7 @@ export function prepareTerminalPaneMount(
       )
     )
   }
-  const getHttpLinkActionDestinations = (paneId: number): TerminalHttpLinkActionDestinations =>
+  const getHttpLinkActionDestinations = (paneId: number): HttpLinkActionDestinations =>
     httpLinkActionDestinationsFor(
       deps.settingsRef.current,
       getHttpLinkSourceOwnerForPane(paneId),

@@ -5,8 +5,6 @@ import {
 } from '../../../shared/hosted-review-creation-providers'
 import { translate } from '@/i18n/i18n'
 
-export type SupportedHostedReviewCopyProvider = HostedReviewCreationProvider
-
 export type LocalizedHostedReviewCopy = {
   shortLabel: string
   reviewLabel: string
@@ -16,12 +14,12 @@ export type LocalizedHostedReviewCopy = {
 
 export function resolveSupportedHostedReviewCopyProvider(
   provider: HostedReviewProvider | null | undefined
-): SupportedHostedReviewCopyProvider {
+): HostedReviewCreationProvider {
   return resolveHostedReviewCreationProvider(provider)
 }
 
 export function localizedHostedReviewCopy(
-  provider: SupportedHostedReviewCopyProvider
+  provider: HostedReviewCreationProvider
 ): LocalizedHostedReviewCopy {
   if (provider === 'gitlab') {
     return {

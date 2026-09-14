@@ -1,6 +1,6 @@
 import { ghExecFileAsync } from '../../gh-utils'
-import type { OwnerRepo, ghRepoExecOptions } from '../../gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from '../../github-api-repository'
+import type { GitHubOwnerRepo, ghRepoExecOptions } from '../../gh-utils'
+import { githubHostExecOptions } from '../../github-api-repository'
 import type { GhExecOptions } from './../github-exec-scope'
 import { isNoPullRequestError } from './../gh-error-predicates'
 import {
@@ -12,8 +12,9 @@ import {
   type RestPullRequest
 } from './pull-request-lookup-data'
 import { getPRByNumber } from './pr-number-lookup'
+
 export async function getRestPRForBranch(
-  prRepo: GitHubApiRepository,
+  prRepo: GitHubOwnerRepo,
   headOwner: string,
   branchName: string,
   ghOptions: ReturnType<typeof ghRepoExecOptions>
@@ -29,7 +30,7 @@ export async function getRestPRForBranch(
 }
 
 export async function getFallbackPRListForBranch(
-  prRepo: GitHubApiRepository,
+  prRepo: GitHubOwnerRepo,
   branchName: string,
   ghOptions: ReturnType<typeof ghRepoExecOptions>
 ): Promise<PullRequestLookupData | null> {
@@ -55,7 +56,7 @@ export async function getFallbackPRListForBranch(
 }
 
 export async function hydrateBranchLookupWithExactPR(
-  ownerRepo: OwnerRepo,
+  ownerRepo: GitHubOwnerRepo,
   branchData: PullRequestLookupData | null,
   ghOptions: GhExecOptions,
   executionScope: string
@@ -74,14 +75,14 @@ export async function hydrateBranchLookupWithExactPR(
 }
 
 export async function lookupPRByBranchName(args: {
-  candidates: OwnerRepo[]
-  headRepo: OwnerRepo | null
+  candidates: GitHubOwnerRepo[]
+  headRepo: GitHubOwnerRepo | null
   branchName: string
   ghOptions: GhExecOptions
   executionScope: string
 }): Promise<{
   data: PullRequestLookupData | null
-  dataRepo: OwnerRepo | null
+  dataRepo: GitHubOwnerRepo | null
   pendingError?: unknown
 }> {
   if (args.candidates.length > 0) {

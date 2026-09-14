@@ -372,10 +372,7 @@ describe('on-disk layout', () => {
 
 /** Opens the session database directly, so a case can stage a fault or read
  *  back what a commit actually stored. */
-async function withJournalDatabase(
-  journalDir: string,
-  run: (db: Database.Database) => void
-): Promise<void> {
+async function withJournalDatabase(journalDir: string, run: (db: Database) => void): Promise<void> {
   const { openJournalDatabase } = await import('./journal-database')
   const opened = openJournalDatabase(journalDatabaseFile(journalDir))
   try {

@@ -24,7 +24,7 @@ import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-termi
 import { isWindowsAbsolutePathLike } from '../../shared/cross-platform-path'
 import { isWslUncPath } from '../../shared/wsl-paths'
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 
 export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRuntimeWithResolveRecoveredStructuredTuiTranscript {
   async replaceStructuredAgentSessionTab(replacement: ConversationReplacement): Promise<void> {
@@ -183,7 +183,7 @@ export class OrcaRuntimeWithRestoreStructuredAgentSessionTabsOnce extends OrcaRu
   async inspectTerminalProcess(
     terminalSelector: string,
     options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean }
-  ): Promise<PtyProcessInspection> {
+  ): Promise<TerminalProcessInspection> {
     const leaf = this.resolveLiveLeafForHandle(terminalSelector)
     if (!leaf?.ptyId || !this.ptyController) {
       throw new Error('terminal_gone')

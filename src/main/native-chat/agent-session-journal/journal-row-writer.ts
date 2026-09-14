@@ -7,7 +7,7 @@ export type JournalRowWriterDeps = {
   sessionId: string
   now: () => number
   serialize: <T>(run: () => Promise<T>) => Promise<T>
-  database: () => { db: Database.Database }
+  database: () => { db: Database }
   readOnly: () => boolean
   highestFence: () => number
   nextSequence: () => number

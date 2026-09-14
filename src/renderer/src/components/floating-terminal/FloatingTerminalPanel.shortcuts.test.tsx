@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import type { KeybindingOverrides } from '../../../../shared/keybindings'
-import type { BrowserTab } from '../../../../shared/browser-workspace-types'
+import type { BrowserWorkspace } from '../../../../shared/browser-workspace-types'
 import type { Tab } from '../../../../shared/tab-types'
 import { getMaximizedFloatingTerminalBounds } from './floating-terminal-panel-bounds'
 import {
@@ -495,7 +495,7 @@ describe('FloatingTerminalPanel close behavior', () => {
       sortOrder: 1,
       createdAt: 1
     }
-    const browserTab: BrowserTab = {
+    const browserTab: BrowserWorkspace = {
       id: 'browser-tab',
       worktreeId: FLOATING_TERMINAL_WORKTREE_ID,
       url: '',

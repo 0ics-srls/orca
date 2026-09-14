@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { SkillInstallDestinationSchema } from './skill-install-contract'
-import { SkillInstallFailureSchema, type SkillInstallFailure } from './skill-install-failure'
+import { SkillInstallFailureSchema } from './skill-install-failure'
 
 const DIGEST_PATTERN = /^[a-f0-9]{64}$/
 const ID_SCHEMA = z.string().regex(/^[A-Za-z0-9_-]{1,128}$/)
@@ -150,7 +150,6 @@ export type SkillBundleInstallPreview = z.infer<typeof SkillBundleInstallPreview
 export type SkillBundleInstallResult = z.infer<typeof SkillBundleInstallResultSchema>
 export type SkillBundleSkillResult = SkillBundleInstallResult['skills'][number]
 export type SkillBundlePlacementResult = SkillBundleSkillResult['placements'][number]
-export type SkillBundleInstallFailure = SkillInstallFailure
 
 export const SkillBundleInstallProgressSchema = z
   .object({

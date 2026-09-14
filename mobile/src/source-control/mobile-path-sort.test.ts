@@ -1,7 +1,8 @@
+import type { GitStatusEntry } from '../../../src/shared/git-status-types'
 import { describe, expect, it, vi } from 'vitest'
 import { buildMobileDiffReviewQueue } from '../session/mobile-diff-review-queue'
 import { buildMobileBranchCompareSection } from './mobile-branch-compare'
-import { buildMobileSourceControlSections, type MobileGitStatusEntry } from './mobile-git-status'
+import { buildMobileSourceControlSections } from './mobile-git-status'
 
 const paths = [
   'file10.ts',
@@ -37,7 +38,7 @@ const reviewInput = {
   reviewState: { version: 1 as const, files: {} }
 }
 const comparePath = (a: string, b: string) => a.localeCompare(b, undefined, { numeric: true })
-const conflictRank = (entry: MobileGitStatusEntry) =>
+const conflictRank = (entry: GitStatusEntry) =>
   entry.conflictStatus === 'unresolved' ? 0 : entry.conflictStatus === 'resolved_locally' ? 1 : 2
 
 describe('mobile path sort collation', () => {

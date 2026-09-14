@@ -16,7 +16,7 @@ import {
   getTaskSourceCacheScope,
   type TaskSourceContext
 } from '../../../../../shared/task-source-context'
-import type { GitHubItemDialogProjectOrigin } from './github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import {
   WORK_ITEM_DETAILS_FRESH_MS,
   getWorkItemDetailsCacheKey,
@@ -44,7 +44,7 @@ export function useGitHubItemDialogDetails({
   effectiveRepoId: string | null
   sourceContext?: TaskSourceContext | null
   initialTab?: ItemDialogTab
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   onReviewRequestsChange?: (
     itemKey: { id: string; repoId: string },
     reviewRequests: GitHubAssignableUser[]

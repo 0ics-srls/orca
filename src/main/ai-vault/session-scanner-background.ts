@@ -1,12 +1,15 @@
-import type { AiVaultListResult, AiVaultSubagentListResult } from '../../shared/ai-vault-types'
+import type {
+  AiVaultFirstUserPromptResult,
+  AiVaultListResult,
+  AiVaultSubagentListResult
+} from '../../shared/ai-vault-types'
 import type {
   AiVaultSessionTitleRequest,
   AiVaultSessionTitlesResult
 } from '../../shared/ai-vault-session-title'
 import {
   readAiVaultFirstUserPrompt,
-  type ReadAiVaultFirstUserPromptArgs,
-  type ReadAiVaultFirstUserPromptResult
+  type ReadAiVaultFirstUserPromptArgs
 } from './session-first-user-prompt-read'
 import {
   clearAiVaultServiceRestartCircuit,
@@ -72,7 +75,7 @@ export function listAiVaultSubagentSessionsInBackground(
 
 export function readAiVaultFirstUserPromptInBackground(
   request: ReadAiVaultFirstUserPromptArgs
-): Promise<ReadAiVaultFirstUserPromptResult> {
+): Promise<AiVaultFirstUserPromptResult> {
   return shouldUseAiVaultServiceProcess()
     ? readAiVaultFirstUserPromptInService(request)
     : readAiVaultFirstUserPrompt(request)

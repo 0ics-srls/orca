@@ -1,6 +1,6 @@
 import {
   DEFAULT_PRODUCER_QUEUE_MAX_BYTES,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher-client-writer'
 import type { LegacyPublicationLease } from './legacy-relay-publication-ledger'
 import type { JsonRpcNotification } from './protocol'
@@ -71,7 +71,7 @@ export abstract class RelayDispatcherProducerTransport extends RelayDispatcherRp
     client: RelayClient,
     msg: JsonRpcNotification,
     lane: 'interactive' | 'ordinary' | 'fixed-bulk' | 'bulk',
-    onSettled: (result: SinkWriteSettlement) => void = () => {}
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {}
   ): boolean {
     if (this.disposed || client.closed) {
       return false
@@ -83,7 +83,7 @@ export abstract class RelayDispatcherProducerTransport extends RelayDispatcherRp
     client: RelayClient,
     frame: PreparedRelayFrame,
     lane: 'interactive' | 'ordinary' | 'fixed-bulk' | 'bulk',
-    onSettled: (result: SinkWriteSettlement) => void = () => {}
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {}
   ): boolean {
     const bytes = frame.frameBytes
     const fixedBlocked =
@@ -148,7 +148,7 @@ export abstract class RelayDispatcherProducerTransport extends RelayDispatcherRp
     frame: PreparedRelayFrame,
     lane: 'interactive' | 'ordinary' | 'fixed-bulk' | 'bulk',
     lease: LegacyPublicationLease,
-    onSettled: (result: SinkWriteSettlement) => void = () => {}
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {}
   ): boolean {
     const accepted = this.enqueuePreparedFrame(client, frame, lane, (result) => {
       lease.release()

@@ -5,7 +5,7 @@ import {
 import { isShellProcess } from '../../../../shared/shell-process-detection'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { PaneForegroundAgentEntry } from '@/store/slices/pane-foreground-agent'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 import { createPaneForegroundProcessReader } from './pane-foreground-process-reader'
 
 // Why: settle after exec, then place the final generic retry beyond sequential
@@ -23,12 +23,12 @@ type PaneForegroundAgentTrackerDeps = {
   readForegroundProcess: (
     ptyId: string,
     options?: { expectedIncarnationId?: string }
-  ) => Promise<string | null | RuntimeTerminalProcessInspection>
+  ) => Promise<string | null | TerminalProcessInspection>
   /** Fresh, provider-owned evidence used only when input routing may change. */
   confirmForegroundProcess?: (
     ptyId: string,
     options?: { expectedIncarnationId?: string }
-  ) => Promise<string | null | RuntimeTerminalProcessInspection>
+  ) => Promise<string | null | TerminalProcessInspection>
   /** Remote authorities must provide fenced evidence; local panes retain the string path. */
   isRemotePtyId?: (ptyId: string) => boolean
   getExpectedIncarnationId?: () => string | null

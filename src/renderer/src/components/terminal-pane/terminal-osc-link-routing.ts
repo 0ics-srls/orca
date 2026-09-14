@@ -6,11 +6,9 @@ import {
   isTerminalLinkActionActivation,
   isTerminalLinkDirectActivation
 } from './terminal-link-activation'
-import {
-  handleTerminalHttpLink,
-  type TerminalHttpLinkActionDestinations,
-  type TerminalLinkRoutingPreferenceRequester
-} from './terminal-url-link-hit-testing'
+import { handleTerminalHttpLink } from './terminal-url-link-hit-testing'
+import type { HttpLinkRoutingPreferenceRequester } from '@/lib/http-link-destinations'
+import type { HttpLinkActionDestinations } from '@/lib/http-link-destinations'
 import type { HttpLinkSourceOwner } from '@/lib/http-link-routing'
 import type { TerminalLinkActionContext } from './terminal-link-action-request'
 import { handleTerminalFileLink } from './terminal-file-link-actions'
@@ -52,9 +50,9 @@ export function handleOscLink(
       >
     > & {
       sourceOwner?: HttpLinkSourceOwner
-      requestOpenLinksInAppPreference?: TerminalLinkRoutingPreferenceRequester
+      requestOpenLinksInAppPreference?: HttpLinkRoutingPreferenceRequester
       linkActionContext?: TerminalLinkActionContext | null
-      actionDestinations?: TerminalHttpLinkActionDestinations
+      actionDestinations?: HttpLinkActionDestinations
     }
 ): boolean {
   if (!isDesktopOscLinkActivation(event)) {

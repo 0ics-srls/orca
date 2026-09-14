@@ -17,8 +17,6 @@ export type ProjectGroupHeaderDragRect = {
   sectionBottom?: number
 }
 
-export type ProjectGroupHeaderDropPreview = WorktreeSidebarHeaderDropPreview
-
 export type ProjectGroupTabOrderUpdate = {
   groupId: string
   tabOrder: number
@@ -185,7 +183,7 @@ export function computeProjectGroupHeaderDropPreview(args: {
   rects: readonly ProjectGroupHeaderDragRect[]
   sidebarProjectGroupHeaderIds: readonly string[]
   contentBottom?: number
-}): ProjectGroupHeaderDropPreview | null {
+}): WorktreeSidebarHeaderDropPreview | null {
   const { rects, sidebarProjectGroupHeaderIds } = args
   return computeWorktreeSidebarHeaderDropPreview({
     pointerY: args.pointerY,

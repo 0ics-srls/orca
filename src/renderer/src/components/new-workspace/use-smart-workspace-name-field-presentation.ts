@@ -1,3 +1,4 @@
+import type { StandardEmojiShortcodeEntry } from '../../../../shared/emoji-shortcode-catalog'
 import { useEffect, useMemo } from 'react'
 import { CaseSensitive, LoaderCircle, Search } from 'lucide-react'
 import { parseGitHubIssueOrPRLink } from '@/lib/github-links'
@@ -10,8 +11,7 @@ import {
 } from '../../../../shared/new-workspace/smart-workspace-linear-intent'
 import {
   getActiveWorkspaceEmojiShortcode,
-  searchWorkspaceEmojiShortcodes,
-  type WorkspaceEmojiSuggestion
+  searchWorkspaceEmojiShortcodes
 } from '@/lib/workspace-emoji-shortcodes'
 import { resolveSmartWorkspaceCommandValue } from './smart-workspace-command-value'
 import {
@@ -243,7 +243,7 @@ export function useSmartWorkspaceNameFieldPresentation(
     () =>
       activeEmojiShortcode
         ? searchWorkspaceEmojiShortcodes(activeEmojiShortcode.query)
-        : ([] as WorkspaceEmojiSuggestion[]),
+        : ([] as StandardEmojiShortcodeEntry[]),
     [activeEmojiShortcode]
   )
   const emojiMenuOpen =

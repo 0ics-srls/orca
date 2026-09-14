@@ -4,7 +4,7 @@ import { useAppStore, type AppState } from '@/store'
 import {
   cancelRuntimeGeneratePullRequestFields,
   generateRuntimePullRequestFields,
-  type RuntimeGeneratePullRequestFieldsOverrides
+  type RuntimeGenerateCommitMessageOverrides
 } from '@/runtime/runtime-git-client'
 import type { HostedReviewCreationEligibility } from '../../../../shared/hosted-review'
 import type { ResolveSourceControlAiResult } from '../../../../shared/source-control-ai'
@@ -53,7 +53,7 @@ type CreatePullRequestFieldGenerationResult = {
   effectiveGenerateError: string | null
   generateDisabled: boolean
   generateDisabledReason: string | undefined
-  handleGenerate: (overrides?: RuntimeGeneratePullRequestFieldsOverrides) => Promise<void>
+  handleGenerate: (overrides?: RuntimeGenerateCommitMessageOverrides) => Promise<void>
   handleCancelGenerate: () => void
 }
 
@@ -99,7 +99,7 @@ export function useCreatePullRequestFieldGeneration({
   const generateDisabled = !effectiveGenerating && Boolean(generateDisabledReason)
 
   const handleGenerate = useCallback(
-    async (overrides?: RuntimeGeneratePullRequestFieldsOverrides): Promise<void> => {
+    async (overrides?: RuntimeGenerateCommitMessageOverrides): Promise<void> => {
       if (!worktreePath || !base.trim() || effectiveGenerating || generateDisabled) {
         return
       }

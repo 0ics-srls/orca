@@ -1,13 +1,15 @@
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
 import { getRemoteRuntimeTerminalHandle } from '@/runtime/runtime-terminal-stream'
 import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
 import { admitRemoteForegroundEvidence } from '../../../../shared/remote-foreground-evidence-admission'
-import { isClientOnlyUnverifiableInspection } from '../../../../shared/terminal-process-inspection'
+import {
+  isClientOnlyUnverifiableInspection,
+  type TerminalProcessInspection
+} from '../../../../shared/terminal-process-inspection'
 
 type ForegroundReader = (
   ptyId: string,
   options?: { expectedIncarnationId?: string }
-) => Promise<string | null | RuntimeTerminalProcessInspection>
+) => Promise<string | null | TerminalProcessInspection>
 
 export function createPaneForegroundProcessReader(deps: {
   readForegroundProcess: ForegroundReader

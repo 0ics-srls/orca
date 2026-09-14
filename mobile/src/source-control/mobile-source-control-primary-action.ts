@@ -1,16 +1,14 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import {
   resolveSourceControlCommitAreaPrimaryActionDecision,
   type SourceControlCommitAreaPrimaryActionDecision,
   type SourceControlRemoteOpKind
 } from '../../../src/shared/source-control-primary-action-decision'
-import type { MobileGitBranchCompareResult } from './mobile-branch-compare'
-import type { MobileGitStatusResult } from './mobile-git-status'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 
 type GitStep = { method: string; params?: Record<string, unknown> }
 
 type MobileSourceControlPrimaryActionKind = SourceControlCommitAreaPrimaryActionDecision['kind']
-type MobileSourceControlPrimaryActionDecision = SourceControlCommitAreaPrimaryActionDecision
-type MobileSourceControlRemoteOpKind = SourceControlRemoteOpKind
 
 export type MobileSourceControlPrimaryAction = {
   kind: MobileSourceControlPrimaryActionKind
@@ -31,7 +29,7 @@ export type MobileSourceControlPrimaryActionHandlers = {
 }
 
 export type MobileSourceControlPrimaryActionArgs = {
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   hasUnresolvedConflicts: boolean
   stageablePaths: readonly string[]
   stagedCount: number
@@ -40,7 +38,7 @@ export type MobileSourceControlPrimaryActionArgs = {
   busyAction: string | null
   openingPath: string | null
   openingBranchPath: string | null
-  branchCompareResult: MobileGitBranchCompareResult | null
+  branchCompareResult: GitBranchCompareResult | null
   handlers: MobileSourceControlPrimaryActionHandlers
 }
 
@@ -88,9 +86,7 @@ function isMobileRemoteOperationActive(busyAction: string | null): boolean {
   return getInFlightRemoteOpKind(busyAction) !== null
 }
 
-function getInFlightRemoteOpKind(
-  busyAction: string | null
-): MobileSourceControlRemoteOpKind | null {
+function getInFlightRemoteOpKind(busyAction: string | null): SourceControlRemoteOpKind | null {
   switch (busyAction) {
     case 'push':
     case 'commit-push':
@@ -127,7 +123,9 @@ function getMobileBranchCommitsAhead(
   return upstream?.hasUpstream ? upstream.ahead : undefined
 }
 
-function getMobilePrimaryActionLabel(decision: MobileSourceControlPrimaryActionDecision): string {
+function getMobilePrimaryActionLabel(
+  decision: SourceControlCommitAreaPrimaryActionDecision
+): string {
   if (decision.requiresForceWithLease) {
     return 'Force Push'
   }
@@ -147,7 +145,9 @@ function getMobilePrimaryActionLabel(decision: MobileSourceControlPrimaryActionD
   }
 }
 
-function getMobilePrimaryActionHint(decision: MobileSourceControlPrimaryActionDecision): string {
+function getMobilePrimaryActionHint(
+  decision: SourceControlCommitAreaPrimaryActionDecision
+): string {
   switch (decision.titleIntent) {
     case 'commit_in_progress':
       return 'Commit in progress.'
@@ -194,7 +194,7 @@ function getMobilePrimaryActionHint(decision: MobileSourceControlPrimaryActionDe
 }
 
 function isLoadingDecision(
-  decision: MobileSourceControlPrimaryActionDecision,
+  decision: SourceControlCommitAreaPrimaryActionDecision,
   busyAction: string | null
 ): boolean {
   switch (decision.kind) {
@@ -219,7 +219,7 @@ function isLoadingDecision(
 }
 
 async function runMobilePrimaryAction(
-  decision: MobileSourceControlPrimaryActionDecision,
+  decision: SourceControlCommitAreaPrimaryActionDecision,
   handlers: MobileSourceControlPrimaryActionHandlers
 ): Promise<void> {
   switch (decision.kind) {

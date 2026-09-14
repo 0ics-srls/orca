@@ -4,12 +4,12 @@ import { DEGRADED_DAEMON_RECOVERY_RETRY_MS } from './degraded-daemon-fresh-spawn
 import type { DaemonPtyAdapter } from './daemon-pty-adapter'
 import { settledWriteStub, stubWriteSettlement } from '../providers/settled-pty-write-stub'
 import type { IPtyProvider, PtySpawnOptions, PtySpawnResult } from '../providers/types'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 import { SessionNotFoundError, TerminalSessionOwnerUnverifiedError } from './daemon-errors'
 
 type ProviderMock = IPtyProvider & {
   probePtyLiveness: (id: string) => Promise<boolean | null>
-  inspectProcess: (id: string) => Promise<PtyProcessInspection>
+  inspectProcess: (id: string) => Promise<TerminalProcessInspection>
   emitData: (id: string, data: string, sequenceChars?: number) => void
   emitReplay: (id: string, data: string) => void
   emitExit: (id: string, code: number) => void

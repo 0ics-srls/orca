@@ -1,5 +1,5 @@
+import type { GitUpstreamStatus } from '../../../src/shared/git-status-types'
 import { describe, expect, it, vi } from 'vitest'
-import type { MobileGitUpstreamStatus } from './mobile-git-status'
 import {
   buildMobileSourceControlActions,
   type MobileSourceControlActionArgs
@@ -30,7 +30,7 @@ function args(
   return {
     commitMessage: 'msg',
     stagedCount: 1,
-    upstream: { hasUpstream: true, ahead: 0, behind: 0 } as MobileGitUpstreamStatus,
+    upstream: { hasUpstream: true, ahead: 0, behind: 0 } as GitUpstreamStatus,
     upstreamKnown: true,
     busyAction: null,
     openingPath: null,
@@ -67,14 +67,14 @@ describe('buildMobileSourceControlActions', () => {
 
   it('disables fast-forward when ahead of upstream (would lose local commits)', () => {
     const actions = buildMobileSourceControlActions(
-      args({ upstream: { hasUpstream: true, ahead: 2, behind: 3 } as MobileGitUpstreamStatus })
+      args({ upstream: { hasUpstream: true, ahead: 2, behind: 3 } as GitUpstreamStatus })
     )
     expect(action(actions, 'Fast-forward')?.disabled).toBe(true)
   })
 
   it('enables fast-forward when behind and not ahead', () => {
     const actions = buildMobileSourceControlActions(
-      args({ upstream: { hasUpstream: true, ahead: 0, behind: 3 } as MobileGitUpstreamStatus })
+      args({ upstream: { hasUpstream: true, ahead: 0, behind: 3 } as GitUpstreamStatus })
     )
     expect(action(actions, 'Fast-forward')?.disabled).toBe(false)
   })

@@ -9,8 +9,8 @@ import { createRootDispatch } from './db/root-dispatch-test-fixture'
 
 const MUTATION_RECEIPT_MAX_ROWS = 10_000
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
 function insertMutationReceipts(

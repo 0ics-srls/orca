@@ -1,3 +1,4 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from 'react-native'
 import { RotateCw } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
@@ -18,7 +19,6 @@ import { usePRBotAuthorOverrides } from '../session/use-pr-bot-author-overrides'
 import { buildFixChecksPrompt, buildResolveConflictsPrompt } from '../session/pr-ai-triage-prompt'
 import { prSidebarRenderBranch } from './mobile-pr-sidebar-presentation'
 import { mobilePrSidebarStyles as styles } from './pr-sidebar/mobile-pr-sidebar-styles'
-import type { MobileGitStatusResult } from '../source-control/mobile-git-status'
 import { PRSidebarHeader } from './pr-sidebar/PRSidebarHeader'
 import { PRConflictingFilesSection } from './pr-sidebar/PRConflictingFilesSection'
 import { PRActionsSection } from './pr-sidebar/PRActionsSection'
@@ -37,7 +37,7 @@ type Props = {
   connState: ConnectionState
   worktreeId: string
   gitBranch: string | null
-  gitStatus: MobileGitStatusResult | null
+  gitStatus: GitStatusResult | null
   headSha: string | null
   bottomInset?: number
   // Hub chrome already shows open-on-web; hide the in-body icon there.
@@ -154,7 +154,7 @@ function PrSidebarContent({
   connState: ConnectionState
   worktreeId: string
   gitBranch: string | null
-  gitStatus: MobileGitStatusResult | null
+  gitStatus: GitStatusResult | null
   actions: MobilePrActions
   commentActions: MobilePrCommentActions
   titleAction: MobilePrTitleAction

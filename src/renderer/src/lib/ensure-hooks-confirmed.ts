@@ -15,8 +15,6 @@ import {
   type ExecutionHostId
 } from '../../../shared/execution-host'
 
-export type HookScriptKind = OrcaHookScriptKind
-
 const NEVER_CANCEL_TRUST_CHECK = (): boolean => false
 
 // Serialize the singleton modal callback so overlapping worktree actions cannot replace it.
@@ -103,7 +101,7 @@ function canUseRepoWideTrust(state: AppState, repoId: string): boolean {
 async function confirmScriptContent(
   state: AppState,
   repoId: string,
-  scriptKind: HookScriptKind,
+  scriptKind: OrcaHookScriptKind,
   scriptContent: string,
   hostId?: ExecutionHostId,
   isCancelled: () => boolean = NEVER_CANCEL_TRUST_CHECK
@@ -236,7 +234,7 @@ export async function readAndConfirmRuntimeIssueCommand(
 export async function ensureHooksConfirmed(
   state: AppState,
   repoId: string,
-  scriptKind: HookScriptKind,
+  scriptKind: OrcaHookScriptKind,
   hostId?: ExecutionHostId,
   runtimeOwnerEnvironmentId?: string | null,
   isCancelled: () => boolean = NEVER_CANCEL_TRUST_CHECK

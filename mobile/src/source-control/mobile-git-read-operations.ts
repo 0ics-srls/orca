@@ -1,3 +1,4 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
 import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import {
@@ -5,7 +6,6 @@ import {
   rpcUncheckedPayloadReader
 } from '../transport/rpc-reader-payload'
 import { readMobileGitStatusResult } from '../session/mobile-diff-review-rpc'
-import type { MobileGitStatusResult } from './mobile-git-status'
 
 // Source-control reads. Every one of these replies used to be re-typed with a cast at the call
 // site; the reader below is now the only place that says what the payload is.
@@ -32,7 +32,7 @@ export const gitStatusHostPayloadRead = bindDeferredRpcOperation(
 const gitStatusProjectionReader: RpcCompatibleReader<
   unknown,
   'normalized-status',
-  MobileGitStatusResult | null
+  GitStatusResult | null
 > = (raw) => ({
   compatible: true,
   variant: 'normalized-status',

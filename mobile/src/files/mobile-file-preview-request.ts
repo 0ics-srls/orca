@@ -46,7 +46,6 @@ export type MobileFilePreviewRequest = {
 }
 
 type MobileFilePreviewClient = Pick<RpcClient, 'sendRequest'>
-type TerminalArtifactSource = MobileTerminalArtifactPreviewSource
 type TerminalArtifactSaveOptions = TerminalArtifactRetryOptions & {
   baseContent?: string
 }
@@ -112,7 +111,7 @@ export async function loadMobileFilePreview(
 
 export async function saveMobileTerminalArtifactPreview(
   client: MobileFilePreviewClient,
-  source: TerminalArtifactSource,
+  source: MobileTerminalArtifactPreviewSource,
   content: string,
   options: TerminalArtifactSaveOptions = {}
 ): Promise<MobileFilePreviewResult | { status: 'saved' }> {
@@ -175,11 +174,11 @@ export async function saveMobileTerminalArtifactPreview(
 
 async function verifyTerminalArtifactBaseContent(
   client: MobileFilePreviewClient,
-  source: TerminalArtifactSource,
+  source: MobileTerminalArtifactPreviewSource,
   baseContent: string,
   options: TerminalArtifactRetryOptions
 ): Promise<
-  | { status: 'ok'; source: TerminalArtifactSource; refreshed: boolean }
+  | { status: 'ok'; source: MobileTerminalArtifactPreviewSource; refreshed: boolean }
   | { status: 'error'; error: MobileFilePreviewResult }
 > {
   let readSource = source
@@ -233,7 +232,7 @@ async function verifyTerminalArtifactBaseContent(
 
 function writeTerminalArtifactPreview(
   client: MobileFilePreviewClient,
-  source: TerminalArtifactSource,
+  source: MobileTerminalArtifactPreviewSource,
   content: string
 ): Promise<RpcResponse> {
   return client.sendRequest('files.writeTerminalArtifact', {

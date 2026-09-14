@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { RelayDispatcher, type SinkWriteSettlement } from './dispatcher'
+import { RelayDispatcher, type DispatcherWriterSettlement } from './dispatcher'
 import { DISPATCHER_CONTROL_QUEUE_MAX_FRAMES } from './dispatcher-writer-admission'
 
 // A detach carries the reason the client went away, because the PTY owner grace is only safe to
@@ -11,7 +11,7 @@ describe('RelayDispatcher client close cause', () => {
     // but slow to drain looks like, and a consumer that read this as a peer close would shorten that
     // owner's grace and hand its session to someone else while it is still there.
     const detachListener = vi.fn()
-    const settlements: ((result: SinkWriteSettlement) => void)[] = []
+    const settlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const dispatcher = new RelayDispatcher(
       (_data, onSettled) => {
         settlements.push(onSettled)

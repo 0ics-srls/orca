@@ -4,9 +4,9 @@ import {
 } from '@/lib/source-control-remote-error'
 import type { GitConflictOperation } from '../../../../../../shared/git-status-types'
 import type { SourceControlActionError } from './action-error'
-import type { RemoteOpKind } from '../../source-control-primary-action'
+import type { SourceControlRemoteOpKind } from '../../source-control-primary-action'
 
-export function resolveRemoteActionError(kind: RemoteOpKind, error: unknown): string {
+export function resolveRemoteActionError(kind: SourceControlRemoteOpKind, error: unknown): string {
   return resolveRemoteOperationErrorMessage(error, {
     publish: kind === 'publish',
     isPush: kind === 'push',

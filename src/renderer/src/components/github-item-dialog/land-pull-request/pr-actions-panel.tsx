@@ -24,7 +24,7 @@ import { assertTaskPageGitHubDialogStateAuthority } from '@/components/task-page
 import { resolvePullRequestRepo } from '@/components/github/github-work-item-identity'
 import { notifyWorkItemDetailsMutation } from '@/components/github/github-work-item-comment-mutations'
 import { runPullRequestStateUpdate } from '@/components/github/github-work-item-edit-mutations'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { PRActionsMergeMenu } from './pr-actions-merge-menu'
 import { WorkItemStateBadge } from '../load-item-details/work-item-state-badge'
 
@@ -42,7 +42,7 @@ export function PRActionsPanel({
   repoPath: string | null
   repoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: GitHubItemDialogProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   localState: GitHubWorkItem['state']
   onStateChange: (state: GitHubWorkItem['state']) => void
   onMutated: () => void

@@ -17,7 +17,7 @@ import type {
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
 import { ChecksTab } from '../inspect-pull-request/checks-tab'
 import { ConversationTab } from '../discuss-item/conversation-tab'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { PRFilesCombinedDiffViewer } from '../inspect-pull-request/pr-files-combined-diff-viewer'
 import {
   patchCachedPRChecks,
@@ -51,7 +51,7 @@ export function GitHubItemDialogPRTabs({
   repoPath: string | null
   effectiveRepoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   details: GitHubWorkItemDetails | null
   detailsCacheKey: string | null
   loading: boolean

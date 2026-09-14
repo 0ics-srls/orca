@@ -1,7 +1,7 @@
+import type { PtyControllerInventory } from './runtime-pty-controller-contract'
 import type { RuntimeLegacyWorkerTerminalRecoveryController } from './runtime-legacy-worker-terminal-recovery-controller'
 import type {
   LegacyWorkerRecoveryCandidate,
-  LegacyWorkerRecoveryInventory,
   LegacyWorkerRecoveryOptions,
   LegacyWorkerRecoveryPorts,
   LegacyWorkerRecoveryResolution,
@@ -15,7 +15,7 @@ export async function reconcileLegacyWorkerCandidate(args: {
   candidate: LegacyWorkerRecoveryCandidate
   workspace: LegacyWorkerRecoveryWorkspace
   resolvedWorktrees: LegacyWorkerRecoveryWorkspace['resolved'][]
-  inventory: LegacyWorkerRecoveryInventory
+  inventory: PtyControllerInventory
   deferredDispatchIds: Set<string>
   pendingResolutions: LegacyWorkerRecoveryResolution[]
 }): Promise<void> {

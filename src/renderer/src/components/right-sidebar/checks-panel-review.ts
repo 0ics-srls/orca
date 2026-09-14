@@ -3,8 +3,6 @@ import type { HostedReviewInfo } from '../../../../shared/hosted-review'
 import { hostedReviewInfoFromGitHubPRInfo } from '../../../../shared/hosted-review-github'
 import { isGitHubPRSuppressed } from '../../../../shared/worktree/github-pr-suppression'
 
-export type ChecksPanelReview = HostedReviewInfo
-
 export type ChecksPanelReviewSelectionInput = {
   hostedReview: HostedReviewInfo | null | undefined
   pr: PRInfo | null | undefined
@@ -16,7 +14,7 @@ export type ChecksPanelReviewSelectionInput = {
   linkedGiteaPR: number | null
 }
 
-export function gitHubPRToChecksPanelReview(pr: PRInfo): ChecksPanelReview {
+export function gitHubPRToChecksPanelReview(pr: PRInfo): HostedReviewInfo {
   // Why: the checks panel must not maintain a second GitHub PR metadata mapper;
   // merge-state fields drifting here regressed the right-sidebar action label.
   return hostedReviewInfoFromGitHubPRInfo(pr)
@@ -31,7 +29,7 @@ export function selectChecksPanelReview({
   linkedBitbucketPR,
   linkedAzureDevOpsPR,
   linkedGiteaPR
-}: ChecksPanelReviewSelectionInput): ChecksPanelReview | null {
+}: ChecksPanelReviewSelectionInput): HostedReviewInfo | null {
   const gitLabHostedReview = hostedReview?.provider === 'gitlab' ? hostedReview : null
   if (gitLabHostedReview) {
     return gitLabHostedReview

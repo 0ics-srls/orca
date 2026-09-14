@@ -29,7 +29,7 @@ const DELETE_REPAIR = 'DELETE FROM journal_repairs WHERE session_id = ?'
  * superseded says nothing about the live one.
  */
 export function pendingJournalRepairSequence(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string
 ): number | null {
@@ -41,13 +41,13 @@ export function pendingJournalRepairSequence(
 
 /** Retires the marker. Called from inside the epoch transactions, whose new
  *  epoch is the rebuilt history the marker was holding out for. */
-export function clearJournalRepairMarker(db: Database.Database, sessionId: string): void {
+export function clearJournalRepairMarker(db: Database, sessionId: string): void {
   db.prepare(DELETE_REPAIR).run(sessionId)
 }
 
 /** Drop the rejected suffix and record that it is owed, atomically. */
 export function deleteJournalRepairedSuffix(input: {
-  db: Database.Database
+  db: Database
   sessionId: string
   epoch: string
   /** First sequence of the rejected suffix. */

@@ -24,7 +24,7 @@ import {
   release,
   resolveIssueSource,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 // ── Top-level aggregator ───────────────────────────────────────────
@@ -56,7 +56,7 @@ export async function getWorkItemDetails(
   type: 'issue' | 'mr',
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRefOverride?: ProjectRef | null,
+  projectRefOverride?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabWorkItemDetails | null> {
   // Why: detail fetches must use the same project source as the list row
@@ -91,7 +91,7 @@ export async function getWorkItemDetails(
 
 async function fetchIssueDetails(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
@@ -130,7 +130,7 @@ async function fetchIssueDetails(
 
 async function fetchMRDetails(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

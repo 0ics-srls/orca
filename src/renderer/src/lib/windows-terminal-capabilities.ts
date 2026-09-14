@@ -1,9 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { startWindowsTerminalCapabilityReprobe } from './windows-terminal-capability-reprobe'
-import {
-  readWindowsTerminalCapabilities,
-  type WindowsTerminalCapabilityLoadTarget
-} from './windows-terminal-capability-read'
+import { readWindowsTerminalCapabilities } from './windows-terminal-capability-read'
+import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 
 export type WindowsTerminalCapabilities = {
   wslAvailable: boolean
@@ -46,7 +44,7 @@ type WindowsTerminalCapabilityHookState = {
 
 function resolveWindowsTerminalCapabilityCacheKey(args: {
   ownerKey?: string
-  target?: WindowsTerminalCapabilityLoadTarget
+  target?: RuntimeClientTarget
   sshConnectionId?: string | null
 }): string {
   const explicitOwnerKey = args.ownerKey?.trim()
@@ -128,7 +126,7 @@ export function loadWindowsTerminalCapabilities(
     force?: boolean
     now?: number
     ownerKey?: string
-    target?: WindowsTerminalCapabilityLoadTarget
+    target?: RuntimeClientTarget
     sshConnectionId?: string | null
   } = {}
 ): Promise<WindowsTerminalCapabilities> {
@@ -178,7 +176,7 @@ export function loadWindowsTerminalCapabilities(
 
 export function refreshWindowsTerminalCapabilities(
   ownerKey?: string,
-  target: WindowsTerminalCapabilityLoadTarget = { kind: 'local' },
+  target: RuntimeClientTarget = { kind: 'local' },
   sshConnectionId?: string | null
 ): Promise<WindowsTerminalCapabilities> {
   return loadWindowsTerminalCapabilities({ force: true, ownerKey, target, sshConnectionId })
@@ -201,13 +199,13 @@ export function useWindowsTerminalCapabilities(
   enabled: boolean,
   forceRefreshOnMount = false,
   ownerKey?: string,
-  target: WindowsTerminalCapabilityLoadTarget = { kind: 'local' },
+  target: RuntimeClientTarget = { kind: 'local' },
   sshConnectionId?: string | null
 ): WindowsTerminalCapabilities {
   const targetKind = target.kind
   const targetEnvironmentId = target.kind === 'environment' ? target.environmentId : null
   const sshConnectionIdKey = sshConnectionId?.trim() || null
-  const resolvedTarget: WindowsTerminalCapabilityLoadTarget = useMemo(
+  const resolvedTarget: RuntimeClientTarget = useMemo(
     () =>
       targetKind === 'environment' && targetEnvironmentId
         ? { kind: 'environment', environmentId: targetEnvironmentId }
@@ -285,7 +283,7 @@ export function useWindowsTerminalCapabilities(
 export function isWindowsTerminalCapabilityHost(args: {
   isWindowsRenderer: boolean
   isWebClient: boolean
-  target: WindowsTerminalCapabilityLoadTarget
+  target: RuntimeClientTarget
   hostPlatform: NodeJS.Platform | null
 }): boolean {
   return (

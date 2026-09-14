@@ -9,14 +9,12 @@ import {
   getRemoteUrlForRepo,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import {
-  getGitHubApiRepositoryForRemote,
-  githubHostExecOptions,
-  type GitHubApiRepository
-} from '../../github-api-repository'
+import { getGitHubApiRepositoryForRemote, githubHostExecOptions } from '../../github-api-repository'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 import { isNotFoundGhError } from './../gh-error-predicates'
 import { resolvePullRequestLookupCandidates } from './../pull-request-lookup-candidates'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export function pickPushRemoteUrl(args: {
   originUrl: string | null
   cloneUrl: string
@@ -71,7 +69,7 @@ export async function getPullRequestPushTarget(
   await acquire()
   try {
     let prStdout = ''
-    let matchedRepository: GitHubApiRepository | null = null
+    let matchedRepository: GitHubOwnerRepo | null = null
     for (const candidate of candidates) {
       try {
         const { stdout } = await ghExecFileAsync(

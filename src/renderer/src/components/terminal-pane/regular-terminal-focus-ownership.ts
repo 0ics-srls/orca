@@ -6,7 +6,6 @@ import {
 } from './terminal-ime-input-context-refresh'
 
 export type TerminalInputFocusSync = (focused: boolean) => void
-export type RefocusScheduler = TerminalImeInputContextRefocusScheduler
 export const REGULAR_TERMINAL_INPUT_FOCUSED_ATTRIBUTE = 'data-regular-terminal-input-focused'
 
 export function isXtermHelperTextarea(target: EventTarget | null): target is HTMLElement {
@@ -80,7 +79,7 @@ export function resyncTerminalFocusForWindowFocus(args: {
   /** Override the macOS check (tests). Defaults to the navigator user agent. */
   isMac?: boolean
   /** Override the refocus scheduler (tests). Defaults to requestAnimationFrame. */
-  scheduleRefocus?: RefocusScheduler
+  scheduleRefocus?: TerminalImeInputContextRefocusScheduler
 }): boolean {
   const ownedActive = getPaneOwnedActiveHelperTextarea(args.container, args.activeElement)
   let helper = ownedActive

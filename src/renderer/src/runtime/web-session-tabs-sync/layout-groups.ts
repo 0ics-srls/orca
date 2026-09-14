@@ -1,12 +1,8 @@
 import type { RuntimeMobileSessionTabGroup } from '../../../../shared/runtime-types'
 import type { TabGroup } from '../../../../shared/tab-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
-import type {
-  MirroredAgentTab,
-  MirroredBrowserTab,
-  MirroredEditorTab,
-  TerminalSurface
-} from './state'
+import type { MirroredAgentTab, MirroredBrowserTab, MirroredEditorTab } from './state'
+import type { RuntimeMobileSessionTerminalClientTab } from '../../../../shared/runtime-types'
 import { toWebTerminalSurfaceTabId } from '../web-runtime-session'
 import { clearHostSessionTabIdMappings, setHostSessionTabIdMapping } from './tracking-mappings'
 import { isWebSessionBrowserPlacementGroupReserved } from '../web-session-browser-placement'
@@ -21,7 +17,7 @@ export function buildHostToLocalTabIdMap({
   editorTabs,
   agentTabs
 }: {
-  terminalSurfaces: readonly TerminalSurface[]
+  terminalSurfaces: readonly RuntimeMobileSessionTerminalClientTab[]
   terminalTabs: readonly TerminalTab[]
   browserTabs: readonly MirroredBrowserTab[]
   editorTabs: readonly MirroredEditorTab[]
@@ -52,7 +48,7 @@ export function buildHostToLocalTabIdMap({
 export function updateHostSessionTabIdMappings(args: {
   environmentId: string
   worktreeId: string
-  terminalSurfaces: readonly TerminalSurface[]
+  terminalSurfaces: readonly RuntimeMobileSessionTerminalClientTab[]
   terminalTabs: readonly TerminalTab[]
   browserTabs: readonly MirroredBrowserTab[]
   editorTabs: readonly MirroredEditorTab[]

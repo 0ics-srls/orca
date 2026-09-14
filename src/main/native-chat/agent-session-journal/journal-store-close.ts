@@ -61,7 +61,7 @@ export class JournalConnectionCloser {
 
   constructor(
     private readonly deps: {
-      connection: () => Database.Database | null
+      connection: () => Database | null
       /** Chains onto the store's write queue past the closed gate. */
       enqueue: (run: () => Promise<void>) => Promise<void>
     }

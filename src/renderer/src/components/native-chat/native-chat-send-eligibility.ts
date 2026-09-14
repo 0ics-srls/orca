@@ -1,4 +1,4 @@
-import type { DriverState } from '@/lib/pane-manager/mobile-driver-state'
+import type { RuntimeTerminalDriverState } from '../../../../shared/runtime-types'
 
 /**
  * Pure derivation of the composer's `canSend` (R8). A pty held by a mobile
@@ -9,7 +9,9 @@ import type { DriverState } from '@/lib/pane-manager/mobile-driver-state'
  * is treated as unlocked so the composer stays usable while the lock state loads;
  * the actual send still no-ops without a ptyId.
  */
-export function deriveNativeChatCanSend(driver: DriverState | null | undefined): boolean {
+export function deriveNativeChatCanSend(
+  driver: RuntimeTerminalDriverState | null | undefined
+): boolean {
   return driver?.kind !== 'mobile'
 }
 

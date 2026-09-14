@@ -1,9 +1,7 @@
 import type { PaneManager } from '@/lib/pane-manager/pane-manager'
 import type { DeferredSplitPaneHandoffHandle } from './deferred-split-pane-handoff'
-import type {
-  TerminalHttpLinkActionDestinations,
-  TerminalLinkRoutingPreferenceRequester
-} from './terminal-url-link-hit-testing'
+import type { HttpLinkRoutingPreferenceRequester } from '@/lib/http-link-destinations'
+import type { HttpLinkActionDestinations } from '@/lib/http-link-destinations'
 import type { PtyConnectionDeps } from './pty-connection-types'
 import type { LinkHandlerDeps } from './terminal-link-handlers'
 import type { TerminalPaneLifecycleRefs } from './use-terminal-pane-lifecycle-refs'
@@ -31,10 +29,10 @@ export type TerminalPaneMountContext = {
   getHttpLinkSourceOwnerForPane: (
     paneId: number
   ) => ReturnType<typeof resolveTerminalHttpLinkSourceOwner>
-  getHttpLinkActionDestinations: (paneId: number) => TerminalHttpLinkActionDestinations
+  getHttpLinkActionDestinations: (paneId: number) => HttpLinkActionDestinations
   getLinkActionContext: (paneId: number) => TerminalLinkActionContext | null
   canOpenOwnedBrowserForPane: (paneId: number) => boolean
-  requestOpenLinksInAppPreference: TerminalLinkRoutingPreferenceRequester
+  requestOpenLinksInAppPreference: HttpLinkRoutingPreferenceRequester
   onShowSessionRestoredBanner: (paneId: number, reason?: SessionRestoredBannerReason) => void
   queueResizeAll: (focusActive: boolean) => void
   syncPaneCount: () => void
@@ -50,8 +48,6 @@ export type TerminalPaneManagerOptionsContext = TerminalPaneMountContext & {
   startup: PtyConnectionDeps['startup']
   osc7UncHost: string | null
 }
-
-export type PaneCreatedHandlerContext = TerminalPaneManagerOptionsContext
 
 export type PaneClosedHandlerContext = TerminalPaneMountContext & {
   paneId: number

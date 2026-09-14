@@ -84,9 +84,6 @@ export type RuntimeTerminalVisualLayout = {
   root: RuntimeTerminalVisualLayoutNode
 }
 
-/** The shared listing-scope shape, kept under its incumbent name for existing consumers. */
-export type RuntimeTerminalListHostScope = RuntimeListingHostScope
-
 export type RuntimeTerminalListResult = {
   terminals: RuntimeTerminalSummary[]
   visualLayouts?: RuntimeTerminalVisualLayout[]
@@ -94,7 +91,7 @@ export type RuntimeTerminalListResult = {
   totalCount: number
   truncated: boolean
   /** Absent from hosts that predate the field; treat that scope as unverifiable. */
-  hostScope?: RuntimeTerminalListHostScope
+  hostScope?: RuntimeListingHostScope
 }
 
 export type RuntimeTerminalOrphanAdoptionClaim = {

@@ -89,11 +89,11 @@ export { parseGitHubProjectInput as parseProjectInput } from './github-project-r
 export type {
   GitHubProjectOwnerType,
   GitHubProjectPartialFailure,
-  GitHubProjectRef,
   GitHubProjectSettings,
   GitHubProjectSummary,
   GitHubProjectViewSummary
 } from './github-project-reference'
+export type { GitHubProjectIdentity } from '../../../src/shared/github/project-identity'
 export {
   extractGitHubIssueSourceFallback,
   extractGitHubIssueSourceError

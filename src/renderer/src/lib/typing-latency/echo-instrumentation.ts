@@ -45,20 +45,16 @@ export { drainTimedOutEchoCandidates }
 
 type Disposable = { dispose: () => void }
 
-export type KeystrokeSource = TypingInputSource
-
 export type PreventedKeystrokeDiscard = 'pending' | 'counted-unmatched' | null
-
-type PendingKeystroke = EchoCandidate
 
 export type InstrumentedPane = {
   pane: ProbePane | null
-  undispatched: PendingKeystroke[]
-  nextDispatch: PendingKeystroke | null
-  deferredNextDispatch: PendingKeystroke | null
-  ignoredDispatches: PendingKeystroke[]
+  undispatched: EchoCandidate[]
+  nextDispatch: EchoCandidate | null
+  deferredNextDispatch: EchoCandidate | null
+  ignoredDispatches: EchoCandidate[]
   ignoredDispatchOverflowedAt: number | null
-  awaitingEcho: PendingKeystroke[]
+  awaitingEcho: EchoCandidate[]
   attributionGap: boolean
   parsingBatch: EchoBatch | null
   parsedBatches: EchoBatch[]
@@ -71,7 +67,7 @@ export type InstrumentedPane = {
 export function recordKeystroke(
   entry: InstrumentedPane,
   now: number,
-  source: KeystrokeSource,
+  source: TypingInputSource,
   text: string = ''
 ): RecordedKeystroke {
   const dropped = drainTimedOutEchoCandidates(entry, now)
@@ -89,7 +85,7 @@ export function recordKeystroke(
 /** Removes a prevented routed commit only if it never reached terminal.onData. */
 export function discardUndispatchedKeystroke(
   entry: InstrumentedPane,
-  candidate: PendingKeystroke
+  candidate: EchoCandidate
 ): PreventedKeystrokeDiscard {
   if (candidate.status === 'unmatched-undispatched') {
     const index = entry.ignoredDispatches.lastIndexOf(candidate)

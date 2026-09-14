@@ -1,10 +1,11 @@
 import type { PRCheckRunDetails } from '../../../../shared/github/check-types'
 import { sliceCheckLogTail } from '../../../../shared/check-job-log-tail-slice'
 import { ghExecFileAsync } from '../../gh-utils'
-import type { GitHubApiRepository } from '../../github-api-repository'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 import type { GhExecOptions } from './../github-exec-scope'
 import { rethrowCheckDetailsAbort } from './check-details-abort'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export const PR_CHECK_LOG_TAIL_JOB_LIMIT = 5
 
 // Why: only the tail is kept, but the whole log buffers first — the default 10MiB cap drops long CI logs.
@@ -48,7 +49,7 @@ export function getCheckJobLogTailCacheKey(job: PRCheckRunDetails['jobs'][number
 
 export async function attachFailedJobLogTails(
   jobs: PRCheckRunDetails['jobs'],
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   ghOptions: GhExecOptions
 ): Promise<void> {
   const failedJobs = jobs

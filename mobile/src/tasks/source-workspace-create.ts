@@ -10,9 +10,9 @@ import {
   agentLaunchCreateFields,
   buildTaskWorkspaceCreateParams,
   type WorkspaceCreateParams,
-  type WorkspaceCreateSetupDecision,
   type WorkspaceCreateTaskItem
 } from './workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 import { createWorktreeWithNameRetry, type WorktreeCreateResult } from './worktree-create-retry'
 import type { WorktreeCreateIdempotencyProbe } from './worktree-create-idempotency-policy'
 
@@ -26,7 +26,7 @@ export type CreateWorkspaceFromComposerArgs = {
   client: RpcClient
   selection: MobileComposerCreateSelection
   targetRepoId: string
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   agent: WorkspaceCreateAgentBundle
   workspaceName: string | undefined
   nameIsAutoManaged?: boolean
@@ -89,7 +89,7 @@ async function createWorkItemWorkspace(args: {
   client: RpcClient
   selection: Extract<MobileComposerCreateSelection, { kind: 'work-item' }>
   targetRepoId: string
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   agent: WorkspaceCreateAgentBundle
   workspaceName: string | undefined
   nameIsAutoManaged?: boolean
@@ -148,7 +148,7 @@ async function createBranchWorkspace(args: {
   client: RpcClient
   selection: Extract<MobileComposerCreateSelection, { kind: 'branch' }>
   targetRepoId: string
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   agent: WorkspaceCreateAgentBundle
   workspaceName: string | undefined
   nameIsAutoManaged?: boolean
@@ -235,7 +235,7 @@ async function createNewBranchWorkspace(args: {
   client: RpcClient
   selection: Extract<MobileComposerCreateSelection, { kind: 'new-branch' }>
   targetRepoId: string
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   agent: WorkspaceCreateAgentBundle
   workspaceName: string | undefined
   nameIsAutoManaged?: boolean

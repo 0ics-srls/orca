@@ -12,7 +12,7 @@ import {
   type MiniMaxRateLimitConfig,
   type GeminiCliOAuthEnabledResolver,
   type InactiveCodexAccountInfo,
-  type InactiveClaudeAccountInfo,
+  type InactiveClaudeAccount,
   type RateLimitState,
   normalizeCodexAccountSelectionTarget,
   normalizeClaudeAccountSelectionTarget,
@@ -56,7 +56,7 @@ export abstract class RateLimitServiceConfiguration extends RateLimitServiceAcco
     this.networkProxySettingsResolver = resolver
   }
 
-  setInactiveClaudeAccountsResolver(resolver: () => InactiveClaudeAccountInfo[]): void {
+  setInactiveClaudeAccountsResolver(resolver: () => InactiveClaudeAccount[]): void {
     this.inactiveClaudeAccountsResolver = resolver
     this.inactiveClaudeAccountsGeneration += 1
   }

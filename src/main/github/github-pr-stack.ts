@@ -1,5 +1,6 @@
 import type {
   CheckStatus,
+  GitHubOwnerRepo,
   GitHubPRStack,
   GitHubPRStackEntry,
   PRMergeableState,
@@ -8,11 +9,7 @@ import type {
 } from '../../shared/github/pull-request-types'
 import { githubRepoIdentityKey } from '../../shared/github/repository-identity-key'
 import { ghExecFileAsync } from '../git/runner'
-import {
-  githubHostExecOptions,
-  type GitHubApiRepository,
-  type GitHubRepoExecOptions
-} from './github-api-repository'
+import { githubHostExecOptions, type GitHubRepoExecOptions } from './github-api-repository'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 
 const STACK_CACHE_TTL_MS = 30_000
@@ -65,7 +62,7 @@ export function _resetGitHubPRStackCacheForTests(): void {
 }
 
 function stackCacheKey(
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   stackNumber: number,
   executionScope: string
 ): string {
@@ -206,7 +203,7 @@ query($owner: String!, $repo: String!, $pr: Int!) {
 }`
 
 async function fetchStackDetails(
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   prNumber: number,
   summary: GitHubPRStack,
   ghOptions: GitHubRepoExecOptions
@@ -239,7 +236,7 @@ async function fetchStackDetails(
 }
 
 export async function hydrateGitHubPRStack(
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   prNumber: number,
   summary: GitHubPRStack,
   ghOptions: GitHubRepoExecOptions,

@@ -4,7 +4,7 @@ import {
   HeroFlow,
   HeroIntro,
   HeroPaired,
-  type PairedDevice,
+  type PairedMobileDevice,
   type Platform,
   type StepIndex
 } from './MobileHero'
@@ -19,7 +19,7 @@ type MobilePageContentProps = {
   closeMobilePage: () => void
   copyInstallUrl: () => void
   copyPairingCode: () => void
-  devices: readonly PairedDevice[]
+  devices: readonly PairedMobileDevice[]
   enterFlow: () => void
   generatePairing: (rotate: boolean) => void
   canGeneratePairing: boolean

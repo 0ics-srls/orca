@@ -2,7 +2,8 @@ import { execFileSync } from 'node:child_process'
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import { describe, expect, it, vi } from 'vitest'
-import { spawnProcess, type SpawnedProcess } from '../../shared/child-process/run-process'
+import { spawnProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import type { DescendantTreeVerdict } from '../pty-descendant-exit-verification'
 import type { DescendantSnapshot } from '../pty-descendant-termination'
 import type { WindowsDescendantSnapshot } from '../windows-descendant-exit-verification'
@@ -126,7 +127,7 @@ function observeExit(child: EventEmitter): { exitPromise: Promise<void>; exited:
 function mockChild(
   pid: number | null = 424242
 ): EventEmitter &
-  Pick<SpawnedProcess, 'pid' | 'kill' | 'stdin'> & { kill: ReturnType<typeof vi.fn> } {
+  Pick<ChildProcess, 'pid' | 'kill' | 'stdin'> & { kill: ReturnType<typeof vi.fn> } {
   const child = new EventEmitter()
   return Object.assign(child, {
     pid: pid ?? undefined,

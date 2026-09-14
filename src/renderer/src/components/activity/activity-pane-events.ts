@@ -1,16 +1,13 @@
 import { isHistoricalActivityState } from './activity-event-state'
 import type {
   AgentStateHistoryEntry,
-  AgentStatusEntry
+  AgentStatusEntry,
+  AgentStatusState
 } from '../../../../shared/agent-status-types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { Worktree } from '../../../../shared/worktree/types'
-import type {
-  ActivityEvent,
-  ActivityEventState,
-  ActivityLiveAgentState
-} from './activity-thread-types'
+import type { ActivityEvent, ActivityLiveAgentState } from './activity-thread-types'
 import { EVENTS_PER_PANE_CAP } from './activity-event-cap'
 
 function historyEntrySnapshot(
@@ -62,7 +59,7 @@ type PaneEventInputs = {
 export function buildPaneActivityEvents(args: PaneEventInputs): ActivityEvent[] {
   const events: ActivityEvent[] = []
   const seenIds = new Set<string>()
-  const append = (state: ActivityEventState, timestamp: number, entry: AgentStatusEntry): void => {
+  const append = (state: AgentStatusState, timestamp: number, entry: AgentStatusEntry): void => {
     const id = `agent:${entry.paneKey}:${state}:${timestamp}`
     if (seenIds.has(id)) {
       return
@@ -91,7 +88,7 @@ export function buildPaneActivityEvents(args: PaneEventInputs): ActivityEvent[] 
       continue
     }
     append(
-      history.state as ActivityEventState,
+      history.state as AgentStatusState,
       history.startedAt,
       historyEntrySnapshot(args.entry, history)
     )

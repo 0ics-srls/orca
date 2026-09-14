@@ -2,7 +2,7 @@ import type { TaskPaginationActionsModel } from './use-mobile-tasks-task-paginat
 import {
   type GitHubProjectOwnerType,
   type GitHubProjectPartialFailure,
-  type GitHubProjectRef,
+  type GitHubProjectIdentity,
   type GitHubProjectSettings,
   type GitHubProjectSummary,
   type GitHubProjectViewSummary,
@@ -69,7 +69,7 @@ export function useMobileTasksProjectLoadingActions(model: TaskPaginationActions
   }, [client, connState, tasksSupported])
 
   const loadGitHubProjectViews = useCallback(
-    async (project: GitHubProjectRef): Promise<GitHubProjectViewSummary[]> => {
+    async (project: GitHubProjectIdentity): Promise<GitHubProjectViewSummary[]> => {
       if (!client || connState !== 'connected' || !tasksSupported || !taskStateHydrated) {
         return []
       }
@@ -163,7 +163,7 @@ export function useMobileTasksProjectLoadingActions(model: TaskPaginationActions
   )
 
   const commitGitHubProjectView = useCallback(
-    (project: GitHubProjectRef, viewId: string): void => {
+    (project: GitHubProjectIdentity, viewId: string): void => {
       const projectKey = githubProjectKey(project)
       const nextSettings: GitHubProjectSettings = {
         ...githubProjectSettings,
@@ -186,7 +186,10 @@ export function useMobileTasksProjectLoadingActions(model: TaskPaginationActions
   )
 
   const selectGitHubProject = useCallback(
-    async (project: GitHubProjectRef, options: { viewNumber?: number } = {}): Promise<void> => {
+    async (
+      project: GitHubProjectIdentity,
+      options: { viewNumber?: number } = {}
+    ): Promise<void> => {
       if (!tasksSupported || !taskStateHydrated) {
         return
       }

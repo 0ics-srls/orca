@@ -2,7 +2,7 @@ import { toast } from 'sonner'
 import { runIssueUpdate } from '@/components/github/github-work-item-edit-mutations'
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 
 type IssueUpdateRun = (
   key: string,
@@ -21,7 +21,7 @@ export function changeIssueState(args: {
   item: GitHubWorkItem
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   run: IssueUpdateRun
   onStateChange: (state: GitHubWorkItem['state']) => void
   patchWorkItem: (
@@ -78,7 +78,7 @@ export function toggleIssueLabel(args: {
   item: GitHubWorkItem
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   run: IssueUpdateRun
   onLabelsChange: (labels: string[]) => void
   patchWorkItem: (
@@ -131,7 +131,7 @@ export function toggleIssueAssignee(args: {
   item: GitHubWorkItem
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   run: IssueUpdateRun
   setLocalAssignees: (value: string[]) => void
   patchProjectRowIfNeeded: (patch: { assignees: string[] }) => void

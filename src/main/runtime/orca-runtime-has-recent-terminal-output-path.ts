@@ -1,10 +1,11 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { RuntimeTerminalDriverState } from '../../shared/runtime-types'
 import { OrcaRuntimeWithGetOrchestrationDispatchAuthority } from './orca-runtime-get-orchestration-dispatch-authority'
 import {
   recentTerminalOutputIncludesPath,
   recentTerminalPathCandidatesIncludePath
 } from './terminal-output-path-candidates'
-import type { ApplyLayoutResult, DriverState } from './orca-runtime-core'
+import type { ApplyLayoutResult } from './orca-runtime-core'
 import { clampTerminalViewport } from './terminal-viewport'
 
 export class OrcaRuntimeWithHasRecentTerminalOutputPath extends OrcaRuntimeWithGetOrchestrationDispatchAuthority {
@@ -162,7 +163,7 @@ export class OrcaRuntimeWithHasRecentTerminalOutputPath extends OrcaRuntimeWithG
     return result
   }
 
-  getAllTerminalDrivers(): Map<string, DriverState> {
+  getAllTerminalDrivers(): Map<string, RuntimeTerminalDriverState> {
     return this.terminalDrivers.getAll()
   }
 

@@ -2,7 +2,7 @@ import { ipcMain } from 'electron'
 import { toGitLabJobLogExcerptResult } from '../../shared/gitlab-job-log-excerpt'
 import type { Store } from '../persistence'
 import { getJobTrace, retryJob } from '../gitlab/client'
-import type { ProjectRef } from '../gitlab/gl-utils'
+import type { GitLabProjectRef } from '../gitlab/gl-utils'
 import type { GitLabRepoSelectorArgs } from './gitlab-repo-access'
 import { assertRegisteredRepo, localGitOptionArgs, repoConnectionId } from './gitlab-repo-access'
 
@@ -13,7 +13,7 @@ export function registerGitLabCiJobHandlers(store: Store): void {
       _event,
       args: GitLabRepoSelectorArgs & {
         jobId: number
-        projectRef?: ProjectRef | null
+        projectRef?: GitLabProjectRef | null
         logExcerpt?: boolean
       }
     ) => {
@@ -34,7 +34,7 @@ export function registerGitLabCiJobHandlers(store: Store): void {
     'gitlab:retryJob',
     async (
       _event,
-      args: GitLabRepoSelectorArgs & { jobId: number; projectRef?: ProjectRef | null }
+      args: GitLabRepoSelectorArgs & { jobId: number; projectRef?: GitLabProjectRef | null }
     ) => {
       const repo = assertRegisteredRepo(args, store)
       return retryJob(

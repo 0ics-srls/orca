@@ -1,4 +1,7 @@
-import { writeForegroundTerminalChunk } from './pane-terminal-foreground-render-settle'
+import {
+  writeForegroundTerminalChunk,
+  type ForegroundTerminalOutputTarget
+} from './pane-terminal-foreground-render-settle'
 import { registerTerminalOutputAckCredits } from './pane-terminal-output-ack-credit'
 import {
   armTerminalWriteStallWatch,
@@ -26,12 +29,11 @@ import {
   fireQueuedAckCredits,
   queuedByTerminal,
   requestRegisteredTerminalBacklogRecovery,
-  scheduleDrain,
-  type TerminalOutputTarget
+  scheduleDrain
 } from './pane-terminal-output-queue-registry'
 
 export function flushTerminalOutputImpl(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   options?: { maxChars?: number }
 ): void {
   exposeDebugApi()

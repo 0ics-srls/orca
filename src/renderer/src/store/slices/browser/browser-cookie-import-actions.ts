@@ -1,9 +1,6 @@
 import type { BrowserSlice, BrowserSliceGet, BrowserSliceSet } from './browser-slice-contract'
 import type { BrowserCookieImportResult } from '../../../../../shared/browser-workspace-types'
-import type {
-  BrowserProfileImportFromBrowserResult,
-  BrowserProfileClearDefaultCookiesResult
-} from '../../../../../shared/runtime-types'
+import type { BrowserProfileClearDefaultCookiesResult } from '../../../../../shared/runtime-types'
 import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
 import { selectExecutionHostDisplayLabel } from '@/lib/execution-host-display-label'
 import {
@@ -46,7 +43,7 @@ export function createBrowserCookieImportActions(
           ranOnClient = clientHostResult != null
           const result =
             clientHostResult ??
-            (await callRuntimeRpc<BrowserProfileImportFromBrowserResult>(
+            (await callRuntimeRpc<BrowserCookieImportResult>(
               { kind: 'environment', environmentId: runtimeEnvironmentId },
               'browser.profileImportFromBrowser',
               { profileId, browserFamily, browserProfile, supportsPartitionSkippedCookies: true },

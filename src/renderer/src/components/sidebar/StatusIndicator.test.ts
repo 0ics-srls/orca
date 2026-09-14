@@ -1,7 +1,8 @@
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it, vi } from 'vitest'
-import StatusIndicator, { type Status } from './StatusIndicator'
+import type { WorktreeStatus } from '@/lib/worktree-status'
+import StatusIndicator from './StatusIndicator'
 
 vi.mock('@/components/StateIndicatorTooltip', async () => {
   const { createElement } = await import('react')
@@ -19,11 +20,11 @@ vi.mock('@/components/StateIndicatorTooltip', async () => {
   }
 })
 
-function renderMarkup(status: Status): string {
+function renderMarkup(status: WorktreeStatus): string {
   return renderToStaticMarkup(React.createElement(StatusIndicator, { status }))
 }
 
-function renderDotClassNames(status: Status): string[] {
+function renderDotClassNames(status: WorktreeStatus): string[] {
   const markup = renderMarkup(status)
   const dotClassName = markup.match(/<span class="([^"]*rounded-full[^"]*)"/)?.[1]
 

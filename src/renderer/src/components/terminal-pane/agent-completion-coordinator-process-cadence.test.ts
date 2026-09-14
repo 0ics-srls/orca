@@ -6,7 +6,7 @@ import {
   processResult,
   useAgentCompletionCoordinatorLifecycle
 } from './agent-completion-coordinator-test-harness'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 
 describe('agent completion coordinator', () => {
   useAgentCompletionCoordinatorLifecycle()
@@ -291,7 +291,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('resets exit confirmation across an unavailable inspection', async () => {
-    let result: RuntimeTerminalProcessInspection = processResult('codex')
+    let result: TerminalProcessInspection = processResult('codex')
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',

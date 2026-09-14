@@ -227,7 +227,7 @@ describe('adopted Run binding without --takeover-legacy', () => {
 // JS isEquivalentPaneKey filter stays authoritative. These pin both halves of that contract.
 describe('pane-bound Run lookup', () => {
   function explain(db: OrchestrationDb, paneKey: string): string {
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     return (
       sqlite
         .prepare(
@@ -349,7 +349,7 @@ describe('pane-bound Run lookup', () => {
 
   it('hands the JS filter an O(1) candidate set regardless of bound-Run count', () => {
     const db = track(new OrchestrationDb(':memory:'))
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     const leaf = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
     for (let i = 0; i < 500; i++) {
       db.createRun({

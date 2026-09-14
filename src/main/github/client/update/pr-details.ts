@@ -5,7 +5,9 @@ import {
   classifyPullRequestUpdateError,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 /**
  * Update a PR's title.
  */
@@ -14,7 +16,7 @@ export async function updatePRTitle(
   prNumber: number,
   title: string,
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<boolean> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(
@@ -49,7 +51,7 @@ export async function updatePRDetails(
   prNumber: number,
   updates: { title?: string; body?: string },
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(

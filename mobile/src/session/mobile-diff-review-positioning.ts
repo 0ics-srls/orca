@@ -1,11 +1,11 @@
+import type { GitStagingArea } from '../../../src/shared/git-status-types'
 import type { DiffReviewScope } from '../../../src/shared/diff-comment-types'
-import type { MobileGitStagingArea } from '../source-control/mobile-git-status'
 import {
   createMobileDiffReviewFileKey,
   type MobileDiffReviewQueueItem
 } from './mobile-diff-review-queue'
 
-export type MobileDiffReviewTargetArea = MobileGitStagingArea | 'branch'
+export type MobileDiffReviewTargetArea = GitStagingArea | 'branch'
 
 export type MobileDiffReviewInitialTarget = {
   filePath: string

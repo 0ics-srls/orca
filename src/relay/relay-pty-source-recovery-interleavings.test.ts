@@ -4,7 +4,7 @@ import type { PtySourceRecoveryRequest } from '../shared/pty-source-recovery-con
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourceCreditLedger } from './pty-source-credit-ledger'
@@ -115,7 +115,7 @@ describe('relay PTY source recovery interleavings', () => {
 
   it('retries a failed exit publication after exact owner recovery', async () => {
     const primaryWrites: Buffer[] = []
-    let exitSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let exitSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     dispatcher = new RelayDispatcher(
       (data, settle) => {
         primaryWrites.push(Buffer.from(data))
@@ -143,7 +143,7 @@ describe('relay PTY source recovery interleavings', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     publication.activate('pty-1', 'incarnation-1', {
       clientId: 1,
       isStale: () => false,
@@ -197,7 +197,7 @@ describe('relay PTY source recovery interleavings', () => {
       })
     )
     await flushRequests()
-    const recoveredActivationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const recoveredActivationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const recovered = publication.activate(
       'pty-1',
       'incarnation-1',
@@ -261,7 +261,7 @@ describe('relay PTY source recovery interleavings', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: 1,
@@ -309,7 +309,7 @@ describe('relay PTY source recovery interleavings', () => {
       ptyIncarnation: 'incarnation-1',
       acceptedSourceEndSu: 4
     }
-    const firstActivationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const firstActivationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const firstRecovery = publication.activate(
       'pty-1',
       'incarnation-1',
@@ -333,7 +333,7 @@ describe('relay PTY source recovery interleavings', () => {
     publication.onCreditAvailable('pty-1')
     expect(recoveredWrites).toHaveLength(writesBeforeRetry)
 
-    const retryActivationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const retryActivationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const retriedRecovery = publication.activate(
       'pty-1',
       'incarnation-1',
@@ -376,7 +376,7 @@ describe('relay PTY source recovery interleavings', () => {
       })
     )
     await flushRequests()
-    const firstActivation: ((result: SinkWriteSettlement) => void)[] = []
+    const firstActivation: ((result: DispatcherWriterSettlement) => void)[] = []
     publication.activate('pty-1', 'incarnation-1', {
       clientId: 1,
       isStale: () => false,
@@ -391,8 +391,8 @@ describe('relay PTY source recovery interleavings', () => {
     dispatcher.invalidateClient()
 
     const recoveredWrites: Buffer[] = []
-    let recoveryDataSettlement: ((result: SinkWriteSettlement) => void) | undefined
-    let failedCompletionSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let recoveryDataSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
+    let failedCompletionSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     const recoveredClientId = dispatcher.attachClient(
       (data, settle) => {
         recoveredWrites.push(Buffer.from(data))
@@ -424,7 +424,7 @@ describe('relay PTY source recovery interleavings', () => {
     )
     await flushRequests()
     const recoveredGrant = responseResult(recoveredWrites, 2)!
-    const recoveredActivation: ((result: SinkWriteSettlement) => void)[] = []
+    const recoveredActivation: ((result: DispatcherWriterSettlement) => void)[] = []
     publication.activate(
       'pty-1',
       'incarnation-1',
@@ -453,7 +453,7 @@ describe('relay PTY source recovery interleavings', () => {
     failedCompletionSettlement!({ ok: false, error: new Error('completion write failed') })
 
     const replacementWrites: Buffer[] = []
-    let replacementCompletionSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let replacementCompletionSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     const replacementClientId = dispatcher.attachClient(
       (data, settle) => {
         replacementWrites.push(Buffer.from(data))
@@ -481,7 +481,7 @@ describe('relay PTY source recovery interleavings', () => {
       })
     )
     await flushRequests()
-    const replacementActivation: ((result: SinkWriteSettlement) => void)[] = []
+    const replacementActivation: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate(
         'pty-1',

@@ -1,6 +1,6 @@
 import { normalizeGitHubPRMergeMethodSettings } from '../../../../shared/github/pull-request-merge-methods'
 import { ghExecFileAsync } from '../../gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from '../../github-api-repository'
+import { githubHostExecOptions } from '../../github-api-repository'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from '../../rate-limit'
 import type { GhExecOptions } from './../github-exec-scope'
@@ -12,8 +12,10 @@ import {
   cacheRepositoryMergeMetadata,
   type GitHubRepositoryMergeMetadata
 } from './repository-merge-metadata-cache'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function detectRepositoryMergeMetadata(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   branchName: string | undefined,
   ghOptions: GhExecOptions,
   executionScope: string | undefined = 'default'

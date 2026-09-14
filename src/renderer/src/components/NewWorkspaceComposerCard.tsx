@@ -1,3 +1,4 @@
+import type { NeedsSetupProjectHostOption } from '@/lib/project-host-setup-options'
 import React from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
@@ -32,7 +33,6 @@ import {
   EMPTY_EPHEMERAL_VM_RECIPES,
   EMPTY_PROJECT_HOST_SETUP_OPTIONS,
   EMPTY_PROJECT_OPTIONS,
-  type NeedsProjectHostOption,
   type NewWorkspaceComposerCardProps
 } from './new-workspace/new-workspace-composer-card-props'
 import { getSshStatusLabel } from './new-workspace/new-workspace-composer-ssh-status'
@@ -95,9 +95,8 @@ export default function NewWorkspaceComposerCard(
   const branchNameInputId = React.useId()
   const projectDescriptionId = React.useId()
   const [addRemoteHostMode, setAddRemoteHostMode] = React.useState<AddRemoteHostMode | null>(null)
-  const [setLocationOption, setSetLocationOption] = React.useState<NeedsProjectHostOption | null>(
-    null
-  )
+  const [setLocationOption, setSetLocationOption] =
+    React.useState<NeedsSetupProjectHostOption | null>(null)
   // Why sticky: the dialog animates itself closed off its own `option` prop, so unmounting it
   // when the option clears would cut that animation short.
   const [setLocationDialogMounted, setSetLocationDialogMounted] = React.useState(false)
@@ -204,7 +203,7 @@ export default function NewWorkspaceComposerCard(
     openModal('add-repo')
   }, [onAddProjectOverride, openModal])
   const handleSetLocation = React.useCallback(
-    (option: NeedsProjectHostOption): void => {
+    (option: NeedsSetupProjectHostOption): void => {
       setSetLocationDialogMounted(true)
       setSetLocationOption(option)
       onNestedDialogOpenChange?.(true)
@@ -223,7 +222,7 @@ export default function NewWorkspaceComposerCard(
     [handleSetLocationClose, onProjectHostSetupChange]
   )
   const handleConnectRunTargetHost = React.useCallback(
-    async (option: NeedsProjectHostOption): Promise<void> => {
+    async (option: NeedsSetupProjectHostOption): Promise<void> => {
       const action = option.connectAction
       if (!action) {
         return

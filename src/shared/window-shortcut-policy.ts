@@ -48,8 +48,6 @@ export type WindowShortcutAction =
   | { type: 'worktreeHistoryNavigate'; direction: 'back' | 'forward' }
   | { type: 'dictationKeyDown' }
 
-type WindowShortcutResolveOptions = KeybindingMatchOptions
-
 function platformPrimaryModifier(
   input: Pick<WindowShortcutInput, 'meta' | 'control'>,
   platform: NodeJS.Platform
@@ -68,7 +66,7 @@ export function matchesRecentTabSwitcherChord(
   input: WindowShortcutInput,
   platform: NodeJS.Platform,
   keybindings?: KeybindingOverrides,
-  options: WindowShortcutResolveOptions = {}
+  options: KeybindingMatchOptions = {}
 ): boolean {
   const control = Boolean(input.control ?? input.ctrlKey)
   const meta = Boolean(input.meta ?? input.metaKey)
@@ -129,7 +127,7 @@ function actionMatches(
   input: WindowShortcutInput,
   platform: NodeJS.Platform,
   keybindings: KeybindingOverrides | undefined,
-  options: WindowShortcutResolveOptions
+  options: KeybindingMatchOptions
 ): boolean {
   return keybindingMatchesAction(actionId, input, platform, keybindings, options)
 }
@@ -170,7 +168,7 @@ export function resolveWindowShortcutAction(
   input: WindowShortcutInput,
   platform: NodeJS.Platform,
   keybindings?: KeybindingOverrides,
-  options: WindowShortcutResolveOptions = {}
+  options: KeybindingMatchOptions = {}
 ): WindowShortcutAction | null {
   if (actionMatches('worktree.history.back', input, platform, keybindings, options)) {
     return {

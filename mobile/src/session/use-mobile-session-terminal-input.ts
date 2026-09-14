@@ -19,7 +19,8 @@ import {
   TERMINAL_GESTURE_INPUT_MAX_QUEUE_AGE_MS,
   TERMINAL_GESTURE_INPUT_REFILL_PER_SECOND
 } from './mobile-session-route-helpers'
-import type { Terminal, TerminalGestureInputQueue } from './mobile-session-route-types'
+import type { TerminalGestureInputQueue } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 import type { MobileSessionFileActionsModel } from './use-mobile-session-file-actions'
 
 export function useMobileSessionTerminalInput(scope: MobileSessionFileActionsModel) {
@@ -228,7 +229,7 @@ export function useMobileSessionTerminalInput(scope: MobileSessionFileActionsMod
     })
   }, [])
 
-  async function handleClearTerminal(target: Terminal) {
+  async function handleClearTerminal(target: TerminalRecord) {
     if (!client) {
       return
     }

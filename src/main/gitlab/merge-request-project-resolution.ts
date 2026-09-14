@@ -3,15 +3,15 @@ import {
   getGlabKnownHosts,
   resolveIssueSource,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 export async function withProjectRef<T>(
   repoPath: string,
   preference: IssueSourcePreference | undefined,
   connectionId: string | null | undefined,
-  explicitProjectRef: ProjectRef | null | undefined,
-  fn: (projectRef: ProjectRef, repoFlag: string) => Promise<T>,
+  explicitProjectRef: GitLabProjectRef | null | undefined,
+  fn: (projectRef: GitLabProjectRef, repoFlag: string) => Promise<T>,
   fallback: T,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<T> {

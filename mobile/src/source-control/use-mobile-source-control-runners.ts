@@ -1,3 +1,4 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { useCallback, type MutableRefObject } from 'react'
 import { useRouter } from 'expo-router'
 import type { RpcClient } from '../transport/rpc-client'
@@ -7,7 +8,6 @@ import { useMobileSourceControlCommitRunners } from './use-mobile-source-control
 import { useMobileSourceControlActionSheetRunners } from './use-mobile-source-control-action-sheet-runners'
 import { useMobileCreatePrRunner } from './use-mobile-create-pr-runner'
 import type { RuntimeGitLocalBranches } from '../../../src/shared/runtime-types'
-import type { MobileGitStatusResult } from './mobile-git-status'
 import type { LoadStatusOptions } from './mobile-source-control-screen-state'
 import type {
   MobileCommitFailureRecovery,
@@ -21,7 +21,7 @@ type Params = {
   client: RpcClient | null
   hostId: string
   worktreeId: string
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   branchLabel: string
   commitMessage: string
   stagedEntries: MobileCommitFailureRecovery['stagedEntries']

@@ -26,8 +26,6 @@ const DU_TIMEOUT_MS = 120_000
 const DU_MAX_BUFFER_BYTES = 16 * 1024 * 1024
 const execFileAsync = promisify(execFile)
 
-type ScanStats = WorkspaceSpaceEntryScan
-
 class RelayWorkspaceSpaceScanCancelledError extends Error {
   constructor() {
     super('Workspace space scan cancelled')
@@ -77,7 +75,7 @@ async function readDuDepthOne(
   return parseDuDepthOneOutput(stdout)
 }
 
-function toWorkspaceSpaceItem(stats: ScanStats): WorkspaceSpaceItem {
+function toWorkspaceSpaceItem(stats: WorkspaceSpaceEntryScan): WorkspaceSpaceItem {
   return {
     name: stats.name,
     path: stats.path,
@@ -91,7 +89,7 @@ async function scanTopLevelEntryWithDu(
   name: string,
   duSizes: Map<string, number>,
   context: RequestContext
-): Promise<ScanStats> {
+): Promise<WorkspaceSpaceEntryScan> {
   throwIfCancelled(context)
   const stats = await lstat(entryPath)
   throwIfCancelled(context)
@@ -129,7 +127,7 @@ async function scanEntryAggregate(
   entryPath: string,
   name: string,
   context: RequestContext
-): Promise<ScanStats> {
+): Promise<WorkspaceSpaceEntryScan> {
   return scanWorkspaceSpaceEntryTree<Dirent>({
     rootPath: entryPath,
     rootName: name,
@@ -182,7 +180,7 @@ async function scanDirectoryWithDu(
   const childStats = await mapWithConcurrency(
     entries,
     RELAY_FS_CONCURRENCY,
-    async (entry): Promise<ScanStats | null> => {
+    async (entry): Promise<WorkspaceSpaceEntryScan | null> => {
       try {
         return await scanTopLevelEntryWithDu(
           join(rootPath, entry.name),
@@ -198,7 +196,7 @@ async function scanDirectoryWithDu(
       }
     }
   )
-  const children = childStats.filter((child): child is ScanStats => child !== null)
+  const children = childStats.filter((child): child is WorkspaceSpaceEntryScan => child !== null)
   const compact = compactWorkspaceSpaceItems(children.map(toWorkspaceSpaceItem))
 
   return {

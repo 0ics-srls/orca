@@ -25,12 +25,23 @@ export const HEADLESS_RUNTIME_WINDOW_ID = 0
 
 export type DeviceScope = 'mobile' | 'runtime'
 
+// Why: presence-based driver state for the mobile-presence lock. Exactly one
+// driver per PTY at any moment. See docs/mobile-presence-lock.md.
+//   - `idle`: no mobile subscribers; desktop input flows freely
+//   - `desktop`: at least one mobile client subscribed but desktop reclaimed
+//      (or all mobile clients are passive `desktop`-mode watchers); desktop
+//      input flows freely
+//   - `mobile{clientId}`: a mobile client is the active driver; desktop
+//      input/resize are dropped server-side and the lock banner is mounted.
+//      `clientId` is the most recent mobile actor for this PTY.
 export type RuntimeTerminalDriverState =
   | { kind: 'idle' }
   | { kind: 'desktop' }
   | { kind: 'mobile'; clientId: string }
 
-export type RuntimeBrowserDriverState = RuntimeTerminalDriverState
+// Why: browser pages carry the same idle/desktop/mobile driver states as terminals, and both
+// names are part of the enumerated runtime client export surface (runtime-client-export-parity).
+export type { RuntimeTerminalDriverState as RuntimeBrowserDriverState }
 
 export const BROWSER_UNAVAILABLE_ERROR_CODE = 'browser_unavailable' as const
 

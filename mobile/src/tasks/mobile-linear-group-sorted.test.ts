@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LinearIssue } from './mobile-tasks-provider-detail-types'
+import type { LinearMobileIssue } from './mobile-tasks-provider-detail-types'
 import {
   sortLinearIssues,
   groupLinearIssues,
@@ -9,7 +9,7 @@ import {
 vi.mock('./mobile-tasks-dependencies', () => import('../theme/mobile-theme'))
 afterEach(() => vi.restoreAllMocks())
 
-const issues: LinearIssue[] = Array.from({ length: 60 }, (_, i) => ({
+const issues: LinearMobileIssue[] = Array.from({ length: 60 }, (_, i) => ({
   id: `${i}`,
   identifier: ['ENG-10', 'ENG-2', 'Ä-1', 'Å-1', 'é-2', 'e\u0301-2', 'İ-3'][i % 7],
   title: 'Task',

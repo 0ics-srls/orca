@@ -5,7 +5,6 @@ import {
   type RuntimeDiscoverCommitMessageModelsResult,
   type RuntimeGenerateCommitMessageOverrides,
   type RuntimeGenerateCommitMessageResult,
-  type RuntimeGeneratePullRequestFieldsOverrides,
   type RuntimeGeneratePullRequestFieldsResult,
   type RuntimeGitContext,
   type RuntimePullRequestGenerationInput
@@ -96,7 +95,7 @@ export async function cancelRuntimeGenerateCommitMessage(
 export async function generateRuntimePullRequestFields(
   context: RuntimeGitContext,
   input: RuntimePullRequestGenerationInput,
-  overrides?: RuntimeGeneratePullRequestFieldsOverrides
+  overrides?: RuntimeGenerateCommitMessageOverrides
 ): Promise<RuntimeGeneratePullRequestFieldsResult> {
   const target = getActiveRuntimeTarget(context.settings)
   if (target.kind === 'local' || !context.worktreeId) {

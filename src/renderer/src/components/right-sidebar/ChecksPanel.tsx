@@ -1,3 +1,4 @@
+import type { HostedReviewInfo } from '../../../../shared/hosted-review'
 import React from 'react'
 import { Ellipsis, GitMerge, Link, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,6 @@ import {
   getTerminalUrlOrcaBrowserHint,
   getTerminalUrlSystemBrowserHint
 } from '../terminal-pane/terminal-link-open-hints'
-import type { ChecksPanelReview } from './checks-panel-review'
 import type { ChecksPanelHostedReviewModifierDestination } from './checks-panel-hosted-review-click-routing'
 import { translate } from '@/i18n/i18n'
 import { PullRequestIcon, prStateColor } from './checks-panel/check-presentation'
@@ -40,7 +40,7 @@ import { ChecksPanelActiveContent } from './checks-panel/active-content'
 import { HostedReviewUnlinkMenuItem } from '@/components/HostedReviewUnlinkMenuItem'
 
 type ChecksPanelReviewHeaderProps = {
-  review: ChecksPanelReview
+  review: HostedReviewInfo
   isRefreshing: boolean
   canUnlinkReview: boolean
   modifierHintDestination: ChecksPanelHostedReviewModifierDestination

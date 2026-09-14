@@ -5,7 +5,7 @@ import {
   glabRepoExecOptions,
   glabExecFileAsync,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 /**
@@ -78,7 +78,7 @@ function mapMRFile(raw: {
 
 export async function fetchMRFiles(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

@@ -2,7 +2,7 @@ import type {
   GitHubWorkItem,
   GitLabWorkItem,
   GitLabTodo,
-  LinearIssue,
+  LinearMobileIssue,
   SetupDecision
 } from './mobile-tasks-provider-detail-types'
 import type { WorkspaceAgentChoice, SparsePreset } from './mobile-tasks-dependencies'
@@ -43,7 +43,7 @@ export type TaskItem =
       subtitle: string
       status: string
       updatedAt: string
-      source: LinearIssue
+      source: LinearMobileIssue
     }
 
 export type ActionableTaskItem = Exclude<TaskItem, { provider: 'gitlabTodo' }>

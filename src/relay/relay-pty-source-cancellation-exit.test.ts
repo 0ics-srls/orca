@@ -3,7 +3,7 @@ import { PTY_CONSUMER_OWNER_GRACE_MS } from '../shared/pty-consumer-session'
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourcePublication } from './relay-pty-source-publication'
@@ -58,7 +58,7 @@ describe('RelayPtySourcePublication cancellation and exit', () => {
 
   async function createHarness(windowSu = 8, holdExitSettlement = false) {
     const writes: Buffer[] = []
-    const exitSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const exitSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const capacityIds: string[] = []
     dispatcher = new RelayDispatcher(
       (data, onSettled) => {
@@ -93,7 +93,7 @@ describe('RelayPtySourcePublication cancellation and exit', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: 1,
@@ -116,7 +116,7 @@ describe('RelayPtySourcePublication cancellation and exit', () => {
   }
 
   function activateOwner(publication: RelayPtySourcePublication): void {
-    const settlements: ((result: SinkWriteSettlement) => void)[] = []
+    const settlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: 1,

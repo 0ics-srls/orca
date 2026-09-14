@@ -1,14 +1,14 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { useMemo } from 'react'
 import { buildMobileCreatePrAction } from './mobile-create-pr-action'
 import { useMobileHostedReviewEligibility } from './use-mobile-hosted-review-eligibility'
-import type { MobileGitStatusResult } from './mobile-git-status'
 
 type Params = {
   client: Parameters<typeof useMobileHostedReviewEligibility>[0]['client']
   connState: Parameters<typeof useMobileHostedReviewEligibility>[0]['connState']
   hostId: string
   worktreeId: string
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   hasUncommittedChanges: boolean
   busyAction: string | null
   createPr: (pushFirst: boolean) => void

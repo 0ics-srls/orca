@@ -9,13 +9,9 @@ import { getWorkspaceSourceName } from '../../../src/shared/new-workspace/worksp
 import { resolveMobileWorkspaceCreateName } from './mobile-workspace-name'
 import type { WorkspaceAgentChoice } from './workspace-agent-selection'
 
-export type WorkspaceCreateSetupDecision = SetupDecision
-export type WorkspaceCreateSparseCheckout = CreateSparseCheckoutRequest
-export type WorkspaceCreateGitPushTarget = GitPushTarget
-
 export type WorkspaceCreateHostedStartPoint = {
   baseBranch: string
-  pushTarget?: WorkspaceCreateGitPushTarget
+  pushTarget?: GitPushTarget
 }
 
 type WorkspaceCreateGitHubItem = {
@@ -78,15 +74,15 @@ export function agentLaunchCreateFields(agentId: TuiAgent | undefined): {
 export function buildTaskWorkspaceCreateParams(args: {
   item: WorkspaceCreateTaskItem
   targetRepoId: string
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   agent?: WorkspaceAgentChoice
   workspaceName?: string
   note?: string
   baseBranch?: string
   compareBaseRef?: string
   branchNameOverride?: string
-  pushTarget?: WorkspaceCreateGitPushTarget
-  sparseCheckout?: WorkspaceCreateSparseCheckout
+  pushTarget?: GitPushTarget
+  sparseCheckout?: CreateSparseCheckoutRequest
   hostedStartPoint?: WorkspaceCreateHostedStartPoint
   nameIsAutoManaged?: boolean
 }): WorkspaceCreateParams {

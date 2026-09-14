@@ -72,16 +72,13 @@ describe('getRuntimeProjectRefreshEnvironmentIds', () => {
   })
 })
 
-type RuntimeEnvironmentStoreSubscriber = RuntimeEnvironmentStoreSyncSubscriber
-type RuntimeEnvironmentStoreState = RuntimeEnvironmentStoreSyncState
-
 function makeRuntimeEnvironmentStoreState(args: {
   environments: readonly { id: string; createdAt: number; pairingRevision?: number }[]
   statuses: ReadonlyMap<string, { status: { runtimeId: string } | null; checkedAt: number }>
   sshStateByEnvironment?: ReadonlyMap<string, unknown>
   activeEnvironmentId?: string | null
   settingsRevision?: number
-}): RuntimeEnvironmentStoreState {
+}): RuntimeEnvironmentStoreSyncState {
   return {
     runtimeEnvironments: args.environments,
     runtimeStatusByEnvironmentId: args.statuses,
@@ -90,7 +87,7 @@ function makeRuntimeEnvironmentStoreState(args: {
       activeRuntimeEnvironmentId: args.activeEnvironmentId ?? null,
       terminalFontSize: args.settingsRevision ?? 0
     }
-  } as unknown as RuntimeEnvironmentStoreState
+  } as unknown as RuntimeEnvironmentStoreSyncState
 }
 
 describe('createRuntimeEnvironmentStoreSyncSubscriber', () => {
@@ -146,7 +143,7 @@ describe('createRuntimeEnvironmentStoreSyncSubscriber', () => {
         pendingStartupByTabId: { [`local-tab-${write}`]: true },
         sshConnectionStates: new Map([[`direct-ssh-${write}`, { status: 'connected' }]]),
         folderWorkspaces: [{ id: `folder-${write}` }]
-      } as unknown as RuntimeEnvironmentStoreState
+      } as unknown as RuntimeEnvironmentStoreSyncState
       subscriber(currentState, previousState)
     }
 
@@ -187,8 +184,8 @@ describe('createRuntimeEnvironmentStoreSyncSubscriber', () => {
     ])
     const refreshes: string[] = []
     let syncs = 0
-    let subscriber: RuntimeEnvironmentStoreSubscriber
-    const publish = (nextState: RuntimeEnvironmentStoreState): void => {
+    let subscriber: RuntimeEnvironmentStoreSyncSubscriber
+    const publish = (nextState: RuntimeEnvironmentStoreSyncState): void => {
       const previousState = currentState
       currentState = nextState
       subscriber(nextState, previousState)

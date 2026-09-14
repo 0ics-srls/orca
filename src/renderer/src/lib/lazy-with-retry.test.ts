@@ -16,7 +16,7 @@ import { ORCA_RENDERER_UNLOAD_PREVENTED_EVENT } from '../../../shared/renderer-s
 import { ORCA_APP_RESTART_ABORTED_EVENT } from '../../../shared/updater-renderer-events'
 import {
   ORCA_EDITOR_PREPARE_HOT_EXIT_EVENT,
-  type EditorPrepareHotExitDetail
+  type EditorSaveDirtyFilesDetail
 } from '../../../shared/editor-save-events'
 
 const RELOAD_GUARD_KEY = 'orca:lazy-chunk-reload-attempted'
@@ -387,7 +387,7 @@ describe('loadLazyWithRetry recovery reload vs the dirty-editor-tab unload veto'
       preventUnloadAndScheduleShutdownCheckpointReset(event, window)
     }
     const hotExitBackup = (event: Event): void => {
-      const detail = (event as CustomEvent<EditorPrepareHotExitDetail>).detail
+      const detail = (event as CustomEvent<EditorSaveDirtyFilesDetail>).detail
       detail.claim()
       harness.hotExitBackups += 1
       if (options.hotExitBackupFails === true) {

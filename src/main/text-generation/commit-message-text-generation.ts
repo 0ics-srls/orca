@@ -39,7 +39,6 @@ import type {
   TextGenerationOperation
 } from './source-control-text-generation-types'
 
-export type GenerateCommitMessageParams = ResolvedSourceControlAiGenerationParams
 export type {
   CommitMessageGenerationTarget,
   CommitMessageModelDiscoveryLocalOptions,
@@ -53,7 +52,7 @@ export type GeneratePullRequestFieldsResult =
   GenericGeneratePullRequestFieldsResult<GeneratedPullRequestFields>
 
 type ResolveCommitMessageSettingsResult =
-  | { ok: true; params: GenerateCommitMessageParams }
+  | { ok: true; params: ResolvedSourceControlAiGenerationParams }
   | { ok: false; error: string }
 
 export function trimGeneratedCommitMessage(message: string): string {
@@ -134,7 +133,7 @@ export function cancelGeneratePullRequestFieldsLocal(cwd: string): void {
 
 export function generateCommitMessageFromContext(
   context: CommitMessageDraftContext,
-  params: GenerateCommitMessageParams,
+  params: ResolvedSourceControlAiGenerationParams,
   target: CommitMessageGenerationTarget
 ): Promise<GenerateCommitMessageResult> {
   return generateCommitMessage({ context, params, target, spawnAgent: spawnSourceControlAgent })
@@ -142,7 +141,7 @@ export function generateCommitMessageFromContext(
 
 export function generatePullRequestFieldsFromContext(
   context: PullRequestDraftContext,
-  params: GenerateCommitMessageParams,
+  params: ResolvedSourceControlAiGenerationParams,
   target: CommitMessageGenerationTarget
 ): Promise<GeneratePullRequestFieldsResult> {
   return generatePullRequestFields({ context, params, target, spawnAgent: spawnSourceControlAgent })
@@ -150,7 +149,7 @@ export function generatePullRequestFieldsFromContext(
 
 export function generateBranchNameFromContext(
   context: BranchNameWorkContext,
-  params: GenerateCommitMessageParams,
+  params: ResolvedSourceControlAiGenerationParams,
   target: CommitMessageGenerationTarget
 ): Promise<GenerateBranchNameResult> {
   return generateBranchName({ context, params, target, spawnAgent: spawnSourceControlAgent })

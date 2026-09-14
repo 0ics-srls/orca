@@ -11,15 +11,12 @@ import {
   resolveRepoLineageOwner,
   resolveWorktreeLineageOwner
 } from './lineage-owner-resolution'
-import type {
-  LineageFolder,
-  LineageOwner,
-  LineageResolutionContext
-} from './lineage-owner-resolution'
+import type { FolderWorkspace } from '../../../../shared/folder-workspace-types'
+import type { LineageOwner, LineageResolutionContext } from './lineage-owner-resolution'
 
 export function getFolderLineageCandidateRepos(
   context: LineageResolutionContext,
-  folder: LineageFolder
+  folder: FolderWorkspace
 ): Repo[] {
   let groupIds = context.groupSubtreeIdsByRoot.get(folder.projectGroupId)
   if (!groupIds) {

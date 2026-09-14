@@ -10,7 +10,7 @@ import type { PtyIncarnationId } from '../../shared/pty-incarnation'
 import type { PtyBindingSourceExpectation } from '../persistence'
 import type { ExecutionHostId } from '../../shared/execution-host'
 import type { PtyProviderBufferSnapshot, PtyProcessInfo, PtySpawnResult } from '../providers/types'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 import type { WriteSettlement } from '../../shared/pty-write-settlement'
 
 export type RuntimePtyController = {
@@ -112,7 +112,7 @@ export type RuntimePtyController = {
   inspectProcess?(
     ptyId: string,
     options?: { expectedIncarnationId?: PtyIncarnationId; scanChildProcesses?: boolean }
-  ): Promise<PtyProcessInspection>
+  ): Promise<TerminalProcessInspection>
   confirmForegroundProcess?(ptyId: string): Promise<string | null>
   confirmShellForeground?(ptyId: string): Promise<boolean>
   hasChildProcesses?(ptyId: string): Promise<boolean>

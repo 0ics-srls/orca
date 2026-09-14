@@ -3,11 +3,9 @@
 // live canvas overlay and the final composited PNG. Keeping this canvas-free
 // makes the undo/redo and geometry logic unit-testable.
 
-export type MarkupToolKind = 'pen' | 'highlight' | 'arrow' | 'rect' | 'ellipse' | 'text'
-
 // Toolbar selection. Draw-only: markup is a throwaway scribble the user copies
 // once, so there is no select/move/restyle cursor.
-export type MarkupTool = MarkupToolKind
+export type MarkupTool = 'pen' | 'highlight' | 'arrow' | 'rect' | 'ellipse' | 'text'
 
 export type MarkupPoint = { x: number; y: number }
 

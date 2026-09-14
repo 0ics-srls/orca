@@ -4,11 +4,9 @@ import {
   type DispatcherWriterSettlement
 } from './dispatcher-writer-admission'
 
-export type SinkWriteSettlement = DispatcherWriterSettlement
-
 export type RelayClientWrite = (
   data: Buffer,
-  onSettled: (result: SinkWriteSettlement) => void
+  onSettled: (result: DispatcherWriterSettlement) => void
 ) => boolean | void
 
 export type RelayClientSinkOptions = {

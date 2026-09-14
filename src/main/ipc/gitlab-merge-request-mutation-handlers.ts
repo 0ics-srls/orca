@@ -12,7 +12,7 @@ import {
   updateMR,
   updateMRReviewers
 } from '../gitlab/client'
-import type { ProjectRef } from '../gitlab/gl-utils'
+import type { GitLabProjectRef } from '../gitlab/gl-utils'
 import type { GitLabRepoSelectorArgs } from './gitlab-repo-access'
 import { assertRegisteredRepo, localGitOptionArgs, repoConnectionId } from './gitlab-repo-access'
 
@@ -92,7 +92,7 @@ export function registerGitLabMergeRequestMutationHandlers(store: Store): void {
         sourceContext?: TaskSourceContext | null
         iid: number
         reviewerIds: number[]
-        projectRef?: ProjectRef | null
+        projectRef?: GitLabProjectRef | null
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)
@@ -134,7 +134,7 @@ export function registerGitLabMergeRequestMutationHandlers(store: Store): void {
         sourceContext?: TaskSourceContext | null
         iid: number
         input: GitLabMRInlineCommentInput
-        projectRef?: ProjectRef | null
+        projectRef?: GitLabProjectRef | null
       }
     ) => {
       const repo = assertRegisteredRepo(args, store)

@@ -14,16 +14,16 @@ import {
   rememberGlabKnownHost,
   type LocalGitExecOptions
 } from './gitlab-known-host-probe'
+import type { GitLabProjectRef } from '../../shared/gitlab-types'
 import {
   DEFAULT_GITLAB_HOSTS,
   normalizeGitLabHost,
   parseGitLabProjectRef,
-  parseRemoteProjectRefCandidate,
-  type ProjectRef
+  parseRemoteProjectRefCandidate
 } from './project-ref-parser'
 
 export { DEFAULT_GITLAB_HOSTS, parseGitLabProjectRef }
-export type { ProjectRef }
+export type { GitLabProjectRef }
 export {
   _resetKnownHostsCache,
   getGlabKnownHosts,
@@ -33,7 +33,7 @@ export type { LocalGitExecOptions } from './gitlab-known-host-probe'
 
 const PROJECT_REF_CACHE_MAX_ENTRIES = 512
 
-type CachedProjectRef = { value: ProjectRef | null; expiresAt: number }
+type CachedProjectRef = { value: GitLabProjectRef | null; expiresAt: number }
 
 const projectRefCache = new Map<string, CachedProjectRef>()
 
@@ -49,7 +49,7 @@ export function _getProjectRefCacheSize(): number {
   return projectRefCache.size
 }
 
-function rememberProjectRefCacheEntry(cacheKey: string, value: ProjectRef | null): void {
+function rememberProjectRefCacheEntry(cacheKey: string, value: GitLabProjectRef | null): void {
   // Why: "not GitLab" only holds until someone configures `origin` or logs into
   // `glab` — a repo probed before either kept hosted-review detection stale for
   // the life of the process. Negatives expire the way every other forge's do;
@@ -73,7 +73,7 @@ export async function getProjectRefForRemote(
   knownHosts: readonly string[] = DEFAULT_GITLAB_HOSTS,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<ProjectRef | null> {
+): Promise<GitLabProjectRef | null> {
   // Why: a reconnect replaces the host an answer came from under the same id, so
   // the generation is part of the signature; `knownHosts` carries the glab auth
   // state, so logging into a self-hosted instance re-asks rather than reusing a
@@ -111,11 +111,11 @@ async function resolveProjectRefForRemote(
   cacheKey: string,
   ownsKey: () => boolean,
   localGitOptions: LocalGitExecOptions
-): Promise<ProjectRef | null> {
+): Promise<GitLabProjectRef | null> {
   // Why: a probe abandoned as stale still runs, and the repo state it read is
   // older than whatever its successor already published. It may answer its own
   // callers; it may not overwrite the cache.
-  const publish = (value: ProjectRef | null): void => {
+  const publish = (value: GitLabProjectRef | null): void => {
     if (ownsKey()) {
       rememberProjectRefCacheEntry(cacheKey, value)
     }
@@ -171,7 +171,7 @@ export async function getProjectRef(
   knownHosts?: readonly string[],
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<ProjectRef | null> {
+): Promise<GitLabProjectRef | null> {
   return getProjectRefForRemote(repoPath, 'origin', knownHosts, connectionId, localGitOptions)
 }
 
@@ -180,7 +180,7 @@ export async function getIssueProjectRef(
   knownHosts?: readonly string[],
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<ProjectRef | null> {
+): Promise<GitLabProjectRef | null> {
   const originPromise = getProjectRefForRemote(
     repoPath,
     'origin',
@@ -204,7 +204,7 @@ export async function getIssueProjectRef(
 }
 
 export type ResolvedIssueSource = {
-  source: ProjectRef | null
+  source: GitLabProjectRef | null
   /** True when explicit upstream is gone and resolver fell back to origin. */
   fellBack: boolean
 }
@@ -269,7 +269,7 @@ export function glabRepoExecOptions(
 }
 
 export function glabHostnameArgs(
-  projectRef: Pick<ProjectRef, 'host'> | null | undefined,
+  projectRef: Pick<GitLabProjectRef, 'host'> | null | undefined,
   connectionId?: string | null
 ): string[] {
   return connectionId && projectRef?.host ? ['--hostname', projectRef.host] : []
@@ -277,7 +277,7 @@ export function glabHostnameArgs(
 
 async function isGlabConfiguredForRemoteHost(
   repoPath: string,
-  projectRef: Pick<ProjectRef, 'host'>,
+  projectRef: Pick<GitLabProjectRef, 'host'>,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<boolean> {

@@ -31,8 +31,6 @@ type ReservedOwner = {
   promise: Promise<AgentSessionClaimedSpawnResult>
 }
 
-type LiveOwner = LiveAgentSessionOwner
-
 function cloneClaim(claim: AgentSessionExecutionClaim): AgentSessionExecutionClaim {
   return cloneAgentSessionClaim(claim)
 }
@@ -41,14 +39,14 @@ function cloneSurface(surface: AgentSessionSurfaceBinding): AgentSessionSurfaceB
   return cloneAgentSessionSurface(surface)
 }
 
-function cloneOwner(owner: LiveOwner): LiveOwner {
+function cloneOwner(owner: LiveAgentSessionOwner): LiveAgentSessionOwner {
   return cloneAgentSessionOwner(owner)
 }
 
 export class ClaimedAgentPtyOwnerRegistry {
   private readonly reserved = new Map<string, ReservedOwner>()
-  private readonly live = new Map<string, LiveOwner>()
-  private readonly conflicts = new Map<string, LiveOwner[]>()
+  private readonly live = new Map<string, LiveAgentSessionOwner>()
+  private readonly conflicts = new Map<string, LiveAgentSessionOwner[]>()
   private keysByPtyId = new Map<string, Set<string>>()
 
   async ensure(args: {
@@ -93,7 +91,7 @@ export class ClaimedAgentPtyOwnerRegistry {
         throw new Error('agent_session_conflict')
       }
       const result = await reserved.promise
-      return { disposition: 'adopted', owner: cloneOwner(result.owner as LiveOwner) }
+      return { disposition: 'adopted', owner: cloneOwner(result.owner as LiveAgentSessionOwner) }
     }
 
     this.assertCapacityForNewOwner()
@@ -115,10 +113,10 @@ export class ClaimedAgentPtyOwnerRegistry {
       promise
     })
 
-    let promotedOwner: LiveOwner | null = null
+    let promotedOwner: LiveAgentSessionOwner | null = null
     try {
       const spawned = await args.spawn({ generation })
-      const owner: LiveOwner = spawned.owner
+      const owner: LiveAgentSessionOwner = spawned.owner
         ? {
             claim: cloneClaim(spawned.owner.claim),
             generation: spawned.owner.generation,
@@ -277,7 +275,7 @@ export class ClaimedAgentPtyOwnerRegistry {
     }
     return [...keys]
       .map((key) => this.live.get(key))
-      .filter((owner): owner is LiveOwner => owner !== undefined)
+      .filter((owner): owner is LiveAgentSessionOwner => owner !== undefined)
       .map(cloneOwner)
   }
 
@@ -300,8 +298,8 @@ export class ClaimedAgentPtyOwnerRegistry {
   }
 
   private countOwners(
-    live: ReadonlyMap<string, LiveOwner>,
-    conflicts: ReadonlyMap<string, readonly LiveOwner[]>
+    live: ReadonlyMap<string, LiveAgentSessionOwner>,
+    conflicts: ReadonlyMap<string, readonly LiveAgentSessionOwner[]>
   ): number {
     let count = live.size
     for (const owners of conflicts.values()) {

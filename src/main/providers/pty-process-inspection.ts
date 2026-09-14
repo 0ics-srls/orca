@@ -6,13 +6,11 @@ import {
   type TerminalProcessInspection
 } from '../../shared/terminal-process-inspection'
 
-export type PtyProcessInspection = TerminalProcessInspection
-
 type CompletionSensitivePtyProvider = IPtyProvider & {
   inspectProcess?: (
     id: string,
     options?: PtyProcessInspectionOptions
-  ) => Promise<PtyProcessInspection>
+  ) => Promise<TerminalProcessInspection>
 }
 
 /**
@@ -32,7 +30,7 @@ export async function inspectPtyProviderProcess(
   provider: IPtyProvider,
   ptyId: string,
   options?: PtyProcessInspectionOptions
-): Promise<PtyProcessInspection> {
+): Promise<TerminalProcessInspection> {
   if (provider.hasPty?.(ptyId) === false) {
     throw new Error('terminal_gone')
   }
@@ -51,7 +49,7 @@ export async function inspectPtyProviderProcessForRenderer(
   provider: IPtyProvider,
   ptyId: string,
   options?: PtyProcessInspectionOptions
-): Promise<PtyProcessInspection> {
+): Promise<TerminalProcessInspection> {
   try {
     return await inspectPtyProviderProcess(provider, ptyId, options)
   } catch (error) {

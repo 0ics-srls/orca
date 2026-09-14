@@ -4,7 +4,7 @@ import { getConnectionId } from '@/lib/connection-context'
 import {
   generateRuntimePullRequestFields,
   cancelRuntimeGeneratePullRequestFields,
-  type RuntimeGeneratePullRequestFieldsOverrides
+  type RuntimeGenerateCommitMessageOverrides
 } from '@/runtime/runtime-git-client'
 import type { ChecksPanelReviewState } from './use-checks-panel-review-state'
 import type { ChecksPanelControllerState } from './use-checks-panel-controller-state'
@@ -62,7 +62,7 @@ export function useChecksPanelGeneration(model: ChecksPanelGenerationInput) {
     async (
       fields: PullRequestGenerationFields,
       fieldRevisions: PullRequestFieldRevisions,
-      overrides?: RuntimeGeneratePullRequestFieldsOverrides
+      overrides?: RuntimeGenerateCommitMessageOverrides
     ): Promise<void> => {
       if (!repo || !activePullRequestGenerationKey || !activeWorktreePath || !branch) {
         return

@@ -7,19 +7,15 @@ import type {
   ClaudeRateLimitFetchOptions
 } from './claude-usage-fetch-options'
 
-export type FetchClaudeRateLimitsOptions = ClaudeRateLimitFetchOptions
-export type FetchManagedAccountUsageOptions = ClaudeManagedAccountUsageOptions
-export type InactiveClaudeAccountInfo = InactiveClaudeAccount
-
 export async function fetchClaudeRateLimits(
-  options?: FetchClaudeRateLimitsOptions
+  options?: ClaudeRateLimitFetchOptions
 ): Promise<ProviderRateLimits> {
   return fetchActiveClaudeRateLimits(options)
 }
 
 export async function fetchManagedAccountUsage(
-  account: InactiveClaudeAccountInfo,
-  options: FetchManagedAccountUsageOptions = {}
+  account: InactiveClaudeAccount,
+  options: ClaudeManagedAccountUsageOptions = {}
 ): Promise<ProviderRateLimits> {
   return fetchInactiveClaudeAccountUsage(account, options)
 }

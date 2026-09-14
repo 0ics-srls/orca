@@ -3,7 +3,7 @@ import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
   type RelayClientSinkOptions,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourcePublication } from './relay-pty-source-publication'
@@ -79,7 +79,7 @@ class SaturatedSink {
     }
   }
 
-  write = (data: Buffer, onSettled: (result: SinkWriteSettlement) => void): boolean => {
+  write = (data: Buffer, onSettled: (result: DispatcherWriterSettlement) => void): boolean => {
     this.writes.push(Buffer.from(data))
     this.writableBytes += data.length
     onSettled({ ok: true })
@@ -111,7 +111,7 @@ describe('relay PTY publication admission', () => {
     dispatcher = new RelayDispatcher(sink.write, sink.options, endpointIdentity)
     sink.saturateNext = true
     dispatcher.notify('test.blocker')
-    const settled = vi.fn<(result: SinkWriteSettlement) => void>()
+    const settled = vi.fn<(result: DispatcherWriterSettlement) => void>()
     const legacyData = 'x'.repeat(1024 * 1024 + 128)
 
     expect(dispatcher.tryNotifyPtyDataToClient(1, { id: 'pty-1', data: legacyData }, settled)).toBe(
@@ -170,7 +170,7 @@ describe('relay PTY publication admission', () => {
     const publication = new RelayPtySourcePublication(dispatcher, adapter, () => {})
     dispatcher.feed(openFrame(1, 'session-owner', true))
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
 
     expect(
       publication.activate('pty-1', 'incarnation-1', {

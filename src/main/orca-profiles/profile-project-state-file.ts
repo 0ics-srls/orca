@@ -17,8 +17,6 @@ import type { SparsePreset } from '../../shared/worktree/create-types'
 import type { RetiredNameRegistry } from '../../shared/worktree/retired-name-registry'
 import { getOrcaProfileDataFile } from './profile-index-store'
 
-export type TransferProfileState = PersistedState
-
 function isRecord<T>(value: unknown): value is Record<string, T> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
 }
@@ -31,7 +29,7 @@ function recordOrEmpty<T>(value: unknown): Record<string, T> {
   return isRecord<T>(value) ? value : {}
 }
 
-export function readProfileState(profileId: string, userDataPath: string): TransferProfileState {
+export function readProfileState(profileId: string, userDataPath: string): PersistedState {
   const defaults = getDefaultPersistedState(homedir())
   const dataFile = getOrcaProfileDataFile(profileId, userDataPath)
   if (!existsSync(dataFile)) {
@@ -94,7 +92,7 @@ export function readProfileState(profileId: string, userDataPath: string): Trans
 export function writeProfileState(
   profileId: string,
   userDataPath: string,
-  state: TransferProfileState
+  state: PersistedState
 ): void {
   const dataFile = getOrcaProfileDataFile(profileId, userDataPath)
   mkdirSync(dirname(dataFile), { recursive: true })
@@ -110,7 +108,7 @@ function isRepoBackedProjectHostSetup(
   return Boolean(setup.repoId && currentRepoIds.has(setup.repoId))
 }
 
-export function rebuildRepoBackedProjectState(state: TransferProfileState): TransferProfileState {
+export function rebuildRepoBackedProjectState(state: PersistedState): PersistedState {
   const projection = projectHostSetupProjectionFromRepos(state.repos)
   const succession = carryProjectStateThroughIdentityChange(projection.projects, state.projects)
   const currentRepoIds = new Set(state.repos.map((repo) => repo.id))

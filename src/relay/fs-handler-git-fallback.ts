@@ -9,7 +9,8 @@
 import { SearchSubprocessLineAccumulator } from '../shared/search-subprocess-lines'
 import { spawn } from 'node:child_process'
 import { fileListingCancellationError } from '../shared/file-listing-cancellation'
-import type { SearchOptions, SearchResult } from './fs-handler-utils'
+import type { SearchResult } from '../shared/code-search-types'
+import type { SearchOptions } from './fs-handler-utils'
 import {
   buildGitLsFilesArgsForQuickOpen,
   shouldExcludeQuickOpenRelPath,

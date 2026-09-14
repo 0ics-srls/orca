@@ -3,7 +3,7 @@ import { getConnectionId } from '@/lib/connection-context'
 import {
   cancelRuntimeGeneratePullRequestFields,
   generateRuntimePullRequestFields,
-  type RuntimeGeneratePullRequestFieldsOverrides
+  type RuntimeGenerateCommitMessageOverrides
 } from '@/runtime/runtime-git-client'
 import { useAppStore } from '@/store'
 import {
@@ -80,7 +80,7 @@ export function useSourceControlPullRequestGeneration({
     async (
       fields: PullRequestGenerationFields,
       fieldRevisions: PullRequestFieldRevisions,
-      overrides?: RuntimeGeneratePullRequestFieldsOverrides
+      overrides?: RuntimeGenerateCommitMessageOverrides
     ): Promise<void> => {
       if (!activeRepo || !activePullRequestGenerationKey || !worktreePath || !branchName) {
         return

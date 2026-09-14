@@ -1,5 +1,5 @@
-import { describe, expect, expectTypeOf, it } from 'vitest'
-import type { GitStatusResult } from '../../../src/shared/git-status-types'
+import { describe, expect, it } from 'vitest'
+import type { GitStatusEntry } from '../../../src/shared/git-status-types'
 import {
   buildMobileSourceControlSections,
   canOpenMobileGitStatusEntry,
@@ -10,22 +10,16 @@ import {
   isMobileGitDiscardableEntry,
   isMobileGitStageableEntry,
   isMobileGitTransientRefreshError,
-  isMobileGitUnavailable,
-  type MobileGitStatusEntry,
-  type MobileGitStatusResult
+  isMobileGitUnavailable
 } from './mobile-git-status'
 
-const entries: MobileGitStatusEntry[] = [
+const entries: GitStatusEntry[] = [
   { path: 'b.ts', status: 'modified', area: 'staged' },
   { path: 'a.ts', status: 'modified', area: 'unstaged' },
   { path: 'new.ts', status: 'untracked', area: 'untracked' }
 ]
 
 describe('mobile source control status helpers', () => {
-  it('keeps the mobile RPC status type in lockstep with the shared git contract', () => {
-    expectTypeOf<MobileGitStatusResult>().toEqualTypeOf<GitStatusResult>()
-  })
-
   it('builds sections in the mobile source control order', () => {
     const sections = buildMobileSourceControlSections(entries)
 
@@ -44,7 +38,7 @@ describe('mobile source control status helpers', () => {
   })
 
   it('keeps unresolved conflicts out of stage actions', () => {
-    const conflictedEntries: MobileGitStatusEntry[] = [
+    const conflictedEntries: GitStatusEntry[] = [
       { path: 'ready.ts', status: 'modified', area: 'unstaged' },
       {
         path: 'conflicted.ts',

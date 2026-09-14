@@ -1,6 +1,6 @@
 import type { ExecutionHostId } from '../../shared/execution-host'
 import type {
-  CreateStackedHostedReviewInput,
+  CreateHostedReviewInput,
   CreateStackedHostedReviewResult,
   HostedReviewSummary
 } from '../../shared/hosted-review'
@@ -13,7 +13,7 @@ import type { HostedReviewExecutionOptions } from './hosted-review-git-options'
 
 export async function createStackedHostedReview(
   repoPath: string,
-  input: CreateStackedHostedReviewInput,
+  input: CreateHostedReviewInput,
   executionHostId: ExecutionHostId,
   options: HostedReviewExecutionOptions = {}
 ): Promise<CreateStackedHostedReviewResult> {

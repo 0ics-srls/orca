@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { BrowserTab as BrowserTabState } from '../../../../shared/browser-workspace-types'
+import type { BrowserWorkspace as BrowserTabState } from '../../../../shared/browser-workspace-types'
 
 const reactHookRuntime = vi.hoisted(() => ({
   states: [] as unknown[],

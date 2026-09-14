@@ -22,7 +22,7 @@ import type {
   TaskSort
 } from './mobile-tasks-view-state-types'
 import type { ActionableTaskItem } from './mobile-tasks-project-workspace-types'
-import type { DetailComment, LinearIssue } from './mobile-tasks-provider-detail-types'
+import type { DetailComment, LinearMobileIssue } from './mobile-tasks-provider-detail-types'
 
 export const PROVIDER_OPTIONS: PickerOption<TaskProvider>[] = [
   {
@@ -180,12 +180,12 @@ export type LinearIssueSection = {
   key: string
   label: string
   color: string
-  issues: LinearIssue[]
+  issues: LinearMobileIssue[]
 }
 
 export type LinearListEntry =
   | { type: 'section'; section: LinearIssueSection }
-  | { type: 'issue'; issue: LinearIssue }
+  | { type: 'issue'; issue: LinearMobileIssue }
 
 export const PROJECT_VIEW_DEFAULT_SORT = '__view_default__'
 

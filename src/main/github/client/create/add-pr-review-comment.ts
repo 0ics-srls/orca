@@ -9,8 +9,10 @@ import {
   classifyGhError,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { mapReviewCommentResponse } from './../map/review-comment-response'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function addPRReviewComment(
   args: GitHubPRReviewCommentInput & {
     connectionId?: string | null
@@ -79,7 +81,7 @@ export async function addPRReviewCommentReply(
   path?: string,
   line?: number,
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubCommentResult> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(

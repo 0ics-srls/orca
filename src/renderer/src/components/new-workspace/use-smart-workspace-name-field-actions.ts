@@ -1,3 +1,4 @@
+import type { StandardEmojiShortcodeEntry } from '../../../../shared/emoji-shortcode-catalog'
 import { useCallback } from 'react'
 import type React from 'react'
 import { toast } from 'sonner'
@@ -5,8 +6,7 @@ import { translate } from '@/i18n/i18n'
 import { lookupGitHubWorkItemByOwnerRepoForSource } from '@/lib/github-work-item-source-lookup'
 import {
   applyWorkspaceEmojiSuggestion,
-  type WorkspaceEmojiReplacement,
-  type WorkspaceEmojiSuggestion
+  type WorkspaceEmojiReplacement
 } from '@/lib/workspace-emoji-shortcodes'
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import { buildTaskSourceContextFromRepo } from '../../../../shared/task-source-context'
@@ -139,7 +139,7 @@ export function useSmartWorkspaceNameFieldActions(
     ]
   )
   const handleEmojiSelect = useCallback(
-    (suggestion: WorkspaceEmojiSuggestion): void => {
+    (suggestion: StandardEmojiShortcodeEntry): void => {
       if (!activeEmojiShortcode) {
         return
       }

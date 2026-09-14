@@ -2,14 +2,8 @@ import type { TerminalLinkPointerGesture } from './terminal-link-pointer-gesture
 import { isTerminalLinkActionActivation } from './terminal-link-activation'
 import {
   closeLinkActionRequest,
-  type LinkAction,
-  type LinkActionKind,
   type LinkActionRequest
 } from '@/components/link-actions/link-action-request'
-
-export type TerminalLinkActionKind = LinkActionKind
-
-export type TerminalLinkAction = LinkAction
 
 export type TerminalLinkActionRequest = LinkActionRequest & { paneId: number }
 

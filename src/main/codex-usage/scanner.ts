@@ -10,10 +10,8 @@ import {
   listCodexSessionFiles,
   yieldToEventLoop
 } from './codex-session-file-discovery'
-import {
-  attributeCodexUsageEvent,
-  type CodexUsageWorktreeRef
-} from './codex-usage-event-attribution'
+import { attributeCodexUsageEvent } from './codex-usage-event-attribution'
+import type { UsageScanWorktreeRef } from '../usage/usage-provider-contract'
 import { parseCodexUsageRecord, type CodexUsageParseContext } from './codex-usage-record-parser'
 import type {
   CodexUsageAttributedEvent,
@@ -35,8 +33,8 @@ export async function getProcessedFileInfo(filePath: string): Promise<CodexUsage
 }
 
 async function buildWorktreesWithCanonicalPaths(
-  worktrees: CodexUsageWorktreeRef[]
-): Promise<(CodexUsageWorktreeRef & { canonicalPath: string })[]> {
+  worktrees: UsageScanWorktreeRef[]
+): Promise<(UsageScanWorktreeRef & { canonicalPath: string })[]> {
   return canonicalizeUsageWorktreePaths(worktrees, canonicalizePath)
 }
 
@@ -66,7 +64,7 @@ const { finalizeSessions, mergeSessions, mergeDailyAggregates, sortDailyAggregat
 
 export async function parseCodexUsageFile(
   filePath: string,
-  worktrees: (CodexUsageWorktreeRef & { canonicalPath: string })[],
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[],
   options: { skipInitialBytes?: number; claimEventKey?: (eventKey: string) => boolean } = {}
 ): Promise<CodexUsagePersistedFile> {
   const processedFile = await getProcessedFileInfo(filePath)
@@ -119,7 +117,7 @@ export async function parseCodexUsageFile(
 }
 
 export async function scanCodexUsageFiles(
-  worktrees: CodexUsageWorktreeRef[],
+  worktrees: UsageScanWorktreeRef[],
   previousProcessedFiles: CodexUsagePersistedFile[]
 ): Promise<{
   processedFiles: CodexUsagePersistedFile[]

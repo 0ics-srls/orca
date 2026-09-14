@@ -13,10 +13,8 @@ import {
   readMobileReviewGitDiffResult,
   readMobileReviewWorktreeMetadata
 } from './mobile-diff-review-rpc'
-import {
-  canOpenMobileBranchCompareDiff,
-  type MobileGitBranchCompareResult
-} from '../source-control/mobile-branch-compare'
+import { canOpenMobileBranchCompareDiff } from '../source-control/mobile-branch-compare'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 import { resolveMobileBranchCompareBaseRef } from '../source-control/mobile-branch-base-ref'
 import { isMobileGitUnavailable } from '../source-control/mobile-git-status'
 import type { RpcClient } from '../transport/rpc-client'
@@ -25,7 +23,7 @@ import type { ReviewDiffState, ReviewScreenState } from './mobile-diff-review-sc
 import { reviewDescriptorFromItem } from './mobile-diff-review-screen-model'
 
 type BranchCompareLoadResult = {
-  result: MobileGitBranchCompareResult | null
+  result: GitBranchCompareResult | null
   error?: string
 }
 
@@ -33,7 +31,7 @@ type DiffLoadInput = {
   client: RpcClient
   worktreeId: string
   item: MobileDiffReviewQueueItem
-  branchCompare: MobileGitBranchCompareResult | null
+  branchCompare: GitBranchCompareResult | null
 }
 
 export async function loadMobileDiffReviewBranchCompare(
@@ -163,7 +161,7 @@ async function loadBranchFileDiff(
   client: RpcClient,
   worktreeId: string,
   item: MobileDiffReviewQueueItem,
-  branchCompare: MobileGitBranchCompareResult | null
+  branchCompare: GitBranchCompareResult | null
 ) {
   const summary = branchCompare?.summary
   if (!summary || !summary.headOid || !summary.mergeBase) {

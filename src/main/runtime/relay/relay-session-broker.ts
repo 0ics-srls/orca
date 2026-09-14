@@ -21,9 +21,8 @@ import {
 import { RelayOriginPool } from './relay-origin-pool'
 import { RelayRegionRefresh } from './relay-region-refresh'
 import { relayRenewalDelayMs } from './relay-renewal-jitter'
-import type { RelayBrokerStatus, RelaySessionBrokerOptions } from './relay-session-broker-contract'
-
-export type { RelayBrokerStatus } from './relay-session-broker-contract'
+import type { RelaySessionBrokerOptions } from './relay-session-broker-contract'
+import type { MobileRelayStatus } from '../../../shared/mobile-relay-status'
 
 export class RelaySessionBroker {
   private readonly options: RelaySessionBrokerOptions
@@ -312,7 +311,7 @@ export class RelaySessionBroker {
     return !this.closed && this.options.isCurrent()
   }
 
-  private publishStatus(status: RelayBrokerStatus): void {
+  private publishStatus(status: MobileRelayStatus): void {
     if (!this.isCurrent()) {
       return
     }

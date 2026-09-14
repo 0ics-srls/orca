@@ -1,9 +1,7 @@
 // @ts-nocheck -- mechanically split class members.
+import type { BrowserCookieImportResult } from '../../shared/browser-workspace-types'
 import { RuntimeBrowserCommandsWithBrowserTabSetProfile } from './runtime-browser-commands-browser-tab-set-profile'
-import type {
-  BrowserProfileClearDefaultCookiesResult,
-  BrowserProfileImportFromBrowserResult
-} from '../../shared/runtime-types'
+import type { BrowserProfileClearDefaultCookiesResult } from '../../shared/runtime-types'
 import { browserSessionRegistry } from '../browser/browser-session-registry'
 import {
   detectInstalledBrowsers,
@@ -17,7 +15,7 @@ export class RuntimeBrowserCommandsWithBrowserProfileImportFromBrowser extends R
     browserFamily: string
     browserProfile?: string
     supportsPartitionSkippedCookies?: true
-  }): Promise<BrowserProfileImportFromBrowserResult> {
+  }): Promise<BrowserCookieImportResult> {
     const profile = browserSessionRegistry.getProfile(params.profileId)
     if (!profile) {
       return { ok: false, reason: 'Session profile not found.' }

@@ -20,8 +20,6 @@ export type ProjectHeaderDragRect = {
   sectionBottom?: number
 }
 
-export type ProjectHeaderDropPreview = WorktreeSidebarHeaderDropPreview
-
 export function getProjectHeaderDragBucketKey(
   repo: Pick<Repo, 'projectGroupId'>
 ): ProjectHeaderDragBucketKey {
@@ -189,7 +187,7 @@ export function computeProjectHeaderDropPreview(args: {
   rects: readonly ProjectHeaderDragRect[]
   sidebarRepoHeaderIds: readonly string[]
   contentBottom?: number
-}): ProjectHeaderDropPreview | null {
+}): WorktreeSidebarHeaderDropPreview | null {
   const { rects, sidebarRepoHeaderIds } = args
   return computeWorktreeSidebarHeaderDropPreview({
     pointerY: args.pointerY,

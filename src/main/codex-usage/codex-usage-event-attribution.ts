@@ -8,8 +8,6 @@ import {
 import type { UsageScanWorktreeRef } from '../usage/usage-provider-contract'
 import type { CodexUsageAttributedEvent, CodexUsageParsedEvent } from './types'
 
-export type CodexUsageWorktreeRef = UsageScanWorktreeRef
-
 function getDefaultProjectLabel(cwd: string | null): string {
   if (!cwd) {
     return 'Unknown location'
@@ -59,8 +57,8 @@ function isContainingPath(candidatePath: string, targetPath: string): boolean {
 
 function findContainingWorktree(
   cwd: string,
-  worktrees: (CodexUsageWorktreeRef & { canonicalPath: string })[]
-): CodexUsageWorktreeRef | null {
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[]
+): UsageScanWorktreeRef | null {
   const normalizedCwd = normalizeFsPath(cwd)
   for (const worktree of worktrees) {
     if (areWorktreePathsEqual(worktree.canonicalPath, normalizedCwd)) {
@@ -75,7 +73,7 @@ function findContainingWorktree(
 
 export async function attributeCodexUsageEvent(
   event: CodexUsageParsedEvent,
-  worktrees: (CodexUsageWorktreeRef & { canonicalPath: string })[]
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[]
 ): Promise<CodexUsageAttributedEvent | null> {
   const day = localDayFromTimestamp(event.timestamp)
   if (!day) {

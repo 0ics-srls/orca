@@ -1,4 +1,4 @@
-import type { SpawnedProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import { waitForProcessExitUntil } from '../codex/codex-process-exit-deadline'
 import type { ClaudeChildTreeReaper } from './claude-agent-sdk-exit-proof'
 
@@ -6,7 +6,7 @@ const GRACEFUL_EXIT_MS = 1_500
 const FORCED_EXIT_MS = 1_000
 
 export type ClaudeChildExitProofInput = {
-  child: Pick<SpawnedProcess, 'pid' | 'kill' | 'stdin'>
+  child: Pick<ChildProcess, 'pid' | 'kill' | 'stdin'>
   exitPromise: Promise<void>
   exited: () => boolean
   tree?: ClaudeChildTreeReaper

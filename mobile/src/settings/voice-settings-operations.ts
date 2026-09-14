@@ -1,12 +1,12 @@
-import type { MobileSpeechSetup } from '../dictation/mobile-dictation-setup'
+import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 
 export interface VoiceSettingsOperations {
-  load(): Promise<MobileSpeechSetup>
+  load(): Promise<RuntimeSpeechSetupState>
   configure(params: {
     enabled?: boolean
     modelId?: string
     dictationMode?: 'toggle' | 'hold'
-  }): Promise<MobileSpeechSetup>
+  }): Promise<RuntimeSpeechSetupState>
   download(modelId: string): Promise<void>
-  delete(modelId: string): Promise<MobileSpeechSetup>
+  delete(modelId: string): Promise<RuntimeSpeechSetupState>
 }

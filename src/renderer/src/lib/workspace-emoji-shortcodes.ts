@@ -9,8 +9,6 @@ import {
 // empty catalog until it settled, so a `:wink:` submitted in that window persisted literally.
 setEmojiShortcodeDatasetLoader(() => emojiShortcodes)
 
-export type WorkspaceEmojiSuggestion = StandardEmojiShortcodeEntry
-
 export type ActiveWorkspaceEmojiShortcode = {
   end: number
   query: string
@@ -24,9 +22,9 @@ export type WorkspaceEmojiReplacement = {
 
 // Lazy for the same reason as the shared catalog it indexes: nothing needs it
 // until a `:` shortcode is completed.
-let exactShortcode: ReadonlyMap<string, WorkspaceEmojiSuggestion> | null = null
+let exactShortcode: ReadonlyMap<string, StandardEmojiShortcodeEntry> | null = null
 
-function exactShortcodeIndex(): ReadonlyMap<string, WorkspaceEmojiSuggestion> {
+function exactShortcodeIndex(): ReadonlyMap<string, StandardEmojiShortcodeEntry> {
   exactShortcode ??= new Map(
     getStandardEmojiShortcodeEntries().map(({ emoji, shortcode }) => [
       shortcode,
@@ -53,7 +51,7 @@ function matchTier(shortcode: string, query: string): number | null {
 export function searchWorkspaceEmojiShortcodes(
   query: string,
   limit = 8
-): WorkspaceEmojiSuggestion[] {
+): StandardEmojiShortcodeEntry[] {
   const normalizedQuery = query.trim().toLowerCase()
   if (!normalizedQuery || limit <= 0) {
     return []
@@ -71,7 +69,7 @@ export function searchWorkspaceEmojiShortcodes(
         left.shortcode.localeCompare(right.shortcode)
     )
   const seenEmoji = new Set<string>()
-  const suggestions: WorkspaceEmojiSuggestion[] = []
+  const suggestions: StandardEmojiShortcodeEntry[] = []
   for (const { emoji, shortcode } of matches) {
     if (seenEmoji.has(emoji)) {
       continue
@@ -125,7 +123,7 @@ export function replaceCompletedWorkspaceEmojiShortcode(
 export function applyWorkspaceEmojiSuggestion(
   value: string,
   active: ActiveWorkspaceEmojiShortcode,
-  suggestion: WorkspaceEmojiSuggestion
+  suggestion: StandardEmojiShortcodeEntry
 ): WorkspaceEmojiReplacement {
   return replaceWorkspaceEmojiRange(value, active.start, active.end, suggestion.emoji, true)
 }

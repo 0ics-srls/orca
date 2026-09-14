@@ -1,10 +1,7 @@
+import type { RuntimeTerminalDriverState } from '../../../../../shared/runtime-types'
 import { isAgentSessionPtyWriteRefusedError } from '../../../../../shared/agent-session-pty-write-admission'
 import { InvalidArgumentError } from '../../core'
-import type {
-  DriverState,
-  OrcaRuntimeService,
-  SubscriptionRegistration
-} from '../../../orca-runtime'
+import type { OrcaRuntimeService, SubscriptionRegistration } from '../../../orca-runtime'
 import {
   TERMINAL_INPUT_MAX_BYTES,
   TERMINAL_INPUT_TOO_LARGE_ERROR,
@@ -38,7 +35,7 @@ export async function assertTerminalSendTextWithinLimit(text: string | undefined
 }
 
 export function resolveMobileFloorClientId(
-  driver: DriverState | null,
+  driver: RuntimeTerminalDriverState | null,
   client: TerminalViewportClient | undefined
 ): string | null {
   if (client?.type === 'mobile') {

@@ -1,4 +1,4 @@
-import type { SinkWriteSettlement } from './dispatcher-client-writer'
+import type { DispatcherWriterSettlement } from './dispatcher-client-writer'
 import type { JsonRpcNotification } from './protocol'
 import { RelayDispatcherProducerCapacity } from './dispatcher-producer-capacity'
 
@@ -59,7 +59,7 @@ export abstract class RelayDispatcherPtyPublication extends RelayDispatcherProdu
   tryNotifyPtyDataToClient(
     clientId: number,
     params: Record<string, unknown>,
-    onSettled: (result: SinkWriteSettlement) => void
+    onSettled: (result: DispatcherWriterSettlement) => void
   ): boolean {
     if (this.disposed) {
       onSettled({ ok: false, error: new Error('Relay dispatcher is disposed') })
@@ -128,7 +128,7 @@ export abstract class RelayDispatcherPtyPublication extends RelayDispatcherProdu
   tryNotifyPtyExitToClient(
     clientId: number,
     params: Record<string, unknown>,
-    onSettled: (result: SinkWriteSettlement) => void
+    onSettled: (result: DispatcherWriterSettlement) => void
   ): boolean {
     if (this.disposed) {
       onSettled({ ok: false, error: new Error('Relay dispatcher is disposed') })

@@ -9,7 +9,8 @@ import type { MobileRelayMintFailure } from '../../../../shared/mobile-relay-min
 import { MobileHeroPairingStep } from './MobileHeroPairingStep'
 import { MobileAndroidInstallHelp } from './MobileAndroidInstallHelp'
 export { HeroIntro } from './MobileHeroIntro'
-export { HeroPaired, type PairedDevice } from './MobileHeroPairedDevices'
+export { HeroPaired } from './MobileHeroPairedDevices'
+export type { PairedMobileDevice } from './paired-mobile-devices'
 import { translate } from '@/i18n/i18n'
 
 export type Platform = 'ios' | 'android'

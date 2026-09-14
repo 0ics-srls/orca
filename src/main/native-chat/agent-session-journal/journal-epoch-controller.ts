@@ -16,7 +16,7 @@ export class JournalEpochController {
       now: () => number
       mintEpoch: () => string
       serialize: <T>(run: () => Promise<T>) => Promise<T>
-      database: () => { db: Database.Database }
+      database: () => { db: Database }
       readOnly: () => boolean
       setReadOnly: (readOnly: boolean) => void
       highestFence: () => number

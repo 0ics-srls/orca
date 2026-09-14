@@ -84,8 +84,6 @@ export type TerminalLiveInputDefaultResult = {
   changed: boolean
 }
 
-export type TerminalLiveInputPruneResult = TerminalLiveInputDefaultResult
-
 export function getTerminalLiveSpecialKeyBytes(key: string): string | null {
   const shortcutKey = TERMINAL_LIVE_SPECIAL_KEY_IDS.get(key)
   if (!shortcutKey) {
@@ -176,7 +174,7 @@ export function pruneTerminalLiveInputHandles(
   enabledHandles: ReadonlySet<string>,
   defaultedHandles: ReadonlySet<string>,
   liveTerminalHandles: ReadonlySet<string>
-): TerminalLiveInputPruneResult {
+): TerminalLiveInputDefaultResult {
   let nextEnabledHandles: Set<string> | null = null
   let nextDefaultedHandles: Set<string> | null = null
 

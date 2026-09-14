@@ -3,7 +3,7 @@ import type * as ProtocolModule from './protocol'
 import {
   RelayDispatcher,
   type RelayClientSinkOptions,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeKeepAliveFrame, type JsonRpcNotification } from './protocol'
 
@@ -184,7 +184,7 @@ describe('RelayDispatcher prepared JSON payloads', () => {
       return admissionParams.deliveryToken === 'token-before'
     })
     dispatcher.notify('test.blocker')
-    const settled = vi.fn<(result: SinkWriteSettlement) => void>()
+    const settled = vi.fn<(result: DispatcherWriterSettlement) => void>()
     expect(dispatcher.tryNotifyPtyDataToClient(1, params, settled)).toBe(true)
     admissions.length = 0
     params.data = 'after'
@@ -219,7 +219,7 @@ describe('RelayDispatcher prepared JSON payloads', () => {
     dispatcher.registerPtyDataPublicationAdmission(() => admitted)
     try {
       dispatcher.notify('test.blocker')
-      const retired = vi.fn<(result: SinkWriteSettlement) => void>()
+      const retired = vi.fn<(result: DispatcherWriterSettlement) => void>()
       expect(dispatcher.tryNotifyPtyDataToClient(1, { id: 'pty-1', data: 'retire' }, retired)).toBe(
         true
       )

@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import type { DatabaseSync, StatementSync, SQLInputValue } from 'node:sqlite'
+import type { DatabaseSync, StatementSync } from 'node:sqlite'
 
 type SqlitePath = ConstructorParameters<typeof DatabaseSync>[0]
 
@@ -12,8 +12,6 @@ type SyncDatabaseOptions = {
 type PragmaOptions = {
   simple?: boolean
 }
-
-export type SqliteStatement = StatementSync
 
 // Why: dynamic `IN (?,?,…)` clauses mint a new SQL string per arity, so the cache must stay bounded.
 const STATEMENT_CACHE_LIMIT = 256
@@ -104,12 +102,6 @@ class SyncDatabase {
     this.statementCache.clear()
     this.db.close()
   }
-}
-
-namespace SyncDatabase {
-  export type Database = SyncDatabase
-  export type Statement = SqliteStatement
-  export type BindValue = SQLInputValue
 }
 
 export default SyncDatabase

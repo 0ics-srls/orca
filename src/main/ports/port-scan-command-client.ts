@@ -36,7 +36,6 @@ export const MAX_CONSECUTIVE_DEATHS = 3
 export const MAX_QUEUED_CALLS = 8
 
 export type PortScanCommandResult = { stdout: string; spawnMs: number }
-export type PortScanWorkerFactory = WorkerThreadFactory
 
 // Distinguishes "no worker at all" from a timeout or crash so the scanner can
 // log it once and callers never mistake it for a command timeout.
@@ -68,7 +67,7 @@ export class PortScanCommandClient {
   private nextId = 1
   private readonly host: LazyWorkerThreadHost<PortScanCommandResponse>
 
-  constructor(options: { workerFactory: PortScanWorkerFactory; log?: (message: string) => void }) {
+  constructor(options: { workerFactory: WorkerThreadFactory; log?: (message: string) => void }) {
     const log = options.log ?? ((message: string) => console.warn(message))
     this.host = new LazyWorkerThreadHost<PortScanCommandResponse>({
       factory: options.workerFactory,

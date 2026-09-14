@@ -31,11 +31,9 @@ import { installTerminalPaneInputHandling } from './terminal-pane-pane-input'
 import { installTerminalPaneLinkHandling } from './terminal-pane-pane-links'
 import { scheduleRuntimeGraphSync } from '@/runtime/sync-runtime-graph'
 
-export type PaneCreatedSetupContext = TerminalPaneManagerOptionsContext
-
 /** Creates the PaneManager `onPaneCreated` callback. */
 export function createTerminalPaneCreatedHandler(
-  context: PaneCreatedSetupContext
+  context: TerminalPaneManagerOptionsContext
 ): (pane: ManagedPane, spawnHints?: PaneSpawnHints) => void {
   // Split spawn hints let the renderer pane appear before a slow inherited-cwd lookup finishes.
   return (pane, spawnHints) => {

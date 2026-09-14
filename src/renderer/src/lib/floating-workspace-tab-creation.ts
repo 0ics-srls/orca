@@ -1,5 +1,5 @@
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import type { BrowserTab } from '../../../shared/browser-workspace-types'
+import type { BrowserWorkspace } from '../../../shared/browser-workspace-types'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import { createUntitledMarkdownFileWithTemplateSelection } from './create-untitled-markdown'
 import { getConnectionId } from './connection-context'
@@ -39,7 +39,7 @@ export async function createFloatingWorkspaceTerminalTab(
 
 export async function createFloatingWorkspaceBrowserTab(
   store: FloatingWorkspaceBrowserStore
-): Promise<BrowserTab | null> {
+): Promise<BrowserWorkspace | null> {
   assertClientCreationActionAvailable(
     store as AppState,
     FLOATING_TERMINAL_WORKTREE_ID,

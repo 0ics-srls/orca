@@ -6,7 +6,7 @@ import {
   pruneTerminalKeyboardMetrics,
   resolveRetainedTerminalHandles
 } from './mobile-terminal-prune-decision'
-import type { Terminal } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 import type { MobileSessionTerminalStreamDisplayModel } from './use-mobile-session-terminal-stream-display'
 import { MobileTerminalInventoryRequest } from './mobile-terminal-inventory-request'
 import type { MobileTerminalInventoryRefreshOptions } from './use-mobile-terminal-inventory-recovery'
@@ -61,7 +61,7 @@ export function useMobileSessionTerminalList(scope: MobileSessionTerminalStreamD
             if (!isCurrent() || !response.ok) {
               return false
             }
-            const result = (response as RpcSuccess).result as { terminals: Terminal[] }
+            const result = (response as RpcSuccess).result as { terminals: TerminalRecord[] }
             if (result.terminals.length === 0 && !allowsEmpty()) {
               return true
             }

@@ -72,7 +72,7 @@ describe('OrchestrationDb legacy contract storage', () => {
     db = new OrchestrationDb(fixture.dbPath)
     const adoption = db.getLegacyAdoption()
     const adoptedRunId = adoption?.adopted_run_id as string
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
 
     expect(adoption).toMatchObject({
       source_run_id: LEGACY_RUN_ID,
@@ -694,7 +694,7 @@ describe('OrchestrationDb legacy contract storage', () => {
       askerHandle: 'term_legacy_worker',
       question: 'Inherited?'
     })
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     sqlite
       .prepare(
         `UPDATE messages

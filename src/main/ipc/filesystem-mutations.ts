@@ -14,9 +14,9 @@ import { assertNotExists, rethrowWithUserMessage } from './filesystem-create-pat
 import type {
   ImportItemResult,
   ImportSkipReason,
-  ResolveDroppedPathsResult,
-  StagedExternalImportSource
+  ResolveDroppedPathsResult
 } from './filesystem-import-result-types'
+import type { StagedRuntimeUploadSource } from '../../shared/runtime-upload-staging-contract'
 import { importOneSource } from './filesystem-import-local'
 import {
   stagedRuntimeUploadByteLength,
@@ -202,8 +202,8 @@ export function registerFilesystemMutationHandlers(store: Store): void {
     async (
       _event,
       args: { sourcePaths: string[] }
-    ): Promise<{ sources: StagedExternalImportSource[] }> => {
-      const sources: StagedExternalImportSource[] = []
+    ): Promise<{ sources: StagedRuntimeUploadSource[] }> => {
+      const sources: StagedRuntimeUploadSource[] = []
       // Why: one budget for the whole drop — per-source counters would let five
       // 2 GB files through a ceiling meant to cap the drop.
       let totalBytes = 0

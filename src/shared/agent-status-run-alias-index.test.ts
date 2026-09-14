@@ -1,3 +1,4 @@
+import type { AgentSessionExecutionLocation } from './agent-session-record'
 import { describe, expect, it, vi } from 'vitest'
 import {
   deserializeAgentStatusProviderAliasKey,
@@ -8,9 +9,10 @@ import {
   type AgentStatusScopedProviderAlias,
   type AgentStatusRunAliasIndex
 } from './agent-status-run-alias-index'
-import type { AgentStatusExecutionScope } from './agent-status-subject'
 
-function scope(overrides: Partial<AgentStatusExecutionScope> = {}): AgentStatusExecutionScope {
+function scope(
+  overrides: Partial<AgentSessionExecutionLocation> = {}
+): AgentSessionExecutionLocation {
   return {
     executionHostId: 'local',
     wslDistro: null,

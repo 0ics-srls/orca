@@ -179,7 +179,7 @@ describe('legacy question takeover compatibility', () => {
         legacyCompatibility: { replayed: true }
       }
     })
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     expect(
       (
         sqlite
@@ -230,7 +230,7 @@ describe('legacy question takeover compatibility', () => {
         }
       }
     })
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     expect(
       (sqlite.prepare('SELECT COUNT(*) AS count FROM question_threads').get() as { count: number })
         .count
@@ -339,7 +339,7 @@ describe('legacy question takeover compatibility', () => {
           workerEvidence
         )
       )
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     sqlite
       .prepare('UPDATE messages SET to_handle = ? WHERE id = ?')
       .run('dispatch:foreign', acknowledgement.answerMessageId)

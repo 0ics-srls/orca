@@ -6,7 +6,7 @@ import type {
 import type { Store } from '../persistence'
 import type { RateLimitService } from '../rate-limits/service'
 import type { CodexRuntimeHomeService } from './runtime-home-service'
-import type { ResolvedCodexIdentity } from './codex-account-identity'
+import type { CodexAuthIdentity } from './codex-auth-identity'
 import type {
   CodexAccountAddTarget,
   CodexAccountReauthenticateOptions,
@@ -28,10 +28,7 @@ type CodexAccountRegistrationDependencies = {
   store: Store
   rateLimits: RateLimitService
   runtimeHome: CodexRuntimeHomeService
-  readIdentityFromHome: (
-    managedHomePath: string,
-    expectedAccountId: string
-  ) => ResolvedCodexIdentity
+  readIdentityFromHome: (managedHomePath: string, expectedAccountId: string) => CodexAuthIdentity
   selection: CodexAccountSelection
   configMirror: CodexConfigMirror
   managedHomePaths: CodexManagedHomePath

@@ -1,6 +1,6 @@
 import { BoundedMap } from '../../../../shared/bounded-map'
 import { isDefaultGitHubHost } from '../../../../shared/github/repository-identity-key'
-import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../gh-utils'
 import type { GitHubRepoExecOptions } from '../../github-api-repository'
 import {
   requestWorkItemSearch,
@@ -17,7 +17,7 @@ const cursors = new BoundedMap<string, { at: number; cursor: string }>({
 })
 
 export function usesGraphqlWorkItemSearch(
-  ownerRepo: OwnerRepo,
+  ownerRepo: GitHubOwnerRepo,
   options: GitHubRepoExecOptions
 ): boolean {
   return isDefaultGitHubHost(

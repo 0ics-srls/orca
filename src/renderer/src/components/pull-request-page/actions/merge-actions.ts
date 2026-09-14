@@ -12,7 +12,7 @@ import type {
 } from '../../../../../shared/github/pull-request-types'
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { translate } from '@/i18n/i18n'
 import type { GitHubPRMergeStatePresentation } from '@/components/github-pr-merge-state'
 
@@ -25,7 +25,7 @@ export async function changePullRequestState(args: {
   repoPath: string | null
   repoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   prRepo: GitHubOwnerRepo | null
   confirm: (options: {
     title: string

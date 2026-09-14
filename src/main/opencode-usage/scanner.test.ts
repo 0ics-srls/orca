@@ -12,7 +12,7 @@ const WORKTREE = '/workspace/repo'
 
 let tempDirs: string[] = []
 
-function createTempDb(): { db: Database.Database; path: string } {
+function createTempDb(): { db: Database; path: string } {
   const dir = mkdtempSync(join(tmpdir(), 'orca-opencode-usage-'))
   tempDirs.push(dir)
   const path = join(dir, 'opencode.db')
@@ -31,7 +31,7 @@ function worktrees() {
   ]
 }
 
-function createSessionTotalsSchema(db: Database.Database): void {
+function createSessionTotalsSchema(db: Database): void {
   db.exec(`
     CREATE TABLE session (
       id TEXT PRIMARY KEY,
@@ -49,11 +49,7 @@ function createSessionTotalsSchema(db: Database.Database): void {
   `)
 }
 
-function insertSessionTotalsRow(
-  db: Database.Database,
-  sessionId: string,
-  inputTokens: number
-): void {
+function insertSessionTotalsRow(db: Database, sessionId: string, inputTokens: number): void {
   db.prepare(
     `INSERT INTO session (
       id, directory, title, model, cost,

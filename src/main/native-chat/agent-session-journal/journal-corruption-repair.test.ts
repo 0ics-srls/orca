@@ -59,7 +59,7 @@ function open(overrides: Partial<Parameters<typeof openAgentSessionJournal>[0]> 
   })
 }
 
-async function withJournalDatabase(run: (db: Database.Database) => void): Promise<void> {
+async function withJournalDatabase(run: (db: Database) => void): Promise<void> {
   const opened = openJournalDatabase(journalDatabaseFile(root))
   try {
     run(opened.db)

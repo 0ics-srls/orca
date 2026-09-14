@@ -14,8 +14,6 @@ import { settleBeforeDeadline } from './settle-before-deadline'
 // Floor for the verification window when the sweep ran on a very short budget.
 export const WORKTREE_TEARDOWN_VERIFY_GRACE_MS = 2_000
 
-export type UnstoppedPtyVerdict = PtyLivenessVerdict
-
 /**
  * Re-lists the provider's processes to decide what a failed stop RPC actually
  * meant. The three verdicts stay distinct on purpose: "we could not ask" is not
@@ -31,7 +29,7 @@ export async function verifyUnstoppedPtys(
   failedPtyIds: readonly string[],
   provider: IPtyProvider,
   sweepBudgetMs: number
-): Promise<UnstoppedPtyVerdict> {
+): Promise<PtyLivenessVerdict> {
   const verifyBudgetMs = Math.max(WORKTREE_TEARDOWN_VERIFY_GRACE_MS, sweepBudgetMs)
   const verifyDeadline = Date.now() + verifyBudgetMs
   let listError: unknown
@@ -66,7 +64,7 @@ export async function verifyUnstoppedPtys(
 export function unverifiableStopVerdict(
   failedPtyIds: readonly string[],
   runtime: OrcaRuntimeService | undefined
-): UnstoppedPtyVerdict | null {
+): PtyLivenessVerdict | null {
   for (const ptyId of failedPtyIds) {
     const verdict = runtime?.getPtyLivenessVerdict?.(ptyId)
     if (verdict?.status === 'unverifiable') {
@@ -82,7 +80,7 @@ export async function resolveUnstoppedPtyVerdict(
   sweepBudgetMs: number,
   providerObservesOwningHost: boolean,
   runtime?: OrcaRuntimeService
-): Promise<UnstoppedPtyVerdict> {
+): Promise<PtyLivenessVerdict> {
   if (failedPtyIds.length === 0) {
     return { status: 'exited' }
   }
@@ -101,7 +99,7 @@ export async function resolveUnstoppedPtyVerdict(
 export function describeUnstoppedPtys(
   worktreeId: string,
   failedPtyIds: readonly string[],
-  verdict: Exclude<UnstoppedPtyVerdict, { status: 'exited' }>
+  verdict: Exclude<PtyLivenessVerdict, { status: 'exited' }>
 ): string {
   const detail =
     verdict.status === 'live'

@@ -1,7 +1,7 @@
 import { EventEmitter } from 'node:events'
 import { PassThrough } from 'node:stream'
 import { describe, expect, it, vi } from 'vitest'
-import type { SpawnedProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import type { DescendantSnapshot } from '../pty-descendant-termination'
 import type { WindowsDescendantSnapshot } from '../windows-descendant-exit-verification'
 import { createClaudeChildTreeReaper } from './claude-agent-sdk-exit-proof'
@@ -12,7 +12,7 @@ const ROOT_STARTED_AT = 'Mon Jan 1 00:00:00 2026'
 const ROOT_FORK_MS = Date.parse(ROOT_STARTED_AT)
 
 function mockChild(): EventEmitter &
-  Pick<SpawnedProcess, 'pid' | 'kill' | 'stdin'> & { kill: ReturnType<typeof vi.fn> } {
+  Pick<ChildProcess, 'pid' | 'kill' | 'stdin'> & { kill: ReturnType<typeof vi.fn> } {
   return Object.assign(new EventEmitter(), {
     pid: ROOT_PID,
     stdin: new PassThrough(),

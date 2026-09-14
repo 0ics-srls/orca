@@ -4,6 +4,7 @@ import {
   DASHBOARD_BUCKET_ORDER,
   type DashboardBucket,
   type DashboardCard,
+  type DashboardRevealAgentArgs,
   type DashboardSnapshot
 } from '../../../../shared/dashboard-snapshot'
 import type { RepoIcon } from '../../../../shared/repo-icon'
@@ -12,7 +13,7 @@ import { TooltipProvider } from '@/components/ui/tooltip'
 import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
 import { AgentKanbanCard } from './AgentKanbanCard'
 import { AgentDashboardToolbar } from './AgentDashboardToolbar'
-import { AgentTerminalDialog, type AgentRevealArgs } from './AgentTerminalDialog'
+import { AgentTerminalDialog } from './AgentTerminalDialog'
 import {
   EMPTY_DASHBOARD_FILTERS,
   filterDashboardCards,
@@ -31,7 +32,7 @@ function ackAgentViaPopoutRelay(paneKey: string): void {
 /** Reveal an agent from the pop-out window: raise the main window and route it
  *  to the agent's pane via IPC. Same `?.` HMR-skew guard as the ack relay —
  *  both channels ship together, so a stale preload lacks both. */
-function revealAgentViaPopoutRelay(args: AgentRevealArgs): void {
+function revealAgentViaPopoutRelay(args: DashboardRevealAgentArgs): void {
   void window.api.dashboard.revealAgent?.(args)
 }
 
@@ -122,7 +123,7 @@ type AgentKanbanBoardProps = {
   onAckAgent?: (paneKey: string) => void
   /** Focuses the agent's pane. Defaults to the pop-out IPC relay; the in-window
    *  host activates the worktree/pane locally and closes the overlay. */
-  onRevealAgent?: (args: AgentRevealArgs) => void
+  onRevealAgent?: (args: DashboardRevealAgentArgs) => void
   /** When provided, renders a close control in the header (in-window mode). The
    *  pop-out relies on its native window controls, so it omits this. */
   onClose?: () => void

@@ -36,8 +36,6 @@ export type AttemptCoordinatorAcknowledgment = {
   reportId?: string
 }
 
-export type AttemptLivenessObservation = PtyLivenessVerdict
-
 export type AttemptAdditiveOutcomeFact = {
   outcome: 'outcome_unknown' | 'finished_unverified'
   reason: string
@@ -48,7 +46,7 @@ export type AttemptObservationPayloadByFacet = {
   artifact_git: AttemptArtifactGitEvidence
   worker_report: AttemptWorkerReport
   coordinator_ack: AttemptCoordinatorAcknowledgment
-  liveness: AttemptLivenessObservation
+  liveness: PtyLivenessVerdict
   outcome: AttemptAdditiveOutcomeFact
 }
 
@@ -104,6 +102,6 @@ export type AttemptOutcomeProjection = {
   artifactGit: AttemptArtifactGitEvidence | null
   workerReport: AttemptWorkerReport | null
   coordinatorAcknowledgment: AttemptCoordinatorAcknowledgment | null
-  liveness: AttemptLivenessObservation & { freshness: AttemptFreshness }
+  liveness: PtyLivenessVerdict & { freshness: AttemptFreshness }
 }
 import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'

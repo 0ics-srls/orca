@@ -28,8 +28,8 @@ import {
   getRepoIdFromWorktreeId,
   getWorktreePathBasenameFromId
 } from '../../../../shared/worktree/id'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 import type {
-  DaemonSession,
   MergeContext,
   UnifiedProjectGroup,
   UnifiedSessionRow,
@@ -93,7 +93,7 @@ function resolveSnapshotSessionLabel(
 }
 
 function resolveDaemonSessionLabel(
-  session: DaemonSession,
+  session: PtyListedSession,
   resolvedWorktreeId: string | null,
   tabId: string | null,
   ctx: MergeContext,
@@ -138,7 +138,7 @@ export const UNATTRIBUTED_REPO_NAME = 'Unattributed'
 
 export function mergeSnapshotAndSessions(
   snapshot: MemorySnapshot | null,
-  daemonSessions: readonly DaemonSession[],
+  daemonSessions: readonly PtyListedSession[],
   ctx: MergeContext
 ): UnifiedProjectGroup[] {
   const repos = new Map<string, UnifiedProjectGroup>()

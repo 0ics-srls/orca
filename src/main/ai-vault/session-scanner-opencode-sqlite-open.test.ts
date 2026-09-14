@@ -142,7 +142,7 @@ describe('listOpenCodeSqliteSessions against a database OpenCode is writing to',
 describe('readOpenCodeDatabase', () => {
   it('closes the handle on the success path', () => {
     const path = seededDatabase('opencode.db', 'session-a')
-    let captured: Database.Database | null = null
+    let captured: Database | null = null
 
     const rows = readOpenCodeDatabase({
       dbPath: path,
@@ -215,7 +215,7 @@ describe('readOpenCodeDatabase', () => {
 
   it('closes the handle when the read throws', () => {
     const path = seededDatabase('opencode.db', 'session-a')
-    let captured: Database.Database | null = null
+    let captured: Database | null = null
 
     expect(() =>
       readOpenCodeDatabase({

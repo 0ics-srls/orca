@@ -4,7 +4,7 @@ import type {
 } from '../shared/pty-source-credit-contract'
 import type { PtySourceRecoveryCheckpoint } from '../shared/pty-source-recovery-contract'
 import type { PtySourceReceivingActivation } from '../shared/pty-source-receiving-activation'
-import type { RelayDispatcher, SinkWriteSettlement } from './dispatcher'
+import type { RelayDispatcher, DispatcherWriterSettlement } from './dispatcher'
 import {
   PTY_SOURCE_SCHEDULER_MAX_FRAMES,
   PTY_SOURCE_SCHEDULER_MAX_SU
@@ -47,8 +47,8 @@ export type RelayPtySourcePublicationCounters = {
 const PTY_SOURCE_FRAME_MAX_SU = 16 * 1024
 
 export function onceSinkSettlement(
-  callback: (result: SinkWriteSettlement) => void
-): (result: SinkWriteSettlement) => void {
+  callback: (result: DispatcherWriterSettlement) => void
+): (result: DispatcherWriterSettlement) => void {
   let settled = false
   return (result) => {
     if (settled) {

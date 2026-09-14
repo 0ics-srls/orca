@@ -1,4 +1,7 @@
-import { writeForegroundTerminalChunk } from './pane-terminal-foreground-render-settle'
+import {
+  writeForegroundTerminalChunk,
+  type ForegroundTerminalOutputTarget
+} from './pane-terminal-foreground-render-settle'
 import { registerTerminalOutputAckCredits } from './pane-terminal-output-ack-credit'
 import {
   armTerminalWriteStallWatch,
@@ -39,12 +42,11 @@ import {
   discardTerminalOutput,
   queuedByTerminal,
   scheduleDrain,
-  type TerminalOutputTarget,
   type WriteTerminalOutputOptions
 } from './pane-terminal-output-queue-registry'
 
 export function writeTerminalOutputImpl(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   data: string,
   options: WriteTerminalOutputOptions
 ): void {

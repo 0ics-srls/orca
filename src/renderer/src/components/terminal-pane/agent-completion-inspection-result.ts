@@ -2,9 +2,11 @@ import type { RecognizedAgentProcess } from '../../../../shared/agent-process-re
 import { recognizeAgentProcess } from '../../../../shared/agent-process-recognition'
 import { parseAppSshPtyId } from '../../../../shared/ssh-pty-id'
 import { admitRemoteForegroundEvidence } from '../../../../shared/remote-foreground-evidence-admission'
-import { isClientOnlyUnverifiableInspection } from '../../../../shared/terminal-process-inspection'
+import {
+  isClientOnlyUnverifiableInspection,
+  type TerminalProcessInspection
+} from '../../../../shared/terminal-process-inspection'
 import { getRemoteRuntimeTerminalHandle } from '@/runtime/runtime-terminal-stream'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
 import type { AgentCompletionCoordinatorOptions } from './agent-completion-coordinator-types'
 import type {
   AgentCompletionIdentityScope,
@@ -26,7 +28,7 @@ type CompletionDispatch = (
 ) => boolean
 
 export function handleAgentCompletionInspectionResult(args: {
-  result: RuntimeTerminalProcessInspection
+  result: TerminalProcessInspection
   requestStartedAtMonotonic: number
   options: AgentCompletionCoordinatorOptions
   state: ProcessMonitorState

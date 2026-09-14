@@ -1,5 +1,5 @@
 import type { DropdownActionKind, DropdownEntry } from '../../source-control-dropdown-item-types'
-import type { PrimaryAction, RemoteOpKind } from '../../source-control-primary-action'
+import type { PrimaryAction, SourceControlRemoteOpKind } from '../../source-control-primary-action'
 import type { SourceControlPushRecovery } from '../sync/push-recovery'
 import type {
   SourceControlActionRecipe,
@@ -39,7 +39,7 @@ export type CommitAreaProps = {
   hasPartiallyStagedChanges: boolean
   hasUnresolvedConflicts: boolean
   isRemoteOperationActive: boolean
-  inFlightRemoteOpKind: RemoteOpKind | null
+  inFlightRemoteOpKind: SourceControlRemoteOpKind | null
   primaryAction: PrimaryAction
   dropdownItems: DropdownEntry[]
   fixCommitFailureRecipe?: SourceControlActionRecipe

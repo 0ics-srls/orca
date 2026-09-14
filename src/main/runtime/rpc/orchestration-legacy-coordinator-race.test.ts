@@ -172,14 +172,14 @@ function settleLegacyWorkerAndTakeOver(harness: Harness, result: string): void {
 }
 
 function mutationReceiptCount(db: OrchestrationDb): number {
-  const sqlite = (db as unknown as { db: Database.Database }).db
+  const sqlite = (db as unknown as { db: Database }).db
   return (
     sqlite.prepare('SELECT COUNT(*) AS count FROM mutation_receipts').get() as { count: number }
   ).count
 }
 
 function messageCount(db: OrchestrationDb): number {
-  const sqlite = (db as unknown as { db: Database.Database }).db
+  const sqlite = (db as unknown as { db: Database }).db
   return (sqlite.prepare('SELECT COUNT(*) AS count FROM messages').get() as { count: number }).count
 }
 
@@ -501,7 +501,7 @@ describe('legacy coordinator takeover races', () => {
         mutation: { requestId: 'check-ack-takeover', replayed: false }
       }
     })
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     expect(sqlite.prepare('SELECT state FROM mutation_receipts').get()).toEqual({
       state: 'completed'
     })

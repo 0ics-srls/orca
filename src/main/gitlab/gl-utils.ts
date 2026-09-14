@@ -26,7 +26,7 @@ export {
 } from './gitlab-project-ref-resolution'
 export type {
   LocalGitExecOptions,
-  ProjectRef,
+  GitLabProjectRef,
   ResolvedIssueSource
 } from './gitlab-project-ref-resolution'
 export {

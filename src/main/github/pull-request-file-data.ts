@@ -1,7 +1,11 @@
-import type { GitHubPRFile, GitHubPRFileViewedState } from '../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  GitHubPRFile,
+  GitHubPRFileViewedState
+} from '../../shared/github/pull-request-types'
 import { ghExecFileAsync, ghRepoExecOptions, githubRepoContext } from './gh-utils'
 import type { LocalGitExecOptions } from './gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from './github-api-repository'
+import { githubHostExecOptions } from './github-api-repository'
 import { getPRReviewCommentLineNumbersFromPatch } from './pr-review-comment-lines'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 
@@ -65,7 +69,7 @@ function isBinaryHint(file: RESTPRFile): boolean {
 export async function getPRMetadata(
   repoPath: string,
   prNumber: number,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ body: string; headSha?: string; baseSha?: string }> {
@@ -104,7 +108,7 @@ export async function getPRMetadata(
 export async function getPRFiles(
   repoPath: string,
   prNumber: number,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubPRFile[] | null> {
@@ -155,7 +159,7 @@ export async function getPRFiles(
 export async function getPRFileViewedStates(
   repoPath: string,
   prNumber: number,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<PRFileViewedStatesResult | null> {

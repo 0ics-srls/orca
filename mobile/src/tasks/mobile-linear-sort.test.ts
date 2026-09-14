@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { LinearIssue } from './mobile-tasks-provider-detail-types'
+import type { LinearMobileIssue } from './mobile-tasks-provider-detail-types'
 import type { LinearOrderBy } from './mobile-tasks-view-state-types'
 import { groupLinearIssues, sortLinearIssues } from './mobile-tasks-reviewer-linear'
 import { taskTime } from './mobile-tasks-item-mapping'
@@ -8,7 +8,7 @@ import { getLinearPriorityRank } from './mobile-tasks-hosted-review'
 vi.mock('./mobile-tasks-dependencies', () => import('../theme/mobile-theme'))
 afterEach(() => vi.restoreAllMocks())
 
-const issues: LinearIssue[] = Array.from({ length: 60 }, (_, i) => ({
+const issues: LinearMobileIssue[] = Array.from({ length: 60 }, (_, i) => ({
   id: `${i}`,
   identifier: ['ENG-10', 'ENG-2', 'Ä-1', 'Å-1', 'é-2', 'e\u0301-2', 'İ-3'][i % 7],
   title: 'Task',
@@ -21,7 +21,10 @@ const issues: LinearIssue[] = Array.from({ length: 60 }, (_, i) => ({
   state: { name: i % 2 ? 'Todo' : 'Done', type: 'started', color: '' },
   team: { id: `${i % 3}`, name: `Team ${i % 3}`, key: 'ENG' }
 }))
-function originalSort(input: readonly LinearIssue[], mode: LinearOrderBy): LinearIssue[] {
+function originalSort(
+  input: readonly LinearMobileIssue[],
+  mode: LinearOrderBy
+): LinearMobileIssue[] {
   return [...input].sort((a, b) => {
     if (mode === 'updated') {
       return taskTime(b.updatedAt) - taskTime(a.updatedAt)

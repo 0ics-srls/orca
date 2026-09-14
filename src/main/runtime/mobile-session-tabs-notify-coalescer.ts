@@ -19,9 +19,6 @@ const SESSION_TABS_FLUSH_MS = 50
 // keeps spinning never starves the emit indefinitely.
 const SESSION_TABS_MAX_WAIT_MS = 250
 
-/** Keys are worktree ids; `emit` reads the latest snapshot for the worktree itself. */
-export type MobileSessionTabsNotifyCoalescer = KeyedTrailingEdgeCoalescer
-
 /**
  * Coalesces per-worktree session.tabs notifications on a short trailing-edge
  * window. `emit` is invoked once per settled worktree and is expected to read
@@ -30,7 +27,7 @@ export type MobileSessionTabsNotifyCoalescer = KeyedTrailingEdgeCoalescer
  */
 export function createMobileSessionTabsNotifyCoalescer(
   emit: (worktreeId: string) => void
-): MobileSessionTabsNotifyCoalescer {
+): KeyedTrailingEdgeCoalescer {
   return createKeyedTrailingEdgeCoalescer(emit, {
     flushMs: SESSION_TABS_FLUSH_MS,
     maxWaitMs: SESSION_TABS_MAX_WAIT_MS

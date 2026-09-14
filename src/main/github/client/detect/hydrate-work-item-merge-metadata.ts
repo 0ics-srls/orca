@@ -1,10 +1,10 @@
-import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../gh-utils'
 import type { GhExecOptions } from './../github-exec-scope'
 import { detectRepositoryMergeMetadata } from './repository-merge-metadata'
 import type { MainWorkItem } from './../map/work-item-field-coercion'
 export async function hydrateWorkItemRepositoryMergeMetadata(
   items: MainWorkItem[],
-  ownerRepo: OwnerRepo | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions,
   executionScope?: string
 ): Promise<MainWorkItem[]> {

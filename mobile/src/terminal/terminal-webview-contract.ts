@@ -42,8 +42,6 @@ function toNonNegativeInteger(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? Math.floor(value) : 0
 }
 
-export type MobileTerminalTheme = RuntimeMobileTerminalTheme
-
 export type TerminalSelectionEvents = {
   onSelectionMode?: (active: boolean) => void
   onSelectionCopy?: (text: string) => void
@@ -65,7 +63,7 @@ export type TerminalSelectionEvents = {
 
 export type TerminalWebViewProps = {
   style?: StyleProp<ViewStyle>
-  terminalTheme?: MobileTerminalTheme
+  terminalTheme?: RuntimeMobileTerminalTheme
   // Why: baseline zoom multiplier applied on top of fit-to-width scale; raw
   // xterm fontSize alone cannot drive apparent size because fitting cancels it.
   textScale?: number

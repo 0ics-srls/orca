@@ -2,11 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   mobileHostEditHostRoute,
   mobileHostEditRouteTarget,
-  navigateToMobileHostEdit,
-  type MobileHostEditNavigationState
+  navigateToMobileHostEdit
 } from './host-edit-navigation'
+import type { HostStackNavigationState } from '../navigation/host-stack-navigation'
 
-function navigationHarness(initialState: MobileHostEditNavigationState) {
+function navigationHarness(initialState: HostStackNavigationState) {
   let stateListener = () => {}
   let state = initialState
   const unsubscribeState = vi.fn()
@@ -20,7 +20,7 @@ function navigationHarness(initialState: MobileHostEditNavigationState) {
   }
   return {
     navigation,
-    setState(nextState: MobileHostEditNavigationState) {
+    setState(nextState: HostStackNavigationState) {
       state = nextState
       stateListener()
     },
@@ -30,7 +30,7 @@ function navigationHarness(initialState: MobileHostEditNavigationState) {
 
 // Edit now waits for the nested host stack, not just the root `h` route, so every committed
 // state below carries the stack the replacement targets.
-function committedHostState(hostIdParam: string): MobileHostEditNavigationState {
+function committedHostState(hostIdParam: string): HostStackNavigationState {
   return {
     index: 1,
     routes: [

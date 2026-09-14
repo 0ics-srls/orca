@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type Dispatch, type SetStateA
 import { toast } from 'sonner'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { useMobilePairingDevicePolling } from '../settings/mobile-pairing-device-polling'
-import type { PairedDevice, StepIndex } from './MobileHero'
+import type { PairedMobileDevice, StepIndex } from './MobileHero'
 import {
   shouldShowPairedAfterDeviceRefresh,
   type MobilePageStage as FlowStage
@@ -21,7 +21,7 @@ export function useMobilePagePairedDevices({
   stepIdx: StepIndex
   setStepIdx: Dispatch<SetStateAction<StepIndex>>
 }): {
-  devices: readonly PairedDevice[]
+  devices: readonly PairedMobileDevice[]
   stage: FlowStage | null
   revokingDeviceIds: readonly string[]
   enterFlow: () => void
@@ -75,7 +75,7 @@ export function useMobilePagePairedDevices({
       opts: {
         force?: boolean
       } = {}
-    ): Promise<readonly PairedDevice[]> => {
+    ): Promise<readonly PairedMobileDevice[]> => {
       try {
         const nextDevices = await refreshDevices(opts)
         if (mountedRef.current) {
@@ -148,7 +148,7 @@ export function useMobilePagePairedDevices({
         // revoked device from the last-known list (not loadDevices' bogus [] from
         // a failed reload), keeping success + intro-routing correct. Mirrors
         // MobilePane's revoke fallback.
-        let remaining: readonly PairedDevice[]
+        let remaining: readonly PairedMobileDevice[]
         try {
           remaining = await refreshDevices({ force: true })
         } catch (err) {

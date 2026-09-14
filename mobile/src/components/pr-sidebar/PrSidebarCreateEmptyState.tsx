@@ -1,10 +1,10 @@
+import type { GitStatusResult } from '../../../../src/shared/git-status-types'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Pressable, Text, View } from 'react-native'
 import { GitPullRequestArrow, Link2, RefreshCw } from 'lucide-react-native'
 import { colors } from '../../theme/mobile-theme'
 import type { RpcClient } from '../../transport/rpc-client'
 import type { ConnectionState } from '../../transport/types'
-import type { MobileGitStatusResult } from '../../source-control/mobile-git-status'
 import {
   getMobileCommitFailureStagedEntries,
   type MobileCommitFailureRecovery
@@ -26,7 +26,7 @@ type Props = {
   client: RpcClient | null
   worktreeId: string
   gitBranch: string | null
-  gitStatus: MobileGitStatusResult | null
+  gitStatus: GitStatusResult | null
   connState: ConnectionState
   // Refetches the sidebar after create or an explicit empty-state refresh.
   onCreated: () => void

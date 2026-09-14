@@ -5,7 +5,7 @@ export const MUTATION_RECEIPT_MAX_ROWS = 10_000
 const MUTATION_RECEIPT_MAX_AGE_DAYS = 30
 const MUTATION_RECEIPT_PRUNE_BATCH_SIZE = 64
 
-export function migrateMutationReceiptCapacity(db: Database.Database): void {
+export function migrateMutationReceiptCapacity(db: Database): void {
   // Why: database triggers keep the count exact for concurrent connections and older binaries.
   db.exec(`
     CREATE INDEX IF NOT EXISTS idx_mutation_receipts_completed_updated
@@ -40,7 +40,7 @@ export function migrateMutationReceiptCapacity(db: Database.Database): void {
   `)
 }
 
-function receiptCount(db: Database.Database): number {
+function receiptCount(db: Database): number {
   const row = db
     .prepare('SELECT receipt_count FROM mutation_receipt_ledger WHERE singleton = 1')
     .get() as { receipt_count: number } | undefined
@@ -50,7 +50,7 @@ function receiptCount(db: Database.Database): number {
   return row.receipt_count
 }
 
-export function ensureMutationReceiptCapacity(db: Database.Database): void {
+export function ensureMutationReceiptCapacity(db: Database): void {
   db.prepare(
     `DELETE FROM mutation_receipts
      WHERE state = 'completed'

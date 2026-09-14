@@ -3,7 +3,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { spawnProcess, type SpawnedProcess } from '../../shared/child-process/run-process'
+import { spawnProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import { hasLiveClaudePtys } from '../claude-accounts/live-pty-gate'
 import type { ProcessSpec } from '../../shared/child-process/process-spec'
 import { query, type CanUseTool, type Options } from '@anthropic-ai/claude-agent-sdk'
@@ -84,7 +85,7 @@ function launchFor(
 /** The derived child environment, captured where Orca actually hands it to the OS. */
 const spawned: ProcessSpec[] = []
 /** The retained child, so a test can end it the way a crashing CLI would. */
-const spawnedChildren: SpawnedProcess[] = []
+const spawnedChildren: ChildProcess[] = []
 
 async function open(
   launch: ClaudeStreamJsonLaunch,
@@ -734,7 +735,7 @@ describe('the managed-auth live gate', () => {
       { emit: { type: 'system', subtype: 'init', session_id: SESSION_ID, uuid: 'init-1' } },
       { wait: HOLD_OPEN }
     ])
-    let started: SpawnedProcess | null = null
+    let started: ChildProcess | null = null
 
     try {
       await expect(
@@ -763,7 +764,7 @@ describe('the managed-auth live gate', () => {
 
       expect(hasLiveClaudePtys()).toBe(false)
     } finally {
-      ;(started as SpawnedProcess | null)?.kill('SIGKILL')
+      ;(started as ChildProcess | null)?.kill('SIGKILL')
     }
   }, 30_000)
 })

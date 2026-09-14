@@ -15,11 +15,6 @@ import type { TelemetryConsentState } from '../../shared/telemetry-consent-types
 // (`pending_banner`) from "user explicitly opted out" (`disabled`). A boolean
 // would force the UI to re-derive that, re-introducing the scattered env
 // checks this module exists to eliminate.
-//
-// The type itself lives in `shared/telemetry-consent-types.ts` so the
-// renderer can import it across the IPC boundary; this re-export keeps
-// existing call sites in main working without a rename.
-export type ConsentState = TelemetryConsentState
 
 // Precedence for the `disabled` branches is documented alongside
 // `resolveConsent` below.
@@ -73,7 +68,7 @@ export function _resetMisconfigWarnCacheForTests(): void {
   warnedMisconfigured.clear()
 }
 
-export function resolveConsent(settings: GlobalSettings): ConsentState {
+export function resolveConsent(settings: GlobalSettings): TelemetryConsentState {
   // Precedence 1: community standard kill switch. Always wins.
   if (isEnvVarTruthy('DO_NOT_TRACK')) {
     return { effective: 'disabled', reason: 'do_not_track' }

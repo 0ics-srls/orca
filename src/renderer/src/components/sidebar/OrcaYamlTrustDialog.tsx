@@ -12,16 +12,14 @@ import { useAppStore } from '@/store'
 import type { OrcaHookScriptKind } from '@/lib/orca-hook-trust'
 import { translate } from '@/i18n/i18n'
 
-type ScriptKind = OrcaHookScriptKind
-
-const SCRIPT_KIND_LABEL: Record<ScriptKind, string> = {
+const SCRIPT_KIND_LABEL: Record<OrcaHookScriptKind, string> = {
   setup: 'setup script',
   archive: 'archive script',
   issueCommand: 'issue command',
   vmRecipe: 'VM recipe'
 }
 
-const SCRIPT_KIND_TRIGGER: Record<ScriptKind, string> = {
+const SCRIPT_KIND_TRIGGER: Record<OrcaHookScriptKind, string> = {
   setup: 'when this workspace is created',
   archive: 'when this workspace is removed',
   issueCommand: 'when this workspace launches with a linked issue',
@@ -53,7 +51,7 @@ const OrcaYamlTrustDialog = React.memo(function OrcaYamlTrustDialog() {
 
   const repoId = typeof modalData.repoId === 'string' ? modalData.repoId : ''
   const repoName = typeof modalData.repoName === 'string' ? modalData.repoName : 'this repository'
-  const scriptKind: ScriptKind =
+  const scriptKind: OrcaHookScriptKind =
     modalData.scriptKind === 'archive'
       ? 'archive'
       : modalData.scriptKind === 'issueCommand'

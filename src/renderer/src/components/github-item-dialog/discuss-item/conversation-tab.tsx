@@ -44,7 +44,7 @@ import {
   addPRReviewCommentReplyForRepo
 } from '@/components/github/github-work-item-comment-mutations'
 import { runWorkItemBodyUpdate } from '@/components/github/github-work-item-edit-mutations'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import {
   EMPTY_GITHUB_ISSUE_TIMELINE_ITEMS,
   getIssueConversationEntries
@@ -92,7 +92,7 @@ export function ConversationTab({
   checks: GitHubWorkItemDetails['checks']
   localState: GitHubWorkItem['state']
   onStateChange: (state: GitHubWorkItem['state']) => void
-  projectOrigin: GitHubItemDialogProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   onMutated: () => void
   onChecksUpdated: (checks: PRCheckDetail[]) => void
   onBodyUpdated: (body: string) => void

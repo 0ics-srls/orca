@@ -21,8 +21,6 @@ import {
 const SNAPSHOT_FILE_NAME = 'orca-workspace-space-analysis.json'
 const SNAPSHOT_VERSION = 2
 
-export type WorkspaceSpaceAnalysisSnapshotPruneTarget = WorkspaceSnapshotPruneTarget
-
 const prunedWorkspacesByFile = new Map<string, Map<string, WorkspaceSnapshotPruneTombstone>>()
 
 type PersistedWorkspaceSpaceAnalysisSnapshot = {
@@ -209,7 +207,7 @@ function analysisRepoKey(entry: { repoId: string; executionHostId?: ExecutionHos
 /** Register anti-resurrection tombstones without scheduling a sidecar rewrite. */
 export function registerWorkspaceSpaceAnalysisSnapshotPruneTombstones(
   snapshotDirectory: string,
-  targets: readonly WorkspaceSpaceAnalysisSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): void {
   if (targets.length === 0) {
     return
@@ -254,7 +252,7 @@ function clearSupersededPrunes(file: string, analysis: WorkspaceSpaceAnalysis): 
 
 async function pruneWorkspaceSpaceAnalysisSnapshotsWithRegisteredTombstones(
   snapshotDirectory: string,
-  targets: readonly WorkspaceSpaceAnalysisSnapshotPruneTarget[],
+  targets: readonly WorkspaceSnapshotPruneTarget[],
   registerTombstones: boolean
 ): Promise<void> {
   if (targets.length === 0) {
@@ -297,7 +295,7 @@ async function pruneWorkspaceSpaceAnalysisSnapshotsWithRegisteredTombstones(
 /** Drop removed workspace rows and rebalance their totals in one sidecar transaction. Never throws. */
 export async function pruneWorkspaceSpaceAnalysisSnapshots(
   snapshotDirectory: string,
-  targets: readonly WorkspaceSpaceAnalysisSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): Promise<void> {
   await pruneWorkspaceSpaceAnalysisSnapshotsWithRegisteredTombstones(
     snapshotDirectory,
@@ -309,7 +307,7 @@ export async function pruneWorkspaceSpaceAnalysisSnapshots(
 /** Flush only tombstones still active for this batch, preserving their original prune time. */
 export async function finalizeWorkspaceSpaceAnalysisSnapshotPrunes(
   snapshotDirectory: string,
-  targets: readonly WorkspaceSpaceAnalysisSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): Promise<void> {
   await pruneWorkspaceSpaceAnalysisSnapshotsWithRegisteredTombstones(
     snapshotDirectory,

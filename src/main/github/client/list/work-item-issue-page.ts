@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import type { ParsedTaskQuery } from '../../../../shared/task-query'
-import { ghExecFileAsync, type LocalGitExecOptions, type OwnerRepo } from '../../gh-utils'
+import { ghExecFileAsync, type LocalGitExecOptions, type GitHubOwnerRepo } from '../../gh-utils'
 import { noteRepositoryRateLimitSpend } from '../../rate-limit'
 import type { GitHubRepoExecOptions } from '../../github-api-repository'
 import { fetchIssueWorkItem } from '../fetch/work-item-fetch'
@@ -50,7 +50,7 @@ function restActor(actor: Actor | null): Record<string, unknown> | null {
 
 export async function listIssueWorkItemPage(args: {
   repoPath: string
-  ownerRepo: OwnerRepo
+  ownerRepo: GitHubOwnerRepo
   query: ParsedTaskQuery
   limit: number
   page: number

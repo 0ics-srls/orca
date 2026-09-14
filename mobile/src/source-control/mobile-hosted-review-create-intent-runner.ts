@@ -1,11 +1,11 @@
-import type { MobileGitStatusResult } from './mobile-git-status'
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import {
   createMobilePr,
   getMobilePrCreateBlockMessage,
   getMobilePrCreateSuccessWarning,
-  shouldPushBeforeMobilePrCreate,
-  type MobilePrPrefill
+  shouldPushBeforeMobilePrCreate
 } from './mobile-pr-create'
+import type { MobileHostedReviewPrefill } from './mobile-hosted-review-service'
 import {
   prepareMobileHostedReviewCreateIntent,
   type MobileHostedReviewCreateIntentProgress
@@ -15,7 +15,7 @@ import type { MobileSourceControlRpcSender } from './mobile-source-control-rpc-s
 type RunInput = {
   branch: string
   title: string
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   commitMessage?: string
   onProgress?: (progress: MobileHostedReviewCreateIntentProgress) => void
 }
@@ -25,15 +25,15 @@ export type MobileHostedReviewCreateIntentRunOutcome =
       ok: true
       url: string
       warning?: string
-      prefill: MobilePrPrefill
-      status: MobileGitStatusResult | null
+      prefill: MobileHostedReviewPrefill
+      status: GitStatusResult | null
       committed: boolean
     }
   | {
       ok: false
       error: string
       committed?: boolean
-      status?: MobileGitStatusResult | null
+      status?: GitStatusResult | null
       commitMessage?: string
     }
 

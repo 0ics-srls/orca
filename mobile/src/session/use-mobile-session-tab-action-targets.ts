@@ -5,7 +5,8 @@ import {
   type MutableRefObject,
   type SetStateAction
 } from 'react'
-import type { MobileSessionTab, Terminal } from './mobile-session-route-types'
+import type { MobileSessionTab } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 
 type MarkdownTab = Extract<MobileSessionTab, { type: 'markdown' }>
 type FileTab = Extract<MobileSessionTab, { type: 'file' }>
@@ -14,7 +15,7 @@ type AgentSessionTab = Extract<MobileSessionTab, { type: 'agent-session' }>
 type SetActionTarget<T> = Dispatch<SetStateAction<T | null>>
 
 export function useMobileSessionTabActionTargets() {
-  const [actionTarget, setActionTarget] = useState<Terminal | null>(null)
+  const [actionTarget, setActionTarget] = useState<TerminalRecord | null>(null)
   const [markdownActionTarget, setMarkdownActionTarget] = useState<MarkdownTab | null>(null)
   const [fileActionTarget, setFileActionTarget] = useState<FileTab | null>(null)
   const [browserActionTarget, setBrowserActionTarget] = useState<BrowserTab | null>(null)
@@ -38,7 +39,7 @@ export function useMobileSessionTabActionTargets() {
 
 export function useMobileSessionTabActionSheetOpener(args: {
   activeHandleRef: MutableRefObject<string | null>
-  setActionTarget: SetActionTarget<Terminal>
+  setActionTarget: SetActionTarget<TerminalRecord>
   setMarkdownActionTarget: SetActionTarget<MarkdownTab>
   setFileActionTarget: SetActionTarget<FileTab>
   setBrowserActionTarget: SetActionTarget<BrowserTab>

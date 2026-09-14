@@ -46,7 +46,7 @@ export type JournalLoad = {
  * session has no journal yet.
  */
 export function replayJournal(
-  db: Database.Database,
+  db: Database,
   readOnly: boolean,
   sessionId: string
 ): JournalLoad | null {
@@ -124,7 +124,7 @@ export function replayJournal(
 /** Rows after a cursor, in sequence order. Stops at the first row this build
  *  cannot parse, exactly as replay does. */
 export function readJournalRowsAfterCursor(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string,
   afterSequence: number,

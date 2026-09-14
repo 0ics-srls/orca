@@ -1,6 +1,6 @@
 import {
   ORCA_EDITOR_PREPARE_HOT_EXIT_EVENT,
-  type EditorPrepareHotExitDetail
+  type EditorSaveDirtyFilesDetail
 } from './editor-save-events'
 import {
   consumeShutdownCheckpointFailureReason,
@@ -20,7 +20,7 @@ function requestEditorHotExitBackup(eventTarget: EventTarget): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     let claimed = false
     eventTarget.dispatchEvent(
-      new CustomEvent<EditorPrepareHotExitDetail>(ORCA_EDITOR_PREPARE_HOT_EXIT_EVENT, {
+      new CustomEvent<EditorSaveDirtyFilesDetail>(ORCA_EDITOR_PREPARE_HOT_EXIT_EVENT, {
         detail: {
           claim: () => {
             claimed = true

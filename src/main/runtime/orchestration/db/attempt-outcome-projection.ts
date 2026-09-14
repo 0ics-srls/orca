@@ -1,6 +1,6 @@
+import type { PtyLivenessVerdict } from '../../../../shared/pty-liveness-verdict'
 import type {
   AttemptFreshness,
-  AttemptLivenessObservation,
   AttemptObservationFact,
   AttemptObservationFacet,
   AttemptOutcomeProjection,
@@ -59,12 +59,12 @@ function projectLiveness(
   fact: AttemptObservationFact | undefined,
   clock: { execution?: number; home: number },
   freshAfterMs: number
-): AttemptLivenessObservation & { freshness: AttemptFreshness } {
+): PtyLivenessVerdict & { freshness: AttemptFreshness } {
   const freshness = projectFreshness(fact, clock, freshAfterMs)
   if (!fact) {
     return { status: 'unverifiable', reason: 'never observed', freshness }
   }
-  const observed = fact.payload as AttemptLivenessObservation
+  const observed = fact.payload as PtyLivenessVerdict
   if (observed.status === 'exited') {
     return { status: 'exited', freshness }
   }

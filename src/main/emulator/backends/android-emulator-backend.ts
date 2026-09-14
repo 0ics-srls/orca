@@ -45,7 +45,7 @@ import {
 } from '../android/android-stream-session-starter'
 import { AndroidStreamController } from '../android/android-stream-controller'
 import { scrcpyVideoRegistry } from '../scrcpy-video-registry'
-import type { EmulatorGesturePoint } from '../emulator-gesture-sender'
+import type { ServeSimTouchFrame } from '../../../shared/emulator-touch-frame'
 
 export type AndroidEmulatorBackendOptions = {
   runner?: AndroidCommandRunner
@@ -212,7 +212,7 @@ export class AndroidEmulatorBackend implements EmulatorBackend {
 
   async gesture(
     deviceId: string,
-    points: EmulatorGesturePoint[],
+    points: ServeSimTouchFrame[],
     _wsUrl: string | null
   ): Promise<void> {
     const serial = await this.resolveDeviceId(deviceId)

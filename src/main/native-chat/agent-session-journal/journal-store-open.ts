@@ -12,10 +12,6 @@ import type { JournalLoad } from './journal-open'
 import { journalRepairDisclosure, type JournalRepairDisclosure } from './journal-repair-disclosure'
 import { staleSubagentRosterRevisions } from './journal-subagent-liveness'
 
-/** What any of this file's disclosures hands the store — a repair's, or the
- *  pre-SQLite notice's. Same shape, and neither is only a repair. */
-type JournalDisclosure = JournalRepairDisclosure
-
 export async function ensureJournalDir(journalDir: string): Promise<void> {
   await mkdir(journalDir, { recursive: true })
 }
@@ -99,8 +95,8 @@ async function discloseFileFormatRemnant(input: {
   journalDir: string
   agent: AgentType
   appendItem: (
-    identity: JournalDisclosure['identity'],
-    body: JournalDisclosure['body'],
+    identity: JournalRepairDisclosure['identity'],
+    body: JournalRepairDisclosure['body'],
     fence: number
   ) => Promise<unknown>
   highestFence: () => number

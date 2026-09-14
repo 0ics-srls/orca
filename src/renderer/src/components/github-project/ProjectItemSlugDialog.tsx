@@ -10,13 +10,13 @@
 import React from 'react'
 import { VisuallyHidden } from 'radix-ui'
 import { Sheet, SheetContent, SheetDescription, SheetTitle } from '@/components/ui/sheet'
-import type { GitHubItemDialogProjectOrigin } from '@/components/GitHubItemDialog'
+import type { GitHubWorkItemProjectOrigin } from '@/components/GitHubItemDialog'
 import { SlugDialogBody } from './slug-dialog/SlugDialogBody'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { translate } from '@/i18n/i18n'
 
 type Props = {
-  projectOrigin: GitHubItemDialogProjectOrigin | null
+  projectOrigin: GitHubWorkItemProjectOrigin | null
   sourceSettings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
   onClose: () => void
 }

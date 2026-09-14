@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import type { RpcSuccess } from '../transport/types'
 import { normalizeSetupHookTrust } from '../tasks/setup-hook-trust'
-import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 import type {
   MobileWorkspaceRepo,
   RepoHooksResponse,
@@ -17,8 +17,8 @@ export function useNewWorkspaceSetupScript(args: {
   setupSource: string | null
   setupTrust: SetupHookDetails['trust']
   setupRunPolicy: SetupHookDetails['runPolicy']
-  setupDecisionChoice: Exclude<WorkspaceCreateSetupDecision, 'inherit'> | null
-  setSetupDecisionChoice: (decision: Exclude<WorkspaceCreateSetupDecision, 'inherit'>) => void
+  setupDecisionChoice: Exclude<SetupDecision, 'inherit'> | null
+  setSetupDecisionChoice: (decision: Exclude<SetupDecision, 'inherit'>) => void
   runSetup: boolean
   setRunSetup: (run: boolean) => void
   showAdvanced: boolean
@@ -27,7 +27,7 @@ export function useNewWorkspaceSetupScript(args: {
   const { client, selectedRepo } = args
   const [details, setDetails] = useState<SetupHookDetails | null>(null)
   const [setupDecisionChoice, setSetupDecisionChoice] = useState<Exclude<
-    WorkspaceCreateSetupDecision,
+    SetupDecision,
     'inherit'
   > | null>(null)
   const [runSetup, setRunSetup] = useState(true)

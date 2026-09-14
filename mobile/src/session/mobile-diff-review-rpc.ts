@@ -1,15 +1,13 @@
 import type {
-  MobileGitBranchChangeEntry,
-  MobileGitBranchCompareResult,
-  MobileGitBranchCompareSummary
-} from '../source-control/mobile-branch-compare'
-import type {
-  MobileGitFileStatus,
-  MobileGitStagingArea,
-  MobileGitStatusEntry,
-  MobileGitStatusResult,
-  MobileGitUpstreamStatus
-} from '../source-control/mobile-git-status'
+  GitFileStatus,
+  GitStagingArea,
+  GitStatusEntry,
+  GitStatusResult,
+  GitUpstreamStatus
+} from '../../../src/shared/git-status-types'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
+import type { GitBranchChangeEntry } from '../../../src/shared/git-diff-compare-types'
+import type { GitBranchCompareSummary } from '../../../src/shared/git-diff-compare-types'
 
 export type MobileReviewGitDiffResult =
   | {
@@ -47,7 +45,7 @@ function readBoolean(value: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined
 }
 
-function readFileStatus(value: unknown): MobileGitFileStatus | null {
+function readFileStatus(value: unknown): GitFileStatus | null {
   return value === 'modified' ||
     value === 'added' ||
     value === 'deleted' ||
@@ -58,17 +56,17 @@ function readFileStatus(value: unknown): MobileGitFileStatus | null {
     : null
 }
 
-function readStagingArea(value: unknown): MobileGitStagingArea | null {
+function readStagingArea(value: unknown): GitStagingArea | null {
   return value === 'staged' || value === 'unstaged' || value === 'untracked' ? value : null
 }
 
-function readConflictOperation(value: unknown): MobileGitStatusResult['conflictOperation'] {
+function readConflictOperation(value: unknown): GitStatusResult['conflictOperation'] {
   return value === 'merge' || value === 'rebase' || value === 'cherry-pick' || value === 'unknown'
     ? value
     : 'unknown'
 }
 
-function readUpstreamStatus(value: unknown): MobileGitUpstreamStatus | undefined {
+function readUpstreamStatus(value: unknown): GitUpstreamStatus | undefined {
   if (!isRecord(value)) {
     return undefined
   }
@@ -88,7 +86,7 @@ function readUpstreamStatus(value: unknown): MobileGitUpstreamStatus | undefined
   }
 }
 
-function readStatusEntry(value: unknown): MobileGitStatusEntry | null {
+function readStatusEntry(value: unknown): GitStatusEntry | null {
   if (!isRecord(value)) {
     return null
   }
@@ -117,12 +115,12 @@ function readStatusEntry(value: unknown): MobileGitStatusEntry | null {
   }
 }
 
-export function readMobileGitStatusResult(value: unknown): MobileGitStatusResult | null {
+export function readMobileGitStatusResult(value: unknown): GitStatusResult | null {
   if (!isRecord(value) || !Array.isArray(value.entries)) {
     return null
   }
   return {
-    entries: value.entries.flatMap((entry): MobileGitStatusEntry[] => {
+    entries: value.entries.flatMap((entry): GitStatusEntry[] => {
       const parsed = readStatusEntry(entry)
       return parsed ? [parsed] : []
     }),
@@ -133,7 +131,7 @@ export function readMobileGitStatusResult(value: unknown): MobileGitStatusResult
   }
 }
 
-function readBranchStatus(value: unknown): MobileGitBranchCompareSummary['status'] {
+function readBranchStatus(value: unknown): GitBranchCompareSummary['status'] {
   return value === 'ready' ||
     value === 'invalid-base' ||
     value === 'unborn-head' ||
@@ -144,7 +142,7 @@ function readBranchStatus(value: unknown): MobileGitBranchCompareSummary['status
     : 'error'
 }
 
-function readBranchEntry(value: unknown): MobileGitBranchChangeEntry | null {
+function readBranchEntry(value: unknown): GitBranchChangeEntry | null {
   if (!isRecord(value)) {
     return null
   }
@@ -162,7 +160,7 @@ function readBranchEntry(value: unknown): MobileGitBranchChangeEntry | null {
   }
 }
 
-export function readMobileBranchCompareResult(value: unknown): MobileGitBranchCompareResult | null {
+export function readMobileBranchCompareResult(value: unknown): GitBranchCompareResult | null {
   if (!isRecord(value) || !isRecord(value.summary) || !Array.isArray(value.entries)) {
     return null
   }
@@ -184,7 +182,7 @@ export function readMobileBranchCompareResult(value: unknown): MobileGitBranchCo
       status: readBranchStatus(value.summary.status),
       errorMessage: readString(value.summary.errorMessage)
     },
-    entries: value.entries.flatMap((entry): MobileGitBranchChangeEntry[] => {
+    entries: value.entries.flatMap((entry): GitBranchChangeEntry[] => {
       const parsed = readBranchEntry(entry)
       return parsed ? [parsed] : []
     })

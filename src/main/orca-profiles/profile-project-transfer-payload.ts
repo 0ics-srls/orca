@@ -11,7 +11,6 @@ import {
   extractRetiredNameRegistriesByNamespace,
   mergeRetiredNameRegistryMaps
 } from './profile-project-retired-name-transfer'
-import type { TransferProfileState } from './profile-project-state-file'
 import { rebuildRepoBackedProjectState } from './profile-project-state-file'
 import { mergeHostWorkspaceSessions, mergeWorkspaceSessions } from './profile-project-session-state'
 import {
@@ -39,7 +38,7 @@ export type TransferPayload = {
 
 export function createTargetRepo(
   sourceRepo: Repo,
-  targetState: TransferProfileState,
+  targetState: PersistedState,
   copy: boolean
 ): Repo {
   const targetRepoId =
@@ -56,7 +55,7 @@ export function createTargetRepo(
   return repo
 }
 
-function createUniqueRepoId(state: TransferProfileState): string {
+function createUniqueRepoId(state: PersistedState): string {
   const existingRepoIds = new Set(state.repos.map((repo) => repo.id))
   let candidate = randomUUID()
   while (existingRepoIds.has(candidate)) {
@@ -124,7 +123,7 @@ function rekeyWorkspaceLineageRecord(
 }
 
 export function createTransferPayload(args: {
-  sourceState: TransferProfileState
+  sourceState: PersistedState
   sourceRepo: Repo
   targetRepo: Repo
   includeSessions: boolean
@@ -192,10 +191,10 @@ export function createTransferPayload(args: {
 }
 
 export function applyPayloadToTarget(
-  targetState: TransferProfileState,
+  targetState: PersistedState,
   payload: TransferPayload
-): TransferProfileState {
-  const next: TransferProfileState = {
+): PersistedState {
+  const next: PersistedState = {
     ...targetState,
     repos: [...targetState.repos, payload.repo],
     sparsePresetsByRepo: {

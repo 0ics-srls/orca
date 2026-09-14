@@ -497,6 +497,6 @@ function createDatabase(path?: string): DatabaseHarness {
   return harness
 }
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }

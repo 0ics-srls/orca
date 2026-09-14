@@ -8,9 +8,9 @@ import {
   getMobilePrCreateBlockMessage,
   mobileRepoSelectorFromWorktreeId,
   resolveMobilePrPrefill,
-  shouldPushBeforeMobilePrCreate,
-  type MobilePrPrefill
+  shouldPushBeforeMobilePrCreate
 } from './mobile-pr-create'
+import type { MobileHostedReviewPrefill } from './mobile-hosted-review-service'
 
 function ok(result: unknown): RpcSuccess {
   return { id: 'r', ok: true, result, _meta: { runtimeId: 'rt' } }
@@ -236,7 +236,8 @@ describe('mobile create form gating parity', () => {
         title: 'Add feature',
         body: '',
         canCreate: false,
-        blockedReason: 'future_desktop_reason' as unknown as MobilePrPrefill['blockedReason']
+        blockedReason:
+          'future_desktop_reason' as unknown as MobileHostedReviewPrefill['blockedReason']
       })
     ).toBe('This branch is not ready for a pull request yet.')
   })

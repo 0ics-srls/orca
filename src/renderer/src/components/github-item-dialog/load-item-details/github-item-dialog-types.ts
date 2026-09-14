@@ -6,9 +6,6 @@ import type {
   ItemDialogTab
 } from '@/components/github/github-work-item-identity'
 
-/** Re-exported so Project-view callers keep a stable import path. */
-export type GitHubItemDialogProjectOrigin = GitHubWorkItemProjectOrigin
-
 export type GitHubItemDialogProps = {
   workItem: GitHubWorkItem | null
   repoPath: string | null
@@ -24,5 +21,5 @@ export type GitHubItemDialogProps = {
   ) => void
   onClose: () => void
   /** Optional Project-origin context; when set, edits route via slug-addressed IPCs against the row's repo (slug routing wins for writes). */
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
 }

@@ -8,8 +8,6 @@ import {
   type ParsedFileLinkLocation
 } from '../../../src/shared/file-link-location'
 
-export type TappedFilePath = ParsedFileLinkLocation
-
 // Separator-anchored path tokens (absolute, relative, ~/, drive-letter, UNC) OR
 // a bare filename with an extension (README.md, index.ts), optionally suffixed
 // with :line or :line:col. Like desktop, we propose candidates and let the host
@@ -47,7 +45,7 @@ function trimBoundaryPunctuation(
   }
 }
 
-export function parsePathWithOptionalLineColumn(value: string): TappedFilePath | null {
+export function parsePathWithOptionalLineColumn(value: string): ParsedFileLinkLocation | null {
   const parsed = parseFileLinkLocation(value)
   if (!parsed) {
     return null
@@ -137,7 +135,7 @@ function hasSpacedPathExtension(text: string): boolean {
   return /\s/.test(trimmed) && /\.[A-Za-z0-9_+-]+(?::\d+)?(?::\d+)?$/.test(trimmed)
 }
 
-function matchSpacedFilePathAtColumn(lineText: string, col: number): TappedFilePath | null {
+function matchSpacedFilePathAtColumn(lineText: string, col: number): ParsedFileLinkLocation | null {
   SPACED_PATH_REGEX.lastIndex = 0
   let match: RegExpExecArray | null
   while ((match = SPACED_PATH_REGEX.exec(lineText)) !== null) {
@@ -165,7 +163,10 @@ function matchSpacedFilePathAtColumn(lineText: string, col: number): TappedFileP
 
 // Returns the file-path span (after punctuation trim) that contains `col`, or
 // null when the tap isn't on a path.
-export function matchFilePathAtColumn(lineText: string, col: number): TappedFilePath | null {
+export function matchFilePathAtColumn(
+  lineText: string,
+  col: number
+): ParsedFileLinkLocation | null {
   const spaced = matchSpacedFilePathAtColumn(lineText, col)
   if (spaced) {
     return spaced

@@ -1,22 +1,20 @@
 import type { Mock } from 'vitest'
 import type * as BoundedFileReader from '../../shared/node-bounded-file-reader'
 
-type MockFn = Mock
-
 export type GitRunnerMocks = {
-  gitExecFileAsyncMock: MockFn
-  gitExecFileAsyncBufferMock: MockFn
-  gitStreamOptionsMock: MockFn
+  gitExecFileAsyncMock: Mock
+  gitExecFileAsyncBufferMock: Mock
+  gitStreamOptionsMock: Mock
 }
 
 export type FsPromisesMocks = {
-  lstatMock: MockFn
-  realpathMock: MockFn
-  readFileMock: MockFn
-  statMock: MockFn
-  rmMock: MockFn
+  lstatMock: Mock
+  realpathMock: Mock
+  readFileMock: Mock
+  statMock: Mock
+  rmMock: Mock
   /** Optional: defaults to "nothing exists", which is what most git-read tests assume. */
-  accessMock?: MockFn
+  accessMock?: Mock
 }
 
 export function createGitRunnerModuleMock(mocks: GitRunnerMocks): Record<string, unknown> {
@@ -62,7 +60,7 @@ export function createFsPromisesModuleMock(mocks: FsPromisesMocks): Record<strin
 
 export function createBoundedFileReaderModuleMock(
   actual: typeof BoundedFileReader,
-  mocks: { readFileMock: MockFn; statMock: MockFn }
+  mocks: { readFileMock: Mock; statMock: Mock }
 ): Record<string, unknown> {
   return {
     ...actual,

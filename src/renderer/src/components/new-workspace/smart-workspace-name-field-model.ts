@@ -1,6 +1,6 @@
 import type React from 'react'
 import type { useAppStore } from '@/store'
-import type { parseGitHubIssueOrPRLink, RepoSlug } from '@/lib/github-links'
+import type { parseGitHubIssueOrPRLink } from '@/lib/github-links'
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
 import type { GitLabWorkItem } from '../../../../shared/gitlab-types'
 import type { JiraIssue, JiraSite } from '../../../../shared/jira-types'
@@ -97,8 +97,6 @@ export type SmartWorkspaceNameFieldSearchState = {
   linearIssues: LinearIssue[]
   jiraIssues: JiraIssue[]
 }
-
-export type CachedRepoSlug = RepoSlug
 
 export const EMPTY_REPO_SEARCH_REPOS: readonly RepoOption[] = []
 export const SEARCH_DEBOUNCE_MS = 200

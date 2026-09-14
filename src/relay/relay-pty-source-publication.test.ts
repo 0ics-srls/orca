@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourcePublication } from './relay-pty-source-publication'
@@ -58,8 +58,8 @@ describe('RelayPtySourcePublication', () => {
     holdExitSettlement = false
   ) {
     const writes: Buffer[] = []
-    const sourceSettlements: ((result: SinkWriteSettlement) => void)[] = []
-    const exitSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const sourceSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
+    const exitSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const capacityIds: string[] = []
     dispatcher = new RelayDispatcher(
       (data, onSettled) => {
@@ -103,7 +103,7 @@ describe('RelayPtySourcePublication', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       publication.activate('pty-1', 'incarnation-1', {
         clientId: 1,
@@ -298,7 +298,7 @@ describe('RelayPtySourcePublication', () => {
     const detached: number[] = []
     const saturatedWrites: Buffer[] = []
     const healthyWrites: Buffer[] = []
-    const heldSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const heldSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     let saturateSubscriber = false
     dispatcher!.onClientDetached((clientId) => detached.push(clientId))
     const saturatedId = dispatcher!.attachClient(
@@ -501,7 +501,7 @@ describe('RelayPtySourcePublication', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(
       harness.publication.activate(
         'pty-1',
@@ -578,7 +578,7 @@ describe('RelayPtySourcePublication', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const activation = harness.publication.activate(
       'pty-1',
       'incarnation-1',
@@ -654,8 +654,8 @@ describe('RelayPtySourcePublication', () => {
     dispatcher!.invalidateClient()
 
     const recoveredWrites: Buffer[] = []
-    const recoverySettlements: ((result: SinkWriteSettlement) => void)[] = []
-    const completionSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const recoverySettlements: ((result: DispatcherWriterSettlement) => void)[] = []
+    const completionSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const recoveredClientId = dispatcher!.attachClient(
       (data, onSettled) => {
         recoveredWrites.push(Buffer.from(data))
@@ -686,7 +686,7 @@ describe('RelayPtySourcePublication', () => {
       })
     )
     await flushRequests()
-    const activationSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const activationSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const activation = harness.publication.activate(
       'pty-1',
       'incarnation-1',

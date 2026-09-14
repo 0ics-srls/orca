@@ -1,11 +1,8 @@
+import type { GitStatusResult, GitUpstreamStatus } from '../../../src/shared/git-status-types'
 import { useCallback } from 'react'
 import type { ConnectionState, RpcSuccess } from '../transport/types'
 import type { RpcClient } from '../transport/rpc-client'
-import {
-  isMobileGitUnavailable,
-  type MobileGitStatusResult,
-  type MobileGitUpstreamStatus
-} from './mobile-git-status'
+import { isMobileGitUnavailable } from './mobile-git-status'
 import type { GitCommitResult, GitRequestError } from './mobile-source-control-screen-state'
 
 type Params = {
@@ -49,16 +46,16 @@ export function useMobileGitRequests({ client, connState, worktreeId }: Params) 
     [sendGitRequest]
   )
 
-  const readUpstreamStatusForSync = useCallback(async (): Promise<MobileGitUpstreamStatus> => {
+  const readUpstreamStatusForSync = useCallback(async (): Promise<GitUpstreamStatus> => {
     try {
-      return await sendGitRequest<MobileGitUpstreamStatus>('git.upstreamStatus')
+      return await sendGitRequest<GitUpstreamStatus>('git.upstreamStatus')
     } catch (err) {
       const code = err instanceof Error ? (err as GitRequestError).code : undefined
       const message = err instanceof Error ? err.message : String(err)
       if (!isMobileGitUnavailable(code, message)) {
         throw err
       }
-      const status = await sendGitRequest<MobileGitStatusResult>('git.status')
+      const status = await sendGitRequest<GitStatusResult>('git.status')
       if (!status.upstreamStatus) {
         throw new Error('Branch status unavailable')
       }

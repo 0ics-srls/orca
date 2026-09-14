@@ -8,7 +8,7 @@ import {
   ghRepoExecOptions,
   githubRepoContext,
   type LocalGitExecOptions,
-  type OwnerRepo
+  type GitHubOwnerRepo
 } from '../../gh-utils'
 import {
   githubHostExecOptions,
@@ -27,7 +27,7 @@ import { buildSearchQueryString, defaultOpenWorkItemQuery } from './work-item-se
 import { searchWorkItemCount, usesGraphqlWorkItemSearch } from './work-item-search-page'
 export async function countWorkItemsForQuery(
   repoPath: string,
-  ownerRepo: OwnerRepo,
+  ownerRepo: GitHubOwnerRepo,
   query: ParsedTaskQuery,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

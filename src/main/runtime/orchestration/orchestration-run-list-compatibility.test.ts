@@ -3,8 +3,8 @@ import type Database from '../../sqlite/sync-database'
 import { OrchestrationDb } from './db'
 import { ORCHESTRATION_RUN_METHODS } from '../rpc/methods/orchestration/runs/runs'
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
 describe('orchestration Run list compatibility', () => {

@@ -2,7 +2,7 @@ import type { RouteAndItemStateModel } from './use-mobile-tasks-route-and-item-s
 import {
   type BaseRefSearchResult,
   type GitHubProjectPartialFailure,
-  type GitHubProjectRef,
+  type GitHubProjectIdentity,
   type GitHubProjectSettings,
   type GitHubProjectSummary,
   type GitHubProjectViewSummary,
@@ -120,7 +120,7 @@ export function useMobileTasksWorkspaceAndProjectState(model: RouteAndItemStateM
   const [showGitHubProjectSortPicker, setShowGitHubProjectSortPicker] = useState(false)
   const [showGitHubProjectFieldsPicker, setShowGitHubProjectFieldsPicker] = useState(false)
   const [pendingGitHubProjectViewSelection, setPendingGitHubProjectViewSelection] =
-    useState<GitHubProjectRef | null>(null)
+    useState<GitHubProjectIdentity | null>(null)
   const [projectRowItem, setProjectRowItem] = useState<GitHubProjectRow | null>(null)
   const [projectRowDetail, setProjectRowDetail] = useState<DetailPayload | null>(null)
   const [projectRowDetailLoading, setProjectRowDetailLoading] = useState(false)

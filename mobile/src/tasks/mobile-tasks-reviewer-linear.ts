@@ -11,7 +11,7 @@ import type {
   GitHubAssignableUser,
   GitHubPRReviewSummary,
   GitHubRepoSources,
-  LinearIssue,
+  LinearMobileIssue,
   LinearTeam
 } from './mobile-tasks-provider-detail-types'
 
@@ -84,9 +84,9 @@ export function issueSourceSlug(source: GitHubOwnerRepo | null | undefined): str
 }
 
 export function sortLinearIssues(
-  issues: readonly LinearIssue[],
+  issues: readonly LinearMobileIssue[],
   orderBy: LinearOrderBy
-): LinearIssue[] {
+): LinearMobileIssue[] {
   if (issues.length < 2) {
     return [...issues]
   }
@@ -104,7 +104,7 @@ export function sortLinearIssues(
 }
 
 export function getLinearIssueGroup(
-  issue: LinearIssue,
+  issue: LinearMobileIssue,
   groupBy: LinearGroupBy
 ): {
   key: string
@@ -135,7 +135,7 @@ export function getLinearIssueGroup(
 }
 
 export function groupLinearIssues(
-  issues: LinearIssue[],
+  issues: LinearMobileIssue[],
   groupBy: LinearGroupBy,
   orderBy: LinearOrderBy
 ): LinearIssueSection[] {
@@ -144,14 +144,14 @@ export function groupLinearIssues(
 
 /** The caller must sort issues by its selected order before grouping. */
 export function groupSortedLinearIssues(
-  issues: readonly LinearIssue[],
+  issues: readonly LinearMobileIssue[],
   groupBy: LinearGroupBy
 ): LinearIssueSection[] {
   return groupOrderedLinearIssues([...issues], groupBy)
 }
 
 function groupOrderedLinearIssues(
-  sorted: LinearIssue[],
+  sorted: LinearMobileIssue[],
   groupBy: LinearGroupBy
 ): LinearIssueSection[] {
   if (groupBy === 'none') {
@@ -159,7 +159,7 @@ function groupOrderedLinearIssues(
   }
   const sections = new Map<
     string,
-    { key: string; label: string; color: string; issues: LinearIssue[] }
+    { key: string; label: string; color: string; issues: LinearMobileIssue[] }
   >()
   for (const issue of sorted) {
     const group = getLinearIssueGroup(issue, groupBy)
@@ -174,7 +174,7 @@ function groupOrderedLinearIssues(
 }
 
 export function linearIssueSecondaryParts(
-  issue: LinearIssue,
+  issue: LinearMobileIssue,
   displayProperties: ReadonlySet<LinearDisplayProperty>
 ): string[] {
   const parts = [issue.identifier]

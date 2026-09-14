@@ -1,5 +1,5 @@
 import { getLinearOrganizationUrlKeyFromIssueUrl } from '../linear/links'
-import type { FolderWorkspaceLinkedTask } from '../folder-workspace-types'
+import type { WorkspaceLinkedItem } from '../worktree/types'
 import type { JiraIssue } from '../jira-types'
 import type { LinearIssue } from '../linear/issue-types'
 import {
@@ -9,9 +9,9 @@ import {
 } from '../workspace-name'
 import { isWorkItemLookupText } from './work-item-lookup-text'
 
-export type WorkspaceSourceProvider = FolderWorkspaceLinkedTask['provider']
+export type WorkspaceSourceProvider = WorkspaceLinkedItem['provider']
 
-export type WorkspaceSourceLinkedItem = FolderWorkspaceLinkedTask & {
+export type WorkspaceSourceLinkedItem = WorkspaceLinkedItem & {
   linearWorkspaceId?: string
   linearOrganizationUrlKey?: string
   linearBranchName?: string

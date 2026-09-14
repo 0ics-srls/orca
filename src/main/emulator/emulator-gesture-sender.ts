@@ -4,11 +4,9 @@ import {
   type ServeSimTouchFrame
 } from '../../shared/emulator-touch-frame'
 
-export type EmulatorGesturePoint = ServeSimTouchFrame
-
 export async function sendEmulatorGestureSequence(
   wsUrl: string,
-  points: EmulatorGesturePoint[]
+  points: ServeSimTouchFrame[]
 ): Promise<void> {
   await new Promise<void>((resolve, reject) => {
     const ws = new WebSocket(wsUrl)

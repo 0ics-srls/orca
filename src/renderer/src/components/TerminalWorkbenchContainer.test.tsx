@@ -1,7 +1,7 @@
 // @vitest-environment happy-dom
 import { cleanup, render } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { BrowserTab as BrowserTabState } from '../../../shared/browser-workspace-types'
+import type { BrowserWorkspace as BrowserTabState } from '../../../shared/browser-workspace-types'
 
 type MockAppState = { browserTabsByWorktree: Record<string, readonly BrowserTabState[]> }
 

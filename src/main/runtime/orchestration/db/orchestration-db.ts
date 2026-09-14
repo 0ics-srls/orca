@@ -11,7 +11,7 @@ import { createTables } from './schema/create-tables'
 import { migrate } from './schema/migrate'
 
 class OrchestrationDbCore {
-  db: Database.Database
+  db: Database
 
   // Why: the orchestration DB is created lazily for ALL users, but only the
   // small minority who dispatch work ever have dispatch_contexts rows. The

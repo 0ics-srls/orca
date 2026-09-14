@@ -3,9 +3,7 @@ import {
   latestReceivedSessionTabsFrameByEnvironment,
   sessionTabsPublicationEpochHistoryByWorktree,
   sessionTabsRuntimeHistoryByEnvironment,
-  type RetiredValueHistory,
-  type SessionTabsPublicationEpochHistory,
-  type SessionTabsRuntimeHistory
+  type RetiredValueHistory
 } from './state'
 
 const SESSION_TABS_RETIRED_EPOCH_LIMIT = 8
@@ -77,10 +75,7 @@ export function isRetiredSessionTabsRuntimeId(environmentId: string, runtimeId: 
   return hasRetiredValue(sessionTabsRuntimeHistoryByEnvironment.get(environmentId), runtimeId)
 }
 
-function noteSessionTabsRuntimeId(
-  environmentId: string,
-  runtimeId: string
-): SessionTabsRuntimeHistory {
+function noteSessionTabsRuntimeId(environmentId: string, runtimeId: string): RetiredValueHistory {
   const history = noteRetiredValue(
     sessionTabsRuntimeHistoryByEnvironment.get(environmentId),
     runtimeId,
@@ -157,7 +152,7 @@ export function isHeadlessMergeSessionTabsPublication(publicationEpoch: string):
 export function noteSessionTabsPublicationEpoch(
   key: string,
   publicationEpoch: string
-): SessionTabsPublicationEpochHistory {
+): RetiredValueHistory {
   const history = noteRetiredValue(
     sessionTabsPublicationEpochHistoryByWorktree.get(key),
     publicationEpoch,

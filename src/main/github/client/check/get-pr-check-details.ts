@@ -1,6 +1,6 @@
 import type { PRCheckRunDetails } from '../../../../shared/github/check-types'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import {
   GITHUB_CHECK_DETAILS_HOST_TIMEOUT_MS,
   GITHUB_CHECK_DETAILS_TIMEOUT_MESSAGE
@@ -14,6 +14,8 @@ import {
 } from './check-detail-field-mapping'
 import { rethrowCheckDetailsAbort, waitForCheckDetailsResolution } from './check-details-abort'
 import { attachFailedJobLogTails } from './check-job-log-tails'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function getPRCheckDetails(
   repoPath: string,
   args: {
@@ -21,7 +23,7 @@ export async function getPRCheckDetails(
     workflowRunId?: number
     checkName?: string
     url?: string | null
-    prRepo?: GitHubApiRepository | null
+    prRepo?: GitHubOwnerRepo | null
   },
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {},

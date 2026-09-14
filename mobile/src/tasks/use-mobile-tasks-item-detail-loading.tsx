@@ -10,7 +10,7 @@ import {
   type GitHubDetailCheck,
   type GitHubDetailFile,
   type GitHubPRReviewSummary,
-  type LinearIssue,
+  type LinearMobileIssue,
   type TaskItem,
   createLinearTask,
   isSuccess
@@ -207,7 +207,7 @@ export function useMobileTasksItemDetailLoading(model: ItemDetailMetadataEffects
       if (!isSuccess(issueResponse)) {
         throw new Error(issueResponse.error.message)
       }
-      const issue = issueResponse.result as LinearIssue | null
+      const issue = issueResponse.result as LinearMobileIssue | null
       const comments = isSuccess(commentsResponse)
         ? ((commentsResponse.result as DetailComment[]) ?? [])
         : []

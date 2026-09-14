@@ -7,7 +7,7 @@ import type {
 } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
 import { PRAssigneesPanel } from '@/components/github/PRAssigneesPanel'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { ChecksTab } from '../inspect-pull-request/checks-tab'
 import { PRActionsPanel } from '../land-pull-request/pr-actions-panel'
 import { PRReviewersPanel } from '../land-pull-request/pr-reviewers-panel'
@@ -30,7 +30,7 @@ export function ConversationTabPRSidebar({
   item: GitHubWorkItem
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: GitHubItemDialogProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   localState: GitHubWorkItem['state']
   onStateChange: (state: GitHubWorkItem['state']) => void
   onMutated: () => void

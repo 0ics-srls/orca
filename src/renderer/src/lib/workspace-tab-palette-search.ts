@@ -49,8 +49,6 @@ export type SearchableWorkspaceTab = {
 // secondary crowds the row. Keep these matchable so typing "terminal" still finds them.
 export const TERMINAL_TYPE_SEARCH_ALIASES = ['terminal tab', 'terminal'] as const
 
-type WorkspaceTabPaletteActiveTabType = WorkspaceVisibleTabType
-
 export type BuildSearchableWorkspaceTabsOptions = WorkspaceTabAgentMetadataState & {
   worktrees: readonly Worktree[]
   ownershipWorktrees?: readonly Pick<Worktree, 'id'>[]
@@ -64,12 +62,12 @@ export type BuildSearchableWorkspaceTabsOptions = WorkspaceTabAgentMetadataState
   groupsByWorktree: Record<string, readonly TabGroup[] | undefined>
   activeWorktreeId: string | null
   activeWorkspaceExecutionHostId?: ExecutionHostId | null
-  activeTabType: WorkspaceTabPaletteActiveTabType
+  activeTabType: WorkspaceVisibleTabType
   activeTabId: string | null
   activeTabIdByWorktree: Record<string, string | null | undefined>
   activeFileId: string | null
   activeFileIdByWorktree: Record<string, string | null | undefined>
-  activeTabTypeByWorktree: Record<string, WorkspaceTabPaletteActiveTabType | undefined>
+  activeTabTypeByWorktree: Record<string, WorkspaceVisibleTabType | undefined>
   generatedTitlesEnabled: boolean
   terminalLayoutsByTabId?: Record<string, TerminalLayoutSnapshot | undefined>
   paneForegroundAgentByPaneKey?: Record<string, PaneForegroundAgentEntry>

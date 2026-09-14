@@ -35,8 +35,6 @@ export type EmulatorPointerAction =
   | { kind: 'tap'; point: EmulatorScreenPoint }
   | { kind: 'gesture'; points: EmulatorGesturePoint[] }
 
-type ContentRect = RectLike
-
 const DOM_DELTA_LINE = 1
 const DOM_DELTA_PAGE = 2
 export const HID_EDGE_BOTTOM = 3
@@ -62,7 +60,7 @@ export function buildEmulatorGesturePoint(
   return edge === undefined ? { ...point, type } : { ...point, type, edge }
 }
 
-function resolveSimulatorScreenContentRect(rect: RectLike, streamSize: StreamSize): ContentRect {
+function resolveSimulatorScreenContentRect(rect: RectLike, streamSize: StreamSize): RectLike {
   let contentLeft = rect.left
   let contentTop = rect.top
   let contentWidth = rect.width

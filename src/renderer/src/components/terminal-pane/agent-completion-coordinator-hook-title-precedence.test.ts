@@ -7,7 +7,7 @@ import {
   processResult,
   useAgentCompletionCoordinatorLifecycle
 } from './agent-completion-coordinator-test-harness'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 
 describe('agent completion coordinator', () => {
   useAgentCompletionCoordinatorLifecycle()
@@ -188,7 +188,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('keeps duplicate done-only hooks inside replay guard suppressed after process inspection', async () => {
-    const inspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const inspection = createDeferred<TerminalProcessInspection>()
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',
@@ -259,7 +259,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('ignores process inspections that resolve after completion state reset', async () => {
-    const inspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const inspection = createDeferred<TerminalProcessInspection>()
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',
@@ -282,8 +282,8 @@ describe('agent completion coordinator', () => {
   })
 
   it('starts a fresh pending-title inspection after stale inspection resolves', async () => {
-    const firstInspection = createDeferred<RuntimeTerminalProcessInspection>()
-    const secondInspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const firstInspection = createDeferred<TerminalProcessInspection>()
+    const secondInspection = createDeferred<TerminalProcessInspection>()
     const inspectProcess = vi
       .fn()
       .mockReturnValueOnce(firstInspection.promise)

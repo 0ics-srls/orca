@@ -18,7 +18,7 @@ import type {
 import type { PRCheckDetail } from '../../../../../shared/github/check-types'
 import type { PRComment } from '../../../../../shared/github/comment-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import {
   patchCachedPRChecks,
   patchCachedPRReviewRequests,
@@ -61,7 +61,7 @@ export function PullRequestPageTabs({
   repoPath: string | null
   effectiveRepoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   body: string
   comments: PRComment[]
   files: GitHubPRFile[]

@@ -18,12 +18,9 @@ import {
   describeSyncCounts
 } from './source-control-primary-action-titles'
 
-export type {
-  PrimaryActionKind,
-  RemoteOpKind,
-  PrimaryAction,
-  PrimaryActionInputs
-} from './source-control-primary-action-types'
+export type { PrimaryAction, PrimaryActionInputs } from './source-control-primary-action-types'
+export type { SourceControlRemoteOpKind } from '../../../../shared/source-control-primary-action-decision-types'
+export type { SourceControlPrimaryActionKind } from '../../../../shared/source-control-primary-action-decision-types'
 
 // Why: the shared module owns the pure state-machine logic; this renderer
 // adapter keeps localized copy and the historical exported shape in place.

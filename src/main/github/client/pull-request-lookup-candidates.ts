@@ -2,16 +2,17 @@ import type { IssueSourcePreference } from '../../../shared/repo-types'
 import type { LocalGitExecOptions } from '../gh-utils'
 import {
   getOriginGitHubApiRepository,
-  resolveGitHubApiRepositoryCandidates,
-  type GitHubApiRepository
+  resolveGitHubApiRepositoryCandidates
 } from '../github-api-repository'
+import type { GitHubOwnerRepo } from '../../../shared/github/pull-request-types'
+
 // resolvePrWorkItemSource list semantics.
 export async function resolvePullRequestLookupCandidates(
   repoPath: string,
   preference: IssueSourcePreference | undefined,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<GitHubApiRepository[]> {
+): Promise<GitHubOwnerRepo[]> {
   if (preference === 'origin') {
     const origin = await getOriginGitHubApiRepository(repoPath, connectionId, localGitOptions)
     return origin ? [origin] : []

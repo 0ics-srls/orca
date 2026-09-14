@@ -6,15 +6,13 @@ import {
   processResult,
   useAgentCompletionCoordinatorLifecycle
 } from './agent-completion-coordinator-test-harness'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 
 describe('agent completion coordinator queued inspections', () => {
   useAgentCompletionCoordinatorLifecycle()
 
   it('drops inspections queued by a disposed coordinator before starting live work', async () => {
-    const blockers = Array.from({ length: 4 }, () =>
-      createDeferred<RuntimeTerminalProcessInspection>()
-    )
+    const blockers = Array.from({ length: 4 }, () => createDeferred<TerminalProcessInspection>())
     const blockerInspectors = blockers.map((inspection) => vi.fn(() => inspection.promise))
     const blockerCoordinators = blockerInspectors.map((inspectProcess, index) =>
       createAgentCompletionCoordinator({

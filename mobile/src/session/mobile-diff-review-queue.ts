@@ -1,15 +1,17 @@
 import type {
+  GitFileStatus,
+  GitStagingArea,
+  GitStatusEntry
+} from '../../../src/shared/git-status-types'
+import type {
   DiffComment,
   DiffReviewScope,
   MobileDiffReviewState
 } from '../../../src/shared/diff-comment-types'
-import type { MobileGitBranchChangeEntry } from '../source-control/mobile-branch-compare'
+import type { GitBranchChangeEntry } from '../../../src/shared/git-diff-compare-types'
 import {
   isMobileGitDiscardableEntry,
-  isMobileGitStageableEntry,
-  type MobileGitFileStatus,
-  type MobileGitStagingArea,
-  type MobileGitStatusEntry
+  isMobileGitStageableEntry
 } from '../source-control/mobile-git-status'
 import {
   buildMobileDiffIdentity,
@@ -28,10 +30,10 @@ export type MobileDiffReviewQueueFilter =
 export type MobileDiffReviewQueueItem = {
   key: string
   scope: DiffReviewScope
-  area: MobileGitStagingArea | 'branch'
+  area: GitStagingArea | 'branch'
   filePath: string
   oldPath?: string
-  status: MobileGitFileStatus
+  status: GitFileStatus
   title: string
   subtitle: string
   added?: number
@@ -51,8 +53,8 @@ export type MobileDiffReviewQueueItem = {
 
 export type BuildMobileDiffReviewQueueInput = {
   worktreeId: string
-  statusEntries: readonly MobileGitStatusEntry[]
-  branchEntries: readonly MobileGitBranchChangeEntry[]
+  statusEntries: readonly GitStatusEntry[]
+  branchEntries: readonly GitBranchChangeEntry[]
   branchHeadOid?: string | null
   branchMergeBase?: string | null
   comments: readonly DiffComment[]
@@ -65,20 +67,20 @@ const SCOPE_SORT_ORDER: Record<DiffReviewScope, number> = {
   branch: 2
 }
 
-function scopeForStatusArea(area: MobileGitStagingArea): DiffReviewScope {
+function scopeForStatusArea(area: GitStagingArea): DiffReviewScope {
   return area === 'staged' ? 'staged' : 'unstaged'
 }
 
 export function createMobileDiffReviewFileKey(
   scope: DiffReviewScope,
-  area: MobileGitStagingArea | 'branch',
+  area: GitStagingArea | 'branch',
   filePath: string,
   oldPath?: string
 ): string {
   return [scope, area, oldPath ?? '', filePath].join('\0')
 }
 
-function statusEntryIdentity(entry: MobileGitStatusEntry, scope: DiffReviewScope): string {
+function statusEntryIdentity(entry: GitStatusEntry, scope: DiffReviewScope): string {
   return buildMobileDiffIdentity([
     scope,
     entry.area,
@@ -92,7 +94,7 @@ function statusEntryIdentity(entry: MobileGitStatusEntry, scope: DiffReviewScope
 }
 
 function branchEntryIdentity(
-  entry: MobileGitBranchChangeEntry,
+  entry: GitBranchChangeEntry,
   branchHeadOid: string | null | undefined,
   branchMergeBase: string | null | undefined
 ): string {
@@ -163,7 +165,7 @@ function queueNoteCounts(
 }
 
 function statusEntryToQueueItem(
-  entry: MobileGitStatusEntry,
+  entry: GitStatusEntry,
   comments: readonly DiffComment[],
   reviewState: MobileDiffReviewState
 ): MobileDiffReviewQueueItem {
@@ -199,7 +201,7 @@ function statusEntryToQueueItem(
 }
 
 function branchEntryToQueueItem(
-  entry: MobileGitBranchChangeEntry,
+  entry: GitBranchChangeEntry,
   input: BuildMobileDiffReviewQueueInput
 ): MobileDiffReviewQueueItem {
   const scope: DiffReviewScope = 'branch'

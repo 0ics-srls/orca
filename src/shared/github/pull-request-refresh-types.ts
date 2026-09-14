@@ -17,9 +17,6 @@ export type PRRefreshErrorType =
   | 'server_error'
   | 'unknown'
 
-// Backward-compatible name used by outage-copy consumers added on main.
-export type PRRefreshUpstreamErrorType = PRRefreshErrorType
-
 export type PRRefreshOutcome =
   | { kind: 'found'; pr: PRInfo; fetchedAt: number }
   | { kind: 'no-pr'; fetchedAt: number }

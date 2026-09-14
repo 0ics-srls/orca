@@ -5,7 +5,8 @@ import { resolvePaneAgentOwnerRecord } from '../../../../shared/pane-agent-owner
 import { normalizeCompatibleAgentTitleForOwner } from '../../../../shared/agent-title-owner'
 import { getRemoteRuntimePtyEnvironmentId, toRemoteRuntimePtyId } from '../runtime-terminal-stream'
 import { toWebTerminalSurfaceTabId } from '../web-runtime-session'
-import type { MirroredTerminalTab, TerminalSurface, ReadyTerminalSurface } from './state'
+import type { MirroredTerminalTab, ReadyTerminalSurface } from './state'
+import type { RuntimeMobileSessionTerminalClientTab } from '../../../../shared/runtime-types'
 import { chooseRemoteTerminalLayout, isTerminalSurfaceTab } from './terminal-surfaces'
 
 function pendingBindingBelongsToEnvironment(
@@ -21,7 +22,7 @@ function pendingBindingBelongsToEnvironment(
 
 /** Keep a known pane binding while the host briefly publishes its surface as pending. */
 function retainPendingTerminalBindings(
-  surfaces: readonly TerminalSurface[],
+  surfaces: readonly RuntimeMobileSessionTerminalClientTab[],
   existingLayout: TerminalLayoutSnapshot | undefined,
   ptyIdsByLeafId: Record<string, string>,
   environmentId: string,
@@ -62,7 +63,7 @@ export function buildMirroredTerminalTabs(
   focusTarget?: { parentTabId: string; leafId: string },
   terminalPtyMode: 'local' | 'remote' = 'remote'
 ): MirroredTerminalTab[] {
-  const groups = new Map<string, TerminalSurface[]>()
+  const groups = new Map<string, RuntimeMobileSessionTerminalClientTab[]>()
   for (const tab of snapshot.tabs.filter(isTerminalSurfaceTab)) {
     const group = groups.get(tab.parentTabId) ?? []
     group.push(tab)
@@ -102,7 +103,9 @@ export function buildMirroredTerminalTabs(
     ).snapshot
     const layoutPtyEntries = Object.entries(layout.ptyIdsByLeafId ?? {})
     const ptyIds = layoutPtyEntries.map(([, ptyId]) => ptyId)
-    let retainedSurfaceByPrunedLeafId: Map<string, TerminalSurface> | undefined
+    let retainedSurfaceByPrunedLeafId:
+      | Map<string, RuntimeMobileSessionTerminalClientTab>
+      | undefined
     if (layoutPtyEntries.length < Object.keys(ptyIdsByLeafId).length) {
       const retainedLeafIdByPtyId = new Map(
         layoutPtyEntries.map(([leafId, ptyId]) => [ptyId, leafId])

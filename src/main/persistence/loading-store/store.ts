@@ -33,7 +33,6 @@ import type { RetiredWorktreeNamePersistence } from './retired-worktree-name-per
 import type { SshLeaseRecoveryOperations } from './ssh-lease-recovery-operations'
 import type { WriteFlushBarrierOperations } from './write-flush-barriers'
 
-export type StoreOptions = StoreRuntimeOptions
 export type PtyBindingSourceExpectation = {
   worktreeId?: string
   tabId: string
@@ -49,7 +48,7 @@ export class Store {
   private readonly domains: StoreDomains
   private readonly state: PersistedState
 
-  constructor(options: StoreOptions = {}) {
+  constructor(options: StoreRuntimeOptions = {}) {
     this.runtime = new StoreRuntimeState(options)
     this.domains = createStoreDomains(this.runtime)
     installStoreDomainContexts(this, this.domains)

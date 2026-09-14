@@ -192,6 +192,6 @@ function paneKey(handle: string): string {
   return `tab:${handle}`
 }
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }

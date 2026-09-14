@@ -1,6 +1,5 @@
 import type {
   CreateHostedReviewInput,
-  CreateStackedHostedReviewInput,
   HostedReviewCreationEligibility,
   HostedReviewInfo
 } from '../../../../shared/hosted-review'
@@ -30,7 +29,7 @@ export type HostedReviewFetchOptions = {
   repoOwnerExecutionHostId?: string
 }
 export type CreateHostedReviewStoreInput = CreateHostedReviewInput & { repoId?: string | null }
-export type CreateStackedHostedReviewStoreInput = CreateStackedHostedReviewInput & {
+export type CreateStackedHostedReviewStoreInput = CreateHostedReviewInput & {
   repoId?: string | null
 }
 

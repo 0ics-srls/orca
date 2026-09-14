@@ -28,7 +28,7 @@ import {
 import { readFileViaStream } from '../main/ssh/ssh-filesystem-stream-reader'
 
 import { RelayDispatcher } from './dispatcher'
-import type { SinkWriteSettlement } from './dispatcher'
+import type { DispatcherWriterSettlement } from './dispatcher'
 import { RelayContext } from './context'
 import { FsHandler } from './fs-handler'
 import { STREAM_CHUNK_SIZE } from './protocol'
@@ -98,7 +98,7 @@ function createHarness(opts: { congested: boolean }): Harness {
 
   const outQueue: {
     data: Buffer
-    settle: (result: SinkWriteSettlement) => void
+    settle: (result: DispatcherWriterSettlement) => void
   }[] = []
   let queuedBytes = 0
   const drainWaiters = new Set<() => void>()

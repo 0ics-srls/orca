@@ -58,7 +58,7 @@ describe('nested worker depth migration (v30)', () => {
   it('backfills in-flight rows to depth 1, not 0', () => {
     const dbPath = createV29Database()
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
 
     expect(sqlite.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION)
     expect(
@@ -74,7 +74,7 @@ describe('nested worker depth migration (v30)', () => {
   it('leaves an upgraded in-flight worker unable to spawn at the default cap', () => {
     const dbPath = createV29Database()
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     sqlite
       .prepare(
         "UPDATE dispatch_contexts SET assignee_handle = 'term_upgraded' WHERE id = 'ctx_inflight'"
@@ -105,7 +105,7 @@ describe('nested worker depth migration (v30)', () => {
   it('widens the attachment pane indexes to the potentially-live states', () => {
     const dbPath = createV29Database()
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     const sql = sqlite
       .prepare(
         "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'idx_remote_dispatch_attachments_active_pane'"

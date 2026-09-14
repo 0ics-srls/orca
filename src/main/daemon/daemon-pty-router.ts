@@ -8,7 +8,7 @@ import type {
   PtySpawnOptions,
   PtySpawnResult
 } from '../providers/types'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 import { shouldHandoffDaemonHistory } from './daemon-history-handoff'
 import type { DaemonPtyRouterDataEvent, DaemonPtyRouterExitEvent } from './daemon-pty-router-events'
 import { DaemonSessionOwnerResolver } from './daemon-session-owner-resolution'
@@ -181,7 +181,7 @@ export class DaemonPtyRouter implements IPtyProvider {
   async inspectProcess(
     id: string,
     options?: { expectedIncarnationId?: string; steadyState?: boolean }
-  ): Promise<PtyProcessInspection> {
+  ): Promise<TerminalProcessInspection> {
     return this.adapterForInspection(id).inspectProcess(id, options)
   }
 

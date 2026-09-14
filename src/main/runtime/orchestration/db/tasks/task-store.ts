@@ -1,4 +1,4 @@
-import type Database from '../../../../sqlite/sync-database'
+import type { SQLInputValue } from 'node:sqlite'
 import type { TaskStatus, TaskRow } from '../../types'
 import { buildOrchestrationTaskDisplayMetadata } from '../../../../../shared/orchestration-task-display'
 import { generateId } from '../generated-id'
@@ -134,7 +134,7 @@ export function listTasks(
   filter?: { status?: TaskStatus; ready?: boolean; runId?: string }
 ): TaskRow[] {
   const runWhere = filter?.runId ? 'run_id = ? AND ' : ''
-  const runParams: Database.BindValue[] = filter?.runId ? [filter.runId] : []
+  const runParams: SQLInputValue[] = filter?.runId ? [filter.runId] : []
   if (filter?.ready) {
     return this.db
       .prepare(
@@ -172,7 +172,7 @@ export function listTasksWithDispatch(
   dispatch_id: string | null
 })[] {
   const whereClauses: string[] = []
-  const params: Database.BindValue[] = []
+  const params: SQLInputValue[] = []
   if (filter?.runId) {
     whereClauses.push('t.run_id = ?')
     params.push(filter.runId)

@@ -30,8 +30,22 @@ import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire
 import { observeStructuredWorker } from './structured-worker-authority'
 import { closeStructuredAgentSessionChild } from './structured-agent-session-close'
 import { retireSettledStructuredWorkerTab } from './structured-agent-session-tab-retirement'
-import type { WorktreePtyHostFence } from './worktree-pty-host-fence'
 import type { OrcaRuntimeService } from './orca-runtime'
+
+/**
+ * `WorktreePtyHostFence` is the two fields every teardown caller already resolves to fence its PTY
+ * sweeps to one host.
+ *
+ * Deliberately the PTY fence's own type rather than a look-alike: these two helpers are written
+ * against each other, so a widening on one side must not become a silent disagreement on the
+ * other. `resolvedConnectionId: null` means this machine on both.
+ *
+ * They differ in exactly one reading, and only that one: ABSENT. The PTY fence takes it as no
+ * fence at all and matches every host, which a single-host-id comparison cannot express — and
+ * closing every host's chats is destructive, not merely noisy. So this side reads absent as local
+ * too, the narrower half of that pair. Pinned by test, not left to the next reader to rediscover.
+ */
+import type { WorktreePtyHostFence } from './worktree-pty-host-fence'
 
 export type StructuredSessionInWorkspace = {
   sessionId: string
@@ -49,20 +63,6 @@ export type StructuredWorktreeSweepRuntime = Pick<
 >
 
 /**
- * The two fields every teardown caller already resolves to fence its PTY sweeps to one host.
- *
- * Deliberately the PTY fence's own type rather than a look-alike: these two helpers are written
- * against each other, so a widening on one side must not become a silent disagreement on the
- * other. `resolvedConnectionId: null` means this machine on both.
- *
- * They differ in exactly one reading, and only that one: ABSENT. The PTY fence takes it as no
- * fence at all and matches every host, which a single-host-id comparison cannot express — and
- * closing every host's chats is destructive, not merely noisy. So this side reads absent as local
- * too, the narrower half of that pair. Pinned by test, not left to the next reader to rediscover.
- */
-export type StructuredSessionHostFence = WorktreePtyHostFence
-
-/**
  * The one execution host this teardown may touch.
  *
  * A workspace id is `repoId::path` with no host component, so the local machine, an SSH host and a
@@ -70,9 +70,7 @@ export type StructuredSessionHostFence = WorktreePtyHostFence
  * PTY sweeps fence on exactly these two fields; a structured session records its host directly, so
  * the comparison is on `location.executionHostId` instead of on a pty-id shape.
  */
-export function structuredSessionTeardownHostId(
-  fence: StructuredSessionHostFence
-): ExecutionHostId {
+export function structuredSessionTeardownHostId(fence: WorktreePtyHostFence): ExecutionHostId {
   if (fence.resolvedRuntimeEnvironmentId !== undefined) {
     return toRuntimeExecutionHostId(fence.resolvedRuntimeEnvironmentId)
   }
@@ -113,7 +111,7 @@ export type StructuredSessionsForWorktree = {
  */
 export function listStructuredSessionsForWorktree(
   worktreeId: string,
-  fence: StructuredSessionHostFence
+  fence: WorktreePtyHostFence
 ): StructuredSessionsForWorktree {
   const host = getStructuredAgentSessionHost()
   if (!host) {

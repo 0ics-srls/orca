@@ -17,7 +17,7 @@ import {
 } from '@/components/task-page-github-status-actions'
 import { parseOwnerRepoFromItemUrl } from '@/components/github/github-work-item-identity'
 import { translate } from '@/i18n/i18n'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { getGitHubRepositoryLabelsUrl } from './repository-labels-url'
 import {
   closeGHEditAsDuplicate,
@@ -50,7 +50,7 @@ export function GHEditSection({
   repoPath: string | null
   repoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: GitHubItemDialogProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   localState: GitHubWorkItem['state']
   localLabels: string[]
   onStateChange: (state: GitHubWorkItem['state']) => void

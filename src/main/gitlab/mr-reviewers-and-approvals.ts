@@ -6,12 +6,12 @@ import {
   glabRepoExecOptions,
   glabExecFileAsync,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 export async function fetchMRReviewers(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
@@ -32,7 +32,7 @@ export async function fetchMRReviewers(
 
 export async function fetchMRApprovalState(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   iid: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

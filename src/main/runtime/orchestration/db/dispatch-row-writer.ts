@@ -63,7 +63,7 @@ function assertStampedDepth(depth: number): void {
 
 /** Adopts an existing agent terminal, claiming a ready task atomically. */
 export function claimDispatchContextRow(
-  db: Database.Database,
+  db: Database,
   params: {
     id: string
     contractVersion: number
@@ -106,7 +106,7 @@ export function claimDispatchContextRow(
 
 /** Supervised `worker-start`, including every retry and the federated home side. */
 export function insertStartingDispatchContextRow(
-  db: Database.Database,
+  db: Database,
   params: {
     id: string
     runId: string
@@ -137,7 +137,7 @@ export function insertStartingDispatchContextRow(
 
 /** The worker host's record of a live worker driven by a remote Run home. */
 export function insertRemoteDispatchAttachmentRow(
-  db: Database.Database,
+  db: Database,
   params: {
     dispatchId: string
     runId: string

@@ -1,4 +1,4 @@
-import { ghExecFileAsync, acquire, release, type OwnerRepo } from '../../gh-utils'
+import { ghExecFileAsync, acquire, release, type GitHubOwnerRepo } from '../../gh-utils'
 import {
   getHostedReviewLocalGitOptions,
   type HostedReviewExecutionOptions
@@ -7,15 +7,15 @@ import {
   getGitHubApiRepositoryForRemote,
   getOriginGitHubApiRepository,
   githubRepositorySlugArg,
-  resolveGitHubRepoExecution,
-  type GitHubApiRepository
+  resolveGitHubRepoExecution
 } from '../../github-api-repository'
 import { hostedReviewLocalGitOptionArgs, sameOwnerRepo } from './../github-exec-scope'
+
 export async function getRepoSlug(
   repoPath: string,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
-): Promise<GitHubApiRepository | null> {
+): Promise<GitHubOwnerRepo | null> {
   return getOriginGitHubApiRepository(
     repoPath,
     connectionId,
@@ -33,7 +33,7 @@ export async function getRepoUpstream(
   repoPath: string,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
-): Promise<OwnerRepo | null> {
+): Promise<GitHubOwnerRepo | null> {
   const localGitArgs = hostedReviewLocalGitOptionArgs(options)
   const localGitOptions = localGitArgs[0] ?? {}
   const { ownerRepo: origin, ghOptions } = await resolveGitHubRepoExecution(

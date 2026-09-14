@@ -23,8 +23,6 @@ import {
 const SNAPSHOT_FILE_NAME = 'orca-workspace-cleanup-scan.json'
 const SNAPSHOT_VERSION = 2
 
-export type WorkspaceCleanupScanSnapshotPruneTarget = WorkspaceSnapshotPruneTarget
-
 const prunedWorkspacesByFile = new Map<string, Map<string, WorkspaceSnapshotPruneTombstone>>()
 
 type PersistedWorkspaceCleanupScanSnapshot = {
@@ -130,7 +128,7 @@ function candidateSnapshotKey(
 /** Register anti-resurrection tombstones without scheduling a sidecar rewrite. */
 export function registerWorkspaceCleanupScanSnapshotPruneTombstones(
   snapshotDirectory: string,
-  targets: readonly WorkspaceCleanupScanSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): void {
   if (targets.length === 0) {
     return
@@ -243,7 +241,7 @@ export async function persistWorkspaceCleanupScanResult(
 
 async function pruneWorkspaceCleanupScanSnapshotsWithRegisteredTombstones(
   snapshotDirectory: string,
-  targets: readonly WorkspaceCleanupScanSnapshotPruneTarget[],
+  targets: readonly WorkspaceSnapshotPruneTarget[],
   registerTombstones: boolean
 ): Promise<void> {
   if (targets.length === 0) {
@@ -286,7 +284,7 @@ async function pruneWorkspaceCleanupScanSnapshotsWithRegisteredTombstones(
 /** Drop removed workspaces in one sidecar transaction. Never throws. */
 export async function pruneWorkspaceCleanupScanSnapshots(
   snapshotDirectory: string,
-  targets: readonly WorkspaceCleanupScanSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): Promise<void> {
   await pruneWorkspaceCleanupScanSnapshotsWithRegisteredTombstones(snapshotDirectory, targets, true)
 }
@@ -294,7 +292,7 @@ export async function pruneWorkspaceCleanupScanSnapshots(
 /** Flush only tombstones still active for this batch, preserving their original prune time. */
 export async function finalizeWorkspaceCleanupScanSnapshotPrunes(
   snapshotDirectory: string,
-  targets: readonly WorkspaceCleanupScanSnapshotPruneTarget[]
+  targets: readonly WorkspaceSnapshotPruneTarget[]
 ): Promise<void> {
   await pruneWorkspaceCleanupScanSnapshotsWithRegisteredTombstones(
     snapshotDirectory,

@@ -1,3 +1,4 @@
+import type { GitStatusEntry } from '../../../src/shared/git-status-types'
 import { useCallback, useRef, useState, type MutableRefObject } from 'react'
 import { useRouter } from 'expo-router'
 import type { RpcClient } from '../transport/rpc-client'
@@ -9,16 +10,10 @@ import {
   highlightMobileDiffLines,
   resolveMobileSyntaxLanguage
 } from '../session/mobile-file-syntax'
-import {
-  canOpenMobileBranchCompareDiff,
-  type MobileGitBranchChangeEntry
-} from './mobile-branch-compare'
+import { canOpenMobileBranchCompareDiff } from './mobile-branch-compare'
+import type { GitBranchChangeEntry } from '../../../src/shared/git-diff-compare-types'
 import { gitBranchDiffRead } from './mobile-git-read-operations'
-import {
-  canOpenMobileGitStatusEntry,
-  isMobileGitUnavailableReply,
-  type MobileGitStatusEntry
-} from './mobile-git-status'
+import { canOpenMobileGitStatusEntry, isMobileGitUnavailableReply } from './mobile-git-status'
 import { sourceFileDiffOpenRun, sourceFileOpenRun } from './mobile-source-file-open-operations'
 import { buildMobileReviewFileRoute } from './mobile-review-route'
 import { revealMobileSourceControlSessionDiff } from './reveal-mobile-source-control-session-diff'
@@ -77,7 +72,7 @@ export function useMobileSourceControlOpeners(params: Params) {
   const openingBranchPathRef = useRef<string | null>(null)
 
   const openFile = useCallback(
-    async (entry: MobileGitStatusEntry) => {
+    async (entry: GitStatusEntry) => {
       // Deletions are openable (pre-delete text/image via git.diff); only block
       // unresolved conflicts, matching canOpenMobileGitStatusEntry / row UI.
       if (!canOpenMobileGitStatusEntry(entry)) {
@@ -202,7 +197,7 @@ export function useMobileSourceControlOpeners(params: Params) {
   )
 
   const openBranchDiff = useCallback(
-    async (entry: MobileGitBranchChangeEntry) => {
+    async (entry: GitBranchChangeEntry) => {
       if (openingBranchPathRef.current || openingPathRef.current || busyActionRef.current) {
         return
       }

@@ -8,7 +8,7 @@ import { buildTaskSourceContextFromRepo } from '../../../../shared/task-source-c
 import { githubProjectHost } from '../../../../shared/github/project-identity'
 import type { GitHubProjectRow, GitHubProjectTable } from '../../../../shared/github/project-types'
 import type { GitHubWorkItem } from '../../../../shared/github/work-item-types'
-import type { GitHubItemDialogProjectOrigin } from '@/components/GitHubItemDialog'
+import type { GitHubWorkItemProjectOrigin } from '@/components/GitHubItemDialog'
 import {
   resolveMissingRepoProjectDialogState,
   resolveRepoBackedProjectDialogState
@@ -21,7 +21,7 @@ type DialogRepoItem = {
   workItem: GitHubWorkItem
   repoPath: string
   repoId: string
-  origin: GitHubItemDialogProjectOrigin
+  origin: GitHubWorkItemProjectOrigin
 }
 
 export function useProjectRowActions({
@@ -37,9 +37,7 @@ export function useProjectRowActions({
   const rowMutations = useProjectRowMutations(currentCacheKey)
   const { lookupSlug, lookupSlugMatches, ready: slugIndexReady } = useRepoSlugIndex()
   const [dialogRepoItem, setDialogRepoItem] = useState<DialogRepoItem | null>(null)
-  const [slugDialog, setSlugDialog] = useState<{ origin: GitHubItemDialogProjectOrigin } | null>(
-    null
-  )
+  const [slugDialog, setSlugDialog] = useState<{ origin: GitHubWorkItemProjectOrigin } | null>(null)
   const [repoNotInOrca, setRepoNotInOrca] = useState<{
     owner: string
     repo: string
@@ -80,7 +78,7 @@ export function useProjectRowActions({
   }
 
   const buildOrigin = useCallback(
-    (row: GitHubProjectRow): GitHubItemDialogProjectOrigin | null => {
+    (row: GitHubProjectRow): GitHubWorkItemProjectOrigin | null => {
       if (!table || !currentCacheKey) {
         return null
       }

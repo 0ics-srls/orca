@@ -13,7 +13,7 @@ import type {
   StructuredTuiOwner
 } from './structured-agent-session-handoff-types'
 
-export type StructuredAgentSessionRestartAccess = {
+export type RestartAccess = {
   deps: StructuredAgentSessionHandoffDeps
   requireRecord: (sessionId: string) => AgentSessionRecord
   flowContext: () => StructuredAgentSessionHandoffFlowContext
@@ -21,13 +21,10 @@ export type StructuredAgentSessionRestartAccess = {
   setStatus: (sessionId: string, status: AgentSessionHandoffStatus) => void
 }
 
-type ContinueHandoff = (
-  input: StructuredAgentSessionRestartAccess,
-  record: AgentSessionRecord
-) => Promise<void>
+type ContinueHandoff = (input: RestartAccess, record: AgentSessionRecord) => Promise<void>
 
 export async function recoverUnavailableTuiAsNative(
-  input: StructuredAgentSessionRestartAccess,
+  input: RestartAccess,
   record: AgentSessionRecord,
   continueHandoff: ContinueHandoff
 ): Promise<void> {
@@ -64,7 +61,7 @@ export async function recoverUnavailableTuiAsNative(
 }
 
 export async function recoverTuiOwnerOrContinue(
-  input: StructuredAgentSessionRestartAccess,
+  input: RestartAccess,
   record: AgentSessionRecord,
   continueHandoff: ContinueHandoff
 ): Promise<StructuredTuiOwner | null> {
@@ -84,7 +81,7 @@ export async function recoverTuiOwnerOrContinue(
 }
 
 export async function persistReprovedTuiOwner(
-  input: StructuredAgentSessionRestartAccess,
+  input: RestartAccess,
   sessionId: string,
   owner: StructuredTuiOwner
 ): Promise<void> {

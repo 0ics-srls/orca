@@ -1,3 +1,4 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { useCallback, useEffect, useRef, useState, type MutableRefObject } from 'react'
 import { View } from 'react-native'
 import type { RpcClient } from '../transport/rpc-client'
@@ -8,10 +9,9 @@ import { gitBranchCompareRead, gitStatusHostPayloadRead } from './mobile-git-rea
 import {
   isMobileGitTransientRefreshError,
   isMobileGitUnavailableReply,
-  readMobileGitRefusal,
-  type MobileGitStatusResult
+  readMobileGitRefusal
 } from './mobile-git-status'
-import type { MobileGitBranchCompareResult } from './mobile-branch-compare'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 import {
   SELECTOR_RETRY_COUNT,
   SELECTOR_RETRY_DELAY_MS,
@@ -147,7 +147,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
         setBranchCompareState({
           kind: 'ready',
           // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          result: compared as MobileGitBranchCompareResult
+          result: compared as GitBranchCompareResult
         })
         return true
       } catch (err) {
@@ -215,7 +215,7 @@ export function useMobileSourceControlLoaders(params: Params): MobileSourceContr
             const refusal = readMobileGitRefusal(reply)
             if (!refusal) {
               // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-              const result = gitStatusHostPayloadRead.interpret(reply) as MobileGitStatusResult
+              const result = gitStatusHostPayloadRead.interpret(reply) as GitStatusResult
               setScreenState({ kind: 'ready', status: result })
               void loadBranchCompare({ preserveReadyOnFailure: true })
               if (options?.clearActionErrorOnSuccess !== false) {

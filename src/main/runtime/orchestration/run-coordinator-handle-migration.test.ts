@@ -37,7 +37,7 @@ describe('Run coordinator handle history migration', () => {
     oldDb.close()
 
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     expect(sqlite.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION)
     expect(
       sqlite
@@ -84,7 +84,7 @@ describe('Run coordinator handle history migration', () => {
     v28Db.close()
 
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     expect(sqlite.pragma('user_version', { simple: true })).toBe(SCHEMA_VERSION)
     expect(
       sqlite
@@ -116,7 +116,7 @@ describe('Run coordinator handle history migration', () => {
     oldRuntimeDb.close()
 
     db = new OrchestrationDb(dbPath)
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     expect(
       sqlite
         .prepare(

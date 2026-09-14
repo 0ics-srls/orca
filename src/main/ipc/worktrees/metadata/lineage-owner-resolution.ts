@@ -12,16 +12,13 @@ export type LineageOwner =
   | { status: 'owned'; hostId: ExecutionHostId }
   | { status: 'ambiguous' | 'contradictory' | 'runtime' }
 
-export type LineageFolder = FolderWorkspace
-export type LineageGroup = ProjectGroup
-
 export type LineageResolutionContext = {
   store: Store
   repos: Repo[]
-  groups: LineageGroup[]
+  groups: ProjectGroup[]
   reposById: Map<string, Repo[]>
-  foldersById: Map<string, LineageFolder[]>
-  groupsById: Map<string, LineageGroup[]>
+  foldersById: Map<string, FolderWorkspace[]>
+  groupsById: Map<string, ProjectGroup[]>
   groupSubtreeIdsByRoot: Map<string, Set<string>>
   worktreeOwners: Map<string, LineageOwner>
   folderOwners: Map<string, LineageOwner>

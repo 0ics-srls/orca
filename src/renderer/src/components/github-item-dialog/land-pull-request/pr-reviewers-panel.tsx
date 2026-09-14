@@ -20,7 +20,7 @@ import { translate } from '@/i18n/i18n'
 import { getSettingsForRepoRuntimeOwner } from '@/lib/repo-runtime-owner'
 import { resolvePullRequestRepo } from '@/components/github/github-work-item-identity'
 import { mergeReviewerSuggestions } from '@/components/github/work-item-state-presentation'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { PRReviewersPickerList } from './pr-reviewers-picker-row'
 import { PRReviewersRequestedList } from './pr-reviewers-requested-list'
 import { removePRReviewers, requestPRReviewers } from './pr-reviewers-request-actions'
@@ -37,7 +37,7 @@ export function PRReviewersPanel({
   loading: boolean
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   onReviewersRequested: (reviewRequests: GitHubAssignableUser[]) => void
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)

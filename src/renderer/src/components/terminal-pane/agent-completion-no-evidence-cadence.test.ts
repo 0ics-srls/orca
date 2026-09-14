@@ -16,7 +16,7 @@ import { resetAgentProcessInspectionQueueForTests } from './agent-process-inspec
 import { isAgentProcessInspectionCostly } from './agent-process-inspection-cost'
 import { toRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
 import { toAppSshPtyId } from '../../../../shared/ssh-pty-id'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 import type { AgentCompletionCoordinatorOptions } from './agent-completion-coordinator-types'
 
 const MAC_UA = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)'
@@ -25,7 +25,7 @@ const WINDOWS_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'
 function processResult(
   foregroundProcess: string | null,
   hasChildProcesses = foregroundProcess !== null
-): RuntimeTerminalProcessInspection {
+): TerminalProcessInspection {
   return { foregroundProcess, hasChildProcesses }
 }
 

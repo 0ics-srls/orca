@@ -10,9 +10,9 @@ import { parseOpenCodeUsageRow } from './opencode-usage-row-parsing'
 import { selectUsageRows } from './opencode-usage-row-queries'
 import {
   attributeOpenCodeUsageEvent,
-  buildWorktreesWithCanonicalPaths,
-  type OpenCodeUsageWorktreeRef
+  buildWorktreesWithCanonicalPaths
 } from './opencode-usage-worktree-attribution'
+import type { UsageScanWorktreeRef } from '../usage/usage-provider-contract'
 import type {
   OpenCodeUsageAttributedEvent,
   OpenCodeUsageDailyAggregate,
@@ -50,7 +50,7 @@ const { finalizeSessions, mergeSessions, mergeDailyAggregates, sortDailyAggregat
 
 export async function parseOpenCodeUsageDatabase(
   dbPath: string,
-  worktrees: (OpenCodeUsageWorktreeRef & { canonicalPath: string })[],
+  worktrees: (UsageScanWorktreeRef & { canonicalPath: string })[],
   options: { claimSession?: (sessionId: string) => boolean } = {}
 ): Promise<OpenCodeUsagePersistedDatabase> {
   const processedDatabase = await getProcessedDatabaseInfo(dbPath)
@@ -95,7 +95,7 @@ export async function parseOpenCodeUsageDatabase(
 }
 
 export async function scanOpenCodeUsageDatabases(
-  worktrees: OpenCodeUsageWorktreeRef[],
+  worktrees: UsageScanWorktreeRef[],
   previousProcessedDatabases: OpenCodeUsagePersistedDatabase[]
 ): Promise<{
   processedDatabases: OpenCodeUsagePersistedDatabase[]

@@ -1,3 +1,4 @@
+import type { HostedReviewInfo } from '../../../../../shared/hosted-review'
 import { useCallback, useEffect, useRef } from 'react'
 import { toast } from 'sonner'
 import { mergePRCommentIntoList } from '@/store/github/pr-comment-cache'
@@ -20,7 +21,6 @@ import { resolveGitLabMRDiscussionForChecks } from './gitlab-review-client'
 import { clearPRCommentsListSelection } from '../pr-comments-list-selection'
 import { translate } from '@/i18n/i18n'
 import type { ChecksAgentComposerState } from './panel-state-types'
-import type { ChecksPanelReview } from '../checks-panel-review'
 
 type ChecksPanelAiAcknowledgementInput = Pick<
   ChecksPanelControllerState,
@@ -72,7 +72,7 @@ export function useChecksPanelAiAcknowledgement(model: ChecksPanelAiAcknowledgem
   )
 
   const refreshCommentsAfterBulkResolve = useCallback(
-    async (provider: ChecksPanelReview['provider']): Promise<void> => {
+    async (provider: HostedReviewInfo['provider']): Promise<void> => {
       if (provider === 'gitlab') {
         await fetchGitLabDetails({ commitAsCurrent: true })
         return

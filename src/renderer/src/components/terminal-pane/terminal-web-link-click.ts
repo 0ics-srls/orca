@@ -4,10 +4,10 @@ import { isTerminalOwnedLinkGesture } from './terminal-link-activation'
 import { handleOscLink } from './terminal-osc-link-routing'
 import {
   findHttpLinkAtTerminalMouseEvent,
-  handleTerminalHttpLink,
-  type TerminalHttpLinkActionDestinations,
-  type TerminalLinkRoutingPreferenceRequester
+  handleTerminalHttpLink
 } from './terminal-url-link-hit-testing'
+import type { HttpLinkRoutingPreferenceRequester } from '@/lib/http-link-destinations'
+import type { HttpLinkActionDestinations } from '@/lib/http-link-destinations'
 import type { HttpLinkSourceOwner } from '@/lib/http-link-routing'
 import type { TerminalLinkActionContext } from './terminal-link-action-request'
 
@@ -17,9 +17,9 @@ type TerminalWebLinkClickDeps = Pick<
 > & {
   terminal: Terminal | null
   sourceOwner?: HttpLinkSourceOwner
-  requestOpenLinksInAppPreference?: TerminalLinkRoutingPreferenceRequester
+  requestOpenLinksInAppPreference?: HttpLinkRoutingPreferenceRequester
   linkActionContext?: TerminalLinkActionContext | null
-  actionDestinations?: TerminalHttpLinkActionDestinations
+  actionDestinations?: HttpLinkActionDestinations
 }
 
 export function handleTerminalWebLinkClick(

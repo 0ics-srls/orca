@@ -23,13 +23,13 @@ WHERE session_id = ? AND epoch = ? AND seq > ? ORDER BY seq ASC`
 const SELECT_ROWS_AFTER_LIMITED = `${SELECT_ROWS_AFTER} LIMIT ?`
 const DELETE_SUFFIX = 'DELETE FROM journal_rows WHERE session_id = ? AND epoch = ? AND seq >= ?'
 
-export function readJournalSessionEpoch(db: Database.Database, sessionId: string): string | null {
+export function readJournalSessionEpoch(db: Database, sessionId: string): string | null {
   const row = db.prepare(SELECT_SESSION).get(sessionId) as { epoch?: string } | undefined
   return row?.epoch ?? null
 }
 
 export function upsertJournalSessionRow(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string,
   updatedAt: number
@@ -37,18 +37,14 @@ export function upsertJournalSessionRow(
   db.prepare(UPSERT_SESSION).run(sessionId, epoch, updatedAt)
 }
 
-export function insertJournalRow(
-  db: Database.Database,
-  sessionId: string,
-  row: JournalRow
-): number {
+export function insertJournalRow(db: Database, sessionId: string, row: JournalRow): number {
   const rowJson = serializeJournalRow(row)
   db.prepare(INSERT_ROW).run(sessionId, row.epoch, row.seq, row.ts, rowJson)
   return Buffer.byteLength(rowJson, 'utf8')
 }
 
 export function readJournalEpochRows(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string
 ): JournalStoredRow[] {
@@ -62,7 +58,7 @@ const EPOCH_ROW_PAGE_SIZE = 128
 
 /** Epoch rows in sequence order, fetched one completed statement at a time. */
 export function* iterateJournalEpochRows(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string
 ): Generator<JournalStoredRow> {
@@ -79,7 +75,7 @@ export function* iterateJournalEpochRows(
 }
 
 export function readJournalRowsAfter(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string,
   afterSeq: number,
@@ -99,13 +95,13 @@ export function readJournalRowsAfter(
  * optimization: measured at 0.26% of the database in WAL bytes where the
  * `WHERE session_id = ?` form rewrote every emptied leaf at up to 99%.
  */
-export function deleteAllJournalRows(db: Database.Database): void {
+export function deleteAllJournalRows(db: Database): void {
   db.exec('DELETE FROM journal_rows')
 }
 
 /** Drop the rejected suffix a repair found, from `fromSeq` to the tip. */
 export function deleteJournalRowSuffix(
-  db: Database.Database,
+  db: Database,
   sessionId: string,
   epoch: string,
   fromSeq: number

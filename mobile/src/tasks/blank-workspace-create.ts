@@ -2,11 +2,8 @@ import type { TuiAgent } from '../../../src/shared/tui-agent'
 import type { RpcClient } from '../transport/rpc-client'
 import { createWorktreeWithNameRetry, type WorktreeCreateResult } from './worktree-create-retry'
 import type { WorktreeCreateIdempotencyProbe } from './worktree-create-idempotency-policy'
-import {
-  agentLaunchCreateFields,
-  type WorkspaceCreateParams,
-  type WorkspaceCreateSetupDecision
-} from './workspace-create-params'
+import { agentLaunchCreateFields, type WorkspaceCreateParams } from './workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 
 // The blank/named create path, extracted from NewWorktreeModal so the modal keeps
 // only the UI-coupled setup-trust flow. Assembles worktree.create params and
@@ -17,7 +14,7 @@ export async function createBlankWorkspace(args: {
   baseName: string
   createdWithAgentId: TuiAgent | undefined
   comment: string | undefined
-  setupDecision: WorkspaceCreateSetupDecision
+  setupDecision: SetupDecision
   /** True when `baseName` is a generated creature name rather than one the user typed; only then
    *  may the host retire it. */
   nameWasGenerated: boolean

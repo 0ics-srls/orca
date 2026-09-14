@@ -1,5 +1,5 @@
 import { splitRemoteBranchName } from '../../../../shared/git-effective-upstream'
-import type { OwnerRepo } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../gh-utils'
 import { readLocalGitConfigSignature } from '../../local-git-config-signature'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 export type TrackedUpstreamBranch = {
@@ -91,8 +91,8 @@ export function parseTrackedUpstreamBranch(upstreamRef: string): TrackedUpstream
 export function shouldRetryTrackedUpstreamBranch(
   upstreamBranch: TrackedUpstreamBranch,
   branchName: string,
-  upstreamHeadRepo: OwnerRepo,
-  headRepo: OwnerRepo | null
+  upstreamHeadRepo: GitHubOwnerRepo,
+  headRepo: GitHubOwnerRepo | null
 ): boolean {
   if (upstreamBranch.branchName !== branchName) {
     return true

@@ -17,7 +17,7 @@ import {
   getGitHubPRReviewerQueryState
 } from '@/components/github/github-pr-reviewer-candidate-filter'
 import { translate } from '@/i18n/i18n'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { createReviewerRequestActions } from './request-actions'
 import { ReviewerPicker } from './picker'
 import { ReviewerRequestedList } from './requested-list'
@@ -34,7 +34,7 @@ export function PRReviewersPanel({
   loading: boolean
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin?: PullRequestPageProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   onReviewersRequested: (reviewRequests: GitHubAssignableUser[]) => void
 }): React.JSX.Element {
   const [open, setOpen] = useState(false)

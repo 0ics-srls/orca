@@ -4,11 +4,7 @@ import {
   type AgentStatusEntry,
   type AgentStatusState
 } from '../../../../shared/agent-status-types'
-import type {
-  ActivityEventState,
-  ActivityHookLiveAgentState,
-  ActivityLiveAgentState
-} from './activity-thread-types'
+import type { ActivityHookLiveAgentState, ActivityLiveAgentState } from './activity-thread-types'
 
 function isActivityHookLiveAgentState(
   state: AgentStatusState
@@ -33,6 +29,6 @@ export function freshActivityLiveAgentState(
 
 export function isHistoricalActivityState(
   state: string
-): state is Extract<ActivityEventState, 'done' | 'blocked' | 'waiting'> {
+): state is Extract<AgentStatusState, 'done' | 'blocked' | 'waiting'> {
   return state === 'done' || state === 'blocked' || state === 'waiting'
 }

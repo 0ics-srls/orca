@@ -3,7 +3,7 @@ import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
   type RequestContext,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { RelayPtySourcePublication } from './relay-pty-source-publication'
@@ -71,7 +71,7 @@ describe('PTY source activation from a superseded owner', () => {
 
   function contextFor(
     clientId: number,
-    settlements: ((result: SinkWriteSettlement) => void)[]
+    settlements: ((result: DispatcherWriterSettlement) => void)[]
   ): RequestContext {
     return {
       clientId,
@@ -88,7 +88,7 @@ describe('PTY source activation from a superseded owner', () => {
    */
   it('leaves the replacement delivery intact when the superseded owner re-activates', async () => {
     const { publication, adapter, writes } = await createHarness()
-    const settlements: ((result: SinkWriteSettlement) => void)[] = []
+    const settlements: ((result: DispatcherWriterSettlement) => void)[] = []
     expect(publication.activate('pty-1', 'incarnation-1', contextFor(1, settlements))).toBe(
       'opened'
     )
@@ -124,7 +124,7 @@ describe('PTY source activation from a superseded owner', () => {
     )
     await flushRequests()
 
-    const replacementSettlements: ((result: SinkWriteSettlement) => void)[] = []
+    const replacementSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
     const recovery = {
       status: 'checkpoint' as const,
       clientGeneration: activation.clientGeneration,

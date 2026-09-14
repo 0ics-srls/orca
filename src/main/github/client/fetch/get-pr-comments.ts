@@ -1,11 +1,13 @@
 import type { PRComment } from '../../../../shared/github/comment-types'
 import { GITHUB_WORK_ITEMS_SSH_REMOTE_REQUIRED_MESSAGE } from '../../../../shared/work-items'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { mapGraphQLReactionGroups, type GitHubGraphQLReactionGroup } from '../../comment-reactions'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from '../../rate-limit'
 import { assertRateLimitBudget } from './../lookup/pr-lookup-rate-limit'
 import { REVIEW_THREADS_QUERY } from './pr-review-threads-query'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 /**
  * Get all comments on a PR — both top-level conversation comments and inline
  * review comments (including suggestions). Uses GraphQL for review threads
@@ -14,7 +16,7 @@ import { REVIEW_THREADS_QUERY } from './pr-review-threads-query'
 export async function getPRComments(
   repoPath: string,
   prNumber: number,
-  options?: { noCache?: boolean; prRepo?: GitHubApiRepository | null },
+  options?: { noCache?: boolean; prRepo?: GitHubOwnerRepo | null },
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<PRComment[]> {

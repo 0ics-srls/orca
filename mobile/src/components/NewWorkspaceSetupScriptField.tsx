@@ -1,5 +1,5 @@
 import { Pressable, Switch, Text, View } from 'react-native'
-import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 import { colors } from '../theme/mobile-theme'
 import { newWorktreeFormStyles as styles } from './new-worktree-form-styles'
 import type { SetupRunPolicy } from './new-worktree-modal-types'
@@ -16,9 +16,9 @@ export function NewWorkspaceSetupScriptField({
   command: string
   source: string | null
   runPolicy: SetupRunPolicy
-  decision: Exclude<WorkspaceCreateSetupDecision, 'inherit'> | null
+  decision: Exclude<SetupDecision, 'inherit'> | null
   runSetup: boolean
-  onDecisionChange: (decision: Exclude<WorkspaceCreateSetupDecision, 'inherit'>) => void
+  onDecisionChange: (decision: Exclude<SetupDecision, 'inherit'>) => void
   onRunSetupChange: (run: boolean) => void
 }) {
   return (

@@ -3,9 +3,10 @@ import type {
   GitHubIssueTimelineTarget
 } from '../../shared/github/comment-types'
 import { ghExecFileAsync } from './gh-utils'
-import type { GitHubApiRepository, GitHubRepoExecOptions } from './github-api-repository'
+import type { GitHubRepoExecOptions } from './github-api-repository'
 import { githubHostExecOptions } from './github-api-repository'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
+import type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 
 const MAX_ISSUE_TIMELINE_ITEMS = 300
 const GITHUB_REST_PAGE_SIZE = 100
@@ -145,7 +146,7 @@ function parseRestTimelineEventLines(stdout: string): RestTimelineEvent[] {
 }
 
 export async function getIssueTimelineItems(
-  repository: GitHubApiRepository,
+  repository: GitHubOwnerRepo,
   issueNumber: number,
   ghOptions: GitHubRepoExecOptions
 ): Promise<GitHubIssueTimelineItem[]> {

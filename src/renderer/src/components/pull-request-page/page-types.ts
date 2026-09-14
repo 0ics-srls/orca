@@ -6,8 +6,6 @@ import type {
   ItemDialogTab
 } from '@/components/github/github-work-item-identity'
 
-export type PullRequestPageProjectOrigin = GitHubWorkItemProjectOrigin
-
 export type MentionOption = {
   login: string
   name?: string | null
@@ -35,5 +33,5 @@ export type PullRequestPageProps = {
   ) => void
   onClose: () => void
   /** Optional Project-origin context; when set, slug-addressed IPCs route writes to the row's repo instead of `repoPath` (both may be set — slug wins for writes). */
-  projectOrigin?: PullRequestPageProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
 }

@@ -16,7 +16,7 @@ import type {
   MobileLinkedWorkItem,
   SmartNameSelection
 } from './mobile-composer-source-types'
-import type { WorkspaceCreateGitPushTarget } from './workspace-create-params'
+import type { GitPushTarget } from '../../../src/shared/worktree/types'
 
 export function buildGitHubLinkedWorkItem(item: {
   type: 'issue' | 'pr'
@@ -85,7 +85,7 @@ export function resolveComposerCreateSelection(args: {
   base: {
     baseBranch?: string
     compareBaseRef?: string
-    pushTarget?: WorkspaceCreateGitPushTarget
+    pushTarget?: GitPushTarget
     branchNameOverride?: string
   }
   branch: { refName: string; localBranchName: string } | null

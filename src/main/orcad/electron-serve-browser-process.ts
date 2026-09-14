@@ -12,7 +12,8 @@ import type {
 import type { RuntimeMetadata } from '../../shared/runtime-bootstrap'
 import { BROWSER_UNAVAILABLE_ERROR_CODE } from '../../shared/runtime-types'
 import { readRuntimeMetadata } from '../runtime/runtime-metadata'
-import { spawnProcess, type SpawnedProcess } from '../../shared/child-process/run-process'
+import { spawnProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import { sendOrcadSidecarRequest } from './orcad-sidecar-runtime-client'
 import {
   ElectronSidecarTabRegistry,
@@ -90,7 +91,7 @@ function processIsLive(pid: number): boolean {
 }
 
 export class ElectronServeBrowserProcess {
-  private child: SpawnedProcess | null = null
+  private child: ChildProcess | null = null
   private metadata: RuntimeMetadata | null = null
   private readonly tabs = new ElectronSidecarTabRegistry()
   private sidecarDataPath: string | null = null

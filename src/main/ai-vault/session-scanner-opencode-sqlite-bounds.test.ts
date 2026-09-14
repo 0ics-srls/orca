@@ -21,14 +21,14 @@ afterEach(() => {
   tempDirs = []
 })
 
-function createTempDb(): { db: Database.Database; path: string } {
+function createTempDb(): { db: Database; path: string } {
   const dir = mkdtempSync(join(tmpdir(), 'orca-opencode-bounds-'))
   tempDirs.push(dir)
   const path = join(dir, 'opencode.db')
   return { db: new Database(path), path }
 }
 
-function applySchema(db: Database.Database): void {
+function applySchema(db: Database): void {
   db.exec(`
     CREATE TABLE session (
       id TEXT PRIMARY KEY,
@@ -63,7 +63,7 @@ function applySchema(db: Database.Database): void {
   `)
 }
 
-function insertSession(db: Database.Database, id: string, timeUpdated: number): void {
+function insertSession(db: Database, id: string, timeUpdated: number): void {
   db.prepare(
     `INSERT INTO session (id, project_id, directory, title, time_created, time_updated, agent)
      VALUES (?, 'proj', '/tmp/w', ?, ?, ?, 'build')`
@@ -71,7 +71,7 @@ function insertSession(db: Database.Database, id: string, timeUpdated: number): 
 }
 
 function insertUserMessage(
-  db: Database.Database,
+  db: Database,
   args: { id: string; sessionId: string; timeCreated: number; text: string }
 ): void {
   db.prepare(`INSERT INTO message (id, session_id, time_created, data) VALUES (?, ?, ?, ?)`).run(
@@ -92,7 +92,7 @@ function insertUserMessage(
 }
 
 function insertMessageWithPart(
-  db: Database.Database,
+  db: Database,
   args: {
     id: string
     sessionId: string

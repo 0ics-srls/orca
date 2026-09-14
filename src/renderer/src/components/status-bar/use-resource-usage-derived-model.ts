@@ -4,7 +4,7 @@ import type { MemorySnapshot } from '../../../../shared/process-stats-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { getRepoExecutionHostId, parseExecutionHostId } from '../../../../shared/execution-host'
 import { mergeSnapshotAndSessions } from './mergeSnapshotAndSessions'
-import type { DaemonSession } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 import type { ResourceSessionBindingInputs } from './resource-session-bindings'
 import { countUnboundDaemonSessions } from './resource-session-bindings'
 import {
@@ -38,7 +38,7 @@ export function useResourceUsageDerivedModel({
 }: {
   open: boolean
   resourceSnapshot: MemorySnapshot | null
-  sessions: readonly DaemonSession[]
+  sessions: readonly PtyListedSession[]
   resourceSessionBindings: ResourceSessionBindingInputs
   runtimePaneTitlesByTabId: AppState['runtimePaneTitlesByTabId']
   repos: AppState['repos']

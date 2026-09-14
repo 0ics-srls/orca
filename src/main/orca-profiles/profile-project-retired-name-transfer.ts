@@ -1,3 +1,4 @@
+import type { PersistedState } from '../../shared/persisted-state-types'
 import type { Repo } from '../../shared/repo-types'
 import {
   mergeRetiredNameRegistries,
@@ -5,10 +6,9 @@ import {
 } from '../../shared/worktree/retired-name-registry'
 import { getRemoteRetirementNamespaceKey } from '../worktree-name-retirement'
 import { retirementNamespaceKeysToRead } from '../worktree-retirement-namespace'
-import type { TransferProfileState } from './profile-project-state-file'
 
 export function extractRetiredNameRegistriesByNamespace(
-  sourceState: TransferProfileState,
+  sourceState: PersistedState,
   sourceRepo: Repo
 ): Record<string, RetiredNameRegistry> {
   const lookup = (targetId: string) =>

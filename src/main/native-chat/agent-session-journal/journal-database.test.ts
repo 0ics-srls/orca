@@ -173,7 +173,7 @@ describe('schema creation', () => {
   it('publishes no table until the version bump commits with it', () => {
     const original = Database.prototype.pragma
     const pragma = vi.spyOn(Database.prototype, 'pragma').mockImplementation(function (
-      this: Database.Database,
+      this: Database,
       sql: string,
       options?: { simple?: boolean }
     ) {

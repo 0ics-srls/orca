@@ -35,8 +35,6 @@ export type LegacyWorkerRecoveryWorkspace = {
   resolved: ResolvedWorktree
 }
 
-export type LegacyWorkerRecoveryInventory = PtyControllerInventory
-
 export type LegacyWorkerRecoveryPorts = {
   preparePlan: () => LegacyWorkerTerminalRecoveryPlan
   resolveWorkspace: (
@@ -45,7 +43,7 @@ export type LegacyWorkerRecoveryPorts = {
   refreshInventory: (
     worktrees: ResolvedWorktree[],
     connectionId: string | null
-  ) => Promise<LegacyWorkerRecoveryInventory | null>
+  ) => Promise<PtyControllerInventory | null>
   /** Serializes the pre-adoption liveness probe and the adoption itself against other terminal mutations. */
   runMutation: <T>(worktreeId: string, operation: () => Promise<T>) => Promise<T>
   getActivation: (worktreeId: string) => { activeTabId?: string; activeGroupId?: string }
@@ -54,7 +52,7 @@ export type LegacyWorkerRecoveryPorts = {
   adopt: (
     candidate: LegacyWorkerRecoveryCandidate,
     workspace: TerminalWorkspaceLaunchScope,
-    inventory: LegacyWorkerRecoveryInventory,
+    inventory: PtyControllerInventory,
     activation: { activeTabId?: string; activeGroupId?: string }
   ) => Promise<void>
   getRendererEpoch: () => number

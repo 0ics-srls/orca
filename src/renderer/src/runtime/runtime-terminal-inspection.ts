@@ -21,8 +21,6 @@ export type {
   ClientOnlyUnverifiableReason
 } from '../../../shared/terminal-process-inspection'
 
-export type RuntimeTerminalProcessInspection = TerminalProcessInspection
-
 const REMOTE_PTY_ID_PREFIX = 'remote:'
 const DESKTOP_RUNTIME_CLIENT = { id: 'orca-desktop', type: 'desktop' } as const
 type TerminalLayoutsByTabId = ReturnType<typeof useAppStore.getState>['terminalLayoutsByTabId']
@@ -91,7 +89,7 @@ function isRemoteInspectionPtyId(ptyId: string): boolean {
 function normalizeInspectionResult(
   result: TerminalProcessInspection,
   remote: boolean
-): RuntimeTerminalProcessInspection {
+): TerminalProcessInspection {
   if (typeof result !== 'object' || result === null) {
     return clientOnlyUnverifiableInspection(remote ? 'old_host' : 'terminal_gone')
   }
@@ -139,7 +137,7 @@ export async function inspectRuntimeTerminalProcess(
   settings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined,
   ptyId: string,
   options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean; steadyState?: boolean }
-): Promise<RuntimeTerminalProcessInspection> {
+): Promise<TerminalProcessInspection> {
   const ownerEnvironmentId = getRemoteRuntimePtyEnvironmentId(ptyId)
   const target = ownerEnvironmentId
     ? ({ kind: 'environment', environmentId: ownerEnvironmentId } as const)
@@ -162,7 +160,7 @@ export async function inspectRuntimeTerminalProcess(
   }
 
   try {
-    const result = await callRuntimeRpc<{ process: RuntimeTerminalProcessInspection }>(
+    const result = await callRuntimeRpc<{ process: TerminalProcessInspection }>(
       target,
       'terminal.inspectProcess',
       {

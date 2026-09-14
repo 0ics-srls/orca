@@ -3,7 +3,7 @@ import type { IssueSourcePreference } from '../../../../shared/repo-types'
 import type { ParsedTaskQuery } from '../../../../shared/task-query'
 import { GITHUB_WORK_ITEMS_SSH_REMOTE_REQUIRED_MESSAGE } from '../../../../shared/work-items'
 import { shouldProbeGitRemote } from '../../../git/remote-name-listing'
-import type { LocalGitExecOptions, OwnerRepo } from '../../gh-utils'
+import type { LocalGitExecOptions, GitHubOwnerRepo } from '../../gh-utils'
 import {
   getGitHubApiRepositoryForRemote,
   getOriginGitHubApiRepository
@@ -21,7 +21,7 @@ export function normalizeWorkItemPage(page: number | undefined): number {
 
 export function buildWorkItemListRequest(args: {
   kind: 'issue' | 'pr'
-  ownerRepo: OwnerRepo
+  ownerRepo: GitHubOwnerRepo
   limit: number
   query: ParsedTaskQuery
   page: number
@@ -110,8 +110,8 @@ export type PartialWorkItemsResult = {
 
 export function assertSshRepoHasResolvedGitHubSource(args: {
   connectionId?: string | null
-  issueOwnerRepo: OwnerRepo | null
-  prOwnerRepo: OwnerRepo | null
+  issueOwnerRepo: GitHubOwnerRepo | null
+  prOwnerRepo: GitHubOwnerRepo | null
 }): void {
   if (!args.connectionId || args.issueOwnerRepo || args.prOwnerRepo) {
     return
@@ -121,9 +121,9 @@ export function assertSshRepoHasResolvedGitHubSource(args: {
 }
 
 export type ResolvedPrWorkItemSource = {
-  source: OwnerRepo | null
-  originCandidate: OwnerRepo | null
-  upstreamCandidate: OwnerRepo | null
+  source: GitHubOwnerRepo | null
+  originCandidate: GitHubOwnerRepo | null
+  upstreamCandidate: GitHubOwnerRepo | null
 }
 
 // Why: only an explicit `origin` preference is origin-only; `upstream`/`auto`/

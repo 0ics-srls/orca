@@ -3,10 +3,6 @@
 // functions from run-process, which re-exports everything here.
 import type { ChildProcess, SpawnOptions as NodeSpawnOptions } from 'node:child_process'
 
-export type ChildProcessHandle = ChildProcess
-
-export type SpawnedProcess = ChildProcess
-
 /**
  * The single place Orca starts a child process.
  *

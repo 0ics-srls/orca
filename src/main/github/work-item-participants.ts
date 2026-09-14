@@ -1,9 +1,9 @@
 import type { PRComment } from '../../shared/github/comment-types'
-import type { GitHubAssignableUser } from '../../shared/github/pull-request-types'
+import type { GitHubAssignableUser, GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 import type { GitHubWorkItem } from '../../shared/github/work-item-types'
 import { ghExecFileAsync, ghRepoExecOptions, githubRepoContext } from './gh-utils'
 import type { LocalGitExecOptions } from './gh-utils'
-import { githubHostExecOptions, type GitHubApiRepository } from './github-api-repository'
+import { githubHostExecOptions } from './github-api-repository'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 
 const WORK_ITEM_PARTICIPANTS_QUERY = `query($owner: String!, $repo: String!, $number: Int!, $isPr: Boolean!) {
@@ -49,7 +49,7 @@ function mergeGitHubUsers(users: GitHubAssignableUser[]): GitHubAssignableUser[]
 export async function getWorkItemParticipants(
   repoPath: string,
   item: Pick<GitHubWorkItem, 'number' | 'type'>,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubAssignableUser[]> {
@@ -109,7 +109,7 @@ export async function getWorkItemParticipants(
 async function getGitHubUsersByLogin(
   repoPath: string,
   logins: string[],
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubAssignableUser[]> {
@@ -172,7 +172,7 @@ export async function getMentionParticipants(
   >,
   comments: PRComment[],
   participants: GitHubAssignableUser[],
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubAssignableUser[]> {

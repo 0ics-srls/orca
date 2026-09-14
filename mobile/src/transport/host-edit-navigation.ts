@@ -3,19 +3,12 @@ import {
   navigateToHostStackRoute,
   type HostStackHostRoute,
   type HostStackNavigationController,
-  type HostStackNavigationState,
   type HostStackRootNavigation,
   type HostStackRouteTarget,
   type HostStackRouter
 } from '../navigation/host-stack-navigation'
 
-export type MobileHostEditHostRoute = HostStackHostRoute
-export type MobileHostEditNavigationState = HostStackNavigationState
-export type MobileHostEditRootNavigation = HostStackRootNavigation
-export type MobileHostEditRouter = HostStackRouter
-export type MobileHostEditNavigationController = HostStackNavigationController
-
-export function mobileHostEditHostRoute(hostId: string): MobileHostEditHostRoute {
+export function mobileHostEditHostRoute(hostId: string): HostStackHostRoute {
   return hostStackHostRoute(hostId)
 }
 
@@ -27,9 +20,9 @@ export function mobileHostEditRouteTarget(hostId: string): HostStackRouteTarget 
 }
 
 export function navigateToMobileHostEdit(
-  navigation: MobileHostEditRootNavigation,
-  router: MobileHostEditRouter,
+  navigation: HostStackRootNavigation,
+  router: HostStackRouter,
   hostId: string
-): MobileHostEditNavigationController {
+): HostStackNavigationController {
   return navigateToHostStackRoute(navigation, router, hostId, mobileHostEditRouteTarget(hostId))
 }

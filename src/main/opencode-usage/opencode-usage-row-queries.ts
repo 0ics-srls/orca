@@ -29,17 +29,17 @@ type OpenCodeSessionUsageRow = {
   tokens_cache_read: number
 }
 
-function getProjectJoin(db: Database.Database): string {
+function getProjectJoin(db: Database): string {
   return tableExists(db, 'project') && columnExists(db, 'session', 'project_id')
     ? 'LEFT JOIN project p ON p.id = s.project_id'
     : 'LEFT JOIN (SELECT NULL AS id, NULL AS worktree) p ON 1 = 0'
 }
 
-function getSessionModelSelect(db: Database.Database): string {
+function getSessionModelSelect(db: Database): string {
   return columnExists(db, 'session', 'model') ? 's.model AS session_model' : 'NULL AS session_model'
 }
 
-function getAssistantSessionMessageCount(db: Database.Database): number {
+function getAssistantSessionMessageCount(db: Database): number {
   if (!tableExists(db, 'session_message')) {
     return 0
   }
@@ -52,7 +52,7 @@ function getAssistantSessionMessageCount(db: Database.Database): number {
   return row?.count ?? 0
 }
 
-function canReadSessionUsageRows(db: Database.Database): boolean {
+function canReadSessionUsageRows(db: Database): boolean {
   if (!tableExists(db, 'session')) {
     return false
   }
@@ -61,7 +61,7 @@ function canReadSessionUsageRows(db: Database.Database): boolean {
   )
 }
 
-function getSessionUsageRowCount(db: Database.Database): number {
+function getSessionUsageRowCount(db: Database): number {
   if (!canReadSessionUsageRows(db)) {
     return 0
   }
@@ -75,7 +75,7 @@ function getSessionUsageRowCount(db: Database.Database): number {
   return row?.count ?? 0
 }
 
-function selectSessionUsageRows(db: Database.Database): OpenCodeUsageRow[] {
+function selectSessionUsageRows(db: Database): OpenCodeUsageRow[] {
   const projectJoin = getProjectJoin(db)
   const sessionModelSelect = getSessionModelSelect(db)
   const rows = db
@@ -115,7 +115,7 @@ function selectSessionUsageRows(db: Database.Database): OpenCodeUsageRow[] {
   }))
 }
 
-export function selectUsageRows(db: Database.Database): OpenCodeUsageRow[] {
+export function selectUsageRows(db: Database): OpenCodeUsageRow[] {
   if (!tableExists(db, 'session')) {
     return []
   }

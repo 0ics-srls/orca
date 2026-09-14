@@ -13,7 +13,7 @@ const messageIds = Array.from(
   (_, index) => `m${index.toString().padStart(3, '0')}`
 )
 
-function seedMessages(sqlite: Database.Database): void {
+function seedMessages(sqlite: Database): void {
   sqlite.exec(`
     WITH RECURSIVE ids(value) AS (
       VALUES(0)
@@ -24,7 +24,7 @@ function seedMessages(sqlite: Database.Database): void {
   `)
 }
 
-function rejectLastMessageUpdate(sqlite: Database.Database): void {
+function rejectLastMessageUpdate(sqlite: Database): void {
   sqlite.exec(`
     CREATE TRIGGER reject_last_message_update
     BEFORE UPDATE ON messages WHEN OLD.id = 'm500'
@@ -61,7 +61,7 @@ describe('message batch atomicity', () => {
     }
   ])('rolls back $method when a later batch fails', ({ method, setup, changedCountSql }) => {
     db = new OrchestrationDb(':memory:')
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     seedMessages(sqlite)
     if (setup) {
       sqlite.exec(setup)
@@ -76,7 +76,7 @@ describe('message batch atomicity', () => {
 
   it('preserves an outer transaction when an inner batch rolls back', () => {
     db = new OrchestrationDb(':memory:')
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     seedMessages(sqlite)
     rejectLastMessageUpdate(sqlite)
     sqlite.exec('BEGIN IMMEDIATE')
@@ -94,7 +94,7 @@ describe('message batch atomicity', () => {
 
   it('preserves an outer transaction when a message insert batch rolls back', () => {
     db = new OrchestrationDb(':memory:')
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     sqlite.exec(`
       CREATE TRIGGER reject_second_message_insert
       BEFORE INSERT ON messages WHEN NEW.id = 'inner_second'
@@ -135,7 +135,7 @@ describe('message batch atomicity', () => {
 
   it('preserves an outer transaction when a worker_done commit rolls back', () => {
     db = new OrchestrationDb(':memory:')
-    const sqlite = (db as unknown as { db: Database.Database }).db
+    const sqlite = (db as unknown as { db: Database }).db
     sqlite.exec(`
       BEGIN IMMEDIATE;
       INSERT INTO messages (id, from_handle, to_handle, subject)

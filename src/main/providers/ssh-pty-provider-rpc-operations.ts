@@ -1,5 +1,5 @@
 import type { SshChannelMultiplexer } from '../ssh/ssh-channel-multiplexer'
-import type { PtyProcessInspection } from './pty-process-inspection'
+import type { TerminalProcessInspection } from '../../shared/terminal-process-inspection'
 import { writeToSshPty, writeToSshPtyWithSettlement } from './ssh-pty-write'
 import type { WriteSettlement } from '../../shared/pty-write-settlement'
 
@@ -58,7 +58,7 @@ export function createSshPtyProviderRpcOperations({ mux, toRelayPtyId }: SshPtyP
     inspectProcess: async (
       id: string,
       options?: { expectedIncarnationId?: string; scanChildProcesses?: boolean }
-    ): Promise<PtyProcessInspection> => {
+    ): Promise<TerminalProcessInspection> => {
       return (await mux.request('pty.inspectProcess', {
         id: toRelayPtyId(id),
         ...(options?.expectedIncarnationId
@@ -66,7 +66,7 @@ export function createSshPtyProviderRpcOperations({ mux, toRelayPtyId }: SshPtyP
           : {}),
         // Additive request member: an older relay ignores it and answers as it always did.
         ...(options?.scanChildProcesses === true ? { scanChildProcesses: true } : {})
-      })) as PtyProcessInspection
+      })) as TerminalProcessInspection
     },
     serialize: async (ids: string[]): Promise<string> => {
       const result = await mux.request('pty.serialize', {

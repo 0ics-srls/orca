@@ -16,8 +16,6 @@ import { classifyGitHubOwnerRepoFromRemoteUrl } from './github-ssh-host-alias-re
 import { isStableMissingGitRemoteError } from '../git/stable-missing-git-remote-error'
 import type { GitAdmissionTier } from '../git/command-runner/git-exec-options'
 
-export type OwnerRepo = GitHubOwnerRepo
-
 export type { GitHubRemoteIdentity }
 export { parseGitHubOwnerRepo, parseGitHubRemoteIdentity }
 
@@ -72,13 +70,13 @@ const OWNER_REPO_SIGNED_CACHE_TTL_MS = 5 * 60_000
 const OWNER_REPO_CACHE_MAX_ENTRIES = 512
 
 type OwnerRepoCacheEntry = {
-  value: OwnerRepo | null
+  value: GitHubOwnerRepo | null
   expiresAt: number
   configSignature?: string
 }
 
 const ownerRepoCache = new Map<string, OwnerRepoCacheEntry>()
-const ownerRepoInFlight: CoalescedProbes<OwnerRepo | null> = new Map()
+const ownerRepoInFlight: CoalescedProbes<GitHubOwnerRepo | null> = new Map()
 
 /** @internal - exposed for tests only */
 export function _resetOwnerRepoCache(): void {
@@ -113,7 +111,7 @@ export async function getRemoteUrlForRepo(
   return readRemoteUrl(context, remoteName)
 }
 
-function getOwnerRepoCacheTtl(value: OwnerRepo | null, configSignature?: string): number {
+function getOwnerRepoCacheTtl(value: GitHubOwnerRepo | null, configSignature?: string): number {
   if (configSignature) {
     return value ? OWNER_REPO_SIGNED_CACHE_TTL_MS : OWNER_REPO_NEGATIVE_CACHE_TTL_MS
   }
@@ -126,7 +124,7 @@ export async function getOwnerRepoForRemote(
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {},
   probeOptions: GitHubRemoteIdentityProbeOptions = {}
-): Promise<OwnerRepo | null> {
+): Promise<GitHubOwnerRepo | null> {
   const context = githubRepoContext(repoPath, connectionId, localGitOptions)
   if (
     probeOptions.requireVerifiedSshProbe &&
@@ -188,7 +186,7 @@ async function resolveOwnerRepoForRemote(
   cacheKey: string,
   configSignature: string | undefined,
   requireVerifiedSshProbe: boolean
-): Promise<OwnerRepo | null> {
+): Promise<GitHubOwnerRepo | null> {
   const now = Date.now()
   try {
     const remoteUrl = await getRemoteUrlForRepo(context, remoteName)

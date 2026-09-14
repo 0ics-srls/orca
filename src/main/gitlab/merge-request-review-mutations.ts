@@ -14,7 +14,7 @@ import {
   glabExecFileAsync,
   release,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 import { withProjectRef } from './merge-request-project-resolution'
@@ -25,7 +25,7 @@ export async function addMRComment(
   body: string,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true; comment: MRComment } | { ok: false; error: string }> {
   return withProjectRef<{ ok: true; comment: MRComment } | { ok: false; error: string }>(
@@ -83,7 +83,7 @@ export async function addMRInlineComment(
   input: GitLabMRInlineCommentInput,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true; comment: MRComment } | { ok: false; error: string }> {
   return withProjectRef<{ ok: true; comment: MRComment } | { ok: false; error: string }>(
@@ -171,7 +171,7 @@ export async function resolveMRDiscussion(
   resolved: boolean,
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabDiscussionResolveResult> {
   return withProjectRef<GitLabDiscussionResolveResult>(
@@ -237,7 +237,7 @@ export async function updateMRReviewers(
   reviewerIds: number[],
   preference?: IssueSourcePreference,
   connectionId?: string | null,
-  projectRef?: ProjectRef | null,
+  projectRef?: GitLabProjectRef | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitLabMRReviewersUpdateResult> {
   return withProjectRef<GitLabMRReviewersUpdateResult>(

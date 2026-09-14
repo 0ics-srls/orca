@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   RelayDispatcher,
   type RelayClientSessionIdentity,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { encodeJsonRpcFrame, MessageType } from './protocol'
 import { SshPtyConsumerSessionAdapter } from './ssh-pty-consumer-session-adapter'
@@ -160,7 +160,7 @@ describe('relay PTY consumer owner displacement', () => {
     })
 
     const reconnectWrites: Buffer[] = []
-    let grantSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let grantSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     const reconnectClientId = dispatcher.attachClient(
       (data, settle) => {
         reconnectWrites.push(Buffer.from(data))
@@ -215,7 +215,7 @@ describe('relay PTY consumer owner displacement', () => {
     const incumbentGrant = response(incumbentWrites, 1)!.result as Record<string, unknown>
 
     const reconnectWrites: Buffer[] = []
-    let grantSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let grantSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     const reconnectClientId = dispatcher.attachClient(
       (data, settle) => {
         reconnectWrites.push(Buffer.from(data))
@@ -300,7 +300,7 @@ describe('relay PTY consumer owner displacement', () => {
       ownerLease: incumbentGrant.ownerLease
     }
 
-    let firstReconnectSettlement: ((result: SinkWriteSettlement) => void) | undefined
+    let firstReconnectSettlement: ((result: DispatcherWriterSettlement) => void) | undefined
     const firstReconnectWrites: Buffer[] = []
     const firstReconnectClientId = dispatcher.attachClient(
       (data, settle) => {

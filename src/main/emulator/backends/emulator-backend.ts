@@ -1,4 +1,4 @@
-import type { EmulatorGesturePoint } from '../emulator-gesture-sender'
+import type { ServeSimTouchFrame } from '../../../shared/emulator-touch-frame'
 import type {
   EmulatorBackendKind,
   EmulatorSessionInfo,
@@ -74,7 +74,7 @@ export type EmulatorBackend = {
   tap(deviceId: string, x: number, y: number): Promise<void>
   // wsUrl is the iOS gesture stream from the registry; Android backends ignore it
   // and drive their own control socket keyed by deviceId.
-  gesture(deviceId: string, points: EmulatorGesturePoint[], wsUrl: string | null): Promise<void>
+  gesture(deviceId: string, points: ServeSimTouchFrame[], wsUrl: string | null): Promise<void>
   type(deviceId: string, text: string): Promise<void>
   button(deviceId: string, name: string): Promise<void>
   rotate(deviceId: string, orientation: string): Promise<void>

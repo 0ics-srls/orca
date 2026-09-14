@@ -5,7 +5,7 @@ import {
   glabRepoExecOptions,
   glabExecFileAsync,
   type LocalGitExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 // ── Pipeline jobs ──────────────────────────────────────────────────
@@ -77,7 +77,7 @@ function mapBridgeAsJob(raw: GitLabRawBridge, pipelineId: number): GitLabPipelin
 
 async function fetchPipelineJobPage(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   pipelineId: number,
   connectionId: string | null | undefined,
   localGitOptions: LocalGitExecOptions
@@ -99,7 +99,7 @@ async function fetchPipelineJobPage(
 
 async function fetchPipelineBridges(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   pipelineId: number,
   connectionId: string | null | undefined,
   localGitOptions: LocalGitExecOptions
@@ -118,8 +118,8 @@ async function fetchPipelineBridges(
 
 function childPipelineTarget(
   bridge: GitLabRawBridge,
-  parentProjectRef: ProjectRef
-): { projectRef: ProjectRef; pipelineId: number } | null {
+  parentProjectRef: GitLabProjectRef
+): { projectRef: GitLabProjectRef; pipelineId: number } | null {
   const childId = bridge.downstream_pipeline?.id
   if (typeof childId !== 'number') {
     return null
@@ -171,7 +171,7 @@ async function mapWithConcurrencyLimit<T, R>(
 
 export async function fetchPipelineJobs(
   repoPath: string,
-  projectRef: ProjectRef,
+  projectRef: GitLabProjectRef,
   pipelineId: number,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
@@ -184,7 +184,7 @@ export async function fetchPipelineJobs(
   ])
 
   const bridgeRows = bridges.map((bridge) => mapBridgeAsJob(bridge, pipelineId))
-  const childTargets: { projectRef: ProjectRef; pipelineId: number }[] = []
+  const childTargets: { projectRef: GitLabProjectRef; pipelineId: number }[] = []
   const seenChildIds = new Set<number>()
   for (const bridge of bridges) {
     const target = childPipelineTarget(bridge, projectRef)

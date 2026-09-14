@@ -7,8 +7,10 @@ import {
   type ListSessionsResult,
   type SessionInfo
 } from './types'
-import type { PtyProcessInspection } from '../providers/pty-process-inspection'
-import { clientOnlyUnverifiableInspection } from '../../shared/terminal-process-inspection'
+import {
+  clientOnlyUnverifiableInspection,
+  type TerminalProcessInspection
+} from '../../shared/terminal-process-inspection'
 
 export abstract class DaemonPtyProcessInspection extends DaemonPtyBufferSnapshots {
   // Why: daemon-backed PTYs can host long-lived agents while detached; cleanup prompts must not treat them as idle shells.
@@ -26,7 +28,7 @@ export abstract class DaemonPtyProcessInspection extends DaemonPtyBufferSnapshot
   async inspectProcess(
     id: string,
     options?: { expectedIncarnationId?: string; steadyState?: boolean }
-  ): Promise<PtyProcessInspection> {
+  ): Promise<TerminalProcessInspection> {
     if (this.protocolVersion < GET_FOREGROUND_PROCESS_PROTOCOL_VERSION) {
       return clientOnlyUnverifiableInspection('old_host')
     }
@@ -43,7 +45,7 @@ export abstract class DaemonPtyProcessInspection extends DaemonPtyBufferSnapshot
         hasChildProcesses: this.hasChildProcessesFromForeground(foregroundProcess)
       }
     }
-    return this.client.request<PtyProcessInspection>('inspectProcess', {
+    return this.client.request<TerminalProcessInspection>('inspectProcess', {
       sessionId: id,
       ...(options?.expectedIncarnationId
         ? { expectedIncarnationId: options.expectedIncarnationId }

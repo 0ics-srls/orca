@@ -1,14 +1,11 @@
+import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native'
 import { Check, Download, Trash2 } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
-import {
-  isModelInFlight,
-  type MobileSpeechModel,
-  type MobileSpeechSetup
-} from '../dictation/mobile-dictation-setup'
+import { isModelInFlight, type MobileSpeechModel } from '../dictation/mobile-dictation-setup'
 
 type Props = {
-  setup: MobileSpeechSetup
+  setup: RuntimeSpeechSetupState
   // Disabled mirrors desktop: the model list greys out when dictation is off.
   disabled: boolean
   busyAction: { modelId: string; type: 'download' | 'select' | 'delete' } | null

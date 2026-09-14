@@ -1,7 +1,7 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { useCallback, type MutableRefObject } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import { triggerError } from '../platform/haptics'
-import type { MobileGitStatusResult } from './mobile-git-status'
 import type { LoadStatusOptions } from './mobile-source-control-screen-state'
 import {
   getMobileCommitFailureStagedEntries,
@@ -24,7 +24,7 @@ type LoadStatus = (options?: LoadStatusOptions) => Promise<boolean>
 type Params = {
   client: RpcClient | null
   worktreeId: string
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   branchLabel: string
   commitMessage: string
   stagedEntries: MobileCommitFailureRecovery['stagedEntries']

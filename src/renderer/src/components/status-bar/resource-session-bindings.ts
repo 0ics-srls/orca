@@ -1,6 +1,8 @@
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/terminal-tab-types'
-import { mayDestroyWithoutOwnerEvidence } from '../../../../shared/pty-listed-session'
-import type { DaemonSession } from './resource-usage-merge-types'
+import {
+  mayDestroyWithoutOwnerEvidence,
+  type PtyListedSession
+} from '../../../../shared/pty-listed-session'
 
 export type ResourceSessionBindingInputs = {
   tabsByWorktree: Record<string, TerminalTab[]>
@@ -101,9 +103,9 @@ export function buildResourceSessionBindingIndex(
  * killed cannot diverge — that divergence would be live agent sessions (#8459).
  */
 export function selectUnboundDaemonSessions(
-  sessions: readonly DaemonSession[],
+  sessions: readonly PtyListedSession[],
   inputs: ResourceSessionBindingInputs
-): DaemonSession[] {
+): PtyListedSession[] {
   if (!inputs.workspaceSessionReady) {
     return []
   }
@@ -116,7 +118,7 @@ export function selectUnboundDaemonSessions(
 }
 
 export function countUnboundDaemonSessions(
-  sessions: readonly DaemonSession[],
+  sessions: readonly PtyListedSession[],
   inputs: ResourceSessionBindingInputs
 ): number {
   return selectUnboundDaemonSessions(sessions, inputs).length

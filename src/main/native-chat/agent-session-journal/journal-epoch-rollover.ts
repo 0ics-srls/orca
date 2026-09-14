@@ -19,7 +19,7 @@ import {
 import type { AgentJournalEpochReason, JournalRow } from './journal-row-schema'
 
 export function publishNewEpoch(input: {
-  db: Database.Database
+  db: Database
   sessionId: string
   providerHandle: AgentSessionProviderHandle
   epoch: string

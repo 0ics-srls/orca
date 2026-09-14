@@ -9,10 +9,8 @@ import {
   type SkillGitTreeFileEntry
 } from './skill-git-tree-identity'
 
-type ObservedSkillFile = SkillBundleFileIdentity
-
 export type ObservedSkillPackage = {
-  files: ObservedSkillFile[]
+  files: SkillBundleFileIdentity[]
   observedDigest: string
   /**
    * Git tree sha of every observed file's raw bytes — one of the two values comparable
@@ -133,7 +131,7 @@ export function describeObservedSkillFile(
   path: string,
   bytes: Buffer,
   executable: boolean
-): ObservedSkillFile {
+): SkillBundleFileIdentity {
   let normalized: Buffer | null = null
   if (!bytes.includes(0)) {
     try {
@@ -173,7 +171,7 @@ export function skillPackageDigest(files: readonly SkillBundleFileIdentity[]): s
 }
 
 function matchesFileIdentity(
-  actual: ObservedSkillFile,
+  actual: SkillBundleFileIdentity,
   expected: SkillBundleFileIdentity
 ): boolean {
   if (
@@ -196,7 +194,7 @@ export async function observeSkillPackage(
   platform: NodeJS.Platform = process.platform,
   inferShebangExecutables = false
 ): Promise<ObservedSkillPackage> {
-  const files: ObservedSkillFile[] = []
+  const files: SkillBundleFileIdentity[] = []
   const treeEntries: SkillGitTreeFileEntry[] = []
   const caseFoldedPaths = new Map<string, string>()
   const normalizedExecutablePaths =

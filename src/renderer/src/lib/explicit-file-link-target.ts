@@ -8,12 +8,7 @@ import {
   resolveTildePath
 } from './terminal-path-normalization'
 
-export type ParsedExplicitFileLinkTarget = ParsedFileLinkLocation
-
-export type ResolvedExplicitFileLinkTarget = Pick<
-  ParsedExplicitFileLinkTarget,
-  'line' | 'column'
-> & {
+export type ResolvedExplicitFileLinkTarget = Pick<ParsedFileLinkLocation, 'line' | 'column'> & {
   absolutePath: string
 }
 
@@ -33,7 +28,7 @@ function canKeepTrailingSeparator(pathText: string): boolean {
 export function parseExplicitFileLinkTarget(
   value: string,
   options: ParseExplicitFileLinkTargetOptions = {}
-): ParsedExplicitFileLinkTarget | null {
+): ParsedFileLinkLocation | null {
   const parsed = parseFileLinkLocation(value)
   if (!parsed) {
     return null
@@ -65,7 +60,7 @@ export function resolveExplicitFileLinkTargetPath(
 }
 
 export function resolveExplicitFileLinkTarget(
-  parsed: ParsedExplicitFileLinkTarget,
+  parsed: ParsedFileLinkLocation,
   cwd: string,
   homePath?: string | null
 ): ResolvedExplicitFileLinkTarget | null {

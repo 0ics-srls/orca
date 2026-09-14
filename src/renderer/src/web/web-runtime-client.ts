@@ -20,7 +20,7 @@ export type WebRuntimeSubscriptionHandle = {
   sendBinary: (bytes: Uint8Array<ArrayBufferLike>) => void
 }
 
-export type SubscribeOptions = WebRuntimeSubscribeOptions
+export type { WebRuntimeSubscribeOptions }
 
 const SHARED_CONNECTION_SUBSCRIPTION_METHODS = new Set(['files.watch'])
 
@@ -101,7 +101,7 @@ export class WebRuntimeClient {
     method: string,
     params: unknown,
     callbacks: WebRuntimeSubscriptionCallbacks,
-    options?: SubscribeOptions
+    options?: WebRuntimeSubscribeOptions
   ): Promise<WebRuntimeSubscriptionHandle> {
     if (SHARED_CONNECTION_SUBSCRIPTION_METHODS.has(method)) {
       return subscribeWebRuntimeFileWatch({
@@ -166,7 +166,7 @@ export class WebRuntimeClient {
     method: string,
     params: unknown,
     callbacks: WebRuntimeSubscriptionCallbacks,
-    options?: SubscribeOptions
+    options?: WebRuntimeSubscribeOptions
   ): Promise<WebRuntimeTransportSubscriptionHandle> {
     await this.waitForConnected(options?.timeoutMs)
     const id = this.nextId()

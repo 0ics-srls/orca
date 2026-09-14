@@ -3,7 +3,6 @@ import type { RpcClient } from '../transport/rpc-client'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import type { RpcSuccess } from '../transport/types'
 
-export type MobileSpeechSetup = RuntimeSpeechSetupState
 export type MobileSpeechModel = RuntimeSpeechSetupState['models'][number]
 
 // Dictation-setup errors startMobileDictation throws when the desktop isn't
@@ -31,7 +30,7 @@ export function isDictationSetupRequiredError(message: string): boolean {
 
 export async function fetchDictationSetup(
   client: Pick<RpcClient, 'sendRequest'>
-): Promise<MobileSpeechSetup> {
+): Promise<RuntimeSpeechSetupState> {
   const response = await fetchDictationSetupResponse(client)
   if (!response.ok) {
     if (isLegacyDesktopSpeechSetupError(response.error)) {
@@ -39,7 +38,7 @@ export async function fetchDictationSetup(
     }
     throw new Error(response.error?.message || 'Failed to load dictation models')
   }
-  return (response as RpcSuccess).result as MobileSpeechSetup
+  return (response as RpcSuccess).result as RuntimeSpeechSetupState
 }
 
 async function fetchDictationSetupResponse(client: Pick<RpcClient, 'sendRequest'>) {
@@ -68,23 +67,23 @@ export async function downloadDictationModel(
 export async function deleteDictationModel(
   client: Pick<RpcClient, 'sendRequest'>,
   modelId: string
-): Promise<MobileSpeechSetup> {
+): Promise<RuntimeSpeechSetupState> {
   const response = await client.sendRequest('speech.models.delete', { modelId })
   if (!response.ok) {
     throw new Error(response.error?.message || 'Failed to delete model')
   }
-  return (response as RpcSuccess).result as MobileSpeechSetup
+  return (response as RpcSuccess).result as RuntimeSpeechSetupState
 }
 
 export async function setDictationConfig(
   client: Pick<RpcClient, 'sendRequest'>,
   params: { enabled?: boolean; modelId?: string; dictationMode?: 'toggle' | 'hold' }
-): Promise<MobileSpeechSetup> {
+): Promise<RuntimeSpeechSetupState> {
   const response = await client.sendRequest('speech.dictation.setup', params)
   if (!response.ok) {
     throw new Error(response.error?.message || 'Failed to update dictation settings')
   }
-  return (response as RpcSuccess).result as MobileSpeechSetup
+  return (response as RpcSuccess).result as RuntimeSpeechSetupState
 }
 
 // A model is mid-download (or extracting) and the sheet should keep polling.
@@ -93,7 +92,7 @@ export function isModelInFlight(model: MobileSpeechModel): boolean {
 }
 
 // Whether dictation can be used right now: enabled + a selected model that's ready.
-export function isDictationReady(setup: MobileSpeechSetup): boolean {
+export function isDictationReady(setup: RuntimeSpeechSetupState): boolean {
   if (!setup.enabled || !setup.selectedModelId) {
     return false
   }

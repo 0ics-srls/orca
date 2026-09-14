@@ -6,7 +6,7 @@ import {
   glabExecFileAsync,
   glabHostnameArgs,
   glabRepoExecOptions,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 
 export function parseMergeRequestPayload(stdout: string): { number: number; url: string } | null {
@@ -46,7 +46,7 @@ export function parseMergeRequestPayload(stdout: string): { number: number; url:
 
 export async function findOpenMRByHeadBase(args: {
   repoPath: string
-  projectRef: ProjectRef
+  projectRef: GitLabProjectRef
   head: string
   base: string
   connectionId?: string | null

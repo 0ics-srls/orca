@@ -5,14 +5,14 @@ import type {
   JsonRpcResponse,
   PreparedJsonRpcPayload
 } from './protocol'
-import type { DispatcherClientWriter, SinkWriteSettlement } from './dispatcher-client-writer'
+import type { DispatcherClientWriter, DispatcherWriterSettlement } from './dispatcher-client-writer'
 
 export type RequestContext = {
   clientId: number
   isStale: () => boolean
   signal?: AbortSignal
   sessionIdentity?: RelayClientSessionIdentity
-  onResponseSettled?: (handler: (result: SinkWriteSettlement) => void) => void
+  onResponseSettled?: (handler: (result: DispatcherWriterSettlement) => void) => void
 }
 
 export type RelayClientSessionIdentity = {

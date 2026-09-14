@@ -29,7 +29,7 @@ export type GitSubmoduleStatus = {
 //
 // `conflictStatusSource` is never set by the main process. The renderer stamps
 // 'git' for live u-records and 'session' for Resolved locally state.
-export type GitUncommittedEntry = {
+export type GitStatusEntry = {
   path: string
   status: GitFileStatus
   area: GitStagingArea
@@ -49,8 +49,6 @@ export type GitUncommittedEntry = {
   added?: number
   removed?: number
 }
-
-export type GitStatusEntry = GitUncommittedEntry
 
 // `mergeBase(base, HEAD) → working tree`, deduplicated, so committing doesn't move it.
 // Matches the per-file rows rather than git: binary and >2MB untracked count zero.

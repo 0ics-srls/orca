@@ -3,7 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   LinearGroupBy,
-  LinearIssue,
+  LinearMobileIssue,
   LinearIssueSection,
   LinearOrderBy,
   LinearViewMode,
@@ -35,11 +35,15 @@ vi.mock('./mobile-tasks-legacy-foundation', async () => {
   return {
     ...options,
     ...linear,
-    groupLinearIssues: (issues: LinearIssue[], groupBy: LinearGroupBy, orderBy: LinearOrderBy) => {
+    groupLinearIssues: (
+      issues: LinearMobileIssue[],
+      groupBy: LinearGroupBy,
+      orderBy: LinearOrderBy
+    ) => {
       groupingInputSizes.push(issues.length)
       return linear.groupLinearIssues(issues, groupBy, orderBy)
     },
-    groupSortedLinearIssues: (issues: readonly LinearIssue[], groupBy: LinearGroupBy) => {
+    groupSortedLinearIssues: (issues: readonly LinearMobileIssue[], groupBy: LinearGroupBy) => {
       groupingInputSizes.push(issues.length)
       return linear.groupSortedLinearIssues(issues, groupBy)
     }
@@ -70,7 +74,7 @@ const ORDERINGS: LinearOrderBy[] = ['priority', 'updated', 'identifier']
 
 /** Deterministic issues: every field is a pure function of the index, so grouping,
  *  ordering and comparison counts repeat exactly across runs. */
-function makeIssue(index: number): LinearIssue {
+function makeIssue(index: number): LinearMobileIssue {
   const state = STATES[(index * 3) % STATES.length]!
   const team = TEAMS[(index * 5) % TEAMS.length]!
   return {
@@ -190,7 +194,7 @@ function current(): Projection {
 
 /** The pre-change board memo, kept verbatim as the parity and count oracle. */
 function legacyProjection(input: ProbeInput): {
-  issuesForView: LinearIssue[]
+  issuesForView: LinearMobileIssue[]
   listSections: LinearIssueSection[]
   boardSections: LinearIssueSection[]
 } {

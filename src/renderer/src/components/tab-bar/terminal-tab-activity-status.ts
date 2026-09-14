@@ -15,7 +15,6 @@ import type { TerminalLayoutSnapshot, TerminalTab } from '../../../../shared/ter
 // a container of tabs. Reuse the WorktreeCard status vocabulary and resolver so
 // the tab's live states resolve identically to the sidebar (tabs intentionally
 // skip the card's retained-done promotion — see resolveTerminalTabActivityStatus).
-export type TerminalTabActivityStatus = WorktreeStatus
 
 // Per-tab live-hook flags, mirroring applyLiveAgentState in
 // worktree-agent-activity-summary.ts. blocked/waiting collapse to permission,
@@ -165,7 +164,7 @@ export function resolveTerminalTabActivityStatus({
   runtimePaneTitlesByTabId,
   ptyIdsByTabId,
   terminalLayout
-}: TerminalTabActivityInput): TerminalTabActivityStatus {
+}: TerminalTabActivityInput): WorktreeStatus {
   const flags = getTerminalTabActivityFlags(agentStatusByPaneKey, agentStatusEpoch).get(tab.id)
   return resolveWorktreeStatus({
     tabs: [tab],
@@ -187,7 +186,7 @@ export function resolveTerminalTabActivityStatus({
 }
 
 /** True while the tab shows a live in-turn signal (spinner or needs-input). */
-export function isTerminalTabActivityLive(status: TerminalTabActivityStatus): boolean {
+export function isTerminalTabActivityLive(status: WorktreeStatus): boolean {
   return status === 'working' || status === 'monitoring' || status === 'permission'
 }
 
@@ -237,7 +236,7 @@ export function resolveTerminalTabAttentionBadge({
 
 /** Map a container activity status onto AgentStateDot's vocabulary (no unread — that's a bell). */
 export function terminalTabActivityToAgentDotState(
-  status: TerminalTabActivityStatus
+  status: WorktreeStatus
 ): 'working' | 'monitoring' | 'permission' | 'interrupted' | 'done' | null {
   switch (status) {
     case 'working':

@@ -1,9 +1,6 @@
 import type RepoCombobox from '@/components/repo/RepoCombobox'
 import type { NewWorkspaceProjectOption } from '@/lib/new-workspace-project-options'
-import type {
-  NeedsSetupProjectHostOption,
-  ProjectHostSetupOption
-} from '@/lib/project-host-setup-options'
+import type { ProjectHostSetupOption } from '@/lib/project-host-setup-options'
 import type { SetupConfig } from '@/lib/new-workspace'
 import type { WorkspaceCreateErrorDisplay } from '@/lib/workspace-create-error-format'
 import type { SmartNameMode } from '@/components/new-workspace/smart-workspace-source-results'
@@ -120,6 +117,5 @@ export type NewWorkspaceComposerCardProps = {
   onNestedDialogOpenChange?: (open: boolean) => void
 }
 
-export type NeedsProjectHostOption = NeedsSetupProjectHostOption
 export type ReadyProjectHostOption = Extract<ProjectHostSetupOption, { kind: 'ready' }>
 export type SmartWorkspaceNameFieldProps = React.ComponentProps<typeof SmartWorkspaceNameField>

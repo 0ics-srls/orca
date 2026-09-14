@@ -13,7 +13,8 @@ import type { CommonProps, EventName, EventProps, OptInVia } from '../../shared/
 import type { Store } from '../persistence'
 import { consumeBurstToken, resetBurstCapsForSession } from './burst-cap'
 import { getCohortAtEmit } from './cohort-classifier'
-import { resolveConsent, type ConsentState } from './consent'
+import { resolveConsent } from './consent'
+import type { TelemetryConsentState } from '../../shared/telemetry-consent-types'
 import { commonPropsSchema, validate } from './validator'
 
 // Compile-time feature flag, independent of the build-identity gate — both must be satisfied to transmit.
@@ -123,7 +124,7 @@ export function initTelemetry(store: Store): void {
  * `pending_banner`: the direct `telemetry_opted_out` capture in `setOptIn(_, false)` must not drop,
  * or we'd lose the one signal that the opt-out flow works.
  */
-export function shouldOptOutSdkAtInit(consent: ConsentState): boolean {
+export function shouldOptOutSdkAtInit(consent: TelemetryConsentState): boolean {
   return consent.effective === 'disabled'
 }
 

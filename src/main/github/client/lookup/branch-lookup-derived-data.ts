@@ -1,5 +1,5 @@
 import { getPRConflictSummary } from '../../conflict-summary'
-import type { ghRepoExecOptions, OwnerRepo } from '../../gh-utils'
+import type { ghRepoExecOptions, GitHubOwnerRepo } from '../../gh-utils'
 import { hydrateGitHubPRStack } from '../../github-pr-stack'
 import { detectRepositoryMergeMetadata } from './../detect/repository-merge-metadata'
 import { derivePullRequestMergeable, type PullRequestLookupData } from './pull-request-lookup-data'
@@ -7,7 +7,7 @@ import { getCachedGitHubPRStackSummary } from './pr-stack-summary-cache'
 
 export async function derivePRRefreshData(args: {
   data: PullRequestLookupData
-  dataRepo: OwnerRepo | null
+  dataRepo: GitHubOwnerRepo | null
   repoPath: string
   connectionId?: string | null
   localGitOptions: { wslDistro?: string }

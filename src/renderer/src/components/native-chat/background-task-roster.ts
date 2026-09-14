@@ -10,12 +10,11 @@ import { formatNativeChatDuration } from '../../../../shared/native-chat-turn-st
 import { translate } from '@/i18n/i18n'
 
 type TaskKind = AgentSessionBackgroundTask['kind']
-type RunState = AgentSessionBackgroundTaskRunState
 
 export type BackgroundRosterTask = {
   task: AgentSessionBackgroundTask
   settled: boolean
-  state: RunState
+  state: AgentSessionBackgroundTaskRunState
   name: string
 }
 
@@ -60,7 +59,10 @@ export function resolveBackgroundTaskName(task: AgentSessionBackgroundTask): str
   )
 }
 
-function effectiveState(task: AgentSessionBackgroundTask, settled: boolean): RunState {
+function effectiveState(
+  task: AgentSessionBackgroundTask,
+  settled: boolean
+): AgentSessionBackgroundTaskRunState {
   if (task.state) {
     return task.state
   }
@@ -102,7 +104,7 @@ export function buildBackgroundTaskGroups(
   })).filter((group) => group.tasks.length > 0)
 }
 
-export function backgroundTaskStateWord(state: RunState): string {
+export function backgroundTaskStateWord(state: AgentSessionBackgroundTaskRunState): string {
   switch (state) {
     case 'working':
       return translate('components.native-chat.backgroundTasks.stateWorking', 'working')
@@ -122,7 +124,9 @@ export function backgroundTaskStateWord(state: RunState): string {
 }
 
 /** The reason line for an attention state, per the signed-off mock. */
-export function backgroundTaskStateReason(state: RunState): string | null {
+export function backgroundTaskStateReason(
+  state: AgentSessionBackgroundTaskRunState
+): string | null {
   switch (state) {
     case 'waiting':
       return translate('components.native-chat.backgroundTasks.reasonWaiting', 'needs approval')

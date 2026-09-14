@@ -1,3 +1,4 @@
+import type { AgentSessionExecutionLocation } from './agent-session-record'
 import { describe, expect, it } from 'vitest'
 import {
   agentStatusSubjectsEqual,
@@ -6,15 +7,16 @@ import {
   makePtyRunAgentStatusSubject,
   makeStructuredAgentStatusSubject,
   parseAgentStatusSubject,
-  serializeAgentStatusSubject,
-  type AgentStatusExecutionScope
+  serializeAgentStatusSubject
 } from './agent-status-subject'
 
 const RUN_ID = 'run_11111111-1111-4111-8111-111111111111'
 const PANE_KEY = 'tab-1:11111111-1111-4111-8111-111111111111'
 const SESSION_ID = 'session_11111111-1111-4111-8111-111111111111'
 
-function scope(overrides: Partial<AgentStatusExecutionScope> = {}): AgentStatusExecutionScope {
+function scope(
+  overrides: Partial<AgentSessionExecutionLocation> = {}
+): AgentSessionExecutionLocation {
   return {
     executionHostId: 'local',
     wslDistro: null,

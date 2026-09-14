@@ -3,11 +3,9 @@ import { translateMain } from '../i18n/main-i18n'
 import type { InstallDirAclPoisonDiagnosis } from '../startup/windows-install-dir-acl-recovery'
 import type { RecoveryExhaustionCause } from './renderer-recovery-reload-watchdog'
 
-export type RendererRecoveryPromptFailure = RecoveryExhaustionCause
-
 export type RendererRecoveryPromptDeps = {
   recentRecoveryCount: number
-  failure?: RendererRecoveryPromptFailure
+  failure?: RecoveryExhaustionCause
   isQuitting: () => boolean
   diagnose: () => InstallDirAclPoisonDiagnosis | null
   showMessageBox: (options: MessageBoxOptions) => Promise<MessageBoxReturnValue>

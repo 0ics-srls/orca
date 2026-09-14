@@ -8,7 +8,7 @@ import type {
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
 import { ConversationTab } from '../discuss-item/conversation-tab'
 import { GHEditSection } from '../edit-item-fields/gh-edit-section'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import {
   patchCachedPRChecks,
   patchCachedPRReviewRequests,
@@ -43,7 +43,7 @@ export function GitHubItemDialogIssueBody({
   repoPath: string | null
   effectiveRepoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   details: GitHubWorkItemDetails | null
   detailsCacheKey: string | null
   loading: boolean

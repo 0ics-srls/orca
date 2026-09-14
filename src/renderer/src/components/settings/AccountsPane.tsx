@@ -39,7 +39,6 @@ import { GrokAccountsSection } from './GrokAccountsSection'
 import type {
   AccountsPaneProps,
   AccountsPaneSectionModel,
-  ClaudeAccountAction,
   CodexAccountAction,
   RemoveAccountTarget
 } from './accounts-pane-types'
@@ -141,7 +140,7 @@ export function AccountsPane({
   const [codexAction, setCodexAction] = useState<CodexAccountAction>('idle')
   const [claudeAccounts, setClaudeAccounts] =
     useState<ClaudeRateLimitAccountsState>(emptyClaudeAccountsState)
-  const [claudeAction, setClaudeAction] = useState<ClaudeAccountAction>('idle')
+  const [claudeAction, setClaudeAction] = useState<CodexAccountAction>('idle')
   // Why: capture the account's runtime slot when the dialog opens; the roster
   // can change underneath an open dialog and lose the slot to diff for restarts.
   const [removeCodexTarget, setRemoveCodexTarget] = useState<RemoveAccountTarget | null>(null)

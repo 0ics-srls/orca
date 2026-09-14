@@ -3,8 +3,7 @@ import { acquire, release, classifyGhError, type LocalGitExecOptions } from '../
 import {
   resolveGitHubApiRepository,
   resolveGitHubApiRepositoryCandidates,
-  resolveIssueGitHubApiRepositorySource,
-  type GitHubApiRepository
+  resolveIssueGitHubApiRepositorySource
 } from '../../github-api-repository'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 import type { MainWorkItem } from './../map/work-item-field-coercion'
@@ -13,6 +12,8 @@ import {
   fetchPullRequestWorkItem,
   fetchPullRequestWorkItemFromCandidates
 } from './work-item-fetch'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function getWorkItem(
   repoPath: string,
   number: number,
@@ -91,7 +92,7 @@ export async function getWorkItem(
 
 export async function getWorkItemByOwnerRepo(
   repoPath: string,
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   number: number,
   type: 'issue' | 'pr',
   connectionId?: string | null,

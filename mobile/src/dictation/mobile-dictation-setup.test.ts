@@ -1,3 +1,4 @@
+import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
 import { describe, expect, it, vi } from 'vitest'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import type { RpcClient } from '../transport/rpc-client'
@@ -10,8 +11,7 @@ import {
   isDictationSetupRequiredError,
   isModelInFlight,
   setDictationConfig,
-  type MobileSpeechModel,
-  type MobileSpeechSetup
+  type MobileSpeechModel
 } from './mobile-dictation-setup'
 
 function ok(result: unknown): RpcSuccess {
@@ -62,14 +62,14 @@ describe('isDictationSetupRequiredError', () => {
 
 describe('rpc wrappers', () => {
   it('fetches setup', async () => {
-    const setup: MobileSpeechSetup = { enabled: false, selectedModelId: '', models: [] }
+    const setup: RuntimeSpeechSetupState = { enabled: false, selectedModelId: '', models: [] }
     const client = clientWith([ok(setup)])
     await expect(fetchDictationSetup(client)).resolves.toEqual(setup)
     expect(client.calls[0]).toEqual({ method: 'speech.models.list', params: null })
   })
 
   it('retries the idempotent setup read once after logical-client cutover', async () => {
-    const setup: MobileSpeechSetup = { enabled: false, selectedModelId: '', models: [] }
+    const setup: RuntimeSpeechSetupState = { enabled: false, selectedModelId: '', models: [] }
     const sendRequest = vi
       .fn()
       .mockRejectedValueOnce(new LogicalClientCutoverError())
@@ -95,14 +95,14 @@ describe('rpc wrappers', () => {
   })
 
   it('deletes a model and returns refreshed setup', async () => {
-    const setup: MobileSpeechSetup = { enabled: true, selectedModelId: '', models: [] }
+    const setup: RuntimeSpeechSetupState = { enabled: true, selectedModelId: '', models: [] }
     const client = clientWith([ok(setup)])
     await expect(deleteDictationModel(client, 'm1')).resolves.toEqual(setup)
     expect(client.calls[0]).toEqual({ method: 'speech.models.delete', params: { modelId: 'm1' } })
   })
 
   it('sets config', async () => {
-    const setup: MobileSpeechSetup = { enabled: true, selectedModelId: 'm1', models: [] }
+    const setup: RuntimeSpeechSetupState = { enabled: true, selectedModelId: 'm1', models: [] }
     const client = clientWith([ok(setup)])
     await expect(setDictationConfig(client, { enabled: true, modelId: 'm1' })).resolves.toEqual(
       setup

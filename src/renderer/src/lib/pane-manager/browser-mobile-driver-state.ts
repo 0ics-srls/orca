@@ -1,16 +1,14 @@
 import { useSyncExternalStore } from 'react'
 import type { RuntimeBrowserDriverState } from '../../../../shared/runtime-types'
 
-export type BrowserDriverState = RuntimeBrowserDriverState
-
-const driverByBrowserPageId = new Map<string, BrowserDriverState>()
+const driverByBrowserPageId = new Map<string, RuntimeBrowserDriverState>()
 
 // Why: a shared instance keeps getDriverForBrowserPage referentially stable for useSyncExternalStore snapshots.
-export const IDLE_BROWSER_DRIVER: BrowserDriverState = { kind: 'idle' }
+export const IDLE_BROWSER_DRIVER: RuntimeBrowserDriverState = { kind: 'idle' }
 
 type BrowserDriverChangeEvent = {
   browserPageId: string
-  driver: BrowserDriverState
+  driver: RuntimeBrowserDriverState
 }
 
 type BrowserDriverChangeListener = (event: BrowserDriverChangeEvent) => void
@@ -48,7 +46,10 @@ function notifyChange(event: BrowserDriverChangeEvent): void {
   }
 }
 
-export function setDriverForBrowserPage(browserPageId: string, driver: BrowserDriverState): void {
+export function setDriverForBrowserPage(
+  browserPageId: string,
+  driver: RuntimeBrowserDriverState
+): void {
   if (driver.kind === 'idle') {
     driverByBrowserPageId.delete(browserPageId)
   } else {
@@ -57,13 +58,13 @@ export function setDriverForBrowserPage(browserPageId: string, driver: BrowserDr
   notifyChange({ browserPageId, driver })
 }
 
-export function getDriverForBrowserPage(browserPageId: string): BrowserDriverState {
+export function getDriverForBrowserPage(browserPageId: string): RuntimeBrowserDriverState {
   return driverByBrowserPageId.get(browserPageId) ?? IDLE_BROWSER_DRIVER
 }
 
 export function useBrowserDriverForPage(
   browserPageId: string | null | undefined
-): BrowserDriverState {
+): RuntimeBrowserDriverState {
   useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)
   return browserPageId ? getDriverForBrowserPage(browserPageId) : IDLE_BROWSER_DRIVER
 }
@@ -105,7 +106,7 @@ export function useBrowserMobileDrivenPageIds(
 }
 
 export function hydrateBrowserDrivers(
-  drivers: { browserPageId: string; driver: BrowserDriverState }[]
+  drivers: { browserPageId: string; driver: RuntimeBrowserDriverState }[]
 ): void {
   const affectedPageIds = new Set(driverByBrowserPageId.keys())
   driverByBrowserPageId.clear()

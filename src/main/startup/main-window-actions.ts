@@ -16,10 +16,8 @@ import {
   describeInstallDirAclPoison,
   isBlockingInstallDirAclRepairInFlight
 } from './windows-install-dir-acl-recovery'
-import {
-  presentRendererRecoveryPrompt,
-  type RendererRecoveryPromptFailure
-} from '../window/renderer-recovery-prompt'
+import { presentRendererRecoveryPrompt } from '../window/renderer-recovery-prompt'
+import type { RecoveryExhaustionCause } from '../window/renderer-recovery-reload-watchdog'
 
 // The window module injects this callback to avoid a cycle between actions and lifecycle code.
 let openWindow: (options?: { revealOnDidFinishLoad?: boolean }) => BrowserWindow
@@ -152,7 +150,7 @@ export function sendOpenCrashReport(targetWindow?: BrowserWindow | null): void {
 // Why: on renderer crash-loop the breaker stops auto-reloading and the window goes blank, so a main-process dialog is the only retry/quit surface.
 export async function showRendererRecoveryPrompt(
   recentRecoveryCount: number,
-  failure?: RendererRecoveryPromptFailure,
+  failure?: RecoveryExhaustionCause,
   retry?: () => void
 ): Promise<void> {
   await presentRendererRecoveryPrompt({

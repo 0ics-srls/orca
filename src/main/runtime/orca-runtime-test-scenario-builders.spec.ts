@@ -23,22 +23,21 @@ import type {
 import type { OrchestrationDb } from './orchestration/db'
 
 type RuntimeService = InstanceType<typeof OrcaRuntimeService>
-type TestMock = Mock
 
 type MobileCreateTestNotifier = {
-  focusTerminal: TestMock
-  worktreesChanged: TestMock
-  reposChanged: TestMock
-  activateWorktree: TestMock
-  createTerminal: TestMock
-  revealTerminalSession: TestMock
-  splitTerminal: TestMock
-  renameTerminal: TestMock
+  focusTerminal: Mock
+  worktreesChanged: Mock
+  reposChanged: Mock
+  activateWorktree: Mock
+  createTerminal: Mock
+  revealTerminalSession: Mock
+  splitTerminal: Mock
+  renameTerminal: Mock
   closeTerminal: (tabId: string, paneRuntimeId?: number) => void
-  closeSessionTab: TestMock
-  sleepWorktree: TestMock
-  terminalFitOverrideChanged: TestMock
-  terminalDriverChanged: TestMock
+  closeSessionTab: Mock
+  sleepWorktree: Mock
+  terminalFitOverrideChanged: Mock
+  terminalDriverChanged: Mock
 }
 
 function attachClientBrowserHost(runtime: RuntimeService) {

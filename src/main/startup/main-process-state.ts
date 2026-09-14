@@ -23,7 +23,7 @@ import type { PluginKillListService } from '../plugins/plugin-kill-list-service'
 import type { PluginMarketplaceService } from '../plugins/plugin-marketplace-service'
 import type { PluginMarketplaceInstaller } from '../plugins/plugin-marketplace-installer'
 import type { KeybindingService } from '../keybindings/keybinding-service'
-import type { RelayBrokerStatus } from '../runtime/relay/relay-session-broker'
+import type { MobileRelayStatus } from '../../shared/mobile-relay-status'
 import type { AgentBrowserBridge } from '../browser/agent-browser-bridge'
 import type { EmulatorBridge } from '../emulator/emulator-bridge'
 import type { GpuFallbackMarker, GpuFallbackEnvironment } from './gpu-fallback-marker'
@@ -66,7 +66,7 @@ export const mainProcessState = {
   serveReadinessPublisher: new ServeReadinessPublisher(),
   desktopRelayService: null as DesktopRelayService | null,
   desktopPushService: null as DesktopPushService | null,
-  desktopRelayStatus: 'offline' as RelayBrokerStatus,
+  desktopRelayStatus: 'offline' as MobileRelayStatus,
   desktopRelayCellUrl: undefined as string | undefined,
   pendingUnpairedDeviceAuthFailure: false,
   // Why: gates whether headless serve installs the offscreen browser backend (and advertises browser pane support).

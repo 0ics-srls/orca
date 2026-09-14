@@ -15,7 +15,7 @@ import {
 } from './protocol'
 import {
   DISPATCHER_CONTROL_QUEUE_MAX_BYTES,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher-client-writer'
 import {
   RELAY_TO_CLIENT_REQUEST_TIMEOUT_MS,
@@ -83,9 +83,9 @@ export abstract class RelayDispatcherRpcRouting extends RelayDispatcherFrameCode
       client.id,
       req.id
     )
-    const responseSettledHandlers = new Set<(result: SinkWriteSettlement) => void>()
+    const responseSettledHandlers = new Set<(result: DispatcherWriterSettlement) => void>()
     let responseSettled = false
-    const settleResponse = (result: SinkWriteSettlement): void => {
+    const settleResponse = (result: DispatcherWriterSettlement): void => {
       if (responseSettled) {
         return
       }
@@ -193,7 +193,7 @@ export abstract class RelayDispatcherRpcRouting extends RelayDispatcherFrameCode
     id: number,
     result?: unknown,
     error?: { code: number; message: string; data?: unknown },
-    onSettled: (result: SinkWriteSettlement) => void = () => {}
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {}
   ): boolean {
     const msg: JsonRpcResponse = {
       jsonrpc: '2.0',

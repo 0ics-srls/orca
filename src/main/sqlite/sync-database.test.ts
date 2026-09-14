@@ -6,10 +6,10 @@ import { afterEach, describe, expect, it } from 'vitest'
 import SyncDatabase from './sync-database'
 
 const temporaryDirectories: string[] = []
-const openDatabases: SyncDatabase.Database[] = []
+const openDatabases: SyncDatabase[] = []
 const lockHolders: Worker[] = []
 
-async function createDatabase(): Promise<SyncDatabase.Database> {
+async function createDatabase(): Promise<SyncDatabase> {
   const directory = await mkdtemp(join(tmpdir(), 'orca-sync-database-'))
   temporaryDirectories.push(directory)
   const db = new SyncDatabase(join(directory, 'test.db'))

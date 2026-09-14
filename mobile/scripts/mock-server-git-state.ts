@@ -1,6 +1,6 @@
-import type { MobileGitStatusEntry } from '../src/source-control/mobile-git-status'
+import type { GitStatusEntry } from '../../src/shared/git-status-types'
 
-type FakeGitEntry = MobileGitStatusEntry & {
+type FakeGitEntry = GitStatusEntry & {
   stagedFromUntracked?: boolean
 }
 
@@ -30,7 +30,7 @@ let fakeAhead = 1
 let fakeBehind = 0
 let fakeHasUpstream = true
 
-function toGitStatusEntry(entry: FakeGitEntry): MobileGitStatusEntry {
+function toGitStatusEntry(entry: FakeGitEntry): GitStatusEntry {
   const { stagedFromUntracked: _stagedFromUntracked, ...statusEntry } = entry
   return statusEntry
 }

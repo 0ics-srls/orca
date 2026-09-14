@@ -1,3 +1,4 @@
+import type { StandardEmojiShortcodeEntry } from '../../../../shared/emoji-shortcode-catalog'
 import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from 'react'
 import { isImeCompositionKeyDown } from '@/lib/ime-composition-keyboard-event'
 import {
@@ -5,8 +6,7 @@ import {
   getActiveWorkspaceEmojiShortcode,
   replaceCompletedWorkspaceEmojiShortcode,
   searchWorkspaceEmojiShortcodes,
-  type WorkspaceEmojiReplacement,
-  type WorkspaceEmojiSuggestion
+  type WorkspaceEmojiReplacement
 } from '@/lib/workspace-emoji-shortcodes'
 
 type WorkspaceEmojiShortcodeInputOptions = {
@@ -92,7 +92,7 @@ export function useWorkspaceEmojiShortcodeInput({
   const close = useCallback(() => setCursor(null), [])
 
   const selectSuggestion = useCallback(
-    (suggestion: WorkspaceEmojiSuggestion) => {
+    (suggestion: StandardEmojiShortcodeEntry) => {
       if (!activeShortcode) {
         return
       }

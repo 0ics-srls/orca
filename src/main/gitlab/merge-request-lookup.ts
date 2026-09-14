@@ -8,7 +8,7 @@ import {
   glabRepoExecOptions,
   glabExecFileAsync,
   release,
-  type ProjectRef
+  type GitLabProjectRef
 } from './gl-utils'
 import { encodedProject } from './project-path-encoding'
 import {
@@ -30,7 +30,7 @@ export async function getProjectSlug(
   repoPath: string,
   connectionId?: string | null,
   options: HostedReviewExecutionOptions = {}
-): Promise<ProjectRef | null> {
+): Promise<GitLabProjectRef | null> {
   const localGitArgs = hostedReviewLocalGitOptionArgs(options)
   const knownHosts = await getGlabKnownHosts(connectionId, localGitArgs[0])
   return getProjectRef(repoPath, knownHosts, connectionId, ...localGitArgs)

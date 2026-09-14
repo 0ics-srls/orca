@@ -2,12 +2,12 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   DispatcherClientWriter,
   type DispatcherWriterLane,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher-client-writer'
 
 type AcceptedWrite = {
   data: string
-  settle: (result: SinkWriteSettlement) => void
+  settle: (result: DispatcherWriterSettlement) => void
 }
 
 class FakeSink {
@@ -18,7 +18,7 @@ class FakeSink {
   saturateNext = false
   closed = false
 
-  write = (data: Buffer, settle: (result: SinkWriteSettlement) => void): boolean | void => {
+  write = (data: Buffer, settle: (result: DispatcherWriterSettlement) => void): boolean | void => {
     this.accepted.push({ data: data.toString(), settle })
     this.writableLength += data.length
     if (this.saturateNext) {

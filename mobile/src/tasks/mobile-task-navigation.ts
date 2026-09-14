@@ -4,7 +4,6 @@ import {
   navigateToHostStackRoute,
   type HostStackHostRoute,
   type HostStackNavigationController,
-  type HostStackNavigationState,
   type HostStackRootNavigation,
   type HostStackRouteTarget,
   type HostStackRouter,
@@ -12,14 +11,7 @@ import {
 } from '../navigation/host-stack-navigation'
 import type { TaskProvider } from './mobile-task-providers'
 
-export type MobileTasksHostRoute = HostStackHostRoute
-export type MobileTasksNavigationState = HostStackNavigationState
-export type MobileTasksRootNavigation = HostStackRootNavigation
-export type MobileTasksRouter = HostStackRouter
-export type MobileTasksNavigationController = HostStackNavigationController
-export type PendingMobileTasksNavigation = PendingHostStackNavigation
-
-export function mobileTasksHostRoute(hostId: string): MobileTasksHostRoute {
+export function mobileTasksHostRoute(hostId: string): HostStackHostRoute {
   return hostStackHostRoute(hostId)
 }
 
@@ -34,11 +26,11 @@ export function mobileTasksRouteTarget(
 }
 
 export function navigateToMobileTasks(
-  navigation: MobileTasksRootNavigation,
-  router: MobileTasksRouter,
+  navigation: HostStackRootNavigation,
+  router: HostStackRouter,
   hostId: string,
   provider?: TaskProvider
-): MobileTasksNavigationController {
+): HostStackNavigationController {
   return navigateToHostStackRoute(
     navigation,
     router,
@@ -48,12 +40,12 @@ export function navigateToMobileTasks(
 }
 
 export function coordinateMobileTasksNavigation(
-  current: PendingMobileTasksNavigation | null,
-  navigation: MobileTasksRootNavigation,
-  router: MobileTasksRouter,
+  current: PendingHostStackNavigation | null,
+  navigation: HostStackRootNavigation,
+  router: HostStackRouter,
   hostId: string,
   provider?: TaskProvider
-): PendingMobileTasksNavigation {
+): PendingHostStackNavigation {
   return coordinateHostStackNavigation(
     current,
     navigation,

@@ -4,13 +4,6 @@ import {
   type GitCommandRunner
 } from '../../shared/git-effective-upstream'
 
-/**
- * Git runner so branch-rename logic works identically for local worktrees
- * (`gitExecFileAsync`) and SSH worktrees (`provider.exec`). Same contract the
- * shared upstream-status helpers use.
- */
-export type GitExec = GitCommandRunner
-
 export type BranchUpstreamProbe =
   | { outcome: 'has-upstream' }
   | { outcome: 'no-upstream' }
@@ -21,7 +14,7 @@ export type BranchUpstreamProbe =
  * a remote. Auto-rename refuses to touch such a branch because `git branch -m`
  * would orphan the remote branch and break any open PR.
  */
-export async function probeBranchUpstream(exec: GitExec): Promise<BranchUpstreamProbe> {
+export async function probeBranchUpstream(exec: GitCommandRunner): Promise<BranchUpstreamProbe> {
   try {
     const upstream = await resolveEffectiveGitUpstream(exec)
     return { outcome: upstream !== null ? 'has-upstream' : 'no-upstream' }
@@ -39,7 +32,7 @@ export async function probeBranchUpstream(exec: GitExec): Promise<BranchUpstream
   }
 }
 
-async function localBranchExists(exec: GitExec, branch: string): Promise<boolean> {
+async function localBranchExists(exec: GitCommandRunner, branch: string): Promise<boolean> {
   try {
     await exec(['show-ref', '--verify', '--quiet', `refs/heads/${branch}`])
     return true
@@ -55,7 +48,7 @@ async function localBranchExists(exec: GitExec, branch: string): Promise<boolean
  * being renamed away from is never treated as a collision.
  */
 export async function resolveUniqueBranchName(
-  exec: GitExec,
+  exec: GitCommandRunner,
   leaf: string,
   compute: (leaf: string) => string,
   currentBranch: string,
@@ -78,6 +71,9 @@ export async function resolveUniqueBranchName(
 }
 
 /** Rename the currently checked-out branch (`git branch -m <newBranch>`). */
-export async function renameCurrentBranch(exec: GitExec, newBranch: string): Promise<void> {
+export async function renameCurrentBranch(
+  exec: GitCommandRunner,
+  newBranch: string
+): Promise<void> {
   await exec(['branch', '-m', newBranch])
 }

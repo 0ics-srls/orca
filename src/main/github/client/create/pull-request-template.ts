@@ -7,10 +7,12 @@ import {
   getHostedReviewLocalGitOptions,
   type HostedReviewExecutionOptions
 } from '../../../source-control/hosted-review-git-options'
-import { githubHostExecOptions, type GitHubApiRepository } from '../../github-api-repository'
+import { githubHostExecOptions } from '../../github-api-repository'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function findOpenPRByHeadBase(args: {
   repoPath: string
-  repo: GitHubApiRepository
+  repo: GitHubOwnerRepo
   head: string
   base: string
   connectionId?: string | null

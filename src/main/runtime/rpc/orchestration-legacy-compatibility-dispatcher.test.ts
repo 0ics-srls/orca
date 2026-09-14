@@ -192,7 +192,7 @@ describe('legacy compatibility through RpcDispatcher', () => {
       processIncarnation: 'process-1'
     })
     // Recreate the pre-boundary state where A settled before a current attempt was persisted.
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     sqlite.prepare("UPDATE tasks SET status = 'ready' WHERE id = ?").run(harness.taskId)
     const currentDispatch = createRootDispatch(
       harness.db,
@@ -263,7 +263,7 @@ describe('legacy compatibility through RpcDispatcher', () => {
 
   it('rejects a reused pane whose live process incarnation is not the legacy worker', async () => {
     const harness = createHarness()
-    const sqlite = (harness.db as unknown as { db: Database.Database }).db
+    const sqlite = (harness.db as unknown as { db: Database }).db
     sqlite
       .prepare('UPDATE dispatch_contexts SET process_incarnation = ? WHERE id = ?')
       .run('different-process', harness.dispatchId)

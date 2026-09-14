@@ -1,4 +1,4 @@
-import type { LocalGitExecOptions, OwnerRepo } from '../gh-utils'
+import type { LocalGitExecOptions, GitHubOwnerRepo } from '../gh-utils'
 import {
   hasHostedReviewLocalGitOptions,
   getHostedReviewLocalGitOptions
@@ -23,13 +23,16 @@ export function githubPRStackExecutionScope(
   return connectionId ? `ssh:${connectionId}` : `local:${localGitOptions.wslDistro ?? 'host'}`
 }
 
-export function sameOwnerRepo(left: OwnerRepo | null, right: OwnerRepo | null): boolean {
+export function sameOwnerRepo(
+  left: GitHubOwnerRepo | null,
+  right: GitHubOwnerRepo | null
+): boolean {
   // Why: casing does not distinguish GitHub repos, but the same slug on different hosts does.
   return Boolean(left && right && githubRepoIdentityKey(left) === githubRepoIdentityKey(right))
 }
 
 // Why: exact-linked fallback has no dataRepo; derive its host-aware identity from the web URL for merged-PR membership checks.
-export function ownerRepoFromPullRequestUrl(url: string): OwnerRepo | null {
+export function ownerRepoFromPullRequestUrl(url: string): GitHubOwnerRepo | null {
   const match = url.match(/^https?:\/\/([^/\s]+)\/([^/\s]+)\/([^/\s]+)\/pull\/\d+/)
   return match ? { owner: match[2], repo: match[3], host: match[1] } : null
 }

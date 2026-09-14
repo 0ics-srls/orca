@@ -1,14 +1,13 @@
 import type { GitHubProjectIdentity } from '../../../src/shared/github/project-identity'
 
 export type GitHubProjectOwnerType = GitHubProjectIdentity['ownerType']
-export type GitHubProjectRef = GitHubProjectIdentity
 export type GitHubProjectSettings = {
-  pinned: GitHubProjectRef[]
-  recent: Array<GitHubProjectRef & { lastOpenedAt: string }>
+  pinned: GitHubProjectIdentity[]
+  recent: Array<GitHubProjectIdentity & { lastOpenedAt: string }>
   lastViewByProject: Record<string, { viewId: string }>
-  activeProject: GitHubProjectRef | null
+  activeProject: GitHubProjectIdentity | null
 }
-export type GitHubProjectSummary = GitHubProjectRef & {
+export type GitHubProjectSummary = GitHubProjectIdentity & {
   id: string
   title: string
   url: string

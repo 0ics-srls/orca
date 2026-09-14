@@ -7,15 +7,11 @@ import { OrchestrationDb } from './db'
 import { MUTATION_RECEIPT_MAX_ROWS } from './mutation-receipt-capacity'
 import { SCHEMA_VERSION } from './db/contract-constants'
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
-function insertReceipts(
-  sqlite: Database.Database,
-  count: number,
-  state: 'pending' | 'completed'
-): void {
+function insertReceipts(sqlite: Database, count: number, state: 'pending' | 'completed'): void {
   sqlite
     .prepare(
       `WITH RECURSIVE receipt_numbers(value) AS (

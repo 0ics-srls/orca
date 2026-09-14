@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
 import {
   RelayDispatcher,
   type RelayClientSinkOptions,
-  type SinkWriteSettlement
+  type DispatcherWriterSettlement
 } from './dispatcher'
 import { DISPATCHER_CONTROL_QUEUE_MAX_FRAMES } from './dispatcher-writer-admission'
 import { LEGACY_CLIENT_RETAINED_BYTES_LOW } from './legacy-relay-publication-ledger'
@@ -396,7 +396,7 @@ describe('RelayDispatcher bounded-capacity degradation', () => {
     const primary = makeBoundedClient(65536)
     const bounded = new RelayDispatcher(primary.write, primary.options)
     try {
-      const settlements: SinkWriteSettlement[] = []
+      const settlements: DispatcherWriterSettlement[] = []
       bounded.onRequest('fs.listFiles', async (_params, context) => {
         context.onResponseSettled?.((result) => settlements.push(result))
         return { paths: 'x'.repeat(3 * 1024 * 1024) }
@@ -537,7 +537,7 @@ describe('RelayDispatcher bounded-capacity degradation', () => {
     const bounded = new RelayDispatcher(primary.write, primary.options)
     try {
       const clientId = bounded.activeClientIds()[0]
-      const settlements: SinkWriteSettlement[] = []
+      const settlements: DispatcherWriterSettlement[] = []
       bounded.onRequest('workspace.get', async (_params, context) => {
         context.onResponseSettled?.((result) => settlements.push(result))
         return { name: 'workspace' }

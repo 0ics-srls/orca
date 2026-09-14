@@ -29,7 +29,7 @@ import { resolvePullRequestRepo } from '@/components/github/github-work-item-ide
 import { translate } from '@/i18n/i18n'
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
-import type { PullRequestPageProjectOrigin } from '../page-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { WorkItemStateBadge } from '../presentation/state-badge'
 import { changePullRequestState, mergePullRequest, setPullRequestAutoMerge } from './merge-actions'
 
@@ -47,7 +47,7 @@ export function PRActionsPanel({
   repoPath: string | null
   repoId: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: PullRequestPageProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   localState: GitHubWorkItem['state']
   onStateChange: (state: GitHubWorkItem['state']) => void
   onMutated: () => void

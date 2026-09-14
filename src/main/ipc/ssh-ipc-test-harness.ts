@@ -10,11 +10,8 @@ import {
   getPtyIdsForConnection
 } from './pty'
 import type { SshIpcMocks } from './ssh-ipc-module-mocks'
-import type {
-  SshConnectionManagerMock,
-  SshIpcTestSource,
-  SshPortForwardManagerMock
-} from './ssh-ipc-mock-shapes'
+import type { SshConnectionManagerMock, SshPortForwardManagerMock } from './ssh-ipc-mock-shapes'
+import type { SshPtySourceFrame } from '../providers/ssh-pty-source-frame'
 
 export type RelayDisposeCallback = (reason: 'shutdown' | 'connection_lost') => void
 
@@ -49,7 +46,7 @@ export type RelayLaunchResultMock = {
 
 export type SshIpcHarness = {
   relayBuildId: string
-  ipcTestSource: SshIpcTestSource
+  ipcTestSource: SshPtySourceFrame
   handlers: Map<string, (_event: unknown, args: unknown) => unknown>
   mockStore: SshLeaseStoreMock
   mockWindow: MockBrowserWindow

@@ -1,20 +1,15 @@
+import type { PersistedState } from '../../shared/persisted-state-types'
 import type { WorkspaceKey } from '../../shared/folder-workspace-types'
 import { parseWorkspaceKey } from '../../shared/workspace-scope'
-import {
-  rebuildRepoBackedProjectState,
-  type TransferProfileState
-} from './profile-project-state-file'
+import { rebuildRepoBackedProjectState } from './profile-project-state-file'
 import {
   removeRepoFromHostWorkspaceSessions,
   removeRepoFromWorkspaceSession
 } from './profile-project-session-state'
 import { isRepoWorktreeId, removeRepoWorktreeRecord } from './profile-project-worktree-identity'
 
-export function removeSourceRepo(
-  state: TransferProfileState,
-  repoId: string
-): TransferProfileState {
-  const next: TransferProfileState = {
+export function removeSourceRepo(state: PersistedState, repoId: string): PersistedState {
+  const next: PersistedState = {
     ...state,
     repos: state.repos.filter((repo) => repo.id !== repoId),
     sparsePresetsByRepo: { ...state.sparsePresetsByRepo },
@@ -44,7 +39,7 @@ export function removeSourceRepo(
   return rebuildRepoBackedProjectState(next)
 }
 
-function removeRepoWorktreeMetadata(state: TransferProfileState, repoId: string): void {
+function removeRepoWorktreeMetadata(state: PersistedState, repoId: string): void {
   for (const key of Object.keys(state.worktreeMeta)) {
     if (isRepoWorktreeId(repoId, key)) {
       delete state.worktreeMeta[key]

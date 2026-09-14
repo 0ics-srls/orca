@@ -12,7 +12,7 @@ import { runIssueUpdate } from '@/components/github/github-work-item-edit-mutati
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
 import { translate } from '@/i18n/i18n'
-import type { GitHubItemDialogProjectOrigin } from '../load-item-details/github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 
 export type GHEditProjectRowPatch = {
   state?: GitHubWorkItem['state']
@@ -27,7 +27,7 @@ type GHEditMutationBase = {
   itemRepoId: GitHubWorkItem['repoId']
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin: GitHubItemDialogProjectOrigin | undefined
+  projectOrigin: GitHubWorkItemProjectOrigin | undefined
   run: GHEditMutationRun
   patchProjectRowIfNeeded: (patch: GHEditProjectRowPatch) => void
   onMutated: () => void

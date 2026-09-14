@@ -1,4 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { PtyControllerInventory } from './runtime-pty-controller-contract'
 import { OrcaRuntimeWithAutomationOperations } from './orca-runtime-automation-operations'
 import {
   resolveTerminalSessionWorktreeId,
@@ -9,7 +10,6 @@ import type { LegacyWorkerTerminalRecoveryPlan } from './orchestration/orchestra
 import { retireTerminalSurfacesFromSnapshot } from './mobile-session-terminal-retirement'
 import type {
   LegacyWorkerRecoveryCandidate,
-  LegacyWorkerRecoveryInventory,
   TerminalWorkspaceLaunchScope
 } from './runtime-legacy-worker-terminal-recovery-types'
 import { getLatestPtyTitle } from './runtime-worktree-status-projection'
@@ -126,7 +126,7 @@ export class OrcaRuntimeWithHasExactPersistedTerminalSurfaceIdentity extends Orc
   protected async adoptLegacyWorkerTerminal(
     candidate: LegacyWorkerRecoveryCandidate,
     workspace: TerminalWorkspaceLaunchScope,
-    inventory: LegacyWorkerRecoveryInventory,
+    inventory: PtyControllerInventory,
     activation: { activeTabId?: string; activeGroupId?: string }
   ): Promise<void> {
     await this.adoptTerminalOrphansFromInventoryUnderMutation(

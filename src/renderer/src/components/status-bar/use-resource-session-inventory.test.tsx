@@ -1,11 +1,11 @@
 // @vitest-environment happy-dom
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DaemonSession } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 import { notifyDaemonSessionInventoryInvalidated } from './daemon-session-inventory-invalidation'
 import { useResourceSessionInventory } from './use-resource-session-inventory'
 
-function session(id: string): DaemonSession {
+function session(id: string): PtyListedSession {
   return { id, cwd: '/workspace', title: id, agentOwnership: 'absent' as const }
 }
 
@@ -18,7 +18,7 @@ function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
 }
 
 describe('useResourceSessionInventory', () => {
-  const listSessions = vi.fn<() => Promise<DaemonSession[]>>()
+  const listSessions = vi.fn<() => Promise<PtyListedSession[]>>()
   const unsubscribeSpawned = vi.fn()
   const unsubscribeExit = vi.fn()
   let spawnedCallback: ((data: { id: string }) => void) | null = null
@@ -119,7 +119,7 @@ describe('useResourceSessionInventory', () => {
     const { result } = renderHook(() => useResourceSessionInventory(true))
     await waitFor(() => expect(result.current.sessionInventory.count).toBe(1))
 
-    const inFlight = deferred<DaemonSession[]>()
+    const inFlight = deferred<PtyListedSession[]>()
     listSessions.mockReturnValueOnce(inFlight.promise)
     await act(async () => {
       spawnedCallback?.({ id: 'background-one' })
@@ -146,7 +146,7 @@ describe('useResourceSessionInventory', () => {
     const { result } = renderHook(() => useResourceSessionInventory(true))
     await waitFor(() => expect(result.current.sessionInventory.count).toBe(1))
 
-    const inFlight = deferred<DaemonSession[]>()
+    const inFlight = deferred<PtyListedSession[]>()
     listSessions
       .mockReturnValueOnce(inFlight.promise)
       .mockResolvedValueOnce([session('one'), session('background-one'), session('background-two')])
@@ -186,7 +186,7 @@ describe('useResourceSessionInventory', () => {
     const { result, unmount } = renderHook(() => useResourceSessionInventory(true))
     await waitFor(() => expect(result.current.sessionInventory.count).toBe(1))
 
-    const inFlight = deferred<DaemonSession[]>()
+    const inFlight = deferred<PtyListedSession[]>()
     listSessions.mockReturnValueOnce(inFlight.promise)
     await act(async () => {
       spawnedCallback?.({ id: 'background-one' })
@@ -209,7 +209,7 @@ describe('useResourceSessionInventory', () => {
     const { result } = renderHook(() => useResourceSessionInventory(true))
     await waitFor(() => expect(result.current.sessionInventory.count).toBe(2))
 
-    const stale = deferred<DaemonSession[]>()
+    const stale = deferred<PtyListedSession[]>()
     listSessions.mockReturnValueOnce(stale.promise)
     let refresh!: Promise<void>
     act(() => {
@@ -235,8 +235,8 @@ describe('useResourceSessionInventory', () => {
     const { result } = renderHook(() => useResourceSessionInventory(true))
     await waitFor(() => expect(result.current.sessionInventory.count).toBe(1))
 
-    const older = deferred<DaemonSession[]>()
-    const newer = deferred<DaemonSession[]>()
+    const older = deferred<PtyListedSession[]>()
+    const newer = deferred<PtyListedSession[]>()
     listSessions.mockReturnValueOnce(older.promise).mockReturnValueOnce(newer.promise)
     let olderRefresh!: Promise<void>
     let newerRefresh!: Promise<void>

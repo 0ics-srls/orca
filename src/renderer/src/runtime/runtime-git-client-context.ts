@@ -58,8 +58,6 @@ export type RuntimeGenerateCommitMessageOverrides = {
   agentCmdOverrides?: GlobalSettings['agentCmdOverrides']
 }
 
-export type RuntimeGeneratePullRequestFieldsOverrides = RuntimeGenerateCommitMessageOverrides
-
 export function resolveLocalWorktreePath(context: RuntimeGitContext): string {
   return context.worktreeId
     ? (splitWorktreeIdForFilesystem(context.worktreeId)?.worktreePath ?? context.worktreePath)

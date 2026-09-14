@@ -1,4 +1,4 @@
-import type { PRRefreshUpstreamErrorType } from '../../../../shared/github/pull-request-refresh-types'
+import type { PRRefreshErrorType } from '../../../../shared/github/pull-request-refresh-types'
 import { translate } from '@/i18n/i18n'
 
 export type ChecksPanelErrorCopy = { title: string; description: string }
@@ -10,7 +10,7 @@ export type ChecksPanelErrorCopy = { title: string; description: string }
  * "could not refresh" copy — those are user-actionable, not "GitHub is down".
  */
 export function getGitHubUnavailableEmptyStateCopy(
-  errorType: PRRefreshUpstreamErrorType | undefined
+  errorType: PRRefreshErrorType | undefined
 ): ChecksPanelErrorCopy | null {
   if (errorType === 'server_error') {
     return {
@@ -57,7 +57,7 @@ export function getGitHubUnavailableEmptyStateCopy(
  * Always returns a line: GitHub-attributed for outage kinds, generic otherwise.
  */
 export function getChecksPanelRefreshErrorBannerLine(
-  errorType: PRRefreshUpstreamErrorType | undefined
+  errorType: PRRefreshErrorType | undefined
 ): string {
   if (errorType === 'server_error') {
     return translate(

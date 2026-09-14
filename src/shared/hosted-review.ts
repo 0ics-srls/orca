@@ -97,9 +97,7 @@ export type CreateHostedReviewArgs = CreateHostedReviewInput & {
   connectionId?: string | null
 }
 
-export type CreateStackedHostedReviewInput = CreateHostedReviewInput
-
-export type CreateStackedHostedReviewArgs = CreateStackedHostedReviewInput & {
+export type CreateStackedHostedReviewArgs = CreateHostedReviewInput & {
   repoPath: string
   repoId?: string
   connectionId?: string | null

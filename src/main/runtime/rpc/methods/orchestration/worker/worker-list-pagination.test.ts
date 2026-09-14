@@ -621,8 +621,8 @@ function insertWorkerInventory(
     )
 }
 
-function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
 function federatedDispatch(dispatchId: string): FederatedDispatchRow {

@@ -1,8 +1,8 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { useEffect, useState } from 'react'
 import type { ConnectionState } from '../transport/types'
 import type { RpcClient } from '../transport/rpc-client'
-import type { MobileGitBranchCompareResult } from '../source-control/mobile-branch-compare'
-import type { MobileGitStatusResult } from '../source-control/mobile-git-status'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 import { resolveMobileBranchCompareBaseRef } from '../source-control/mobile-branch-base-ref'
 import { fetchGithubRepoSlug } from './github-pr-rpc'
 import { readMobileBranchCompareResult, readMobileGitStatusResult } from './mobile-diff-review-rpc'
@@ -10,7 +10,7 @@ import { readMobileBranchCompareResult, readMobileGitStatusResult } from './mobi
 export type MobilePrBranchContext = {
   branch: string | null
   headSha: string | null
-  status: MobileGitStatusResult | null
+  status: GitStatusResult | null
   isGithubRepo: boolean
   repoLoaded: boolean
   loaded: boolean
@@ -21,9 +21,9 @@ export type MobilePrBranchContext = {
 // `status.head ?? branchCompare.summary.headOid ?? null` — a status-only read would lose
 // the SHA when `status.head` is absent and diverge from the review surface's check status.
 export function deriveMobilePrBranchContext(
-  status: MobileGitStatusResult | null,
-  branchCompare: MobileGitBranchCompareResult | null
-): { branch: string | null; headSha: string | null; status: MobileGitStatusResult | null } {
+  status: GitStatusResult | null,
+  branchCompare: GitBranchCompareResult | null
+): { branch: string | null; headSha: string | null; status: GitStatusResult | null } {
   return {
     branch: status?.branch ?? null,
     headSha: status?.head ?? branchCompare?.summary.headOid ?? null,
@@ -172,7 +172,7 @@ export async function loadMobilePrBranchIdentity(
 async function readGitStatus(
   client: RpcClient,
   worktreeId: string
-): Promise<MobileGitStatusResult | null> {
+): Promise<GitStatusResult | null> {
   const response = await client.sendRequest('git.status', { worktree: `id:${worktreeId}` })
   return response.ok ? readMobileGitStatusResult(response.result) : null
 }
@@ -180,7 +180,7 @@ async function readGitStatus(
 async function readBranchCompare(
   client: RpcClient,
   worktreeId: string
-): Promise<MobileGitBranchCompareResult | null> {
+): Promise<GitBranchCompareResult | null> {
   // branchCompare requires a baseRef; without one (or on error) the headOid fallback is
   // simply unavailable and headSha relies on status.head.
   const baseRef = await resolveMobileBranchCompareBaseRef(client, worktreeId)

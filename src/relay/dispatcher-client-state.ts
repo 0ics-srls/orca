@@ -9,7 +9,7 @@ import type {
   DispatcherClientWriter,
   RelayClientSinkOptions,
   RelayClientWrite,
-  SinkWriteSettlement
+  DispatcherWriterSettlement
 } from './dispatcher-client-writer'
 import type {
   MethodHandler,
@@ -118,6 +118,6 @@ export abstract class RelayDispatcherClientState {
     frame: PreparedRelayFrame,
     lane: 'interactive' | 'ordinary' | 'fixed-bulk' | 'bulk',
     lease: LegacyPublicationLease,
-    onSettled?: (result: SinkWriteSettlement) => void
+    onSettled?: (result: DispatcherWriterSettlement) => void
   ): boolean
 }

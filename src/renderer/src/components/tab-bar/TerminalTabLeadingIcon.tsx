@@ -5,15 +5,13 @@ import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { FilledBellIcon } from '../sidebar/WorktreeCardHelpers'
 import { ShellIcon } from './shell-icons'
-import {
-  terminalTabActivityToAgentDotState,
-  type TerminalTabActivityStatus
-} from './terminal-tab-activity-status'
+import { terminalTabActivityToAgentDotState } from './terminal-tab-activity-status'
+import type { WorktreeStatus } from '@/lib/worktree-status'
 import { translate } from '@/i18n/i18n'
 
 type TerminalTabLeadingIconProps = {
   agent: TuiAgent | null
-  activityStatus: TerminalTabActivityStatus
+  activityStatus: WorktreeStatus
   shell: TerminalTab['shellOverride']
   showUnreadActivity: boolean
   isActive: boolean

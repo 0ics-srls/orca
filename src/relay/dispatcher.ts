@@ -3,7 +3,7 @@ import { RelayDispatcherNotificationPublication } from './dispatcher-notificatio
 export type {
   RelayClientSinkOptions,
   RelayClientWrite,
-  SinkWriteSettlement
+  DispatcherWriterSettlement
 } from './dispatcher-client-writer'
 export type {
   MethodHandler,

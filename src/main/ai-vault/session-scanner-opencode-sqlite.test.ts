@@ -18,14 +18,14 @@ afterEach(() => {
   tempDirs = []
 })
 
-function createTempDb(): { db: Database.Database; path: string } {
+function createTempDb(): { db: Database; path: string } {
   const dir = mkdtempSync(join(tmpdir(), 'orca-opencode-sqlite-'))
   tempDirs.push(dir)
   const path = join(dir, 'opencode.db')
   return { db: new Database(path), path }
 }
 
-function applyOpenCodeSchema(db: Database.Database): void {
+function applyOpenCodeSchema(db: Database): void {
   db.exec(`
     CREATE TABLE session (
       id TEXT PRIMARY KEY,
@@ -90,7 +90,7 @@ function applyOpenCodeSchema(db: Database.Database): void {
   `)
 }
 
-function applyMinimalOpenCodeSchema(db: Database.Database): void {
+function applyMinimalOpenCodeSchema(db: Database): void {
   db.exec(`CREATE TABLE session (
     id TEXT PRIMARY KEY,
     time_created INTEGER NOT NULL,
@@ -99,7 +99,7 @@ function applyMinimalOpenCodeSchema(db: Database.Database): void {
 }
 
 function insertSession(
-  db: Database.Database,
+  db: Database,
   args: {
     id: string
     title?: string
@@ -144,7 +144,7 @@ function insertSession(
 }
 
 function insertMessage(
-  db: Database.Database,
+  db: Database,
   args: {
     id: string
     sessionId: string
@@ -170,7 +170,7 @@ function insertMessage(
 }
 
 function insertPart(
-  db: Database.Database,
+  db: Database,
   args: {
     id: string
     messageId: string

@@ -9,7 +9,8 @@ import type {
 import type { RelayHostCloseReason } from '../../../shared/relay-host-close-reason'
 import { readRelayAuthContext } from './relay-auth-context'
 import { RelayAuthCoordinator } from './relay-auth-coordinator'
-import { RelaySessionBroker, type RelayBrokerStatus } from './relay-session-broker'
+import { RelaySessionBroker } from './relay-session-broker'
+import type { MobileRelayStatus } from '../../../shared/mobile-relay-status'
 import type { PairingRelay } from '../../../shared/mobile-relay-pairing-offer'
 import type {
   RelayRevokeOutbox,
@@ -26,7 +27,7 @@ type DesktopRelayServiceOptions = {
   userDataPath: string
   appVersion: string
   runtimeRpc: OrcaRuntimeRpcServer
-  onStatus: (status: RelayBrokerStatus, cellUrl?: string) => void
+  onStatus: (status: MobileRelayStatus, cellUrl?: string) => void
 }
 
 export function pairingAuthorizationForContext(

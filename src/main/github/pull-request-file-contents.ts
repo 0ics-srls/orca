@@ -1,11 +1,11 @@
-import type { GitHubPRFile, GitHubPRFileContents } from '../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  GitHubPRFile,
+  GitHubPRFileContents
+} from '../../shared/github/pull-request-types'
 import { acquire, ghExecFileAsync, ghRepoExecOptions, githubRepoContext, release } from './gh-utils'
 import type { LocalGitExecOptions } from './gh-utils'
-import {
-  githubHostExecOptions,
-  resolveGitHubRepoExecution,
-  type GitHubApiRepository
-} from './github-api-repository'
+import { githubHostExecOptions, resolveGitHubRepoExecution } from './github-api-repository'
 import { isMaxBufferOverflowError } from '../git/max-buffer-overflow'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 
@@ -19,7 +19,7 @@ async function fetchContentAtRef(args: {
   repoPath: string
   connectionId?: string | null
   localGitOptions?: LocalGitExecOptions
-  ownerRepo: GitHubApiRepository
+  ownerRepo: GitHubOwnerRepo
   path: string
   ref: string
 }): Promise<{ content: string; isBinary: boolean; tooLarge?: boolean }> {
@@ -61,7 +61,7 @@ export async function getPRFileContents(args: {
   repoPath: string
   connectionId?: string | null
   localGitOptions?: LocalGitExecOptions
-  prRepo?: GitHubApiRepository | null
+  prRepo?: GitHubOwnerRepo | null
   prNumber: number
   path: string
   oldPath?: string

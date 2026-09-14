@@ -5,7 +5,7 @@ import { translate } from '@/i18n/i18n'
 import type { GitHubPRFileViewedState } from '../../../../../shared/github/pull-request-types'
 import type { GitHubWorkItem } from '../../../../../shared/github/work-item-types'
 import type { TaskSourceContext } from '../../../../../shared/task-source-context'
-import type { GitHubItemDialogProjectOrigin } from './github-item-dialog-types'
+import type { GitHubWorkItemProjectOrigin } from '@/components/github/github-work-item-identity'
 import { patchCachedPRFileViewedState } from './work-item-details-cache'
 
 export async function syncPRFileViewedState(args: {
@@ -15,7 +15,7 @@ export async function syncPRFileViewedState(args: {
   detailsCacheKey: string | null
   repoPath: string | null
   sourceContext?: TaskSourceContext | null
-  projectOrigin?: GitHubItemDialogProjectOrigin
+  projectOrigin?: GitHubWorkItemProjectOrigin
   path: string
   viewed: boolean
   setPendingViewedPaths: (updater: (prev: Set<string>) => Set<string>) => void

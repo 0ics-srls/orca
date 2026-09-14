@@ -1,4 +1,5 @@
 // @ts-nocheck -- mechanically split from OrcaRuntimeService; behavior is covered by AST equivalence and characterization tests.
+import type { RuntimeTerminalDriverState } from '../../shared/runtime-types'
 import { OrcaRuntimeWithRecordAgentPromptLifecycleState } from './orca-runtime-record-agent-prompt-lifecycle-state'
 import type {
   RemoteTerminalSourceRangeReplacementPublication,
@@ -6,7 +7,6 @@ import type {
   RemoteTerminalSourceRangeStreamIdentity
 } from './remote-terminal-source-range-consumer'
 import type { TerminalOutputSourceRange } from '../../shared/terminal-output-source-range'
-import type { DriverState } from './orca-runtime-core'
 import { addListenerToMap } from './orca-runtime-core'
 import { notifyRuntimeListeners } from './runtime-async-boundaries'
 import type { RuntimeTerminalBufferSnapshot } from './runtime-terminal-state-records'
@@ -136,7 +136,10 @@ export class OrcaRuntimeWithAttachRemoteTerminalSourceRangeConsumer extends Orca
     return addListenerToMap(this.fitOverrideListeners, ptyId, listener)
   }
 
-  subscribeToDriverChanges(ptyId: string, listener: (driver: DriverState) => void): () => void {
+  subscribeToDriverChanges(
+    ptyId: string,
+    listener: (driver: RuntimeTerminalDriverState) => void
+  ): () => void {
     return this.terminalDrivers.subscribe(ptyId, listener)
   }
 

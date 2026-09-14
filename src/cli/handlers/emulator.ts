@@ -25,8 +25,6 @@ type EmulatorKillResult = {
   deviceUdid?: string
 }
 
-type EmulatorShutdownResult = EmulatorKillResult
-
 type EmulatorGesturePoint = {
   edge?: number
   type: 'begin' | 'move' | 'end'
@@ -233,7 +231,7 @@ export const EMULATOR_HANDLERS: Record<string, CommandHandler> = {
       worktree: target.worktree
     })
     printResult(res, json, (r: unknown) => {
-      const result = r as EmulatorShutdownResult
+      const result = r as EmulatorKillResult
       return `Shut down ${result.deviceUdid || target.device || 'emulator'}`
     })
   },

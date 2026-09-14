@@ -1,14 +1,14 @@
+import type { HostedReviewInfo } from '../../../../../shared/hosted-review'
 import type { PRComment } from '../../../../../shared/github/comment-types'
 import type {
   GitLabDiscussionResolveResult,
   GitLabWorkItemDetails
 } from '../../../../../shared/gitlab-types'
 import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
-import type { ChecksPanelReview } from '../checks-panel-review'
 
 export function isGitLabChecksPanelReview(
-  review: ChecksPanelReview | null
-): review is ChecksPanelReview & { provider: 'gitlab' } {
+  review: HostedReviewInfo | null
+): review is HostedReviewInfo & { provider: 'gitlab' } {
   return review?.provider === 'gitlab'
 }
 

@@ -16,7 +16,7 @@ import {
   SEARCH_TIMEOUT_MS as SHARED_SEARCH_TIMEOUT_MS
 } from '../shared/text-search'
 import { IMAGE_FILE_MIME_TYPES } from '../shared/image-file-extensions'
-import type { SearchResult as SharedSearchResult } from '../shared/code-search-types'
+import type { SearchResult } from '../shared/code-search-types'
 import {
   absorbPendingRipgrepSpawnError,
   isRipgrepUnavailableAfterLaunchFailure,
@@ -77,8 +77,6 @@ export type SearchOptions = {
   excludePattern?: string
   maxResults: number
 }
-
-export type SearchResult = SharedSearchResult
 
 // ─── rg-based search ─────────────────────────────────────────────────
 

@@ -51,7 +51,6 @@ export type {
   BrowserProfileClearDefaultCookiesResult,
   BrowserProfileCreateResult,
   BrowserProfileDeleteResult,
-  BrowserProfileImportFromBrowserResult,
   BrowserProfileListResult,
   BrowserReloadResult,
   BrowserScreencastDialogClosedResult,
@@ -151,7 +150,6 @@ export type {
   RuntimeTerminalFocus,
   RuntimeTerminalInteractiveWait,
   RuntimeTerminalInteractiveWaitSource,
-  RuntimeTerminalListHostScope,
   RuntimeTerminalListResult,
   RuntimeTerminalOrphanAdoptionClaim,
   RuntimeTerminalOrphanAdoptionRequest,
@@ -182,6 +180,7 @@ export type {
   RuntimeWorktreeTerminalCloseResult,
   RuntimeWorktreeTerminalSleepResult
 } from './runtime-terminal-contracts'
+export type { RuntimeListingHostScope } from './runtime-listing-host-scope'
 export type {
   RuntimeGitCheckoutResult,
   RuntimeGitLocalBranches,

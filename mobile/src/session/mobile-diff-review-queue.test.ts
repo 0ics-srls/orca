@@ -1,7 +1,7 @@
+import type { GitStatusEntry } from '../../../src/shared/git-status-types'
 import { describe, expect, it } from 'vitest'
 import type { DiffComment, MobileDiffReviewState } from '../../../src/shared/diff-comment-types'
-import type { MobileGitBranchChangeEntry } from '../source-control/mobile-branch-compare'
-import type { MobileGitStatusEntry } from '../source-control/mobile-git-status'
+import type { GitBranchChangeEntry } from '../../../src/shared/git-diff-compare-types'
 import {
   buildMobileDiffReviewQueue,
   createMobileDiffReviewFileKey,
@@ -12,7 +12,7 @@ import {
 
 const emptyReviewState: MobileDiffReviewState = { version: 1, files: {} }
 
-function statusEntry(overrides: Partial<MobileGitStatusEntry>): MobileGitStatusEntry {
+function statusEntry(overrides: Partial<GitStatusEntry>): GitStatusEntry {
   return {
     path: 'src/app.ts',
     status: 'modified',
@@ -21,7 +21,7 @@ function statusEntry(overrides: Partial<MobileGitStatusEntry>): MobileGitStatusE
   }
 }
 
-function branchEntry(overrides: Partial<MobileGitBranchChangeEntry>): MobileGitBranchChangeEntry {
+function branchEntry(overrides: Partial<GitBranchChangeEntry>): GitBranchChangeEntry {
   return {
     path: 'src/branch.ts',
     status: 'modified',

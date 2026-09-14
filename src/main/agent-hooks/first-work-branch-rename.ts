@@ -18,9 +18,9 @@ import { getSshGitProvider } from '../providers/ssh-git-dispatch'
 import {
   probeBranchUpstream,
   renameCurrentBranch,
-  resolveUniqueBranchName,
-  type GitExec
+  resolveUniqueBranchName
 } from '../git/branch-rename'
+import type { GitCommandRunner } from '../../shared/git-effective-upstream'
 import {
   generateBranchNameFromContext,
   resolveTextGenerationParams
@@ -180,7 +180,7 @@ async function runAutoRename(
   if (repo.connectionId && !provider) {
     return retry('ssh provider unavailable')
   }
-  const exec: GitExec = provider
+  const exec: GitCommandRunner = provider
     ? (args) => provider.exec(args, worktreePath)
     : (args) => gitExecFileAsync(args, { cwd: worktreePath })
 

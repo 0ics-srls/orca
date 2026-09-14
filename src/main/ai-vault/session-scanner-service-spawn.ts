@@ -6,16 +6,17 @@ import type {
   AiVaultSearchResponse,
   AiVaultSearchStatus
 } from '../../shared/ai-vault-search-types'
-import type { AiVaultListResult, AiVaultSubagentListResult } from '../../shared/ai-vault-types'
+import type {
+  AiVaultFirstUserPromptResult,
+  AiVaultListResult,
+  AiVaultSubagentListResult
+} from '../../shared/ai-vault-types'
 import type {
   AiVaultSessionTitleRequest,
   AiVaultSessionTitlesResult
 } from '../../shared/ai-vault-session-title'
 import { withSpan } from '../observability/tracer'
-import type {
-  ReadAiVaultFirstUserPromptArgs,
-  ReadAiVaultFirstUserPromptResult
-} from './session-first-user-prompt-read'
+import type { ReadAiVaultFirstUserPromptArgs } from './session-first-user-prompt-read'
 import { sessionSearchServiceInit } from '../ai-vault-search/session-search-service-init'
 import { getSessionParseCachePersistenceOptions } from './session-parse-cache-persistence'
 import { buildAiVaultServiceEnv } from './session-scanner-service-env'
@@ -91,7 +92,7 @@ export function listAiVaultSubagentSessionsInService(
 export function readAiVaultFirstUserPromptInService(
   request: ReadAiVaultFirstUserPromptArgs,
   signal?: AbortSignal
-): Promise<ReadAiVaultFirstUserPromptResult> {
+): Promise<AiVaultFirstUserPromptResult> {
   return getSharedClient().request({ type: 'request', operation: 'firstPrompt', request }, signal)
 }
 

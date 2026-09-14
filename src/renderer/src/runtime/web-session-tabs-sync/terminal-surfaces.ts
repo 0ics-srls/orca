@@ -16,9 +16,9 @@ import type {
   ReadyBrowserSurface,
   ReadyEditorSurface,
   ReadyTerminalSurface,
-  TerminalSurface,
   MirroredAgentTab
 } from './state'
+import type { RuntimeMobileSessionTerminalClientTab } from '../../../../shared/runtime-types'
 import type { Tab } from '../../../../shared/tab-types'
 import { structuredAgentSessionTabId } from '../../../../shared/structured-agent-session-projection'
 
@@ -30,7 +30,7 @@ export function isReadyTerminalTab(
 
 export function isTerminalSurfaceTab(
   tab: RuntimeMobileSessionTabsResult['tabs'][number]
-): tab is TerminalSurface {
+): tab is RuntimeMobileSessionTerminalClientTab {
   return tab.type === 'terminal'
 }
 
@@ -158,7 +158,7 @@ export function isMirroredTerminalSurfaceId(tabId: string): boolean {
 }
 
 export function chooseRemoteTerminalLayout(
-  surfaces: readonly TerminalSurface[],
+  surfaces: readonly RuntimeMobileSessionTerminalClientTab[],
   ptyIdsByLeafId: Record<string, string>,
   existingLayout?: TerminalLayoutSnapshot,
   requestedActiveLeafId?: string

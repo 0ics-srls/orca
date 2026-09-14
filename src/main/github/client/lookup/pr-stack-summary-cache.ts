@@ -1,6 +1,5 @@
-import type { GitHubPRStack } from '../../../../shared/github/pull-request-types'
+import type { GitHubOwnerRepo, GitHubPRStack } from '../../../../shared/github/pull-request-types'
 import type { ghRepoExecOptions } from '../../gh-utils'
-import type { GitHubApiRepository } from '../../github-api-repository'
 import { githubRepoIdentityKey } from '../../../../shared/github/repository-identity-key'
 import { getRestPRByNumber } from './pr-number-lookup'
 export const PR_STACK_SUMMARY_CACHE_TTL_MS = 60_000
@@ -37,7 +36,7 @@ export function prunePRStackSummaryCache(now = Date.now()): void {
 }
 
 export async function getCachedGitHubPRStackSummary(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   number: number,
   ghOptions: ReturnType<typeof ghRepoExecOptions>,
   executionScope: string

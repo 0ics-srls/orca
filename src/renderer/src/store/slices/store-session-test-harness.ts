@@ -1,5 +1,5 @@
 import { vi, type Mock } from 'vitest'
-import type { BrowserTab } from '../../../../shared/browser-workspace-types'
+import type { BrowserWorkspace } from '../../../../shared/browser-workspace-types'
 
 /** Shape shared by the Claude/Codex/OpenCode usage-scanner namespaces. */
 type UsageScannerMocks = {
@@ -115,8 +115,8 @@ export function createStoreSessionMockApi(): StoreSessionMockApi {
 }
 
 export function makeBrowserTab(
-  overrides: Partial<BrowserTab> & { id: string; worktreeId: string; url: string }
-): BrowserTab {
+  overrides: Partial<BrowserWorkspace> & { id: string; worktreeId: string; url: string }
+): BrowserWorkspace {
   return {
     title: overrides.url,
     loading: false,

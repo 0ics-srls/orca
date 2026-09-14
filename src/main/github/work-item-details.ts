@@ -1,14 +1,14 @@
 import type { PRCheckDetail } from '../../shared/github/check-types'
-import type { GitHubPRFile, GitHubPRFileContents } from '../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  GitHubPRFile,
+  GitHubPRFileContents
+} from '../../shared/github/pull-request-types'
 import type { GitHubWorkItem, GitHubWorkItemDetails } from '../../shared/github/work-item-types'
 import type { IssueSourcePreference } from '../../shared/repo-types'
 import { getPRChecks, getPRComments, getWorkItem } from './client'
 import { acquire, release, type LocalGitExecOptions } from './gh-utils'
-import {
-  getIssueGitHubApiRepository,
-  resolveGitHubRepoExecution,
-  type GitHubApiRepository
-} from './github-api-repository'
+import { getIssueGitHubApiRepository, resolveGitHubRepoExecution } from './github-api-repository'
 import { getIssueBodyAndComments, getIssueDetailsViaGraphQL } from './issue-work-item-details'
 import {
   getPRFiles,
@@ -40,7 +40,7 @@ async function getPRChecksForDetails(
   repoPath: string,
   prNumber: number,
   headSha: string | undefined,
-  repository: GitHubApiRepository | null,
+  repository: GitHubOwnerRepo | null,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<PRCheckDetail[]> {
@@ -217,7 +217,7 @@ export async function getPRFileContents(args: {
   repoPath: string
   connectionId?: string | null
   localGitOptions?: LocalGitExecOptions
-  prRepo?: GitHubApiRepository | null
+  prRepo?: GitHubOwnerRepo | null
   prNumber: number
   path: string
   oldPath?: string

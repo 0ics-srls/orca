@@ -3,7 +3,7 @@ import {
   type RelayHostCloseReason
 } from '../../../shared/relay-host-close-reason'
 import { relayStatusCellUrl } from '../../../shared/mobile-relay-status'
-import type { RelayBrokerStatus } from './relay-session-broker'
+import type { MobileRelayStatus } from '../../../shared/mobile-relay-status'
 import { RelayHttpError, shouldRetryRelayConnectionError } from './relay-http-client'
 
 export type RelayAuthIdentity = {
@@ -32,7 +32,7 @@ type RelayAuthCoordinatorOptions = {
     isCurrent: () => boolean
     refreshAccessToken: () => Promise<string | null>
   }) => Promise<CoordinatedRelayBroker>
-  onStatus: (status: RelayBrokerStatus, cellUrl?: string) => void
+  onStatus: (status: MobileRelayStatus, cellUrl?: string) => void
   lingerMs?: number
   random?: () => number
 }
@@ -100,7 +100,7 @@ export class RelayAuthCoordinator {
   // Why derived rather than passed in: the coordinator republishes `registered`
   // after the broker already announced its cell, so a call site that forgot the
   // cell would silently blank it moments after the broker set it.
-  private publish(status: RelayBrokerStatus): void {
+  private publish(status: MobileRelayStatus): void {
     this.options.onStatus(
       status,
       relayStatusCellUrl(status, this.ownership?.broker?.endpoint?.cellUrl)

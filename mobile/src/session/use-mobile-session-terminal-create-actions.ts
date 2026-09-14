@@ -8,7 +8,8 @@ import { buildTerminalSendParams } from '../terminal/terminal-send-request'
 import { terminalRecordsEqual } from './mobile-terminal-records'
 import type { MobileNewTabAgentOption } from './mobile-new-tab-agent-options'
 import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-command-types'
-import type { Terminal, TerminalCreateResult } from './mobile-session-route-types'
+import type { TerminalCreateResult } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 import type { MobileSessionAttachmentsModel } from './use-mobile-session-attachments'
 import { isAgentSessionHandleProvider } from '../../../src/shared/agent-session-provider-handle'
 import { createMobileStructuredAgentSession } from './mobile-structured-agent-session-launch'
@@ -145,7 +146,7 @@ export function useMobileSessionTerminalCreateActions(scope: MobileSessionAttach
           setActiveHandle(createdHandle)
           setTerminals((prev) => {
             const existing = prev.find((terminal) => terminal.handle === createdHandle)
-            const createdTerminal: Terminal = {
+            const createdTerminal: TerminalRecord = {
               handle: createdHandle,
               title: created.title || existing?.title || 'Terminal',
               terminalTheme: created.terminalTheme ?? existing?.terminalTheme,

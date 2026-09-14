@@ -11,13 +11,11 @@ import {
 import { requestEditorSaveQuiesce } from './editor-autosave'
 import type { RestoredEditorOwnerResult } from '@/store/slices/editor'
 
-export type RestoredEditorOwnerMigrationResult = RestoredEditorOwnerResult
-
 export async function migrateRestoredEditorFileOwner(
   fileId: string,
   route: RuntimeWorkspaceFileRoute,
   runtimeEnvironmentId: string | null
-): Promise<RestoredEditorOwnerMigrationResult> {
+): Promise<RestoredEditorOwnerResult> {
   const state = useAppStore.getState()
   const source = state.openFiles.find((file) => file.id === fileId)
   const initialRoute = source

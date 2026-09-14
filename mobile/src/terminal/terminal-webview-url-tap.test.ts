@@ -1,6 +1,6 @@
 import { createContext, Script } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import type { TappedFilePath } from './terminal-path-tap'
+import type { ParsedFileLinkLocation } from '../../../src/shared/file-link-location'
 import { TERMINAL_PATH_TAP_JS } from './terminal-path-tap-injected'
 import {
   TERMINAL_HTTP_URL_MAX_LENGTH,
@@ -16,7 +16,7 @@ import { XTERM_HTML } from './terminal-webview-html'
 type FileTapResolverCase = {
   name: string
   uri: string
-  expected: TappedFilePath | null
+  expected: ParsedFileLinkLocation | null
 }
 
 const FILE_URL_TAP_CASES: FileTapResolverCase[] = [
@@ -90,7 +90,7 @@ const OSC_FILE_TAP_CASES: FileTapResolverCase[] = [
   }
 ]
 
-type InjectedFileTapResolver = (uri: string) => TappedFilePath | null
+type InjectedFileTapResolver = (uri: string) => ParsedFileLinkLocation | null
 
 // Why: the WebView blob hand-translates terminal-file-url-tap.ts into plain JS
 // with re-escaped regexes; executing it against the same cases as the TS module

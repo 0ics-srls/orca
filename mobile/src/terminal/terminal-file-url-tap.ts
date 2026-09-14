@@ -1,7 +1,7 @@
-import type { TappedFilePath } from './terminal-path-tap'
+import type { ParsedFileLinkLocation } from '../../../src/shared/file-link-location'
 import { parsePathWithOptionalLineColumn } from './terminal-path-tap'
 
-export function resolveTerminalFileUrlTap(uri: string): TappedFilePath | null {
+export function resolveTerminalFileUrlTap(uri: string): ParsedFileLinkLocation | null {
   let parsed: URL
   try {
     parsed = new URL(uri)
@@ -24,7 +24,7 @@ export function resolveTerminalFileUrlTap(uri: string): TappedFilePath | null {
   )
 }
 
-export function resolveTerminalOscFileTap(uri: string): TappedFilePath | null {
+export function resolveTerminalOscFileTap(uri: string): ParsedFileLinkLocation | null {
   return resolveTerminalFileUrlTap(uri) ?? parseOscPathLikeTarget(uri)
 }
 
@@ -57,7 +57,7 @@ function isLocalFileUriHostname(hostname: string): boolean {
   )
 }
 
-function parseOscPathLikeTarget(value: string): TappedFilePath | null {
+function parseOscPathLikeTarget(value: string): ParsedFileLinkLocation | null {
   if (
     !/^(?:~[\\/]|[\\/]|\.{1,2}[\\/]|[A-Za-z]:[\\/]|[A-Za-z0-9._-]+[\\/]|(?=[A-Za-z0-9._-]*\.[A-Za-z0-9]))/.test(
       value
@@ -81,7 +81,7 @@ function parseFileUrlLineHash(hash: string): { line: number; column: number | nu
   return { line, column }
 }
 
-function parseFilePathTrailingLineTarget(filePath: string): TappedFilePath | null {
+function parseFilePathTrailingLineTarget(filePath: string): ParsedFileLinkLocation | null {
   const match = /^(.*?)(?::(\d+))(?::(\d+))?$/.exec(filePath)
   if (!match || !match[1] || match[1].endsWith('/') || match[1].endsWith('\\')) {
     return null

@@ -1,6 +1,6 @@
 import { isTerminalLeafId, makePaneKey } from '../../../shared/stable-pane-id'
 import type {
-  RuntimeTerminalListHostScope,
+  RuntimeListingHostScope,
   RuntimeTerminalListResult,
   RuntimeTerminalSummary
 } from '../../../shared/runtime-types'
@@ -32,7 +32,7 @@ const OWNER_LISTING_LIMIT = 200
 /** A host that predates `hostScope` cannot say what it answered for, so it cannot be read. */
 function isScopedTerminalListResult(
   value: unknown
-): value is RuntimeTerminalListResult & { hostScope: RuntimeTerminalListHostScope } {
+): value is RuntimeTerminalListResult & { hostScope: RuntimeListingHostScope } {
   if (
     !value ||
     typeof value !== 'object' ||

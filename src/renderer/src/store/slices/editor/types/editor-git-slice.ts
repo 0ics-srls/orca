@@ -1,4 +1,4 @@
-import type { RemoteOpKind } from '@/components/right-sidebar/source-control-primary-action'
+import type { SourceControlRemoteOpKind } from '@/components/right-sidebar/source-control-primary-action'
 import type { WorkspaceSessionHydrationOptions } from '@/lib/workspace-session-hydration-keys'
 import type {
   GitBranchChangeEntry,
@@ -43,8 +43,8 @@ export type EditorGitSlice = {
   isRemoteOperationActive: boolean
   remoteOperationDepth: number
   // Why: which remote op the user triggered, so the primary button mirrors its label+spinner; cleared at depth 0.
-  inFlightRemoteOpKind: RemoteOpKind | null
-  beginRemoteOperation: (kind?: RemoteOpKind) => void
+  inFlightRemoteOpKind: SourceControlRemoteOpKind | null
+  beginRemoteOperation: (kind?: SourceControlRemoteOpKind) => void
   endRemoteOperation: () => void
   fetchUpstreamStatus: (
     worktreeId: string,

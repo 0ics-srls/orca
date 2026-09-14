@@ -1,17 +1,11 @@
-import { describe, expect, expectTypeOf, it } from 'vitest'
-import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
+import { describe, expect, it } from 'vitest'
 import {
   buildMobileBranchCompareSection,
   canOpenMobileBranchCompareDiff,
-  formatMobileBranchCompareSummary,
-  type MobileGitBranchCompareResult
+  formatMobileBranchCompareSummary
 } from './mobile-branch-compare'
 
 describe('mobile branch compare helpers', () => {
-  it('keeps the mobile branch compare type in lockstep with the runtime contract', () => {
-    expectTypeOf<MobileGitBranchCompareResult>().toEqualTypeOf<GitBranchCompareResult>()
-  })
-
   it('sorts committed branch entries by path', () => {
     const section = buildMobileBranchCompareSection([
       { path: 'zeta.ts', status: 'modified' },

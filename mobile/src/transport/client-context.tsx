@@ -43,13 +43,11 @@ export {
   useRefreshHostClient
 } from './host-client-hooks'
 
-type StoreEntry = HostClientStoreEntry
-
 const Ctx = createContext<RpcClientContextValue | null>(null)
 
 export function RpcClientProvider({ children }: { children: ReactNode }) {
   // Why: entries in a ref so state changes don't re-render the whole tree; propagation goes through per-host listener Sets.
-  const storeRef = useRef<Map<string, StoreEntry>>(new Map())
+  const storeRef = useRef<Map<string, HostClientStoreEntry>>(new Map())
   const stateListenersRef = useRef<Map<string, Set<(state: ConnectionState) => void>>>(new Map())
   const allHostsListenersRef = useRef<Set<() => void>>(new Set())
 
@@ -93,7 +91,7 @@ export function RpcClientProvider({ children }: { children: ReactNode }) {
   }, [])
 
   const openEntry = useCallback(
-    (hostId: string, allowUnowned = false): Promise<StoreEntry | null> => {
+    (hostId: string, allowUnowned = false): Promise<HostClientStoreEntry | null> => {
       const retryScheduler = retrySchedulerRef.current
       if (!retryScheduler) {
         throw new Error('host retry scheduler not initialized')

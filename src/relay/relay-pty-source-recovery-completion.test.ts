@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest'
-import type { RelayDispatcher, SinkWriteSettlement } from './dispatcher'
+import type { RelayDispatcher, DispatcherWriterSettlement } from './dispatcher'
 import type { SshPtyConsumerSessionAdapter } from './ssh-pty-consumer-session-adapter'
 import {
   RelayPtySourceSendScheduler,
@@ -10,7 +10,7 @@ it('retries an unadmitted recovery completion once capacity returns', () => {
   let capacityListener = () => {}
   let listenerRemoved = false
   let admissions = 0
-  const completionSettlements: ((result: SinkWriteSettlement) => void)[] = []
+  const completionSettlements: ((result: DispatcherWriterSettlement) => void)[] = []
   const dispatcher = {
     onLegacyPtyCapacity(listener: () => void) {
       capacityListener = listener
@@ -22,7 +22,7 @@ it('retries an unadmitted recovery completion once capacity returns', () => {
       _clientId: number,
       _method: string,
       _params: Record<string, unknown>,
-      onSettled: (result: SinkWriteSettlement) => void
+      onSettled: (result: DispatcherWriterSettlement) => void
     ) {
       admissions++
       if (admissions === 1) {

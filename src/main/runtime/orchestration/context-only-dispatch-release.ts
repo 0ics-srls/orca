@@ -24,7 +24,7 @@ export function contextOnlyAbandonWarning(result: {
 }
 
 export function releaseContextOnlyDispatch(
-  db: Database.Database,
+  db: Database,
   dispatch: DispatchContextRow,
   requestedState: 'abandoned' | 'stopped'
 ): ContextOnlyDispatchReleaseResult {

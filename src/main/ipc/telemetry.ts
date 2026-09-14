@@ -14,7 +14,8 @@ import { consumeConsentMutationToken } from '../telemetry/burst-cap'
 import { persistBannerAcknowledgeWithoutEmitting, setOptIn, track } from '../telemetry/client'
 import { getCohortAtEmit } from '../telemetry/cohort-classifier'
 import { getOnboardingCohortAtEmit } from '../telemetry/onboarding-cohort-classifier'
-import { resolveConsent, type ConsentState } from '../telemetry/consent'
+import { resolveConsent } from '../telemetry/consent'
+import type { TelemetryConsentState } from '../../shared/telemetry-consent-types'
 import type { Store } from '../persistence'
 import { isCohortExtendedEvent, isOnboardingEvent } from '../../shared/telemetry-events'
 import type { EventName, EventProps, OptInVia } from '../../shared/telemetry-events'
@@ -99,7 +100,7 @@ export function registerTelemetryHandlers(store: Store): void {
   })
 
   // Read-only getter: lets the Privacy pane see env-var blocks (DO_NOT_TRACK/ORCA_TELEMETRY_DISABLED/CI), which are main-side state the renderer can't read.
-  ipcMain.handle('telemetry:getConsentState', (): ConsentState => {
+  ipcMain.handle('telemetry:getConsentState', (): TelemetryConsentState => {
     if (!storeRef) {
       // Fail closed: no store means we can't honor the stored preference, so surface pending_banner, not a misleading 'enabled'.
       return { effective: 'pending_banner' }

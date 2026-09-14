@@ -11,12 +11,12 @@ import { createJournalTablesSql, JOURNAL_DB_SCHEMA_VERSION } from './journal-dat
 export const JOURNAL_BUSY_TIMEOUT_MS = 5000
 
 export type OpenJournalDatabase = {
-  db: Database.Database
+  db: Database
   /** A newer `user_version` was met: this build reads and never writes. */
   readOnly: boolean
 }
 
-export function journalPragmaNumber(db: Database.Database, name: string): number {
+export function journalPragmaNumber(db: Database, name: string): number {
   return Number(db.pragma(name, { simple: true }) ?? 0)
 }
 
@@ -48,7 +48,7 @@ export function openJournalDatabase(dbPath: string): OpenJournalDatabase {
   }
 }
 
-function configureJournalPragmas(db: Database.Database): void {
+function configureJournalPragmas(db: Database): void {
   db.pragma('journal_mode = WAL')
   db.pragma(`busy_timeout = ${JOURNAL_BUSY_TIMEOUT_MS}`)
   db.pragma('foreign_keys = ON')
@@ -64,7 +64,7 @@ function configureJournalPragmas(db: Database.Database): void {
  * build does not latch read-only: it stamped its own version on and wrote
  * through SQL for a schema it did not have.
  */
-function createJournalSchema(db: Database.Database, stored: number): void {
+function createJournalSchema(db: Database, stored: number): void {
   if (stored >= JOURNAL_DB_SCHEMA_VERSION) {
     return
   }

@@ -6,9 +6,6 @@ import type { NativeChatApprovalCardProps } from './NativeChatApprovalCard'
 import type { NativeChatQuestionCardProps } from './NativeChatQuestionCard'
 import type { NativeChatLaunchSeed } from './native-chat-composer-types'
 
-// Why: a named spy type keeps the harness's inferred return type portable across the test files.
-type StructuredSessionSpy = Mock
-
 type StructuredSessionMessageListProps = {
   allowFileUriLinks?: boolean
   onLinkClick?: (...args: unknown[]) => void
@@ -28,8 +25,8 @@ const initialApprovalCardProps: NativeChatApprovalCardProps | null = null
  */
 export function createStructuredSessionMocks() {
   const mocks = {
-    call: vi.fn() as StructuredSessionSpy,
-    fileLinkClick: vi.fn() as StructuredSessionSpy,
+    call: vi.fn() as Mock,
+    fileLinkClick: vi.fn() as Mock,
     mode: 'static' as 'static' | 'outbox',
     status: 'ready' as 'idle' | 'loading' | 'ready' | 'error',
     messages: null as null | unknown[],
@@ -42,10 +39,10 @@ export function createStructuredSessionMocks() {
     approvalCardProps: initialApprovalCardProps,
     questionCardProps: null as NativeChatQuestionCardProps | null,
     promptItems: [] as AgentJournalRenderItem[],
-    respond: vi.fn() as StructuredSessionSpy,
-    cancel: vi.fn() as StructuredSessionSpy,
-    handlePasteEvent: vi.fn() as StructuredSessionSpy,
-    pasteFromClipboard: vi.fn() as StructuredSessionSpy,
+    respond: vi.fn() as Mock,
+    cancel: vi.fn() as Mock,
+    handlePasteEvent: vi.fn() as Mock,
+    pasteFromClipboard: vi.fn() as Mock,
     submissions: [] as unknown[],
     monitoringBackgroundTasks: false,
     showBackgroundTasks: false,
@@ -55,7 +52,7 @@ export function createStructuredSessionMocks() {
     supportsBackgroundTaskStopAll: true,
     backgroundTasks: [] as AgentSessionBackgroundTask[],
     settledBackgroundTasks: [] as AgentSessionBackgroundTask[],
-    stopBackgroundTask: vi.fn() as StructuredSessionSpy
+    stopBackgroundTask: vi.fn() as Mock
   }
 
   const moduleFactories = {
@@ -99,7 +96,7 @@ export function createStructuredSessionMocks() {
             error: outbox.error,
             hasOlder: false,
             loadingOlder: false,
-            loadOlder: vi.fn() as StructuredSessionSpy,
+            loadOlder: vi.fn() as Mock,
             prompts: mocks.promptItems,
             outbox: outbox.outbox,
             blockedClientMessageId: outbox.blockedClientMessageId,
@@ -135,11 +132,11 @@ export function createStructuredSessionMocks() {
             ],
             optionSurface: {
               getSnapshot: () => [],
-              setOption: vi.fn() as StructuredSessionSpy,
-              invokeAction: vi.fn() as StructuredSessionSpy,
+              setOption: vi.fn() as Mock,
+              invokeAction: vi.fn() as Mock,
               subscribe: () => () => {}
             },
-            setStructuredOption: vi.fn() as StructuredSessionSpy
+            setStructuredOption: vi.fn() as Mock
           }
         }
       }

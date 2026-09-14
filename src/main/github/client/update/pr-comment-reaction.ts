@@ -1,15 +1,17 @@
 import type { GitHubReactionContent } from '../../../../shared/github/comment-types'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { toGraphQLReactionContent } from '../../comment-reactions'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from '../../rate-limit'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export async function setPRCommentReaction(
   repoPath: string,
   reactionSubjectId: string,
   content: GitHubReactionContent,
   reacted: boolean,
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<boolean> {
   const mutation = reacted ? 'addReaction' : 'removeReaction'

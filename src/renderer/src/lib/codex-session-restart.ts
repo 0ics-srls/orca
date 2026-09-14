@@ -2,9 +2,9 @@ import type { AppState } from '@/store'
 import { useAppStore } from '@/store'
 import {
   confirmRuntimeTerminalForegroundProcess,
-  inspectRuntimeTerminalProcess,
-  type RuntimeTerminalProcessInspection
+  inspectRuntimeTerminalProcess
 } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../shared/terminal-process-inspection'
 import { translate } from '@/i18n/i18n'
 import {
   getCodexAccountDisplayLabel,
@@ -94,7 +94,7 @@ async function isConfirmedCodexForegroundDespiteShellReading(
   state: AppState,
   ptyId: string,
   launchAgent: TuiAgent | undefined,
-  inspection: RuntimeTerminalProcessInspection
+  inspection: TerminalProcessInspection
 ): Promise<boolean> {
   if (
     launchAgent !== 'codex' ||

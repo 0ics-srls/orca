@@ -43,5 +43,3 @@ export type FolderWorkspace = {
   updatedAt: number
   diffComments?: DiffComment[]
 }
-
-export type FolderWorkspaceLinkedTask = WorkspaceLinkedItem

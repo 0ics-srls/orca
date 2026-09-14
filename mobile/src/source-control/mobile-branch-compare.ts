@@ -1,21 +1,15 @@
 import type {
   GitBranchChangeEntry,
-  GitBranchCompareResult,
   GitBranchCompareSummary
 } from '../../../src/shared/git-diff-compare-types'
 
-export type MobileGitBranchChangeEntry = GitBranchChangeEntry
-export type MobileGitBranchCompareSummary = GitBranchCompareSummary
-export type MobileGitBranchCompareResult = GitBranchCompareResult
+export type MobileBranchCompareSection<TEntry extends GitBranchChangeEntry = GitBranchChangeEntry> =
+  {
+    title: 'Committed on Branch'
+    data: TEntry[]
+  }
 
-export type MobileBranchCompareSection<
-  TEntry extends MobileGitBranchChangeEntry = MobileGitBranchChangeEntry
-> = {
-  title: 'Committed on Branch'
-  data: TEntry[]
-}
-
-export function buildMobileBranchCompareSection<TEntry extends MobileGitBranchChangeEntry>(
+export function buildMobileBranchCompareSection<TEntry extends GitBranchChangeEntry>(
   entries: readonly TEntry[]
 ): MobileBranchCompareSection<TEntry> | null {
   if (entries.length === 0) {
@@ -32,9 +26,7 @@ export function buildMobileBranchCompareSection<TEntry extends MobileGitBranchCh
   }
 }
 
-export function formatMobileBranchCompareSummary(
-  summary: MobileGitBranchCompareSummary
-): string | null {
+export function formatMobileBranchCompareSummary(summary: GitBranchCompareSummary): string | null {
   if (summary.status !== 'ready') {
     return summary.errorMessage ?? null
   }
@@ -46,6 +38,6 @@ export function formatMobileBranchCompareSummary(
   return parts.join(' - ')
 }
 
-export function canOpenMobileBranchCompareDiff(summary: MobileGitBranchCompareSummary): boolean {
+export function canOpenMobileBranchCompareDiff(summary: GitBranchCompareSummary): boolean {
   return summary.status === 'ready' && Boolean(summary.headOid && summary.mergeBase)
 }

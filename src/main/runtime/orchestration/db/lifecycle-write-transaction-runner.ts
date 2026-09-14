@@ -6,7 +6,7 @@ import {
 } from './lifecycle-transition'
 
 export function runLifecycleWriteTransaction<T>(
-  db: Database.Database,
+  db: Database,
   savepoint: string,
   operation: () => T
 ): T {

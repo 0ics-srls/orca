@@ -1,4 +1,5 @@
-import { spawnProcess, type ChildProcessHandle } from '../../shared/child-process/run-process'
+import { spawnProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import type { WindowsHostInteractiveLoginSpawn } from '../../shared/windows-interactive-login-spawn'
 import { recordSelfInitiatedTreeKill } from '../crash-reporting/self-initiated-tree-kill-log'
 import { admitSelfInitiatedTreeKill } from '../own-chromium-tree-kill-guard'
@@ -7,7 +8,7 @@ const WINDOWS_TASKKILL_TIMEOUT_MS = 5_000
 
 /** Ends a `claude` login and everything it spawned, then runs `afterKill`. */
 export function terminateClaudeProcess(
-  child: ChildProcessHandle,
+  child: ChildProcess,
   interactiveLogin: WindowsHostInteractiveLoginSpawn | null,
   afterKill: () => void
 ): void {

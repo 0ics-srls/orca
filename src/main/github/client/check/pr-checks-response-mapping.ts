@@ -1,5 +1,5 @@
 import type { PRCheckDetail } from '../../../../shared/github/check-types'
-import { githubRepositoryWebHost, type GitHubApiRepository } from '../../github-api-repository'
+import { githubRepositoryWebHost } from '../../github-api-repository'
 import {
   mapCheckRunRESTStatus,
   mapCheckRunRESTConclusion,
@@ -16,6 +16,8 @@ import type {
   RestCommitStatus
 } from './pr-checks-graphql-query'
 import { nullableString, nullableNumber, parseActionsRunId } from './check-detail-field-mapping'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 export function isGraphQLCheckRunContext(
   context: GraphQLStatusCheckContext
 ): context is GraphQLCheckRunContext {
@@ -91,7 +93,7 @@ export function mapRestCommitStatus(status: RestCommitStatus): PRCheckDetail | n
 }
 
 export function mapGraphQLPendingApprovalCheckSuite(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   suite: GraphQLCheckSuite,
   headSha: string | null | undefined,
   index: number
@@ -108,7 +110,7 @@ export function mapGraphQLPendingApprovalCheckSuite(
 }
 
 export function mapGraphQLPRChecksResponse(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   response: GraphQLPRChecksResponse
 ): PRCheckDetail[] | null {
   const pullRequest = response.data?.repository?.pullRequest
@@ -175,7 +177,7 @@ export function getPendingApprovalCheckSuiteName(
 }
 
 export function getPendingApprovalCheckSuiteUrl(
-  ownerRepo: GitHubApiRepository,
+  ownerRepo: GitHubOwnerRepo,
   headSha: string,
   suiteId: number | null | undefined
 ): string {

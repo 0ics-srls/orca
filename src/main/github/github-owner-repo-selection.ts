@@ -1,17 +1,14 @@
 import type { IssueSourcePreference } from '../../shared/repo-types'
 import { githubRepoIdentityKey } from '../../shared/github/repository-identity-key'
 import { shouldProbeGitRemote } from '../git/remote-name-listing'
-import {
-  getOwnerRepoForRemote,
-  type LocalGitExecOptions,
-  type OwnerRepo
-} from './github-repository-identity'
+import { getOwnerRepoForRemote, type LocalGitExecOptions } from './github-repository-identity'
+import type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 
 export async function getOwnerRepo(
   repoPath: string,
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}
-): Promise<OwnerRepo | null> {
+): Promise<GitHubOwnerRepo | null> {
   // Why: on a fork checkout PRs live on the upstream parent, not origin (#7331).
   const originPromise = getOwnerRepoForRemote(repoPath, 'origin', connectionId, localGitOptions)
   if (await shouldProbeGitRemote(repoPath, 'upstream', connectionId, localGitOptions)) {
@@ -31,8 +28,8 @@ export async function getOwnerRepo(
 export const getIssueOwnerRepo = getOwnerRepo
 
 export type PRRepositoryCandidates = {
-  candidates: OwnerRepo[]
-  headRepo: OwnerRepo | null
+  candidates: GitHubOwnerRepo[]
+  headRepo: GitHubOwnerRepo | null
 }
 
 export async function resolvePRRepositoryCandidates(
@@ -54,7 +51,7 @@ export async function resolvePRRepositoryCandidates(
     originPromise
   ])
   const seen = new Set<string>()
-  const candidates: OwnerRepo[] = []
+  const candidates: GitHubOwnerRepo[] = []
 
   for (const candidate of [upstream, origin]) {
     if (!candidate) {
@@ -72,7 +69,7 @@ export async function resolvePRRepositoryCandidates(
 }
 
 export type ResolvedIssueSource = {
-  source: OwnerRepo | null
+  source: GitHubOwnerRepo | null
   /** True when explicit upstream is gone and resolver fell back to origin. */
   fellBack: boolean
 }

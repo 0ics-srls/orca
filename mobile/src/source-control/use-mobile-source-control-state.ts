@@ -1,3 +1,4 @@
+import type { GitStatusEntry } from '../../../src/shared/git-status-types'
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useHostClient, useForceReconnect } from '../transport/client-context'
@@ -21,8 +22,7 @@ import {
   countStagedEntries,
   countUnstagedEntries,
   getStageablePaths,
-  getUnstageablePaths,
-  type MobileGitStatusEntry
+  getUnstageablePaths
 } from './mobile-git-status'
 import { getMobileCommitFailureStagedEntries } from './mobile-commit-failure-recovery'
 import { useMobileSourceControlCommitFailure } from './use-mobile-source-control-commit-failure'
@@ -31,8 +31,6 @@ import {
   formatBranchLabel,
   type MobileBranchEntryView
 } from './mobile-source-control-screen-state'
-
-type MobileGitLocalBranches = RuntimeGitLocalBranches
 
 export type MobileSourceControlStateParams = {
   hostId: string
@@ -67,10 +65,10 @@ export function useMobileSourceControlState(params: MobileSourceControlStatePara
   const [commitMessage, setCommitMessage] = useState('')
   const [generatingMessage, setGeneratingMessage] = useState(false)
   const [showBranchPicker, setShowBranchPicker] = useState(false)
-  const [localBranches, setLocalBranches] = useState<MobileGitLocalBranches | null>(null)
+  const [localBranches, setLocalBranches] = useState<RuntimeGitLocalBranches | null>(null)
   const [createdPrUrl, setCreatedPrUrl] = useState<string | null>(null)
   const [createdPrWarning, setCreatedPrWarning] = useState<string | null>(null)
-  const [discardTarget, setDiscardTarget] = useState<MobileGitStatusEntry | null>(null)
+  const [discardTarget, setDiscardTarget] = useState<GitStatusEntry | null>(null)
   const [showActionSheet, setShowActionSheet] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
   const keyboardLift = useMobileSourceControlKeyboardLift()

@@ -2,7 +2,7 @@ import type { GithubReplyMergeActionsModel } from './use-mobile-tasks-github-rep
 import { useCallback } from './mobile-tasks-dependencies'
 import {
   type DetailComment,
-  type LinearIssue,
+  type LinearMobileIssue,
   type LinearIssueChild,
   type TaskItem,
   createLinearTask,
@@ -87,7 +87,7 @@ export function useMobileTasksLinearItemActions(model: GithubReplyMergeActionsMo
         if (!isSuccess(response)) {
           throw new Error(response.error.message)
         }
-        const issue = response.result as LinearIssue | null
+        const issue = response.result as LinearMobileIssue | null
         if (!issue) {
           throw new Error('Sub-issue not found')
         }

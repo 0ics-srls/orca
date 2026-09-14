@@ -29,8 +29,6 @@ export type DispatcherOptions = {
   methods?: readonly RpcAnyMethodDeclaration[]
 }
 
-type DispatchCallOptions = RpcDispatchStreamingOptions
-
 export class RpcDispatcher {
   private readonly runtime: OrcaRuntimeService
   private readonly registry: RpcRegistry
@@ -52,7 +50,7 @@ export class RpcDispatcher {
     })
   }
 
-  async dispatch(request: RpcRequest, options?: DispatchCallOptions): Promise<RpcResponse> {
+  async dispatch(request: RpcRequest, options?: RpcDispatchStreamingOptions): Promise<RpcResponse> {
     const meta = this.meta()
     const method = this.registry.get(request.method)
     if (!method) {

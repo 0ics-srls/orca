@@ -13,7 +13,7 @@ import {
 } from '../tasks/setup-hook-trust'
 import { createWorkspaceFromComposerSource } from '../tasks/source-workspace-create'
 import { normalizeWorkspaceAgent } from '../tasks/workspace-agent-selection'
-import type { WorkspaceCreateSetupDecision } from '../tasks/workspace-create-params'
+import type { SetupDecision } from '../../../src/shared/worktree/create-types'
 import type { WorkspaceSshGate } from '../tasks/workspace-ssh-gate'
 import type { useMobileComposerSource } from '../tasks/use-mobile-composer-source'
 import type { WorktreeCreateIdempotencySupport } from '../tasks/worktree-create-idempotency-policy'
@@ -28,7 +28,7 @@ import type { NewWorktreeDrawerView } from './use-new-worktree-drawer-navigation
 import { getSuggestedCreatureName } from './worktree-name-suggestion'
 
 type CreateOptions = {
-  setupOverride?: Exclude<WorkspaceCreateSetupDecision, 'inherit'>
+  setupOverride?: Exclude<SetupDecision, 'inherit'>
   approvedSetupContentHash?: string
 }
 
@@ -51,7 +51,7 @@ export function useNewWorkspaceCreateSubmit(args: {
   setupCommand: string | null
   setupTrust: SetupHookTrust | null
   setupRunPolicy: SetupRunPolicy
-  setupDecisionChoice: Exclude<WorkspaceCreateSetupDecision, 'inherit'> | null
+  setupDecisionChoice: Exclude<SetupDecision, 'inherit'> | null
   runSetup: boolean
   trustedOrcaHooks: PersistedTrustedOrcaHooks
   setTrustedOrcaHooks: (trust: PersistedTrustedOrcaHooks) => void
@@ -118,7 +118,7 @@ export function useNewWorkspaceCreateSubmit(args: {
           undefined,
           args.retiredWorktreeNames
         )
-      let setupDecision: WorkspaceCreateSetupDecision = 'inherit'
+      let setupDecision: SetupDecision = 'inherit'
       if (args.setupCommand) {
         if (options.setupOverride) {
           setupDecision = options.setupOverride

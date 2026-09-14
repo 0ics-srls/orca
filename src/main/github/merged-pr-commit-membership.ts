@@ -2,7 +2,7 @@ import { ghExecFileAsync } from './gh-utils'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from './rate-limit'
 import { githubHostExecOptions } from './github-api-repository'
 import { githubRepoIdentityKey } from '../../shared/github/repository-identity-key'
-import type { OwnerRepo } from './github-repository-identity'
+import type { GitHubOwnerRepo } from '../../shared/github/pull-request-types'
 
 type GhExecOptions = Parameters<typeof ghExecFileAsync>[1]
 
@@ -50,7 +50,7 @@ export function resetMergedPRCommitMembershipCacheForTest(): void {
  * reused branch name. Conservative on any failure: returns unknown.
  */
 export async function isCommitPartOfMergedPR(args: {
-  ownerRepo: OwnerRepo
+  ownerRepo: GitHubOwnerRepo
   prNumber: number
   commitOid: string
   ghOptions: GhExecOptions

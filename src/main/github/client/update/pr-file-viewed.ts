@@ -1,6 +1,8 @@
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { noteRepositoryRateLimitSpend, repositoryRateLimitGuard } from '../../rate-limit'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 /**
  * Mark or unmark a PR file as viewed via GitHub's GraphQL API.
  */
@@ -8,7 +10,7 @@ export async function setPRFileViewed(args: {
   repoPath: string
   connectionId?: string | null
   localGitOptions?: LocalGitExecOptions
-  prRepo?: GitHubApiRepository | null
+  prRepo?: GitHubOwnerRepo | null
   pullRequestId: string
   path: string
   viewed: boolean

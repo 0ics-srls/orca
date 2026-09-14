@@ -1,10 +1,10 @@
-import type { RelayDispatcher, SinkWriteSettlement } from './dispatcher'
+import type { RelayDispatcher, DispatcherWriterSettlement } from './dispatcher'
 import type { RelayPtySourceDeliveryRecord } from './relay-pty-source-send-scheduler'
 import type { SshPtyConsumerSessionAdapter } from './ssh-pty-consumer-session-adapter'
 
 function onceSettlement(
-  callback: (result: SinkWriteSettlement) => void
-): (result: SinkWriteSettlement) => void {
+  callback: (result: DispatcherWriterSettlement) => void
+): (result: DispatcherWriterSettlement) => void {
   let settled = false
   return (result) => {
     if (settled) {

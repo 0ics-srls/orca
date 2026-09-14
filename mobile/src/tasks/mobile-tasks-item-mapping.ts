@@ -15,7 +15,7 @@ import type {
   GitHubWorkItem,
   GitLabTodo,
   GitLabWorkItem,
-  LinearIssue,
+  LinearMobileIssue,
   RepoSummary
 } from './mobile-tasks-provider-detail-types'
 
@@ -288,7 +288,7 @@ export async function mapWithConcurrency<T, R>(
   return results
 }
 
-export function createLinearTask(issue: LinearIssue): TaskItem {
+export function createLinearTask(issue: LinearMobileIssue): TaskItem {
   return {
     key: `linear:${issue.workspaceId ?? 'workspace'}:${issue.id}`,
     provider: 'linear',

@@ -5,7 +5,8 @@ import type { TerminalTab } from '../../../../shared/terminal-tab-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { mergeSnapshotAndSessions, UNATTRIBUTED_REPO_ID } from './mergeSnapshotAndSessions'
 import { requiresKillConfirmation } from './resource-session-kill-confirmation'
-import type { DaemonSession, MergeContext } from './resource-usage-merge-types'
+import type { MergeContext } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 
 function emptyAppMemory() {
   return {
@@ -153,7 +154,7 @@ describe('mergeSnapshotAndSessions', () => {
       history: [],
       sessions: [{ sessionId: 'pty-1', paneKey: null, pid: 999, cpu: 0.1, memory: 50_000_000 }]
     }
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       { id: 'pty-1', cwd: '/Users/me/Triton', title: 'shell', agentOwnership: 'absent' as const }
     ]
     const out = mergeSnapshotAndSessions(makeSnapshot([wt]), ds, baseCtx())
@@ -179,7 +180,7 @@ describe('mergeSnapshotAndSessions', () => {
       history: [],
       sessions: [{ sessionId: 'pty-agent', paneKey: null, pid: 999, cpu: 0.1, memory: 50_000_000 }]
     }
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: 'pty-agent',
         cwd: '/Users/me/Triton',
@@ -234,7 +235,7 @@ describe('mergeSnapshotAndSessions', () => {
   })
 
   it('@@ parse: an SSH-style session id resolves to its worktree group', () => {
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: 'orca::/remote/Stingray@@abcd1234',
         cwd: '',
@@ -275,7 +276,7 @@ describe('mergeSnapshotAndSessions', () => {
     // A live local daemon session whose registry entry the renderer hasn't
     // re-spawned yet must NOT be flagged as remote. Under the old
     // predicate (`!hasLocalSamples`) it was — that was the bug.
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: 'orca::/local/Triton@@deadbeef',
         cwd: '/local/Triton',
@@ -299,7 +300,7 @@ describe('mergeSnapshotAndSessions', () => {
 
   it('tab walk wins over @@ parse when they disagree', () => {
     const tabId = 'tab-xyz'
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: 'orca::/wrong/path@@feedface',
         cwd: '',
@@ -322,7 +323,7 @@ describe('mergeSnapshotAndSessions', () => {
   it('treats startup deferred reattach tab ptyId wake hints as bound sessions', () => {
     const tabId = 'tab-restored'
     const sessionId = 'orca::/Users/me/Triton@@deferred'
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: sessionId,
         cwd: '/Users/me/Triton',
@@ -364,7 +365,7 @@ describe('mergeSnapshotAndSessions', () => {
       history: [],
       sessions: []
     }
-    const remoteDs: DaemonSession[] = [
+    const remoteDs: PtyListedSession[] = [
       {
         id: 'remote-repo::/remote/Stingray@@1234',
         cwd: '',
@@ -407,7 +408,7 @@ describe('mergeSnapshotAndSessions', () => {
       history: [],
       sessions: [{ sessionId: 'runtime-pty', paneKey: null, pid: 2, cpu: 5, memory: 500_000_000 }]
     }
-    const sessions: DaemonSession[] = [
+    const sessions: PtyListedSession[] = [
       {
         id: 'runtime-repo::/runtime/Wt@@future-runtime',
         cwd: '',
@@ -468,7 +469,7 @@ describe('mergeSnapshotAndSessions', () => {
     // not evidence of remoteness — we just don't know what it belongs
     // to. The chip should stay off; the row still surfaces in the
     // unattributed bucket with `—` cells because we have no sample.
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       { id: 'opaque-id-without-prefix', cwd: '', title: 'shell', agentOwnership: 'absent' as const }
     ]
     const out = mergeSnapshotAndSessions(null, ds, baseCtx())
@@ -522,7 +523,7 @@ describe('mergeSnapshotAndSessions', () => {
   })
 
   it('remote-orphan interaction state: null metrics + bound=false', () => {
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       {
         id: 'orca::/remote/Wt@@deadbeef',
         cwd: '',
@@ -542,7 +543,7 @@ describe('mergeSnapshotAndSessions', () => {
   })
 
   it('uses repoDisplayNameById to humanize new project groups when available', () => {
-    const ds: DaemonSession[] = [
+    const ds: PtyListedSession[] = [
       { id: 'stably-ai/orca::/remote/Wt@@1', cwd: '', title: '', agentOwnership: 'absent' as const }
     ]
     const ctx = baseCtx({
@@ -584,7 +585,7 @@ it('indexes tab labels when merging a large resource inventory', () => {
     },
     ptyId: `pty-${i}`
   }))
-  const sessions: DaemonSession[] = tabs.map((_, i) => ({
+  const sessions: PtyListedSession[] = tabs.map((_, i) => ({
     id: `pty-${i}`,
     cwd: '/repo',
     title: '',
@@ -602,7 +603,7 @@ it('indexes tab labels when merging a large resource inventory', () => {
 })
 
 it('does not scan accumulated worktree rows for unrelated daemon sessions', () => {
-  const sessions: DaemonSession[] = Array.from({ length: 1000 }, (_, i) => ({
+  const sessions: PtyListedSession[] = Array.from({ length: 1000 }, (_, i) => ({
     id: `opaque-${i}`,
     cwd: '',
     title: '',

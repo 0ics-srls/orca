@@ -1,9 +1,9 @@
+import type { GitStatusResult } from '../../../../src/shared/git-status-types'
 import { StyleSheet, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { colors } from '../../theme/mobile-theme'
 import type { ConnectionState } from '../../transport/types'
 import type { RpcClient } from '../../transport/rpc-client'
-import type { MobileGitStatusResult } from '../../source-control/mobile-git-status'
 import type { MobilePrSidebarController } from '../../session/use-mobile-pr-sidebar-controller'
 import { MobilePRSidebar } from '../MobilePRSidebar'
 
@@ -13,7 +13,7 @@ type Props = {
   worktreeId: string
   branch: string | null
   headSha: string | null
-  gitStatus: MobileGitStatusResult | null
+  gitStatus: GitStatusResult | null
   isGithubRepo?: boolean
   branchContextLoaded?: boolean
   controller: MobilePrSidebarController

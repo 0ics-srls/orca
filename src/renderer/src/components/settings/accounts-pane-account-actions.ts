@@ -16,9 +16,8 @@ import {
   getProviderAccountRuntime
 } from './provider-account-visibility'
 import type {
-  ClaudeAccountAction,
-  ClaudeAccountActionRunner,
   CodexAccountAction,
+  ClaudeAccountActionRunner,
   CodexAccountActionRunner,
   LocalAccountRuntime
 } from './accounts-pane-types'
@@ -138,7 +137,7 @@ type ClaudeActionContext = {
   isRemoteAccountScope: boolean
   claudeAccounts: ClaudeRateLimitAccountsState
   setClaudeAccounts: Dispatch<SetStateAction<ClaudeRateLimitAccountsState>>
-  setClaudeAction: Dispatch<SetStateAction<ClaudeAccountAction>>
+  setClaudeAction: Dispatch<SetStateAction<CodexAccountAction>>
   fetchSettings: () => Promise<void>
   recordFeatureInteraction: (featureId: FeatureInteractionId) => void
 }

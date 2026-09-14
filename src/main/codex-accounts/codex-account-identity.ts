@@ -6,8 +6,6 @@ import type { CodexSystemDefaultIdentity } from '../../shared/managed-account-ty
 import { readCodexAuthIdentity, type CodexAuthIdentity } from './codex-auth-identity'
 import { ManagedCodexHomeTemporarilyUnavailableError } from './host-codex-managed-home-ownership'
 
-export type ResolvedCodexIdentity = CodexAuthIdentity
-
 /** API-key logins carry no OAuth identity even when a stale `tokens` blob is still present. */
 function declaresApiKeyCredential(parsed: unknown): boolean {
   if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
@@ -25,7 +23,7 @@ export class CodexAccountIdentity {
     ) => string
   ) {}
 
-  readFromHome(managedHomePath: string, expectedAccountId: string): ResolvedCodexIdentity {
+  readFromHome(managedHomePath: string, expectedAccountId: string): CodexAuthIdentity {
     const authFilePath = join(
       this.assertManagedHomePath(managedHomePath, expectedAccountId),
       'auth.json'

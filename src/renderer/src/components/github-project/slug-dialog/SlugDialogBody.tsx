@@ -9,7 +9,7 @@ import { useAppStore } from '@/store'
 import { callRuntimeRpc, getActiveRuntimeTarget } from '@/runtime/runtime-rpc-client'
 import type { GitHubWorkItemDetails } from '../../../../../shared/github/work-item-types'
 import type { GlobalSettings } from '../../../../../shared/global-settings-types'
-import type { GitHubItemDialogProjectOrigin } from '@/components/GitHubItemDialog'
+import type { GitHubWorkItemProjectOrigin } from '@/components/GitHubItemDialog'
 import { LabelsEditor } from './LabelsEditor'
 import { AssigneesEditor } from './AssigneesEditor'
 import { CommentsList, NewCommentForm } from './Comments'
@@ -20,7 +20,7 @@ export function SlugDialogBody({
   sourceSettings,
   onClose
 }: {
-  projectOrigin: GitHubItemDialogProjectOrigin
+  projectOrigin: GitHubWorkItemProjectOrigin
   sourceSettings: Pick<GlobalSettings, 'activeRuntimeEnvironmentId'> | null | undefined
   onClose: () => void
 }): React.JSX.Element {

@@ -7,8 +7,6 @@ import { createCloudLinkedOrcaProfileRecord, linkOrcaProfileToCloud } from './pr
 import { readOrcaCloudSession, saveOrcaCloudSessionExchange } from './profile-cloud-session-store'
 import { createDevOrcaCloudSession } from './profile-cloud-dev-auth'
 
-type DevProfileListResult = OrcaProfileListState
-
 type DevCreateProfileResult =
   | {
       status: 'created'
@@ -19,14 +17,14 @@ type DevCreateProfileResult =
 type DevMutationResult =
   | {
       status: 'updated'
-      list: DevProfileListResult
+      list: OrcaProfileListState
     }
   | { status: 'reconnect-required' }
 
 export function connectDevOrcaCloudProfile(
   active: ActiveOrcaProfileState,
   userDataPath: string
-): DevProfileListResult {
+): OrcaProfileListState {
   const session = createDevOrcaCloudSession({ localProfileId: active.profile.id })
   saveOrcaCloudSessionExchange(active.profile.id, userDataPath, session)
   return linkOrcaProfileToCloud(active.profile.id, session.cloud, userDataPath)

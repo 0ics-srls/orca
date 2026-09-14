@@ -1,13 +1,13 @@
+import type { GitStatusResult } from '../../../src/shared/git-status-types'
 import { describe, expect, it, vi } from 'vitest'
-import type { MobileGitBranchCompareResult } from '../source-control/mobile-branch-compare'
-import type { MobileGitStatusResult } from '../source-control/mobile-git-status'
+import type { GitBranchCompareResult } from '../../../src/shared/git-diff-compare-types'
 import {
   deriveMobilePrBranchContext,
   loadMobilePrBranchContext,
   loadMobilePrRepoContext
 } from './use-mobile-pr-branch-context'
 
-function status(overrides: Partial<MobileGitStatusResult>): MobileGitStatusResult {
+function status(overrides: Partial<GitStatusResult>): GitStatusResult {
   return {
     entries: [],
     conflictOperation: 'unknown',
@@ -17,7 +17,7 @@ function status(overrides: Partial<MobileGitStatusResult>): MobileGitStatusResul
   }
 }
 
-function branchCompare(headOid: string | null): MobileGitBranchCompareResult {
+function branchCompare(headOid: string | null): GitBranchCompareResult {
   return {
     summary: {
       baseRef: 'main',

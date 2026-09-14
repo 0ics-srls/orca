@@ -4,10 +4,7 @@ import {
   PTY_PRECONNECT_INPUT_MAX_CODE_UNITS,
   PTY_PRECONNECT_INPUT_MAX_ENTRIES
 } from './pty-preconnect-input-buffer'
-import type { PtyPreconnectInputEntry, PtyPreconnectInputKind } from './pty-preconnect-input-buffer'
-
-export type DeferredSplitPaneInputKind = PtyPreconnectInputKind
-export type DeferredSplitPaneInput = PtyPreconnectInputEntry
+import type { PtyPreconnectInputEntry } from './pty-preconnect-input-buffer'
 
 declare const deferredSplitPaneHandoffHandleBrand: unique symbol
 
@@ -18,7 +15,7 @@ export type DeferredSplitPaneHandoffHandle = {
 export type ClaimedDeferredSplitPaneHandoff = {
   handle: DeferredSplitPaneHandoffHandle
   cwdPromise: Promise<string>
-  preconnectInput: DeferredSplitPaneInput[]
+  preconnectInput: PtyPreconnectInputEntry[]
 }
 
 export const DEFERRED_SPLIT_PANE_HANDOFF_TTL_MS = 15_000
@@ -30,7 +27,7 @@ type DeferredSplitPaneHandoffRecord = {
   expiryTimer: ReturnType<typeof setTimeout>
   inputCodeUnits: number
   owner: DeferredSplitPaneHandoffHandle
-  preconnectInput: DeferredSplitPaneInput[]
+  preconnectInput: PtyPreconnectInputEntry[]
 }
 
 const handoffs = new Map<PaneKey, DeferredSplitPaneHandoffRecord>()
@@ -125,7 +122,7 @@ export function claimDeferredSplitPaneHandoff(
 
 export function appendDeferredSplitPaneInput(
   handle: DeferredSplitPaneHandoffHandle,
-  input: DeferredSplitPaneInput
+  input: PtyPreconnectInputEntry
 ): void {
   const owned = getOwnedRecord(handle)
   if (

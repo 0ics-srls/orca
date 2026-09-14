@@ -1,3 +1,4 @@
+import type { ForegroundTerminalOutputTarget } from './pane-terminal-foreground-render-settle'
 import {
   failTerminalWriteStallWatch,
   isTerminalWritePipelineCertifiedDead,
@@ -8,7 +9,6 @@ import { flushTerminalOutputImpl } from './pane-terminal-output-flusher'
 import { writeTerminalOutputImpl } from './pane-terminal-output-writer'
 import {
   requestRegisteredTerminalBacklogRecovery,
-  type TerminalOutputTarget,
   type WriteTerminalOutputOptions
 } from './pane-terminal-output-queue-registry'
 // Why this bare import: pane-terminal-output-drain registers the drain runner that the registry's
@@ -42,14 +42,14 @@ export {
   type QueuedWrite,
   type TerminalOutputBeforeWrite,
   type TerminalOutputParsedCallback,
-  type TerminalOutputTarget,
   type WriteTerminalOutputOptions
 } from './pane-terminal-output-queue-registry'
+export type { ForegroundTerminalOutputTarget } from './pane-terminal-foreground-render-settle'
 
 const PARSE_SETTLE_TIMEOUT_MS = 250
 
 export function writeTerminalOutput(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   data: string,
   options: WriteTerminalOutputOptions
 ): void {
@@ -57,18 +57,20 @@ export function writeTerminalOutput(
 }
 
 export function flushTerminalOutput(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   options?: { maxChars?: number }
 ): void {
   flushTerminalOutputImpl(terminal, options)
 }
 
-export function requestTerminalBacklogRecovery(terminal: TerminalOutputTarget): void {
+export function requestTerminalBacklogRecovery(terminal: ForegroundTerminalOutputTarget): void {
   exposeDebugApi()
   requestRegisteredTerminalBacklogRecovery(terminal)
 }
 
-export function waitForTerminalOutputParsed(terminal: TerminalOutputTarget): Promise<void> {
+export function waitForTerminalOutputParsed(
+  terminal: ForegroundTerminalOutputTarget
+): Promise<void> {
   flushTerminalOutput(terminal)
   if (isTerminalWritePipelineCertifiedDead(terminal)) {
     // Why: a dead pipeline cannot settle; recovery owns it and serializers must not enqueue probe writes during a pending remount retry.

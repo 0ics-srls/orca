@@ -191,7 +191,7 @@ export async function invoke(
 }
 
 export function counts(db: OrchestrationDb): Record<string, number> {
-  const sqlite = (db as unknown as { db: Database.Database }).db
+  const sqlite = (db as unknown as { db: Database }).db
   return Object.fromEntries(
     [
       'messages',

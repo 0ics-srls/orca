@@ -75,22 +75,18 @@ const POST_V6_INDEXES = [
   'idx_remote_questions_dispatch_status'
 ] as const
 
-function hasOrchestrationColumn(db: Database.Database, table: string, column: string): boolean {
+function hasOrchestrationColumn(db: Database, table: string, column: string): boolean {
   const rows = db.pragma(`table_info(${table})`) as { name: string }[]
   return rows.some((row) => row.name === column)
 }
 
-function hasNotNullOrchestrationColumn(
-  db: Database.Database,
-  table: string,
-  column: string
-): boolean {
+function hasNotNullOrchestrationColumn(db: Database, table: string, column: string): boolean {
   const rows = db.pragma(`table_info(${table})`) as { name: string; notnull: number }[]
   return rows.some((row) => row.name === column && row.notnull === 1)
 }
 
 function hasOrchestrationColumnDefault(
-  db: Database.Database,
+  db: Database,
   table: string,
   column: string,
   defaultValue: string
@@ -99,29 +95,25 @@ function hasOrchestrationColumnDefault(
   return rows.some((row) => row.name === column && row.dflt_value === defaultValue)
 }
 
-function hasOrchestrationIndex(db: Database.Database, index: string): boolean {
+function hasOrchestrationIndex(db: Database, index: string): boolean {
   return !!db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = ?").get(index)
 }
 
-function hasOrchestrationIndexPredicate(
-  db: Database.Database,
-  index: string,
-  predicate: string
-): boolean {
+function hasOrchestrationIndexPredicate(db: Database, index: string, predicate: string): boolean {
   const row = db
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'index' AND name = ?")
     .get(index) as { sql: string | null } | undefined
   return !!row?.sql?.includes(predicate)
 }
 
-function messagesAllowQuestions(db: Database.Database): boolean {
+function messagesAllowQuestions(db: Database): boolean {
   const row = db
     .prepare("SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'messages'")
     .get() as { sql: string } | undefined
   return !!row && row.sql.includes("'question'")
 }
 
-function hasConsistentLegacyAdoption(db: Database.Database): boolean {
+function hasConsistentLegacyAdoption(db: Database): boolean {
   const sourceRunId = 'run_legacy_local'
   // Misfiled federated mail is not evidence of a pre-Runs database.
   const notFederatedMailbox = (handle: string): string =>
@@ -155,7 +147,7 @@ function hasConsistentLegacyAdoption(db: Database.Database): boolean {
   return true
 }
 
-function hasCompletePostV6Schema(db: Database.Database, storedVersion: number): boolean {
+function hasCompletePostV6Schema(db: Database, storedVersion: number): boolean {
   return (
     POST_V6_COLUMNS.every(([table, column]) => hasOrchestrationColumn(db, table, column)) &&
     VERSIONED_POST_V6_COLUMNS.every(
@@ -178,7 +170,7 @@ function hasCompletePostV6Schema(db: Database.Database, storedVersion: number): 
 }
 
 export function resolveOrchestrationMigrationStartVersion(
-  db: Database.Database,
+  db: Database,
   storedVersion: number,
   schemaVersion: number
 ): number {

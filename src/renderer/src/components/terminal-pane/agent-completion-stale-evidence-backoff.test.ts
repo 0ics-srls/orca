@@ -14,14 +14,14 @@ import { handleAgentCompletionInspectionResult } from './agent-completion-inspec
 import type { RemoteInspectionState } from './agent-completion-inspection-result'
 import type { ProcessMonitorState } from './agent-completion-process-types'
 import type { AgentCompletionCoordinatorOptions } from './agent-completion-coordinator-types'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 import { toAppSshPtyId } from '../../../../shared/ssh-pty-id'
 import { REMOTE_FOREGROUND_EVIDENCE_MAX_AGE_MS } from '../../../../shared/remote-foreground-evidence-admission'
 
 const SSH_PTY_ID = toAppSshPtyId('target-1', 'pty-1')
 const INCARNATION = 'inc-1'
 
-function liveRecord(capturedAgeMs: number): RuntimeTerminalProcessInspection {
+function liveRecord(capturedAgeMs: number): TerminalProcessInspection {
   return {
     foregroundProcess: 'claude',
     hasChildProcesses: true,
@@ -46,7 +46,7 @@ function liveRecord(capturedAgeMs: number): RuntimeTerminalProcessInspection {
 }
 
 /** What both relay call sites publish when the capture misses its budget. */
-function unreadableTableRecord(): RuntimeTerminalProcessInspection {
+function unreadableTableRecord(): TerminalProcessInspection {
   return {
     foregroundProcess: 'claude',
     hasChildProcesses: true,
@@ -62,7 +62,7 @@ function unreadableTableRecord(): RuntimeTerminalProcessInspection {
   }
 }
 
-function inspect(result: RuntimeTerminalProcessInspection, roundTripMs = 20): ProcessMonitorState {
+function inspect(result: TerminalProcessInspection, roundTripMs = 20): ProcessMonitorState {
   const state: ProcessMonitorState = {
     disposed: false,
     inspectionInFlight: false,

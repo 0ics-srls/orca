@@ -32,8 +32,8 @@ export function createDatabase(prefix: string): OrchestrationDb {
   return new OrchestrationDb(join(directory, 'orchestration.db'))
 }
 
-export function sqliteFor(db: OrchestrationDb): Database.Database {
-  return (db as unknown as { db: Database.Database }).db
+export function sqliteFor(db: OrchestrationDb): Database {
+  return (db as unknown as { db: Database }).db
 }
 
 export function createBoundRun(db: OrchestrationDb, objective: string) {

@@ -1,8 +1,8 @@
+import type { ForegroundTerminalOutputTarget } from './pane-terminal-foreground-render-settle'
 import {
   queuedByTerminal,
   scheduleDrain,
   type QueueEntry,
-  type TerminalOutputTarget,
   type WriteTerminalOutputOptions
 } from './pane-terminal-output-queue-registry'
 
@@ -12,7 +12,7 @@ export const LATENCY_SENSITIVE_FOREGROUND_COALESCE_DELAY_MS = 16
 export const LATENCY_SENSITIVE_FOREGROUND_HOLD_SAFETY_DELAY_MS = 32
 
 export function createQueueEntry(
-  terminal: TerminalOutputTarget,
+  terminal: ForegroundTerminalOutputTarget,
   options: WriteTerminalOutputOptions
 ): QueueEntry {
   return {

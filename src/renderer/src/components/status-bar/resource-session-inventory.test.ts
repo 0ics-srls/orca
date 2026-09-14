@@ -5,9 +5,9 @@ import {
   removeSessionFromInventory,
   removeSessionsFromInventory
 } from './resource-session-inventory'
-import type { DaemonSession } from './resource-usage-merge-types'
+import type { PtyListedSession } from '../../../../shared/pty-listed-session'
 
-function session(id: string): DaemonSession {
+function session(id: string): PtyListedSession {
   return { id, cwd: '/workspace', title: id, agentOwnership: 'absent' as const }
 }
 

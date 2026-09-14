@@ -9,7 +9,7 @@ import {
   type JsonRpcRequest,
   type JsonRpcResponse
 } from './protocol'
-import type { DispatcherWriterLane, SinkWriteSettlement } from './dispatcher-client-writer'
+import type { DispatcherWriterLane, DispatcherWriterSettlement } from './dispatcher-client-writer'
 import type { OutgoingJsonRpcMessage, PreparedRelayFrame, RelayClient } from './dispatcher-contract'
 import { RelayDispatcherCapacitySignals } from './dispatcher-capacity-signals'
 
@@ -65,7 +65,7 @@ export abstract class RelayDispatcherFrameCodec extends RelayDispatcherCapacityS
     client: RelayClient,
     msg: OutgoingJsonRpcMessage,
     lane: DispatcherWriterLane,
-    onSettled: (result: SinkWriteSettlement) => void = () => {},
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {},
     controlOverflow: 'close-client' | 'reject' = 'close-client'
   ): boolean {
     if (this.disposed || client.closed) {
@@ -84,7 +84,7 @@ export abstract class RelayDispatcherFrameCodec extends RelayDispatcherCapacityS
     client: RelayClient,
     frame: PreparedRelayFrame,
     lane: DispatcherWriterLane,
-    onSettled: (result: SinkWriteSettlement) => void = () => {},
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {},
     controlOverflow: 'close-client' | 'reject' = 'close-client'
   ): boolean {
     if (this.disposed || client.closed) {

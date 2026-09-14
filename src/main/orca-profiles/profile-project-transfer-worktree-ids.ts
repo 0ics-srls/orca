@@ -1,16 +1,12 @@
 import type { PersistedState } from '../../shared/persisted-state-types'
 import { parseWorkspaceKey } from '../../shared/workspace-scope'
-import type { TransferProfileState } from './profile-project-state-file'
 import { isRepoWorktreeId } from './profile-project-worktree-identity'
 import {
   getWorktreeIdFromHostIdentity,
   isWorktreeHostIdentity
 } from '../../shared/worktree/host-qualified-identity'
 
-export function collectTransferWorktreeIds(
-  state: TransferProfileState,
-  repoId: string
-): Set<string> {
+export function collectTransferWorktreeIds(state: PersistedState, repoId: string): Set<string> {
   const ids = new Set<string>()
   const add = (value: string | null | undefined): void => {
     if (value && isRepoWorktreeId(repoId, value)) {

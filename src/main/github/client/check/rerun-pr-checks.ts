@@ -1,9 +1,11 @@
 import type { GitHubRerunPRChecksResult } from '../../../../shared/github/check-types'
 import { ghExecFileAsync, acquire, release, type LocalGitExecOptions } from '../../gh-utils'
+import type { GitHubOwnerRepo } from '../../../../shared/github/pull-request-types'
+
 // Why: pure error helpers come from their own modules so tests that mock gh-utils still classify for real.
 import { extractExecError } from '../../../git/exec-error'
 import { classifyRerunChecksError } from '../../gh-error-classification'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { getPRChecks } from './get-pr-checks'
 import { parseActionsRunId } from './check-detail-field-mapping'
 export async function rerunPRChecks(
@@ -12,7 +14,7 @@ export async function rerunPRChecks(
   options: {
     headSha?: string
     failedOnly?: boolean
-    prRepo?: GitHubApiRepository | null
+    prRepo?: GitHubOwnerRepo | null
   } = {},
   connectionId?: string | null,
   localGitOptions: LocalGitExecOptions = {}

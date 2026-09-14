@@ -6,5 +6,3 @@ export type EditorSaveDirtyFilesDetail = {
   resolve: () => void
   reject: (message: string) => void
 }
-
-export type EditorPrepareHotExitDetail = EditorSaveDirtyFilesDetail

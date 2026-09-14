@@ -725,6 +725,6 @@ function expectCapability(database: OrchestrationDb, worker: WorkerFixture, vali
   ).toBe(valid)
 }
 
-function sqliteFor(database: OrchestrationDb): Database.Database {
-  return (database as unknown as { db: Database.Database }).db
+function sqliteFor(database: OrchestrationDb): Database {
+  return (database as unknown as { db: Database }).db
 }

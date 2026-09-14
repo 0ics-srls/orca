@@ -14,7 +14,8 @@ import type { RateLimitService } from '../rate-limits/service'
 import { buildEncodedWslBashCommand } from '../wsl-bash-command'
 import { admitSelfInitiatedTreeKill } from '../own-chromium-tree-kill-guard'
 import type { CodexAccountSelectionTarget } from './runtime-selection'
-import { CodexAccountIdentity, type ResolvedCodexIdentity } from './codex-account-identity'
+import { CodexAccountIdentity } from './codex-account-identity'
+import type { CodexAuthIdentity } from './codex-auth-identity'
 import { CodexConfigMirror } from './codex-config-mirror'
 import { runCodexLoginSession, type CodexLoginChild } from './codex-login-session'
 import { CodexManagedHomePath } from './codex-managed-home-path'
@@ -221,7 +222,7 @@ export class CodexAccountService {
   private readIdentityFromHome(
     managedHomePath: string,
     expectedAccountId: string
-  ): ResolvedCodexIdentity {
+  ): CodexAuthIdentity {
     return this.identity.readFromHome(managedHomePath, expectedAccountId)
   }
 

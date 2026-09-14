@@ -1,4 +1,4 @@
-import type { SpawnedProcess } from '../../shared/child-process/run-process'
+import type { ChildProcess } from 'node:child_process'
 import {
   terminateDescendantSnapshotWithVerdict,
   type DescendantTreeVerdict
@@ -34,7 +34,7 @@ const TREE_VERDICT_TRUST: Record<DescendantTreeVerdict, number> = {
   exited: 2
 }
 
-type ReapableChild = Pick<SpawnedProcess, 'pid' | 'kill'>
+type ReapableChild = Pick<ChildProcess, 'pid' | 'kill'>
 
 /**
  * A walk is only admissible while the root it walked was alive. A POSIX walk

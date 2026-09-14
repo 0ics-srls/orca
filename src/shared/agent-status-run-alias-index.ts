@@ -1,13 +1,11 @@
+import type { AgentSessionExecutionLocation } from './agent-session-record'
 import {
   parseAgentStatusProviderAlias,
   isAgentStatusRunId,
   type AgentStatusProviderAlias,
   type AgentStatusRunId
 } from './agent-status-run'
-import {
-  parseAgentStatusExecutionScope,
-  type AgentStatusExecutionScope
-} from './agent-status-subject'
+import { parseAgentStatusExecutionScope } from './agent-status-subject'
 import { assertJsonTextStructureWithinLimits } from './json-text-structure-limit'
 import { measureUtf8ByteLength } from './utf8-byte-limits'
 
@@ -21,7 +19,8 @@ const ALIAS_INDEX_JSON_STRUCTURE_LIMITS = {
   nestingDepth: 3
 } as const
 
-export type AgentStatusScopedProviderAlias = AgentStatusExecutionScope & AgentStatusProviderAlias
+export type AgentStatusScopedProviderAlias = AgentSessionExecutionLocation &
+  AgentStatusProviderAlias
 export type AgentStatusProviderAliasKey = string
 
 /** One provider tuple can resolve to multiple concurrently live run ids. */
@@ -31,7 +30,7 @@ type ProviderAliasKeyTuple = readonly [
   executionHostId: string,
   wslDistro: string | null,
   workspaceId: string,
-  workspaceKind: AgentStatusExecutionScope['workspaceKind'],
+  workspaceKind: AgentSessionExecutionLocation['workspaceKind'],
   provider: AgentStatusProviderAlias['provider'],
   sessionKeyKind: AgentStatusProviderAlias['sessionKeyKind'],
   providerId: string

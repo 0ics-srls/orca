@@ -112,11 +112,9 @@ export function statusPreviewForEntry(
   return resolveActivityThreadStatusPreview(entry, agentState, previousPreview)
 }
 
-export type ActivityThreadStatusId = AgentDotState
-
 /** Single classifier behind grouping, labels, and clear-completed; the only place the
  *  interrupted predicate is spelled. */
-export function activityThreadStatusId(thread: AgentPaneThread): ActivityThreadStatusId {
+export function activityThreadStatusId(thread: AgentPaneThread): AgentDotState {
   const state = thread.currentAgentState ?? thread.latestEvent?.state ?? 'done'
   if (!thread.currentAgentState && state === 'done' && thread.latestEvent?.entry.interrupted) {
     return 'interrupted'

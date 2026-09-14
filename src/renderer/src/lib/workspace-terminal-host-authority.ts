@@ -1,18 +1,6 @@
-import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
-import { parseExecutionHostId } from '../../../shared/execution-host'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
-import type { HostLiveTerminalProbeVerdict } from '@/runtime/host-live-terminal-probe'
-import type { RemoteWorkspaceSyncStatus } from '@/store/slices/ssh'
-import { isWebRuntimeSessionActive } from '@/runtime/web-runtime-session'
-import {
-  getExecutionHostIdForWorktree,
-  getRuntimeEnvironmentIdForWorktree,
-  type WorktreeRuntimeOwnerState
-} from '@/lib/worktree-runtime-owner'
-
 /**
  * Who holds a workspace's terminals right now, in the same three-verdict vocabulary the renderer
- * already uses for host terminal inventory ({@link HostLiveTerminalProbeVerdict}) — aliased rather
+ * already uses for host terminal inventory ({@link HostLiveTerminalProbeVerdict}), reused rather
  * than restated so the two cannot drift:
  *
  * - `live` — a remote execution host owns terminal creation here. It supplies the surface itself.
@@ -33,7 +21,18 @@ import {
  *
  * See docs/reference/ssh-execution-boundary.md.
  */
-export type WorkspaceTerminalHostAuthority = HostLiveTerminalProbeVerdict
+
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../shared/constants'
+import { parseExecutionHostId } from '../../../shared/execution-host'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
+import type { HostLiveTerminalProbeVerdict } from '@/runtime/host-live-terminal-probe'
+import type { RemoteWorkspaceSyncStatus } from '@/store/slices/ssh'
+import { isWebRuntimeSessionActive } from '@/runtime/web-runtime-session'
+import {
+  getExecutionHostIdForWorktree,
+  getRuntimeEnvironmentIdForWorktree,
+  type WorktreeRuntimeOwnerState
+} from '@/lib/worktree-runtime-owner'
 
 export type WorkspaceTerminalHostAuthorityState = WorktreeRuntimeOwnerState & {
   remoteWorkspaceHydratedTargetIds?: ReadonlySet<string>
@@ -58,7 +57,7 @@ const TERMINATED_WITHOUT_ANSWER_PHASES = new Set(['offline', 'error'])
 function resolveDirectSshAuthority(
   state: WorkspaceTerminalHostAuthorityState,
   targetId: string
-): WorkspaceTerminalHostAuthority {
+): HostLiveTerminalProbeVerdict {
   const phase = state.remoteWorkspaceSyncStatusByTargetId?.[targetId]?.phase
   if (state.remoteWorkspaceHydratedTargetIds?.has(targetId)) {
     // Why: the same pair use-app-session-persistence.ts gates uploads on. A conflicting snapshot
@@ -88,7 +87,7 @@ function resolveDirectSshAuthority(
 export function resolveWorkspaceTerminalHostAuthority(
   state: WorkspaceTerminalHostAuthorityState,
   worktreeId: string | null | undefined
-): WorkspaceTerminalHostAuthority {
+): HostLiveTerminalProbeVerdict {
   if (!worktreeId || worktreeId === FLOATING_TERMINAL_WORKTREE_ID) {
     return 'none'
   }
@@ -158,9 +157,9 @@ function captureAuthorityInputs(state: WorkspaceTerminalHostAuthorityState): Aut
 
 export function createWorkspaceTerminalHostAuthoritySelector(
   worktreeId: string | null | undefined
-): (state: WorkspaceTerminalHostAuthorityState) => WorkspaceTerminalHostAuthority {
+): (state: WorkspaceTerminalHostAuthorityState) => HostLiveTerminalProbeVerdict {
   let previousInputs: AuthorityInputs | null = null
-  let previousResult: WorkspaceTerminalHostAuthority = 'none'
+  let previousResult: HostLiveTerminalProbeVerdict = 'none'
   return (state) => {
     const inputs = captureAuthorityInputs(state)
     if (previousInputs?.every((value, index) => value === inputs[index]) === true) {

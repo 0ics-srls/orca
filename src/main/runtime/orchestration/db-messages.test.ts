@@ -90,7 +90,7 @@ describe('OrchestrationDb', () => {
 
     it('creates the undelivered inbox index used by push delivery', () => {
       const d = createDb()
-      const sqlite = (d as unknown as { db: Database.Database }).db
+      const sqlite = (d as unknown as { db: Database }).db
 
       const indexes = sqlite
         .prepare(

@@ -7,8 +7,6 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../ui/
 import { ShareUsageCard, type ShareUsageCardProps } from './ShareUsageCard'
 import { translate } from '@/i18n/i18n'
 
-type ShareUsageButtonProps = ShareUsageCardProps
-
 function XIcon(): React.JSX.Element {
   return (
     <svg width={16} height={16} viewBox="0 0 24 24" fill="currentColor">
@@ -17,7 +15,7 @@ function XIcon(): React.JSX.Element {
   )
 }
 
-export function ShareUsageButton(props: ShareUsageButtonProps): React.JSX.Element {
+export function ShareUsageButton(props: ShareUsageCardProps): React.JSX.Element {
   const cardRef = useRef<HTMLDivElement>(null)
   const [copied, setCopied] = useState(false)
   const [capturing, setCapturing] = useState(false)

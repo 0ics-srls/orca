@@ -6,7 +6,7 @@ import {
   processResult,
   useAgentCompletionCoordinatorLifecycle
 } from './agent-completion-coordinator-test-harness'
-import type { RuntimeTerminalProcessInspection } from '@/runtime/runtime-terminal-inspection'
+import type { TerminalProcessInspection } from '../../../../shared/terminal-process-inspection'
 
 function createRejectableDeferred<T>(): {
   promise: Promise<T>
@@ -41,8 +41,8 @@ describe('agent completion coordinator', () => {
   })
 
   it('does not validate a pending cwd title with an already in-flight inspection', async () => {
-    const staleInspection = createDeferred<RuntimeTerminalProcessInspection>()
-    const freshInspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const staleInspection = createDeferred<TerminalProcessInspection>()
+    const freshInspection = createDeferred<TerminalProcessInspection>()
     const inspectProcess = vi
       .fn()
       .mockReturnValueOnce(staleInspection.promise)
@@ -76,8 +76,8 @@ describe('agent completion coordinator', () => {
   })
 
   it('does not validate a replaced pending title with an older pending-title inspection', async () => {
-    const titleAInspection = createDeferred<RuntimeTerminalProcessInspection>()
-    const titleBInspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const titleAInspection = createDeferred<TerminalProcessInspection>()
+    const titleBInspection = createDeferred<TerminalProcessInspection>()
     const inspectProcess = vi
       .fn()
       .mockReturnValueOnce(titleAInspection.promise)
@@ -111,8 +111,8 @@ describe('agent completion coordinator', () => {
   })
 
   it('does not drop a replaced pending title from an older non-agent inspection', async () => {
-    const titleAInspection = createDeferred<RuntimeTerminalProcessInspection>()
-    const titleBInspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const titleAInspection = createDeferred<TerminalProcessInspection>()
+    const titleBInspection = createDeferred<TerminalProcessInspection>()
     const inspectProcess = vi
       .fn()
       .mockReturnValueOnce(titleAInspection.promise)
@@ -146,7 +146,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('does not dispatch a pending cwd title when process inspection fails', async () => {
-    const inspection = createRejectableDeferred<RuntimeTerminalProcessInspection>()
+    const inspection = createRejectableDeferred<TerminalProcessInspection>()
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',
@@ -166,7 +166,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('prefers a later explicit completion title over a pending cwd title', async () => {
-    const inspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const inspection = createDeferred<TerminalProcessInspection>()
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',
@@ -206,7 +206,7 @@ describe('agent completion coordinator', () => {
   })
 
   it('keeps a generic title completion pending long enough for the first remote inspection', async () => {
-    const inspection = createDeferred<RuntimeTerminalProcessInspection>()
+    const inspection = createDeferred<TerminalProcessInspection>()
     const dispatchCompletion = vi.fn()
     const coordinator = createAgentCompletionCoordinator({
       paneKey: 'tab-1:leaf-1',

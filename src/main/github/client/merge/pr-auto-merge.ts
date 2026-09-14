@@ -1,4 +1,7 @@
-import type { GitHubPRMergeMethod } from '../../../../shared/github/pull-request-types'
+import type {
+  GitHubOwnerRepo,
+  GitHubPRMergeMethod
+} from '../../../../shared/github/pull-request-types'
 import {
   ghExecFileAsync,
   acquire,
@@ -6,7 +9,7 @@ import {
   classifyGhError,
   type LocalGitExecOptions
 } from '../../gh-utils'
-import { resolveGitHubRepoExecution, type GitHubApiRepository } from '../../github-api-repository'
+import { resolveGitHubRepoExecution } from '../../github-api-repository'
 import { githubPRStackExecutionScope, type GhExecOptions } from './../github-exec-scope'
 import { detectRepositoryMergeMetadata } from './../detect/repository-merge-metadata'
 import { getRestPRByNumber } from './../lookup/pr-number-lookup'
@@ -35,7 +38,7 @@ export type PRAutoMergeIdentity = {
 
 export async function getPRAutoMergeIdentity(
   prNumber: number,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions
 ): Promise<PRAutoMergeIdentity | null> {
   const args = ['pr', 'view', String(prNumber), '--json', PR_AUTO_MERGE_IDENTITY_JSON_FIELDS]
@@ -54,7 +57,7 @@ export async function getPRAutoMergeIdentity(
 export async function runPRAutoMergeCommand(
   prNumber: number,
   method: GitHubPRMergeMethod,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions
 ): Promise<void> {
   const args = ['pr', 'merge', String(prNumber), '--auto', `--${method}`]
@@ -69,7 +72,7 @@ export async function runPRAutoMergeCommand(
 
 export async function shouldUseMergeQueueAutoMerge(
   pr: PRAutoMergeIdentity,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions,
   executionScope?: string
 ): Promise<boolean> {
@@ -88,7 +91,7 @@ export async function shouldUseMergeQueueAutoMerge(
 export async function enablePRAutoMerge(
   prNumber: number,
   method: GitHubPRMergeMethod,
-  ownerRepo: GitHubApiRepository | null,
+  ownerRepo: GitHubOwnerRepo | null,
   ghOptions: GhExecOptions,
   executionScope?: string
 ): Promise<{ ok: true } | { ok: false; error: string }> {
@@ -150,7 +153,7 @@ export async function setPRAutoMerge(
   enabled: boolean,
   method: GitHubPRMergeMethod = 'squash',
   connectionId?: string | null,
-  prRepo?: GitHubApiRepository | null,
+  prRepo?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<{ ok: true } | { ok: false; error: string }> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(

@@ -1,5 +1,5 @@
 import type { GitHubCommentResult, PRComment } from '../../shared/github/comment-types'
-import type { LocalGitExecOptions, OwnerRepo } from './gh-utils'
+import type { LocalGitExecOptions, GitHubOwnerRepo } from './gh-utils'
 import { getIssueGitHubApiRepository, resolveGitHubRepoExecution } from './github-api-repository'
 import { acquire, classifyGhError, ghExecFileAsync, release } from './gh-utils'
 
@@ -20,7 +20,7 @@ export async function addIssueComment(
   issueNumber: number,
   body: string,
   connectionId?: string | null,
-  ownerRepoOverride?: OwnerRepo | null,
+  ownerRepoOverride?: GitHubOwnerRepo | null,
   localGitOptions: LocalGitExecOptions = {}
 ): Promise<GitHubCommentResult> {
   const { ownerRepo, ghOptions } = await resolveGitHubRepoExecution(

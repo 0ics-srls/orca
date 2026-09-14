@@ -6,7 +6,7 @@ import type Database from '../../sqlite/sync-database'
 import { OrchestrationDb } from './db'
 
 type OrchestrationDbAccess = {
-  db: Database.Database
+  db: Database
 }
 
 describe('task creation dependency readiness', () => {

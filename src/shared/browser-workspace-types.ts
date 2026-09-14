@@ -152,8 +152,6 @@ export type BrowserWorkspace = {
   docLocation?: BrowserPageDocLocation | null
 }
 
-export type BrowserTab = BrowserWorkspace
-
 export type BrowserSessionProfileScope = 'default' | 'isolated' | 'imported'
 
 export type BrowserSessionUserAgentMode = 'clean' | 'native'

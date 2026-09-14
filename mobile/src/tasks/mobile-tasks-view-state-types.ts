@@ -3,7 +3,7 @@ import type {
   TuiAgent,
   TaskProvider,
   GitHubProjectSettings,
-  GitHubProjectRef
+  GitHubProjectIdentity
 } from './mobile-tasks-dependencies'
 import type { GitHubProjectSortDirection } from '../../../src/shared/github/project-types'
 
@@ -159,7 +159,7 @@ export type GitHubProjectRow = {
 }
 
 export type GitHubProjectTable = {
-  project: GitHubProjectRef & {
+  project: GitHubProjectIdentity & {
     id: string
     title: string
     url: string

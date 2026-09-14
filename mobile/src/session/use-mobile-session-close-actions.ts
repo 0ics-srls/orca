@@ -1,4 +1,5 @@
-import type { MobileSessionTab, Terminal } from './mobile-session-route-types'
+import type { MobileSessionTab } from './mobile-session-route-types'
+import type { TerminalRecord } from './mobile-terminal-records'
 import type { MobileSessionContentCreateActionsModel } from './use-mobile-session-content-create-actions'
 
 export function useMobileSessionCloseActions(scope: MobileSessionContentCreateActionsModel) {
@@ -60,7 +61,7 @@ export function useMobileSessionCloseActions(scope: MobileSessionContentCreateAc
     }
   }
 
-  async function handleCloseTerminal(target: Terminal) {
+  async function handleCloseTerminal(target: TerminalRecord) {
     if (!client) {
       return
     }

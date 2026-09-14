@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest'
-import { RelayDispatcher, type SinkWriteSettlement } from './dispatcher'
+import { RelayDispatcher, type DispatcherWriterSettlement } from './dispatcher'
 import { relayWriterControlReserve } from './dispatcher-writer-admission'
 import {
   encodeJsonRpcFrame,
@@ -547,7 +547,7 @@ describe('RelayDispatcher', () => {
   })
 
   it('keeps a saturated legacy primary as required backpressure', () => {
-    const callbacks: ((result: SinkWriteSettlement) => void)[] = []
+    const callbacks: ((result: DispatcherWriterSettlement) => void)[] = []
     const legacyDispatcher = new RelayDispatcher(
       (_data, settle) => {
         callbacks.push(settle)
@@ -730,13 +730,13 @@ describe('RelayDispatcher', () => {
         client: object,
         msg: JsonRpcNotification,
         lane: string,
-        onSettled?: (result: SinkWriteSettlement) => void
+        onSettled?: (result: DispatcherWriterSettlement) => void
       ) => boolean
       enqueuePreparedFrame: (
         client: object,
         frame: object,
         lane: string,
-        onSettled?: (result: SinkWriteSettlement) => void
+        onSettled?: (result: DispatcherWriterSettlement) => void
       ) => boolean
     }
 

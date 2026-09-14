@@ -30,7 +30,7 @@ import { ClientSessionTabSelectionStore } from './client-session-tab-selection'
 import { WorktreeTerminalMutationLock } from './worktree-terminal-mutation-lock'
 import { RemoteRuntimeTerminalCreateIdempotency } from './remote-runtime-terminal-create-idempotency'
 import type { PtyIncarnationId } from '../../shared/pty-incarnation'
-import type { MobileSessionTabsNotifyCoalescer } from './mobile-session-tabs-notify-coalescer'
+import type { KeyedTrailingEdgeCoalescer } from './keyed-trailing-edge-coalescer'
 import { createMobileSessionTabsNotifyCoalescer } from './mobile-session-tabs-notify-coalescer'
 import type { MobileSessionTabsAgentStatusHeartbeat } from './mobile-session-tabs-agent-status-heartbeat'
 import { createMobileSessionTabsAgentStatusHeartbeat } from './mobile-session-tabs-agent-status-heartbeat'
@@ -243,7 +243,7 @@ export class OrcaRuntimeWithRuntimeId {
   // Why: coalesces title/status-driven session.tabs emits so spinner churn
   // doesn't fan out (and per-client JSON.stringify) a snapshot several times a
   // second. Emit reads the latest snapshot, so only the freshest version ships.
-  protected readonly mobileSessionTabsNotifyCoalescer: MobileSessionTabsNotifyCoalescer =
+  protected readonly mobileSessionTabsNotifyCoalescer: KeyedTrailingEdgeCoalescer =
     createMobileSessionTabsNotifyCoalescer((worktreeId) =>
       this.flushScheduledMobileSessionTabsChanged(worktreeId)
     )

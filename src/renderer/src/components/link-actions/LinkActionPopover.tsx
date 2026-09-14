@@ -9,7 +9,8 @@ import { useClipboardTextCopyFeedback } from '@/hooks/use-clipboard-text-copy-fe
 import { translate } from '@/i18n/i18n'
 import { BROWSER_TERMINAL_LINK_ACTIONS_SETTINGS_TARGET_ID } from '@/lib/settings-navigation-types'
 import { useAppStore } from '@/store'
-import type { LinkAction, LinkActionRequest } from './link-action-request'
+import type { LinkActionRequest } from './link-action-request'
+import type { HttpLinkAction } from '@/lib/http-link-destinations'
 
 type LinkActionPopoverProps<TRequest extends LinkActionRequest> = {
   request: TRequest | null
@@ -21,7 +22,7 @@ function ActionRow({
   alternate,
   onRun
 }: {
-  action: LinkAction
+  action: HttpLinkAction
   alternate: boolean
   onRun: () => void
 }): React.JSX.Element {
@@ -65,7 +66,7 @@ export function LinkActionPopover<TRequest extends LinkActionRequest>({
     [request?.anchorX, request?.anchorY]
   )
 
-  const runAction = (action: LinkAction): void => {
+  const runAction = (action: HttpLinkAction): void => {
     onClose()
     request?.restoreFocus()
     void action.run()

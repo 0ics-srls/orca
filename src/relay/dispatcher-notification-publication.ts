@@ -1,4 +1,4 @@
-import type { SinkWriteSettlement } from './dispatcher-client-writer'
+import type { DispatcherWriterSettlement } from './dispatcher-client-writer'
 import type { JsonRpcNotification } from './protocol'
 import {
   DROPPED_NOTIFICATION_LOG_KEY_LIMIT,
@@ -86,7 +86,7 @@ export abstract class RelayDispatcherNotificationPublication extends RelayDispat
     clientId: number,
     method: string,
     params?: Record<string, unknown>,
-    onSettled: (result: SinkWriteSettlement) => void = () => {},
+    onSettled: (result: DispatcherWriterSettlement) => void = () => {},
     options: {
       controlOverflow?: 'close-client' | 'reject'
     } = {}

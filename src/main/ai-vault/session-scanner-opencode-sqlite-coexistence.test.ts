@@ -56,14 +56,14 @@ function isolatedScanRoots(root: string) {
   }
 }
 
-function createTempOpenCodeDb(): { db: Database.Database; path: string } {
+function createTempOpenCodeDb(): { db: Database; path: string } {
   const dir = mkdtempSync(join(tmpdir(), 'orca-ai-vault-sqlite-'))
   tempDbDirs.push(dir)
   const path = join(dir, 'opencode.db')
   return { db: new Database(path), path }
 }
 
-function applyOpenCodeSchema(db: Database.Database): void {
+function applyOpenCodeSchema(db: Database): void {
   db.exec(`
     CREATE TABLE session (
       id TEXT PRIMARY KEY,

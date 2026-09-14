@@ -10,14 +10,13 @@ import {
   agentSummary,
   agentTitle,
   threadAgentState,
-  threadAgentStateLabel,
-  type ActivityThreadStatusId
+  threadAgentStateLabel
 } from './activity-thread-presentation'
 import type { ActivityGroupBy, ActivityThreadGroup, AgentPaneThread } from './activity-thread-types'
 
 // Attention-first. Exhaustive Record so an unranked dot state is a type error; ranks are
 // unique so header order never falls back to thread recency.
-const ACTIVITY_STATUS_GROUP_RANK: Record<ActivityThreadStatusId, number> = {
+const ACTIVITY_STATUS_GROUP_RANK: Record<AgentDotState, number> = {
   waiting: 0,
   blocked: 1,
   permission: 2,

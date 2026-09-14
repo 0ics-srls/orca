@@ -18,8 +18,6 @@ import type {
   RuntimeTerminalPresentation
 } from '../../shared/runtime-types'
 
-type DriverState = RuntimeTerminalDriverState
-
 export type RuntimeNotifier = {
   automationsChanged?(payload: {
     selector?: { kind: 'self' } | { kind: 'ssh'; targetId: string } | { kind: 'orphan' }
@@ -140,7 +138,7 @@ export type RuntimeNotifier = {
   // actor's clientId so the renderer can disambiguate multi-phone scenarios
   // and so a future write coordinator can use the same signal as scheduling
   // input. See docs/mobile-presence-lock.md.
-  terminalDriverChanged(ptyId: string, driver: DriverState): void
+  terminalDriverChanged(ptyId: string, driver: RuntimeTerminalDriverState): void
   nativeChatLaunchDraftResolved?(
     tabId: string,
     resolution: { text: string; createdAt: number }

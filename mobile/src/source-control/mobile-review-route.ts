@@ -1,6 +1,6 @@
-import type { MobileGitStagingArea } from './mobile-git-status'
+import type { GitStagingArea } from '../../../src/shared/git-status-types'
 
-export type MobileReviewRouteArea = MobileGitStagingArea | 'branch'
+export type MobileReviewRouteArea = GitStagingArea | 'branch'
 
 export type MobileReviewRouteTarget = {
   hostId: string

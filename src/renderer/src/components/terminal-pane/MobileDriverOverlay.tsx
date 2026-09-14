@@ -2,7 +2,7 @@ import { useCallback, useEffect, useId, useRef, useState, type ReactElement } fr
 import { Smartphone } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
-import type { DriverState } from '@/lib/pane-manager/mobile-driver-state'
+import type { RuntimeTerminalDriverState } from '../../../../shared/runtime-types'
 import { shouldFocusMobileDriverAction } from './mobile-driver-overlay-focus'
 import {
   createMobileDriverOverlayCollapseState,
@@ -11,7 +11,7 @@ import {
 import { translate } from '@/i18n/i18n'
 
 type Props = {
-  driver: DriverState
+  driver: RuntimeTerminalDriverState
   hasFitOverride: boolean
   onAction: () => void | Promise<void>
   onAllAction?: () => void | Promise<void>

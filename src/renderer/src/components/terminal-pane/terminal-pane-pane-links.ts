@@ -5,9 +5,9 @@ import type { TerminalPaneLifecycleRefs } from './use-terminal-pane-lifecycle-re
 import type { LinkHandlerDeps } from './terminal-link-handlers'
 import type { TerminalLinkActionContext } from './terminal-link-action-request'
 import type {
-  TerminalHttpLinkActionDestinations,
-  TerminalLinkRoutingPreferenceRequester
-} from './terminal-url-link-hit-testing'
+  HttpLinkActionDestinations,
+  HttpLinkRoutingPreferenceRequester
+} from '@/lib/http-link-destinations'
 import {
   createFilePathLinkProvider,
   installFilePathLinkClickFallback
@@ -47,9 +47,9 @@ type PaneLinkContext = {
   >
   linkDeps: LinkHandlerDeps
   fileOpenLinkHint: string
-  requestOpenLinksInAppPreference: TerminalLinkRoutingPreferenceRequester
+  requestOpenLinksInAppPreference: HttpLinkRoutingPreferenceRequester
   getHttpLinkSourceOwnerForPane: (paneId: number) => HttpLinkSourceOwner
-  getHttpLinkActionDestinations: (paneId: number) => TerminalHttpLinkActionDestinations
+  getHttpLinkActionDestinations: (paneId: number) => HttpLinkActionDestinations
   getLinkActionContext: (paneId: number) => TerminalLinkActionContext | null
   getPaneLinkCwd: (paneId: number) => string
   getUrlOpenLinkHint: (paneId: number) => string

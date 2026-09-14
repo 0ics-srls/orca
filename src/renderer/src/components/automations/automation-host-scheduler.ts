@@ -100,8 +100,6 @@ export type AutomationHostScheduler = {
   dispose: () => void
 }
 
-type PlannedTarget = PlannedAutomationHostTarget
-
 function scopeSelectorFor(target: AutomationHostFetchTarget): AutomationListScopeSelector | null {
   const selector = target.ref.selector
   if (selector.kind === 'self' || selector.kind === 'orphan') {
@@ -148,7 +146,7 @@ export function createAutomationHostScheduler(
     retry: (target) => void refresh([target], { force: true })
   })
 
-  const stillCurrent = (target: PlannedTarget): boolean =>
+  const stillCurrent = (target: PlannedAutomationHostTarget): boolean =>
     !disposed &&
     cache.getByKey(target.stableKey)?.requestGeneration === target.fence.requestGeneration
 
@@ -160,10 +158,10 @@ export function createAutomationHostScheduler(
    * response; it is one response and one stale entry.
    */
   const settleGroup = (
-    live: readonly PlannedTarget[],
+    live: readonly PlannedAutomationHostTarget[],
     stableKey: string | null,
     outcome: 'commit' | 'failure',
-    apply: (target: PlannedTarget) => boolean
+    apply: (target: PlannedAutomationHostTarget) => boolean
   ): void => {
     let landed = 0
     for (const target of live) {
@@ -178,7 +176,7 @@ export function createAutomationHostScheduler(
     }
   }
 
-  const runScoped = async (target: PlannedTarget): Promise<void> => {
+  const runScoped = async (target: PlannedAutomationHostTarget): Promise<void> => {
     if (!stillCurrent(target)) {
       return
     }
@@ -205,7 +203,9 @@ export function createAutomationHostScheduler(
     }
   }
 
-  const runLegacyAuthority = async (targets: readonly PlannedTarget[]): Promise<void> => {
+  const runLegacyAuthority = async (
+    targets: readonly PlannedAutomationHostTarget[]
+  ): Promise<void> => {
     const live = targets.filter(stillCurrent)
     if (live.length === 0) {
       return
@@ -223,7 +223,7 @@ export function createAutomationHostScheduler(
         options.legacyPartitionContext(live[0].ref.authority),
         hostStableKey
       )
-      const rowsFor = (target: PlannedTarget): readonly AutomationHostRow[] =>
+      const rowsFor = (target: PlannedAutomationHostTarget): readonly AutomationHostRow[] =>
         partition.rowsByStableKey.get(target.stableKey) ?? []
       // The call belongs to the authority, but the rows belong to the hosts —
       // without this, per-host row counts are missing exactly where payload is worst.
@@ -243,7 +243,7 @@ export function createAutomationHostScheduler(
   }
 
   /** Hands back the markers of queued work the pool dropped before sending it. */
-  const abandon = (targets: readonly PlannedTarget[]): void => {
+  const abandon = (targets: readonly PlannedAutomationHostTarget[]): void => {
     for (const target of targets) {
       cache.abandonRequest(target.fence)
     }
@@ -291,7 +291,7 @@ export function createAutomationHostScheduler(
       )
     }
     const fetchable = planned.filter((target) => target.querySupport !== 'incompatible')
-    const legacyByAuthority = new Map<string, PlannedTarget[]>()
+    const legacyByAuthority = new Map<string, PlannedAutomationHostTarget[]>()
     const submitted: Promise<void>[] = [...joined]
     for (const target of fetchable) {
       if (target.querySupport === 'legacy-unscoped') {
