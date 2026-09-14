@@ -215,7 +215,7 @@ families because no reference states are defined for them.
 
 ## What this oracle does and does not see
 
-It replays 78 scenarios against frozen goldens and fails on any divergence: 153 goldens over 200
+It replays 78 scenarios against frozen goldens and fails on any divergence: 153 goldens over 209
 tests, all inside `pnpm --dir mobile test`. For a migration it answers one question — does the
 rewritten call site produce the same sender calls, settlements, state and effects as main did?
 
