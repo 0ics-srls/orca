@@ -1,12 +1,13 @@
 import { getPiCompatibleTitleSeparatorStatus } from './pi-compatible-synthetic-title'
 import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { detectAgentStatusFromTitle, getAgentLabel } from './agent-detection'
 import { normalizeCompatibleAgentTitleForOwner } from './agent-title-owner'
 import { clearPiStateWorkingMarker } from './pi-state-title-marker'
 
 const transcript = readFileSync(
-  new URL('../main/runtime/__fixtures__/omp-native-title-win32.txt', import.meta.url),
+  join(__dirname, '..', 'main', 'runtime', '__fixtures__', 'omp-native-title-win32.txt'),
   'utf8'
 )
 // oxlint-disable-next-line no-control-regex -- The fixture retains actual OSC control bytes.
