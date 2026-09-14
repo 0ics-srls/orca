@@ -18,7 +18,7 @@ const alive = (pid: number): boolean => {
 /** Run a hook past its deadline and report which of its real processes survived. */
 async function survivorsAfterDeadline(
   script: string
-): Promise<{ shell: boolean; child: boolean; pids: number[] }> {
+): Promise<{ shell: boolean; child: boolean; output: string; pids: number[] }> {
   const { runHook } = await import('./hooks')
   const dir = mkdtempSync(join(tmpdir(), 'orca-term-'))
   const pidFile = join(dir, 'pids')
@@ -34,7 +34,7 @@ async function survivorsAfterDeadline(
     await new Promise((resolve) => setTimeout(resolve, 3_500))
     expect(existsSync(pidFile)).toBe(true)
     pids = readFileSync(pidFile, 'utf8').trim().split(/\s+/).map(Number)
-    return { shell: alive(pids[0]!), child: alive(pids[1]!), pids }
+    return { shell: alive(pids[0]!), child: alive(pids[1]!), output: result.output, pids }
   } finally {
     for (const pid of pids) {
       try {
@@ -53,10 +53,12 @@ async function survivorsAfterDeadline(
 // or not a real group exists. That is the precise condition the bug turns on.
 describe.skipIf(process.platform === 'win32')('hook termination against real processes', () => {
   it('kills the shell and its child when the deadline expires', async () => {
-    const { shell, child } = await survivorsAfterDeadline(
-      'sleep 120 &\necho "$$ $!" > "$PWD/pids"\nwait'
+    const { shell, child, output } = await survivorsAfterDeadline(
+      'echo "archive step 3 of 7"\nsleep 120 &\necho "$$ $!" > "$PWD/pids"\nwait'
     )
     expect({ shell, child }).toEqual({ shell: false, child: false })
+    // The gate reports this run as `unverifiable`; what the hook printed is the only clue why.
+    expect(output).toContain('archive step 3 of 7')
   }, 30_000)
 
   it('kills a descendant that ignores SIGTERM', async () => {

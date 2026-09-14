@@ -248,8 +248,7 @@ export function runHook(
     // reports whatever it chose to do, so a hook that traps SIGTERM and exits 0 came back as a
     // PASS — a hook cut off mid-archive, indistinguishable from one that finished. Settle on the
     // deadline instead, and settle AT it, so a hook that traps and keeps running cannot hold a
-    // removal open. `exec` stays because it owns the per-platform shell invocation (`cmd.exe`
-    // wants `/d /s /c`, not `-c`), which is not this change's to re-derive.
+    // removal open.
     let settled = false
     let deadline: NodeJS.Timeout | undefined
     const settle = (result: HookProcessOutcome): void => {
@@ -304,7 +303,9 @@ export function runHook(
       deadline = setTimeout(() => {
         settle(
           classifyHookProcessResult(
-            { code: null, stdout: '', stderr: '', timedOut: true },
+            // Keep what the hook printed: it is the only clue to why the removal gate says
+            // `unverifiable`.
+            { code: null, stdout, stderr, timedOut: true },
             { hookName, cwd, timeoutMs }
           )
         )
