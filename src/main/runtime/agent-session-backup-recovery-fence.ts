@@ -8,8 +8,8 @@
 // The bound "one lost commit can advance a session's fence by at most 1" is what makes +2 enough.
 // It holds because every mint site routes through `nextAgentSessionFence` and each performs one
 // transition per transaction, and because the save path aborts rather than letting the primary
-// advance past a stale backup. A batching refactor would break it silently, so it is pinned by a
-// test.
+// advance past a stale backup. A source-level ratchet rejects direct `+ 1` mints, while
+// acquisition-transition tests pin the one-step bound and floor; an indirected mint is not caught.
 //
 // This records a FLOOR for the next grant and leaves the current fence alone. Rewriting the current
 // fence is what an earlier version did, and it corrupted exactly the records it meant to save: a
