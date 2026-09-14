@@ -2984,6 +2984,28 @@
               }
             }
           }
+        },
+        "activation": {
+          "recovery": {
+            "blocked": {
+              "title": "Workspace recovery is paused",
+              "description": "Orca could not safely determine whether this workspace already owns a running surface."
+            },
+            "producerFailed": {
+              "title": "The requested surface did not open",
+              "description": "The surface producer reported a failure. Retry after correcting the problem."
+            },
+            "unverifiable": {
+              "title": "Reconnect to continue",
+              "description": "Orca cannot verify the execution host, so it will not start another process."
+            },
+            "unexpected": {
+              "title": "Workspace recovery failed",
+              "description": "An unexpected error interrupted workspace recovery."
+            },
+            "progress": "Checking workspace surfaces…",
+            "retry": "Retry"
+          }
         }
       },
       "ui": {
