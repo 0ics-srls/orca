@@ -2,15 +2,20 @@ import type { MountAdapter } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
 
 const WORKSPACE = 'workspace-1'
-const ARTIFACT = {
-  source: 'terminalArtifact' as const,
-  worktreeId: WORKSPACE,
-  absolutePath: '/logs/run.txt',
-  grantId: 'grant-1',
-  terminalHandle: 'terminal-1',
-  pathText: 'run.txt',
-  cwd: '/logs'
+/** The artifact a scenario reads; the path decides which of the two artifact methods it asks. */
+function artifactSource(absolutePath: string) {
+  return {
+    source: 'terminalArtifact' as const,
+    worktreeId: WORKSPACE,
+    absolutePath,
+    grantId: 'grant-1',
+    terminalHandle: 'terminal-1',
+    pathText: absolutePath.slice(absolutePath.lastIndexOf('/') + 1),
+    cwd: '/logs'
+  }
 }
+
+const ARTIFACT = artifactSource('/logs/run.txt')
 
 /**
  * The file reads and writes a session file tab runs: ownership capture before a mutation, the
@@ -43,11 +48,11 @@ export function fileRequestMountAdapters(
       ).loadMobileFilePreview
       let preview: unknown = 'unloaded'
       return {
-        action(name) {
+        action(name, args) {
           const request =
             name === 'worktree'
-              ? load(client, WORKSPACE, 'docs/readme.md')
-              : load(client, ARTIFACT, undefined, {
+              ? load(client, WORKSPACE, String(args.path ?? 'docs/readme.md'))
+              : load(client, artifactSource(String(args.path ?? '/logs/run.txt')), undefined, {
                   onTerminalArtifactSourceRefreshed: (source: unknown) =>
                     effect('artifact-source-refreshed', source)
                 })

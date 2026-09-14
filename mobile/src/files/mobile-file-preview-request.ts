@@ -136,7 +136,7 @@ function settlePreviewSend(
   const verdict = interpret(reply)
   return verdict.accepted
     ? { accepted: true, payload: verdict.value }
-    : // The policy skipped it, so the envelope is the refusal it skipped.
+    : // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this policy skips only a refusal, so an unaccepted reply is a failure envelope.
       { accepted: false, refusal: (reply as RpcFailure).error }
 }
 

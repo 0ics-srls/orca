@@ -7005,6 +7005,79 @@
       ]
     },
     {
+      "id": "files-preview-worktree-image",
+      "operation": "files.preview-load",
+      "version": 1,
+      "family": "files.preview-load",
+      "sites": ["mobile/src/files/mobile-file-preview-request.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "worktree",
+          "id": "load",
+          "args": {
+            "path": "docs/logo.png"
+          }
+        },
+        {
+          "complete": "files.readPreview#1",
+          "params": {
+            "worktree": "id:workspace-1",
+            "relativePath": "docs/logo.png"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "content": "aGk=",
+              "isBinary": true,
+              "isImage": true,
+              "mimeType": "image/png"
+            }
+          }
+        },
+        {
+          "checkpoint": "settled"
+        }
+      ]
+    },
+    {
+      "id": "files-preview-artifact-image",
+      "operation": "files.preview-load",
+      "version": 1,
+      "family": "files.preview-load",
+      "sites": ["mobile/src/files/mobile-file-preview-request.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "artifact",
+          "id": "load",
+          "args": {
+            "path": "/logs/shot.png"
+          }
+        },
+        {
+          "complete": "files.readTerminalArtifactPreview#1",
+          "params": {
+            "worktree": "id:workspace-1",
+            "absolutePath": "/logs/shot.png",
+            "grantId": "grant-1"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "content": "aGk=",
+              "isBinary": true,
+              "isImage": true,
+              "mimeType": "image/png"
+            }
+          }
+        },
+        {
+          "checkpoint": "settled"
+        }
+      ]
+    },
+    {
       "id": "files-save-verified",
       "operation": "files.preview-save",
       "version": 1,

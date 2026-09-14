@@ -1,43 +1,50 @@
 {
-  "operation": "files.preview-save",
-  "family": "files.preview-save",
+  "operation": "files.preview-load",
+  "family": "files.preview-load",
   "namedDeltas": [],
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "2e90933db32efc17d752cf5d506ecdd9ec54ce53ea30ba55021ea3d1bc1d3fb2",
   "adapterSha256": "b93fc8b6f1ece041acaa8cc5699852085e67d7e2f39db13145e483f854ea3309",
-  "scenarioSha256": "8b5c3e87d989966d7b252f19a537040cd5078ba9355a824e7e49af3424390a3e",
+  "scenarioSha256": "0ffaffb472b663e08a42317d799a2a000211dda5b127fb21cc64f04f73800130",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "39c6d10eb5a5": {
-      "name": "files.writeTerminalArtifact#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.writeTerminalArtifact\",\"params\":{\"worktree\":\"id:workspace-1\",\"absolutePath\":\"/logs/run.txt\",\"grantId\":\"grant-1\",\"content\":\"next\"}}"
+    "3acec737cb08": {
+      "name": "files.readPreview#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.readPreview\",\"params\":{\"worktree\":\"id:workspace-1\",\"relativePath\":\"docs/logo.png\"}}"
     },
-    "54a6055a16b5": {
+    "7659b8b575da": {
+      "preview": {
+        "dataUri": "data:image/png;base64,aGk=",
+        "kind": "image",
+        "status": "ready"
+      }
+    },
+    "eee847a9d90d": {
       "status": "fulfilled",
       "startedAt": 0,
       "settledAt": 0,
       "value": {
-        "status": "saved"
+        "dataUri": "data:image/png;base64,aGk=",
+        "kind": "image",
+        "status": "ready"
       }
     },
-    "936b6553a1e7": {
-      "name": "files.writeTerminalArtifact#1",
+    "f6564bdb4e19": {
+      "name": "files.readPreview#1",
       "args": [
         {
           "name": "method",
-          "value": "files.writeTerminalArtifact"
+          "value": "files.readPreview"
         },
         {
           "name": "params",
           "value": {
-            "absolutePath": "/logs/run.txt",
-            "content": "next",
-            "grantId": "grant-1",
+            "relativePath": "docs/logo.png",
             "worktree": "id:workspace-1"
           }
         },
@@ -56,29 +63,27 @@
           "id": "frame-1",
           "ok": true,
           "result": {
-            "ok": true
+            "content": "aGk=",
+            "isBinary": true,
+            "isImage": true,
+            "mimeType": "image/png"
           }
         }
-      }
-    },
-    "b3f873eb7d0c": {
-      "saved": {
-        "status": "saved"
       }
     }
   },
   "recording": {
-    "scenario": "files-save-blind",
+    "scenario": "files-preview-worktree-image",
     "checkpoints": [
       {
         "id": "settled",
         "observation": {
-          "sender": ["936b6553a1e7"],
-          "payloads": ["39c6d10eb5a5"],
+          "sender": ["f6564bdb4e19"],
+          "payloads": ["3acec737cb08"],
           "settlements": {
-            "save": "54a6055a16b5"
+            "load": "eee847a9d90d"
           },
-          "state": "b3f873eb7d0c",
+          "state": "7659b8b575da",
           "effects": []
         }
       }
