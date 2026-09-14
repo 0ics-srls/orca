@@ -47,7 +47,7 @@ describe('copyTerminalSelection gutter handling', () => {
     expect(writeClipboardText).toHaveBeenCalledWith(UNGUTTERED)
   })
 
-  it('still reports no selection when the gutter is all there was', async () => {
+  it('still reports no selection for an empty xterm selection', async () => {
     const writeClipboardText = vi.fn<(text: string) => Promise<void>>().mockResolvedValue()
     await expect(
       copyTerminalSelection({

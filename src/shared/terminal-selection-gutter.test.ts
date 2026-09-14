@@ -1,8 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  measureTerminalSelectionGutter,
-  stripTerminalSelectionGutter
-} from './terminal-selection-gutter'
+import { stripTerminalSelectionGutter } from './terminal-selection-gutter'
 
 // Shape agent CLIs paint: a marker column, then continuation lines behind a
 // two-space gutter. Selecting the body is what users copy to paste elsewhere.
@@ -49,11 +46,15 @@ describe('stripTerminalSelectionGutter', () => {
   })
 
   it('ignores blank lines when measuring the gutter', () => {
-    expect(measureTerminalSelectionGutter(['  a', '', '  b'].join('\n'))).toBe(2)
+    expect(stripTerminalSelectionGutter(['  a', '', '  b'].join('\n'))).toBe(
+      ['a', '', 'b'].join('\n')
+    )
   })
 
   it('ignores whitespace-only lines when measuring the gutter', () => {
-    expect(measureTerminalSelectionGutter(['    a', ' ', '    b'].join('\n'))).toBe(4)
+    expect(stripTerminalSelectionGutter(['    a', ' ', '    b'].join('\n'))).toBe(
+      ['a', '', 'b'].join('\n')
+    )
   })
 
   it('leaves an all-whitespace selection untouched', () => {

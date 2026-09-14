@@ -1,54 +1,49 @@
-// Why: xterm selections are screen cells, not logical text. Agent CLIs paint
-// their messages behind a fixed left gutter (Claude Code indents continuation
-// lines by two spaces), so every copied line carries that gutter into the
-// clipboard and pasted replies come out indented (#19770).
+// Why: an xterm selection is a rectangle of screen cells, not logical text.
+// Agent CLIs paint their messages behind a fixed left gutter, so every copied
+// line carried that gutter into the clipboard and pasted replies came out
+// indented (#19770).
 //
-// Only the run of spaces that *every* selected line shares is removed, so
-// relative indentation — nested bullets, fenced code, YAML — survives intact.
-// A selection that starts mid-line has a non-space first line, which makes the
-// shared run zero and turns this into a no-op.
+// Only the run of spaces that *every* non-blank line shares is removed, so
+// relative indentation — nested bullets, fenced code, YAML — survives. A
+// selection that starts mid-line, or that covers any column-0 line, shares a
+// run of zero and comes back untouched.
 
+// Terminal cells never hold tabs (the emulator expands them) and xterm folds
+// non-breaking spaces into plain ones, so spaces are the whole alphabet here.
 const LEADING_SPACES = /^ */
 
-// xterm writes CRLF joins on Windows; keep the terminator it chose.
-function splitCarriageReturn(line: string): [string, string] {
-  return line.endsWith('\r') ? [line.slice(0, -1), '\r'] : [line, '']
+function measureIndent(line: string): number {
+  return LEADING_SPACES.exec(line)?.[0].length ?? 0
 }
 
-/** Width of the space run shared by every non-blank line, or 0 when there is none. */
-export function measureTerminalSelectionGutter(selection: string): number {
+// xterm joins rows with CRLF on Windows, so split('\n') leaves the CR behind.
+function splitTerminator(rawLine: string): readonly [text: string, terminator: string] {
+  return rawLine.endsWith('\r') ? [rawLine.slice(0, -1), '\r'] : [rawLine, '']
+}
+
+function measureGutter(lines: readonly string[]): number {
   let gutter = Number.POSITIVE_INFINITY
-  for (const rawLine of selection.split('\n')) {
-    const [line] = splitCarriageReturn(rawLine)
-    const indent = LEADING_SPACES.exec(line)?.[0].length ?? 0
-    // Blank and whitespace-only lines carry no gutter evidence either way.
+  for (const line of lines) {
+    const indent = measureIndent(line)
+    // Blank and whitespace-only lines are evidence of nothing either way.
     if (indent === line.length) {
       continue
     }
-    if (indent < gutter) {
-      gutter = indent
-      if (gutter === 0) {
-        return 0
-      }
+    gutter = Math.min(gutter, indent)
+    if (gutter === 0) {
+      return 0
     }
   }
   return Number.isFinite(gutter) ? gutter : 0
 }
 
 export function stripTerminalSelectionGutter(selection: string): string {
-  if (!selection) {
-    return selection
-  }
-  const gutter = measureTerminalSelectionGutter(selection)
+  const lines = selection.split('\n').map(splitTerminator)
+  const gutter = measureGutter(lines.map(([text]) => text))
   if (gutter === 0) {
     return selection
   }
-  return selection
-    .split('\n')
-    .map((rawLine) => {
-      const [line, terminator] = splitCarriageReturn(rawLine)
-      const indent = LEADING_SPACES.exec(line)?.[0].length ?? 0
-      return line.slice(Math.min(indent, gutter)) + terminator
-    })
+  return lines
+    .map(([text, terminator]) => text.slice(Math.min(measureIndent(text), gutter)) + terminator)
     .join('\n')
 }
