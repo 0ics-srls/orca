@@ -101,7 +101,7 @@ describe('OMP session root parity', () => {
       ).toBe(suffix === 'custom-sessions' ? root : legacy)
     }
   )
-  it.each(['', ' ', '/', 'C:\\', 'C:'])(
+  it.each(['', ' ', '/', 'C:\\', 'C:/', 'C:', 'C:.'])(
     'refuses explicit degenerate root %j without fallback',
     (sessionsDir) => {
       expect(resolveOmpSessionsDir({ sessionsDir })).toBe('')
@@ -109,7 +109,7 @@ describe('OMP session root parity', () => {
       expect(AI_VAULT_AGENT_SOURCES.omp?.rootDirs({ ompSessionsDir: sessionsDir }, [])).toEqual([])
     }
   )
-  it.each(['/', '/..', 'C:\\'])(
+  it.each(['/', '/..', 'C:\\', 'C:/', 'C:', 'C:.'])(
     'does not replace a refused legacy root %s with XDG',
     (override) => {
       const { home, xdg } = fixture()

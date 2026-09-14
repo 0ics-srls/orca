@@ -22,7 +22,7 @@ function safeRoot(value: string): string {
     normalized === '.' ||
     normalized === parse(normalized).root ||
     normalized === win32.parse(normalized).root ||
-    /^[a-z]:$/i.test(normalized)
+    /^[a-z]:(?:\.)?$/i.test(normalized)
     ? ''
     : trimmed
 }
