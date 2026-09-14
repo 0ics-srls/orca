@@ -3,9 +3,9 @@ export function getAgentStatusInputRedactionSourceLines(): string[] {
   return String.raw`
 function statusInputReferencesCredentialPath(value: string): boolean {
   const path = value.replace(/\\/g, '/')
-  return /(?:^|[^a-z0-9_.-])\.(?:ssh|ssh-mcp)(?=$|[^a-z0-9_.-])/i.test(path) ||
+  return /(?:^|[^a-z0-9_.-]|\$(?:[a-z_][a-z0-9_]*|[0-9]))\.(?:ssh|ssh-mcp)(?=$|[^a-z0-9_.-])/i.test(path) ||
     /\.mcp-secrets\.env(?=$|[^a-z0-9_.-])/i.test(path) ||
-    /(?:^|[^a-z0-9_.-])\.omp-backups-archive\/omp-bak-keyfile(?=$|[^a-z0-9_.-])/i.test(path)
+    /(?:^|[^a-z0-9_.-]|\$(?:[a-z_][a-z0-9_]*|[0-9]))\.omp-backups-archive\/omp-bak-keyfile(?=$|[^a-z0-9_.-])/i.test(path)
 }
 
 function sanitizeStatusToolInput(input: unknown): unknown {
