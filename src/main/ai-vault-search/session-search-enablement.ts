@@ -5,7 +5,7 @@ import {
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { updateSessionSearchInService } from '../ai-vault/session-scanner-service-spawn'
 import { createChildSessionSearchService } from './session-search-child-service'
-import { installSessionSearchPolicySource, sessionSearchPolicy } from './session-search-policy'
+import { installSessionSearchPolicySource } from './session-search-policy'
 import { setSessionSearchService } from './session-search-service-registry'
 import {
   installSessionSearchDataRoot,
@@ -18,7 +18,7 @@ import { sameSessionSearchRoots, type SessionSearchScanRoots } from './session-s
 const ROOT_REFRESH_INTERVAL_MS = 5 * 60_000
 
 type RootRefresh = {
-  controller: AbortController
+  disposed: boolean
   timer: ReturnType<typeof setInterval> | null
   lastPushedRoots: SessionSearchScanRoots | null
 }
@@ -41,7 +41,7 @@ export function installChildSessionSearchService(args: {
     return null
   }
   const refresh: RootRefresh = {
-    controller: new AbortController(),
+    disposed: false,
     timer: null,
     lastPushedRoots: null
   }
@@ -49,11 +49,10 @@ export function installChildSessionSearchService(args: {
   installSessionSearchDataRoot(args.dataRoot)
   installSessionSearchPolicySource(args.getSettings)
   setSessionSearchService(createChildSessionSearchService())
-  updateRootRefreshTimer(refresh)
   void pushSessionSearchPolicy(refresh)
   return {
     dispose: () => {
-      refresh.controller.abort()
+      refresh.disposed = true
       if (refresh.timer) {
         clearInterval(refresh.timer)
       }
@@ -81,13 +80,12 @@ export function applySessionSearchSettingsChange(
     return
   }
   if (rootRefresh) {
-    updateRootRefreshTimer(rootRefresh)
     void pushSessionSearchPolicy(rootRefresh)
   }
 }
 
-function updateRootRefreshTimer(refresh: RootRefresh): void {
-  if (!sessionSearchPolicy().enabled) {
+function updateRootRefreshTimer(refresh: RootRefresh, enabled: boolean): void {
+  if (!enabled) {
     if (refresh.timer) {
       clearInterval(refresh.timer)
     }
@@ -103,13 +101,14 @@ function updateRootRefreshTimer(refresh: RootRefresh): void {
 async function pushSessionSearchPolicy(refresh: RootRefresh, policyChanged = true): Promise<void> {
   try {
     await refreshSessionSearchScanRoots()
-    if (refresh.controller.signal.aborted) {
+    if (refresh.disposed) {
       return
     }
     const init = sessionSearchServiceInit()
     if (!init) {
       return
     }
+    updateRootRefreshTimer(refresh, init.settings.enabled)
     if (
       !policyChanged &&
       (!init.settings.enabled ||
