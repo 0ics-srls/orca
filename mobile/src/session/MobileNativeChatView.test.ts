@@ -76,6 +76,7 @@ type Overrides = {
   turnIndicator?: Parameters<typeof MobileNativeChatView>[0]['turnIndicator']
   agentWorking?: boolean
   canStop?: boolean
+  ask?: Parameters<typeof MobileNativeChatView>[0]['ask']
   question?: Parameters<typeof MobileNativeChatView>[0]['question']
   permission?: Parameters<typeof MobileNativeChatView>[0]['permission']
   sendSurfaceId?: string
@@ -303,6 +304,21 @@ describe('MobileNativeChatView', () => {
     })
 
     it.each([
+      {
+        label: 'structured question',
+        cardType: 'ChatAsk',
+        interaction: {
+          ask: {
+            questions: [
+              {
+                question: 'Pick destination',
+                multiSelect: false,
+                options: [{ label: 'Choice A' }, { label: 'Choice B' }]
+              }
+            ]
+          }
+        }
+      },
       {
         label: 'question',
         cardType: 'ChatQuestion',

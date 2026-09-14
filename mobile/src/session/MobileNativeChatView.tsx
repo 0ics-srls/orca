@@ -279,7 +279,7 @@ export function MobileNativeChatView({
     scopeKey: sendSurfaceId
   })
   const hasPendingStructuredInteraction =
-    structuredActivityUi && (permission != null || question != null)
+    structuredActivityUi && (ask != null || permission != null || question != null)
 
   const renderItem = useCallback(
     ({ item, index }: { item: NativeChatMessage; index: number }) => (
