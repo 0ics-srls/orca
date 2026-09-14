@@ -1,6 +1,5 @@
 import { createPortal } from 'react-dom'
 import NativeChatView from '../native-chat/NativeChatView'
-import { NativeChatPaneFileDropSurface } from '../native-chat/NativeChatPaneFileDropSurface'
 import { makePaneKey } from '../../../../shared/stable-pane-id'
 import { canContinueAgentSessionInNewSession } from './terminal-agent-session-continuation'
 import type { TerminalPaneController } from './use-terminal-pane-controller'
@@ -69,7 +68,7 @@ export function TerminalPaneNativeChatPortal({
   }
 
   return createPortal(
-    <NativeChatPaneFileDropSurface className="native-chat-pane-shell absolute inset-0 z-10 flex min-h-0 min-w-0 bg-background">
+    <div className="native-chat-pane-shell absolute inset-0 z-10 flex min-h-0 min-w-0 bg-background">
       {structuredSessionId && structuredChatAgent ? (
         <NativeChatView
           mode="structured"
@@ -96,7 +95,7 @@ export function TerminalPaneNativeChatPortal({
           contextMenuActions={contextMenuActions}
         />
       )}
-    </NativeChatPaneFileDropSurface>,
+    </div>,
     chatPane.container,
     `native-chat-${tabId}-${chatPane.leafId}`
   )

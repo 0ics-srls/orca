@@ -28,12 +28,13 @@ export function useNativeChatPaneFileDropClaim(claim: NativeChatPaneDropClaim): 
   useLayoutEffect(() => {
     claimRef.current = claim
   })
-  const { scopeKey } = claim
+  const { scopeKey, disabled } = claim
   const registration = useMemo<NativeChatPaneDropRegistration>(
     () => ({ getClaim: () => claimRef.current, scopeKey }),
     [scopeKey]
   )
-  useLayoutEffect(() => register?.(registration), [register, registration])
+  // A guard transition ends the current hover before the next paint.
+  useLayoutEffect(() => register?.(registration), [disabled, register, registration])
 }
 
 export function NativeChatPaneFileDropSurface({
@@ -55,15 +56,13 @@ export function NativeChatPaneFileDropSurface({
     },
     []
   )
-  const registrationRef = useRef(registration)
-  registrationRef.current = registration
   const handlers = useMemo(
     () =>
       makeNativeChatPaneFileDropHandlers({
-        getClaim: () => registrationRef.current?.getClaim() ?? null,
+        getClaim: () => registration?.getClaim() ?? null,
         setDragActive: setIsDragActive
       }),
-    []
+    [registration]
   )
   // An OS drag never reaches React: the preload drop route consumes that event
   // before it leaves `document`. Its end is the only signal the overlay gets.

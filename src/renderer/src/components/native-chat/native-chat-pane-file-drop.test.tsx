@@ -152,6 +152,26 @@ describe('NativeChatPaneFileDropSurface', () => {
     expect(onDropCapture).not.toHaveBeenCalled()
   })
 
+  it('clears the active invitation when the composer becomes guarded', () => {
+    const pane = (disabled: boolean) => (
+      <NativeChatPaneFileDropSurface className="pane">
+        <ClaimingComposer disabled={disabled} />
+      </NativeChatPaneFileDropSurface>
+    )
+    const { container, rerender } = render(pane(false))
+    fireDrag(screen.getByTestId('composer'), 'dragover', workspaceDrag())
+    expect(container.querySelector(OVERLAY)).not.toBeNull()
+
+    rerender(pane(true))
+    expect(container.querySelector(OVERLAY)).toBeNull()
+    expect(container.querySelector('.pane')?.getAttribute('data-composer-scope-key')).toBe('pane:1')
+
+    rerender(pane(false))
+    expect(container.querySelector(OVERLAY)).toBeNull()
+    fireDrag(screen.getByTestId('composer'), 'dragover', workspaceDrag())
+    expect(container.querySelector(OVERLAY)).not.toBeNull()
+  })
+
   it('keeps the overlay up while the cursor crosses children, and drops it on exit', () => {
     const { transcript, container } = renderPane(<ClaimingComposer />)
     fireDrag(transcript, 'dragover', workspaceDrag())
