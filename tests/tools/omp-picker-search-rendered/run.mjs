@@ -44,11 +44,13 @@ try {
     errors.push(error.message)
     console.error(error)
   })
-  await page.goto(pathToFileURL(path.join(output, 'renderer/index.html')).href)
+  const baseline = process.env.ORCA_OMP_PICKER_BASELINE === '1'
+  const fixtureUrl = pathToFileURL(path.join(output, 'renderer/index.html'))
+  if (baseline) fixtureUrl.searchParams.set('baseline', '1')
+  await page.goto(fixtureUrl.href)
   await page.locator('button[role=combobox]').click()
   const search = page.getByPlaceholder('Search agents...')
   await search.fill('oh-my-pi')
-  const baseline = process.env.ORCA_OMP_PICKER_BASELINE === '1'
   await expect(
     baseline
       ? page.getByText('No agents match your search.')
