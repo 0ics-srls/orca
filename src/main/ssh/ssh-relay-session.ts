@@ -35,6 +35,7 @@ import {
   AGENT_HOOK_REQUEST_REPLAY_METHOD,
   isRemoteAgentHooksEnabled
 } from '../../shared/agent-hook-relay'
+import { AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES } from '../../shared/agent-status-legacy-adapter'
 import { _internals as openCodeInternals } from '../opencode/hook-service'
 import { getPiAgentStatusExtensionSource } from '../pi/agent-status-extension-source'
 import {
@@ -1608,7 +1609,8 @@ export class SshRelaySession {
               : undefined,
           payload: envelope.payload
         },
-        this.targetId
+        this.targetId,
+        AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
       )
     })
 

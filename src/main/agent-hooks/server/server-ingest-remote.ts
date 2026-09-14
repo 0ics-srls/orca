@@ -17,6 +17,11 @@ import {
 import { launchTokenHash } from '../../../shared/agent-hook-spool'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
+import {
+  AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES,
+  canAdmitLegacyAgentStatus,
+  olderPeerAgentStatusLegacyMode
+} from '../../../shared/agent-status-legacy-adapter'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
 
@@ -49,8 +54,17 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       claudeRunningNonAgentTask?: unknown
       payload: unknown
     },
-    connectionId: string | null
+    connectionId: string | null,
+    advertisedAgentStatusCapabilities: readonly string[] = AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
   ): void {
+    if (
+      !canAdmitLegacyAgentStatus(
+        'main-status-update',
+        olderPeerAgentStatusLegacyMode(advertisedAgentStatusCapabilities)
+      )
+    ) {
+      return
+    }
     // Why: wire crosses a trust boundary — re-check/trim so an empty connectionId can't poison caches.
     if (connectionId !== null && typeof connectionId !== 'string') {
       return

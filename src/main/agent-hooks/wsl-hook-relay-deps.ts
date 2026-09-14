@@ -5,6 +5,7 @@ import { createHash } from 'node:crypto'
 import { readFileSync } from 'node:fs'
 
 import { isAgentStatusHooksEnabled } from './managed-agent-hook-controls'
+import { AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES } from '../../shared/agent-status-legacy-adapter'
 import { agentHookServer } from './server'
 import type { ManagedHookDetectionSettings } from './managed-hook-detection-commands'
 import { installRemoteManagedAgentHooks } from './remote-managed-hook-installers'
@@ -102,7 +103,8 @@ export const defaultWslHookRelayDeps: WslHookRelayManagerDeps = {
   ingest: (envelope, connectionId) =>
     agentHookServer.ingestRemote(
       envelope as Parameters<typeof agentHookServer.ingestRemote>[0],
-      connectionId
+      connectionId,
+      AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
     ),
   installHooks: installRemoteManagedAgentHooks,
   installCodex: (runtimeHomePath, distro) =>
