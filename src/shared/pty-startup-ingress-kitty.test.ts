@@ -105,3 +105,26 @@ it.each([false, true])(
     f.ingress.drainAndClose()
   }
 )
+
+it.each([false, true])('tracks fragmented pre-query mode changes on ConPTY %s', (conpty) => {
+  const bytes = '\x1b[>5u\x1b[>3u\x1b[<u\x1b[?uTAIL'
+  for (let split = 0; split <= bytes.length; split++) {
+    const f = fixture(true, conpty)
+    f.ingress.accept(bytes.slice(0, split))
+    f.ingress.accept(bytes.slice(split))
+    f.ingress.drainAndClose()
+    expect(f.writes).toEqual(['\x1b[?5u'])
+    expect(f.visible()).toBe(bytes.replace('\x1b[?u', ''))
+    expect(f.emissions[0]?.rawStartSeq).toBe(0)
+    expect(f.emissions.at(-1)?.rawEndSeq).toBe(bytes.length)
+  }
+})
+
+it('keeps ConPTY color authority after Kitty hands off', () => {
+  const f = fixture(true, true)
+  f.ingress.closeQueryAuthority()
+  f.ingress.accept('\x1b[?u\x1b]10;?\x07')
+  expect(f.writes).toEqual(['\x1b]10;rgb:ffff/ffff/ffff\x1b\\'])
+  expect(f.visible()).toBe('\x1b[?u')
+  f.ingress.drainAndClose()
+})
