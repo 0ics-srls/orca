@@ -2,7 +2,7 @@
 // accepts `worktree remove --force` on a path Orca just renamed away.
 import { execFile } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { mkdir, mkdtemp, readdir, realpath, rm, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile, readdir, realpath, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
@@ -94,6 +94,24 @@ describe('deferred worktree removal against the real Git binary', () => {
     expect(existsSync(join(worktreePath, 'seed.txt'))).toBe(true)
     expect(await git(['worktree', 'list'], repoPath)).toContain(worktreePath)
     expect(existsSync(getWorktreeTrashRoot(worktreePath))).toBe(false)
+  })
+
+  it('does not rename a malformed registration that points at the checkout git file', async () => {
+    const markerPath = join(worktreePath, '.git')
+    const marker = await readFile(markerPath, 'utf8')
+    const adminPath = marker.trim().replace(/^gitdir: /, '')
+    await writeFile(join(adminPath, 'gitdir'), `${join(markerPath, '.git')}\n`)
+    await writeFile(join(worktreePath, 'untracked.txt'), 'keep this work\n')
+
+    await expect(
+      removeWorktree(repoPath, markerPath, true, { deleteBranch: false })
+    ).rejects.toThrow()
+    await whenWorktreeTrashDeletionsSettled()
+
+    expect(await readFile(markerPath, 'utf8')).toBe(marker)
+    expect(await readFile(join(worktreePath, 'untracked.txt'), 'utf8')).toBe('keep this work\n')
+    expect(await git(['branch', '--list', 'feature'], repoPath)).toContain('feature')
+    expect(existsSync(getWorktreeTrashRoot(markerPath))).toBe(false)
   })
 
   it('sweeps trash a previous run left behind', async () => {
