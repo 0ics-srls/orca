@@ -67,7 +67,7 @@ export function sourceControlMountAdapters(
       let outcome: unknown = 'unlinked'
       let linkedPR: unknown = 'unread'
       return {
-        action(name, args) {
+        action(name) {
           if (name === 'read') {
             return link.fetchWorktreeLinkedPR(client, WORKTREE).then((value) => {
               linkedPR = value
