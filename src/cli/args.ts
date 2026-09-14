@@ -64,28 +64,8 @@ export function parseArgs(
   specs: readonly CommandSpec[] = []
 ): ParsedArgs {
   const commandPath: string[] = []
-  const flags = new Map<string, string | boolean>()
+  const flagEntries: [string, string | boolean][] = []
   const commandIndex = findCliCommandIndex(argv, commandPaths ?? [])
-  // A flag before the command has consumed no path yet, so scope it by the tokens ahead.
-  const tokensAtCommand: string[] = []
-  for (let i = commandIndex; i >= 0 && i < argv.length && !argv[i].startsWith('--'); i += 1) {
-    tokensAtCommand.push(argv[i])
-  }
-  // Why memoised on length: the active spec can only change when a command token
-  // is read, so the lookup runs once per command depth, not once per flag.
-  let scopedAt = -1
-  let scoped: ReadonlySet<string> = REPEATABLE_STRING_FLAGS
-  const repeatableFlags = (): ReadonlySet<string> => {
-    if (scopedAt !== commandPath.length) {
-      scopedAt = commandPath.length
-      const scopePath = commandPath.length > 0 ? commandPath : tokensAtCommand
-      const declared = specForPathPrefix(specs, scopePath)?.repeatableFlags
-      scoped = declared
-        ? new Set([...REPEATABLE_STRING_FLAGS, ...declared])
-        : REPEATABLE_STRING_FLAGS
-    }
-    return scoped
-  }
 
   for (let i = 0; i < argv.length; i += 1) {
     const token = argv[i]
@@ -100,35 +80,42 @@ export function parseArgs(
     // treats a `--`-leading next token as a new flag, so it can't express one.
     const equalsIndex = assignment.indexOf('=')
     if (equalsIndex !== -1) {
-      setFlagValue(
-        flags,
-        assignment.slice(0, equalsIndex),
-        assignment.slice(equalsIndex + 1),
-        repeatableFlags()
-      )
+      flagEntries.push([assignment.slice(0, equalsIndex), assignment.slice(equalsIndex + 1)])
       continue
     }
 
     const flag = assignment
     if (BOOLEAN_FLAGS.has(flag)) {
-      flags.set(flag, true)
+      flagEntries.push([flag, true])
       continue
     }
     // Why: a pre-command flag must not consume a registry-resolvable command path.
     if (commandPath.length === 0 && i + 1 === commandIndex) {
-      flags.set(flag, true)
+      flagEntries.push([flag, true])
       continue
     }
     const hasNext = i + 1 < argv.length
     const next = argv[i + 1]
     if (!hasNext || next.startsWith('--')) {
-      flags.set(flag, true)
+      flagEntries.push([flag, true])
       continue
     }
-    setFlagValue(flags, flag, next, repeatableFlags())
+    flagEntries.push([flag, next])
     i += 1
   }
 
+  const declared = specForPathPrefix(specs, commandPath)?.repeatableFlags
+  const repeatable = declared
+    ? new Set([...REPEATABLE_STRING_FLAGS, ...declared])
+    : REPEATABLE_STRING_FLAGS
+  const flags = new Map<string, string | boolean>()
+  for (const [name, value] of flagEntries) {
+    if (typeof value === 'string') {
+      setFlagValue(flags, name, value, repeatable)
+    } else {
+      flags.set(name, value)
+    }
+  }
   return { commandPath, flags }
 }
 
