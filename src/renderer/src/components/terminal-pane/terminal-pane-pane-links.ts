@@ -18,6 +18,7 @@ import { installTerminalLinkPointerGesture } from './terminal-link-pointer-gestu
 import { installHttpLinkClickFallback } from './terminal-url-link-hit-testing'
 import { handleOscLink } from './terminal-osc-link-routing'
 import { copyTerminalSelection } from './terminal-selection-copy'
+import { readTerminalClipboardSelection } from './terminal-clipboard-selection-text'
 import { installMouseHideWhileTyping } from './mouse-hide-while-typing'
 import { isPrimarySelectionEnabled, setPrimarySelectionText } from '@/lib/primary-selection'
 import {
@@ -144,7 +145,7 @@ export function installTerminalPaneLinkHandling(context: PaneLinkContext): void 
           if (terminalSelectionExceedsPrimaryLimit(pane.terminal)) {
             return
           }
-          const selection = pane.terminal.getSelection()
+          const selection = readTerminalClipboardSelection(pane.terminal)
           if (selection) {
             setPrimarySelectionText(selection)
           }
