@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-types'
+import { LOCAL_EXECUTION_HOST_ID } from '../../../../shared/execution-host'
 import { useWindowStreamVisible } from '@/hooks/use-window-stream-visibility'
 import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
 import { Button } from '@/components/ui/button'
@@ -35,7 +36,9 @@ export function SessionHistoryIndexStatus({
       inFlight = true
       setLoading(true)
       try {
-        const next = await Promise.resolve().then(() => window.api.aiVault.searchStatus('local'))
+        const next = await Promise.resolve().then(() =>
+          window.api.aiVault.searchStatus(LOCAL_EXECUTION_HOST_ID)
+        )
         if (disposed) {
           return
         }
