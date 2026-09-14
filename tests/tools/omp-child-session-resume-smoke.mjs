@@ -14,7 +14,11 @@ process.env.USERPROFILE = process.env.HOME
 process.env.XDG_CONFIG_HOME = join(scratch, 'config')
 process.env.XDG_DATA_HOME = join(scratch, 'data')
 process.env.XDG_STATE_HOME = join(scratch, 'state')
-process.env.OMP_CODING_AGENT_DIR = join(scratch, 'agent')
+process.env.PI_CODING_AGENT_DIR = join(scratch, 'agent')
+delete process.env.OMP_CODING_AGENT_DIR
+delete process.env.PI_CONFIG_DIR
+delete process.env.OMP_PROFILE
+delete process.env.PI_PROFILE
 delete process.env.PI_CONFIG_FILES
 const source = (name) =>
   pathToFileURL(join(resolve(process.argv[2]), 'packages/coding-agent/src', name)).href
