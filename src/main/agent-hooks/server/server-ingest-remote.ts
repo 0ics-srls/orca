@@ -64,7 +64,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     }
     // Why: trim paneKey to match the HTTP path, else remote-vs-local events for one pane diverge.
     const physicalPaneKey = envelope.paneKey.trim()
-    const paneKey = this.resolvePaneKeyAlias(physicalPaneKey)
+    let paneKey = this.resolvePaneKeyAlias(physicalPaneKey)
     const parsedPaneKey = parsePaneKey(paneKey)
     if (paneKey.length === 0) {
       track('agent_hook_unattributed', { reason: 'empty_pane_key' })
@@ -105,7 +105,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     ) {
       return
     }
-    const tabId = paneKey !== physicalPaneKey ? parsedPaneKey.tabId : reportedTabId
+    let tabId = paneKey !== physicalPaneKey ? parsedPaneKey.tabId : reportedTabId
     const hookEventName =
       typeof envelope.hookEventName === 'string' && envelope.hookEventName.trim().length > 0
         ? envelope.hookEventName.trim()
@@ -189,6 +189,14 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
     if (statusDisposition === 'suppress') {
       return
     }
+    const restartedAuthority =
+      statusDisposition === 'restart' && effectiveSource === 'omp'
+        ? this.restoreRetiredStatusRestart(paneKey)
+        : undefined
+    if (restartedAuthority && restartedAuthority.paneKey !== paneKey) {
+      paneKey = restartedAuthority.paneKey
+      tabId = parsePaneKey(paneKey)?.tabId
+    }
     if (statusDisposition === 'restart') {
       // Why: same rebind as the HTTP path — a retired pane taking a new turn is a new session.
       // Why paneKey, not envelope.paneKey: alias resolution already mapped it to the
@@ -265,9 +273,12 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       env: envelope.env,
       expectedEnv: this.env
     })
-    const event: AgentHookEventPayload = {
+    const event: AgentHookEventPayload & { authorityRestartId?: string } = {
       paneKey,
       source: effectiveSource,
+      ...(restartedAuthority?.authorityRestartId
+        ? { authorityRestartId: restartedAuthority.authorityRestartId }
+        : {}),
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
       tabId,
       worktreeId,
