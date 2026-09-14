@@ -53,12 +53,9 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'app/terminal-settings.tsx', references: 3 },
 
   // src/agent-history/ — agent history loads
-  { file: 'src/agent-history/MobileAgentSessionHistoryPanel.tsx', references: 6 },
-  { file: 'src/agent-history/use-mobile-agent-history-state.ts', references: 2 },
+  { file: 'src/agent-history/MobileAgentSessionHistoryPanel.tsx', references: 1 },
 
   // src/browser/ — hosted browser control
-  { file: 'src/browser/use-mobile-browser-commands.ts', references: 5 },
-  { file: 'src/browser/use-mobile-browser-request.ts', references: 1 },
 
   // src/components/ — shared widgets that fetch their own data
   { file: 'src/components/codex-reset-credit-capability.ts', references: 2 },
@@ -69,7 +66,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/components/use-new-workspace-setup-script.ts', references: 1 },
 
   // src/dictation/ — dictation session control
-  { file: 'src/dictation/mobile-dictation-setup.ts', references: 10 },
 
   // src/files/ — file read, write and preview
   { file: 'src/files/mobile-file-mutation-ownership.ts', references: 3 },
@@ -82,9 +78,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/home/mobile-home-host-requests.ts', references: 5 },
 
   // src/hooks/ — cross-screen data hooks
-  { file: 'src/hooks/mobile-dictation-audio-chunk.ts', references: 1 },
-  { file: 'src/hooks/mobile-dictation-desktop-start.ts', references: 4 },
-  { file: 'src/hooks/use-mobile-dictation.ts', references: 4 },
 
   // src/host-screen/ — host screen catalog and actions
   { file: 'src/host-screen/host-screen-overlays.tsx', references: 1 },
@@ -95,7 +88,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // src/notifications/ — push registration and delivery
   { file: 'src/notifications/mobile-notifications.ts', references: 1 },
   { file: 'src/notifications/push-dismissal-reconciliation.ts', references: 2 },
-  { file: 'src/notifications/push-registration.ts', references: 3 },
 
   // src/session/ — session screen: chat, diff review, PR actions, tabs
   { file: 'src/session/ai-vault-resume-launch.ts', references: 3 },
@@ -147,7 +139,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/session/use-quick-commands.ts', references: 2 },
 
   // src/settings/ — settings screen actions
-  { file: 'src/settings/native-voice-settings-operations.ts', references: 1 },
 
   // src/settings/ — notification display probe
   { file: 'src/settings/notification-display-test.tsx', references: 1 },
@@ -196,10 +187,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/tasks/use-mobile-tasks-task-pagination-actions.tsx', references: 1 },
 
   // src/terminal/ — terminal input, viewport and queries
-  { file: 'src/terminal/mobile-terminal-query-reply.ts', references: 2 },
-  { file: 'src/terminal/terminal-live-accessory-raw-send.ts', references: 2 },
-  { file: 'src/terminal/terminal-viewport-refit.ts', references: 1 },
-  { file: 'src/terminal/worker-terminal-takeover-report.ts', references: 2 },
 
   // src/transport/ — pairing, endpoint probing and capability reads
   { file: 'src/transport/host-status-gates.ts', references: 1 },

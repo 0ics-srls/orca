@@ -1,7 +1,20 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
+import type { RpcResponse } from '../transport/types'
+import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import type { BrowserScreencastFrameMetadata } from '../transport/browser-screencast-protocol'
-import { assertRpcOk } from './mobile-browser-frame-state'
+import {
+  browserDialogAccept,
+  browserDialogDismiss,
+  browserInsertText,
+  browserKeypress,
+  browserPointerClick,
+  browserPointerDown,
+  browserPointerMove,
+  browserPointerUp,
+  browserPointerWheel
+} from './mobile-browser-command-operations'
+import type { BrowserPageCommandSend, BrowserPageParams } from './use-mobile-browser-request'
 import {
   computeBrowserFrameGeometry,
   computeBrowserTouchClickRadiusCss,
@@ -13,7 +26,6 @@ import {
 import type { BrowserPointerModifier } from './MobileBrowserPointerModifiers'
 
 const TOUCH_CLICK_RADIUS_DIP = 14
-type BrowserPageParams = { worktree: string; page: string }
 type PendingWheelCommand = {
   base: BrowserPageParams
   point: BrowserPoint
@@ -22,10 +34,27 @@ type PendingWheelCommand = {
   dy: number
 }
 type SendBrowserRequest = (
-  method: string,
-  params?: Record<string, unknown>,
+  send: BrowserPageCommandSend,
   options?: { showBusy?: boolean; suppressError?: boolean; timeoutMs?: number }
 ) => Promise<unknown | null>
+
+/**
+ * The host's own refusal message, or this command's copy when it sent none — what `assertRpcOk`
+ * did before the acceptance moved into the operation. The reply is interpreted after the await, not
+ * inside it, so a transport rejection still reaches the caller as the object the transport threw
+ * and keeps its delivery-unknown mark.
+ */
+function assertBrowserCommandAccepted(
+  command: { interpret: (reply: RpcResponse) => unknown },
+  reply: RpcResponse,
+  fallback: string
+): void {
+  try {
+    command.interpret(reply)
+  } catch (error) {
+    throw new Error(refusedRpcMessageOrFallback(error, fallback))
+  }
+}
 
 type MobileBrowserCommandArgs = {
   client: RpcClient | null
@@ -76,16 +105,18 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
     wheelCommandInFlightRef.current = true
     void (async () => {
       try {
-        assertRpcOk(
-          await client.sendRequest('browser.mouseMove', {
+        assertBrowserCommandAccepted(
+          browserPointerMove,
+          await browserPointerMove.request(client, {
             ...pending.base,
             x: pending.point.x,
             y: pending.point.y
           }),
           'Browser pointer move failed'
         )
-        assertRpcOk(
-          await client.sendRequest('browser.mouseWheel', {
+        assertBrowserCommandAccepted(
+          browserPointerWheel,
+          await browserPointerWheel.request(client, {
             ...pending.base,
             dx: pending.dx,
             dy: pending.dy
@@ -110,39 +141,49 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
         return
       }
       const clickResult = await sendBrowserRequest(
-        'browser.mouseClick',
-        {
-          x: point.x,
-          y: point.y,
-          button,
-          modifiers: pointerModifiers,
-          ...(button === 'left'
-            ? {
-                radius: computeBrowserTouchClickRadiusCss(
-                  layoutRef.current,
-                  frameMetadataRef.current,
-                  zoomRef.current,
-                  TOUCH_CLICK_RADIUS_DIP
-                )
-              }
-            : {})
-        },
+        async (rpc, page, options) =>
+          browserPointerClick.interpret(
+            await browserPointerClick.request(
+              rpc,
+              {
+                ...page,
+                x: point.x,
+                y: point.y,
+                button,
+                modifiers: pointerModifiers,
+                ...(button === 'left'
+                  ? {
+                      radius: computeBrowserTouchClickRadiusCss(
+                        layoutRef.current,
+                        frameMetadataRef.current,
+                        zoomRef.current,
+                        TOUCH_CLICK_RADIUS_DIP
+                      )
+                    }
+                  : {})
+              },
+              options
+            )
+          ),
         { suppressError: true, timeoutMs: 5_000 }
       )
       if (clickResult !== null || pointerModifiers.length > 0) {
         return
       }
       try {
-        assertRpcOk(
-          await client.sendRequest('browser.mouseMove', { ...base, x: point.x, y: point.y }),
+        assertBrowserCommandAccepted(
+          browserPointerMove,
+          await browserPointerMove.request(client, { ...base, x: point.x, y: point.y }),
           'Browser pointer move failed'
         )
-        assertRpcOk(
-          await client.sendRequest('browser.mouseDown', { ...base, button }),
+        assertBrowserCommandAccepted(
+          browserPointerDown,
+          await browserPointerDown.request(client, { ...base, button }),
           'Browser pointer down failed'
         )
-        assertRpcOk(
-          await client.sendRequest('browser.mouseUp', { ...base, button }),
+        assertBrowserCommandAccepted(
+          browserPointerUp,
+          await browserPointerUp.request(client, { ...base, button }),
           'Browser pointer up failed'
         )
         setError(null)
@@ -211,8 +252,10 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
     }
     setKeyboardValue('')
     const result = await sendBrowserRequest(
-      'browser.keyboardInsertText',
-      { text },
+      async (rpc, page, options) =>
+        browserInsertText.interpret(
+          await browserInsertText.request(rpc, { ...page, text }, options)
+        ),
       { suppressError: true }
     )
     if (result !== null) {
@@ -224,7 +267,11 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
 
   const sendKeypress = useCallback(
     async (key: string) => {
-      await sendBrowserRequest('browser.keypress', { key }, { suppressError: true })
+      await sendBrowserRequest(
+        async (rpc, page, options) =>
+          browserKeypress.interpret(await browserKeypress.request(rpc, { ...page, key }, options)),
+        { suppressError: true }
+      )
     },
     [sendBrowserRequest]
   )
@@ -232,7 +279,11 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
   const sendDialogCommand = useCallback(
     async (method: 'browser.dialogAccept' | 'browser.dialogDismiss') => {
       setDialog(null)
-      await sendBrowserRequest(method, {}, { suppressError: true, timeoutMs: 5_000 })
+      const command = method === 'browser.dialogAccept' ? browserDialogAccept : browserDialogDismiss
+      await sendBrowserRequest(
+        async (rpc, page, options) => command.interpret(await command.request(rpc, page, options)),
+        { suppressError: true, timeoutMs: 5_000 }
+      )
     },
     [sendBrowserRequest]
   )
