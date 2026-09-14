@@ -1,14 +1,7 @@
 import { describe, expect, it, vi } from 'vitest'
-import type {
-  AgentJournalMessageItem,
-  AgentSessionJournalIdentity
-} from '../../shared/agent-session-journal-types'
-import { CodexAppServerRequestError } from './codex-app-server-connection'
-import type {
-  CodexAppServerConnection,
-  CodexAppServerConnectionHandlers,
-  CodexAppServerLaunch,
-  openCodexAppServerConnection
+import {
+  CodexAppServerRequestError,
+  type openCodexAppServerConnection
 } from './codex-app-server-connection'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { CODEX_SPAWN_TOKEN_ENV } from './codex-structured-owner-identity'
@@ -17,126 +10,16 @@ import { encodeCodexQuestionOptionId } from './codex-structured-prompt-replies'
 import {
   CodexStructuredSessionAdapter,
   type CodexStructuredLaunch,
-  type CodexStructuredSessionAdapterDeps,
   type CodexStructuredSessionEvent
 } from './codex-structured-session-adapter'
-
-const THREAD_ID = 'thread-abc'
-
-function identityFor(sessionId: string): AgentSessionJournalIdentity {
-  return {
-    sessionId,
-    workspaceId: 'ws-1',
-    hostId: 'host-1',
-    agent: 'codex',
-    providerHandle: { kind: 'codex', threadId: THREAD_ID }
-  }
-}
-
-const USER_MESSAGE: AgentJournalMessageItem = {
-  kind: 'message',
-  role: 'user',
-  blocks: [{ type: 'text', text: 'ship it' }]
-}
-
-type Route = (params: Record<string, unknown> | undefined) => unknown
-
-// `closed` is readonly on the real connection; the fake flips it so a test can
-// kill the child at a chosen moment.
-type FakeConnection = Omit<CodexAppServerConnection, 'closed'> & {
-  closed: boolean
-  launch: CodexAppServerLaunch
-  handlers: CodexAppServerConnectionHandlers
-  calls: { method: string; params?: Record<string, unknown> }[]
-  replies: { id: number | string; result?: unknown; code?: number; message?: string }[]
-  closeCount: number
-}
-
-/** Stands in for a live `codex app-server`: every RPC is answered from `routes`,
- *  and the test drives Codex's own traffic through `handlers`. */
-function fakeCodex(routes: Record<string, Route> = {}): {
-  connections: FakeConnection[]
-  openConnection: typeof openCodexAppServerConnection
-  routes: Record<string, Route>
-} {
-  const connections: FakeConnection[] = []
-  const openConnection = (async (launch, handlers = {}) => {
-    const connection: FakeConnection = {
-      launch,
-      handlers,
-      calls: [],
-      replies: [],
-      closeCount: 0,
-      pid: 4321,
-      closed: false,
-      request: async (method, params) => {
-        connection.calls.push({ method, params })
-        const route = routes[method]
-        return route ? route(params) : {}
-      },
-      notify: () => {},
-      respond: (id, result) => connection.replies.push({ id, result }),
-      respondWithError: (id, code, message) => connection.replies.push({ id, code, message }),
-      close: async () => {
-        connection.closeCount += 1
-        connection.closed = true
-        return true
-      }
-    }
-    connections.push(connection)
-    return connection
-  }) as typeof openCodexAppServerConnection
-  routes['thread/start'] ??= () => ({
-    thread: { id: THREAD_ID, path: '/rollouts/abc.jsonl' },
-    model: 'gpt-live',
-    reasoningEffort: 'medium'
-  })
-  routes['thread/resume'] ??= (params) => ({
-    thread: { id: (params as { threadId: string }).threadId },
-    model: 'gpt-live',
-    reasoningEffort: 'medium'
-  })
-  return { connections, openConnection, routes }
-}
-
-function adapterFor(
-  codex: ReturnType<typeof fakeCodex>,
-  launch: Partial<CodexStructuredLaunch> = {},
-  events: CodexStructuredSessionEvent[] = [],
-  processControl: Partial<
-    Pick<CodexStructuredSessionAdapterDeps, 'captureTurnProcesses' | 'terminateTurnProcesses'>
-  > = {}
-): CodexStructuredSessionAdapter {
-  let acquisitionGeneration = 0
-  return new CodexStructuredSessionAdapter({
-    resolveLaunch: async () => ({
-      command: 'codex',
-      args: ['app-server'],
-      cwd: '/work/repo',
-      codexHome: null,
-      resumeThreadId: null,
-      ...launch
-    }),
-    onEvent: (event) => events.push(event),
-    openConnection: codex.openConnection,
-    readProcessStartTime: async () => 1_700_000_000_000,
-    captureTurnProcesses: async () => ({ platform: 'win32', identities: new Map() }),
-    terminateTurnProcesses: async () => true,
-    now: () => 1_700_000_000_500,
-    mintAcquisitionGeneration: () => `generation-${++acquisitionGeneration}`,
-    ...processControl
-  })
-}
-
-async function acquired(
-  codex: ReturnType<typeof fakeCodex>,
-  launch: Partial<CodexStructuredLaunch> = {},
-  events: CodexStructuredSessionEvent[] = []
-): Promise<CodexStructuredSessionAdapter> {
-  const adapter = adapterFor(codex, launch, events)
-  await adapter.acquire({ identity: identityFor('session-1'), fence: 7, spawnToken: 'spawn-9' })
-  return adapter
-}
+import {
+  THREAD_ID,
+  USER_MESSAGE,
+  acquired,
+  adapterFor,
+  fakeCodex,
+  identityFor
+} from './codex-structured-session-adapter-fixture'
 
 describe('CodexStructuredSessionAdapter.acquire', () => {
   it('starts a new thread and reports the process and link the lease will prove', async () => {
@@ -432,7 +315,7 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
 })
 
 describe('CodexStructuredSessionAdapter.dispatch', () => {
-  it('accepts a turn Codex names in its response', async () => {
+  it('admits a send as soon as Codex owns it', async () => {
     const codex = fakeCodex({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
     const adapter = await acquired(codex)
 
@@ -451,10 +334,9 @@ describe('CodexStructuredSessionAdapter.dispatch', () => {
       fence: 7
     })
 
-    expect(outcome).toEqual({
-      state: 'accepted',
-      providerIdentity: { provider: 'codex', threadId: THREAD_ID, turnId: 'turn-1', ordinal: 0 }
-    })
+    // Identity is not knowable here: a send coalesced into a running turn shares
+    // that turn's id, so the echo settles which message landed where.
+    expect(outcome).toEqual({ state: 'admitted' })
     expect(codex.connections[0].calls[1].params).toEqual({
       threadId: THREAD_ID,
       clientUserMessageId: 'client-1',
@@ -466,7 +348,7 @@ describe('CodexStructuredSessionAdapter.dispatch', () => {
     })
   })
 
-  it('accepts a turn named only by the notification that raced the ack', async () => {
+  it('admits a send on a build whose turn/start answers before the turn is named', async () => {
     const codex = fakeCodex()
     const events: CodexStructuredSessionEvent[] = []
     const adapter = await acquired(codex, {}, events)
@@ -485,8 +367,7 @@ describe('CodexStructuredSessionAdapter.dispatch', () => {
       fence: 7
     })
 
-    expect(outcome).toMatchObject({ state: 'accepted' })
-    expect(outcome).toMatchObject({ providerIdentity: { turnId: 'turn-late' } })
+    expect(outcome).toEqual({ state: 'admitted' })
     expect(events.at(-1)).toMatchObject({ type: 'notification', method: 'turn/started' })
   })
 
@@ -510,39 +391,13 @@ describe('CodexStructuredSessionAdapter.dispatch', () => {
       fence: 7
     })
 
-    expect(outcome).toEqual({
-      state: 'accepted',
-      providerIdentity: { provider: 'codex', threadId: THREAD_ID, turnId: 'turn-root', ordinal: 0 }
-    })
+    expect(outcome).toEqual({ state: 'admitted' })
     // Each event carries the thread it actually came from, so the journal can
     // keep a subagent's turn out of the root conversation.
     expect(events.map((event) => (event.type === 'notification' ? event.threadId : null))).toEqual([
       'thread-child',
       THREAD_ID
     ])
-  })
-
-  it('settles unknown rather than failed when Codex never names the turn', async () => {
-    vi.useFakeTimers()
-    try {
-      const codex = fakeCodex()
-      const adapter = await acquired(codex)
-
-      const dispatching = adapter.dispatch({
-        sessionId: 'session-1',
-        clientMessageId: 'client-1',
-        body: USER_MESSAGE,
-        fence: 7
-      })
-      await vi.advanceTimersByTimeAsync(10_000)
-
-      expect(await dispatching).toEqual({
-        state: 'unknown',
-        reason: 'codex app-server started a turn it did not name in time'
-      })
-    } finally {
-      vi.useRealTimers()
-    }
   })
 
   it('rejects only when Codex answered and declined', async () => {

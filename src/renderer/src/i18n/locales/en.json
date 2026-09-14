@@ -2584,7 +2584,9 @@
           },
           "ProjectViewStates": {
             "ac83c45672": "Switch to a Table or Roadmap view to work with this project in Orca.",
-            "e4cc8b14f2": "Orca renders table and roadmap project views. This view uses a layout it cannot render yet."
+            "e4cc8b14f2": "Orca renders table and roadmap project views. This view uses a layout it cannot render yet.",
+            "3b9c1d5e47": "This view has no items yet.",
+            "7e4a2f80c6": "Recently added items can take a while to appear."
           }
         },
         "GitHubMarkdownComposer": {
@@ -12370,7 +12372,12 @@
             "a4e93c21d7": "Current branch: {{value0}}",
             "c7d4e2f801": "Change base ref: {{value0}}",
             "f3a1b8c204": "upstream",
-            "createPrIntentGenerateDetailsFailed": "Could not generate review details. Retry Create PR."
+            "createPrIntentGenerateDetailsFailed": "Could not generate review details. Retry Create PR.",
+            "entryStageFailed": "Failed to stage “{{value0}}”",
+            "entryUnstageFailed": "Failed to unstage “{{value0}}”",
+            "entryDiscardFailed": "Failed to discard “{{value0}}”",
+            "entryDeleteFailed": "Failed to delete “{{value0}}”",
+            "entryFailedInWorkspace": "{{value0}} in {{value1}}"
           },
           "SourceControlAgentActionDialog": {
             "8e856842d1": "Could not start the selected agent.",
@@ -17094,7 +17101,8 @@
         "chooseInAgentPicker": "Choose in agent picker…",
         "toggleOption": "Toggle {{value0}}",
         "pillAccessibleName": "{{value0}} {{value1}}",
-        "valueUnknown": "Current value unknown — pick On or Off",
+        "valueIsDefault": "Default",
+        "valueNotReported": "Not reported",
         "sentNotConfirmed": "Sent to the agent — not confirmed",
         "setWhenSessionStarts": "Set when the session starts.",
         "availableAfterSessionStarts": "Available after the session starts.",
@@ -17107,9 +17115,7 @@
           "high": "High",
           "xhigh": "Extra high",
           "max": "Max",
-          "ultra": "Ultra",
-          "on": "On",
-          "off": "Off"
+          "ultra": "Ultra"
         },
         "pendingAttachmentLimit": "Too many attachments are waiting. Finish composing before attaching more.",
         "viewAttachment": "View image",
@@ -17240,7 +17246,8 @@
       "approval": {
         "title": "Allow {{value0}}?",
         "allow": "Allow",
-        "deny": "Deny"
+        "deny": "Deny",
+        "cancel": "Cancel"
       },
       "launchPromptNotDelivered": "Not delivered — check the terminal",
       "structuredSessionCloseFailed": "Could not close this chat session",
@@ -17305,7 +17312,12 @@
       "conversationCommand": {
         "pendingWork": "Wait for pending work and messages to finish before using this command.",
         "unconfirmed": "Conversation operation was not confirmed."
-      }
+      },
+      "drop": {
+        "title": "Drop to attach to this chat",
+        "subtitle": "Files are added to your message as paths the agent can read."
+      },
+      "copyCode": "Copy code"
     },
     "tab": {
       "bar": {
@@ -17607,6 +17619,24 @@
         "copySessionId": "Copy Session ID",
         "copySessionIdSuccess": "Session ID copied",
         "copySessionIdError": "Unable to copy session ID"
+      }
+    },
+    "settings": {
+      "TerminalInteraction": {
+        "copyTrimsGutter": "Trim Gutter on Copy",
+        "copyTrimsGutterDescription": "Drop the left gutter agent output is painted behind, so copied text is not indented. Only the indent every selected line shares is removed."
+      },
+      "terminal": {
+        "clipboard": {
+          "search": {
+            "gutter": "gutter",
+            "indent": "indent",
+            "margin": "margin",
+            "leading": "leading",
+            "whitespace": "whitespace",
+            "spaces": "spaces"
+          }
+        }
       }
     }
   },

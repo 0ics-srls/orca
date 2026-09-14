@@ -7,6 +7,7 @@
 // reads is module-level for the same reason the registry is — the runtime
 // service is already far past its size budget.
 
+import type { AgentJournalItemIdentity } from '../../shared/agent-session-journal-types'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AgentSessionRecord } from '../../shared/agent-session-record'
@@ -126,13 +127,62 @@ async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
   // Drain an in-flight recovery before stopping children; recovery may still
   // be writing lifecycle rows or acquiring a replacement child.
   await installed.waitForRecovery()
+  const failures: unknown[] = []
+  // Host teardown runs FIRST, which inverts the older order. It is what stops this host's
+  // provider children now: it evicts each owned session through the adapter, and that eviction
+  // only releases the lease once `disposeSession` PROVES the child gone. Closing the adapter
+  // first would hand every one of those steps a vacuous receipt from an already-closed router,
+  // and would race the attach drain the host runs in the same teardown.
+  //
+  // Tail rows are protected by eviction's own per-session ordering — stop the child, drain what
+  // it already published, settle, then unbind the sink — not by which of the two teardowns runs
+  // first. `closeAll` is only a backstop for children eviction never took: an acquisition that
+  // failed before the host indexed it, or a session whose eviction was refused and left indexed.
+  // A row a child delivers during that backstop close is not captured, and was not captured
+  // under the old order either. The drain below keeps a late callback from outliving the runtime.
   try {
-    await installed.adapter.closeAll()
-  } finally {
-    // closeAll can itself deliver a final exit callback; observe that callback
-    // before flushing and releasing the host's journal resources.
-    await installed.waitForRecovery()
     await installed.host.flushAllStreamedEvents()
+  } catch (error) {
+    failures.push(error)
+  }
+  try {
+    // Backstop for children eviction never took: unindexed acquisitions and refused evictions.
+    await installed.adapter.closeAll()
+  } catch (error) {
+    failures.push(error)
+  }
+  // A backstop close can still deliver a final exit callback.
+  try {
+    await installed.waitForRecovery()
+  } catch (error) {
+    failures.push(error)
+  }
+  if (failures.length === 1) {
+    throw failures[0]
+  }
+  if (failures.length > 1) {
+    throw new AggregateError(failures, 'structured agent-session runtime teardown failed')
+  }
+}
+
+function reportRuntimeError(
+  deps: StructuredAgentSessionRuntimeDeps,
+  scope: string,
+  label: string,
+  error: unknown,
+  sessionId?: string
+): void {
+  try {
+    if (deps.onError) {
+      deps.onError({ scope, error })
+    } else {
+      console.error(
+        `[structured-agent-session] ${label} failed${sessionId ? `:${sessionId}` : ''}`,
+        error
+      )
+    }
+  } catch (reportingError) {
+    console.error(`[structured-agent-session] ${label} error reporting failed`, reportingError)
   }
 }
 
@@ -157,22 +207,26 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
   agentSessionPtyWriteGate.attachRecordLookup((sessionId) => store.getRecord(sessionId))
   // Why: only the durable store can identify a provider child lost before record publication.
   void (deps.reapOrphanChildren ?? stopOrphanAgentSessionChildren)({ store }).catch((error) => {
-    try {
-      if (deps.onError) {
-        deps.onError({ scope: 'agent-session-orphan-child-reaper', error })
-      } else {
-        console.error('[structured-agent-session] orphan reaper failed', error)
-      }
-    } catch (reportingError) {
-      console.error(
-        '[structured-agent-session] orphan reaper error reporting failed',
-        reportingError
-      )
-    }
+    reportRuntimeError(deps, 'agent-session-orphan-child-reaper', 'orphan reaper', error)
   })
   try {
     let host: StructuredAgentSessionHost | null = null
     let recoveryChain = Promise.resolve()
+    const onDispatchSettledLate = (settlement: {
+      sessionId: string
+      clientMessageId: string
+      providerIdentity: AgentJournalItemIdentity
+    }): void => {
+      void host?.settleLateDispatch(settlement).catch((error) => {
+        reportRuntimeError(
+          deps,
+          `structured-agent-session-late-settlement:${settlement.sessionId}`,
+          'late settlement',
+          error,
+          settlement.sessionId
+        )
+      })
+    }
     const codex = new CodexStructuredSessionAdapter({
       resolveLaunch: createCodexStructuredLaunchResolver({
         store,
@@ -184,6 +238,7 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
       ...(deps.readProcessStartTime ? { readProcessStartTime: deps.readProcessStartTime } : {}),
       onBackgroundTasksChanged: (sessionId, state) =>
         host?.publishBackgroundTaskState(sessionId, state),
+      onDispatchSettledLate,
       onEvent: (event) => {
         if (event.type !== 'ended' || !('cause' in event) || event.cause !== 'unexpected-exit') {
           return
@@ -195,21 +250,13 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
           try {
             await host?.handleAdapterEvent(event)
           } catch (error) {
-            try {
-              if (deps.onError) {
-                deps.onError({ scope: `structured-agent-session-exit:${event.sessionId}`, error })
-              } else {
-                console.error(
-                  `[structured-agent-session] exit recovery failed:${event.sessionId}`,
-                  error
-                )
-              }
-            } catch (reportingError) {
-              console.error(
-                '[structured-agent-session] exit recovery error reporting failed',
-                reportingError
-              )
-            }
+            reportRuntimeError(
+              deps,
+              `structured-agent-session-exit:${event.sessionId}`,
+              'exit recovery',
+              error,
+              event.sessionId
+            )
           }
         })
       }
@@ -233,48 +280,19 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
           try {
             await host?.handleAdapterEvent(event)
           } catch (error) {
-            try {
-              if (deps.onError) {
-                deps.onError({ scope: `structured-agent-session-exit:${event.sessionId}`, error })
-              } else {
-                console.error(
-                  `[structured-agent-session] exit recovery failed:${event.sessionId}`,
-                  error
-                )
-              }
-            } catch (reportingError) {
-              console.error(
-                '[structured-agent-session] exit recovery error reporting failed',
-                reportingError
-              )
-            }
+            reportRuntimeError(
+              deps,
+              `structured-agent-session-exit:${event.sessionId}`,
+              'exit recovery',
+              error,
+              event.sessionId
+            )
           }
         })
       },
       onBackgroundTasksChanged: (sessionId, state) =>
         host?.publishBackgroundTaskState(sessionId, state),
-      onDispatchSettledLate: (settlement) => {
-        void host?.settleLateDispatch(settlement).catch((error) => {
-          try {
-            if (deps.onError) {
-              deps.onError({
-                scope: `structured-agent-session-late-settlement:${settlement.sessionId}`,
-                error
-              })
-            } else {
-              console.error(
-                `[structured-agent-session] late settlement failed:${settlement.sessionId}`,
-                error
-              )
-            }
-          } catch (reportingError) {
-            console.error(
-              '[structured-agent-session] late settlement error reporting failed',
-              reportingError
-            )
-          }
-        })
-      },
+      onDispatchSettledLate,
       ...(deps.openClaudeConnection ? { openClaudeConnection: deps.openClaudeConnection } : {}),
       ...(deps.readProcessStartTime ? { readProcessStartTime: deps.readProcessStartTime } : {})
     })
@@ -295,15 +313,13 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
           }
         : {}),
       onEventSinkError: ({ sessionId, error }) => {
-        try {
-          if (deps.onError) {
-            deps.onError({ scope: `structured-agent-session-journal:${sessionId}`, error })
-          } else {
-            console.error(`[structured-agent-session] journal failed:${sessionId}`, error)
-          }
-        } catch (reportingError) {
-          console.error('[structured-agent-session] journal error reporting failed', reportingError)
-        }
+        reportRuntimeError(
+          deps,
+          `structured-agent-session-journal:${sessionId}`,
+          'journal',
+          error,
+          sessionId
+        )
       },
       ...(deps.onSessionStatusChanged
         ? { onSessionStatusChanged: deps.onSessionStatusChanged }
