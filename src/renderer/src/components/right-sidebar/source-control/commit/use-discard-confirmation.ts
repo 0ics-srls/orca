@@ -11,7 +11,6 @@ import {
   type DiscardAllArea
 } from './discard-all-sequence'
 import { isDeleteShapedDiscardEntry } from './discard-confirmation'
-import { refreshEntryMutationStatus } from './entry-mutation-status-refresh'
 import { readIpcErrorMessage } from '@/lib/ipc-error'
 import {
   dismissSourceControlEntryFailureToast,
@@ -71,7 +70,7 @@ export function useSourceControlDiscardConfirmation({
         return
       }
       dismissSourceControlEntryFailureToast(activeWorktreeId)
-      await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
+      await refreshActiveGitStatusAfterMutation()
     },
     [activeWorktreeId, discardSingle, refreshActiveGitStatusAfterMutation, worktreePath]
   )

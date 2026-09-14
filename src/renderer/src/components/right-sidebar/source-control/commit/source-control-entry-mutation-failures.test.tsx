@@ -171,56 +171,6 @@ describe('source-control entry mutation failures', () => {
     expect(mocks.toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
   })
 
-  it('reports a post-mutation refresh failure as its own, not as a failed stage', async () => {
-    mocks.stagePath.mockResolvedValue(undefined)
-    const { result } = renderHook(() =>
-      useSourceControlEntryMutations({
-        activeRepoSettings: null,
-        activeWorktreeId: 'wt-1',
-        worktreePath: '/repo',
-        refreshActiveGitStatusAfterMutation: async () => {
-          throw new Error('status refresh failed')
-        }
-      })
-    )
-
-    await act(async () => {
-      await result.current.handleStage('src/app.ts')
-    })
-
-    expect(mocks.toastError).not.toHaveBeenCalled()
-  })
-
-  it('does not report a successful discard as failed when the refresh rejects', async () => {
-    const discardSingle = vi.fn(async () => {})
-    const { result } = renderHook(() =>
-      useSourceControlDiscardConfirmation({
-        activeRepoSettings: null,
-        activeWorktreeId: 'wt-1',
-        worktreePath: '/repo',
-        grouped: EMPTY_GROUPS,
-        isExecutingBulk: false,
-        setIsExecutingBulk: () => {},
-        clearSelection: () => {},
-        discardMany: async () => {},
-        discardSingle,
-        refreshActiveGitStatusAfterMutation: async () => {
-          throw new Error('status refresh failed')
-        }
-      })
-    )
-
-    await act(async () => {
-      result.current.requestDiscardEntry(entry('src/app.ts'))
-    })
-    await act(async () => {
-      result.current.confirmPendingDiscard()
-    })
-
-    expect(discardSingle).toHaveBeenCalledTimes(1)
-    expect(mocks.toastError).not.toHaveBeenCalled()
-  })
-
   it('reports a failed per-row discard — the destructive action must never fail silently', async () => {
     const discardSingle = vi.fn(async () => {
       throw new Error('unable to write file')

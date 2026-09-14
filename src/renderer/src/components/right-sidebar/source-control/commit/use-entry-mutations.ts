@@ -13,7 +13,6 @@ import {
   type RuntimeGitContext
 } from '@/runtime/runtime-git-client'
 import { useAppStore } from '@/store'
-import { refreshEntryMutationStatus } from './entry-mutation-status-refresh'
 import {
   dismissSourceControlEntryFailureToast,
   showSourceControlEntryFailureToast
@@ -69,7 +68,8 @@ export function useSourceControlEntryMutations({
       // Why: the mutation landed, so clear any failure this worktree's attempts left in the slot —
       // a failure another worktree raised meanwhile is not ours to dismiss.
       dismissSourceControlEntryFailureToast(activeWorktreeId)
-      await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
+      // Why: refreshing outside the try keeps a refresh failure from being reported as "Failed to stage"; the refresher reports its own.
+      await refreshActiveGitStatusAfterMutation()
     },
     [activeRepoSettings, worktreePath, activeWorktreeId, refreshActiveGitStatusAfterMutation]
   )
