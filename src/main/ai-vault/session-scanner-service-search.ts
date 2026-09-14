@@ -44,9 +44,7 @@ export class SessionScannerServiceSearch {
       this.close()
     }
     if (this.instance && this.roots && !sameSessionSearchRoots(this.roots, init.roots)) {
-      // The indexer's roots are fixed at construction, and the parent re-resolves
-      // them on every push: a distro or Codex home that appeared since spawn only
-      // enters the window if the pair is rebuilt around the new set.
+      // Explicit init-root changes replace the fallback used by callers without a resolver.
       this.close()
     }
     this.databasePath = init.databasePath
