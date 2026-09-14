@@ -243,6 +243,30 @@ describe('useMobileStructuredAgentSession', () => {
     sendRequest,
     subscribe
   } as unknown as RpcClient
+
+  it('ignores old-owner prompts and running turns while retaining the transcript', async () => {
+    act(() => {
+      renderer = create(createElement(Harness))
+    })
+    await vi.waitFor(() => expect(listener).toEqual(expect.any(Function)))
+    act(() =>
+      listener?.({
+        ...snapshotEvent(4),
+        page: {
+          ...snapshotEvent(4).page,
+          items: [
+            { ...approvalItem(), ownerFence: 3 },
+            { ...questionItem(), ownerFence: 3 },
+            { ...runningStatusItem(), ownerFence: 3 }
+          ]
+        }
+      })
+    )
+    expect(hook!.permission).toBeNull()
+    expect(hook!.question).toBeNull()
+    expect(hook!.turnId).toBeNull()
+    expect(hook!.isWorking).toBe(false)
+  })
   let storedOperations: Map<string, string>
 
   function Harness({

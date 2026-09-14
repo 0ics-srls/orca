@@ -120,6 +120,8 @@ export type AgentSessionLease = {
   settlementRetryRequired?: boolean
   /** Stable lifecycle batch id used when retrying the terminal settlement. */
   settlementRetryId?: string
+  /** Largest journal owner fence covered by the pending settlement. */
+  settlementRetryFence?: number
 }
 
 export type AgentSessionRecord = {
@@ -328,6 +330,8 @@ function isAgentSessionLease(value: unknown): value is AgentSessionLease {
       typeof lease.settlementRetryRequired === 'boolean') &&
     (lease.settlementRetryId === undefined ||
       isBoundedString(lease.settlementRetryId, MAX_ID_LENGTH)) &&
+    (lease.settlementRetryFence === undefined ||
+      (Number.isSafeInteger(lease.settlementRetryFence) && lease.settlementRetryFence >= 0)) &&
     (lease.deathEvidence === null || isAgentSessionDeathEvidence(lease.deathEvidence))
   )
 }

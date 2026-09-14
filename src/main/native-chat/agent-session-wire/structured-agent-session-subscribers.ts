@@ -13,6 +13,7 @@ import {
   type AgentSessionBackgroundTaskState,
   type AgentSessionSlashCommand,
   type AgentSessionHandoffStatus,
+  type AgentSessionHistoryPage,
   type AgentSessionSubscribeEvent,
   type AgentSessionTurnActivity
 } from '../../../shared/agent-session-wire'
@@ -47,6 +48,9 @@ export type AgentSessionSubscribersHooks = {
   onJournalPublished?: (sessionId: string, journal: AgentSessionJournal) => void
   /** Host wall clock, stamped once per published frame as `hostNow`. */
   now?: () => number
+  projectPage?: (sessionId: string, page: AgentSessionHistoryPage) => AgentSessionHistoryPage
+  readJournal?: (sessionId: string) => AgentSessionJournal | undefined
+  needsOwnerSnapshot?: (sessionId: string, journal: AgentSessionJournal) => boolean
 }
 
 export class AgentSessionSubscribers {
@@ -80,10 +84,13 @@ export class AgentSessionSubscribers {
     this.bySession.set(input.sessionId, session)
 
     const hostNow = this.now()
-    if (input.cursor) {
+    if (input.cursor && !this.hooks.needsOwnerSnapshot?.(input.sessionId, input.journal)) {
       this.deliver(subscriber, input.journal, hostNow, input.handoff, true, input.backgroundTasks)
     } else {
-      const page = readAgentSessionHydrationPage(input.journal, input.fence)
+      const page = this.ownerPage(
+        input.sessionId,
+        readAgentSessionHydrationPage(input.journal, input.fence)
+      )
       this.emit(subscriber, {
         type: 'snapshot',
         sessionId: input.sessionId,
@@ -163,7 +170,7 @@ export class AgentSessionSubscribers {
     backgroundTasks: AgentSessionBackgroundTaskState | null | undefined,
     frame: { type: 'snapshot' } | { type: 'reset'; reset: AgentJournalResetReason }
   ): void {
-    const page = readAgentSessionHydrationPage(journal, fence)
+    const page = this.ownerPage(sessionId, readAgentSessionHydrationPage(journal, fence))
     const hostNow = this.now()
     for (const subscriber of this.subscribers(sessionId)) {
       this.emit(subscriber, {
@@ -183,7 +190,18 @@ export class AgentSessionSubscribers {
 
   handoff(sessionId: string, fence: number, handoff: AgentSessionHandoffStatus): void {
     const hostNow = this.now()
+    let projectedPage: AgentSessionHistoryPage | undefined
     for (const subscriber of this.subscribers(sessionId)) {
+      const journal = subscriber.fence !== fence ? this.hooks.readJournal?.(sessionId) : undefined
+      if (journal) {
+        const page =
+          projectedPage ?? this.ownerPage(sessionId, readAgentSessionHydrationPage(journal, fence))
+        projectedPage = page
+        this.emit(subscriber, { type: 'snapshot', sessionId, page, fence, handoff, hostNow })
+        subscriber.cursor = page.liveCursor ?? page.window.nextCursor
+        subscriber.fence = fence
+        continue
+      }
       this.emit(subscriber, {
         type: 'batch',
         sessionId,
@@ -241,7 +259,10 @@ export class AgentSessionSubscribers {
         limit: AGENT_SESSION_HISTORY_MAX_LIMIT
       })
       if (!result.ok) {
-        const page = { ...result.page, fence: subscriber.fence }
+        const page = this.ownerPage(subscriber.sessionId, {
+          ...result.page,
+          fence: subscriber.fence
+        })
         this.emit(subscriber, {
           type: 'reset',
           sessionId: subscriber.sessionId,
@@ -256,7 +277,7 @@ export class AgentSessionSubscribers {
         subscriber.cursor = page.liveCursor ?? page.window.nextCursor
         return
       }
-      const page = result.page
+      const page = this.ownerPage(subscriber.sessionId, result.page)
       const advanced = page.window.nextCursor.sequence > subscriber.cursor.sequence
       if (!advanced) {
         const commandsChanged =
@@ -299,6 +320,10 @@ export class AgentSessionSubscribers {
   }
 
   private now = (): number => this.hooks.now?.() ?? Date.now()
+
+  private ownerPage(sessionId: string, page: AgentSessionHistoryPage): AgentSessionHistoryPage {
+    return this.hooks.projectPage?.(sessionId, page) ?? page
+  }
 
   private isActive = (subscriber: Subscriber): boolean =>
     this.bySession.get(subscriber.sessionId)?.get(subscriber.id) === subscriber

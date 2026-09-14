@@ -21,7 +21,10 @@ import {
   pinnedAgentSessionLaunchEnv
 } from './structured-agent-session-launch-env'
 import { refuseAgentSessionMutation } from './structured-agent-session-mutation-admission'
-import { turnVerdictFromDeathEvidence } from './structured-agent-session-stale-turn-verdict'
+import {
+  turnVerdictFromDeathEvidence,
+  UNVERIFIABLE_TURN_VERDICT
+} from './structured-agent-session-stale-turn-verdict'
 import {
   captureUnfinishedStructuredAgentSessionWork,
   settleStructuredAgentSessionDeadGeneration,
@@ -120,14 +123,33 @@ export function attachStructuredAgentSession(
             // The new child's events stay buffered until bindAndDrain, so every pending row
             // here predates it. A failed settlement cannot withhold the new writer.
             const verdict = turnVerdictFromDeathEvidence(previousLease?.deathEvidence)
-            const work = captureUnfinishedStructuredAgentSessionWork(attached.journal)
-            await settleStructuredAgentSessionDeadGeneration({
+            const throughFence = previousLease?.settlementRetryFence ?? fence - 1
+            const settlementId =
+              previousLease?.settlementRetryId ??
+              `stale-generation:${sessionId}:${fence}:${acquisitionGeneration ?? 'unknown'}`
+            const priorSettled = await settleStructuredAgentSessionDeadGeneration({
               journal: attached.journal,
               sessionId,
               fence,
-              settlementId:
-                previousLease?.settlementRetryId ??
-                `stale-generation:${sessionId}:${fence}:${acquisitionGeneration ?? 'unknown'}`,
+              throughFence: throughFence - 1,
+              settlementId: `${settlementId}:prior`,
+              verdict: UNVERIFIABLE_TURN_VERDICT,
+              pendingSubmissionReason: 'provider_exited_before_acknowledgement',
+              showUnexpectedExitOutcome: false,
+              onError: (id, error) => context.deps.onEventSinkError?.({ sessionId: id, error })
+            })
+            const work = captureUnfinishedStructuredAgentSessionWork(
+              attached.journal,
+              throughFence,
+              throughFence
+            )
+            const settled = await settleStructuredAgentSessionDeadGeneration({
+              journal: attached.journal,
+              sessionId,
+              fence,
+              throughFence,
+              fromFence: throughFence,
+              settlementId,
               verdict,
               pendingSubmissionReason: 'provider_exited_before_acknowledgement',
               submissionRecoveryMode: 'new-owner-not-publishing',
@@ -137,7 +159,9 @@ export function attachStructuredAgentSession(
                   unfinishedStructuredAgentSessionWorkWasInterrupted(
                     work,
                     attached.journal,
-                    verdict.completedAt
+                    verdict.completedAt,
+                    throughFence,
+                    throughFence
                   )),
               // A later generation has cleared the old exit detail; use generic copy then.
               ...(previousLease?.settlementRetryRequired && previousLease.deathEvidence?.detail
@@ -148,6 +172,24 @@ export function attachStructuredAgentSession(
                 console.error('agent-session dead-generation settlement deferred', id, error)
               }
             })
+            if (settled && priorSettled && previousLease?.settlementRetryRequired) {
+              try {
+                await context.deps.store.transitionHandoff(sessionId, (latest) => ({
+                  ...latest,
+                  lease:
+                    latest.lease.settlementRetryId === previousLease.settlementRetryId
+                      ? {
+                          ...latest.lease,
+                          settlementRetryRequired: undefined,
+                          settlementRetryId: undefined,
+                          settlementRetryFence: undefined
+                        }
+                      : latest.lease
+                }))
+              } catch (error) {
+                context.deps.onEventSinkError?.({ sessionId, error })
+              }
+            }
           }
           await bindAndDrain(eventSink, attached.journal, fence, (activity) =>
             context.subscribers.publish(sessionId, attached.journal, activity)

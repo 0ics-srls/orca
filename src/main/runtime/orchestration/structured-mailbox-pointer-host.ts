@@ -46,7 +46,7 @@ export function readStructuredSessionGateFacts(
     return null
   }
   try {
-    return structuredSessionGateFacts(host.journalSnapshot(sessionId).items)
+    return structuredSessionGateFacts(host.currentOwnerJournalItems(sessionId))
   } catch (error) {
     // Not attached is a retain reason, not a failure; anything else is still unreadable.
     if ((error as Error)?.message !== AGENT_SESSION_NOT_ATTACHED.code) {

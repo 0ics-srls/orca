@@ -79,6 +79,7 @@ export function applyJournalRow(state: JournalReducerState, row: JournalRow): vo
       body: row.body,
       sequence: row.seq,
       observedAt: row.ts,
+      ownerFence: row.fence,
       ...(row.recovered ? { recovered: row.recovered } : {})
     })
     return
@@ -104,6 +105,7 @@ export function applyJournalRow(state: JournalReducerState, row: JournalRow): vo
           body: mutation.body,
           sequence: row.seq,
           observedAt: row.ts,
+          ownerFence: row.fence,
           ...(row.recovered ? { recovered: row.recovered } : {})
         })
       } else {
@@ -218,7 +220,8 @@ function upsertItem(
     // Provider history may normalize text or omit local attachments from the original send.
     body: submitted ? existing.body : next.body,
     sequence: existing.sequence,
-    observedAt: existing.observedAt
+    observedAt: existing.observedAt,
+    ownerFence: existing.ownerFence
   })
   state.tombstones.delete(itemId)
 }

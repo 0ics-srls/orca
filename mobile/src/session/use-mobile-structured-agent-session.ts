@@ -7,7 +7,10 @@ import {
 import { encodeNativeChatTranscriptIdentity } from '../../../src/shared/native-chat-transcript-retention'
 import type { MobileNativeChatSendOutcome } from './mobile-native-chat-send'
 import { projectStructuredAgentSessionMessages } from '../../../src/shared/structured-agent-session-message-projection'
-import { hasUnansweredStructuredAgentSessionDispatch } from '../../../src/shared/structured-agent-session-projection'
+import {
+  hasUnansweredStructuredAgentSessionDispatch,
+  liveStructuredAgentSessionItems
+} from '../../../src/shared/structured-agent-session-projection'
 import {
   activeStructuredAgentSessionTurnId,
   isStructuredAgentSessionThinking
@@ -196,8 +199,10 @@ export function useMobileStructuredAgentSession(args: {
           conversationCommands
         },
         canRun: () =>
-          !activeStructuredAgentSessionTurnId(stateRef.current.items) &&
-          !stateRef.current.items.some(
+          !activeStructuredAgentSessionTurnId(
+            liveStructuredAgentSessionItems(stateRef.current.items, stateRef.current.fence)
+          ) &&
+          !liveStructuredAgentSessionItems(stateRef.current.items, stateRef.current.fence).some(
             (item) => pendingStructuredApproval(item) || pendingStructuredQuestion(item)
           ),
         onError: onSendError,
@@ -263,20 +268,26 @@ export function useMobileStructuredAgentSession(args: {
     () => projectStructuredAgentSessionMessages(state.items, [], state.submissions),
     [state.items, state.submissions]
   )
-  const turnId = activeStructuredAgentSessionTurnId(state.items)
+  const ownerItems = useMemo(
+    () => liveStructuredAgentSessionItems(state.items, state.fence),
+    [state.items, state.fence]
+  )
+  const turnId = activeStructuredAgentSessionTurnId(ownerItems)
   const turnTiming = useMobileStructuredAgentTurnTiming(state, turnId)
   const activityText =
-    selectStructuredAgentTurnActivity(state.items, turnId, state.activity)?.text ?? null
-  const thinking = isStructuredAgentSessionThinking(state.items)
+    selectStructuredAgentTurnActivity(ownerItems, turnId, state.activity)?.text ?? null
+  const thinking = isStructuredAgentSessionThinking(ownerItems)
+  // Stable while the readings hold, so a streaming turn does not re-render the
+  // whole chat surface on every journal batch.
   const turnIndicator = useMemo(() => ({ thinking, activityText }), [thinking, activityText])
   const status = state.status === 'idle' ? 'idle' : state.status
   const approvalPrompt = useMemo(
-    () => state.items.find(pendingStructuredApproval) ?? null,
-    [state.items]
+    () => ownerItems.find(pendingStructuredApproval) ?? null,
+    [ownerItems]
   )
   const questionPrompt = useMemo(
-    () => state.items.find(pendingStructuredQuestion) ?? null,
-    [state.items]
+    () => ownerItems.find(pendingStructuredQuestion) ?? null,
+    [ownerItems]
   )
   return {
     ...options,

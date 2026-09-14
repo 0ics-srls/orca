@@ -210,7 +210,14 @@ export class StructuredAgentSessionStatusFeed {
     // An unreadable journal projects as "no turn": the chat itself shows the reset.
     const cursor = journal.cursor()
     const readOnly = journal.isReadOnly
-    const fence = session.fence
+    const record = this.deps.getRecord(sessionId)
+    const lease = record?.lease
+    // A released fence has no execution owner, even if a late transcript import used it.
+    const fence = lease
+      ? lease.claimStatus === 'live'
+        ? lease.runtimeFence
+        : Number.MAX_SAFE_INTEGER
+      : session.fence
     let projection = this.journalProjections.get(journal)
     if (
       !projection ||
@@ -234,7 +241,6 @@ export class StructuredAgentSessionStatusFeed {
       }
       this.journalProjections.set(journal, projection)
     }
-    const record = this.deps.getRecord(sessionId)
     const providerSession = structuredAgentSessionProviderSessionMetadata(record)
     // The journal has no model: the record's acknowledged options are where an owner
     // handoff or a mid-session switch lands, so the row follows whichever is in force.

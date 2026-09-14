@@ -47,14 +47,22 @@ export function releaseAgentSessionOwnerAfterSurfaceClose(args: {
     processlessAt: null,
     claimStatus: 'released',
     handoffStage: null,
-    settlementRetryRequired: args.settlementRetry ? true : undefined,
-    settlementRetryId: args.settlementRetry?.settlementId,
+    settlementRetryRequired:
+      args.settlementRetry || record.lease.settlementRetryRequired ? true : undefined,
+    settlementRetryId: args.settlementRetry?.settlementId ?? record.lease.settlementRetryId,
+    settlementRetryFence: args.settlementRetry
+      ? args.expectedFence
+      : record.lease.settlementRetryFence,
     lastRenewedAt: args.now,
-    deathEvidence: {
-      kind: 'exit-observed',
-      detail: args.settlementRetry?.detail ?? 'the last surface holding this session released it',
-      observedAt: args.exitObservedAt ?? args.now
-    }
+    deathEvidence:
+      record.lease.settlementRetryRequired && !args.settlementRetry
+        ? record.lease.deathEvidence
+        : {
+            kind: 'exit-observed',
+            detail:
+              args.settlementRetry?.detail ?? 'the last surface holding this session released it',
+            observedAt: args.exitObservedAt ?? args.now
+          }
   })
 }
 

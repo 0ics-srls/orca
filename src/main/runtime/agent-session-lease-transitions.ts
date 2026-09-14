@@ -90,9 +90,16 @@ export function reserveAgentSessionOwner(args: {
       handoffOperationId: reservation.handoffOperationId,
       claimKeyId: reservation.claimKeyId,
       claimStatus: 'reserved',
-      settlementRetryRequired: undefined,
-      settlementRetryId: undefined,
-      deathEvidence: null
+      // A prior generation's journal obligation survives the new reservation.
+      settlementRetryRequired: record.lease.settlementRetryRequired,
+      settlementRetryId: record.lease.settlementRetryId,
+      settlementRetryFence: record.lease.settlementRetryRequired
+        ? (record.lease.settlementRetryFence ??
+          (record.lease.claimStatus === 'released'
+            ? record.lease.runtimeFence - 1
+            : record.lease.runtimeFence))
+        : undefined,
+      deathEvidence: record.lease.deathEvidence
     })
   }
 }
@@ -249,7 +256,8 @@ export function evictAgentSessionOwner(args: {
     settlementRetryRequired: settlementRequired ? true : undefined,
     settlementRetryId: settlementRequired
       ? agentSessionRestartEvictionSettlementId(record.lease, adjudication)
-      : undefined
+      : undefined,
+    settlementRetryFence: settlementRequired ? record.lease.runtimeFence : undefined
   })
 }
 

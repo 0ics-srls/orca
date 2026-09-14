@@ -256,9 +256,18 @@ export class AgentSessionJournal {
   async markPendingSubmissionsUnknown(
     fence: number,
     boundary: { mode: 'death-confirmed' | 'new-owner-not-publishing' },
-    reason?: string
+    reason?: string,
+    throughFence?: number,
+    fromFence?: number
   ): Promise<string[]> {
-    return markJournalPendingSubmissionsUnknown(this, fence, boundary, reason)
+    return markJournalPendingSubmissionsUnknown(
+      this,
+      fence,
+      boundary,
+      reason,
+      throughFence,
+      fromFence
+    )
   }
 
   /** The escape hatch for corruption, an unreconcilable prefix, a forked handle,

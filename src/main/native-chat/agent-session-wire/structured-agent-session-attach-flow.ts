@@ -33,6 +33,7 @@ import { adapterSupportsCreateIfDeclared } from './structured-agent-session-prov
 import type { StructuredAgentSessionEventSink } from './structured-agent-session-event-sink'
 import { resolveAgentSessionReplayOutcome } from './structured-agent-session-replay-outcome'
 import { readAgentSessionHydrationPage } from './agent-session-history-page'
+import { projectStructuredAgentSessionOwnerPage } from './structured-agent-session-owner-projection'
 import { acquireOwner } from './structured-agent-session-acquisition'
 import {
   importAdoptedTranscript,
@@ -252,7 +253,10 @@ export async function performAttach(
     value: {
       sessionId,
       fence,
-      page: readAgentSessionHydrationPage(attached.journal, fence),
+      page: projectStructuredAgentSessionOwnerPage(
+        readAgentSessionHydrationPage(attached.journal, fence),
+        store.getRecord(sessionId)
+      ),
       unconfirmedClientMessageIds: attached.unconfirmedClientMessageIds
     }
   }

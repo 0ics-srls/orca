@@ -19,6 +19,7 @@ import {
   AGENT_SESSION_STORE_FILE_NAME
 } from './agent-session-record-store-file'
 import type { AgentSessionReserveRequest } from './agent-session-reservation-admission'
+import { releaseStoredAgentSessionOwnerAfterSurfaceClose } from './agent-session-surface-release-transition'
 
 const NOW = 1_800_000_000_000
 
@@ -649,6 +650,64 @@ describe('restart reconciliation', () => {
       })
     )
     expect(reacquired.disposition).toBe('reserved')
+  })
+
+  it('retains witnessed settlement across reservation and a crash before provider bind', async () => {
+    const store = await open()
+    await establishOwner(store)
+    await releaseStoredAgentSessionOwnerAfterSurfaceClose(store, {
+      sessionId: 'session-alpha',
+      expectedFence: 1,
+      now: NOW + 1,
+      settlementRetry: { settlementId: 'provider-exit:session-alpha:1:owner-a', detail: 'exit 17' }
+    })
+    const reserved = await store.reserveOwner(
+      reserveRequest({
+        expectedFence: 2,
+        probe: { outcome: 'pid-absent' },
+        operation: { callerKey: 'client-1', operationId: operationId(), fingerprint: 'fp-2' }
+      })
+    )
+    expect(reserved.record.lease).toMatchObject({
+      claimStatus: 'reserved',
+      settlementRetryRequired: true,
+      settlementRetryFence: 1,
+      deathEvidence: { kind: 'exit-observed', observedAt: NOW + 1, detail: 'exit 17' }
+    })
+
+    const restarted = await open()
+    expect(restarted.getRecord('session-alpha')?.lease).toMatchObject({
+      settlementRetryId: 'provider-exit:session-alpha:1:owner-a',
+      settlementRetryFence: 1,
+      deathEvidence: { kind: 'exit-observed', observedAt: NOW + 1 }
+    })
+  })
+
+  it('derives a pre-migration settlement boundary before reserving a replacement', async () => {
+    const store = await open()
+    await establishOwner(store)
+    await releaseStoredAgentSessionOwnerAfterSurfaceClose(store, {
+      sessionId: 'session-alpha',
+      expectedFence: 1,
+      now: NOW + 1,
+      settlementRetry: { settlementId: 'legacy-exit', detail: 'observed' }
+    })
+    await store.transitionHandoff('session-alpha', (record) => ({
+      ...record,
+      lease: { ...record.lease, settlementRetryFence: undefined }
+    }))
+    const reserved = await store.reserveOwner(
+      reserveRequest({
+        expectedFence: 2,
+        probe: { outcome: 'pid-absent' },
+        operation: { callerKey: 'client-1', operationId: operationId(), fingerprint: 'fp-2' }
+      })
+    )
+    expect(reserved.record.lease).toMatchObject({
+      runtimeFence: 3,
+      settlementRetryFence: 1,
+      settlementRetryId: 'legacy-exit'
+    })
   })
 
   it('frees a reservation that provably never spawned', async () => {

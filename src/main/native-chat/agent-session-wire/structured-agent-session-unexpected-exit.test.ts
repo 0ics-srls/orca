@@ -247,7 +247,9 @@ describe('provider-exit recovery tickets', () => {
     expect(session.journal.markPendingSubmissionsUnknown).toHaveBeenCalledWith(
       7,
       { mode: 'death-confirmed' },
-      'provider_exited_before_acknowledgement'
+      'provider_exited_before_acknowledgement',
+      7,
+      7
     )
     expect(session.hasProviderChild).toBe(false)
     // The running row is revised to interrupted at exit receipt, never tombstoned.
@@ -369,7 +371,7 @@ describe('provider-exit recovery tickets', () => {
         snapshot: () => ({ items: [] }),
         appendLifecycleBatch: vi.fn(async () => ({ epoch: 'epoch-1', sequence: 1 })),
         markPendingSubmissionsUnknown,
-        submissions: () => [{ clientMessageId: 'client-1', dispatchState: 'pending' }]
+        submissions: () => [{ clientMessageId: 'client-1', dispatchState: 'pending', fence: 7 }]
       }
     }
 
@@ -395,7 +397,9 @@ describe('provider-exit recovery tickets', () => {
     expect(markPendingSubmissionsUnknown).toHaveBeenCalledWith(
       7,
       { mode: 'death-confirmed' },
-      'provider_exited_before_acknowledgement'
+      'provider_exited_before_acknowledgement',
+      7,
+      7
     )
     expect(session.journal.appendLifecycleBatch).toHaveBeenCalledWith(
       expect.objectContaining({
