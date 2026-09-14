@@ -2,7 +2,6 @@ import type { PRCheckDetail, PRCheckRunDetails } from '../../../src/shared/githu
 import type { GitHubAssignableUser, PRInfo } from '../../../src/shared/github/pull-request-types'
 import type { GitHubWorkItemDetails } from '../../../src/shared/github/work-item-types'
 import type { HostedReviewInfo } from '../../../src/shared/hosted-review'
-import type { RpcMethodName } from '../transport/rpc-params-contract'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import type { RpcResponse } from '../transport/types'
 import { mobileRepoSelectorFromWorktreeId } from '../source-control/mobile-pr-create'
@@ -15,6 +14,7 @@ import {
   githubPrWorkItemDetailsRead,
   hostedReviewBranchLookupRead
 } from './github-pr-read-operations'
+import type { GitHubPrSettleableOperation } from './github-pr-mutation-outcome'
 import { githubPrRequestParams, type GitHubPrRepoSlug } from './github-pr-repo-slug'
 import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
 
@@ -36,12 +36,6 @@ export {
 
 export type GitHubPrReadOutcome<T> = { ok: true; result: T } | { ok: false; error: string }
 
-/** As much of a bound read operation as the settle shape below needs. */
-type GitHubPrReadOperation<Value> = {
-  readonly operation: { readonly method: RpcMethodName }
-  readonly interpret: (reply: RpcResponse) => Value
-}
-
 /**
  * Two failure texts main kept apart, and one it shared.
  *
@@ -58,7 +52,7 @@ function githubPrFailureText(reply: RpcResponse, error: unknown, fallback: strin
 }
 
 async function settleGithubPrRead<Value>(
-  read: GitHubPrReadOperation<Value>,
+  read: GitHubPrSettleableOperation<Value>,
   send: () => Promise<RpcResponse>
 ): Promise<GitHubPrReadOutcome<Value>> {
   const fallback = `Request failed: ${read.operation.method}`

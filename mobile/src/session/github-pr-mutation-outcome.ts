@@ -12,7 +12,7 @@ export type GitHubPrMutationOutcome = { ok: true } | { ok: false; error: string 
 // Host failure `error` is either a bare string (github.* PR mutations) or an
 // object `{ message }` (github.project.* slug mutations). Read whichever is present
 // so the slug edit/delete failures surface a real message, not a generic fallback.
-export function extractMutationError(error: unknown, method: string): string {
+function extractMutationError(error: unknown, method: string): string {
   if (typeof error === 'string') {
     return error
   }
@@ -25,8 +25,8 @@ export function extractMutationError(error: unknown, method: string): string {
   return `Request failed: ${method}`
 }
 
-/** As much of a bound mutation operation as the settle shapes below need. */
-export type GitHubPrMutationOperation<Value> = {
+/** As much of a bound operation as a settle shape needs; the read settle takes the same shape. */
+export type GitHubPrSettleableOperation<Value> = {
   readonly operation: { readonly method: RpcMethodName }
   readonly interpret: (reply: RpcResponse) => Value
 }
@@ -39,7 +39,7 @@ export type GitHubPrMutationOperation<Value> = {
  * and a dropped reply is never read as evidence the mutation failed to reach the host.
  */
 export async function settleGithubPrMutation(
-  mutation: GitHubPrMutationOperation<GitHubPrMutationStatus>,
+  mutation: GitHubPrSettleableOperation<GitHubPrMutationStatus>,
   send: () => Promise<RpcResponse>
 ): Promise<GitHubPrMutationOutcome> {
   const method = mutation.operation.method
@@ -71,7 +71,7 @@ export async function settleGithubPrMutation(
  * so an empty transport message never reached the caller on this path.
  */
 export async function settleGithubPrConfirmation(
-  mutation: GitHubPrMutationOperation<unknown>,
+  mutation: GitHubPrSettleableOperation<unknown>,
   send: () => Promise<RpcResponse>,
   unconfirmed: string
 ): Promise<GitHubPrMutationOutcome> {
