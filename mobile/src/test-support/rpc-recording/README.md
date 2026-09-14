@@ -329,7 +329,9 @@ from the pinned commit instead, with this branch's recorder laid over it — a d
 `git archive` extraction of `baseline`, this tree's `rpc-recording/` and `pilot-scenarios.json`
 copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scratch directory — then
 copy the result back and run the candidate suite here. Format the recorder before recording: an
-`oxfmt` pass afterwards moves `recorderSha256` again. Adding or editing one domain's module under
+`oxfmt` pass afterwards moves `recorderSha256` again. A recorder-only branch that has merged main
+is not the awkward case: its product tree is main's, so repin `baseline` to main's tip and record
+in place — there is no migrated source for the goldens to be recorded against. Adding or editing one domain's module under
 `adapters/` no longer needs any of this: only that domain's goldens move, and they re-record from
 its own branch like any other behaviour change. Adding a mutant, a probe or a suite that does not
 record needs none of it either, and moves no golden at all.
