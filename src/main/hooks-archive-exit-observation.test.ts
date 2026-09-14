@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
+import { EventEmitter } from 'node:events'
 import type { Repo } from '../shared/repo-types'
 
 const { spawnMock } = vi.hoisted(() => ({ spawnMock: vi.fn() }))
@@ -9,27 +10,38 @@ vi.mock('./effective-hook-config', () => ({
 
 const REPO: Repo = { id: 'r', path: '/repo', displayName: 'r', badgeColor: '#000', addedAt: 0 }
 
-/** Replays its chunks to whoever subscribes; runHook subscribes before the close below fires. */
-function fakeStream(chunks: string[]) {
-  return {
-    setEncoding: () => {},
-    on(event: string, fn: (chunk: string) => void) {
-      if (event === 'data') {
-        for (const chunk of chunks) {
-          fn(chunk)
-        }
+/**
+ * A real EventEmitter, so an `error` with no listener throws exactly as Node's would — which is the
+ * whole point of the stream-error row below. Replays its chunks to whoever subscribes to `data`.
+ */
+class FakeStream extends EventEmitter {
+  constructor(private readonly chunks: string[]) {
+    super()
+  }
+  setEncoding(): void {}
+  override on(event: string, fn: (chunk: string) => void): this {
+    super.on(event, fn)
+    if (event === 'data') {
+      for (const chunk of this.chunks) {
+        fn(chunk)
       }
     }
+    return this
   }
 }
 
 /** Minimal ChildProcess stand-in: runHook reads the streams and waits for close/error. */
 function fakeChild(
   outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error,
-  stdoutChunks: string[] = []
+  stdoutChunks: string[] = [],
+  stdoutError?: Error
 ) {
   const listeners: Record<string, ((...args: unknown[]) => void)[]> = {}
+  const stdout = new FakeStream(stdoutChunks)
   queueMicrotask(() => {
+    if (stdoutError) {
+      stdout.emit('error', stdoutError)
+    }
     if (outcome instanceof Error) {
       for (const fn of listeners.error ?? []) {
         fn(outcome)
@@ -42,8 +54,8 @@ function fakeChild(
   })
   return {
     pid: 4242,
-    stdout: fakeStream(stdoutChunks),
-    stderr: fakeStream([]),
+    stdout,
+    stderr: new FakeStream([]),
     exitCode: null,
     signalCode: null,
     kill: () => true,
@@ -56,10 +68,11 @@ function fakeChild(
 
 async function runArchiveWith(
   outcome: { code?: number | null; signal?: NodeJS.Signals | null } | Error,
-  stdoutChunks?: string[]
+  stdoutChunks?: string[],
+  stdoutError?: Error
 ): Promise<{ success: boolean; output: string; exitCode?: number }> {
   const { runHook } = await import('./hooks')
-  spawnMock.mockImplementationOnce(() => fakeChild(outcome, stdoutChunks))
+  spawnMock.mockImplementationOnce(() => fakeChild(outcome, stdoutChunks, stdoutError))
   const result = await runHook('archive', '/repo/wt', REPO)
   // Guard against a vacuous pass: if the mock stops intercepting, a real shell would run.
   expect(spawnMock).toHaveBeenCalled()
@@ -94,7 +107,15 @@ describe('archive hook exit observation', () => {
       Array.from({ length: 12 }, () => megabyte)
     )
     expect(result.output.length).toBeLessThan(11 * 1024 * 1024)
-    expect(result.output).toContain('output truncated')
+    expect(result.output).toContain('output truncated at 10485760 bytes')
+  })
+
+  it('survives an error on the output stream', async () => {
+    // An `error` with no listener is an uncaught exception, and in the main process that is the
+    // app. `exec` never covered this either — its only `error` listener is on the child.
+    await expect(
+      runArchiveWith({ code: 0 }, ['partial'], new Error('EIO: read failed'))
+    ).resolves.toMatchObject({ success: true })
   })
 
   it.each([

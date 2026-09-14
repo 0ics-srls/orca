@@ -19,6 +19,7 @@ import {
   forceTerminateProcessTree,
   signalProcessTree
 } from '../shared/child-process/process-tree-termination'
+import { createOutputSink } from '../shared/child-process/bounded-output-sink'
 
 const HOOK_TIMEOUT = 120_000 // 2 minutes
 
@@ -59,22 +60,16 @@ const SIGTERM_GRACE_MS = 2_000
 
 /**
  * `exec` capped output at 1 MiB and killed the hook on overflow; `spawn` has no cap at all, and a
- * hook flooding stdout for the full deadline can take the main process's heap with it. Retain a
- * generous prefix and keep draining past it, so a chatty hook is never blocked on a full pipe.
+ * hook flooding stdout for the full deadline can take the main process's heap with it. Truncation
+ * is reported in the output rather than as a failure — a chatty hook that exits 0 did succeed, and
+ * failing it for being chatty is the `exec` behaviour this is replacing.
  */
-const HOOK_OUTPUT_LIMIT = 10 * 1024 * 1024
+const HOOK_OUTPUT_LIMIT_BYTES = 10 * 1024 * 1024
 
-function boundedStreamText(): { append: (chunk: string) => void; read: () => string } {
-  let text = ''
-  let dropped = 0
-  return {
-    append(chunk) {
-      const room = Math.max(HOOK_OUTPUT_LIMIT - text.length, 0)
-      text += chunk.slice(0, room)
-      dropped += Math.max(chunk.length - room, 0)
-    },
-    read: () => (dropped > 0 ? `${text}\n[output truncated, ${dropped} chars dropped]` : text)
-  }
+function readSink(sink: ReturnType<typeof createOutputSink>): string {
+  return sink.truncated()
+    ? `${sink.text()}\n[output truncated at ${HOOK_OUTPUT_LIMIT_BYTES} bytes]`
+    : sink.text()
 }
 
 /** A spawn failure: the process never started, so no exit was ever observed. */
@@ -291,18 +286,27 @@ export function runHook(
       // Why: hooks run unattended; block Git Credential Manager's interactive prompt while keeping cached auth (issue #7652).
       env: promptGuardShellEnv(shellHookEnv),
       stdio: ['ignore', 'pipe', 'pipe'],
+      // Pinned, not left to Node's default, for the same reason `runProcess` pins it: a `cmd.exe`
+      // hook otherwise flashes a console window and takes focus. Pre-existing — `exec` did not set
+      // it either — but AGENTS.md asks for it pinned on every Windows spawn.
+      windowsHide: true,
       // Make the shell a group leader so its children can be reached. Not on Windows, which has no
       // process groups in this sense and where `detached` means a new console instead.
       ...(process.platform === 'win32' ? {} : { detached: true })
     })
-    const stdout = boundedStreamText()
-    const stderr = boundedStreamText()
-    child.stdout?.setEncoding('utf8')
-    child.stdout?.on('data', (chunk: string) => stdout.append(chunk))
-    child.stderr?.setEncoding('utf8')
-    child.stderr?.on('data', (chunk: string) => stderr.append(chunk))
+    const stdout = createOutputSink(HOOK_OUTPUT_LIMIT_BYTES)
+    const stderr = createOutputSink(HOOK_OUTPUT_LIMIT_BYTES)
+    child.stdout?.on('data', (chunk: Buffer | string) => stdout.write(chunk))
+    child.stderr?.on('data', (chunk: Buffer | string) => stderr.write(chunk))
+    // Why listeners that do nothing: an unhandled `error` on a stream is an uncaught exception, and
+    // in the Electron main process that is the whole app. `exec` never covered this either — its
+    // only `error` listener is on the child — so this is a pre-existing gap, closed the way
+    // `runProcess` closes it. Losing output is not worth a crash; the exit code still gets through.
+    for (const stream of [child.stdin, child.stdout, child.stderr]) {
+      stream?.on('error', () => {})
+    }
     child.on('error', (error) => {
-      settle(hookProcessError(error, stdout.read(), stderr.read(), { hookName, cwd }))
+      settle(hookProcessError(error, readSink(stdout), readSink(stderr), { hookName, cwd }))
     })
     child.on('close', (code, signal) => {
       settle(
@@ -310,8 +314,8 @@ export function runHook(
           // A signalled exit reports no code, which stays `unverifiable` rather than becoming a 0.
           {
             code: signal ? null : code,
-            stdout: stdout.read(),
-            stderr: stderr.read(),
+            stdout: readSink(stdout),
+            stderr: readSink(stderr),
             timedOut: false
           },
           { hookName, cwd, timeoutMs }
@@ -326,7 +330,7 @@ export function runHook(
           classifyHookProcessResult(
             // Keep what the hook printed: it is the only clue to why the removal gate says
             // `unverifiable`.
-            { code: null, stdout: stdout.read(), stderr: stderr.read(), timedOut: true },
+            { code: null, stdout: readSink(stdout), stderr: readSink(stderr), timedOut: true },
             { hookName, cwd, timeoutMs }
           )
         )
