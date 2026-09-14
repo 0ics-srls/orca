@@ -99,7 +99,7 @@ describe('CodexPromptRegistry', () => {
     registry.register({
       id: 1,
       method: 'item/commandExecution/requestApproval',
-      params: { itemId: 'root-item', threadId: 'thread-1', turnId: 'turn-1' }
+      params: { itemId: 'root-item', threadId: 'thread-1' }
     })
     registry.register({
       id: 2,
@@ -111,7 +111,7 @@ describe('CodexPromptRegistry', () => {
       method: 'item/commandExecution/requestApproval',
       params: { itemId: 'other-thread-item', threadId: 'thread-2', turnId: 'turn-1' }
     })
-    registry.bindJournalItemId('journal-root', 'thread-1', 'root-item')
+    registry.bindJournalItemId('journal-root', 'thread-1', 'root-item', 'turn-1')
 
     registry.clearTurn('thread-1', 'turn-1')
 

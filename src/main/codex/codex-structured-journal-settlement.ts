@@ -165,9 +165,6 @@ export function settleCodexJournalTurn(input: {
       body: codexTurnLifecycleBody(input.turnLifecycle)
     })
   }
-  if (mutations.length === 0) {
-    return ADMITTED
-  }
   const admission = appendCodexLifecycleMutations(
     input.sink,
     `turn-completed:${input.sessionId}:${input.threadId}:${input.turnId}`,

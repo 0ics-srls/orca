@@ -36,6 +36,7 @@ export class CodexJournalPrompts {
     codexItemId: string
     promptKey: string
   }): CodexJournalTranslationAdmission {
+    const turnId = readCodexTurnId(event.params) ?? this.activeTurn(event.threadId)
     if (event.method === CODEX_USER_INPUT_METHOD) {
       const questions = codexQuestionItems({
         threadId: event.threadId,
@@ -51,7 +52,7 @@ export class CodexJournalPrompts {
         const itemId = agentJournalItemKey(question.identity)
         this.pending.set(itemId, {
           threadId: event.threadId,
-          turnId: readCodexTurnId(event.params) ?? this.activeTurn(event.threadId),
+          turnId,
           identity: question.identity,
           body: question.body
         })
@@ -59,7 +60,7 @@ export class CodexJournalPrompts {
         if (!trimAdmission.accepted) {
           return trimAdmission
         }
-        this.deps.bindPromptItemId?.(itemId, event.threadId, event.promptKey)
+        this.deps.bindPromptItemId?.(itemId, event.threadId, event.promptKey, turnId)
       }
       return CODEX_JOURNAL_ADMITTED
     }
@@ -79,7 +80,7 @@ export class CodexJournalPrompts {
     const itemId = agentJournalItemKey(identity)
     this.pending.set(itemId, {
       threadId: event.threadId,
-      turnId: readCodexTurnId(event.params) ?? this.activeTurn(event.threadId),
+      turnId,
       identity,
       body
     })
@@ -87,7 +88,7 @@ export class CodexJournalPrompts {
     if (!trimAdmission.accepted) {
       return trimAdmission
     }
-    this.deps.bindPromptItemId?.(itemId, event.threadId, event.promptKey)
+    this.deps.bindPromptItemId?.(itemId, event.threadId, event.promptKey, turnId)
     return CODEX_JOURNAL_ADMITTED
   }
 

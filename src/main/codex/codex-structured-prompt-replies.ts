@@ -222,7 +222,12 @@ export class CodexPromptRegistry {
   }
 
   /** Called by the translation module once the prompt has a journal id. */
-  bindJournalItemId(journalItemId: string, threadId: string, promptKey: string): void {
+  bindJournalItemId(
+    journalItemId: string,
+    threadId: string,
+    promptKey: string,
+    turnId?: string | null
+  ): void {
     const existing = this.journalItemIds.get(journalItemId)
     if (existing) {
       this.boundPrompts.delete(journalItemId)
@@ -232,6 +237,9 @@ export class CodexPromptRegistry {
     const prompt = this.byAddress.get(address)
     if (!prompt) {
       return
+    }
+    if (prompt.turnId === null && turnId) {
+      prompt.turnId = turnId
     }
     this.journalItemIds.set(journalItemId, address)
     this.boundPrompts.set(journalItemId, prompt)
