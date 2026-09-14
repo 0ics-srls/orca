@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import type { OnboardingState } from '../../shared/onboarding-state-types'
 import type * as AgentStatusHooksEnablement from '../agent-hooks/agent-status-hooks-enablement'
 
 /**
- * The behavioural half of the managed-hook first-run gate. `startup-managed-hook-plan.test.ts`
- * tables the decision; this drives the real ready phase so that dropping the plan call, the
- * `shouldReconcile` conjunct or the latch-retirement write turns red. Without it the whole startup
- * gate can be reverted to origin/main with every other suite still green.
+ * The behavioural half of the managed-hook install gate. `managed-hook-install-policy.test.ts`
+ * tables the decision; this drives the real ready phase so that dropping the plan call or the
+ * `shouldReconcile` conjunct turns red. Without it the whole startup gate can be reverted to
+ * origin/main with every other suite still green.
  */
 const {
   installManagedAgentHooksMock,
@@ -15,7 +15,7 @@ const {
   mainProcessStateFake,
   runtimeFake
 } = vi.hoisted(() => ({
-  installManagedAgentHooksMock: vi.fn(async () => []),
+  installManagedAgentHooksMock: vi.fn(async (_settings?: unknown, _options?: unknown) => []),
   ensureRealHomeCodexHookStateMock: vi.fn(async () => undefined),
   runtimeFake: {
     setAgentBrowserBridge: vi.fn(),
@@ -116,16 +116,30 @@ vi.mock('./first-window-deferral', () => ({ runAfterFirstWindowShown: vi.fn() })
 vi.mock('./startup-diagnostics', () => ({ logStartupMilestone: vi.fn() }))
 
 import { initializeReadyRuntimeServices } from './main-process-ready-runtime'
+import {
+  getManagedHookInstallDecision,
+  setManagedHookInstallDecisionResolver,
+  type ManagedHookInstallationMarker
+} from '../agent-hooks/managed-hook-install-policy'
+
+const PRE_CHANGE: ManagedHookInstallationMarker = {
+  installCohort: 'pre-change',
+  onboardingDecision: 'passed'
+}
+const FRESH_PENDING: ManagedHookInstallationMarker = {
+  installCohort: 'post-change',
+  onboardingDecision: 'pending'
+}
+const FRESH_PASSED: ManagedHookInstallationMarker = {
+  installCohort: 'post-change',
+  onboardingDecision: 'passed'
+}
 
 function createStoreFake(initial: {
   onboarding?: Partial<OnboardingState>
   settings?: Partial<GlobalSettings>
 }) {
-  let settings = {
-    disabledTuiAgents: [],
-    managedAgentHookFirstRunGate: 'pending',
-    ...initial.settings
-  } as GlobalSettings
+  let settings = { disabledTuiAgents: [], ...initial.settings } as GlobalSettings
   const onboarding = {
     flowVersion: 1,
     closedAt: null,
@@ -144,10 +158,15 @@ function createStoreFake(initial: {
   }
 }
 
-function latchWrites(store: ReturnType<typeof createStoreFake>): Partial<GlobalSettings>[] {
-  return store.updateSettings.mock.calls
-    .map(([updates]) => updates)
-    .filter((updates) => 'managedAgentHookFirstRunGate' in updates)
+/** The marker the desktop bootstrap would have established for this launch. */
+function establishInstallation(installation: ManagedHookInstallationMarker): void {
+  setManagedHookInstallDecisionResolver((settings) =>
+    getManagedHookInstallDecision({
+      settings,
+      installation,
+      mode: mainProcessStateFake.isServeMode ? 'serve' : 'desktop'
+    })
+  )
 }
 
 async function runReadyPhase(store: ReturnType<typeof createStoreFake>): Promise<void> {
@@ -159,53 +178,72 @@ async function runReadyPhase(store: ReturnType<typeof createStoreFake>): Promise
   }
 }
 
-describe('managed hook first-run gate in the ready phase', () => {
+describe('managed hook install gate in the ready phase', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mainProcessStateFake.isServeMode = false
     mainProcessStateFake.isQuitting = false
     mainProcessStateFake.codexRuntimeHome = null
+    setManagedHookInstallDecisionResolver(null)
   })
 
-  it('writes nothing user-global for a fresh profile that has not reached step 1', async () => {
-    const store = createStoreFake({})
+  afterEach(() => setManagedHookInstallDecisionResolver(null))
 
-    await runReadyPhase(store)
+  it('writes nothing user-global for a fresh install that has not answered yet', async () => {
+    establishInstallation(FRESH_PENDING)
+
+    await runReadyPhase(createStoreFake({}))
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
     expect(ensureRealHomeCodexHookStateMock).not.toHaveBeenCalled()
-    // The latch must stay armed, or the next launch installs without ever having asked.
-    expect(latchWrites(store)).toEqual([])
   })
 
-  it('reconciles once and retires the latch after the user passes step 1', async () => {
-    const store = createStoreFake({ onboarding: { lastCompletedStep: 1 } })
+  it('installs for an existing user upgrading, whose installation has no marker', async () => {
+    establishInstallation(PRE_CHANGE)
 
-    await runReadyPhase(store)
+    await runReadyPhase(createStoreFake({}))
 
-    expect(latchWrites(store)).toEqual([{ managedAgentHookFirstRunGate: 'done' }])
+    expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('installs once the first-run question has been answered', async () => {
+    establishInstallation(FRESH_PASSED)
+
+    await runReadyPhase(createStoreFake({}))
+
     expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
   })
 
   it('never defers on a serve host, which never paints the wizard', async () => {
     mainProcessStateFake.isServeMode = true
-    const store = createStoreFake({})
+    establishInstallation(FRESH_PENDING)
 
-    await runReadyPhase(store)
+    await runReadyPhase(createStoreFake({}))
 
-    expect(latchWrites(store)).toEqual([{ managedAgentHookFirstRunGate: 'done' }])
     expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
   })
 
-  it('still honours the off switch on a profile whose latch has already retired', async () => {
-    const store = createStoreFake({
-      onboarding: { lastCompletedStep: 1 },
-      settings: { managedAgentHookFirstRunGate: 'done', agentStatusHooksEnabled: false }
-    })
+  it('installs when no bootstrap ever established a marker', async () => {
+    await runReadyPhase(createStoreFake({}))
 
-    await runReadyPhase(store)
+    expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('still honours the off switch on an installation that has answered', async () => {
+    establishInstallation(FRESH_PASSED)
+
+    await runReadyPhase(createStoreFake({ settings: { agentStatusHooksEnabled: false } }))
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
-    expect(latchWrites(store)).toEqual([])
+  })
+
+  it('carries the startup decision into the installer, not just the reconcile flag', async () => {
+    establishInstallation(PRE_CHANGE)
+
+    await runReadyPhase(createStoreFake({}))
+
+    expect(installManagedAgentHooksMock.mock.calls[0]?.[1]).toMatchObject({
+      installDecision: { kind: 'allow', reason: 'pre-change' }
+    })
   })
 })

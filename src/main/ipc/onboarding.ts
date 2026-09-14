@@ -1,5 +1,9 @@
 import { app, ipcMain } from 'electron'
-import { sanitizeOnboardingUpdate, type Store } from '../persistence'
+import { getCanonicalUserDataPath, sanitizeOnboardingUpdate, type Store } from '../persistence'
+import {
+  isManagedHookOnboardingPending,
+  recordManagedHookOnboardingPassed
+} from '../persistence/managed-hook-installation-marker'
 import type { OnboardingState } from '../../shared/onboarding-state-types'
 import {
   installManagedAgentHooks,
@@ -7,7 +11,6 @@ import {
   shouldContinueManagedHookStartup
 } from '../agent-hooks/managed-agent-hook-controls'
 import { recordManagedHookInstallFailure } from '../agent-hooks/install-telemetry'
-import { isManagedHookInstallDeferredForFirstRun } from '../agent-hooks/managed-hook-first-run-gate'
 
 type OnboardingHandlerDeps = {
   /** Live quit flag, so a Continue-triggered install stops mid-loop on shutdown. */
@@ -22,6 +25,16 @@ function readAgentStatusHooksConsent(consent: unknown): boolean | undefined {
   return typeof value === 'boolean' ? value : undefined
 }
 
+/**
+ * Leaving counts as answering: an accidental Esc must not leave agent status permanently broken,
+ * and by then the user has seen step 1 with the box in whatever state they left it.
+ */
+function hasMovedPastTheHooksQuestion(
+  onboarding: Pick<OnboardingState, 'closedAt' | 'lastCompletedStep'>
+): boolean {
+  return onboarding.closedAt !== null || onboarding.lastCompletedStep >= 1
+}
+
 export function registerOnboardingHandlers(store: Store, deps: OnboardingHandlerDeps = {}): void {
   ipcMain.removeHandler('onboarding:get')
   ipcMain.removeHandler('onboarding:update')
@@ -33,30 +46,23 @@ export function registerOnboardingHandlers(store: Store, deps: OnboardingHandler
   ipcMain.handle(
     'onboarding:update',
     (_event, updates: unknown, consent: unknown): OnboardingState => {
-      const wasDeferred = isManagedHookInstallDeferredForFirstRun({
-        onboarding: store.getOnboarding(),
-        settings: store.getSettings()
-      })
+      const wasPending = isManagedHookOnboardingPending()
       // Why persist consent before advancing: the renderer's on-change write reports no failure, so
-      // lifting the latch on the default-on value would install for a user who unchecked. A throw
-      // here aborts the advance too, keeping preference, onboarding and latch from diverging.
-      const consented = wasDeferred ? readAgentStatusHooksConsent(consent) : undefined
+      // recording the answer on the default-on value would install for a user who unchecked. A
+      // throw here aborts the advance too, keeping preference and marker from diverging.
+      const consented = wasPending ? readAgentStatusHooksConsent(consent) : undefined
       if (consented !== undefined) {
         store.updateSettings({ agentStatusHooksEnabled: consented })
       }
       const next = store.updateOnboarding(sanitizeOnboardingUpdate(updates))
-      if (!wasDeferred) {
+      if (!wasPending || !hasMovedPastTheHooksQuestion(next)) {
         return next
       }
-      // Why the deferral-lifting transition and not the step-1 crossing: Esc and skip end the
-      // deferral too, and by then the user has seen step 1 with the box in the state they left it.
-      if (
-        isManagedHookInstallDeferredForFirstRun({ onboarding: next, settings: store.getSettings() })
-      ) {
+      // Why the write must land first: a crash between "installed" and "recorded" is survivable,
+      // but recording before an unchecked preference is durable would install against the box.
+      if (!recordManagedHookOnboardingPassed(getCanonicalUserDataPath())) {
         return next
       }
-      // Idempotency comes from the latch, so a later wizard re-open never installs again.
-      store.updateSettings({ managedAgentHookFirstRunGate: 'done' })
       const settings = store.getSettings()
       if (!isAgentStatusHooksEnabled(settings)) {
         return next

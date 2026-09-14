@@ -50,6 +50,16 @@ describe('AgentStatusHooksControl', () => {
     expect(onEnabledChange).toHaveBeenCalledWith(false)
   })
 
+  it('states the filesystem effect before the disclosure is ever opened', () => {
+    // The material fact — Orca writes outside its own directory — must not be reachable only by
+    // expanding the collapsed section.
+    renderControl()
+
+    expect(disclosureTrigger()).toHaveAttribute('data-state', 'closed')
+    expect(screen.getByText(/edits each agent's own config file in your home folder/)).toBeVisible()
+    expect(screen.getByText(/outside Orca's own directory/)).toBeVisible()
+  })
+
   it('starts with the disclosure collapsed', () => {
     renderControl()
 

@@ -39,9 +39,11 @@ export function AgentStatusHooksControl({
         </span>
       </label>
       <p className="text-xs text-muted-foreground">
+        {/* The filesystem effect stays in the always-visible line: collapsing the per-agent detail
+            is a product choice, hiding the fact that Orca writes outside its own directory is not. */}
         {translate(
           'auto.components.onboarding.AgentStatusHooksControl.why',
-          "Enables Orca to track your CLI agents' statuses, so it can inform you when each is working, needs you, or is done. Also powers your notifications."
+          "Enables Orca to track your CLI agents' statuses, so it can inform you when each is working, needs you, or is done. Also powers your notifications. To do it, Orca edits each agent's own config file in your home folder, outside Orca's own directory."
         )}
       </p>
       {/* Sibling of the label, never nested inside it: a trigger under the label would toggle the checkbox. */}

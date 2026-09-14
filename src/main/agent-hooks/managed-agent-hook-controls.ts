@@ -6,7 +6,10 @@ import {
 import { normalizeDisabledTuiAgents } from '../../shared/tui-agent-selection'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import { detectLocalManagedAgentCliPresence } from './local-agent-cli-presence'
-import { isAgentStatusHooksEnabled } from './agent-status-hooks-enablement'
+import {
+  authorizeManagedHookInstall,
+  type ManagedHookInstallDecision
+} from './managed-hook-install-policy'
 import {
   MANAGED_AGENT_HOOK_ASYNC_REMOVERS,
   MANAGED_AGENT_HOOK_INSTALLERS,
@@ -33,6 +36,9 @@ type ManagedHookSettings = Partial<
 type InstallOptions = {
   /** Set only for an explicit user action, never for startup reconciliation. */
   userInitiated?: boolean
+  /** The authorization for this write. Omitted means "ask the host", which installs when no host
+   *  has answered — the CLI's own process and every pre-bootstrap caller. */
+  installDecision?: ManagedHookInstallDecision
   shouldHydrateShellPath?: boolean
   onInstallError?: (agent: AgentHookTarget, error: unknown) => void
   shouldContinue?: (agent: AgentHookTarget) => boolean
@@ -119,13 +125,16 @@ export async function installManagedAgentHooks(
   settings: ManagedHookSettings = null,
   options: InstallOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
-  // Why here and not only at the call sites: "hooks off" has to hold for every caller and every
-  // launch, including ones added later. Never mirrored with a remove — declined means write
-  // nothing, because removal deletes user-global files another Orca profile owns (STA-5679).
-  if (!isAgentStatusHooksEnabled(settings)) {
-    return selectedInstallers(options).map(([agent]) =>
-      skippedStatus(agent, 'hooks_disabled', 'Agent status hooks are turned off.')
-    )
+  // Why here and not only at the call sites: authorization has to hold for every caller and every
+  // launch, including ones added later. Never mirrored with a remove — neither "declined" nor
+  // "not asked yet" may delete user-global files another Orca profile owns (STA-5679).
+  const decision = authorizeManagedHookInstall(settings, options.installDecision)
+  if (decision.kind !== 'allow') {
+    const [skipReason, detail] =
+      decision.kind === 'deny'
+        ? (['hooks_disabled', 'Agent status hooks are turned off.'] as const)
+        : (['onboarding_pending', 'Waiting for the first-run agent status question.'] as const)
+    return selectedInstallers(options).map(([agent]) => skippedStatus(agent, skipReason, detail))
   }
   await refreshExistingManagedScripts(options)
   const installers = selectedInstallers(options)

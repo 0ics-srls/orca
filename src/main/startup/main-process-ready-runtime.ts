@@ -96,13 +96,8 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
   const startupManagedHookSettings = store.getSettings()
   const startupManagedHookPlan = resolveStartupManagedHookPlan({
     managedHooksInstallable: shouldInstallManagedHooks(is.dev),
-    isServeMode: state.isServeMode,
-    onboarding: store.getOnboarding(),
     settings: startupManagedHookSettings
   })
-  if (startupManagedHookPlan.shouldRetireFirstRunLatch) {
-    store.updateSettings({ managedAgentHookFirstRunGate: 'done' })
-  }
   const shouldReconcileStartupManagedHooks = startupManagedHookPlan.shouldReconcile
   const realHomeCodexHookState =
     shouldReconcileStartupManagedHooks &&
@@ -123,6 +118,7 @@ export async function initializeReadyRuntimeServices(): Promise<void> {
     void realHomeCodexHookState
       .then(() =>
         installManagedAgentHooks(managedHookStore.getSettings(), {
+          installDecision: startupManagedHookPlan.decision,
           shouldHydrateShellPath: app.isPackaged,
           onInstallError: recordManagedHookInstallFailure,
           shouldContinue: (agent) =>

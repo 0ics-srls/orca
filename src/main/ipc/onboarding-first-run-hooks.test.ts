@@ -10,13 +10,16 @@ const {
   removeHandlerMock,
   installManagedAgentHooksMock,
   recordManagedHookInstallFailureMock,
-  sanitizeOnboardingUpdateMock
+  sanitizeOnboardingUpdateMock,
+  installationFake
 } = vi.hoisted(() => ({
   handleMock: vi.fn(),
   removeHandlerMock: vi.fn(),
   installManagedAgentHooksMock: vi.fn(),
   recordManagedHookInstallFailureMock: vi.fn(),
-  sanitizeOnboardingUpdateMock: vi.fn((updates: unknown) => updates)
+  sanitizeOnboardingUpdateMock: vi.fn((updates: unknown) => updates),
+  // Stands in for the installation-scoped marker file the desktop bootstrap established.
+  installationFake: { pending: true, markerWriteFails: false, passedWrites: 0 }
 }))
 
 vi.mock('electron', () => ({
@@ -25,7 +28,20 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../persistence', () => ({
-  sanitizeOnboardingUpdate: sanitizeOnboardingUpdateMock
+  sanitizeOnboardingUpdate: sanitizeOnboardingUpdateMock,
+  getCanonicalUserDataPath: () => '/tmp/orca-onboarding-hooks-test'
+}))
+
+vi.mock('../persistence/managed-hook-installation-marker', () => ({
+  isManagedHookOnboardingPending: () => installationFake.pending,
+  recordManagedHookOnboardingPassed: () => {
+    installationFake.passedWrites += 1
+    if (installationFake.markerWriteFails) {
+      return false
+    }
+    installationFake.pending = false
+    return true
+  }
 }))
 
 // Only the installer is faked: the registry behind the real module pulls in every per-agent hook
@@ -62,11 +78,7 @@ function createStoreFake(initial: {
     lastCompletedStep: -1,
     ...initial.onboarding
   } as OnboardingState
-  let settings = {
-    disabledTuiAgents: [],
-    managedAgentHookFirstRunGate: 'pending',
-    ...initial.settings
-  } as GlobalSettings
+  let settings = { disabledTuiAgents: [], ...initial.settings } as GlobalSettings
   return {
     getOnboarding: vi.fn(() => onboarding),
     getSettings: vi.fn(() => settings),
@@ -117,16 +129,19 @@ describe('onboarding:update first-run managed hook install', () => {
     removeHandlerMock.mockReset()
     installManagedAgentHooksMock.mockReset().mockResolvedValue([])
     recordManagedHookInstallFailureMock.mockReset()
+    installationFake.pending = true
+    installationFake.markerWriteFails = false
+    installationFake.passedWrites = 0
   })
 
-  it('installs once when passing step 1 lifts the deferral, and retires the latch', () => {
+  it('installs once when passing step 1 lifts the deferral, and records the answer', () => {
     const store = createStoreFake({})
     const update = registerAndGetUpdateHandler(store)
 
     update({ lastCompletedStep: 1 })
 
     expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('done')
+    expect(installationFake.pending).toBe(false)
   })
 
   it('never marks the first-run install user-initiated', () => {
@@ -140,24 +155,26 @@ describe('onboarding:update first-run managed hook install', () => {
     expect(installManagedAgentHooksMock.mock.calls[0][1]).not.toHaveProperty('userInitiated', true)
   })
 
-  it('installs nothing when the user unchecked the box, but still retires the latch', () => {
+  it('installs nothing when the user unchecked the box, but still records the answer', () => {
     const store = createStoreFake({ settings: { agentStatusHooksEnabled: false } })
     const update = registerAndGetUpdateHandler(store)
 
     update({ lastCompletedStep: 1 })
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('done')
+    // Recording matters even here: leaving it pending would defer forever, so re-enabling in
+    // Settings later would never install.
+    expect(installationFake.pending).toBe(false)
   })
 
-  it('retires the latch and installs when the wizard is dismissed instead of advanced', () => {
+  it('records the answer and installs when the wizard is dismissed instead of advanced', () => {
     const store = createStoreFake({})
     const update = registerAndGetUpdateHandler(store)
 
     update({ closedAt: 1_700_000_000_000, outcome: 'dismissed' })
 
     expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('done')
+    expect(installationFake.pending).toBe(false)
   })
 
   it('stays deferred while the user is still before step 1', () => {
@@ -167,7 +184,18 @@ describe('onboarding:update first-run managed hook install', () => {
     update({ lastCompletedStep: 0 })
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('pending')
+    expect(installationFake.pending).toBe(true)
+  })
+
+  it('installs nothing and stays pending when the marker write fails', () => {
+    installationFake.markerWriteFails = true
+    const store = createStoreFake({})
+    const update = registerAndGetUpdateHandler(store)
+
+    update({ lastCompletedStep: 1 })
+
+    expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
+    expect(installationFake.pending).toBe(true)
   })
 
   it('does not install again on a later update in the same run', () => {
@@ -192,14 +220,16 @@ describe('onboarding:update first-run managed hook install', () => {
     expect(installManagedAgentHooksMock).toHaveBeenCalledTimes(1)
   })
 
-  it('leaves a pre-release profile with no latch completely alone', () => {
-    const store = createStoreFake({ settings: { managedAgentHookFirstRunGate: undefined } })
+  it('leaves a pre-change installation completely alone', () => {
+    installationFake.pending = false
+    const store = createStoreFake({})
     const update = registerAndGetUpdateHandler(store)
 
     update({ lastCompletedStep: 1 })
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
     expect(store.updateSettings).not.toHaveBeenCalled()
+    expect(installationFake.passedWrites).toBe(0)
   })
 })
 
@@ -209,6 +239,9 @@ describe('onboarding:update step-1 consent transaction', () => {
     removeHandlerMock.mockReset()
     installManagedAgentHooksMock.mockReset().mockResolvedValue([])
     recordManagedHookInstallFailureMock.mockReset()
+    installationFake.pending = true
+    installationFake.markerWriteFails = false
+    installationFake.passedWrites = 0
   })
 
   it('honours a declining consent even when the stored preference is still default-on', () => {
@@ -220,7 +253,7 @@ describe('onboarding:update step-1 consent transaction', () => {
 
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
     expect(store.getSettings().agentStatusHooksEnabled).toBe(false)
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('done')
+    expect(installationFake.pending).toBe(false)
   })
 
   it('re-enables from the consent when the stored preference says off', () => {
@@ -243,7 +276,7 @@ describe('onboarding:update step-1 consent transaction', () => {
 
     expect(store.updateOnboarding).not.toHaveBeenCalled()
     expect(store.getOnboarding().lastCompletedStep).toBe(-1)
-    expect(store.getSettings().managedAgentHookFirstRunGate).toBe('pending')
+    expect(installationFake.pending).toBe(true)
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
   })
 
@@ -257,8 +290,9 @@ describe('onboarding:update step-1 consent transaction', () => {
     expect(installManagedAgentHooksMock).not.toHaveBeenCalled()
   })
 
-  it('never writes the preference for a profile that was not deferring', () => {
-    const store = createStoreFake({ settings: { managedAgentHookFirstRunGate: 'done' } })
+  it('never writes the preference for an installation that was not deferring', () => {
+    installationFake.pending = false
+    const store = createStoreFake({})
     const update = registerAndGetUpdateHandler(store)
 
     update({ lastCompletedStep: 1 }, { agentStatusHooksEnabled: false })
@@ -287,6 +321,9 @@ describe('onboarding:update install cancellation', () => {
     removeHandlerMock.mockReset()
     installManagedAgentHooksMock.mockReset().mockResolvedValue([])
     recordManagedHookInstallFailureMock.mockReset()
+    installationFake.pending = true
+    installationFake.markerWriteFails = false
+    installationFake.passedWrites = 0
   })
 
   it('stops the in-flight install once the user turns hooks off in Settings', () => {

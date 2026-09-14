@@ -1,49 +1,28 @@
-import type { GlobalSettings } from '../../shared/global-settings-types'
-import type { OnboardingState } from '../../shared/onboarding-state-types'
-import { resolveStartupManagedHookAction } from '../agent-hooks/agent-status-hooks-enablement'
 import {
-  isManagedHookFirstRunGatePending,
-  isManagedHookInstallDeferredForFirstRun
-} from '../agent-hooks/managed-hook-first-run-gate'
-
-type StartupManagedHookPlanSettings = Partial<
-  Pick<
-    GlobalSettings,
-    'agentStatusHooksEnabled' | 'disabledTuiAgents' | 'managedAgentHookFirstRunGate'
-  >
-> | null
+  resolveManagedHookInstallDecision,
+  type ManagedHookInstallDecision,
+  type ManagedHookInstallPolicySettings
+} from '../agent-hooks/managed-hook-install-policy'
 
 export type StartupManagedHookPlan = {
-  /** Nothing user-global may be written yet: a fresh profile still has step 1 ahead of it. */
-  deferForFirstRun: boolean
-  /** Freeze the one-shot latch, so a later wizard re-open can never re-arm the deferral. */
-  shouldRetireFirstRunLatch: boolean
+  /** Carried to the installers so the startup pass and the chokepoint cannot disagree. */
+  decision: ManagedHookInstallDecision
   /** Run the startup install/refresh pass over every enabled agent. */
   shouldReconcile: boolean
 }
 
+/**
+ * Thin adapter: the host mode and the installation marker were settled in preflight, so startup
+ * only adds "does this build reconcile hooks at all".
+ */
 export function resolveStartupManagedHookPlan(input: {
   /** `shouldInstallManagedHooks(is.dev)` — whether this build reconciles hooks at all. */
   managedHooksInstallable: boolean
-  isServeMode: boolean
-  onboarding: Pick<OnboardingState, 'closedAt' | 'lastCompletedStep'>
-  settings: StartupManagedHookPlanSettings
+  settings: ManagedHookInstallPolicySettings
 }): StartupManagedHookPlan {
-  // Why a serve host never defers: it never paints the wizard (paired clients keep onboarding in
-  // localStorage and there is no onboarding RPC), so the latch would stay armed forever.
-  const deferForFirstRun =
-    !input.isServeMode &&
-    isManagedHookInstallDeferredForFirstRun({
-      onboarding: input.onboarding,
-      settings: input.settings
-    })
+  const decision = resolveManagedHookInstallDecision(input.settings)
   return {
-    deferForFirstRun,
-    shouldRetireFirstRunLatch:
-      !deferForFirstRun && isManagedHookFirstRunGatePending(input.settings),
-    shouldReconcile:
-      input.managedHooksInstallable &&
-      !deferForFirstRun &&
-      resolveStartupManagedHookAction(input.settings) === 'install'
+    decision,
+    shouldReconcile: input.managedHooksInstallable && decision.kind === 'allow'
   }
 }

@@ -16,6 +16,7 @@ import { normalizeDisabledTuiAgents } from '../../shared/tui-agent-selection'
 import type { GlobalSettings } from '../../shared/global-settings-types'
 import type { PersistedState } from '../../shared/persisted-state-types'
 import { prepareManagedCodexHomeBeforeShellLaunch } from '../../main/codex/managed-home-shell-preflight'
+import { getManagedHookInstallDecision } from '../../main/agent-hooks/managed-hook-install-policy'
 
 type AgentHookCommandResult = {
   enabled: boolean
@@ -201,9 +202,16 @@ async function setAgentHooksEnabled(
   const updatedRuntime = await updateRunningRuntime(client, enabled)
   const offlineUpdate = updatedRuntime ? null : updateEnabledOnDisk(enabled)
   const settingsPath = offlineUpdate?.settingsPath ?? getDataPath()
+  // Why 'cli' and not 'desktop': `orca agent hooks on` IS the user answering, and this process
+  // never paints the wizard — the same reason `--serve` and `orcad` install as they always have.
+  // The policy's deny arm still holds, so `off` can never be turned into an install here.
+  const installDecision = getManagedHookInstallDecision({
+    settings: offlineUpdate?.settings ?? { agentStatusHooksEnabled: enabled },
+    mode: 'cli'
+  })
   const statuses = updatedRuntime
     ? getManagedAgentHookStatuses()
-    : await applyAgentStatusHooksEnabled(enabled, offlineUpdate?.settings)
+    : await applyAgentStatusHooksEnabled(enabled, offlineUpdate?.settings, { installDecision })
   return {
     enabled,
     settingsPath,

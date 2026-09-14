@@ -17,7 +17,7 @@ import type { ExecutionHostId } from '../../shared/execution-host'
 import type { TerminalQuickCommand } from '../../shared/terminal-quick-command-types'
 import { recordManagedHookInstallFailure } from '../agent-hooks/install-telemetry'
 import { applyAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
-import { isManagedHookFirstRunGatePending } from '../agent-hooks/managed-hook-first-run-gate'
+import { resolveManagedHookInstallDecision } from '../agent-hooks/managed-hook-install-policy'
 import type { RuntimeStore } from './runtime-store-contract'
 
 export type RuntimeClientSettings = Pick<
@@ -137,10 +137,10 @@ export class RuntimeClientSettingsController {
     if (updates.worktreeVisibilityDefaults !== undefined) {
       this.notifyReposChanged?.()
     }
-    // Why the latch alone: RuntimeStore exposes no onboarding state, and the two retirement points
-    // make 'pending' equivalent to actively deferring.
+    // Why suppressed rather than reconciled: a deferred installation must write nothing, and a
+    // reconcile with the off switch set would remove hooks another Orca profile owns (STA-5679).
     if (
-      !isManagedHookFirstRunGatePending(settings) &&
+      resolveManagedHookInstallDecision(settings).kind !== 'defer' &&
       ((typeof updates.agentStatusHooksEnabled === 'boolean' &&
         before !== updates.agentStatusHooksEnabled) ||
         (updates.disabledTuiAgents !== undefined &&

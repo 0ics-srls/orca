@@ -12,7 +12,7 @@ import { SETTINGS_CHANGED_WHITELIST, type SettingsChangedKey } from '../../share
 import type { AgentAwakeService } from '../agent-awake-service'
 import { sanitizeFloatingWorkspaceDirectorySetting } from './floating-workspace-directory'
 import { applyAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
-import { isManagedHookInstallDeferredForFirstRun } from '../agent-hooks/managed-hook-first-run-gate'
+import { resolveManagedHookInstallDecision } from '../agent-hooks/managed-hook-install-policy'
 import { recordManagedHookInstallFailure } from '../agent-hooks/install-telemetry'
 import { applyElectronProxySettings } from '../network/proxy-settings'
 import { applyBrowserSessionProxies } from '../browser/browser-session-proxy'
@@ -55,8 +55,6 @@ function sanitizeRendererSettingsUpdate(args: Partial<GlobalSettings>): Partial<
   // writes must pass the dedicated reviewed-fingerprint handlers.
   delete sanitizedArgs.pluginConsents
   delete sanitizedArgs.disabledPlugins
-  // Main-owned first-run authority: a renderer write or a replayed settings backup must not re-arm it.
-  delete sanitizedArgs.managedAgentHookFirstRunGate
   return sanitizedArgs
 }
 
@@ -235,15 +233,9 @@ export function registerSettingsHandlers(
       ('disabledTuiAgents' in sanitizedArgs &&
         !haveSameDisabledTuiAgents(before.disabledTuiAgents, result.disabledTuiAgents))
     // Why only the reconcile is skipped: the preference above already persisted. Reconciling here
-    // would install before onboarding step 1 is passed, or remove user-global hooks a different
-    // Orca profile owns (STA-5679).
-    if (
-      hookSettingChanged &&
-      !isManagedHookInstallDeferredForFirstRun({
-        onboarding: store.getOnboarding(),
-        settings: result
-      })
-    ) {
+    // would install before the first-run question is answered, or remove user-global hooks a
+    // different Orca profile owns (STA-5679).
+    if (hookSettingChanged && resolveManagedHookInstallDecision(result).kind !== 'defer') {
       try {
         await applyAgentStatusHooksEnabled(result.agentStatusHooksEnabled, result, {
           userInitiated: true,

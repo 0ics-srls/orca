@@ -13565,7 +13565,7 @@
         },
         "AgentStatusHooksControl": {
           "label": "Enable agent status hooks",
-          "why": "Enables Orca to track your CLI agents' statuses, so it can inform you when each is working, needs you, or is done. Also powers your notifications.",
+          "why": "Enables Orca to track your CLI agents' statuses, so it can inform you when each is working, needs you, or is done. Also powers your notifications. To do it, Orca edits each agent's own config file in your home folder, outside Orca's own directory.",
           "disclosureSummary": "What Orca changes, and when",
           "whenLabel": "When",
           "whenBody": "For the agent CLIs found on your machine, kept current each time Orca starts. Agents you don't have are skipped, and nothing is written for them.",
