@@ -195,4 +195,42 @@ describe('NativeChatPaneFileDropSurface', () => {
     })
     expect(container.querySelector(OVERLAY)).toBeNull()
   })
+
+  it('observes a native drop that ends before the hover render commits', () => {
+    const consumeDrop = (event: Event): void => event.stopPropagation()
+    document.addEventListener('drop', consumeDrop, true)
+    try {
+      const { transcript, container } = renderPane(<ClaimingComposer />)
+      act(() => {
+        fireDrag(transcript, 'dragover', osDrag())
+        fireDrag(transcript, 'drop', osDrag())
+      })
+      expect(container.querySelector(OVERLAY)).toBeNull()
+    } finally {
+      document.removeEventListener('drop', consumeDrop, true)
+    }
+  })
+
+  it('keeps end listeners stable across drags and removes them with the composer', () => {
+    const add = vi.spyOn(document, 'addEventListener')
+    const remove = vi.spyOn(document, 'removeEventListener')
+    try {
+      const { transcript, unmount } = renderPane(<ClaimingComposer />)
+      const ends = (): number =>
+        add.mock.calls.filter(([type]) => type === 'drop' || type === 'dragend').length
+      expect(ends()).toBe(2)
+      fireDrag(transcript, 'dragover', osDrag())
+      fireDrag(transcript, 'drop', osDrag())
+      fireDrag(transcript, 'dragover', osDrag())
+      expect(ends()).toBe(2)
+      unmount()
+      const removedEnds = remove.mock.calls.filter(
+        ([type]) => type === 'drop' || type === 'dragend'
+      )
+      expect(removedEnds).toHaveLength(2)
+    } finally {
+      add.mockRestore()
+      remove.mockRestore()
+    }
+  })
 })

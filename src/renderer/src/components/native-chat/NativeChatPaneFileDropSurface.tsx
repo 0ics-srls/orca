@@ -64,10 +64,9 @@ export function NativeChatPaneFileDropSurface({
       }),
     [registration]
   )
-  // An OS drag never reaches React: the preload drop route consumes that event
-  // before it leaves `document`. Its end is the only signal the overlay gets.
+  // Subscribe before hover renders: preload can consume a drop before that commit.
   useLayoutEffect(() => {
-    if (!isDragActive) {
+    if (!registration) {
       return
     }
     const clear = (): void => setIsDragActive(false)
@@ -77,7 +76,7 @@ export function NativeChatPaneFileDropSurface({
       document.removeEventListener('drop', clear, true)
       document.removeEventListener('dragend', clear, true)
     }
-  }, [isDragActive])
+  }, [registration])
 
   return (
     <NativeChatPaneFileDropContext.Provider value={register}>
