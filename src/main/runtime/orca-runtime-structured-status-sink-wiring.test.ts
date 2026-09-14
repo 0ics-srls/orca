@@ -71,6 +71,30 @@ describe('every host that constructs a runtime wires the agent-status store', ()
 })
 
 describe('structured status sink wiring', () => {
+  it('passes an error reporter that logs the scope and original error', async () => {
+    installed.deps = null
+    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    try {
+      await new OrcaRuntimeService().ensureStructuredAgentSessionHost()
+
+      const deps: Record<string, unknown> = installed.deps ?? {}
+      const onError = deps['onError']
+      expect(onError).toBeTypeOf('function')
+      if (typeof onError !== 'function') {
+        throw new Error('structured runtime installer omitted onError')
+      }
+      const error = new Error('journal settlement failed')
+      onError({ scope: 'structured-agent-session-journal:session-1', error })
+
+      expect(consoleError).toHaveBeenCalledWith(
+        '[runtime] structured-agent-session-journal:session-1',
+        error
+      )
+    } finally {
+      consoleError.mockRestore()
+    }
+  })
+
   it('hands the host the sink the runtime was constructed with', async () => {
     installed.deps = null
     const sink: StructuredAgentSessionStatusSink = { publish: vi.fn(), forget: vi.fn() }
