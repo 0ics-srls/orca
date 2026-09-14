@@ -6,6 +6,7 @@ import { useAppStore } from '@/store'
 import { Button } from '@/components/ui/button'
 import { ClaudeIcon, OpenAIIcon } from '@/components/status-bar/icons'
 import { cn } from '@/lib/utils'
+import { readIpcErrorMessage } from '@/lib/ipc-error'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import type {
   ClaudeRateLimitAccountsState,
@@ -15,19 +16,6 @@ import { getFeatureWallUsageProviderConnection } from '../feature-wall-usage-tra
 import { translate } from '@/i18n/i18n'
 
 type ConnectAction = 'idle' | 'adding'
-
-function usageConnectionLabel(
-  connection: { connected: boolean; label: string },
-  accountsKnown: boolean
-): string {
-  if (connection.connected || accountsKnown) {
-    return connection.label
-  }
-  return translate(
-    'auto.components.feature.wall.agents.orchestration.UsageAccountsCard.accountStatusUnknown',
-    'Account status unknown'
-  )
-}
 
 function ConnectionPill(props: { connected: boolean; label: string }): JSX.Element {
   const { connected, label } = props
@@ -147,11 +135,11 @@ export function UsageAccountsCard(props: {
   }, [fetchRateLimits])
 
   const claudeConnection = getFeatureWallUsageProviderConnection({
-    managedAccountCount: claudeAccounts?.accounts.length ?? 0,
+    managedAccountCount: claudeAccounts?.accounts.length,
     provider: rateLimits.claude
   })
   const codexConnection = getFeatureWallUsageProviderConnection({
-    managedAccountCount: codexAccounts?.accounts.length ?? 0,
+    managedAccountCount: codexAccounts?.accounts.length,
     provider: rateLimits.codex
   })
 
@@ -185,7 +173,7 @@ export function UsageAccountsCard(props: {
             'Claude sign-in failed.'
           ),
           {
-            description: String((error as Error)?.message ?? error)
+            description: readIpcErrorMessage(error)
           }
         )
       }
@@ -226,7 +214,7 @@ export function UsageAccountsCard(props: {
             'Codex sign-in failed.'
           ),
           {
-            description: String((error as Error)?.message ?? error)
+            description: readIpcErrorMessage(error)
           }
         )
       }
@@ -247,7 +235,7 @@ export function UsageAccountsCard(props: {
           'Track session and weekly usage.'
         )}
         connected={claudeConnection.connected}
-        connectionLabel={usageConnectionLabel(claudeConnection, claudeAccounts !== undefined)}
+        connectionLabel={claudeConnection.label}
         isAdding={claudeAction === 'adding'}
         onSignIn={() => void handleClaudeSignIn()}
       />
@@ -259,7 +247,7 @@ export function UsageAccountsCard(props: {
           'Surface rate limits and swap accounts inline.'
         )}
         connected={codexConnection.connected}
-        connectionLabel={usageConnectionLabel(codexConnection, codexAccounts !== undefined)}
+        connectionLabel={codexConnection.label}
         isAdding={codexAction === 'adding'}
         onSignIn={() => void handleCodexSignIn()}
       />

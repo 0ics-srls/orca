@@ -264,6 +264,34 @@ describe('SkillsPage', () => {
     expect(renderedSkillNames()).not.toContain('local-only')
   })
 
+  it("does not show one runtime's skills when the next runtime scan fails", async () => {
+    const discover = vi.fn().mockResolvedValue(discoveryResult(['local-only']))
+    const call = vi.fn(async (args: { method: string; selector?: string }) => {
+      const compatibilityResponse = createCompatibleRuntimeStatusResponseIfNeeded(args)
+      if (compatibilityResponse) {
+        return compatibilityResponse
+      }
+      throw new Error('remote unavailable')
+    })
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: { skills: skillsApi(discover), runtimeEnvironments: { call } }
+    })
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await renderPage()
+    await flushMicrotasks()
+    expect(renderedSkillNames()).toEqual(['local-only'])
+
+    await act(async () => {
+      setRuntimeOwner('env-1')
+    })
+    await flushMicrotasks()
+
+    expect(container?.textContent).toContain('Could not scan skills')
+    expect(renderedSkillNames()).toEqual([])
+  })
+
   it('keeps scanning rather than listing client skills before the owner is known', async () => {
     const discover = vi.fn().mockResolvedValue(discoveryResult(['local-only']))
     const call = vi.fn()
@@ -456,7 +484,7 @@ describe('SkillsPage', () => {
       .fn()
       .mockRejectedValue(
         new Error(
-          "Error invoking remote method 'skills:discover': Error: EACCES: permission denied"
+          "Error invoking remote method 'skills:discover': Error: EACCES: permission denied\nSSH host unavailable"
         )
       )
     Object.defineProperty(window, 'api', {
@@ -470,6 +498,8 @@ describe('SkillsPage', () => {
 
     expect(container?.textContent).toContain('Could not scan skills')
     expect(container?.textContent).toContain('EACCES: permission denied')
+    expect(container?.textContent).toContain('SSH host unavailable')
+    expect(container?.textContent).not.toContain('Error invoking remote method')
     // Why: nothing was scanned, so "the scanned skill folders are empty" would be a claim we cannot make.
     expect(container?.textContent).not.toContain('No skills found')
   })

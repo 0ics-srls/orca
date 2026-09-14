@@ -50,14 +50,18 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
     void loadConnection()
   }, [loadConnection])
 
-  const envManaged = connection?.source === 'environment'
-  const storedCredential = connection?.source === 'stored'
-  const account = connection?.account ?? statuses.bitbucketAccount
+  const currentConnection = connectionLoadFailed ? null : connection
+  const credentialStatusKnown = currentConnection !== null
+  const envManaged = currentConnection?.source === 'environment'
+  const storedCredential = currentConnection?.source === 'stored'
+  const account = currentConnection?.account ?? statuses.bitbucketAccount
   // Only surface a base URL the user actually overrode; the default is noise.
   const baseUrlOverride =
-    connection?.baseUrl && connection.baseUrl !== DEFAULT_API_BASE_URL ? connection.baseUrl : null
-  const authModeLabel = connection?.authMode
-    ? connection.authMode === 'token'
+    currentConnection?.baseUrl && currentConnection.baseUrl !== DEFAULT_API_BASE_URL
+      ? currentConnection.baseUrl
+      : null
+  const authModeLabel = currentConnection?.authMode
+    ? currentConnection.authMode === 'token'
       ? translate(
           'auto.components.settings.bitbucket.integration.card.authModeToken',
           'Access token'
@@ -69,8 +73,7 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
     : null
   const credentialSummary = [authModeLabel, baseUrlOverride].filter(Boolean).join(' · ')
 
-  // Why: Re-check and a fresh connection both need the preflight AND the credential read, so
-  // Re-check also retries a status() that failed rather than only re-running the preflight.
+  // A fresh connection and Re-check both refresh preflight and credential state.
   const reloadCardState = (): void => {
     void loadConnection()
     refresh()
@@ -97,8 +100,7 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
       if (mountedRef.current) {
         setDisconnecting(false)
       }
-      void loadConnection()
-      refresh()
+      reloadCardState()
     }
   }
 
@@ -127,7 +129,7 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
       statusTone={connected ? 'connected' : 'attention'}
       statusLabel={tokenProviderStatusLabel({ configured: connected, status })}
       actions={
-        status !== 'checking' && !envManaged ? (
+        status !== 'checking' && credentialStatusKnown && !envManaged ? (
           <Button
             variant={storedCredential ? 'outline' : 'default'}
             size="sm"
@@ -187,11 +189,13 @@ export function BitbucketIntegrationCard(): React.JSX.Element {
               )}
             </p>
           ) : null}
-          <BitbucketCardNote
-            envManaged={envManaged}
-            status={status}
-            storedCredential={storedCredential}
-          />
+          {credentialStatusKnown ? (
+            <BitbucketCardNote
+              envManaged={envManaged}
+              status={status}
+              storedCredential={storedCredential}
+            />
+          ) : null}
           <div className="flex items-center gap-2">
             {!connected ? (
               <Button

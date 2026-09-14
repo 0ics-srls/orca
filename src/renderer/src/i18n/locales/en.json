@@ -1003,8 +1003,7 @@
         "attachSkipMissing": "No longer at its original path.",
         "attachSkipSymlink": "Symbolic links cannot be attached.",
         "attachSkipPermissionDenied": "Permission denied.",
-        "attachSkipUnsupported": "Unsupported file type.",
-        "a9ff236145": "Some attachments could not be uploaded."
+        "attachSkipUnsupported": "Unsupported file type."
       },
       "useGlobalFileDrop": {
         "38c9f034ff": "Failed to upload dropped files.",

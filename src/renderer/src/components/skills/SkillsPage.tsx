@@ -4,6 +4,7 @@ import { readIpcErrorDetail } from '@/lib/ipc-error'
 import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { discoverSkillsForRuntimeTarget } from '@/runtime/runtime-skills-client'
+import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 import { useActiveSkillDiscoveryRuntimeTarget } from '@/hooks/use-active-skill-discovery-runtime-target'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import type { DiscoveredSkill, SkillDiscoveryResult } from '../../../../shared/skills'
@@ -59,6 +60,12 @@ const NO_FILTERS: SkillsFilterState = {
   agent: 'all'
 }
 
+type SkillScanState = {
+  runtimeTarget: RuntimeClientTarget
+  result: SkillDiscoveryResult | null
+  error: { detail?: string } | null
+}
+
 export default function SkillsPage(): React.JSX.Element {
   const closeSkillsPage = useAppStore((s) => s.closeSkillsPage)
   const pendingSkillShareId = useAppStore((s) => s.pendingSkillShareId)
@@ -67,9 +74,12 @@ export default function SkillsPage(): React.JSX.Element {
   const clearPendingSkillsSharedView = useAppStore((s) => s.clearPendingSkillsSharedView)
   const runtimeTarget = useActiveSkillDiscoveryRuntimeTarget()
   const hostLabel = useSkillDiscoveryHostLabel(runtimeTarget)
-  const [result, setResult] = useState<SkillDiscoveryResult | null>(null)
+  const [scanState, setScanState] = useState<SkillScanState | null>(null)
+  // Target identity changes on host switches and same-ID re-pairs.
+  const currentScan = scanState?.runtimeTarget === runtimeTarget ? scanState : null
+  const result = currentScan?.result ?? null
   const [loading, setLoading] = useState(true)
-  const [scanError, setScanError] = useState<{ detail?: string } | null>(null)
+  const scanError = currentScan?.error ?? null
   const [shareSkills, setShareSkills] = useState<DiscoveredSkill[]>([])
   const [selectionMode, setSelectionMode] = useState<'share' | 'delete' | null>(null)
   const [selectedSkillIds, setSelectedSkillIds] = useState<Set<string>>(() => new Set())
@@ -109,8 +119,7 @@ export default function SkillsPage(): React.JSX.Element {
         )
         const local = runtimeTarget.kind === 'local'
         if (isCurrentScan()) {
-          setResult(nextResult)
-          setScanError(null)
+          setScanState({ runtimeTarget, result: nextResult, error: null })
           setSelectedSkillIds((current) =>
             selectionModeRef.current === 'delete'
               ? retainedDeletableSkillSelection(current, nextResult.skills)
@@ -122,7 +131,11 @@ export default function SkillsPage(): React.JSX.Element {
         if (isCurrentScan()) {
           // Why: a failed scan needs to stay on screen with a retry — a toast
           // disappears before the user can act on it.
-          setScanError({ detail: readIpcErrorDetail(error) })
+          setScanState((current) => ({
+            runtimeTarget,
+            result: current?.runtimeTarget === runtimeTarget ? current.result : null,
+            error: { detail: readIpcErrorDetail(error) }
+          }))
         }
       } finally {
         if (isCurrentScan()) {

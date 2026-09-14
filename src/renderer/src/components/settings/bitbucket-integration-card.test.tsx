@@ -6,12 +6,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   refresh: vi.fn(),
-  status: vi.fn()
+  status: vi.fn(),
+  statuses: { bitbucketStatus: 'not-authenticated', bitbucketAccount: null }
 }))
 
 vi.mock('./source-control-preflight-card-status', () => ({
   usePreflightCardStatuses: () => ({
-    statuses: { bitbucketStatus: 'not-authenticated', bitbucketAccount: null },
+    statuses: mocks.statuses,
     unavailable: false,
     refresh: mocks.refresh
   })
@@ -49,6 +50,7 @@ function recheckButton(): HTMLButtonElement {
 describe('BitbucketIntegrationCard credential-read failures', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.statuses = { bitbucketStatus: 'not-authenticated', bitbucketAccount: null }
     Object.assign(window, {
       api: {
         bitbucket: { status: mocks.status, disconnect: vi.fn(async () => {}) },
@@ -68,6 +70,8 @@ describe('BitbucketIntegrationCard credential-read failures', () => {
     await renderCard()
 
     expect(container.textContent).toContain(LOAD_FAILED_TEXT)
+    expect(container.textContent).not.toContain('Connect')
+    expect(container.textContent).not.toContain('credentials are configured')
   })
 
   it('does not claim a read failure when the status resolves', async () => {
@@ -113,5 +117,33 @@ describe('BitbucketIntegrationCard credential-read failures', () => {
     })
 
     expect(container.textContent).not.toContain(LOAD_FAILED_TEXT)
+  })
+
+  it('does not expose stale credential controls after a re-check fails', async () => {
+    mocks.statuses = { bitbucketStatus: 'connected', bitbucketAccount: null }
+    mocks.status
+      .mockResolvedValueOnce({
+        configured: true,
+        source: 'stored',
+        account: 'stale-account',
+        authMode: 'token',
+        email: null,
+        baseUrl: null
+      })
+      .mockRejectedValueOnce(new Error('keychain locked'))
+
+    await renderCard()
+    expect(container.textContent).toContain('stale-account')
+    expect(container.textContent).toContain('Edit credentials')
+    expect(container.querySelector('[aria-label="Disconnect Bitbucket"]')).not.toBeNull()
+
+    await act(async () => {
+      recheckButton().click()
+    })
+
+    expect(container.textContent).toContain(LOAD_FAILED_TEXT)
+    expect(container.textContent).not.toContain('stale-account')
+    expect(container.textContent).not.toContain('Edit credentials')
+    expect(container.querySelector('[aria-label="Disconnect Bitbucket"]')).toBeNull()
   })
 })
