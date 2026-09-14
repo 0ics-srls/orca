@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => {
   let uuid = 0
   return {
     recover: vi.fn(),
+    produce: vi.fn(),
     nextUuid: () => `startup-recovery-${++uuid}`,
     resetUuid: () => {
       uuid = 0
@@ -17,12 +18,23 @@ const mocks = vi.hoisted(() => {
 })
 
 vi.mock('@/store', () => ({
-  useAppStore: Object.assign(() => 'none', {
-    getState: () => ({ activeWorktreeId: 'folder:workspace-1' })
-  })
+  useAppStore: Object.assign(
+    (
+      selector: (state: {
+        activeWorkspaceExecutionHostId: null
+        runtimeEnvironments: readonly []
+      }) => unknown
+    ) => selector({ activeWorkspaceExecutionHostId: null, runtimeEnvironments: [] }),
+    {
+      getState: () => ({ activeWorktreeId: 'folder:workspace-1' })
+    }
+  )
 }))
 vi.mock('@/lib/worktree-activation-recovery', () => ({
   recoverWorkspaceActivation: mocks.recover
+}))
+vi.mock('@/lib/workspace-activation-surface-producer', () => ({
+  startWorkspaceActivationSurfaceProducer: mocks.produce
 }))
 vi.mock('@/lib/worktree-runtime-owner', () => ({
   getExecutionHostIdForWorktree: () => 'local',
@@ -53,6 +65,7 @@ afterEach(async () => {
   await act(async () => root?.unmount())
   root = undefined
   mocks.recover.mockReset()
+  mocks.produce.mockReset()
   mocks.resetUuid()
 })
 
@@ -85,9 +98,13 @@ describe('passive activation recovery', () => {
       },
       { mode: 'startup', signal: expect.any(AbortSignal) }
     )
+    expect(mocks.produce).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceKey: 'folder:workspace-1' }),
+      { mode: 'startup' }
+    )
   })
 
-  it('does not turn later state-only selections into new recovery launches', async () => {
+  it('observes every later general-setter selection', async () => {
     mocks.recover.mockResolvedValue({ kind: 'materialized' })
     root = createRoot(document.createElement('div'))
     await act(async () => root?.render(<Watcher activeWorktreeId="worktree-1" />))
@@ -95,7 +112,12 @@ describe('passive activation recovery', () => {
 
     await act(async () => root?.render(<Watcher activeWorktreeId="worktree-2" />))
 
-    expect(mocks.recover).toHaveBeenCalledOnce()
+    expect(mocks.recover).toHaveBeenCalledTimes(2)
+    expect(mocks.produce).toHaveBeenCalledTimes(2)
+    expect(mocks.recover.mock.calls.map(([request]) => request.workspaceKey)).toEqual([
+      'worktree-1',
+      'worktree-2'
+    ])
   })
 
   it('aborts an unsettled request without consuming the next startup assessment', async () => {

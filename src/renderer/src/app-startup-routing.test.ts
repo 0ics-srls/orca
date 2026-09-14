@@ -30,7 +30,10 @@ describe('renderer startup runtime routing', () => {
     const recoveryEffect = source.slice(recoveryStart, recoveryEnd)
 
     expect(recoveryStart).toBeGreaterThanOrEqual(0)
-    expect(recoveryEffect).toContain("{ mode: 'startup', signal: abort.signal }")
+    expect(recoveryEffect).toContain(
+      "startWorkspaceActivationSurfaceProducer(identity, { mode: 'startup' })"
+    )
+    expect(recoveryEffect).toContain('signal: abort.signal')
     expect(recoveryEffect).toContain('abort.abort()')
     expect(recoveryEffect).not.toContain('gateWorktreeAgentActivation')
     expect(recoveryEffect).not.toContain('resumeSleepingAgentSessionsForWorktree')

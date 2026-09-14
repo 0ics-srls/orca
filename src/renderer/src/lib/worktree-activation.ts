@@ -6,7 +6,6 @@ import {
   isWebRuntimeSessionActive
 } from '@/runtime/web-runtime-session'
 import { registerWorktreeActivation } from '@/lib/worktree-activation-nav-registration'
-import { resumeSleepingAgentSessionsForWorktree } from '@/lib/resume-sleeping-agent-session'
 import { getRuntimeEnvironmentIdForWorktree } from '@/lib/worktree-runtime-owner'
 import { folderWorkspaceKey, parseWorkspaceKey } from '../../../shared/workspace-scope'
 import {
@@ -25,19 +24,15 @@ import type {
   WorktreeActivationOptions,
   WorktreeActivationSurfaceSelection
 } from './worktree-activation-surface-selection'
-import { registerWorkspaceSurfaceProducer } from './workspace-surface-production'
 import { resolveWorkspaceExecutionEvidence } from './workspace-execution-evidence'
 import {
-  captureActivationRenderableSurfaceIds,
-  consumeTransferredActivationProducer,
   createWorkspaceActivationIdentity,
   ensureFolderWorkspaceInitialTerminal,
   finalizeActivatedWorkspaceSurface,
   hasOutstandingActivationSurfaceProducer,
-  hasWorkspaceActivationWork,
-  recoverActivatedWorkspace,
-  settleActivationSeedProducer
+  hasWorkspaceActivationWork
 } from './worktree-activation-recovery-routing'
+import { produceRequestedWorkspaceSurface } from './workspace-activation-requested-surface'
 import {
   clearWorktreeActivationSidebarFilters,
   revealActivatedWorktree
@@ -124,19 +119,12 @@ export function activateAndRevealFolderWorkspace(
     executionEvidence === 'live' && isWebRuntimeSessionActive(runtimeEnvironmentId)
   let primaryTabId: string | null = null
   if (opts?.startup && !delegatesToRuntime) {
-    const producer = registerWorkspaceSurfaceProducer(identity)
-    if (executionEvidence !== 'exited') {
-      producer.unverifiable('Orca cannot verify the execution host for this requested surface.')
-    } else {
-      try {
-        const existingSurfaceIds = captureActivationRenderableSurfaceIds(workspaceKey)
-        resumeSleepingAgentSessionsForWorktree(workspaceKey)
-        primaryTabId = ensureFolderWorkspaceInitialTerminal(folderWorkspace, opts.startup)
-        settleActivationSeedProducer(producer, workspaceKey, primaryTabId, existingSurfaceIds)
-      } catch (error) {
-        producer.failed(error)
-      }
-    }
+    primaryTabId = produceRequestedWorkspaceSurface({
+      identity,
+      executionEvidence,
+      owner: 'local',
+      createSurface: () => ensureFolderWorkspaceInitialTerminal(folderWorkspace, opts.startup)
+    })
   }
   if (opts?.revealInSidebar !== false) {
     state.revealWorktreeInSidebar(
@@ -152,7 +140,7 @@ export function activateAndRevealFolderWorkspace(
       agent: opts?.agent
     })
   }
-  return { primaryTabId: primaryTabId ?? recoverActivatedWorkspace(identity) }
+  return { primaryTabId: finalizeActivatedWorkspaceSurface(identity, primaryTabId) }
 }
 
 export function activateAndRevealWorktree(
@@ -223,9 +211,15 @@ export function activateAndRevealWorktree(
     // Why: sleeping destroys the local PTY but preserves the provider session id, so waking should
     // restore those CLI sessions. Ordering is load-bearing: resuming synchronously creates the
     // session's tab first, so the seeding below doesn't add a bare shell next to it.
-    const producer = registerWorkspaceSurfaceProducer(identity)
-    if (delegatesToRuntime) {
-      try {
+    primaryTabId = produceRequestedWorkspaceSurface({
+      identity,
+      executionEvidence,
+      owner: delegatesToRuntime
+        ? 'runtime-transfer'
+        : opts?.backendStartupTerminalSpawned
+          ? 'backend-confirmed'
+          : 'local',
+      createSurface: () =>
         ensureWorktreeHasInitialTerminal(
           useAppStore.getState(),
           worktreeId,
@@ -239,58 +233,7 @@ export function activateAndRevealWorktree(
             reseedEmptiedWorkspace: true
           }
         )
-        consumeTransferredActivationProducer(producer)
-      } catch (error) {
-        producer.failed(error)
-      }
-    } else if (opts?.backendStartupTerminalSpawned) {
-      try {
-        primaryTabId = ensureWorktreeHasInitialTerminal(
-          useAppStore.getState(),
-          worktreeId,
-          opts.startup,
-          opts.setup,
-          opts.issueCommand,
-          opts.defaultTabs,
-          {
-            backendStartupTerminalSpawned: true,
-            ...(opts.createNewTerminalForStartup ? { createNewTerminalForStartup: true } : {}),
-            reseedEmptiedWorkspace: true
-          }
-        )
-        if (primaryTabId) {
-          producer.materialized({ kind: 'tab', id: primaryTabId })
-        } else {
-          producer.unverifiable(
-            'The execution host accepted the startup, but its surface is not visible yet.'
-          )
-        }
-      } catch (error) {
-        producer.failed(error)
-      }
-    } else if (executionEvidence !== 'exited') {
-      producer.unverifiable('Orca cannot verify the execution host for this requested surface.')
-    } else {
-      try {
-        const existingSurfaceIds = captureActivationRenderableSurfaceIds(worktreeId)
-        resumeSleepingAgentSessionsForWorktree(worktreeId)
-        primaryTabId = ensureWorktreeHasInitialTerminal(
-          useAppStore.getState(),
-          worktreeId,
-          opts?.startup,
-          opts?.setup,
-          opts?.issueCommand,
-          opts?.defaultTabs,
-          {
-            ...(opts?.createNewTerminalForStartup ? { createNewTerminalForStartup: true } : {}),
-            reseedEmptiedWorkspace: true
-          }
-        )
-        settleActivationSeedProducer(producer, worktreeId, primaryTabId, existingSurfaceIds)
-      } catch (error) {
-        producer.failed(error)
-      }
-    }
+    })
   }
   // 5. Clear sidebar filters hiding the target — reveal needs the card rendered, else it silently no-ops.
   if (opts?.clearSidebarFilters !== false) {

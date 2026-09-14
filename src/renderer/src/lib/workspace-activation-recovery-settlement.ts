@@ -1,6 +1,7 @@
 import type { WorkspaceVisibleTabType } from '../../../shared/tab-types'
 import {
   consumeWorkspaceSurfaceProducerAttempt,
+  discardWorkspaceSurfaceProducerAttempt,
   readWorkspaceSurfaceProducerEntries
 } from './workspace-surface-production'
 import {
@@ -10,6 +11,7 @@ import {
 } from './workspace-activation-recovery-presentation'
 import {
   isActivationRecoveryCurrent,
+  isActivationRecoveryFresh,
   readActivationRenderableSurface,
   readActivationRenderableSurfaceById,
   readActivationRenderableSurfaceIds,
@@ -21,8 +23,11 @@ import type {
   WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
 import type { WorkspaceActivationRecoveryOwnerContext } from './workspace-activation-recovery-retry'
-
-const failureSurfaceIdsByProducerAttempt = new Map<string, ReadonlySet<string>>()
+import {
+  clearActivationRecoveryFailureSnapshots,
+  readActivationRecoveryFailureSurfaceIds,
+  recordActivationRecoveryFailureSurfaceIds
+} from './workspace-activation-recovery-failure-snapshots'
 
 export function publishActivationRecovery(
   identity: WorkspaceActivationIdentity,
@@ -80,25 +85,41 @@ export type ProducerAssessment =
   | { kind: 'idle' }
   | { kind: 'wait' }
 
+function materializedFromVisibleInventory(
+  identity: WorkspaceActivationIdentity,
+  entries: ReturnType<typeof readWorkspaceSurfaceProducerEntries>
+): WorkspaceActivationRecoveryResult | null {
+  const surface = readActivationRenderableSurface(identity)
+  if (!surface) {
+    return null
+  }
+  for (const entry of entries) {
+    if (entry.result?.kind === 'unverifiable') {
+      discardWorkspaceSurfaceProducerAttempt(entry.attempt.id)
+    }
+  }
+  return activationRecoveryMaterializedResult(identity, surface)
+}
+
 function materializedAfterProducerFailure(
   identity: WorkspaceActivationIdentity,
   producerAttemptId: string
 ): WorkspaceActivationRecoveryResult | null {
   const currentSurfaceIds = readActivationRenderableSurfaceIds(identity)
-  const failureSurfaceIds = failureSurfaceIdsByProducerAttempt.get(producerAttemptId)
+  const failureSurfaceIds = readActivationRecoveryFailureSurfaceIds(producerAttemptId)
   const laterSurfaceId = failureSurfaceIds
     ? [...currentSurfaceIds].find((surfaceId) => !failureSurfaceIds.has(surfaceId))
     : undefined
   if (laterSurfaceId) {
     const laterSurface = readActivationRenderableSurfaceById(identity, laterSurfaceId)
     if (laterSurface) {
-      failureSurfaceIdsByProducerAttempt.delete(producerAttemptId)
+      clearActivationRecoveryFailureSnapshots([producerAttemptId])
       consumeWorkspaceSurfaceProducerAttempt(producerAttemptId)
       return activationRecoveryMaterializedResult(identity, laterSurface)
     }
   }
   if (!failureSurfaceIds) {
-    failureSurfaceIdsByProducerAttempt.set(producerAttemptId, currentSurfaceIds)
+    recordActivationRecoveryFailureSurfaceIds(producerAttemptId, currentSurfaceIds)
   }
   return null
 }
@@ -120,8 +141,34 @@ export function assessActivationProducerAttempts(
       result: activationRecoveryFailedResult(identity, 'producer-failed')
     }
   }
+  const unexpected = entries.find((entry) => entry.result?.kind === 'unexpected')
+  if (unexpected?.result?.kind === 'unexpected') {
+    publishActivationRecovery(identity, context, 'unexpected', unexpected.result.reason)
+    return {
+      kind: 'complete',
+      result: activationRecoveryFailedResult(identity, 'unexpected')
+    }
+  }
+  const blocked = entries.find((entry) => entry.result?.kind === 'blocked')
+  if (blocked?.result?.kind === 'blocked') {
+    publishActivationRecovery(identity, context, 'blocked', blocked.result.reason)
+    return {
+      kind: 'complete',
+      result: activationRecoveryFailedResult(identity, 'blocked')
+    }
+  }
+  const intentionalEmpty = entries.find((entry) => entry.result?.kind === 'intentional-empty')
+  if (intentionalEmpty) {
+    consumeWorkspaceSurfaceProducerAttempt(intentionalEmpty.attempt.id)
+    clearActivationRecoveryPresentation(identity)
+    return { kind: 'complete', result: { kind: 'intentional-empty' } }
+  }
   const unverifiable = entries.find((entry) => entry.result?.kind === 'unverifiable')
   if (unverifiable?.result?.kind === 'unverifiable') {
+    const visibleSurface = materializedFromVisibleInventory(identity, entries)
+    if (visibleSurface) {
+      return { kind: 'complete', result: visibleSurface }
+    }
     publishActivationRecovery(identity, context, 'unverifiable', unverifiable.result.reason)
     return {
       kind: 'complete',
@@ -184,18 +231,19 @@ export function assessActivationProducerAttempts(
         }
       : { kind: 'wait' }
   }
-  const surface = readActivationRenderableSurface(identity)
-  return surface
-    ? { kind: 'complete', result: activationRecoveryMaterializedResult(identity, surface) }
-    : { kind: 'idle' }
+  return { kind: 'idle' }
 }
 
 export async function waitForActivationProducerAttempts(
   identity: WorkspaceActivationIdentity,
   context: WorkspaceActivationRecoveryOwnerContext,
-  deadlineAt: number
+  deadlineAt: number,
+  capturedSelectionRevision: number
 ): Promise<WorkspaceActivationRecoveryResult | null> {
   while (true) {
+    if (!isActivationRecoveryFresh(identity, capturedSelectionRevision, context)) {
+      return { kind: 'stale' }
+    }
     const assessment = assessActivationProducerAttempts(identity, context)
     if (assessment.kind === 'complete') {
       return assessment.result

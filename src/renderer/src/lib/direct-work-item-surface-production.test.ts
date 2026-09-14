@@ -32,7 +32,10 @@ const producer: WorkspaceSurfaceProducer = {
   materialized: vi.fn(),
   declined: vi.fn(),
   failed: vi.fn(),
-  unverifiable: vi.fn()
+  unverifiable: vi.fn(),
+  blocked: vi.fn(),
+  unexpected: vi.fn(),
+  intentionalEmpty: vi.fn()
 }
 
 describe('direct work item surface production', () => {

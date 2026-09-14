@@ -10,11 +10,15 @@ export type WorkspaceSurfaceProductionResult =
   | { kind: 'declined'; reason: string }
   | { kind: 'failed'; reason: string }
   | { kind: 'unverifiable'; reason: string }
+  | { kind: 'blocked'; reason: string }
+  | { kind: 'unexpected'; reason: string }
+  | { kind: 'intentional-empty' }
 
 export type WorkspaceSurfaceProducerAttempt = {
   id: string
   workspaceKey: string
   executionHostId: ExecutionHostId
+  purpose?: 'activation-recovery'
   result: Promise<WorkspaceSurfaceProductionResult>
 }
 
@@ -24,6 +28,9 @@ export type WorkspaceSurfaceProducer = {
   declined: (reason: unknown) => void
   failed: (reason: unknown) => void
   unverifiable: (reason: unknown) => void
+  blocked: (reason: unknown) => void
+  unexpected: (reason: unknown) => void
+  intentionalEmpty: () => void
 }
 
 export type WorkspaceSurfaceProducerEntry = {
@@ -53,6 +60,7 @@ export function registerWorkspaceSurfaceProducer(args: {
   workspaceKey: string
   executionHostId: ExecutionHostId
   attemptId?: string
+  purpose?: 'activation-recovery'
 }): WorkspaceSurfaceProducer {
   const id = args.attemptId?.trim() || createBrowserUuid()
   if (entriesByAttemptId.has(id)) {
@@ -66,17 +74,21 @@ export function registerWorkspaceSurfaceProducer(args: {
     id,
     workspaceKey: args.workspaceKey,
     executionHostId: args.executionHostId,
+    ...(args.purpose ? { purpose: args.purpose } : {}),
     result
   }
   const entry: WorkspaceSurfaceProducerEntry = {
     attempt,
     result: null,
     settle: (settlement) => {
-      if (entry.result) {
+      if (entry.result && entry.result.kind !== 'unverifiable') {
         return
       }
+      const firstSettlement = entry.result === null
       entry.result = settlement
-      settlePromise(settlement)
+      if (firstSettlement) {
+        settlePromise(settlement)
+      }
       notifyListeners()
     }
   }
@@ -87,7 +99,10 @@ export function registerWorkspaceSurfaceProducer(args: {
     materialized: (surface) => entry.settle({ kind: 'materialized', surface }),
     declined: (reason) => entry.settle({ kind: 'declined', reason: reasonText(reason) }),
     failed: (reason) => entry.settle({ kind: 'failed', reason: reasonText(reason) }),
-    unverifiable: (reason) => entry.settle({ kind: 'unverifiable', reason: reasonText(reason) })
+    unverifiable: (reason) => entry.settle({ kind: 'unverifiable', reason: reasonText(reason) }),
+    blocked: (reason) => entry.settle({ kind: 'blocked', reason: reasonText(reason) }),
+    unexpected: (reason) => entry.settle({ kind: 'unexpected', reason: reasonText(reason) }),
+    intentionalEmpty: () => entry.settle({ kind: 'intentional-empty' })
   }
 }
 
@@ -104,11 +119,37 @@ export function readWorkspaceSurfaceProducerEntries(args: {
 
 export function consumeWorkspaceSurfaceProducerAttempt(attemptId: string): void {
   const entry = entriesByAttemptId.get(attemptId)
-  if (!entry || entry.result?.kind === 'unverifiable' || entry.result === null) {
+  if (!entry || entry.result === null || entry.result.kind === 'unverifiable') {
     return
   }
   entriesByAttemptId.delete(attemptId)
   notifyListeners()
+}
+
+export function discardWorkspaceSurfaceProducerAttempt(attemptId: string): void {
+  if (entriesByAttemptId.delete(attemptId)) {
+    notifyListeners()
+  }
+}
+
+export function clearWorkspaceSurfaceProducerAttempts(args: {
+  workspaceKey?: string
+  executionHostId?: ExecutionHostId
+}): string[] {
+  const removed: string[] = []
+  for (const [attemptId, entry] of entriesByAttemptId) {
+    if (
+      (args.workspaceKey === undefined || entry.attempt.workspaceKey === args.workspaceKey) &&
+      (args.executionHostId === undefined || entry.attempt.executionHostId === args.executionHostId)
+    ) {
+      entriesByAttemptId.delete(attemptId)
+      removed.push(attemptId)
+    }
+  }
+  if (removed.length > 0) {
+    notifyListeners()
+  }
+  return removed
 }
 
 export function subscribeWorkspaceSurfaceProducers(listener: () => void): () => void {
@@ -117,6 +158,5 @@ export function subscribeWorkspaceSurfaceProducers(listener: () => void): () => 
 }
 
 export function resetWorkspaceSurfaceProducersForTests(): void {
-  entriesByAttemptId.clear()
-  notifyListeners()
+  clearWorkspaceSurfaceProducerAttempts({})
 }

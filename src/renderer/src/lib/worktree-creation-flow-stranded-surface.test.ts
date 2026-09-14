@@ -14,6 +14,7 @@ import type { WorkspaceSurfaceProducer } from '@/lib/workspace-surface-productio
 // plus toast instead of a panel silently stuck at "creating".
 
 type TestActiveView = 'terminal' | 'tasks'
+const initialUnifiedTabsByWorktree: Record<string, { id: string }[]> = {}
 
 const store = {
   settings: {
@@ -54,7 +55,8 @@ const store = {
   updateWorktreeMeta: vi.fn(),
   createWorktree: vi.fn(),
   tabsByWorktree: {} as Record<string, { id: string; launchAgent?: string }[]>,
-  unifiedTabsByWorktree: {}
+  unifiedTabsByWorktree: initialUnifiedTabsByWorktree,
+  reconcileWorktreeTabModel: vi.fn()
 }
 
 const surfaceProducer: WorkspaceSurfaceProducer = {
@@ -67,7 +69,10 @@ const surfaceProducer: WorkspaceSurfaceProducer = {
   materialized: vi.fn(),
   declined: vi.fn(),
   failed: vi.fn(),
-  unverifiable: vi.fn()
+  unverifiable: vi.fn(),
+  blocked: vi.fn(),
+  unexpected: vi.fn(),
+  intentionalEmpty: vi.fn()
 }
 
 vi.mock('@/store', () => ({
@@ -202,6 +207,7 @@ beforeEach(() => {
   store.activeView = 'terminal'
   store.repos = [{ id: 'repo-1', connectionId: null }]
   store.tabsByWorktree = {}
+  store.unifiedTabsByWorktree = {}
   store.pendingWorktreeCreations = {}
   store.activePendingCreationId = null
   store.createWorktree.mockResolvedValue({
@@ -273,7 +279,7 @@ describe('a throw after createWorktree succeeds no longer strands the creation s
     })
   })
 
-  it('activating branch: routes draft and follow-up delivery to the stamped agent tab', async () => {
+  it('activating branch: a selection-stamped legacy row cannot suppress recovery', async () => {
     const request = makeRequest({
       agent: 'codex',
       startupPlan: {
@@ -296,8 +302,10 @@ describe('a throw after createWorktree succeeds no longer strands the creation s
     await executeWorktreeCreation('creation-1', request)
 
     expect(ensureWorktreeHasInitialTerminal).not.toHaveBeenCalled()
+    expect(surfaceProducer.failed).toHaveBeenCalledWith(expect.any(Error))
+    expect(recoverWorkspaceActivation).toHaveBeenCalledOnce()
     expect(ensureAgentStartupInTerminal).toHaveBeenCalledWith(
-      expect.objectContaining({ primaryTabId: 'agent-tab' })
+      expect.objectContaining({ primaryTabId: null })
     )
   })
 

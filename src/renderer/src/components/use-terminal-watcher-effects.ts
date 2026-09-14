@@ -18,6 +18,8 @@ import {
   getRuntimeEnvironmentIdForWorktree
 } from '@/lib/worktree-runtime-owner'
 import { createBrowserUuid } from '@/lib/browser-uuid'
+import { startWorkspaceActivationSurfaceProducer } from '@/lib/workspace-activation-surface-producer'
+import { getRuntimeEnvironmentRevision } from '@/runtime/runtime-environment-revision'
 
 // Why shared: surfaces without watchable live tabs need no per-pass allocation.
 const NO_PARKED_TAB_IDS: ReadonlySet<string> = new Set()
@@ -81,7 +83,7 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
     workspaceSessionReady,
     workspaceSurfaceIds
   } = controller
-  const startupRecoverySettledRef = useRef(false)
+  const startupRecoveryTargetRef = useRef<string | null>(null)
 
   useEffect(() => {
     pruneParkedTerminalWatchers(terminalWatcherLiveWorkspaceIds(workspaceSurfaceIds))
@@ -194,38 +196,70 @@ export function useTerminalWatcherEffects(controller: TerminalWatcherController)
   const activeWorkspaceExecutionHostId = useAppStore(
     (state) => state.activeWorkspaceExecutionHostId
   )
+  const runtimeEnvironments = useAppStore((state) => state.runtimeEnvironments)
+  const activeRuntimeRoute = useMemo(() => {
+    const routeKey = `${activeWorkspaceExecutionHostId ?? ''}|${activeWorktreeHostAuthority}`
+    if (!activeWorktreeId) {
+      return { routeKey, revision: null }
+    }
+    const runtimeEnvironmentId = getRuntimeEnvironmentIdForWorktree(
+      useAppStore.getState(),
+      activeWorktreeId
+    )
+    const environment = runtimeEnvironments.find(({ id }) => id === runtimeEnvironmentId)
+    return {
+      routeKey,
+      revision: environment
+        ? (environment.pairingRevision ?? environment.createdAt)
+        : runtimeEnvironmentId
+          ? (getRuntimeEnvironmentRevision(runtimeEnvironmentId) ?? null)
+          : null
+    }
+  }, [
+    activeWorkspaceExecutionHostId,
+    activeWorktreeHostAuthority,
+    activeWorktreeId,
+    runtimeEnvironments
+  ])
 
   useEffect(() => {
     if (!workspaceSessionReady || !terminalStartupRestorationReady) {
-      startupRecoverySettledRef.current = false
+      startupRecoveryTargetRef.current = null
       return
     }
-    if (!activeWorktreeId || startupRecoverySettledRef.current) {
+    if (!activeWorktreeId) {
       return
     }
     const state = useAppStore.getState()
+    const identity = {
+      workspaceKey: activeWorktreeId,
+      executionHostId: getExecutionHostIdForWorktree(state, activeWorktreeId),
+      runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(state, activeWorktreeId),
+      attemptId: createBrowserUuid()
+    }
+    const target = JSON.stringify([
+      identity.executionHostId,
+      identity.runtimeEnvironmentId,
+      activeRuntimeRoute.revision,
+      activeWorktreeId,
+      activeRuntimeRoute.routeKey
+    ])
+    if (startupRecoveryTargetRef.current === target) {
+      return
+    }
+    startupRecoveryTargetRef.current = target
     const abort = new AbortController()
-    void recoverWorkspaceActivation(
-      {
-        workspaceKey: activeWorktreeId,
-        executionHostId: getExecutionHostIdForWorktree(state, activeWorktreeId),
-        runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(state, activeWorktreeId),
-        attemptId: createBrowserUuid()
-      },
-      { mode: 'startup', signal: abort.signal }
-    ).then(
-      () => {
-        if (!abort.signal.aborted) {
-          startupRecoverySettledRef.current = true
-        }
-      },
-      () => undefined
-    )
+    startWorkspaceActivationSurfaceProducer(identity, { mode: 'startup' })
+    void recoverWorkspaceActivation(identity, {
+      mode: 'startup',
+      signal: abort.signal
+    }).catch(() => undefined)
     return () => {
       abort.abort()
     }
   }, [
     activeWorkspaceExecutionHostId,
+    activeRuntimeRoute,
     activeWorktreeHostAuthority,
     activeWorktreeId,
     terminalStartupRestorationReady,

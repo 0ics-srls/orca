@@ -63,11 +63,14 @@ function selectionCouplingViolations(source: string): string[] {
   ) {
     violations.push('selection controls recovery ownership')
   }
+  if (/\.find\s*\([\s\S]{0,240}\blaunchAgent\b/.test(source)) {
+    violations.push('selection-stamped legacy tab controls recovery')
+  }
   return violations
 }
 
 describe('activation recovery architecture census', () => {
-  it('classifies every general setter caller and keeps only the public activation path recovery-triggering', () => {
+  it('classifies every general setter caller', () => {
     expect(callerCounts('setActiveWorktree')).toEqual({
       ...stateOnlySetActiveWorktreeCallers,
       'src/renderer/src/lib/worktree-activation.ts': 1
@@ -93,7 +96,8 @@ describe('activation recovery architecture census', () => {
     ])
     expect(source).not.toContain('worktree-creation')
     expect(source).not.toContain('ensureWorktreeHasInitialTerminal')
-    expect(selectionCouplingViolations(source)).toEqual([])
+    expect(source).not.toContain('gateWorktreeAgentActivation')
+    expect(source).not.toContain('.createTab(')
   })
 
   it('detects aliases, option spreading, picker conditionals, and picker-minted fake claims', () => {
@@ -101,7 +105,11 @@ describe('activation recovery architecture census', () => {
       `const callerWillProvideSurface = options.agent != null\nrecoverWorkspaceActivation(identity, { mode: 'explicit', callerWillProvideSurface })`,
       `recoverWorkspaceActivation({ ...options }, context)`,
       `if (selection.agent) recoverWorkspaceActivation(identity, context)`,
-      `if (picker.agent) registerWorkspaceSurfaceProducer(identity)`
+      `if (picker.agent) registerWorkspaceSurfaceProducer(identity)`,
+      `const launchAgent = selection.agent
+       const tab = tabs.find((candidate) => candidate.launchAgent === launchAgent)
+       if (tab) useSurface(tab)
+       else recoverWorkspaceActivation(identity, context)`
     ]
     for (const fixture of fixtures) {
       expect(selectionCouplingViolations(fixture)).not.toEqual([])
@@ -109,12 +117,30 @@ describe('activation recovery architecture census', () => {
   })
 
   it('routes all production recovery requests through the owner, watcher, or create failure adapter', () => {
-    expect(callerCounts('recoverWorkspaceActivation')).toEqual({
+    const callers = {
       'src/renderer/src/components/use-terminal-watcher-effects.ts': 1,
       'src/renderer/src/lib/workspace-activation-recovery-retry.ts': 1,
       'src/renderer/src/lib/worktree-activation-recovery-routing.ts': 1,
       'src/renderer/src/lib/worktree-activation-recovery.ts': 1,
       'src/renderer/src/lib/worktree-creation-flow-execute.ts': 1
+    }
+    expect(callerCounts('recoverWorkspaceActivation')).toEqual(callers)
+    for (const path of Object.keys(callers)) {
+      expect(selectionCouplingViolations(readFileSync(join(process.cwd(), path), 'utf8'))).toEqual(
+        []
+      )
+    }
+  })
+
+  it('cleans recovery ownership on workspace deletion and execution-host retirement', () => {
+    expect(callerCounts('clearWorkspaceActivationRecoveryLifecycle')).toEqual({
+      'src/renderer/src/lib/workspace-activation-recovery-lifecycle.ts': 1,
+      'src/renderer/src/store/folder-workspaces/folder-workspace-mutations.ts': 1,
+      'src/renderer/src/store/project-groups/project-group-mutations.ts': 1,
+      'src/renderer/src/store/slices/ssh.ts': 1,
+      'src/renderer/src/store/slices/worktrees/session/worktree-slice-lookups.ts': 1,
+      'src/renderer/src/store/slices/worktrees/teardown/purge-stale-runtime-host-state.ts': 1,
+      'src/renderer/src/store/slices/worktrees/teardown/remove-worktree-store-cleanup.ts': 1
     })
   })
 })

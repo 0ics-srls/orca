@@ -161,7 +161,22 @@ function stubInventory(args?: {
         ]
       : []
   )
-  vi.stubGlobal('window', { api: { runtime: { call: runtimeCall }, pty: { listSessions } } })
+  const runtimeSubscribe = vi.fn(
+    async (
+      request: { method: string; params?: unknown },
+      callback: (response: unknown) => void
+    ) => {
+      callback(await runtimeCall(request))
+      return { unsubscribe: vi.fn() }
+    }
+  )
+  vi.stubGlobal('window', {
+    api: {
+      runtime: { call: runtimeCall, subscribe: runtimeSubscribe },
+      runtimeEnvironments: { subscribe: vi.fn() },
+      pty: { listSessions }
+    }
+  })
   return { runtimeCall, listSessions }
 }
 
@@ -331,7 +346,15 @@ describe('worktree agent activation seam', () => {
       method: 'session.tabs.list',
       params: { worktree: `id:${worktree.id}` }
     })
-    expect(listSessions).toHaveBeenCalledExactlyOnceWith({ connectionId: null })
+    expect(listSessions).not.toHaveBeenCalled()
+    expect(runtimeCall).toHaveBeenCalledWith({
+      method: 'terminal.list',
+      params: {
+        worktree: `id:${worktree.id}`,
+        requireFreshPtyLiveness: true,
+        includeVisualLayouts: false
+      }
+    })
     expect(runtimeCall).toHaveBeenCalledWith({
       method: 'agentSession.handoffStatus',
       params: { sessionId: 'chat-1' }

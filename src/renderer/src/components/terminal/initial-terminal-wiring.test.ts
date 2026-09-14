@@ -14,7 +14,11 @@ describe('Terminal startup recovery wiring', () => {
 
   it('routes startup materialization through the recovery boundary', () => {
     expect(source.split('recoverWorkspaceActivation(').length - 1).toBe(1)
-    expect(source).toContain("{ mode: 'startup', signal: abort.signal }")
+    expect(source.split('startWorkspaceActivationSurfaceProducer(').length - 1).toBe(1)
+    expect(source).toContain(
+      "startWorkspaceActivationSurfaceProducer(identity, { mode: 'startup' })"
+    )
+    expect(source).toContain('signal: abort.signal')
   })
 
   it('captures target, host, runtime, and attempt identity', () => {
@@ -24,10 +28,11 @@ describe('Terminal startup recovery wiring', () => {
     expect(source).toContain('attemptId: createBrowserUuid()')
   })
 
-  it('keeps recovery retryable until the asynchronous assessment settles', () => {
-    expect(source).toContain(
-      'if (!abort.signal.aborted) {\n          startupRecoverySettledRef.current = true'
-    )
+  it('re-arms startup ownership for every route and authority transition', () => {
+    expect(source).toContain('const startupRecoveryTargetRef = useRef<string | null>(null)')
+    expect(source).toContain('activeRuntimeRoute.revision,')
+    expect(source).toContain('const target = JSON.stringify([')
+    expect(source).toContain('startupRecoveryTargetRef.current = null')
     expect(source).toContain('return () => {\n      abort.abort()')
   })
 })

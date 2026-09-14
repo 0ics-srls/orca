@@ -117,6 +117,12 @@ describe('selection-free empty-workspace recovery', () => {
         resolveGate = resolve
       })
     )
+    vi.stubGlobal('window', {
+      api: {
+        runtime: { subscribe: vi.fn() },
+        runtimeEnvironments: { subscribe: vi.fn() }
+      }
+    })
 
     activateAndRevealWorktree(worktree.id, { notifyHostRuntime: false })
     useAppStore.getState().createTab(worktree.id)
@@ -193,15 +199,6 @@ describe('folder activation recovery', () => {
     )
   })
 
-  it('keeps the direct general setter state-only', async () => {
-    seedEmptyFolderWorkspace('local')
-
-    useAppStore.getState().setActiveWorktree(FOLDER_KEY, 'local')
-    await Promise.resolve()
-
-    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
-  })
-
   it('does not start a writer for an unverifiable SSH folder', async () => {
     seedEmptyFolderWorkspace(SSH_HOST_ID)
 
@@ -209,5 +206,18 @@ describe('folder activation recovery', () => {
     await Promise.resolve()
 
     expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
+  })
+
+  it('seeds a connected SSH folder after its current inventory is synchronized', async () => {
+    seedEmptyFolderWorkspace(SSH_HOST_ID)
+    useAppStore.setState({
+      remoteWorkspaceHydratedTargetIds: new Set(['conn-1']),
+      remoteWorkspaceSyncStatusByTargetId: { 'conn-1': { phase: 'synced' } }
+    })
+
+    const result = activateAndRevealFolderWorkspace(FOLDER_ID, { executionHostId: SSH_HOST_ID })
+
+    expect(result).toEqual({ primaryTabId: expect.any(String) })
+    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toHaveLength(1)
   })
 })

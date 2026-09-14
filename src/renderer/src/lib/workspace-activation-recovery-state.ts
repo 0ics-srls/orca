@@ -14,43 +14,24 @@ import type {
   WorkspaceActivationContext,
   WorkspaceActivationIdentity
 } from './worktree-activation-recovery'
+import { readLatestActivationRecoveryAttempt } from './workspace-activation-recovery-attempts'
+import { getRuntimeEnvironmentRevision } from '@/runtime/runtime-environment-revision'
+
+export {
+  activationRecoveryTargetKey,
+  clearLatestActivationRecoveryAttempts,
+  markLatestActivationRecoveryAttempt,
+  readLatestActivationRecoveryAttempt
+} from './workspace-activation-recovery-attempts'
 
 export type RecoveryWaitResult = 'changed' | 'cancelled' | 'timeout'
 
 export const WORKSPACE_ACTIVATION_RECOVERY_DEADLINE_MS = 30_000
 export const WORKSPACE_ACTIVATION_RECOVERY_PROGRESS_DELAY_MS = 200
 
-const latestAttemptIdByTarget = new Map<string, string>()
-const gateIdentityByPromise = new WeakMap<Promise<unknown>, string>()
 let selectionRevision = 0
 let previousSelectionKey: string | null = null
 let disposeSelectionTracker: (() => void) | null = null
-
-export function activationRecoveryTargetKey(identity: WorkspaceActivationIdentity): string {
-  return `${identity.executionHostId}|${identity.workspaceKey}`
-}
-
-export function activationRecoveryRouteKey(identity: WorkspaceActivationIdentity): string {
-  return `${identity.executionHostId}|${identity.runtimeEnvironmentId ?? ''}`
-}
-
-export function markLatestActivationRecoveryAttempt(identity: WorkspaceActivationIdentity): void {
-  latestAttemptIdByTarget.set(activationRecoveryTargetKey(identity), identity.attemptId)
-}
-
-export function readLatestActivationRecoveryAttempt(
-  identity: WorkspaceActivationIdentity
-): string | undefined {
-  return latestAttemptIdByTarget.get(activationRecoveryTargetKey(identity))
-}
-
-export function readActivationRecoveryGateRoute(gate: Promise<unknown>): string | undefined {
-  return gateIdentityByPromise.get(gate)
-}
-
-export function recordActivationRecoveryGateRoute(gate: Promise<unknown>, route: string): void {
-  gateIdentityByPromise.set(gate, route)
-}
 
 function currentSelectionKey(): string {
   const state = useAppStore.getState()
@@ -58,7 +39,13 @@ function currentSelectionKey(): string {
   if (!workspaceKey) {
     return 'none'
   }
-  return `${getExecutionHostIdForWorktree(state, workspaceKey)}|${getRuntimeEnvironmentIdForWorktree(state, workspaceKey) ?? ''}|${workspaceKey}`
+  const runtimeEnvironmentId = getRuntimeEnvironmentIdForWorktree(state, workspaceKey)
+  return JSON.stringify([
+    getExecutionHostIdForWorktree(state, workspaceKey),
+    runtimeEnvironmentId,
+    runtimeEnvironmentId ? (getRuntimeEnvironmentRevision(runtimeEnvironmentId) ?? null) : null,
+    workspaceKey
+  ])
 }
 
 export function installActivationRecoverySelectionTracker(): void {
@@ -96,12 +83,27 @@ export function isActivationRecoveryCurrent(
   ) {
     return false
   }
+  return isActivationExecutionRouteCurrent(identity)
+}
+
+export function isActivationExecutionRouteCurrent(
+  identity: Pick<
+    WorkspaceActivationIdentity,
+    'workspaceKey' | 'executionHostId' | 'runtimeEnvironmentId'
+  > & { runtimeEnvironmentRevision?: number | null }
+): boolean {
   const state = useAppStore.getState()
   return (
     state.activeWorktreeId === identity.workspaceKey &&
     getExecutionHostIdForWorktree(state, identity.workspaceKey) === identity.executionHostId &&
     getRuntimeEnvironmentIdForWorktree(state, identity.workspaceKey) ===
-      identity.runtimeEnvironmentId
+      identity.runtimeEnvironmentId &&
+    (identity.runtimeEnvironmentRevision === undefined ||
+      (identity.runtimeEnvironmentRevision === null
+        ? identity.runtimeEnvironmentId === null
+        : identity.runtimeEnvironmentId !== null &&
+          getRuntimeEnvironmentRevision(identity.runtimeEnvironmentId) ===
+            identity.runtimeEnvironmentRevision))
   )
 }
 
@@ -223,53 +225,11 @@ export function waitForActivationRecoveryChange(
   })
 }
 
-export function waitForActivationRecoveryPromise<T>(
-  promise: Promise<T>,
-  deadlineAt: number,
-  signal: AbortSignal | undefined
-): Promise<
-  | { kind: 'settled'; value: T }
-  | { kind: 'rejected'; error: unknown }
-  | Exclude<RecoveryWaitResult, 'changed'>
-> {
-  const remaining = Math.max(0, deadlineAt - Date.now())
-  if (remaining === 0) {
-    return Promise.resolve('timeout')
+export function canInspectAgentActivationInventory(runtimeEnvironmentId: string | null): boolean {
+  if (typeof window === 'undefined') {
+    return false
   }
-  return new Promise((resolve) => {
-    let settled = false
-    const finish = (
-      result:
-        | { kind: 'settled'; value: T }
-        | { kind: 'rejected'; error: unknown }
-        | Exclude<RecoveryWaitResult, 'changed'>
-    ): void => {
-      if (settled) {
-        return
-      }
-      settled = true
-      clearTimeout(timeout)
-      signal?.removeEventListener('abort', onAbort)
-      resolve(result)
-    }
-    const onAbort = (): void => finish('cancelled')
-    const timeout = setTimeout(() => finish('timeout'), remaining)
-    signal?.addEventListener('abort', onAbort, { once: true })
-    if (signal?.aborted) {
-      finish('cancelled')
-      return
-    }
-    void promise.then(
-      (value) => finish({ kind: 'settled', value }),
-      (error: unknown) => finish({ kind: 'rejected', error })
-    )
-  })
-}
-
-export function canInspectAgentActivationInventory(): boolean {
-  return (
-    typeof window !== 'undefined' &&
-    typeof window.api?.runtime?.call === 'function' &&
-    typeof window.api?.pty?.listSessions === 'function'
-  )
+  return runtimeEnvironmentId
+    ? typeof window.api?.runtimeEnvironments?.subscribe === 'function'
+    : typeof window.api?.runtime?.subscribe === 'function'
 }

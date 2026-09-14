@@ -1,5 +1,4 @@
 import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import {
   resolveWorkspaceTerminalHostAuthority,
   type WorkspaceTerminalHostAuthorityState
@@ -20,7 +19,7 @@ export function resolveWorkspaceExecutionEvidence(
   if (!host || host.kind === 'local') {
     return 'exited'
   }
-  if (host.kind === 'runtime' || parseWorkspaceKey(workspaceKey)?.type === 'folder') {
+  if (host.kind === 'runtime') {
     return 'unverifiable'
   }
   const syncStatus = state.remoteWorkspaceSyncStatusByTargetId?.[host.targetId]

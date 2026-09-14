@@ -14,6 +14,8 @@ import {
   registerWorkspaceSurfaceProducer,
   resetWorkspaceSurfaceProducersForTests
 } from './workspace-surface-production'
+import { isActivationExecutionRouteCurrent } from './workspace-activation-recovery-state'
+import { replaceRuntimeEnvironmentRevisions } from '@/runtime/runtime-environment-revision'
 
 type FakeUnifiedTab = {
   id: string
@@ -115,7 +117,6 @@ const mocks = vi.hoisted(() => {
       storeListeners.add(listener)
       return () => storeListeners.delete(listener)
     },
-    gate: vi.fn(),
     authority: vi.fn(() => 'none'),
     structuredStatus: vi.fn(() => 'idle'),
     subscribeStructured: (listener: () => void) => {
@@ -134,9 +135,6 @@ vi.mock('@/store', () => ({
 }))
 vi.mock('@/components/terminal/initial-terminal', () => ({
   shouldAutoCreateInitialTerminal: (count: number) => count === 0
-}))
-vi.mock('./worktree-agent-activation-gate', () => ({
-  gateWorktreeAgentActivation: mocks.gate
 }))
 vi.mock('./workspace-terminal-host-authority', () => ({
   resolveWorkspaceTerminalHostAuthority: mocks.authority
@@ -166,12 +164,6 @@ function identity(
   }
 }
 
-function forceGate(): void {
-  mocks.state().sleepingAgentSessionsByPaneKey = {
-    pane: { worktreeId: mocks.state().activeWorktreeId }
-  }
-}
-
 function showSurface(contentType: FakeUnifiedTab['contentType'], id = 'surface-1'): void {
   mocks.state().unifiedTabsByWorktree[mocks.state().activeWorktreeId] = [{ id, contentType }]
   mocks.notifyStore()
@@ -179,12 +171,11 @@ function showSurface(contentType: FakeUnifiedTab['contentType'], id = 'surface-1
 
 beforeEach(() => {
   mocks.reset()
-  mocks.gate.mockReset()
-  mocks.gate.mockResolvedValue('empty')
   mocks.authority.mockReset()
   mocks.authority.mockReturnValue('none')
   mocks.structuredStatus.mockReset()
   mocks.structuredStatus.mockReturnValue('idle')
+  replaceRuntimeEnvironmentRevisions([])
   resetWorkspaceSurfaceProducersForTests()
   resetWorkspaceActivationRecoveryPresentationsForTests()
 })
@@ -194,9 +185,34 @@ afterEach(() => {
 })
 
 describe('activation recovery failures', () => {
+  it('invalidates a captured route when the saved runtime is re-paired', () => {
+    mocks.state().activeWorkspaceExecutionHostId = 'runtime:environment-1'
+    mocks.state().executionHostId = 'runtime:environment-1'
+    mocks.state().runtimeEnvironmentId = 'environment-1'
+    replaceRuntimeEnvironmentRevisions([{ id: 'environment-1', createdAt: 1, pairingRevision: 17 }])
+    const route = {
+      ...identity('paired-runtime-attempt', {
+        executionHostId: 'runtime:environment-1',
+        runtimeEnvironmentId: 'environment-1'
+      }),
+      runtimeEnvironmentRevision: 17
+    }
+
+    expect(isActivationExecutionRouteCurrent({ ...route, runtimeEnvironmentRevision: null })).toBe(
+      false
+    )
+    expect(isActivationExecutionRouteCurrent(route)).toBe(true)
+    replaceRuntimeEnvironmentRevisions([{ id: 'environment-1', createdAt: 1, pairingRevision: 18 }])
+    expect(isActivationExecutionRouteCurrent(route)).toBe(false)
+  })
+
   it('publishes a blocked error and starts no writer', async () => {
-    forceGate()
-    mocks.gate.mockResolvedValue('blocked')
+    const producer = registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'blocked-producer'
+    })
+    producer.blocked('host ownership is incomplete')
 
     const result = await recoverWorkspaceActivation(identity('blocked-attempt'), {
       mode: 'explicit'
@@ -209,39 +225,34 @@ describe('activation recovery failures', () => {
     )
   })
 
-  it.each(['resume', 'adoption'])(
-    'contains an escaped %s rejection as an unexpected error',
-    async () => {
-      forceGate()
-      mocks.gate.mockRejectedValue(new Error('inventory mutation failed'))
-
-      const result = await recoverWorkspaceActivation(identity('rejected-attempt'), {
-        mode: 'explicit'
-      })
-
-      expect(result).toMatchObject({ kind: 'failed', reason: 'unexpected' })
-      expect(mocks.state().createTab).not.toHaveBeenCalled()
-      expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')).toMatchObject({
-        kind: 'unexpected',
-        detail: 'inventory mutation failed'
-      })
-    }
-  )
-
-  it('turns a private seeder throw into an actionable error', async () => {
-    mocks.state().createTab.mockImplementationOnce(() => {
-      throw new Error('tab commit failed')
+  it('contains an observer reconciliation rejection as an unexpected error', async () => {
+    mocks.state().reconcileWorktreeTabModel = vi.fn(() => {
+      throw new Error('inventory reconciliation failed')
     })
 
-    const result = await recoverWorkspaceActivation(identity('seeder-attempt'), {
+    const result = await recoverWorkspaceActivation(identity('rejected-attempt'), {
       mode: 'explicit'
     })
 
     expect(result).toMatchObject({ kind: 'failed', reason: 'unexpected' })
     expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')).toMatchObject({
       kind: 'unexpected',
-      detail: 'tab commit failed'
+      detail: 'inventory reconciliation failed'
     })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
+  })
+
+  it('does not seed when no concrete producer owns an empty activation', async () => {
+    const result = await recoverWorkspaceActivation(identity('observer-only-attempt'), {
+      mode: 'explicit'
+    })
+
+    expect(result).toMatchObject({ kind: 'failed', reason: 'unexpected' })
+    expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')).toMatchObject({
+      kind: 'unexpected',
+      detail: 'No concrete surface producer owns this empty workspace activation.'
+    })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
   it('keeps a failed concrete producer visible without substituting a shell', async () => {
@@ -353,70 +364,89 @@ describe('activation recovery failures', () => {
 
   it('bounds an inventory assessment and publishes an actionable timeout', async () => {
     vi.useFakeTimers()
-    forceGate()
-    mocks.gate.mockReturnValue(new Promise(() => undefined))
+    registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'pending-producer'
+    })
 
     const recovery = recoverWorkspaceActivation(identity('deadline-attempt'), {
       mode: 'explicit'
     })
     await vi.advanceTimersByTimeAsync(30_000)
 
-    await expect(recovery).resolves.toMatchObject({ kind: 'failed', reason: 'unexpected' })
+    await expect(recovery).resolves.toMatchObject({
+      kind: 'deferred',
+      ownerAttemptId: 'pending-producer'
+    })
     expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')?.kind).toBe(
-      'unexpected'
+      'unverifiable'
     )
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it.each(['adopted', 'structured', 'resumed'] as const)(
-    'requires real publication after a %s gate outcome',
-    async (outcome) => {
-      vi.useFakeTimers()
-      forceGate()
-      mocks.gate.mockResolvedValue(outcome)
+  it('accepts a later producer update after an unverifiable settlement', async () => {
+    const producer = registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'updated-producer'
+    })
+    producer.unverifiable('publication acknowledgement was lost')
 
-      const recovery = recoverWorkspaceActivation(identity(`gate-${outcome}`), {
-        mode: 'explicit'
-      })
-      await vi.advanceTimersByTimeAsync(30_000)
+    await expect(
+      recoverWorkspaceActivation(identity('unverifiable-observation'), { mode: 'explicit' })
+    ).resolves.toMatchObject({ kind: 'deferred', ownerAttemptId: 'updated-producer' })
 
-      await expect(recovery).resolves.toMatchObject({ kind: 'deferred' })
-      expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')?.kind).toBe(
-        'unverifiable'
-      )
-      expect(mocks.state().createTab).not.toHaveBeenCalled()
-    }
-  )
+    producer.materialized({ kind: 'tab', id: 'published-later' })
+    const recovery = recoverWorkspaceActivation(identity('updated-observation'), {
+      mode: 'explicit'
+    })
+    showSurface('agent-session', 'published-later')
+
+    await expect(recovery).resolves.toEqual({
+      kind: 'materialized',
+      surface: { id: 'published-later', type: 'agent-session' }
+    })
+    expect(readWorkspaceSurfaceProducerEntries(identity('unused'))).toEqual([])
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
+  })
+
+  it('reconciles visible inventory over an unverifiable producer verdict', async () => {
+    const producer = registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'reconciled-producer'
+    })
+    producer.unverifiable('publication acknowledgement was lost')
+    showSurface('browser', 'visible-after-uncertainty')
+
+    await expect(
+      recoverWorkspaceActivation(identity('reconciled-observation'), { mode: 'explicit' })
+    ).resolves.toEqual({
+      kind: 'materialized',
+      surface: { id: 'visible-after-uncertainty', type: 'browser' }
+    })
+    expect(readWorkspaceSurfaceProducerEntries(identity('unused'))).toEqual([])
+  })
 })
 
 describe('activation recovery settlement', () => {
-  it('uses the live startup tombstone at final settlement', async () => {
-    forceGate()
-    let settleGate!: (outcome: string) => void
-    mocks.gate.mockReturnValue(
-      new Promise((resolve) => {
-        settleGate = resolve
-      })
-    )
-    const recovery = recoverWorkspaceActivation(identity('startup-tombstone'), {
-      mode: 'startup'
-    })
-    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalled())
+  it('uses the live startup tombstone during observation', async () => {
     mocks.state().tabsByWorktree[WORKSPACE_KEY] = []
-    mocks.notifyStore()
-    settleGate('empty')
 
-    await expect(recovery).resolves.toEqual({ kind: 'intentional-empty' })
+    await expect(
+      recoverWorkspaceActivation(identity('startup-tombstone'), { mode: 'startup' })
+    ).resolves.toEqual({ kind: 'intentional-empty' })
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it('lets an explicit reopen override a live tombstone', async () => {
+  it('does not let the observer override a live tombstone with a writer', async () => {
     mocks.state().tabsByWorktree[WORKSPACE_KEY] = []
 
     await expect(
       recoverWorkspaceActivation(identity('explicit-tombstone'), { mode: 'explicit' })
-    ).resolves.toMatchObject({ kind: 'materialized', surface: { type: 'terminal' } })
-    expect(mocks.state().createTab).toHaveBeenCalledOnce()
+    ).resolves.toMatchObject({ kind: 'failed', reason: 'unexpected' })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
   it.each([
@@ -443,59 +473,64 @@ describe('activation recovery settlement', () => {
   )
 
   it('cancels one startup request without consuming a later assessment', async () => {
-    forceGate()
-    mocks.gate.mockReturnValueOnce(new Promise(() => undefined)).mockResolvedValueOnce('empty')
+    const producer = registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'startup-producer'
+    })
     const abort = new AbortController()
     const first = recoverWorkspaceActivation(identity('cancelled-startup'), {
       mode: 'startup',
       signal: abort.signal
     })
-    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    await Promise.resolve()
     abort.abort()
     await expect(first).resolves.toEqual({ kind: 'stale' })
+    producer.intentionalEmpty()
 
     await expect(
       recoverWorkspaceActivation(identity('replacement-startup'), { mode: 'startup' })
-    ).resolves.toMatchObject({ kind: 'materialized' })
-    expect(mocks.state().createTab).toHaveBeenCalledOnce()
+    ).resolves.toEqual({ kind: 'intentional-empty' })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
   it('invalidates an old request across an away-and-back selection cycle', async () => {
-    forceGate()
-    let settleGate!: (outcome: string) => void
-    const sharedGate = new Promise((resolve) => {
-      settleGate = resolve
+    const producer = registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'selection-producer'
     })
-    mocks.gate.mockReturnValue(sharedGate)
     const first = recoverWorkspaceActivation(identity('before-away-and-back'), {
       mode: 'explicit'
     })
-    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    await Promise.resolve()
 
     mocks.state().activeWorktreeId = 'worktree-2'
     mocks.notifyStore()
     mocks.state().activeWorktreeId = WORKSPACE_KEY
     mocks.notifyStore()
-    settleGate('empty')
 
     await expect(first).resolves.toEqual({ kind: 'stale' })
     expect(mocks.state().createTab).not.toHaveBeenCalled()
+    producer.materialized({ kind: 'workspace-content', id: 'new-selection-content' })
 
     await expect(
       recoverWorkspaceActivation(identity('after-away-and-back'), { mode: 'explicit' })
-    ).resolves.toMatchObject({ kind: 'materialized' })
-    expect(mocks.state().createTab).toHaveBeenCalledOnce()
+    ).resolves.toEqual({
+      kind: 'materialized',
+      surface: { id: 'new-selection-content', type: 'workspace-content' }
+    })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it('rejects a joined gate whose host tuple conflicts', async () => {
-    forceGate()
-    let settleGate!: (outcome: string) => void
-    const sharedGate = new Promise((resolve) => {
-      settleGate = resolve
+  it('invalidates an observer whose captured host tuple changes', async () => {
+    registerWorkspaceSurfaceProducer({
+      workspaceKey: WORKSPACE_KEY,
+      executionHostId: 'local',
+      attemptId: 'host-a-producer'
     })
-    mocks.gate.mockReturnValue(sharedGate)
     const first = recoverWorkspaceActivation(identity('host-a'), { mode: 'explicit' })
-    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    await Promise.resolve()
 
     const sshHost = toSshExecutionHostId('box')
     mocks.state().executionHostId = sshHost
@@ -507,13 +542,12 @@ describe('activation recovery settlement', () => {
 
     await expect(second).resolves.toMatchObject({
       kind: 'deferred',
-      reason: expect.stringContaining('another execution host')
+      reason: expect.stringContaining('cannot verify the execution host')
     })
     expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, sshHost)?.kind).toBe(
       'unverifiable'
     )
     expect(mocks.state().createTab).not.toHaveBeenCalled()
-    settleGate('empty')
     await expect(first).resolves.toEqual({ kind: 'stale' })
   })
 
@@ -555,7 +589,7 @@ describe('activation recovery settlement', () => {
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it('allows SSH recovery only after a current synced inventory proves emptiness', async () => {
+  it('keeps synced SSH observation writer-free without producer settlement', async () => {
     const sshHost = toSshExecutionHostId('box')
     mocks.state().executionHostId = sshHost
     mocks.state().activeWorkspaceExecutionHostId = sshHost
@@ -567,8 +601,8 @@ describe('activation recovery settlement', () => {
       recoverWorkspaceActivation(identity('ssh-synced', { executionHostId: sshHost }), {
         mode: 'explicit'
       })
-    ).resolves.toMatchObject({ kind: 'materialized', surface: { type: 'terminal' } })
-    expect(mocks.state().createTab).toHaveBeenCalledOnce()
+    ).resolves.toMatchObject({ kind: 'failed', reason: 'unexpected' })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
   it('keeps a producer-owned tab pending until real publication reaches inventory', async () => {
@@ -618,9 +652,10 @@ describe('activation recovery settlement', () => {
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it('lets a reentrant newer activation own the final seed critical section', async () => {
+  it('lets a reentrant newer activation own final reconciliation', async () => {
     let newerRecovery: Promise<unknown> | null = null
     mocks.runOnNextReconcile(() => {
+      showSurface('terminal', 'newer-surface')
       newerRecovery = recoverWorkspaceActivation(identity('reentrant-newer'), {
         mode: 'explicit'
       })
@@ -628,8 +663,11 @@ describe('activation recovery settlement', () => {
 
     await expect(
       recoverWorkspaceActivation(identity('reentrant-older'), { mode: 'explicit' })
-    ).resolves.toMatchObject({ kind: 'materialized' })
-    await expect(newerRecovery).resolves.toMatchObject({ kind: 'materialized' })
-    expect(mocks.state().createTab).toHaveBeenCalledOnce()
+    ).resolves.toEqual({ kind: 'stale' })
+    await expect(newerRecovery).resolves.toEqual({
+      kind: 'materialized',
+      surface: { id: 'newer-surface', type: 'terminal' }
+    })
+    expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 })

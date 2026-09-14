@@ -19,6 +19,7 @@ import {
   getExecutionHostIdForWorktree,
   getRuntimeEnvironmentIdForWorktree
 } from './worktree-runtime-owner'
+import { startWorkspaceActivationSurfaceProducer } from './workspace-activation-surface-producer'
 
 export function ensureFolderWorkspaceInitialTerminal(
   folderWorkspace: FolderWorkspace,
@@ -90,6 +91,7 @@ export function recoverActivatedWorkspace(identity: WorkspaceActivationIdentity)
   const existingTabIds = new Set(
     (useAppStore.getState().tabsByWorktree[identity.workspaceKey] ?? []).map((tab) => tab.id)
   )
+  startWorkspaceActivationSurfaceProducer(identity, { mode: 'explicit' })
   void recoverWorkspaceActivation(identity, { mode: 'explicit' })
   return (
     useAppStore
@@ -103,6 +105,17 @@ export function finalizeActivatedWorkspaceSurface(
   primaryTabId: string | null,
   initialCwd?: string
 ): string | null {
+  if (primaryTabId) {
+    for (const entry of readWorkspaceSurfaceProducerEntries(identity)) {
+      if (
+        entry.result?.kind === 'materialized' &&
+        entry.result.surface.kind === 'tab' &&
+        entry.result.surface.id === primaryTabId
+      ) {
+        consumeWorkspaceSurfaceProducerAttempt(entry.attempt.id)
+      }
+    }
+  }
   const settledPrimaryTabId = primaryTabId ?? recoverActivatedWorkspace(identity)
   if (settledPrimaryTabId && initialCwd) {
     useAppStore.getState().queueTabInitialCwd(settledPrimaryTabId, initialCwd)
@@ -117,9 +130,4 @@ export function hasOutstandingActivationSurfaceProducer(
     (entry) =>
       entry.result?.kind !== 'materialized' || entry.result.surface.kind === 'workspace-content'
   )
-}
-
-export function consumeTransferredActivationProducer(producer: WorkspaceSurfaceProducer): void {
-  producer.declined('Surface production transferred to the paired execution host.')
-  consumeWorkspaceSurfaceProducerAttempt(producer.attempt.id)
 }

@@ -22,10 +22,8 @@ export function createWorkspaceActivationRecoveryOwnerContext(
   return {
     ...context,
     retry: () => {
-      void recoverWorkspaceActivation(
-        { ...identity, attemptId: createBrowserUuid() },
-        { mode: context.mode }
-      )
+      const retryIdentity = { ...identity, attemptId: createBrowserUuid() }
+      void recoverWorkspaceActivation(retryIdentity, { mode: context.mode })
     }
   }
 }

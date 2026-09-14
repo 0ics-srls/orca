@@ -197,27 +197,25 @@ export async function executeWorktreeCreation(
       // infer a primary tab from default-tab ordering; only a fresh seed may
       // return one here.
       const stateAfterActivationFailure = useAppStore.getState()
-      const existingTabs = stateAfterActivationFailure.tabsByWorktree[worktree.id] ?? []
-      const launchAgent = startupOpt?.launchAgent ?? preparedRequest.agent
-      const verifiedLaunchTabId =
-        result.startupTerminal?.tabId ??
-        (launchAgent ? existingTabs.find((tab) => tab.launchAgent === launchAgent)?.id : undefined)
-      if (verifiedLaunchTabId) {
-        // Startup terminal ids and stamped agent tabs are the only safe primary
-        // ids when activation returned no result.
-        primaryTabId = verifiedLaunchTabId
-      } else {
-        const recoveryState = useAppStore.getState()
-        const identity = {
-          workspaceKey: worktree.id,
-          executionHostId: getExecutionHostIdForWorktree(recoveryState, worktree.id),
-          runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(recoveryState, worktree.id),
-          attemptId: createBrowserUuid()
-        }
-        const producer = registerWorkspaceSurfaceProducer(identity)
-        producer.failed(error)
-        void recoverWorkspaceActivation(identity, { mode: 'explicit' })
+      stateAfterActivationFailure.reconcileWorktreeTabModel(worktree.id)
+      const startupTerminalTabId = result.startupTerminal?.tabId
+      primaryTabId = startupTerminalTabId
+        ? ((useAppStore.getState().unifiedTabsByWorktree[worktree.id] ?? []).find(
+            (tab) => tab.id === startupTerminalTabId
+          )?.id ?? null)
+        : null
+      const identity = {
+        workspaceKey: worktree.id,
+        executionHostId: getExecutionHostIdForWorktree(stateAfterActivationFailure, worktree.id),
+        runtimeEnvironmentId: getRuntimeEnvironmentIdForWorktree(
+          stateAfterActivationFailure,
+          worktree.id
+        ),
+        attemptId: createBrowserUuid()
       }
+      const producer = registerWorkspaceSurfaceProducer(identity)
+      producer.failed(error)
+      void recoverWorkspaceActivation(identity, { mode: 'explicit' })
     }
   } else {
     // Keep chat creation on its pending surface until the session is ready.

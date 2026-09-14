@@ -46,6 +46,25 @@ export function clearWorkspaceActivationRecoveryPresentation(args: {
   notifyListeners()
 }
 
+export function clearWorkspaceActivationRecoveryPresentations(args: {
+  workspaceKey?: string
+  executionHostId?: ExecutionHostId
+}): void {
+  let changed = false
+  for (const [key, presentation] of presentationsByTarget) {
+    if (
+      (args.workspaceKey === undefined || presentation.workspaceKey === args.workspaceKey) &&
+      (args.executionHostId === undefined || presentation.executionHostId === args.executionHostId)
+    ) {
+      presentationsByTarget.delete(key)
+      changed = true
+    }
+  }
+  if (changed) {
+    notifyListeners()
+  }
+}
+
 export function readWorkspaceActivationRecoveryPresentation(
   workspaceKey: string,
   executionHostId: ExecutionHostId
@@ -59,6 +78,5 @@ export function subscribeWorkspaceActivationRecoveryPresentation(listener: () =>
 }
 
 export function resetWorkspaceActivationRecoveryPresentationsForTests(): void {
-  presentationsByTarget.clear()
-  notifyListeners()
+  clearWorkspaceActivationRecoveryPresentations({})
 }
