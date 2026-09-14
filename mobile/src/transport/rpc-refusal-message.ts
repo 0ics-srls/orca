@@ -13,11 +13,13 @@ export function refusedRpcMessageOrFallback(error: unknown, fallback: string): s
 
 /**
  * An error a host reported inside an accepted reply, or the screen's copy when it sent none.
- * Preserves `result?.error || fallback`: only an absent or empty host error falls back.
+ *
+ * Exactly `result?.error || fallback`, including for a truthy non-string: main passed that value
+ * through under a `string` annotation, and a downstream `.replace` then threw. Stringifying it
+ * here would be an improvement, but an unannounced one inside a migration whose contract is that
+ * no behaviour changes — so the pass-through stays and the latent throw is ticketed separately.
  */
 export function hostReplyErrorTextOrFallback(value: unknown, fallback: string): string {
-  if (typeof value === 'string') {
-    return value || fallback
-  }
-  return value ? String(value) : fallback
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: reproduces main's own annotation of an unvalidated host field.
+  return ((value as string | undefined) || fallback) as string
 }

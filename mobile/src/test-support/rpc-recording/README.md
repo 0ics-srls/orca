@@ -218,26 +218,7 @@ publishes `{}`, so a refused refresh wipes the runtime task settings. That diver
 not repaired — `settings-task-hydration-refuse-after-data.json` is the observation, and changing
 the behaviour is a product change with its own re-record.
 
-### Open parity failure: a non-string in-band error is no longer passed through
-
-`matrix-hostedreview.create-intent-git.commit-1` fails on this branch, in one variant
-(`inner-false-object-error`), on one value. Main's `commitMobileHostedReviewStagedChanges` returned
-`result?.error || 'Commit failed'`, so a host error that is not a string reached the create-intent
-outcome as the object itself. `hostReplyErrorTextOrFallback` in
-`mobile/src/transport/rpc-refusal-message.ts` returns `String(value)` instead, so the same reply now
-yields `"[object Object]"`. Its own comment claims it preserves `result?.error || fallback`, which
-holds for strings and for absent values and not for a truthy non-string.
-
-The golden records main, which is what the oracle is for. Restoring the pass-through makes the whole
-suite green — measured, one line — but it is a product change and a product decision: main put an
-object in a `string` field, and neither behaviour is obviously the one to keep. Whoever decides it
-either changes that helper or re-records this one golden with the reason stated in the commit.
-
-Reachability: the host types `git.commit`'s reply as `{success: boolean; error?: string}`, so today's
-host does not send this. Nothing validates it either — the reader is `optionalPayloadMember`, and
-mixed client/host versions are the normal state.
-
-## Running it for a step-4 migration
+### Running it for a step-4 migration
 
 ```sh
 # 1. Before touching the call site, confirm the oracle is green on your branch.
