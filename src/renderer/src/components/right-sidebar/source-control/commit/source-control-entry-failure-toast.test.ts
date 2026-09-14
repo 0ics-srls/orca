@@ -1,16 +1,10 @@
 // @vitest-environment happy-dom
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-
-type ToastOptions = {
-  id?: string
-  description?: string
-  duration?: number
-  action?: { label: string; onClick: () => void }
-}
+import type { SourceControlToastTestOptions } from './source-control-toast-test-options'
 
 const { toastError, toastDismiss } = vi.hoisted(() => ({
-  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
+  toastError: vi.fn<(title: string, options?: SourceControlToastTestOptions) => void>(),
   toastDismiss: vi.fn<(id: string) => void>()
 }))
 vi.mock('sonner', () => ({ toast: { error: toastError, dismiss: toastDismiss } }))
@@ -24,7 +18,7 @@ import { showSourceControlEntryFailureToast } from './source-control-entry-failu
 
 type FailureToastInput = Parameters<typeof showSourceControlEntryFailureToast>[0]
 
-function lastToast(): { title: string; options: ToastOptions } {
+function lastToast(): { title: string; options: SourceControlToastTestOptions } {
   const [title = '', options = {}] = toastError.mock.lastCall ?? []
   return { title, options }
 }

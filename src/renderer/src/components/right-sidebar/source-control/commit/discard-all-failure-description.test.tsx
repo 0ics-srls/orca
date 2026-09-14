@@ -3,8 +3,7 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DiscardAllDeps, DiscardAllResult, DiscardAllArea } from './discard-all-sequence'
-
-type ToastOptions = { description?: string }
+import type { SourceControlToastTestOptions } from './source-control-toast-test-options'
 type DiscardAllRunner = (
   area: DiscardAllArea,
   paths: readonly string[],
@@ -12,7 +11,7 @@ type DiscardAllRunner = (
 ) => Promise<DiscardAllResult>
 
 const mocks = vi.hoisted(() => ({
-  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
+  toastError: vi.fn<(title: string, options?: SourceControlToastTestOptions) => void>(),
   runDiscardAllForArea: vi.fn<DiscardAllRunner>()
 }))
 

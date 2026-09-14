@@ -3,11 +3,10 @@
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
-
-type ToastOptions = { description?: string; action?: { label: string; onClick: () => void } }
+import type { SourceControlToastTestOptions } from './source-control-toast-test-options'
 
 const mocks = vi.hoisted(() => ({
-  toastError: vi.fn<(title: string, options?: ToastOptions) => void>(),
+  toastError: vi.fn<(title: string, options?: SourceControlToastTestOptions) => void>(),
   stagePath: vi.fn(),
   unstagePath: vi.fn(),
   discardPath: vi.fn()
@@ -48,7 +47,7 @@ function entry(
   return { path, status, area }
 }
 
-function lastToast(): { title: string; options: ToastOptions } {
+function lastToast(): { title: string; options: SourceControlToastTestOptions } {
   const [title = '', options = {}] = mocks.toastError.mock.lastCall ?? []
   return { title, options }
 }
