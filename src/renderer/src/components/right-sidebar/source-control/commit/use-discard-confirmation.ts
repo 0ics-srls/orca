@@ -70,7 +70,7 @@ export function useSourceControlDiscardConfirmation({
         })
         return
       }
-      dismissSourceControlEntryFailureToast()
+      dismissSourceControlEntryFailureToast(activeWorktreeId)
       await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
     },
     [activeWorktreeId, discardSingle, refreshActiveGitStatusAfterMutation, worktreePath]

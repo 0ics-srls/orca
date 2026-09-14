@@ -66,8 +66,9 @@ export function useSourceControlEntryMutations({
         })
         return
       }
-      // Why: the mutation landed, so clear any failure this attempt (or an earlier one) left in the slot.
-      dismissSourceControlEntryFailureToast()
+      // Why: the mutation landed, so clear any failure this worktree's attempts left in the slot —
+      // a failure another worktree raised meanwhile is not ours to dismiss.
+      dismissSourceControlEntryFailureToast(activeWorktreeId)
       await refreshEntryMutationStatus(refreshActiveGitStatusAfterMutation)
     },
     [activeRepoSettings, worktreePath, activeWorktreeId, refreshActiveGitStatusAfterMutation]

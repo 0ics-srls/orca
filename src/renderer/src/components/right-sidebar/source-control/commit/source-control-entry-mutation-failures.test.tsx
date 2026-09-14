@@ -155,11 +155,16 @@ describe('source-control entry mutation failures', () => {
   })
 
   it('leaves a successful stage silent, and clears a stale failure it supersedes', async () => {
-    mocks.stagePath.mockResolvedValue(undefined)
+    mocks.stagePath.mockRejectedValueOnce(new Error('index.lock exists'))
+    mocks.stagePath.mockResolvedValueOnce(undefined)
     const { result } = renderMutations()
 
     await act(async () => {
       await result.current.handleStage('src/app.ts')
+    })
+    mocks.toastError.mockClear()
+    await act(async () => {
+      await result.current.handleStage('src/other.ts')
     })
 
     expect(mocks.toastError).not.toHaveBeenCalled()

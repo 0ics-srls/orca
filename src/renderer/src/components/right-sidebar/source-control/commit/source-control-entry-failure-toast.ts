@@ -7,8 +7,19 @@ export type SourceControlEntryOperation = 'stage' | 'unstage' | 'discard'
 
 const ENTRY_FAILURE_TOAST_ID = 'source-control-entry-mutation'
 
-/** Clears the shared entry-failure slot once an attempt — or its retry — lands. */
-export function dismissSourceControlEntryFailureToast(): void {
+// Why: worktreeId is nullable, so an occupancy wrapper distinguishes an empty slot from a null-owned one.
+let entryFailureSlotOwner: { worktreeId: string | null } | null = null
+
+/**
+ * Clears the shared entry-failure slot once an attempt — or its retry — lands, but only when the
+ * completing attempt is the one that filled it: a slow retry in a worktree the user has left must
+ * not erase a failure the worktree they moved to has since raised into the same slot.
+ */
+export function dismissSourceControlEntryFailureToast(worktreeId: string | null): void {
+  if (!entryFailureSlotOwner || entryFailureSlotOwner.worktreeId !== worktreeId) {
+    return
+  }
+  entryFailureSlotOwner = null
   toast.dismiss(ENTRY_FAILURE_TOAST_ID)
 }
 
@@ -76,6 +87,7 @@ export function showSourceControlEntryFailureToast({
   const isActiveWorktree = useAppStore.getState().activeWorktreeId === worktreeId
   const title = entryFailureTitle(operation, filePath, deleteShaped)
   const offerRetry = Boolean(onRetry) && isActiveWorktree
+  entryFailureSlotOwner = { worktreeId }
   toast.error(
     isActiveWorktree || !worktreeName
       ? title
@@ -99,7 +111,7 @@ export function showSourceControlEntryFailureToast({
                 // caller owns this slot instead: it dismisses on success and re-raises on failure.
                 event.preventDefault()
                 if (useAppStore.getState().activeWorktreeId !== worktreeId) {
-                  dismissSourceControlEntryFailureToast()
+                  dismissSourceControlEntryFailureToast(worktreeId)
                   return
                 }
                 onRetry()

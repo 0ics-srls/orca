@@ -123,7 +123,22 @@ describe('showSourceControlEntryFailureToast', () => {
   })
 
   it('clears the shared slot when an attempt finally lands', () => {
-    dismissSourceControlEntryFailureToast()
+    show()
+    dismissSourceControlEntryFailureToast('wt-1')
+    expect(toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
+  })
+
+  it('leaves a failure another worktree raised into the slot alone', () => {
+    // Why: a retry still in flight in the worktree the user left must not erase the failure the
+    // worktree they switched to has since raised into the shared slot.
+    show({ worktreeId: 'wt-1' })
+    storeState.activeWorktreeId = 'wt-2'
+    show({ worktreeId: 'wt-2', worktreeName: 'feature-b' })
+
+    dismissSourceControlEntryFailureToast('wt-1')
+    expect(toastDismiss).not.toHaveBeenCalled()
+
+    dismissSourceControlEntryFailureToast('wt-2')
     expect(toastDismiss).toHaveBeenCalledWith('source-control-entry-mutation')
   })
 
