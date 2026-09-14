@@ -390,6 +390,29 @@ describe('resolveTerminalTabAttentionBadge', () => {
 })
 
 describe('terminalTabHasUnreadActivity', () => {
+  it.each(['terminal-bell', 'agent-completion', 'manual-mark-unread', 'legacy'] as const)(
+    'recognizes a classified %s tab marker without a completion pane',
+    (reason) => {
+      expect(
+        terminalTabHasUnreadActivity({
+          terminalTabId: TAB_ID,
+          unreadTerminalTabs: { [TAB_ID]: reason },
+          unreadAgentCompletionPanes: {}
+        })
+      ).toBe(true)
+    }
+  )
+
+  it.each([false, undefined])('ignores a cleared tab marker (%s)', (marker) => {
+    expect(
+      terminalTabHasUnreadActivity({
+        terminalTabId: TAB_ID,
+        unreadTerminalTabs: { [TAB_ID]: marker },
+        unreadAgentCompletionPanes: {}
+      })
+    ).toBe(false)
+  })
+
   it('is true for a tab bell or completion pane', () => {
     expect(
       terminalTabHasUnreadActivity({

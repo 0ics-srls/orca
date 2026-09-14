@@ -1,4 +1,7 @@
-import type { ReadableAgentAttentionUnread } from '@/attention/agent-attention-contract'
+import {
+  readAgentAttentionUnreadReason,
+  type ReadableAgentAttentionUnread
+} from '@/attention/agent-attention-contract'
 import { isExplicitAgentStatusFresh } from '@/lib/agent-status'
 import { resolveWorktreeStatus, type WorktreeStatus } from '@/lib/worktree-status'
 import {
@@ -260,7 +263,7 @@ export function terminalTabHasUnreadActivity({
   unreadAgentCompletionPanes: Record<string, ReadableAgentAttentionUnread>
 }): boolean {
   return (
-    unreadTerminalTabs[terminalTabId] === true ||
+    readAgentAttentionUnreadReason(unreadTerminalTabs[terminalTabId]) !== null ||
     hasUnreadAgentCompletionForTerminalTab(unreadAgentCompletionPanes, terminalTabId)
   )
 }
