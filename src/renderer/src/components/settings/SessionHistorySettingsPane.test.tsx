@@ -8,7 +8,31 @@ import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-typ
 import { ConfirmationDialogContext } from '@/components/confirmation-dialog-context'
 import { SessionHistorySettingsPane } from './SessionHistorySettingsPane'
 
-const mocks = vi.hoisted(() => ({ web: false, visible: true, status: vi.fn(), clear: vi.fn() }))
+const mocks = vi.hoisted(() => {
+  const environments: { id: string; name: string }[] = []
+  return {
+    web: false,
+    visible: true,
+    status: vi.fn(),
+    clear: vi.fn(),
+    setEnabled: vi.fn(),
+    environments
+  }
+})
+vi.mock('./use-runtime-environment-catalog', () => ({
+  useRuntimeEnvironmentCatalog: () => ({
+    environments: mocks.environments,
+    isLoading: false,
+    detailsByEnvironmentId: {},
+    setDetailsByEnvironmentId: vi.fn(),
+    mountedRef: { current: true },
+    loadEnvironments: vi.fn()
+  })
+}))
+vi.mock('@/store', () => ({
+  useAppStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ openSettingsPage: vi.fn(), openSettingsTarget: vi.fn() })
+}))
 vi.mock('@/lib/web-client-location', () => ({ isWebClientLocation: () => mocks.web }))
 vi.mock('@/hooks/use-window-stream-visibility', () => ({
   useWindowStreamVisible: () => mocks.visible
@@ -53,12 +77,20 @@ beforeEach(() => {
   vi.useFakeTimers()
   mocks.web = false
   mocks.visible = true
+  mocks.environments = []
   mocks.status.mockReset().mockResolvedValue(current)
   mocks.clear.mockReset().mockResolvedValue(undefined)
+  mocks.setEnabled.mockReset().mockResolvedValue(current)
   vi.stubGlobal('api', undefined)
   Object.defineProperty(window, 'api', {
     configurable: true,
-    value: { aiVault: { searchStatus: mocks.status, clearSearchIndex: mocks.clear } }
+    value: {
+      aiVault: {
+        searchStatus: mocks.status,
+        clearSearchIndex: mocks.clear,
+        setSearchEnabled: mocks.setEnabled
+      }
+    }
   })
 })
 afterEach(() => {
@@ -207,4 +239,32 @@ it('keeps the last index status visible while a save is in flight', async () => 
   await act(async () => {
     finishSave()
   })
+})
+
+it('lists one row per paired Orca server under this computer, and says where SSH stands', async () => {
+  mocks.environments = [
+    { id: 'env-1', name: 'build-box' },
+    { id: 'env-2', name: 'office-mini' }
+  ]
+  pane(true)
+  await act(async () => {})
+  const switches = screen.getAllByRole('switch')
+  expect(switches).toHaveLength(3)
+  expect(screen.getByRole('switch', { name: 'Index sessions on build-box' })).toBeInTheDocument()
+  expect(screen.getByRole('switch', { name: 'Index sessions on office-mini' })).toBeInTheDocument()
+  expect(mocks.status).toHaveBeenCalledWith('local')
+  expect(
+    screen.getByText('SSH hosts appear here once indexing is available on SSH.')
+  ).toBeInTheDocument()
+})
+
+it('offers only this computer to a paired client, with no server rows', async () => {
+  mocks.web = true
+  mocks.environments = [{ id: 'env-1', name: 'build-box' }]
+  pane(true)
+  await act(async () => {})
+  expect(screen.getAllByRole('switch')).toHaveLength(1)
+  expect(screen.getByRole('switch')).toBeDisabled()
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  expect(mocks.status).not.toHaveBeenCalled()
 })

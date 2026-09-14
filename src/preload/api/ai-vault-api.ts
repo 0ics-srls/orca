@@ -33,6 +33,14 @@ export type AiVaultApi = {
   ) => Promise<AiVaultSearchResponse>
   /** Status describes one index, so it never accepts the `all` scope. */
   searchStatus: (executionHostScope?: ExecutionHostId) => Promise<AiVaultSearchStatus>
+  /**
+   * Turns indexing on or off on one host and answers with that host's status.
+   * Rejects with `host-too-old` when the server predates this RPC.
+   */
+  setSearchEnabled: (
+    executionHostId: ExecutionHostId,
+    enabled: boolean
+  ) => Promise<AiVaultSearchStatus>
   /** Deletes and rebuilds this desktop's local search index. */
   clearSearchIndex: () => Promise<void>
   listSessions: (args?: AiVaultListArgs) => Promise<AiVaultListResult>

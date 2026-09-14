@@ -42,6 +42,8 @@ export const aiVaultApi = {
     searchClient(executionHostScope).searchSessions(request),
   searchStatus: (executionHostScope?: ExecutionHostId) =>
     searchClient(executionHostScope).searchStatus(),
+  setSearchEnabled: (executionHostId: ExecutionHostId, enabled: boolean) =>
+    ipcRenderer.invoke('aiVault:setSearchEnabled', executionHostId, enabled),
   clearSearchIndex: (): Promise<void> => ipcRenderer.invoke('aiVault:clearSearchIndex'),
   listSessions: (args?: AiVaultListArgs) => ipcRenderer.invoke('aiVault:listSessions', args),
   resolveSessionTitles: (args: AiVaultSessionTitlesArgs) =>
