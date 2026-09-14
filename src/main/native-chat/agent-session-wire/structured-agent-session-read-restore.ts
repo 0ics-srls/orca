@@ -8,14 +8,12 @@ import { loadJournal } from '../agent-session-journal/journal-open'
 import { journalDirectoryFor } from '../agent-session-journal/journal-paths'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { openAgentSessionJournal } from '../agent-session-journal/journal-store-factory'
-import { agentSessionJournalCloseRetries } from '../agent-session-journal/journal-close-retry'
 import {
   attachFingerprintFields,
   journalIdentityFor,
   type AgentSessionAttachParams
 } from './structured-agent-session-attach'
 import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
-import { repairSyntheticRestartEvictionSettlements } from './structured-agent-session-restart-eviction-repair'
 
 export type RestoredStructuredAgentSessionRead = {
   journal: AgentSessionJournal
@@ -61,16 +59,6 @@ export async function restoreStructuredAgentSessionRead(
     // database another process creates in between.
     ...(loaded ? { loaded } : {})
   })
-  try {
-    await repairSyntheticRestartEvictionSettlements({
-      journal,
-      sessionId,
-      fence: record.lease.runtimeFence
-    })
-  } catch (error) {
-    await agentSessionJournalCloseRetries.closeOrRetain(journal)
-    throw error
-  }
   // Read restore opens the journal and nothing else: no adapter call, so no
   // provider child. Opening it can still write — a session whose history is in
   // the old format founds its epoch and commits the row explaining that here.

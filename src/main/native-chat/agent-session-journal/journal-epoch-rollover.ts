@@ -10,7 +10,6 @@ import type { AgentSessionProviderHandle } from '../../../shared/agent-session-j
 import type Database from '../../sqlite/sync-database'
 import type { JournalLoad } from './journal-open'
 import { clearJournalRepairMarker } from './journal-repair-marker'
-import { clearJournalEpochMigrations } from './journal-epoch-migration-marker'
 import { applyJournalRow, createJournalReducerState } from './journal-reducer'
 import {
   deleteAllJournalRows,
@@ -46,7 +45,6 @@ export function publishNewEpoch(input: {
   try {
     deleteAllJournalRows(input.db)
     clearJournalRepairMarker(input.db, input.sessionId)
-    clearJournalEpochMigrations(input.db, input.sessionId)
     insertJournalRow(input.db, input.sessionId, row)
     upsertJournalSessionRow(input.db, input.sessionId, input.epoch, input.now)
     input.db.exec('COMMIT')

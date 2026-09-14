@@ -17,7 +17,6 @@ import { JournalRowWriter } from './journal-row-writer'
 import { restoreJournalStore } from './journal-store-restore'
 import type { JournalRow } from './journal-row-schema'
 import type { AgentSessionJournal } from './journal-store'
-import { JournalEpochMigrationRunner } from './journal-epoch-migration-runner'
 
 export type JournalStoreHost = {
   identity: AgentSessionJournalIdentity
@@ -45,7 +44,6 @@ export type JournalStoreCollaborators = {
   epochController: JournalEpochController
   itemAppender: JournalItemAppender
   lifecycleBatchAppender: JournalLifecycleBatchAppender
-  epochMigrationRunner: JournalEpochMigrationRunner
   /** Restores the store's state from disk. Owned here because it needs the same
    *  collaborators the constructor just built. */
   restore: () => Promise<void>
@@ -85,15 +83,6 @@ export function createJournalStoreCollaborators(host: JournalStoreHost): Journal
       state: host.state,
       cursor: host.cursor,
       enqueue: host.enqueue
-    }),
-    epochMigrationRunner: new JournalEpochMigrationRunner({
-      sessionId: host.identity.sessionId,
-      now: host.now,
-      serialize: host.serialize,
-      database: host.database,
-      state: host.state,
-      readOnly: host.readOnly,
-      commit: host.commit
     })
   }
 }

@@ -49,7 +49,7 @@ afterEach(async () => {
 })
 
 describe('journal database open', () => {
-  it('creates every table and reads back every load-bearing pragma', () => {
+  it('creates both tables and reads back every load-bearing pragma', () => {
     const opened = openJournalDatabase(dbPath)
     try {
       const tables = opened.db
@@ -58,8 +58,6 @@ describe('journal database open', () => {
         .map((entry) => (entry as { name: string }).name)
       expect(tables).toContain('journal_rows')
       expect(tables).toContain('journal_sessions')
-      expect(tables).toContain('journal_repairs')
-      expect(tables).toContain('journal_epoch_migrations')
       expect(opened.db.pragma('journal_mode', { simple: true })).toBe('wal')
       expect(journalPragmaNumber(opened.db, 'synchronous')).toBe(2)
       expect(journalPragmaNumber(opened.db, 'busy_timeout')).toBe(JOURNAL_BUSY_TIMEOUT_MS)
@@ -68,30 +66,6 @@ describe('journal database open', () => {
       expect(opened.readOnly).toBe(false)
     } finally {
       opened.db.close()
-    }
-  })
-
-  it('migrates v2 to v3 without replacing journal rows', () => {
-    const seeded = openJournalDatabase(dbPath)
-    upsertJournalSessionRow(seeded.db, 'session-1', 'epoch-1', 1)
-    insertJournalRow(seeded.db, 'session-1', epochRow(1))
-    seeded.db.exec('DROP TABLE journal_epoch_migrations')
-    seeded.db.pragma('user_version = 2')
-    seeded.db.close()
-
-    const migrated = openJournalDatabase(dbPath)
-    try {
-      expect(journalPragmaNumber(migrated.db, 'user_version')).toBe(3)
-      expect(readJournalEpochRows(migrated.db, 'session-1', 'epoch-1')).toHaveLength(1)
-      expect(
-        migrated.db
-          .prepare(
-            "SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'journal_epoch_migrations'"
-          )
-          .get()
-      ).toBeDefined()
-    } finally {
-      migrated.db.close()
     }
   })
 

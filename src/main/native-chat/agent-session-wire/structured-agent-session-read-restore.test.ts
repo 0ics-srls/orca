@@ -9,14 +9,10 @@ import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { agentJournalItemKey } from '../../../shared/agent-session-journal-item-key'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
-import { openJournalDatabase } from '../agent-session-journal/journal-database'
-import { journalDatabaseFile, journalDirectoryFor } from '../agent-session-journal/journal-paths'
+import { journalDirectoryFor } from '../agent-session-journal/journal-paths'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
-import { openAgentSessionJournal } from '../agent-session-journal/journal-store-factory'
-import { readAgentSessionHistory } from './agent-session-history-page'
 import { restoreStructuredAgentSessionRead } from './structured-agent-session-read-restore'
 
 const SESSION_ID = 'codex_read_restore_fixture'
@@ -110,88 +106,5 @@ describe('a session whose journal is still the pre-SQLite format', () => {
     const restored = await restoreStructuredAgentSessionRead(store, journalRoot, 'unknown-session')
 
     expect(restored).toBeNull()
-  })
-})
-
-describe('a journal from a newer row schema', () => {
-  it('restores read-only history without attempting the restart-eviction migration', async () => {
-    const journalDir = journalDirectoryFor(journalRoot, {
-      workspaceId: WORKSPACE_ID,
-      sessionId: SESSION_ID
-    })
-    const legacyIdentity = {
-      provider: 'orca' as const,
-      clientMessageId: `restart-eviction:${SESSION_ID}:1`
-    }
-    const seeded = await openAgentSessionJournal({
-      identity: {
-        sessionId: SESSION_ID,
-        workspaceId: WORKSPACE_ID,
-        hostId: 'local',
-        agent: 'codex',
-        providerHandle: { kind: 'codex', threadId: 'thread-1' }
-      },
-      journalDir
-    })
-    await seeded.appendItem(
-      legacyIdentity,
-      { kind: 'status', text: 'legacy restart eviction status' },
-      { fence: 1 }
-    )
-    const epoch = seeded.epoch
-    const futureSequence = seeded.cursor().sequence + 1
-    await seeded.close()
-    const database = openJournalDatabase(journalDatabaseFile(journalDir))
-    try {
-      database.db
-        .prepare(
-          'INSERT INTO journal_rows (session_id, epoch, seq, ts, row_json) VALUES (?, ?, ?, ?, ?)'
-        )
-        .run(
-          SESSION_ID,
-          epoch,
-          futureSequence,
-          3,
-          JSON.stringify({
-            v: 99,
-            kind: 'item',
-            epoch,
-            seq: futureSequence,
-            fence: 1,
-            ts: 3,
-            itemId: 'future',
-            revision: 1,
-            body: { kind: 'status', text: 'future row' }
-          })
-        )
-    } finally {
-      database.db.close()
-    }
-
-    const restored = await restoreStructuredAgentSessionRead(store, journalRoot, SESSION_ID)
-
-    expect(restored).not.toBeNull()
-    opened.push(restored!.journal)
-    expect(restored!.journal.isReadOnly).toBe(true)
-    expect(restored!.journal.snapshot().items.map((item) => item.itemId)).toContain(
-      agentJournalItemKey(legacyIdentity)
-    )
-    expect(
-      readAgentSessionHistory(restored!.journal, { sessionId: SESSION_ID, direction: 'tail' })
-    ).toMatchObject({
-      ok: false,
-      reset: 'schema_unreadable'
-    })
-    const inspected = openJournalDatabase(journalDatabaseFile(journalDir))
-    try {
-      expect(
-        inspected.db.prepare('SELECT count(*) AS total FROM journal_rows').get()
-      ).toMatchObject({ total: 3 })
-      expect(
-        inspected.db.prepare('SELECT count(*) AS total FROM journal_epoch_migrations').get()
-      ).toMatchObject({ total: 0 })
-    } finally {
-      inspected.db.close()
-    }
   })
 })

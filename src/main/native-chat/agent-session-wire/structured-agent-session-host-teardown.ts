@@ -18,6 +18,26 @@ export type StructuredAgentSessionTeardownPhase = {
 /** Quit must not wait indefinitely on an in-flight handoff; see `drain-handoffs` below. */
 const HANDOFF_DRAIN_TIMEOUT_MS = 5_000
 
+/** Eight steps at ten seconds each would outlast the global quit deadline, and a quit that dies
+ *  mid-eviction leaves the lease unreleased — the exact state restart has to clean up. Bounded
+ *  well below that deadline so the phases after this one still get to run. */
+const CHILD_EVICTION_TIMEOUT_MS = 8_000
+
+/** Bounds a phase without swallowing its failure, which `withTimeout` alone would. */
+async function withPhaseTimeout(run: () => Promise<void>, timeoutMs: number): Promise<void> {
+  const settled = run().then(
+    () => ({ failed: false }) as const,
+    (error: unknown) => ({ failed: true, error }) as const
+  )
+  const outcome = await withTimeout<Awaited<typeof settled> | null>(settled, timeoutMs, null)
+  if (outcome === null) {
+    throw new Error(`agent session host teardown phase did not finish within ${timeoutMs}ms`)
+  }
+  if (outcome.failed) {
+    throw outcome.error
+  }
+}
+
 /**
  * The quit-path phase order, which is load-bearing rather than incidental.
  *
@@ -45,7 +65,10 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
       run: () => withTimeout(collaborators.handoffs.drain(), HANDOFF_DRAIN_TIMEOUT_MS, undefined)
     },
     { name: 'drain-attaches', run: () => collaborators.tasks.drainAttaches() },
-    { name: 'evict-owned-sessions', run: () => collaborators.evictOwnedSessions() },
+    {
+      name: 'evict-owned-sessions',
+      run: () => withPhaseTimeout(collaborators.evictOwnedSessions, CHILD_EVICTION_TIMEOUT_MS)
+    },
     { name: 'flush-event-sinks', run: () => collaborators.runtimeState.flushAllEventSinks() }
   ]
 }

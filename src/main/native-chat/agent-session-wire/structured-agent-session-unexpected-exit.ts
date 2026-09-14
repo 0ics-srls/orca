@@ -22,7 +22,6 @@ export type StructuredAgentSessionRecoveryTicket = {
   releasedFence: number
   deadAcquisitionGeneration: string
   stableSettlementId: string
-  settlementRetryRequired: boolean
 }
 
 export type StructuredAgentSessionUnexpectedExitSession = {
@@ -118,7 +117,8 @@ export async function settleUnexpectedStructuredAgentSessionExit<
             ? {
                 settlementRetry: {
                   settlementId: stableSettlementId,
-                  detail: `provider exited: ${unexpectedEvent.reason}`.slice(0, 512)
+                  // Bare cause: the retry renders it, and `exit-observed` already says the rest.
+                  detail: unexpectedEvent.reason.slice(0, 512)
                 }
               }
             : {})
@@ -144,8 +144,7 @@ export async function settleUnexpectedStructuredAgentSessionExit<
       sessionId: unexpectedEvent.sessionId,
       releasedFence: released.lease.runtimeFence,
       deadAcquisitionGeneration: unexpectedEvent.acquisitionGeneration,
-      stableSettlementId,
-      settlementRetryRequired: false
+      stableSettlementId
     }
   })
 }
@@ -167,7 +166,6 @@ export function isStructuredAgentSessionRecoveryTicketCurrent(
   const session = context.sessions.get(ticket.sessionId)
   const record = context.store.getRecord(ticket.sessionId)
   return (
-    !ticket.settlementRetryRequired &&
     session?.hasProviderChild === false &&
     session.fence === ticket.releasedFence &&
     session.acquisitionGeneration === ticket.deadAcquisitionGeneration &&
@@ -194,6 +192,7 @@ export async function retryUnexpectedExitSettlement(input: {
     verdict: input.verdict,
     pendingSubmissionReason: 'provider_exited_before_acknowledgement',
     showUnexpectedExitOutcome: input.showUnexpectedExitOutcome,
+    unexpectedExitReason: input.event.reason,
     onError: input.context.onBarrierError
   })
 }

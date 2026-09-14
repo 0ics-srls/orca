@@ -23,6 +23,7 @@ import {
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { projectJournalBatch } from './agent-session-journal-batch'
+import { withoutRestartEvictionStatusItems } from './agent-session-restart-eviction-status-filter'
 import {
   boundHistoryItemsByBytes,
   HISTORY_PAGE_CONTENT_BUDGET_BYTES,
@@ -257,15 +258,18 @@ function buildPage(input: {
   fence?: number
 }): AgentSessionHistoryPage {
   const epoch = input.snapshot.cursor.epoch
-  const pageItemIds = new Set(input.items.map((item) => item.itemId))
-  const oldest = input.items[0]
-  const newest = input.items.at(-1)
+  // Every renderer-bound page funnels through here, so it is the one place that can retire a
+  // historical row without rewriting durable history.
+  const items = withoutRestartEvictionStatusItems(input.items, input.snapshot.sessionId)
+  const pageItemIds = new Set(items.map((item) => item.itemId))
+  const oldest = items[0]
+  const newest = items.at(-1)
   return {
     sessionId: input.snapshot.sessionId,
     epoch,
     ...(input.fence !== undefined ? { fence: input.fence } : {}),
     direction: input.direction,
-    items: input.items,
+    items,
     removedItemIds: input.removedItemIds ?? [],
     submissions: input.snapshot.submissions.filter((submission) =>
       pageItemIds.has(agentJournalSubmissionKey(submission.clientMessageId))

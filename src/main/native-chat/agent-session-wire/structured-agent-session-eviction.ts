@@ -31,6 +31,8 @@ export type StructuredAgentSessionEvictionContext = {
   forget: () => Promise<void>
   /** Drops the cached sink so a later attach mints a fresh one. */
   discardSink: () => void
+  /** Fires once the adapter has PROVEN the child gone, so host bookkeeping stops claiming one. */
+  onProviderChildStopped?: () => void
   /** Settles work owned by the child after its final callbacks have drained. */
   settleWork?: () => Promise<void>
   /** Hands the lease back now that this host's child is proven gone. No-ops when the record is
@@ -59,6 +61,7 @@ export const STRUCTURED_AGENT_SESSION_EVICTION_STEPS: readonly StructuredAgentSe
             throw new Error('provider child exit was not proven')
           }
         }
+        context.onProviderChildStopped?.()
       }
     },
     {

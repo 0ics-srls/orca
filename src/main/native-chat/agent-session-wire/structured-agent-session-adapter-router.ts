@@ -11,10 +11,6 @@ type SessionRoute = { adapter: StructuredAgentSessionAdapter; state: 'live' | 's
 export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessionAdapter {
   private readonly routes = new Map<string, SessionRoute>()
   private allAdaptersClosed = false
-  private closing = false
-  private inFlightAcquisitions = 0
-  private acquisitionDrain: Promise<void> | null = null
-  private resolveAcquisitionDrain: (() => void) | null = null
   private closePromise: Promise<void> | null = null
 
   constructor(
@@ -30,20 +26,20 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
   supportsLocation = (location: AgentSessionExecutionLocation): boolean =>
     Object.values(this.adapters).some((adapter) => adapter.supportsLocation?.(location) ?? false)
 
+  /** Both adapters already gate their own shutdown, so the router only has to stop UNDOING that:
+   *  a late acquire must not clear `allAdaptersClosed` and fan a session back out to closed
+   *  adapters. Once closed, the router stays closed. */
   async acquire(input: Parameters<StructuredAgentSessionAdapter['acquire']>[0]) {
-    if (this.closing) {
-      throw new Error('structured session adapter router is closing')
+    if (this.allAdaptersClosed) {
+      throw new Error('structured session adapter router is closed')
     }
     const adapter = this.requireAgent(input.identity)
-    this.allAdaptersClosed = false
-    this.beginAcquisition()
-    try {
-      const acquired = await adapter.acquire(input)
-      this.routes.set(input.identity.sessionId, { adapter, state: 'live' })
-      return acquired
-    } finally {
-      this.endAcquisition()
+    const acquired = await adapter.acquire(input)
+    if (this.allAdaptersClosed) {
+      throw new Error('structured session adapter router is closed')
     }
+    this.routes.set(input.identity.sessionId, { adapter, state: 'live' })
+    return acquired
   }
 
   async releaseAcquisition(input: { sessionId: string }): Promise<boolean> {
@@ -170,15 +166,12 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
     if (this.closePromise) {
       return this.closePromise
     }
-    this.closing = true
     this.closePromise = (async () => {
       try {
-        await this.waitForAcquisitions()
         await this.closeAdapters()
         this.routes.clear()
         this.allAdaptersClosed = true
       } finally {
-        this.closing = false
         this.closePromise = null
       }
     })()
@@ -213,27 +206,5 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
 
   private adapterForAgent(agent: string): StructuredAgentSessionAdapter | null {
     return agent === 'claude' || agent === 'codex' ? this.adapters[agent] : null
-  }
-
-  private beginAcquisition(): void {
-    if (this.inFlightAcquisitions === 0) {
-      this.acquisitionDrain = new Promise((resolve) => {
-        this.resolveAcquisitionDrain = resolve
-      })
-    }
-    this.inFlightAcquisitions += 1
-  }
-
-  private endAcquisition(): void {
-    this.inFlightAcquisitions -= 1
-    if (this.inFlightAcquisitions === 0) {
-      this.resolveAcquisitionDrain?.()
-      this.resolveAcquisitionDrain = null
-      this.acquisitionDrain = null
-    }
-  }
-
-  private waitForAcquisitions(): Promise<void> {
-    return this.acquisitionDrain ?? Promise.resolve()
   }
 }

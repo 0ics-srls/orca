@@ -4,6 +4,7 @@ import type {
   StructuredAgentSessionHostDeps,
   StructuredAgentSessionHostSession
 } from './structured-agent-session-host-types'
+import type { StructuredAgentSessionLeaseStore } from './structured-agent-session-lease-release'
 import { turnVerdictFromDeathEvidence } from './structured-agent-session-stale-turn-verdict'
 import { settleStructuredAgentSessionDeadGeneration } from './structured-agent-session-dead-generation-settlement'
 
@@ -53,7 +54,10 @@ export async function retryPendingStructuredAgentSessionSettlement(input: {
 }
 
 export async function retryLoadedStructuredAgentSessionSettlement(input: {
-  deps: Pick<StructuredAgentSessionHostDeps, 'store' | 'onEventSinkError'>
+  deps: {
+    store: StructuredAgentSessionLeaseStore
+    onEventSinkError?: StructuredAgentSessionHostDeps['onEventSinkError']
+  }
   sessionId: string
   session: Pick<StructuredAgentSessionHostSession, 'journal' | 'fence' | 'acquisitionGeneration'>
   now: () => number
@@ -66,17 +70,21 @@ export async function retryLoadedStructuredAgentSessionSettlement(input: {
   retrySession.fence = record.lease.runtimeFence
   const onError = (id: string, error: unknown): void =>
     input.deps.onEventSinkError?.({ sessionId: id, error })
+  // Only an observed exit earns an end time; a probe-proven death never saw one.
+  const verdict = turnVerdictFromDeathEvidence(record.lease.deathEvidence)
   const ok = await settleStructuredAgentSessionDeadGeneration({
     journal: retrySession.journal,
     sessionId: input.sessionId,
     fence: retrySession.fence,
     settlementId: record.lease.settlementRetryId,
     pendingSubmissionReason: 'provider_exited_before_acknowledgement',
-    // Only an observed exit earns an end time; a probe-proven death never saw one.
-    verdict: turnVerdictFromDeathEvidence(record.lease.deathEvidence),
-    showUnexpectedExitOutcome: record.lease.settlementRetryId.startsWith(
-      `provider-exit:${input.sessionId}:`
-    ),
+    verdict,
+    // The same evidence decides the copy: only a witnessed death is worth telling the user
+    // about. An unverifiable one is a restart artefact, and the session stays sendable.
+    showUnexpectedExitOutcome: verdict.state === 'interrupted',
+    ...(record.lease.deathEvidence?.detail
+      ? { unexpectedExitReason: record.lease.deathEvidence.detail }
+      : {}),
     onError
   })
   if (!ok) {

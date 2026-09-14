@@ -7,7 +7,7 @@ import {
   agentSessionRecordFixture
 } from '../../../shared/agent-session-record.test-fixture'
 import type { StructuredAgentSessionHostSession } from './structured-agent-session-host-types'
-import { UNEXPECTED_PROVIDER_EXIT_OUTCOME } from './structured-agent-session-dead-generation-settlement'
+import { unexpectedProviderExitOutcome } from './structured-agent-session-dead-generation-settlement'
 import { retryLoadedStructuredAgentSessionSettlement } from './structured-agent-session-settlement-retry'
 import {
   isStructuredAgentSessionRecoveryTicketCurrent,
@@ -24,8 +24,7 @@ const ticket: StructuredAgentSessionRecoveryTicket = {
   sessionId: SESSION,
   releasedFence: 8,
   deadAcquisitionGeneration: GENERATION,
-  stableSettlementId: 'settlement-1',
-  settlementRetryRequired: false
+  stableSettlementId: 'settlement-1'
 }
 
 function recoveryContext(input: {
@@ -244,7 +243,7 @@ describe('provider-exit recovery tickets', () => {
       }
     )
 
-    expect(result).toMatchObject({ settlementRetryRequired: false, releasedFence: 8 })
+    expect(result).toMatchObject({ releasedFence: 8 })
     expect(session.journal.markPendingSubmissionsUnknown).toHaveBeenCalledWith(
       7,
       'provider_exited_before_acknowledgement'
@@ -262,7 +261,7 @@ describe('provider-exit recovery tickets', () => {
             provider: 'orca',
             clientMessageId: `provider-exit:${SESSION}:7:${GENERATION}`
           },
-          body: { kind: 'status', text: UNEXPECTED_PROVIDER_EXIT_OUTCOME }
+          body: { kind: 'status', text: unexpectedProviderExitOutcome('provider exited') }
         },
         {
           kind: 'item',
@@ -349,7 +348,10 @@ describe('provider-exit recovery tickets', () => {
       if (expectedOutcomes > 0) {
         expect(appendLifecycleBatch.mock.calls[0]?.[0].mutations).toEqual([
           expect.objectContaining({
-            body: { kind: 'status', text: UNEXPECTED_PROVIDER_EXIT_OUTCOME }
+            body: {
+              kind: 'status',
+              text: unexpectedProviderExitOutcome('provider exited after completing the turn')
+            }
           })
         ])
       }
@@ -397,7 +399,7 @@ describe('provider-exit recovery tickets', () => {
       expect.objectContaining({
         mutations: [
           expect.objectContaining({
-            body: { kind: 'status', text: UNEXPECTED_PROVIDER_EXIT_OUTCOME }
+            body: { kind: 'status', text: unexpectedProviderExitOutcome('provider exited') }
           })
         ]
       })

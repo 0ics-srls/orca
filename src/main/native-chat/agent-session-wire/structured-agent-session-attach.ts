@@ -47,7 +47,6 @@ import {
 } from './agent-session-journal-recovery'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { structuredAgentSessionRefusalMessage } from './structured-agent-session-refusal-message'
-import { repairSyntheticRestartEvictionSettlements } from './structured-agent-session-restart-eviction-repair'
 
 /**
  * Everything a client may declare about the session it wants. Deliberately no
@@ -206,11 +205,6 @@ export async function attachJournal(input: {
     historyFilePath
   })
   try {
-    await repairSyntheticRestartEvictionSettlements({
-      journal: opened.journal,
-      sessionId: input.record.sessionId,
-      fence
-    })
     // That await is a WRITE. A failure in it leaves the journal with no caller
     // holding a reference to close it.
     const unconfirmed = await opened.journal.markPendingSubmissionsUnknown(fence)

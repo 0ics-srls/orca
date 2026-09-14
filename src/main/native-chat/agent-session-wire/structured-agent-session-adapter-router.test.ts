@@ -167,51 +167,9 @@ describe('StructuredAgentSessionAdapterRouter optional lifecycle methods', () =>
 })
 
 describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
-  it('waits for an in-flight acquisition before publishing global close proof', async () => {
-    let resolveAcquire!: (value: AgentSessionAcquisition) => void
-    const acquire: StructuredAgentSessionAdapter['acquire'] = vi.fn(
-      () =>
-        new Promise<AgentSessionAcquisition>((resolve) => {
-          resolveAcquire = resolve
-        })
-    )
-    const closeAdapters = vi.fn(async () => undefined)
+  it('refuses to acquire once the global close proof is published', async () => {
+    const acquire = vi.fn(async ({ fence, spawnToken }) => acquisition(fence, spawnToken))
     const claude = adapterOf(vi.fn(async () => true))
-    claude.acquire = acquire
-    const router = new StructuredAgentSessionAdapterRouter(
-      { claude, codex: adapterOf(vi.fn(async () => false)) },
-      closeAdapters
-    )
-    const acquirePromise = router.acquire({
-      identity: claudeIdentity('session-1'),
-      fence: 1,
-      spawnToken: 'spawn-1'
-    })
-    const closePromise = router.closeAll()
-
-    await expect(
-      router.acquire({
-        identity: claudeIdentity('session-2'),
-        fence: 1,
-        spawnToken: 'spawn-2'
-      })
-    ).rejects.toThrow('router is closing')
-    expect(closeAdapters).not.toHaveBeenCalled()
-
-    resolveAcquire(acquisition(1, 'spawn-1'))
-    await acquirePromise
-    await closePromise
-    expect(closeAdapters).toHaveBeenCalledOnce()
-    await expect(router.closeSession('session-1')).resolves.toBe(true)
-  })
-
-  it('forwards failed-acquisition cleanup after a prior global close proof', async () => {
-    const failure = new Error('provider acquire failed')
-    const acquire: StructuredAgentSessionAdapter['acquire'] = vi.fn(async () => {
-      throw failure
-    })
-    const release = vi.fn(async () => true)
-    const claude = adapterOf(release)
     claude.acquire = acquire
     const router = new StructuredAgentSessionAdapterRouter(
       { claude, codex: adapterOf(vi.fn(async () => false)) },
@@ -225,9 +183,8 @@ describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
         fence: 1,
         spawnToken: 'spawn-1'
       })
-    ).rejects.toBe(failure)
-    await expect(router.releaseAcquisition({ sessionId: 'session-1' })).resolves.toBe(true)
-    expect(release).toHaveBeenCalledWith({ sessionId: 'session-1' })
+    ).rejects.toThrow('router is closed')
+    expect(acquire).not.toHaveBeenCalled()
   })
 
   it('publishes one global close proof without retaining session ids', async () => {
@@ -287,24 +244,33 @@ describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
     expect(closeSession).toHaveBeenCalledOnce()
   })
 
-  it('clears the global proof when a later acquisition succeeds', async () => {
+  it('keeps the global proof when an acquisition lands mid-close', async () => {
+    let resolveAcquire!: (value: AgentSessionAcquisition) => void
     const closeSession = vi.fn(async () => true)
     const claude = adapterOf(vi.fn(async () => true))
     claude.closeSession = closeSession
+    claude.acquire = vi.fn(
+      () =>
+        new Promise<AgentSessionAcquisition>((resolve) => {
+          resolveAcquire = resolve
+        })
+    )
     const router = new StructuredAgentSessionAdapterRouter(
       { claude, codex: adapterOf(vi.fn(async () => false)) },
       async () => undefined
     )
-
-    await router.closeAll()
-    await router.acquire({
+    const acquiring = router.acquire({
       identity: claudeIdentity('session-1'),
       fence: 2,
       spawnToken: 'spawn-2'
     })
 
-    await expect(router.closeSession('never-routed')).resolves.toBe(false)
+    await router.closeAll()
+    resolveAcquire(acquisition(2, 'spawn-2'))
+
+    // The route is NOT published behind a closed adapter, so nothing routes back out to it.
+    await expect(acquiring).rejects.toThrow('router is closed')
     await expect(router.closeSession('session-1')).resolves.toBe(true)
-    expect(closeSession).toHaveBeenCalledOnce()
+    expect(closeSession).not.toHaveBeenCalled()
   })
 })

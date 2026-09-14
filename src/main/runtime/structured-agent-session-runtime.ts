@@ -172,6 +172,17 @@ async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
   // be writing lifecycle rows or acquiring a replacement child.
   await installed.waitForRecovery()
   const failures: unknown[] = []
+  // Host teardown runs FIRST, which inverts the older order. It is what stops this host's
+  // provider children now: it evicts each owned session through the adapter, and that eviction
+  // only releases the lease once `disposeSession` PROVES the child gone. Closing the adapter
+  // first would hand every one of those steps a vacuous receipt from an already-closed router,
+  // and would race the attach drain the host runs in the same teardown.
+  //
+  // The constraint the old order protected — observe a final exit callback before journals close
+  // — no longer binds: every session the host indexed is stopped and settled by the time
+  // `closeAll` runs, so what `closeAll` still reaches is an acquisition the host never indexed,
+  // which owns no journal for a tail row to land in. The drain below keeps that late callback
+  // from outliving the runtime.
   try {
     await installed.host.flushAllStreamedEvents()
   } catch (error) {

@@ -56,16 +56,21 @@ export async function evictHeldStructuredAgentSession(
   context: StructuredAgentSessionLifetimeContext,
   sessionId: string
 ): Promise<void> {
-  if (!context.sessions.has(sessionId)) {
+  const session = context.sessions.get(sessionId)
+  if (!session) {
     return
   }
-  const session = context.sessions.get(sessionId)!
   const ownedProviderChild = session.hasProviderChild
+  let settlementError: unknown
   const eviction: StructuredAgentSessionEvictionContext = {
     sessionId,
     hasProviderChild: ownedProviderChild,
     eventSink: context.runtimeState.eventSinkFor(sessionId),
     adapter: context.deps.adapter,
+    // Host state must not disagree with the adapter for the seven steps in between.
+    onProviderChildStopped: () => {
+      session.hasProviderChild = false
+    },
     forget: async () => {
       await forgetStructuredAgentSession(context, sessionId)
       context.deps.adapter.acknowledgeSessionRelease?.(sessionId)
@@ -80,10 +85,14 @@ export async function evictHeldStructuredAgentSession(
         pendingSubmissionReason: 'provider_closed_before_acknowledgement',
         verdict: { state: 'interrupted', completedAt: context.now() },
         showUnexpectedExitOutcome: false,
-        onError: (id, error) => context.deps.onEventSinkError?.({ sessionId: id, error })
+        onError: (id, error) => {
+          settlementError = error
+          context.deps.onEventSinkError?.({ sessionId: id, error })
+        }
       })
       if (!settled) {
-        throw new Error('dead generation work settlement failed')
+        // Without the cause the quit log names the step and nothing else.
+        throw new Error('dead generation work settlement failed', { cause: settlementError })
       }
     },
     releaseLease: async () => {
@@ -94,7 +103,6 @@ export async function evictHeldStructuredAgentSession(
         expectedFence: session.fence,
         now: context.now()
       })
-      session.hasProviderChild = false
       context.forgetStatus(sessionId)
     }
   }
@@ -112,16 +120,23 @@ export async function evictOwnedStructuredAgentSessions(
   const ownedSessionIds = [...context.sessions]
     .filter(([, session]) => session.hasProviderChild)
     .map(([sessionId]) => sessionId)
-  const results = await Promise.allSettled(
-    ownedSessionIds.map((sessionId) => evictHeldStructuredAgentSession(context, sessionId))
-  )
+  // Retained up front and cleared only once an eviction settles: the quit phase is bounded, and a
+  // timeout leaves these still running. Closing their journals underneath them is the one outcome
+  // the retain set exists to prevent.
+  for (const sessionId of ownedSessionIds) {
+    retainOnFailure.add(sessionId)
+  }
   const failures: unknown[] = []
-  results.forEach((result, index) => {
-    if (result.status === 'rejected') {
-      retainOnFailure.add(ownedSessionIds[index]!)
-      failures.push(result.reason)
-    }
-  })
+  await Promise.all(
+    ownedSessionIds.map(async (sessionId) => {
+      try {
+        await evictHeldStructuredAgentSession(context, sessionId)
+        retainOnFailure.delete(sessionId)
+      } catch (error) {
+        failures.push(error)
+      }
+    })
+  )
   if (failures.length > 0) {
     throw new AggregateError(failures, 'structured agent-session child eviction failed')
   }

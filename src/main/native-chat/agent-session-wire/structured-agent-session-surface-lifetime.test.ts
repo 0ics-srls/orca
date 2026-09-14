@@ -20,6 +20,7 @@ import type { StructuredAgentSessionAdapter } from './structured-agent-session-a
 import type { StructuredAgentSessionEventSink } from './structured-agent-session-event-sink'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
 import type { StructuredAgentSessionHandoffTransport } from './structured-agent-session-handoff-types'
+import { unexpectedProviderExitOutcome } from './structured-agent-session-dead-generation-settlement'
 import type { StructuredAgentSessionStatusSink } from './structured-agent-session-status-feed'
 import {
   HOST_TEST_NOW as NOW,
@@ -587,12 +588,13 @@ describe('an unexpected provider exit', () => {
     expect(hostErrors).toContainEqual(expect.objectContaining({ message: 'journal failed' }))
     const history = host.history({ sessionId: SESSION, direction: 'tail' })
     expect(history.ok && history.page.submissions[0]?.dispatchState).toBe('unknown')
-    expect(
-      history.ok &&
-        history.page.items.some(
-          (item) => item.body.kind === 'status' && item.body.text.includes('provider exited')
-        )
-    ).toBe(false)
+    // A send whose delivery outcome is unknown IS work in progress, so the reassuring outcome is
+    // written — carrying the cause, and never the old bare `Provider exited: <reason>` row.
+    const statuses = history.ok
+      ? history.page.items.flatMap((item) => (item.body.kind === 'status' ? [item.body.text] : []))
+      : []
+    expect(statuses).toEqual([unexpectedProviderExitOutcome('provider exited')])
+    expect(statuses.some((text) => text.startsWith('Provider exited'))).toBe(false)
 
     dispatch.mockResolvedValueOnce({
       state: 'accepted',

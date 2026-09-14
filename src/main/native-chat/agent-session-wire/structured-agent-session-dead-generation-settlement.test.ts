@@ -6,8 +6,10 @@ import { openAgentSessionJournal } from '../agent-session-journal/journal-store-
 import type { AgentJournalRenderItem } from '../../../shared/agent-session-journal-types'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import {
+  captureUnfinishedStructuredAgentSessionWork,
   settleStructuredAgentSessionDeadGeneration,
-  UNEXPECTED_PROVIDER_EXIT_OUTCOME
+  UNEXPECTED_PROVIDER_EXIT_OUTCOME,
+  unfinishedStructuredAgentSessionWorkWasInterrupted
 } from './structured-agent-session-dead-generation-settlement'
 
 const SESSION = 'session-dead-generation'
@@ -217,5 +219,69 @@ describe('dead structured-session generation settlement', () => {
         reason: 'provider write outcome unknown'
       })
     ])
+  })
+})
+
+describe('whether a dead generation interrupted anything', () => {
+  async function seedIdlePendingApproval(): Promise<void> {
+    await journal.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 1 },
+      {
+        kind: 'approval',
+        title: 'Run command?',
+        detail: null,
+        options: [{ id: 'yes', label: 'Allow' }],
+        resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
+      },
+      { fence: 7 }
+    )
+    await journal.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 2 },
+      { kind: 'turn', turnId: 'turn-1', state: 'completed', startedAt: 900, completedAt: 950 },
+      { fence: 7 }
+    )
+  }
+
+  it('says nothing was interrupted when the provider died waiting on an approval', async () => {
+    await seedIdlePendingApproval()
+    const before = captureUnfinishedStructuredAgentSessionWork(journal)
+
+    expect(unfinishedStructuredAgentSessionWorkWasInterrupted(before, journal, 1_000)).toBe(false)
+  })
+
+  it('still reports an interruption when a turn was running', async () => {
+    await seedUnfinishedWork()
+    const before = captureUnfinishedStructuredAgentSessionWork(journal)
+
+    expect(unfinishedStructuredAgentSessionWorkWasInterrupted(before, journal, 1_000)).toBe(true)
+  })
+
+  it('cancels the idle prompt without claiming a response was in progress', async () => {
+    await seedIdlePendingApproval()
+
+    await expect(
+      settleStructuredAgentSessionDeadGeneration({
+        journal,
+        sessionId: SESSION,
+        fence: 7,
+        settlementId: `provider-exit:${SESSION}:7:generation-1`,
+        pendingSubmissionReason: 'provider_exited_before_acknowledgement',
+        verdict: { state: 'interrupted', completedAt: 1_000 },
+        showUnexpectedExitOutcome: unfinishedStructuredAgentSessionWorkWasInterrupted(
+          captureUnfinishedStructuredAgentSessionWork(journal),
+          journal,
+          1_000
+        )
+      })
+    ).resolves.toBe(true)
+
+    const snapshot = journal.snapshot()
+    expect(snapshot.items.some((item) => item.body.kind === 'status')).toBe(false)
+    expect(snapshot.items.map((item) => item.body)).toContainEqual(
+      expect.objectContaining({
+        kind: 'approval',
+        resolution: expect.objectContaining({ state: 'cancelled' })
+      })
+    )
   })
 })
