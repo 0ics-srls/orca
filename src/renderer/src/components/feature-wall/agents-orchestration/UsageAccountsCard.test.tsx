@@ -4,11 +4,10 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({
-  claudeList: vi.fn(),
-  codexList: vi.fn(),
-  rateLimits: { claude: null, codex: null } as Record<string, unknown>
-}))
+const mocks = vi.hoisted(() => {
+  const rateLimits: Record<string, unknown> = { claude: null, codex: null }
+  return { claudeList: vi.fn(), codexList: vi.fn(), rateLimits }
+})
 
 vi.mock('sonner', () => ({ toast: { error: vi.fn(), success: vi.fn() } }))
 vi.mock('@/store', () => ({
