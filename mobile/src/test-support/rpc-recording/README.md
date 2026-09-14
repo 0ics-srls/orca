@@ -166,7 +166,9 @@ Detached unhandled rejections are captured as effects in a sequential process-sc
 with prior process listeners restored afterward. The known main bug it first recorded is fixed on
 both legs: `new-workspace-runtime-context-null-results-degrade-to-absent` now records a null or
 absent `settings.get` or `ui.get` result degrading the way a reply missing that member does, so
-neither matrix golden carries a property-read TypeError effect any more.
+neither matrix golden carries a property-read TypeError effect any more. That leaves no golden
+recording an unhandled rejection at all, so `unhandled-recording.test.ts` is what pins the capture:
+without it a refactor could stop emitting the effect and every golden would still compare clean.
 Task-model projections record setter invocations and resulting model values, not native UI.
 
 ## Commands and checker contract
