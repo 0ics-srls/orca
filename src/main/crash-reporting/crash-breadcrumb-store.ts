@@ -256,9 +256,33 @@ function isCoalescedCrumbStillInEvidence(
   const visibleRecent = breadcrumbs.filter((breadcrumb) =>
     isVisibleToReporter(breadcrumb, reporterOrigin)
   )
-  return visibleRecent
-    .slice(-(MAX_BREADCRUMBS - retained.length))
-    .some((recentBreadcrumb) => recentBreadcrumb === crumb)
+  return visibleReportWindow(visibleRecent, MAX_BREADCRUMBS - retained.length).some(
+    (recentBreadcrumb) => recentBreadcrumb === crumb
+  )
+}
+
+/**
+ * The ring entries a report will actually carry, once the retained lane has taken its
+ * share of the budget.
+ *
+ * Why not a plain tail slice: fair-share eviction parks the one-off crumbs at the ring's
+ * HEAD and the repeating series at its tail, so trimming the head discards exactly what
+ * eviction just protected. The retained lane fills under memory pressure — the same
+ * condition that produces the `renderer_memory` flood — so the two would cancel out
+ * precisely when the trail matters most. Trim with the same policy instead.
+ */
+function visibleReportWindow(
+  visibleRecent: CrashReportBreadcrumb[],
+  budget: number
+): CrashReportBreadcrumb[] {
+  if (visibleRecent.length <= budget) {
+    return visibleRecent
+  }
+  const window = [...visibleRecent]
+  while (window.length > budget) {
+    window.splice(evictionIndex(window), 1)
+  }
+  return window
 }
 
 /** Fold a key's newest suppressed payload into the ring entry it owns. */
@@ -333,7 +357,7 @@ export function getCrashBreadcrumbSnapshot(reporterOrigin?: string): CrashReport
   const visibleRecent = breadcrumbs.filter((breadcrumb) =>
     isVisibleToReporter(breadcrumb, reporterOrigin)
   )
-  const recent = visibleRecent.slice(-(MAX_BREADCRUMBS - retained.length))
+  const recent = visibleReportWindow(visibleRecent, MAX_BREADCRUMBS - retained.length)
   return [...retained, ...recent]
     .sort((left, right) => left.createdAt.localeCompare(right.createdAt))
     .map((breadcrumb) => ({

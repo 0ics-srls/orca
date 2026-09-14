@@ -211,6 +211,86 @@ describe('crash breadcrumb store', () => {
       expect(snapshot.some((entry) => entry.data?.index === 29)).toBe(true)
     })
 
+    // The gap round 2 named: no test populated the retained lane together with a
+    // fair-share fixture. Retained crumbs take their share off the SAME 30-entry budget,
+    // and a plain tail slice would trim the ring's head — which is exactly where fair
+    // share parks the one-offs it just protected. Three retained crumbs erased the whole
+    // lifecycle trail from the snapshot.
+    it('keeps the lifecycle trail when the retained lane takes part of the budget', () => {
+      // Real timestamps: the snapshot sorts by createdAt, so a same-millisecond fixture
+      // would assert a tie-break order rather than the policy.
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-09-14T12:00:00.000Z'))
+      const tick = (): void => {
+        vi.advanceTimersByTime(1_000)
+      }
+      recordCrashBreadcrumb('app_started')
+      tick()
+      recordCrashBreadcrumb('main_window_created')
+      tick()
+      recordCrashBreadcrumb('main_window_loaded')
+      for (let mark = 0; mark < 3; mark += 1) {
+        tick()
+        recordCrashBreadcrumb('renderer_memory_highwater', {
+          rendererSurface: 'main',
+          thresholdPrivateMB: 600 + mark
+        })
+      }
+      for (let sample = 0; sample < 200; sample += 1) {
+        tick()
+        recordCrashBreadcrumb('renderer_memory', { sample })
+      }
+
+      const snapshot = getCrashBreadcrumbSnapshot()
+      const names = snapshot.map((entry) => entry.name)
+
+      expect(snapshot).toHaveLength(30)
+      expect(names.filter((name) => name === 'renderer_memory_highwater')).toHaveLength(3)
+      expect(names.slice(0, 3)).toEqual([
+        'app_started',
+        'main_window_created',
+        'main_window_loaded'
+      ])
+    })
+
+    // `isCoalescedCrumbStillInEvidence` and the snapshot must compute the SAME window.
+    // If the predicate keeps a tail slice while the snapshot uses fair share, an owner the
+    // report will carry is judged invisible, its handle is dropped, and the burst count
+    // never lands on the crumb the reader actually sees.
+    it('folds a burst into an owner the report keeps, even when the lane takes budget', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-09-14T12:00:00.000Z'))
+      for (let mark = 0; mark < 3; mark += 1) {
+        recordCrashBreadcrumb('renderer_memory_highwater', {
+          rendererSurface: 'main',
+          thresholdPrivateMB: 600 + mark
+        })
+      }
+      recordCrashBreadcrumb('app_started')
+      const hit = (): void => {
+        recordCoalescedCrashBreadcrumb({
+          name: 'renderer_error',
+          data: { message: 'boom' },
+          coalesceKey: 'boom',
+          minIntervalMs: 30_000
+        })
+      }
+      hit()
+      for (let repeat = 0; repeat < 5; repeat += 1) {
+        vi.advanceTimersByTime(10)
+        hit()
+      }
+      for (let sample = 0; sample < 200; sample += 1) {
+        vi.advanceTimersByTime(10)
+        recordCrashBreadcrumb('renderer_memory', { sample })
+      }
+
+      const snapshot = getCrashBreadcrumbSnapshot()
+      const owner = snapshot.find((entry) => entry.name === 'renderer_error')
+
+      expect(owner?.data?.suppressedSinceLast).toBe(5)
+    })
+
     it('degenerates to oldest-first when no name repeats', () => {
       for (let index = 0; index < 40; index += 1) {
         recordCrashBreadcrumb(`event_${index}`)
@@ -445,12 +525,16 @@ describe('crash breadcrumb store', () => {
 
       const snapshot = getCrashBreadcrumbSnapshot()
 
+      const bursts = snapshot.filter((entry) => entry.name === 'terminal_safe_fit_retry_exhausted')
+
       expect(snapshot.filter((entry) => entry.name.startsWith('pre_crash_evidence_'))).toHaveLength(
         10
       )
-      expect(
-        snapshot.filter((entry) => entry.name === 'terminal_safe_fit_retry_exhausted')
-      ).toHaveLength(20)
+      expect(bursts).toHaveLength(20)
+      // The delta that still justifies coalescing: 20 slots against 1, and the population
+      // — the only signal multiplicity ever carried — is nowhere on the uncoalesced side.
+      expect(bursts.some((entry) => entry.data?.livePanes !== undefined)).toBe(false)
+      expect(bursts.every((entry) => entry.data?.suppressedSinceLast === undefined)).toBe(true)
     })
 
     it('costs one slot when coalesced, and keeps the pane count on the payload', () => {
