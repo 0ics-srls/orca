@@ -24,12 +24,13 @@ import { AgentHookServerStatusApplication } from './server-status-application'
 
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
   protected applyNormalizedStatus(
-    payload: AgentHookEventPayload,
+    incoming: AgentHookEventPayload & { authorityRestartId?: string },
     onAccepted?: () => void,
     origin: AgentStatusObservationOrigin = 'hook',
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
   ): EnrichedAgentHookEventPayload | undefined {
+    const { authorityRestartId, ...payload } = incoming
     if (!this.canWriteLegacyStatusRow(payload)) {
       return undefined
     }
@@ -241,7 +242,11 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       this.scheduleStatusPersist()
     }
     this.notifyStatusChangeListeners()
-    this.emitEnrichedStatus(enriched)
+    this.emitEnrichedStatus(
+      authorityRestartId && payload.isReplay !== true
+        ? { ...enriched, authorityRestartId }
+        : enriched
+    )
     return enriched
   }
 
