@@ -7,14 +7,7 @@ import {
 import { planAgentCliArgsSuffix } from '@/lib/tui-agent-startup'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { CLIENT_PLATFORM, getWorkspaceIntentName, getWorkspaceSeedName } from '@/lib/new-workspace'
-import {
-  agentLaunchCommandErrorMessage,
-  agentLaunchErrorMessage,
-  gitLabIssueNumber,
-  resolvePrHeadErrorMessage,
-  unavailableAgentErrorMessage,
-  workspaceActivationErrorMessage
-} from '@/lib/launch-work-item-direct-messages'
+import * as directLaunchMessages from '@/lib/launch-work-item-direct-messages'
 import { ensureHooksConfirmed } from '@/lib/ensure-hooks-confirmed'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import type { SetupDecision } from '../../../shared/worktree/create-types'
@@ -150,7 +143,9 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
       resolvedBranchNameOverride = result.branchNameOverride
       resolvedCompareBaseRef = result.compareBaseRef
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : resolvePrHeadErrorMessage())
+      toast.error(
+        error instanceof Error ? error.message : directLaunchMessages.resolvePrHeadErrorMessage()
+      )
       openModalFallback()
       return false
     }
@@ -183,7 +178,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
       resolvedBranchNameOverride,
       undefined,
       itemType === 'mr' && itemNumber ? itemNumber : undefined,
-      gitLabIssueNumber({ ...item, type: itemType, number: itemNumber }),
+      directLaunchMessages.gitLabIssueNumber({ ...item, type: itemType, number: itemNumber }),
       undefined,
       undefined,
       undefined,
@@ -219,7 +214,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
         sidebarRevealBehavior: 'auto',
         setup: result.setup
       })
-      toast.error(unavailableAgentErrorMessage())
+      toast.error(directLaunchMessages.unavailableAgentErrorMessage())
       return false
     }
     effectiveAgent = launchPreparation.effectiveAgent
@@ -254,13 +249,15 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
       structuredProducer?.failed('The workspace is no longer available.')
       // Worktree vanished between create and activate — extremely unlikely but
       // worth handling explicitly rather than silently dropping the draft.
-      toast.error(workspaceActivationErrorMessage())
+      toast.error(directLaunchMessages.workspaceActivationErrorMessage())
       return false
     }
     primaryTabId = activation.primaryTabId
   } catch (error) {
     structuredProducer?.failed(error)
-    toast.error(error instanceof Error ? error.message : 'Failed to create workspace.')
+    toast.error(
+      error instanceof Error ? error.message : directLaunchMessages.workspaceCreationErrorMessage()
+    )
     return false
   }
 
@@ -279,7 +276,9 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
     })
   } catch (error) {
     structuredProducer?.failed(error)
-    toast.error(error instanceof Error ? error.message : agentLaunchErrorMessage())
+    toast.error(
+      error instanceof Error ? error.message : directLaunchMessages.agentLaunchErrorMessage()
+    )
     return false
   }
   if (structuredProducer) {
@@ -296,7 +295,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
   primaryTabId = structuredResult.primaryTabId
 
   if (startupPlanFailed) {
-    toast.error(agentLaunchCommandErrorMessage())
+    toast.error(directLaunchMessages.agentLaunchCommandErrorMessage())
     return false
   }
 

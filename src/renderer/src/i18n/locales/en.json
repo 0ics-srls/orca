@@ -678,7 +678,8 @@
               "agent": {
                 "ceeeb509b5": "Agent took too long to start. The workspace is ready — paste the {{value0}} when the agent is idle."
               },
-              "agentLaunchFailed": "The agent launch failed."
+              "agentLaunchFailed": "The agent launch failed.",
+              "workspaceCreationFailed": "Failed to create workspace."
             }
           }
         }

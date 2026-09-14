@@ -36,3 +36,9 @@ export const agentLaunchCommandErrorMessage = (): string =>
 
 export const agentLaunchErrorMessage = (): string =>
   translate('auto.lib.launch.work.item.direct.agentLaunchFailed', 'The agent launch failed.')
+
+export const workspaceCreationErrorMessage = (): string =>
+  translate(
+    'auto.lib.launch.work.item.direct.workspaceCreationFailed',
+    'Failed to create workspace.'
+  )
