@@ -37,7 +37,8 @@ type RemoteContentParser<T = string> = (
 
 export function remoteSessionSources(
   remoteHome: string,
-  hostPlatform: RemoteHostPlatform
+  hostPlatform: RemoteHostPlatform,
+  ompSessionsDir?: string
 ): RemoteSessionSource[] {
   return [
     ...remoteCodexSources(remoteHome, hostPlatform),
@@ -98,13 +99,15 @@ export function remoteSessionSources(
       parseDevinSessionContent
     ),
     jsonlSource('pi', remoteHome, hostPlatform, remotePiSessionsSegments(), piParser),
-    {
-      ...jsonlSource('omp', remoteHome, hostPlatform, remoteOmpSessionsSegments(), ompParser),
-      // Same posture as Claude above: OMP stores task-subagent transcripts in
-      // the session's same-named artifact dir; the walk supplies counts and the
-      // partition keeps the children out of the top-level list (#9330).
-      partitionSubagentTranscripts: partitionOmpSubagentTranscriptPaths
-    },
+    ...(ompSessionsDir === ''
+      ? []
+      : [
+          {
+            ...jsonlSource('omp', remoteHome, hostPlatform, remoteOmpSessionsSegments(), ompParser),
+            ...(ompSessionsDir === undefined ? {} : { rootDir: ompSessionsDir }),
+            partitionSubagentTranscripts: partitionOmpSubagentTranscriptPaths
+          }
+        ]),
     jsonlSource(
       'prime-agent',
       remoteHome,
