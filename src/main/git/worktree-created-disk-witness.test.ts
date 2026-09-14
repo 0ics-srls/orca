@@ -1,6 +1,3 @@
-// The disk witness is only read after Git disagreed about the common dir, so what it answers decides
-// whether a worktree Git already wrote is reported as created or abandoned (#16520). A read that
-// failed must not be spent as a disagreement.
 import { chmodSync, mkdirSync, mkdtempSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -30,6 +27,9 @@ const readRepoLocationMock = vi.mocked(readRepoLocation)
 const readRepoCommonDirFromGitMock = vi.mocked(readRepoCommonDirFromGit)
 const readCheckedOutBranchRefMock = vi.mocked(readCheckedOutBranchRef)
 const readWorktreeHeadOidMock = vi.mocked(readWorktreeHeadOid)
+
+/** Repo convention: root bypasses the mode bits, so `chmod 000` denies nothing there. */
+const CAN_DENY_READ = process.platform !== 'win32' && process.getuid?.() !== 0
 
 let scratchDir = ''
 let repoPath = ''
@@ -68,7 +68,7 @@ describe('describeCreatedWorktree when Git and the repo disagree', () => {
   })
 
   it('reports nothing for a bare repo, whose missing .git is a real answer', async () => {
-    // No `.git` at all -> ENOENT -> `{ status: 'read', commonDir: undefined }`, not unverifiable.
+    // No `.git` at all is definitive absence, not an unreadable witness.
     await expect(
       describeCreatedWorktree(repoPath, worktreePath, 'feature')
     ).resolves.toBeUndefined()
@@ -83,16 +83,30 @@ describe('describeCreatedWorktree when Git and the repo disagree', () => {
     ).resolves.toBeUndefined()
   })
 
-  it.runIf(process.platform !== 'win32')(
-    'throws rather than claiming a mismatch when the witness cannot be read',
-    async () => {
-      writeFileSync(join(repoPath, '.git'), 'gitdir: /somewhere\n')
-      chmodSync(repoPath, 0o000)
-      await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).rejects.toThrow(
-        /^repo common dir unverifiable: could not read .*\.git: /
-      )
-    }
-  )
+  it('follows gitdir and commondir markers', async () => {
+    const commonDir = join(scratchDir, 'main', '.git')
+    const linkedGitDir = join(commonDir, 'worktrees', 'source')
+    mkdirSync(linkedGitDir, { recursive: true })
+    writeFileSync(join(repoPath, '.git'), `gitdir: ${linkedGitDir}\n`)
+    writeFileSync(join(linkedGitDir, 'commondir'), '../..\n')
+    readRepoLocationMock.mockResolvedValue({ topLevel: worktreePath, commonDir })
+
+    await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).resolves.toMatchObject(
+      {
+        branch: 'refs/heads/feature'
+      }
+    )
+  })
+
+  it.skipIf(!CAN_DENY_READ)('throws when the .git marker exists but cannot be read', async () => {
+    const dotGit = join(repoPath, '.git')
+    writeFileSync(dotGit, 'gitdir: /somewhere\n')
+    chmodSync(dotGit, 0o000)
+    await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).rejects.toMatchObject({
+      message: expect.stringMatching(/^repo common dir unverifiable: could not read .*\.git: /),
+      cause: expect.objectContaining({ code: 'EACCES' })
+    })
+  })
 
   // The other unverifiable branch -- the deadline firing on a `.git` that never answers -- needs a
   // read that really blocks, so it lives in worktree-created-description-real-git.test.ts behind a
@@ -120,7 +134,7 @@ describe('describeCreatedWorktree before the witness is reached', () => {
     readRepoLocationMock.mockResolvedValue({ topLevel: worktreePath, commonDir })
     readRepoCommonDirFromGitMock.mockResolvedValue(commonDir)
     // chmod 000 would make the witness unverifiable; agreement means it is never opened.
-    if (process.platform !== 'win32') {
+    if (CAN_DENY_READ) {
       chmodSync(repoPath, 0o000)
     }
     await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).resolves.toMatchObject(
@@ -134,7 +148,7 @@ describe('describeCreatedWorktree before the witness is reached', () => {
     readRepoLocationMock.mockResolvedValue(undefined)
     // An unconfirmed worktree is not an unverifiable common dir: resolving undefined under a repo
     // whose witness cannot be read is how we know the witness was never consulted.
-    if (process.platform !== 'win32') {
+    if (CAN_DENY_READ) {
       chmodSync(repoPath, 0o000)
     }
     await expect(
@@ -144,7 +158,7 @@ describe('describeCreatedWorktree before the witness is reached', () => {
 
   it('reports nothing when the worktree has the wrong branch checked out', async () => {
     readCheckedOutBranchRefMock.mockResolvedValue('refs/heads/other')
-    if (process.platform !== 'win32') {
+    if (CAN_DENY_READ) {
       chmodSync(repoPath, 0o000)
     }
     await expect(

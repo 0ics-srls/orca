@@ -1,6 +1,8 @@
-import { realpath, stat } from 'node:fs/promises'
+import { readFile, realpath, stat } from 'node:fs/promises'
 import { join, posix } from 'node:path'
 import { isDefinitiveAbsence } from '../../shared/definitive-filesystem-absence'
+import { resolveGitMetadataPath } from '../../shared/git-metadata-path'
+import { parseGitdirMarkerPayload } from '../../shared/gitdir-marker-payload'
 import { isWorktreeCreatePreparation } from '../../shared/worktree/create-preparation'
 import { toWslExecutionSpace } from '../../shared/wsl-paths'
 import type { GitWorktreeInfo } from '../../shared/worktree/types'
@@ -21,8 +23,6 @@ import {
 } from './worktree-operation-options'
 import { areWorktreePathsEqual, translateWorktreePath } from './worktree-path-comparison'
 import { detectSparseCheckoutCached } from './worktree-sparse-checkout-cache'
-import { resolveGitCommonDir } from './worktree-sparse-state'
-import { resolveGitDir } from './source-control/resolve-git-dir'
 
 const SPARSE_CHECKOUT_DETECTION_CONCURRENCY = 8
 
@@ -153,44 +153,56 @@ export async function annotateSparseCheckoutStatus(
  * Deadlined because a `.git` on a hung mount (dead NFS/SSHFS, stalled WSL 9p) never rejects, and an
  * unbounded read here would leave the whole create IPC pending instead of failing like it used to.
  *
- * Three outcomes, not two: a missing `.git` is a real "no candidate", but a deadline or a permission
- * error is `unverifiable`, and the caller must not spend it as a disagreement. This witness is only
- * read after Git already disagreed, so a failed read here decides whether a worktree that exists on
- * disk is reported as created or abandoned (#16520).
+ * A missing `.git` is a real "no candidate"; every other read failure is unverifiable and rejects.
  */
-type RepoDiskCommonDir =
-  | { status: 'read'; commonDir: string | undefined }
-  | { status: 'unverifiable'; reason: string }
-
 async function readRepoCommonDirFromDisk(
   repoPath: string,
   timeoutMs: number
-): Promise<RepoDiskCommonDir> {
+): Promise<string | undefined> {
   const dotGit = join(repoPath, '.git')
   try {
-    await withDeadline(stat(dotGit), timeoutMs)
+    const commonDir = await withDeadline(resolveRepoCommonDirFromDisk(repoPath, dotGit), timeoutMs)
+    return commonDir ? toWslExecutionSpace(commonDir) : undefined
   } catch (error) {
-    // A bare repo has no `.git`, and resolveGitDir would fabricate one; offer no candidate instead.
-    return isDefinitiveAbsence(error)
-      ? { status: 'read', commonDir: undefined }
-      : { status: 'unverifiable', reason: describeWitnessFailure(dotGit, error) }
-  }
-  try {
-    const commonDir = await withDeadline(
-      resolveGitDir(repoPath).then(resolveGitCommonDir),
-      timeoutMs
-    )
-    // Node answers in the caller's space, Git in the distro's. Without this the WSL candidate is a UNC
-    // path that can never equal Git's `/home/...`, leaving this witness inert on exactly the fallback
-    // path that needs it (realpath cannot bridge the two: a Linux path has no local inode).
-    return { status: 'read', commonDir: toWslExecutionSpace(commonDir) }
-  } catch (error) {
-    return { status: 'unverifiable', reason: describeWitnessFailure(dotGit, error) }
+    // A bare repo has no `.git`; do not fabricate a candidate for it.
+    if (isDefinitiveAbsence(error)) {
+      return undefined
+    }
+    const reason = error instanceof Error ? error.message : String(error)
+    throw new Error(`repo common dir unverifiable: could not read ${dotGit}: ${reason}`, {
+      cause: error
+    })
   }
 }
 
-function describeWitnessFailure(path: string, error: unknown): string {
-  return `could not read ${path}: ${error instanceof Error ? error.message : String(error)}`
+async function resolveRepoCommonDirFromDisk(
+  repoPath: string,
+  dotGit: string
+): Promise<string | undefined> {
+  // The general metadata resolvers are intentionally best effort; a witness must preserve read failures.
+  const dotGitStats = await stat(dotGit)
+  let gitDir = dotGit
+  if (!dotGitStats.isDirectory()) {
+    const pointer = parseGitdirMarkerPayload(await readFile(dotGit, 'utf8'))
+    if (!pointer) {
+      return undefined
+    }
+    gitDir = resolveGitMetadataPath(repoPath, pointer) ?? dotGit
+  }
+
+  return readCommonDirMarker(gitDir)
+}
+
+async function readCommonDirMarker(gitDir: string): Promise<string> {
+  try {
+    const pointer = await readFile(join(gitDir, 'commondir'), 'utf8')
+    return resolveGitMetadataPath(gitDir, pointer) ?? gitDir
+  } catch (error) {
+    if (!isDefinitiveAbsence(error)) {
+      throw error
+    }
+    return gitDir
+  }
 }
 
 async function withDeadline<T>(work: Promise<T>, timeoutMs: number): Promise<T> {
@@ -288,17 +300,11 @@ export async function describeCreatedWorktree(
   if (!(await isSameRepoCommonDir(created.commonDir, [repoGitCommonDir]))) {
     // Only now read the second opinion from disk: a `.git` on a hung mount pins a threadpool thread
     // that no deadline can reclaim, so never pay that on the path where Git already agreed.
-    const diskWitness = await readRepoCommonDirFromDisk(
+    const repoDiskCommonDir = await readRepoCommonDirFromDisk(
       repoPath,
       deadlined.timeout ?? WORKTREE_LIST_TIMEOUT_MS
     )
-    // Throwing rather than returning undefined on purpose: the caller folds a thrown reason into
-    // its error, while undefined becomes a bare "created worktree not found", which claims Git
-    // placed the worktree somewhere else. A stalled mount proves no such thing.
-    if (diskWitness.status === 'unverifiable') {
-      throw new Error(`repo common dir unverifiable: ${diskWitness.reason}`)
-    }
-    if (!(await isSameRepoCommonDir(created.commonDir, [diskWitness.commonDir]))) {
+    if (!(await isSameRepoCommonDir(created.commonDir, [repoDiskCommonDir]))) {
       return undefined
     }
   }
