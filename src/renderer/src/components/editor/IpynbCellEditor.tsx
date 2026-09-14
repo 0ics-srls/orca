@@ -4,6 +4,7 @@ import Markdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
 import rehypeSanitize from 'rehype-sanitize'
 import remarkGfm from 'remark-gfm'
+import { cn } from '@/lib/utils'
 import { monaco } from '@/lib/monaco-setup'
 import { computeEditorFontSize, resolveEditorFontFamily } from '@/lib/editor-font-zoom'
 import { resolveDocumentTheme } from '@/lib/document-theme'
@@ -14,8 +15,12 @@ import type { IpynbCell } from './ipynb-parse'
 import MonacoCodeExcerpt from './MonacoCodeExcerpt'
 
 export function IpynbMarkdownCell({ source }: { source: string }): React.JSX.Element {
+  const settings = useAppStore((s) => s.settings)
+  const isDark = resolveDocumentTheme(settings?.theme ?? 'system')
   return (
-    <div className="markdown-preview-body px-4 py-3 text-sm">
+    <div
+      className={cn('markdown-body px-4 py-3 text-sm', isDark ? 'markdown-dark' : 'markdown-light')}
+    >
       <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
         {source || '\u00a0'}
       </Markdown>
