@@ -1,5 +1,8 @@
 import { it, expect } from 'vitest'
 import * as pty from 'node-pty'
+import { Session } from '../../src/main/daemon/session.ts'
+import { TerminalSessionTeardown } from '../../src/main/daemon/terminal-session-teardown.ts'
+import { createDaemonPtySubprocessHandle } from '../../src/main/daemon/pty-subprocess/subprocess-handle.ts'
 import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
@@ -22,6 +25,8 @@ import {
 } from '../../src/main/providers/local-pty-provider-state.ts'
 
 const binary = process.env.ORCA_OMP_PROBE_BINARY
+const externalTool = process.env.ORCA_OMP_PROBE_EXTERNAL_TOOL === '1'
+const daemonBackend = process.env.ORCA_OMP_PROBE_BACKEND === 'daemon'
 const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 const quote = (value) => `'${value.replaceAll("'", "'\\''")}'`
 const ownedPidRows = async (pids) => {
@@ -33,12 +38,12 @@ const ownedPidRows = async (pids) => {
   return result.stdout.trim()
 }
 it.skipIf(!binary || process.platform === 'win32')(
-  'observes actual OMP under production local closure policy',
+  'observes actual OMP under production owned-PTY closure policy',
   async () => {
     const output = mkdtempSync(join(process.cwd(), '.bench-fixtures/omp-close-'))
     const report = []
     for (const launch of ['recognized', 'typed']) {
-      for (const close of ['explicit', 'quit']) {
+      for (const close of externalTool || daemonBackend ? ['explicit'] : ['explicit', 'quit']) {
         expect(ptyProcesses.size).toBe(0)
         const home = mkdtempSync(join(tmpdir(), 'orca-omp-close-home-'))
         const agentHome = join(home, 'agent')
@@ -63,19 +68,49 @@ it.skipIf(!binary || process.platform === 'win32')(
           env: {
             ...process.env,
             HOME: home,
+            USERPROFILE: home,
             ZDOTDIR: home,
-            XDG_CONFIG_HOME: home,
+            XDG_CONFIG_HOME: join(home, 'config'),
+            XDG_DATA_HOME: join(home, 'data'),
+            XDG_CACHE_HOME: join(home, 'cache'),
+            XDG_STATE_HOME: join(home, 'state'),
+            OMP_CODING_AGENT_DIR: agentHome,
             PI_CODING_AGENT_DIR: agentHome,
+            OMP_PROFILE: '',
+            PI_PROFILE: '',
+            PI_CONFIG_DIR: '.omp',
+            PI_CONFIG_FILES: '',
             ORCA_BACKGROUND_LAUNCH: '1'
           }
         })
+        const daemonSession = daemonBackend
+          ? new Session({
+              sessionId: id,
+              cols: 120,
+              rows: 35,
+              shellReadySupported: false,
+              ...(launch === 'recognized' ? { launchAgent: 'omp' } : {}),
+              subprocess: createDaemonPtySubprocessHandle({
+                process: proc,
+                shellPath: shell,
+                spawnCwd: home,
+                env: process.env,
+                startupCommandDeliveredInShellArgs: false,
+                reportsChildExitStatus: true,
+                sessionId: id,
+                startupAgentRecognition: null
+              })
+            })
+          : null
         proc.onData((data) => {
           transcript = (transcript + data).slice(-131072)
         })
-        ptyProcesses.set(id, proc)
-        createPtyPhysicalExit(id)
-        if (launch === 'recognized') {
-          ptyAgentSessionIds.add(id)
+        if (!daemonSession) {
+          ptyProcesses.set(id, proc)
+          createPtyPhysicalExit(id)
+          if (launch === 'recognized') {
+            ptyAgentSessionIds.add(id)
+          }
         }
         ptyExitDisposables.set(
           id,
@@ -92,14 +127,34 @@ it.skipIf(!binary || process.platform === 'win32')(
           await delay(5000)
           snapshot = await captureDescendantSnapshot(proc.pid)
           expect(snapshot?.descendants.length).toBeGreaterThan(0)
+          if (externalTool) {
+            proc.write('! /bin/sleep 120\r')
+            for (let attempt = 0; attempt < 25; attempt++) {
+              await delay(200)
+              snapshot = await captureDescendantSnapshot(proc.pid)
+              if (snapshot?.descendants.length > 1) {
+                break
+              }
+            }
+            expect(snapshot?.descendants.length).toBeGreaterThan(1)
+          }
           const pids = [proc.pid, ...snapshot.descendants.map((row) => row.pid)]
           const before = await ownedPidRows(pids)
           expect(before).toContain('omp')
+          if (externalTool) {
+            expect(before).toContain('sleep')
+          }
           const started = Date.now()
           let closeError = null
           try {
-            if (close === 'explicit') {
-              await shutdownLocalPty(id, {})
+            if (daemonSession) {
+              await new TerminalSessionTeardown(new Map([[id, daemonSession]])).killSession(
+                id,
+                daemonSession,
+                true
+              )
+            } else if (close === 'explicit') {
+              await shutdownLocalPty(id, { immediate: externalTool })
             } else {
               killAllLocalPtys()
             }
@@ -111,10 +166,12 @@ it.skipIf(!binary || process.platform === 'win32')(
           report.push({
             launch,
             close,
+            externalTool,
+            backend: daemonBackend ? 'daemon' : 'local',
             before,
             after,
             nativeExit,
-            tracked: ptyProcesses.has(id),
+            tracked: daemonSession ? daemonSession.isAlive : ptyProcesses.has(id),
             elapsedMs: Date.now() - started,
             closeError,
             home
@@ -145,6 +202,7 @@ it.skipIf(!binary || process.platform === 'win32')(
               }
             }
           }
+          daemonSession?.dispose()
           clearPtyState(id)
           rmSync(home, { recursive: true, force: true })
         }
