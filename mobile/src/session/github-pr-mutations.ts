@@ -23,7 +23,7 @@ import {
   githubPrRequestParams,
   type GitHubPrRepoSlug
 } from './github-pr-repo-slug'
-import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
+import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 
 // The github.* PR mutation surface: merge, auto-merge, open/close, reviewers, check reruns, the
 // inline title edit, and the conversation mutations (thread replies, root comments, resolution,
@@ -33,7 +33,7 @@ import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
 export type { GitHubPrMutationOutcome } from './github-pr-mutation-outcome'
 
 export function fetchMergePR(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; method?: GitHubPRMergeMethod; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -54,7 +54,7 @@ export function fetchMergePR(
 // Edit the hosted-review title. The host returns a bare boolean (true on success),
 // so it takes the confirmation shape rather than the status envelope.
 export function fetchUpdatePRTitle(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; title: string; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -73,7 +73,7 @@ export function fetchUpdatePRTitle(
 }
 
 export function fetchSetPRAutoMerge(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: {
     prNumber: number
@@ -97,7 +97,7 @@ export function fetchSetPRAutoMerge(
 }
 
 export function fetchUpdatePRState(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; state: 'open' | 'closed'; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -115,7 +115,7 @@ export function fetchUpdatePRState(
 }
 
 export function fetchRequestPRReviewers(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; reviewers: string[]; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -133,7 +133,7 @@ export function fetchRequestPRReviewers(
 }
 
 export function fetchRemovePRReviewers(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; reviewers: string[]; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -151,7 +151,7 @@ export function fetchRemovePRReviewers(
 }
 
 export function fetchRerunPRChecks(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: {
     prNumber: number
@@ -181,7 +181,7 @@ export function fetchRerunPRChecks(
 // (`{ ok, comment } | { ok:false, error }`), which the status reader admits.
 // We refetch afterward, so the returned comment is unused.
 export function fetchAddPRReviewCommentReply(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: {
     prNumber: number
@@ -219,7 +219,7 @@ export function fetchAddPRReviewCommentReply(
 
 // Add a root conversation comment to the PR. Host returns GitHubCommentResult.
 export function fetchAddIssueComment(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; body: string; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -242,7 +242,7 @@ export function fetchAddIssueComment(
 // the matching GraphQL mutation). Unlike the comment mutations, the host returns a
 // bare boolean, so a falsy result is a failure rather than the "no status" success.
 export function fetchResolveReviewThread(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { threadId: string; resolve: boolean; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrMutationOutcome> {
@@ -267,7 +267,7 @@ export function fetchResolveReviewThread(
 // directly rather than via the PR-scoped builder. Host returns the
 // GitHubProjectMutationResult `{ ok }` envelope the status reader admits.
 export function fetchUpdateIssueComment(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   args: { owner: string; repo: string; host?: string; commentId: number; body: string }
 ): Promise<GitHubPrMutationOutcome> {
   return settleGithubPrMutation(githubPrIssueCommentEdit, () =>
@@ -281,7 +281,7 @@ export function fetchUpdateIssueComment(
 
 // Delete a root conversation (issue) comment. Slug-addressed like the edit wrapper.
 export function fetchDeleteIssueComment(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   args: { owner: string; repo: string; host?: string; commentId: number }
 ): Promise<GitHubPrMutationOutcome> {
   return settleGithubPrMutation(githubPrIssueCommentDelete, () =>

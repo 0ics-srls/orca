@@ -1,6 +1,6 @@
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import { reviewTerminalCreateRun, reviewTerminalSendRun } from './mobile-review-terminal-operations'
-import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
+import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 
 // Pure launch path for the PR triage actions ("Fix checks with AI" / "Resolve
 // conflicts with AI"). Reuses the same two RPCs the diff-review send flow uses —
@@ -8,7 +8,7 @@ import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
 // fresh agent terminal in the worktree. Kept free of react-native imports so it
 // stays unit-testable in the node test environment.
 export async function createTerminalAndSendPrompt(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   prompt: string
 ): Promise<void> {

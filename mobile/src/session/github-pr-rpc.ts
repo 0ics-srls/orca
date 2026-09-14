@@ -16,7 +16,7 @@ import {
 } from './github-pr-read-operations'
 import type { GitHubPrSettleableOperation } from './github-pr-mutation-outcome'
 import { githubPrRequestParams, type GitHubPrRepoSlug } from './github-pr-repo-slug'
-import type { MobileSessionRpcSender } from './mobile-session-rpc-sender'
+import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 
 // Re-export the defensive parsers and the PR-scoped param builder so consumers (and tests) have a
 // single entry point for the github.* PR RPC surface.
@@ -74,7 +74,7 @@ async function settleGithubPrRead<Value>(
 // to decide whether the dedicated PR-view icon is available — independent of
 // whether the branch has an open PR.
 export function fetchGithubRepoSlug(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string
 ): Promise<GitHubPrReadOutcome<GitHubPrRepoSlug | null>> {
   return settleGithubPrRead(githubPrRepoSlugRead, () =>
@@ -86,7 +86,7 @@ export function fetchGithubRepoSlug(
 }
 
 export function fetchHostedReviewForBranch(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { branch: string; linkedGitHubPR?: number | null }
 ): Promise<GitHubPrReadOutcome<HostedReviewInfo | null>> {
@@ -103,7 +103,7 @@ export function fetchHostedReviewForBranch(
 }
 
 export function fetchPRForBranch(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { branch: string; linkedPRNumber?: number | null }
 ): Promise<GitHubPrReadOutcome<PRInfo | null>> {
@@ -119,7 +119,7 @@ export function fetchPRForBranch(
 }
 
 export function fetchWorkItemDetails(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number }
 ): Promise<GitHubPrReadOutcome<GitHubWorkItemDetails | null>> {
@@ -135,7 +135,7 @@ export function fetchWorkItemDetails(
 }
 
 export function fetchPRChecks(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: { prNumber: number; headSha?: string | null; prRepo?: GitHubPrRepoSlug | null }
 ): Promise<GitHubPrReadOutcome<PRCheckDetail[]>> {
@@ -153,7 +153,7 @@ export function fetchPRChecks(
 }
 
 export function fetchPRCheckDetails(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string,
   args: {
     checkRunId?: number
@@ -187,7 +187,7 @@ export function fetchPRCheckDetails(
 }
 
 export function fetchAssignableUsers(
-  client: MobileSessionRpcSender,
+  client: RpcOperationSender,
   worktreeId: string
 ): Promise<GitHubPrReadOutcome<GitHubAssignableUser[]>> {
   return settleGithubPrRead(githubPrAssignableUsersRead, () =>
