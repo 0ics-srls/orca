@@ -82,7 +82,7 @@ export function buildWorkflowSettingsSections(
           title: translate('sessionHistory.settings.enable', 'Enable session history search'),
           description: translate(
             'sessionHistory.settings.searchDescription',
-            'Transcript indexing, searchable history retention, index status and clear index.'
+            'Transcript indexing, index status and delete index.'
           )
         }
       ],
