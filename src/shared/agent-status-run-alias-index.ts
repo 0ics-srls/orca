@@ -8,10 +8,18 @@ import {
   parseAgentStatusExecutionScope,
   type AgentStatusExecutionScope
 } from './agent-status-subject'
+import { assertJsonTextStructureWithinLimits } from './json-text-structure-limit'
+import { measureUtf8ByteLength } from './utf8-byte-limits'
 
 const PROVIDER_ALIAS_KEY_PREFIX = 'agent-status-provider-alias-v1:'
 const MAX_ALIAS_INDEX_ENTRIES = 4096
 const MAX_RUN_IDS_PER_ALIAS = 256
+const MAX_ALIAS_INDEX_RUN_REFERENCES = 16_384
+const MAX_ALIAS_INDEX_SERIALIZED_BYTES = 4 * 1024 * 1024
+const ALIAS_INDEX_JSON_STRUCTURE_LIMITS = {
+  structuralTokens: 64 * 1024,
+  nestingDepth: 3
+} as const
 
 export type AgentStatusScopedProviderAlias = AgentStatusExecutionScope & AgentStatusProviderAlias
 export type AgentStatusProviderAliasKey = string
@@ -120,7 +128,7 @@ export function deserializeAgentStatusProviderAliasKey(
     sessionKeyKind,
     providerId
   ] = tuple
-  return parseAgentStatusScopedProviderAlias({
+  const alias = parseAgentStatusScopedProviderAlias({
     executionHostId,
     wslDistro,
     workspaceId,
@@ -129,6 +137,7 @@ export function deserializeAgentStatusProviderAliasKey(
     sessionKeyKind,
     providerId
   })
+  return alias && serializeAgentStatusProviderAliasKey(alias) === value ? alias : null
 }
 
 export function serializeAgentStatusRunAliasIndex(
@@ -138,6 +147,7 @@ export function serializeAgentStatusRunAliasIndex(
     throw new Error('Agent status alias index exceeds its entry limit')
   }
   const entries: SerializedAliasIndexEntry[] = []
+  let runReferenceCount = 0
   for (const [aliasKey, runIds] of index) {
     if (
       !deserializeAgentStatusProviderAliasKey(aliasKey) ||
@@ -150,18 +160,35 @@ export function serializeAgentStatusRunAliasIndex(
     if (!serializedRunIds.every(isAgentStatusRunId)) {
       throw new Error('Invalid agent status alias run id')
     }
+    runReferenceCount += serializedRunIds.length
+    if (runReferenceCount > MAX_ALIAS_INDEX_RUN_REFERENCES) {
+      throw new Error('Agent status alias index exceeds its run-reference limit')
+    }
     serializedRunIds.sort()
     entries.push({ alias: aliasKey, runIds: serializedRunIds })
   }
   entries.sort((left, right) => (left.alias < right.alias ? -1 : left.alias > right.alias ? 1 : 0))
-  return JSON.stringify(entries)
+  const serialized = JSON.stringify(entries)
+  if (
+    measureUtf8ByteLength(serialized, { stopAfterBytes: MAX_ALIAS_INDEX_SERIALIZED_BYTES })
+      .exceededLimit
+  ) {
+    throw new Error('Agent status alias index exceeds its serialized-byte limit')
+  }
+  return serialized
 }
 
 export function deserializeAgentStatusRunAliasIndex(
   value: string
 ): AgentStatusRunAliasIndex | null {
+  if (
+    measureUtf8ByteLength(value, { stopAfterBytes: MAX_ALIAS_INDEX_SERIALIZED_BYTES }).exceededLimit
+  ) {
+    return null
+  }
   let parsed: unknown
   try {
+    assertJsonTextStructureWithinLimits(value, ALIAS_INDEX_JSON_STRUCTURE_LIMITS)
     parsed = JSON.parse(value)
   } catch {
     return null
@@ -170,6 +197,7 @@ export function deserializeAgentStatusRunAliasIndex(
     return null
   }
   const index: AgentStatusRunAliasIndex = new Map()
+  let runReferenceCount = 0
   for (const entry of parsed) {
     if (
       !isRecord(entry) ||
@@ -183,6 +211,10 @@ export function deserializeAgentStatusRunAliasIndex(
       new Set(entry.runIds).size !== entry.runIds.length ||
       index.has(entry.alias)
     ) {
+      return null
+    }
+    runReferenceCount += entry.runIds.length
+    if (runReferenceCount > MAX_ALIAS_INDEX_RUN_REFERENCES) {
       return null
     }
     index.set(entry.alias, new Set(entry.runIds))

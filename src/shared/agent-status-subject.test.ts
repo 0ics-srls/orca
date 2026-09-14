@@ -76,6 +76,11 @@ describe('agent status subjects', () => {
       runId: `${RUN_ID} `
     },
     {
+      kind: 'pty-run',
+      ...scope(),
+      runId: `${RUN_ID}\nforged`
+    },
+    {
       kind: 'pty',
       ...scope(),
       paneKey: PANE_KEY,
@@ -90,6 +95,21 @@ describe('agent status subjects', () => {
       kind: 'pty',
       ...scope(),
       executionHostId: 'target-a',
+      paneKey: PANE_KEY
+    },
+    {
+      kind: 'pty',
+      ...scope({ executionHostId: 'ssh:%74arget-a' }),
+      paneKey: PANE_KEY
+    },
+    {
+      kind: 'pty',
+      ...scope({ executionHostId: 'ssh:target-a', wslDistro: 'Ubuntu' }),
+      paneKey: PANE_KEY
+    },
+    {
+      kind: 'pty',
+      ...scope({ executionHostId: `ssh:${'x'.repeat(513)}` }),
       paneKey: PANE_KEY
     },
     {

@@ -36,8 +36,6 @@ export type AgentStatusIpcPayload = ParsedAgentStatusPayload & {
   executionId?: AgentStatusExecutionId
   /** Fully qualified provider identity; never a credential or mailbox lookup key. */
   providerAlias?: AgentStatusProviderAlias
-  /** Monotonic execution-host store revision for run-aware publications. */
-  revision?: number
   paneKey: string
   launchToken?: string
   terminalHandle?: string

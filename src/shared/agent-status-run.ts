@@ -147,6 +147,10 @@ function parseProviderSessions(value: unknown): AgentStatusProviderSession[] | n
     }
     sessions.push(session)
   }
+  const provider = sessions[0]?.provider
+  if (provider && sessions.some((session) => session.provider !== provider)) {
+    return null
+  }
   return sessions
 }
 

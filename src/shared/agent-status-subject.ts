@@ -1,16 +1,20 @@
 import { isAgentSessionId, type AgentSessionExecutionLocation } from './agent-session-record'
-import { parseExecutionHostId } from './execution-host'
+import { isAgentStatusRunId, type AgentStatusRunId } from './agent-status-run'
+import {
+  parseExecutionHostId,
+  toRuntimeExecutionHostId,
+  toSshExecutionHostId
+} from './execution-host'
 
 const SUBJECT_KEY_PREFIX = 'agent-status-subject-v1:'
 const MAX_SCOPE_PART_LENGTH = 512
 const MAX_PANE_KEY_LENGTH = 512
-const MAX_RUN_ID_LENGTH = 128
 
 export type AgentStatusExecutionScope = AgentSessionExecutionLocation
 
 export type AgentStatusPtyRunSubject = AgentStatusExecutionScope & {
   kind: 'pty-run'
-  runId: string
+  runId: AgentStatusRunId
 }
 
 export type AgentStatusPtySubject = AgentStatusExecutionScope & {
@@ -57,11 +61,20 @@ function isBoundedIdentity(value: unknown, maxLength: number): value is string {
 }
 
 function parseExecutionScope(record: Record<string, unknown>): AgentStatusExecutionScope | null {
-  const parsedHost =
-    typeof record.executionHostId === 'string' ? parseExecutionHostId(record.executionHostId) : null
+  if (!isBoundedIdentity(record.executionHostId, MAX_SCOPE_PART_LENGTH)) {
+    return null
+  }
+  const parsedHost = parseExecutionHostId(record.executionHostId)
+  const canonicalHostId =
+    parsedHost?.kind === 'ssh'
+      ? toSshExecutionHostId(parsedHost.targetId)
+      : parsedHost?.kind === 'runtime'
+        ? toRuntimeExecutionHostId(parsedHost.environmentId)
+        : parsedHost?.id
   if (
     !parsedHost ||
-    parsedHost.id !== record.executionHostId ||
+    canonicalHostId !== record.executionHostId ||
+    (parsedHost.kind !== 'local' && record.wslDistro !== null) ||
     (record.wslDistro !== null && !isBoundedIdentity(record.wslDistro, MAX_SCOPE_PART_LENGTH)) ||
     !isBoundedIdentity(record.workspaceId, MAX_SCOPE_PART_LENGTH) ||
     (record.workspaceKind !== 'git-worktree' && record.workspaceKind !== 'folder')
@@ -105,7 +118,7 @@ export function parseAgentStatusSubject(value: unknown): AgentStatusSubject | nu
       'workspaceKind',
       'runId'
     ]) &&
-    isBoundedIdentity(value.runId, MAX_RUN_ID_LENGTH)
+    isAgentStatusRunId(value.runId)
   ) {
     return { ...scope, kind: 'pty-run', runId: value.runId }
   }
@@ -229,7 +242,7 @@ export function agentStatusSubjectsEqual(
 
 export function makePtyRunAgentStatusSubject(
   scope: AgentStatusExecutionScope,
-  runId: string
+  runId: AgentStatusRunId
 ): AgentStatusPtyRunSubject {
   const subject = parseAgentStatusSubject({ ...scope, kind: 'pty-run', runId })
   if (!subject || subject.kind !== 'pty-run') {

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   deserializeAgentStatusProviderAliasKey,
   deserializeAgentStatusRunAliasIndex,
@@ -30,6 +30,15 @@ function alias(
     providerId: 'shared-provider-id',
     ...overrides
   }
+}
+
+function fullAliasIndex(entryCount: number): AgentStatusRunAliasIndex {
+  return new Map(
+    Array.from({ length: entryCount }, (_, entryIndex) => [
+      serializeAgentStatusProviderAliasKey(alias({ providerId: `provider-${entryIndex}` })),
+      new Set(Array.from({ length: 256 }, (_, runIndex) => `run-${entryIndex}-${runIndex}`))
+    ])
+  )
 }
 
 describe('agent status provider alias index', () => {
@@ -87,11 +96,84 @@ describe('agent status provider alias index', () => {
     ).toEqual(value)
   })
 
+  it('rejects noncanonical spellings of a provider alias key', () => {
+    const canonical = serializeAgentStatusProviderAliasKey(alias())
+    const noncanonical = canonical.replace(':[', ': [')
+
+    expect(deserializeAgentStatusProviderAliasKey(noncanonical)).toBeNull()
+    expect(() =>
+      serializeAgentStatusRunAliasIndex(new Map([[noncanonical, new Set(['run-a'])]]))
+    ).toThrow('Invalid agent status alias index entry')
+  })
+
+  it('rejects split semantic duplicates instead of storing two raw keys', () => {
+    const canonical = serializeAgentStatusProviderAliasKey(alias())
+    const noncanonical = canonical.replace(':[', ':[ ')
+    const serialized = JSON.stringify([
+      { alias: canonical, runIds: ['run-a'] },
+      { alias: noncanonical, runIds: ['run-b'] }
+    ])
+
+    expect(deserializeAgentStatusRunAliasIndex(serialized)).toBeNull()
+  })
+
+  it('rejects execution-host aliases that decode to the same canonical host', () => {
+    const canonical = serializeAgentStatusProviderAliasKey(
+      alias({ executionHostId: 'ssh:target-a' })
+    )
+    const noncanonical = canonical.replace('ssh:target-a', 'ssh:%74arget-a')
+    const serialized = JSON.stringify([
+      { alias: canonical, runIds: ['run-a'] },
+      { alias: noncanonical, runIds: ['run-b'] }
+    ])
+
+    expect(deserializeAgentStatusRunAliasIndex(serialized)).toBeNull()
+  })
+
+  it('rejects WSL scope on a non-local execution host', () => {
+    expect(() =>
+      serializeAgentStatusProviderAliasKey(
+        alias({ executionHostId: 'ssh:target-a', wslDistro: 'Ubuntu' })
+      )
+    ).toThrow('Invalid agent status provider alias')
+  })
+
+  it('rejects an aggregate run-reference count beyond the global limit', () => {
+    const index = fullAliasIndex(65)
+    const serialized = JSON.stringify(
+      [...index].map(([aliasKey, runIds]) => ({ alias: aliasKey, runIds: [...runIds] }))
+    )
+
+    expect(() => serializeAgentStatusRunAliasIndex(index)).toThrow(
+      'Agent status alias index exceeds its run-reference limit'
+    )
+    expect(deserializeAgentStatusRunAliasIndex(serialized)).toBeNull()
+  })
+
+  it('rejects an oversized serialized payload before decoding its structure', () => {
+    const parse = vi.spyOn(JSON, 'parse')
+
+    expect(deserializeAgentStatusRunAliasIndex(`${' '.repeat(4 * 1024 * 1024 + 1)}[]`)).toBeNull()
+    expect(parse).not.toHaveBeenCalled()
+    parse.mockRestore()
+  })
+
+  it('rejects excessive JSON structure before allocating the decoded graph', () => {
+    const serialized = JSON.stringify(Array.from({ length: 22_000 }, () => ({})))
+    const parse = vi.spyOn(JSON, 'parse')
+
+    expect(deserializeAgentStatusRunAliasIndex(serialized)).toBeNull()
+    expect(parse).not.toHaveBeenCalled()
+    parse.mockRestore()
+  })
+
   it.each([
     null,
     { ...alias(), provider: 'unknown' },
     { ...alias(), sessionKeyKind: 'thread_id' },
     { ...alias(), executionHostId: 'target-a' },
+    { ...alias(), executionHostId: 'ssh:%74arget-a' },
+    { ...alias(), executionHostId: 'ssh:target-a', wslDistro: 'Ubuntu' },
     { ...alias(), providerId: 'shared-provider-id', extra: true }
   ])('rejects malformed scoped alias %#', (value) => {
     expect(parseAgentStatusScopedProviderAlias(value)).toBeNull()

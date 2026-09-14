@@ -4,7 +4,7 @@ export const AGENT_STATUS_CAPABILITIES = [AGENT_STATUS_RUNS_RUNTIME_CAPABILITY] 
 export type AgentStatusCapability = (typeof AGENT_STATUS_CAPABILITIES)[number]
 
 const AGENT_STATUS_CAPABILITY_SET: ReadonlySet<string> = new Set(AGENT_STATUS_CAPABILITIES)
-const MAX_CAPABILITIES = 64
+const MAX_CAPABILITIES = 256
 const MAX_CAPABILITY_LENGTH = 128
 
 /** Encode the status capabilities independently from advertising them on any transport. */

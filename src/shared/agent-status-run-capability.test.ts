@@ -28,6 +28,12 @@ describe('agent status run capability codec', () => {
     ).toEqual(new Set([AGENT_STATUS_RUNS_RUNTIME_CAPABILITY]))
   })
 
+  it('finds the run capability in the current host capability inventory', () => {
+    expect(
+      hasAgentStatusRunCapability([...RUNTIME_CAPABILITIES, AGENT_STATUS_RUNS_RUNTIME_CAPABILITY])
+    ).toBe(true)
+  })
+
   it.each([null, {}, 'agent-status.runs.v1', [null], ['']])(
     'rejects malformed capability envelope %#',
     (value) => {
@@ -35,6 +41,14 @@ describe('agent status run capability codec', () => {
       expect(hasAgentStatusRunCapability(value)).toBe(false)
     }
   )
+
+  it('rejects an excessive capability envelope', () => {
+    expect(
+      deserializeAgentStatusCapabilities(
+        Array.from({ length: 257 }, (_, index) => `agent-status.future-${index}`)
+      )
+    ).toBeNull()
+  })
 
   it('defines the codec without advertising incomplete run-aware behavior', () => {
     expect(RUNTIME_CAPABILITIES).not.toContain(AGENT_STATUS_RUNS_RUNTIME_CAPABILITY)

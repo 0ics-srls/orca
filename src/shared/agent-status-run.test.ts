@@ -100,6 +100,18 @@ describe('agent status PTY run records', () => {
       ...runRecord(),
       providerSessions: [{ ...runRecord().providerSessions[0], resetBoundary: false }]
     },
+    {
+      ...runRecord(),
+      providerSessions: [
+        runRecord().providerSessions[0],
+        {
+          provider: 'codex',
+          sessionKeyKind: 'session_id',
+          providerId: 'session-b',
+          resetBoundary: true
+        }
+      ]
+    },
     { ...runRecord(), role: 'resume' },
     { ...runRecord(), verdict: 'dead' },
     { ...runRecord(), extra: true }
