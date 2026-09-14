@@ -33,3 +33,6 @@ export const agentLaunchCommandErrorMessage = (): string =>
     'auto.lib.launch.work.item.direct.3de6371df3',
     'Could not build the agent launch command.'
   )
+
+export const agentLaunchErrorMessage = (): string =>
+  translate('auto.lib.launch.work.item.direct.agentLaunchFailed', 'The agent launch failed.')

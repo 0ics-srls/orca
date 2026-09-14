@@ -9,6 +9,7 @@ import { activateAndRevealWorktree } from '@/lib/worktree-activation'
 import { CLIENT_PLATFORM, getWorkspaceIntentName, getWorkspaceSeedName } from '@/lib/new-workspace'
 import {
   agentLaunchCommandErrorMessage,
+  agentLaunchErrorMessage,
   gitLabIssueNumber,
   resolvePrHeadErrorMessage,
   unavailableAgentErrorMessage,
@@ -47,16 +48,8 @@ import {
 } from './direct-work-item-surface-production'
 
 /**
- * "Use" flow: create the workspace, activate it, launch the default agent,
- * and paste the work item context into the agent. Most callers leave it as a draft;
- * fix-check launches can opt into submitting the prompt after the TUI is ready.
- * Falls back to `openModalFallback()` when:
- *   - the repo's `setupRunPolicy` is `'ask'` (the user must pick per-workspace)
- *   - the repo can't be resolved from `repoId`
- *   - no compatible agent is detected on PATH
- *
- * Best-effort: after workspace activation, paste failures only toast a notice — the user still
- * has a usable workspace and can paste the work item context themselves.
+ * Creates a workspace, launches its default agent, and delivers the work-item context.
+ * Preflight can fall back to the modal; post-activation prompt delivery is best-effort.
  */
 export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Promise<boolean> {
   const {
@@ -267,8 +260,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
     primaryTabId = activation.primaryTabId
   } catch (error) {
     structuredProducer?.failed(error)
-    const message = error instanceof Error ? error.message : 'Failed to create workspace.'
-    toast.error(message)
+    toast.error(error instanceof Error ? error.message : 'Failed to create workspace.')
     return false
   }
 
@@ -287,7 +279,7 @@ export async function launchWorkItemDirect(args: LaunchWorkItemDirectArgs): Prom
     })
   } catch (error) {
     structuredProducer?.failed(error)
-    toast.error(error instanceof Error ? error.message : 'The agent launch failed.')
+    toast.error(error instanceof Error ? error.message : agentLaunchErrorMessage())
     return false
   }
   if (structuredProducer) {
