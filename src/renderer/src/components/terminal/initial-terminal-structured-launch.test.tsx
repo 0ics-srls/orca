@@ -135,20 +135,23 @@ describe('startup agent recovery host inventory', () => {
     expect(mocks.resume).not.toHaveBeenCalled()
   })
 
-  it.each(['blocked', 'rejected'])('retries a %s startup after leaving and returning', async (outcome) => {
-    mocks.authority = 'live'
-    if (outcome === 'rejected') {
-      mocks.gate.mockRejectedValue(new Error('host unavailable'))
-    } else {
-      mocks.gate.mockResolvedValue('blocked')
+  it.each(['blocked', 'rejected'])(
+    'retries a %s startup after leaving and returning',
+    async (outcome) => {
+      mocks.authority = 'live'
+      if (outcome === 'rejected') {
+        mocks.gate.mockRejectedValue(new Error('host unavailable'))
+      } else {
+        mocks.gate.mockResolvedValue('blocked')
+      }
+      root = createRoot(document.createElement('div'))
+      await act(async () => root?.render(<Watcher hydrated />))
+      expect(mocks.gate).toHaveBeenCalledTimes(1)
+      await act(async () => root?.render(<Watcher hydrated worktreeId="wt-2" />))
+      mocks.gate.mockResolvedValue('adopted')
+      await act(async () => root?.render(<Watcher hydrated />))
+      expect(mocks.gate.mock.calls.map(([id]) => id)).toEqual(['wt-1', 'wt-2', 'wt-1'])
+      expect(mocks.resume).not.toHaveBeenCalled()
     }
-    root = createRoot(document.createElement('div'))
-    await act(async () => root?.render(<Watcher hydrated />))
-    expect(mocks.gate).toHaveBeenCalledTimes(1)
-    await act(async () => root?.render(<Watcher hydrated worktreeId="wt-2" />))
-    mocks.gate.mockResolvedValue('adopted')
-    await act(async () => root?.render(<Watcher hydrated />))
-    expect(mocks.gate.mock.calls.map(([id]) => id)).toEqual(['wt-1', 'wt-2', 'wt-1'])
-    expect(mocks.resume).not.toHaveBeenCalled()
-  })
+  )
 })
