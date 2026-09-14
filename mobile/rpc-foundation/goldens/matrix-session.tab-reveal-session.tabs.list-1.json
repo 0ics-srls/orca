@@ -5,598 +5,508 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "076ea52a7046": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
+    "0f9f4df04699": {
+      "name": "session.tabs.activate#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.activate\",\"params\":{\"worktree\":\"id:repo42::/p\",\"tabId\":\"tab-1\",\"notifyClients\":false,\"navigation\":\"caller\",\"intent\":\"user\"}}"
+    },
+    "12380cd54c7c": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
           }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "Error",
-            "message": "transport failure",
-            "isRpcDeliveryUnknown": true
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      }
-    ],
-    "09562e9b10d0": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
             "error": {
-              "code": "refused",
-              "message": "outer refused"
+              "message": "inner refused"
             },
-            "id": "frame-1",
             "ok": false
           }
         }
       }
-    ],
-    "0e8a9adb893e": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    },
+    "4fe73924ca34": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "refused",
-              "message": ""
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:repo42::/p"
           }
-        }
-      }
-    ],
-    "1c18367b5dd1": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+        },
+        {
+          "name": "options",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "$rpc": "absent"
           }
         }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
       }
-    ],
-    "2c781b7a1c65": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    },
+    "5fbe284a7387": {
+      "name": "session.tabs.activate#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.activate"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "error": "inner refused",
-              "ok": false
-            }
+            "intent": "user",
+            "navigation": "caller",
+            "notifyClients": false,
+            "tabId": "tab-1",
+            "worktree": "id:repo42::/p"
           }
-        }
-      }
-    ],
-    "2eed4168353a": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "Error",
-            "message": "",
-            "isRpcDeliveryUnknown": true
-          }
-        }
-      }
-    ],
-    "30d4c515231f": [
-      {
-        "name": "session.tabs.list#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
-      }
-    ],
-    "4f53cda18c2b": [],
-    "5c56d3419936": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+        },
+        {
+          "name": "options",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "tabs": [
-                {
-                  "id": "tab-term",
-                  "type": "terminal"
-                },
-                {
-                  "id": "tab-other",
-                  "mode": "diff",
-                  "relativePath": "src/other.ts",
-                  "type": "file"
-                },
-                {
-                  "diffSource": "unstaged",
-                  "id": "tab-1",
-                  "mode": "diff",
-                  "relativePath": "src/app.ts",
-                  "type": "file"
-                }
-              ]
-            }
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "session.tabs.activate#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.activate"
-          },
-          {
-            "name": "params",
-            "value": {
-              "intent": "user",
-              "navigation": "caller",
-              "notifyClients": false,
-              "tabId": "tab-1",
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
-        }
-      }
-    ],
-    "792993bdd92b": {
-      "reveal": {
+      ],
+      "settlement": {
         "status": "pending",
         "startedAt": 0
       }
     },
-    "8b037e7eb0fb": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
-        }
-      }
-    ],
-    "8c69aa3e5f3d": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "tabs": [
-                {
-                  "id": "tab-term",
-                  "type": "terminal"
-                },
-                {
-                  "id": "tab-other",
-                  "mode": "diff",
-                  "relativePath": "src/other.ts",
-                  "type": "file"
-                },
-                {
-                  "diffSource": "unstaged",
-                  "id": "tab-1",
-                  "mode": "diff",
-                  "relativePath": "src/app.ts",
-                  "type": "file"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "session.tabs.activate#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.activate"
-          },
-          {
-            "name": "params",
-            "value": {
-              "intent": "user",
-              "navigation": "caller",
-              "notifyClients": false,
-              "tabId": "tab-1",
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "activeTabId": "tab-1"
-            }
-          }
-        }
-      }
-    ],
-    "95a58f671053": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "error": {
-                "message": "inner refused"
-              },
-              "ok": false
-            }
-          }
-        }
-      }
-    ],
-    "aedd8e01429a": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true
-          }
-        }
-      }
-    ],
-    "b28b06bd4283": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "error": "refused"
-            }
-          }
-        }
-      }
-    ],
-    "bde782b3557a": {
-      "result": "revealed"
+    "60ef11dd407d": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": "revealed"
     },
-    "c6bd8ddd9810": [
-      {
-        "name": "session.tabs.list#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
-      },
-      {
-        "name": "session.tabs.activate#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.activate\",\"params\":{\"worktree\":\"id:repo42::/p\",\"tabId\":\"tab-1\",\"notifyClients\":false,\"navigation\":\"caller\",\"intent\":\"user\"}}"
+    "63a99e79af5b": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
       }
-    ],
-    "c7a157cde28d": {
-      "result": "unrevealed"
     },
-    "d6c1145d2188": {
-      "reveal": {
+    "661ed2754e93": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
-        "value": "revealed"
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": "outer refused"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
       }
     },
-    "f9611f7c09e5": [
-      {
-        "name": "session.tabs.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "session.tabs.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "7eb00dad4d0d": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "$rpc": "null"
-            }
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "$rpc": "null"
           }
         }
       }
-    ]
+    },
+    "9270aeb7d9c6": {
+      "status": "pending",
+      "startedAt": 0
+    },
+    "92b5192ed75d": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "tabs": [
+              {
+                "id": "tab-term",
+                "type": "terminal"
+              },
+              {
+                "id": "tab-other",
+                "mode": "diff",
+                "relativePath": "src/other.ts",
+                "type": "file"
+              },
+              {
+                "diffSource": "unstaged",
+                "id": "tab-1",
+                "mode": "diff",
+                "relativePath": "src/app.ts",
+                "type": "file"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "94db2ba485c5": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true
+        }
+      }
+    },
+    "b5a14b5bcd38": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "bb3b4ee6b927": {
+      "name": "session.tabs.activate#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.activate"
+        },
+        {
+          "name": "params",
+          "value": {
+            "intent": "user",
+            "navigation": "caller",
+            "notifyClients": false,
+            "tabId": "tab-1",
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "activeTabId": "tab-1"
+          }
+        }
+      }
+    },
+    "bde782b3557a": {
+      "result": "revealed"
+    },
+    "c3ee87ce1af9": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "error": "refused"
+          }
+        }
+      }
+    },
+    "c7a157cde28d": {
+      "result": "unrevealed"
+    },
+    "c7d63e6d1ae1": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": ""
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "eb116b4d99bb": {
+      "name": "session.tabs.list#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+    },
+    "f0e11346d0fc": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "error": "inner refused",
+            "ok": false
+          }
+        }
+      }
+    },
+    "f884811cfa05": {
+      "name": "session.tabs.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    }
   },
   "recording": {
     "scenario": "matrix-session.tab-reveal-session.tabs.list-1",
@@ -604,231 +514,277 @@
       {
         "id": "sc-reveal-first-poll.prelude:list-pending",
         "observation": {
-          "sender": "8b037e7eb0fb",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["f884811cfa05"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.normal:activate-pending",
         "observation": {
-          "sender": "5c56d3419936",
-          "payloads": "c6bd8ddd9810",
-          "settlements": "792993bdd92b",
+          "sender": ["92b5192ed75d", "5fbe284a7387"],
+          "payloads": ["eb116b4d99bb", "0f9f4df04699"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.normal:settled",
         "observation": {
-          "sender": "8c69aa3e5f3d",
-          "payloads": "c6bd8ddd9810",
-          "settlements": "d6c1145d2188",
+          "sender": ["92b5192ed75d", "bb3b4ee6b927"],
+          "payloads": ["eb116b4d99bb", "0f9f4df04699"],
+          "settlements": {
+            "reveal": "60ef11dd407d"
+          },
           "state": "bde782b3557a",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.result-absent:activate-pending",
         "observation": {
-          "sender": "aedd8e01429a",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["94db2ba485c5"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.result-absent:settled",
         "observation": {
-          "sender": "aedd8e01429a",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["94db2ba485c5"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.result-null:activate-pending",
         "observation": {
-          "sender": "f9611f7c09e5",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["7eb00dad4d0d"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.result-null:settled",
         "observation": {
-          "sender": "f9611f7c09e5",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["7eb00dad4d0d"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-ok-missing:activate-pending",
         "observation": {
-          "sender": "b28b06bd4283",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["c3ee87ce1af9"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-ok-missing:settled",
         "observation": {
-          "sender": "b28b06bd4283",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["c3ee87ce1af9"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-false-string-error:activate-pending",
         "observation": {
-          "sender": "2c781b7a1c65",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["f0e11346d0fc"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-false-string-error:settled",
         "observation": {
-          "sender": "2c781b7a1c65",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["f0e11346d0fc"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-false-object-error:activate-pending",
         "observation": {
-          "sender": "95a58f671053",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["12380cd54c7c"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.inner-false-object-error:settled",
         "observation": {
-          "sender": "95a58f671053",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["12380cd54c7c"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.outer-refused:activate-pending",
         "observation": {
-          "sender": "09562e9b10d0",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["661ed2754e93"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.outer-refused:settled",
         "observation": {
-          "sender": "09562e9b10d0",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["661ed2754e93"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.outer-refused-no-message:activate-pending",
         "observation": {
-          "sender": "0e8a9adb893e",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["c7d63e6d1ae1"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.outer-refused-no-message:settled",
         "observation": {
-          "sender": "0e8a9adb893e",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["c7d63e6d1ae1"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.method-not-found:activate-pending",
         "observation": {
-          "sender": "1c18367b5dd1",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["b5a14b5bcd38"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.method-not-found:settled",
         "observation": {
-          "sender": "1c18367b5dd1",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["b5a14b5bcd38"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.transport-rejection:activate-pending",
         "observation": {
-          "sender": "076ea52a7046",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["4fe73924ca34"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.transport-rejection:settled",
         "observation": {
-          "sender": "076ea52a7046",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["4fe73924ca34"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.transport-rejection-no-message:activate-pending",
         "observation": {
-          "sender": "2eed4168353a",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["63a99e79af5b"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "sc-reveal-first-poll.transport-rejection-no-message:settled",
         "observation": {
-          "sender": "2eed4168353a",
-          "payloads": "30d4c515231f",
-          "settlements": "792993bdd92b",
+          "sender": ["63a99e79af5b"],
+          "payloads": ["eb116b4d99bb"],
+          "settlements": {
+            "reveal": "9270aeb7d9c6"
+          },
           "state": "c7a157cde28d",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

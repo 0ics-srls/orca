@@ -5,11 +5,11 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
     "1852c739af4f": {
       "linkedPR": "unread",
@@ -17,108 +17,93 @@
         "ok": true
       }
     },
-    "1fa80941d479": [
-      {
-        "name": "worktree.set#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"baseRef\":\"origin/release\",\"linkedGitLabMR\":12}}"
-      },
-      {
-        "name": "worktree.set#2",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"linkedPR\":null}}"
-      }
-    ],
-    "4f53cda18c2b": [],
-    "855fe3591e0d": {
-      "link-review": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "ok": true
+    "1a42edf0b52f": {
+      "name": "worktree.set#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.set"
+        },
+        {
+          "name": "params",
+          "value": {
+            "linkedPR": {
+              "$rpc": "null"
+            },
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
         }
-      },
-      "unlink": {
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
         "value": {
-          "ok": true
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "ok": true
+          }
         }
       }
     },
-    "fa648e922a69": [
-      {
-        "name": "worktree.set#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "worktree.set"
-          },
-          {
-            "name": "params",
-            "value": {
-              "baseRef": "origin/release",
-              "linkedGitLabMR": 12,
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "9da958eddaa9": {
+      "name": "worktree.set#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.set"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "ok": true
-            }
+            "baseRef": "origin/release",
+            "linkedGitLabMR": 12,
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "worktree.set#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "worktree.set"
-          },
-          {
-            "name": "params",
-            "value": {
-              "linkedPR": {
-                "$rpc": "null"
-              },
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "ok": true
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "ok": true
           }
         }
       }
-    ]
+    },
+    "c2ccaf58540c": {
+      "name": "worktree.set#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"baseRef\":\"origin/release\",\"linkedGitLabMR\":12}}"
+    },
+    "e3b095dbc61d": {
+      "name": "worktree.set#2",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"linkedPR\":null}}"
+    },
+    "fbc958e4d46e": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "ok": true
+      }
+    }
   },
   "recording": {
     "scenario": "sc-pr-link-hosted-review",
@@ -126,11 +111,14 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "fa648e922a69",
-          "payloads": "1fa80941d479",
-          "settlements": "855fe3591e0d",
+          "sender": ["9da958eddaa9", "1a42edf0b52f"],
+          "payloads": ["c2ccaf58540c", "e3b095dbc61d"],
+          "settlements": {
+            "link-review": "fbc958e4d46e",
+            "unlink": "fbc958e4d46e"
+          },
           "state": "1852c739af4f",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

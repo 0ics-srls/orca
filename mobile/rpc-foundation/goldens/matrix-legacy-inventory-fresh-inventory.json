@@ -5,1947 +5,587 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "305c86832cd8": {
-      "mount": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
+    "0d903486cbe8": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
         }
-      },
-      "old": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 240
       }
     },
-    "3390ae6d62f2": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    "1ba589a74085": {
+      "name": "files.searchPaths#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.searchPaths"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "limit": 16,
+            "query": "fresh",
+            "worktree": "id:A"
           }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
+        },
+        {
+          "name": "options",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 240
-        }
-      }
-    ],
-    "35af95861be6": {
-      "mount": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "old": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "select-b": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "reset-a": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "fresh": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      }
-    },
-    "36473858b7fa": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 240,
-          "settledAt": 360,
-          "error": {
-            "category": "Error",
-            "message": "",
-            "isRpcDeliveryUnknown": true
-          }
-        }
-      }
-    ],
-    "4f53cda18c2b": [],
-    "503748c2080e": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 240,
-          "settledAt": 360,
-          "error": {
-            "category": "Error",
-            "message": "transport failure",
-            "isRpcDeliveryUnknown": true
-          }
-        }
-      }
-    ],
-    "5386959d4549": {
-      "mount": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "old": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "select-b": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "reset-a": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "fresh": {
-        "status": "fulfilled",
-        "startedAt": 120,
-        "settledAt": 120,
-        "value": {
-          "$rpc": "undefined"
-        }
-      },
-      "third": {
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 240,
         "settledAt": 240,
         "value": {
-          "$rpc": "undefined"
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-3",
+          "ok": false
+        }
+      }
+    },
+    "2837f481a843": {
+      "name": "files.list#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:A\"}}"
+    },
+    "3b6419fbab75": {
+      "status": "fulfilled",
+      "startedAt": 240,
+      "settledAt": 240,
+      "value": {
+        "$rpc": "undefined"
+      }
+    },
+    "4c6301522bc0": {
+      "name": "files.list#2",
+      "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:A\"}}"
+    },
+    "519f35cc355f": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true
+        }
+      }
+    },
+    "5d5510c9fa8e": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true,
+          "result": {
+            "$rpc": "null"
+          }
         }
       }
     },
     "602e35a92eec": {
       "files": []
     },
-    "669922ce9786": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    "603254c040fc": {
+      "name": "files.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 120,
+        "settledAt": 240,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "files": [
+              {
+                "relativePath": "old.ts"
+              }
+            ]
           }
         }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
+      }
+    },
+    "6fcbcfd641a6": {
+      "name": "files.searchPaths#2",
+      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"files.searchPaths\",\"params\":{\"worktree\":\"id:A\",\"query\":\"fresh\",\"limit\":16}}"
+    },
+    "7dd55e908e3e": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 240,
+        "settledAt": 360,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "83cec65a43c1": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 240,
+        "settledAt": 360,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "94e75c7ab64a": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true,
+          "result": {
             "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
+              "message": "inner refused"
             },
-            "id": "frame-4",
             "ok": false
           }
         }
       }
-    ],
-    "6713de8f80d3": [
-      {
-        "name": "files.searchPaths#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.searchPaths\",\"params\":{\"worktree\":\"id:A\",\"query\":\"old\",\"limit\":16}}"
-      },
-      {
-        "name": "files.list#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:A\"}}"
-      }
-    ],
-    "704590c6cdbf": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true,
-            "result": {
-              "error": "inner refused",
-              "ok": false
-            }
-          }
-        }
-      }
-    ],
-    "86c71b031c6d": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "error": {
-              "code": "refused",
-              "message": ""
-            },
-            "id": "frame-4",
-            "ok": false
-          }
-        }
-      }
-    ],
-    "872323868410": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true
-          }
-        }
-      }
-    ],
-    "9263e4ff521c": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true,
-            "result": {
-              "error": {
-                "message": "inner refused"
-              },
-              "ok": false
-            }
-          }
-        }
-      }
-    ],
-    "97ccce4248eb": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 120
-        }
-      }
-    ],
+    },
+    "9dea95bddfe5": {
+      "name": "files.searchPaths#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.searchPaths\",\"params\":{\"worktree\":\"id:A\",\"query\":\"old\",\"limit\":16}}"
+    },
     "a129552fdc6e": {
       "files": ["third.ts"]
     },
-    "a2895aaf51be": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    "a697ecf6864e": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": ""
           },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
+          "id": "frame-4",
+          "ok": false
+        }
+      }
+    },
+    "b2434f1de9f6": {
+      "name": "files.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 120
+      }
+    },
+    "b97155d69b76": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true,
-            "result": {
-              "$rpc": "null"
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true,
+          "result": {
+            "error": "refused"
           }
         }
       }
-    ],
-    "ad0f58f0684c": [
-      {
-        "name": "files.searchPaths#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.searchPaths\",\"params\":{\"worktree\":\"id:A\",\"query\":\"old\",\"limit\":16}}"
-      },
-      {
-        "name": "files.list#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:A\"}}"
-      },
-      {
-        "name": "files.searchPaths#2",
-        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"files.searchPaths\",\"params\":{\"worktree\":\"id:A\",\"query\":\"fresh\",\"limit\":16}}"
-      },
-      {
-        "name": "files.list#2",
-        "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:A\"}}"
+    },
+    "c0821dc354d7": {
+      "name": "files.searchPaths#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.searchPaths"
+        },
+        {
+          "name": "params",
+          "value": {
+            "limit": 16,
+            "query": "old",
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 120,
+        "settledAt": 120,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
       }
-    ],
-    "b3b91a2d6c56": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    },
+    "d2ad71e601c4": {
+      "status": "fulfilled",
+      "startedAt": 120,
+      "settledAt": 120,
+      "value": {
+        "$rpc": "undefined"
+      }
+    },
+    "d704d5a97c9c": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
           },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
+          "id": "frame-4",
+          "ok": false
+        }
+      }
+    },
+    "daf226a0261c": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true,
-            "result": {
-              "error": "refused"
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true,
+          "result": {
+            "files": [
+              {
+                "relativePath": "fresh.ts"
+              },
+              {
+                "relativePath": "third.ts"
+              }
+            ]
           }
         }
       }
-    ],
-    "d99de913c78a": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    },
+    "ed722785cd67": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "error": {
-              "code": "refused",
-              "message": "outer refused"
-            },
-            "id": "frame-4",
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "id": "frame-4",
+          "ok": true,
+          "result": {
+            "error": "inner refused",
             "ok": false
           }
         }
       }
-    ],
-    "e72410768c32": [
-      {
-        "name": "files.searchPaths#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "old",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 120,
+    },
+    "f427ba18f654": {
+      "name": "files.list#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "files.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-1",
-            "ok": false
+            "worktree": "id:A"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "files.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 240,
+        "settledAt": 360,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": "outer refused"
           },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 120,
-          "settledAt": 240,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "old.ts"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "files.searchPaths#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.searchPaths"
-          },
-          {
-            "name": "params",
-            "value": {
-              "limit": 16,
-              "query": "fresh",
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 240,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      },
-      {
-        "name": "files.list#2",
-        "args": [
-          {
-            "name": "method",
-            "value": "files.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:A"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 240,
-          "settledAt": 360,
-          "value": {
-            "id": "frame-4",
-            "ok": true,
-            "result": {
-              "files": [
-                {
-                  "relativePath": "fresh.ts"
-                },
-                {
-                  "relativePath": "third.ts"
-                }
-              ]
-            }
-          }
+          "id": "frame-4",
+          "ok": false
         }
       }
-    ]
+    }
   },
   "recording": {
     "scenario": "matrix-legacy-inventory-fresh-inventory",
@@ -1953,141 +593,234 @@
       {
         "id": "b1.prelude:old-pending",
         "observation": {
-          "sender": "97ccce4248eb",
-          "payloads": "6713de8f80d3",
-          "settlements": "305c86832cd8",
+          "sender": ["c0821dc354d7", "b2434f1de9f6"],
+          "payloads": ["9dea95bddfe5", "2837f481a843"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.prelude:stale-arrived-fresh-pending",
         "observation": {
-          "sender": "3390ae6d62f2",
-          "payloads": "ad0f58f0684c",
-          "settlements": "35af95861be6",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "0d903486cbe8"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.prelude:third-query",
         "observation": {
-          "sender": "3390ae6d62f2",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "0d903486cbe8"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.normal:fresh-arrived",
         "observation": {
-          "sender": "e72410768c32",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "daf226a0261c"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "a129552fdc6e",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.result-absent:fresh-arrived",
         "observation": {
-          "sender": "872323868410",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "519f35cc355f"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.result-null:fresh-arrived",
         "observation": {
-          "sender": "a2895aaf51be",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "5d5510c9fa8e"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.inner-ok-missing:fresh-arrived",
         "observation": {
-          "sender": "b3b91a2d6c56",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "b97155d69b76"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.inner-false-string-error:fresh-arrived",
         "observation": {
-          "sender": "704590c6cdbf",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "ed722785cd67"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.inner-false-object-error:fresh-arrived",
         "observation": {
-          "sender": "9263e4ff521c",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "94e75c7ab64a"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.outer-refused:fresh-arrived",
         "observation": {
-          "sender": "d99de913c78a",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "f427ba18f654"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.outer-refused-no-message:fresh-arrived",
         "observation": {
-          "sender": "86c71b031c6d",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "a697ecf6864e"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.method-not-found:fresh-arrived",
         "observation": {
-          "sender": "669922ce9786",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "d704d5a97c9c"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.transport-rejection:fresh-arrived",
         "observation": {
-          "sender": "503748c2080e",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "83cec65a43c1"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "b1.transport-rejection-no-message:fresh-arrived",
         "observation": {
-          "sender": "36473858b7fa",
-          "payloads": "ad0f58f0684c",
-          "settlements": "5386959d4549",
+          "sender": ["c0821dc354d7", "603254c040fc", "1ba589a74085", "7dd55e908e3e"],
+          "payloads": ["9dea95bddfe5", "2837f481a843", "6fcbcfd641a6", "4c6301522bc0"],
+          "settlements": {
+            "mount": "eb79a9b3682a",
+            "old": "eb79a9b3682a",
+            "select-b": "d2ad71e601c4",
+            "reset-a": "d2ad71e601c4",
+            "fresh": "d2ad71e601c4",
+            "third": "3b6419fbab75"
+          },
           "state": "602e35a92eec",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

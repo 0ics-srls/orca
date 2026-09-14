@@ -5,24 +5,33 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "4f53cda18c2b": [],
-    "90f981f56526": [
-      {
-        "name": "git.cancelGenerateCommitMessage#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.cancelGenerateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
-      }
-    ],
-    "adb40821f3e2": {
-      "generated": "ungenerated"
-    },
-    "e4594c595a3c": {
-      "cancel": {
+    "029ea2c16f05": {
+      "name": "git.cancelGenerateCommitMessage#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.cancelGenerateCommitMessage"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
         "status": "rejected",
         "startedAt": 0,
         "settledAt": 0,
@@ -33,39 +42,23 @@
         }
       }
     },
-    "fbb82b884f97": [
-      {
-        "name": "git.cancelGenerateCommitMessage#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.cancelGenerateCommitMessage"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "Error",
-            "message": "transport failure",
-            "isRpcDeliveryUnknown": true
-          }
-        }
+    "677c1cb5e628": {
+      "name": "git.cancelGenerateCommitMessage#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.cancelGenerateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+    },
+    "a947768bc0ed": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "transport failure",
+        "isRpcDeliveryUnknown": true
       }
-    ]
+    },
+    "adb40821f3e2": {
+      "generated": "ungenerated"
+    }
   },
   "recording": {
     "scenario": "sc-commit-message-cancel-rejected",
@@ -73,11 +66,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "fbb82b884f97",
-          "payloads": "90f981f56526",
-          "settlements": "e4594c595a3c",
+          "sender": ["029ea2c16f05"],
+          "payloads": ["677c1cb5e628"],
+          "settlements": {
+            "cancel": "a947768bc0ed"
+          },
           "state": "adb40821f3e2",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

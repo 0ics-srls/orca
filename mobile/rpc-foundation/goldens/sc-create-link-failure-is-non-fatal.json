@@ -5,103 +5,106 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "37d747ad162f": [
-      {
-        "name": "hostedReview.create#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "hostedReview.create"
-          },
-          {
-            "name": "params",
-            "value": {
-              "base": "main",
-              "body": "Recorded body",
-              "draft": false,
-              "head": "feature",
-              "provider": "github",
-              "repo": "id:repo42",
-              "title": "Recorded title",
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "122ef8a1f0b9": {
+      "name": "hostedReview.create#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "hostedReview.create"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "number": 5,
-              "ok": true,
-              "url": "https://review.test/5"
-            }
+            "base": "main",
+            "body": "Recorded body",
+            "draft": false,
+            "head": "feature",
+            "provider": "github",
+            "repo": "id:repo42",
+            "title": "Recorded title",
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "worktree.set#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "worktree.set"
-          },
-          {
-            "name": "params",
-            "value": {
-              "baseRef": "main",
-              "linkedPR": 5,
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "error": {
-              "code": "internal",
-              "message": ""
-            },
-            "id": "frame-2",
-            "ok": false
-          }
-        }
-      }
-    ],
-    "4f53cda18c2b": [],
-    "baf4ca5d8a43": {
-      "create": {
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
         "value": {
-          "linkError": "Failed to update linked review",
-          "number": 5,
+          "id": "frame-1",
           "ok": true,
-          "url": "https://review.test/5"
+          "result": {
+            "number": 5,
+            "ok": true,
+            "url": "https://review.test/5"
+          }
+        }
+      }
+    },
+    "1617f98dc371": {
+      "name": "hostedReview.create#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"hostedReview.create\",\"params\":{\"repo\":\"id:repo42\",\"worktree\":\"id:repo42::/p\",\"provider\":\"github\",\"base\":\"main\",\"head\":\"feature\",\"title\":\"Recorded title\",\"body\":\"Recorded body\",\"draft\":false}}"
+    },
+    "3ff86ed23cf9": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "linkError": "Failed to update linked review",
+        "number": 5,
+        "ok": true,
+        "url": "https://review.test/5"
+      }
+    },
+    "7b353f33f66f": {
+      "name": "worktree.set#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"baseRef\":\"main\",\"linkedPR\":5}}"
+    },
+    "91f262b2079b": {
+      "name": "worktree.set#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.set"
+        },
+        {
+          "name": "params",
+          "value": {
+            "baseRef": "main",
+            "linkedPR": 5,
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "internal",
+            "message": ""
+          },
+          "id": "frame-2",
+          "ok": false
         }
       }
     },
@@ -112,17 +115,7 @@
         "ok": true,
         "url": "https://review.test/5"
       }
-    },
-    "e76a5e4ca649": [
-      {
-        "name": "hostedReview.create#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"hostedReview.create\",\"params\":{\"repo\":\"id:repo42\",\"worktree\":\"id:repo42::/p\",\"provider\":\"github\",\"base\":\"main\",\"head\":\"feature\",\"title\":\"Recorded title\",\"body\":\"Recorded body\",\"draft\":false}}"
-      },
-      {
-        "name": "worktree.set#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.set\",\"params\":{\"worktree\":\"id:repo42::/p\",\"baseRef\":\"main\",\"linkedPR\":5}}"
-      }
-    ]
+    }
   },
   "recording": {
     "scenario": "sc-create-link-failure-is-non-fatal",
@@ -130,11 +123,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "37d747ad162f",
-          "payloads": "e76a5e4ca649",
-          "settlements": "baf4ca5d8a43",
+          "sender": ["122ef8a1f0b9", "91f262b2079b"],
+          "payloads": ["1617f98dc371", "7b353f33f66f"],
+          "settlements": {
+            "create": "3ff86ed23cf9"
+          },
           "state": "e5dbe1f8903e",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

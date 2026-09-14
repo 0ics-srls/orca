@@ -5,77 +5,69 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
+    "00e8a3bac22f": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "ok": true,
+        "ran": true
+      }
+    },
     "0fe2eb2410a4": {
       "outcome": {
         "ok": true,
         "ran": true
       }
     },
-    "403c2729a4a8": {
-      "apply": {
+    "387442f96b16": {
+      "name": "git.push#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.push\",\"params\":{\"worktree\":\"id:repo42::/p\",\"publish\":true}}"
+    },
+    "b12e1ce5068c": {
+      "name": "git.push#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.push"
+        },
+        {
+          "name": "params",
+          "value": {
+            "publish": true,
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
         "value": {
+          "id": "frame-1",
           "ok": true,
-          "ran": true
+          "result": {
+            "ok": true
+          }
         }
       }
     },
-    "44787c8cdf35": [
-      {
-        "name": "git.push#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.push\",\"params\":{\"worktree\":\"id:repo42::/p\",\"publish\":true}}"
-      }
-    ],
-    "aa69286387b8": [
-      {
-        "name": "git.push#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.push"
-          },
-          {
-            "name": "params",
-            "value": {
-              "publish": true,
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "ok": true
-            }
-          }
-        }
-      }
-    ],
-    "db31fdd5a3a0": [
-      {
-        "name": "progress",
-        "value": "publishing"
-      }
-    ]
+    "dc538c734db2": {
+      "name": "progress",
+      "value": "publishing"
+    }
   },
   "recording": {
     "scenario": "sc-prerequisite-publish",
@@ -83,11 +75,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "aa69286387b8",
-          "payloads": "44787c8cdf35",
-          "settlements": "403c2729a4a8",
+          "sender": ["b12e1ce5068c"],
+          "payloads": ["387442f96b16"],
+          "settlements": {
+            "apply": "00e8a3bac22f"
+          },
           "state": "0fe2eb2410a4",
-          "effects": "db31fdd5a3a0"
+          "effects": ["dc538c734db2"]
         }
       }
     ]

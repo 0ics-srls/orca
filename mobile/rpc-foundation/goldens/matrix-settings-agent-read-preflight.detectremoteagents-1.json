@@ -5,228 +5,33 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "08dec2e70517": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "07d4c9b0eaf2": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "connectionId": "ssh-1"
           }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+        },
+        {
+          "name": "options",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-3",
-            "ok": true,
-            "result": ["codex", "claude"]
-          }
-        }
-      }
-    ],
-    "11cfd9df4619": {
-      "load": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "",
-          "isRpcDeliveryUnknown": false
-        }
-      }
-    },
-    "155ff7f445b7": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
-        }
-      }
-    ],
-    "3076d0a13ab4": [
-      {
-        "name": "repo.list#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
-      },
-      {
-        "name": "settings.get#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
-      }
-    ],
-    "44136fa355b3": {},
-    "4990c034cddd": {
-      "load": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": [
-          {
-            "agent": "codex",
-            "label": "Codex"
-          },
-          {
-            "agent": "claude",
-            "label": "Claude"
-          }
-        ]
-      }
-    },
-    "4f53cda18c2b": [],
-    "503a535a0cd0": [
-      {
-        "name": "repo.list#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
-      },
-      {
-        "name": "settings.get#1",
-        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"preflight.detectRemoteAgents\",\"params\":{\"connectionId\":\"ssh-1\"}}"
-      }
-    ],
-    "53c0d711b3b1": {
-      "load": {
+      ],
+      "settlement": {
         "status": "rejected",
         "startedAt": 0,
         "settledAt": 0,
@@ -237,226 +42,348 @@
         }
       }
     },
-    "57c2497819a8": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "090c88478661": {
+      "name": "settings.get#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "settings.get"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "0fc9b6295af5": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": {
+            "error": "refused"
           }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+        }
+      }
+    },
+    "25716369cd8f": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": []
+    },
+    "26accd69bc48": {
+      "name": "repo.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "repo.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-3",
-            "ok": true,
-            "result": {
-              "error": "refused"
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "2f067ba3a711": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": {
+            "error": "inner refused",
+            "ok": false
+          }
+        }
+      }
+    },
+    "32a7c0ae7918": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "outer refused",
+        "isRpcDeliveryUnknown": false
+      }
+    },
+    "3cc72974b9bb": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "refused",
+            "message": ""
+          },
+          "id": "frame-3",
+          "ok": false
+        }
+      }
+    },
+    "44136fa355b3": {},
+    "4ed35c961a4b": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-3",
+          "ok": true
+        }
+      }
+    },
+    "554718767f5a": {
+      "name": "settings.get#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "settings.get"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "settings": {
+              "defaultTuiAgent": "codex",
+              "disabledTuiAgents": []
             }
           }
         }
       }
-    ],
-    "6547c0c758a0": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    },
+    "5651342f395d": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "TypeError",
+        "message": "detectedAgents is not iterable",
+        "isRpcDeliveryUnknown": false
+      }
+    },
+    "63c912abe2bc": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-3",
-            "ok": true,
-            "result": {
-              "$rpc": "null"
-            }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": {
+            "error": {
+              "message": "inner refused"
+            },
+            "ok": false
           }
         }
       }
-    ],
-    "6b6f4308d734": {
-      "load": {
+    },
+    "6bdbf70bafa2": {
+      "name": "repo.list#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+    },
+    "6fe734ca80ae": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": {
+            "$rpc": "null"
+          }
+        }
+      }
+    },
+    "9270aeb7d9c6": {
+      "status": "pending",
+      "startedAt": 0
+    },
+    "95dee1165f95": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
         "status": "rejected",
         "startedAt": 0,
         "settledAt": 0,
@@ -467,928 +394,206 @@
         }
       }
     },
-    "745cabcc39bc": {
-      "load": {
-        "status": "rejected",
-        "startedAt": 0,
-        "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "outer refused",
-          "isRpcDeliveryUnknown": false
+    "9c4be43625f0": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
+          "value": {
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
         }
-      }
-    },
-    "7b678e044a1e": {
-      "load": {
+      ],
+      "settlement": {
         "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
-        "value": []
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": ["codex", "claude"]
+        }
       }
     },
-    "a664fa36782f": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-3",
-            "ok": true,
-            "result": {
-              "error": "inner refused",
-              "ok": false
-            }
-          }
-        }
-      }
-    ],
-    "b11c8efab170": {
-      "load": {
-        "status": "pending",
-        "startedAt": 0
+    "a947768bc0ed": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "transport failure",
+        "isRpcDeliveryUnknown": true
       }
     },
-    "ba7b0add1400": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
+    "b27c85677730": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": [
+        {
+          "agent": "codex",
+          "label": "Codex"
+        },
+        {
+          "agent": "claude",
+          "label": "Claude"
         }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "error": {
-              "code": "method_not_found",
-              "message": "Unknown method"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
+      ]
+    },
+    "b69a18178af8": {
+      "name": "preflight.detectRemoteAgents#1",
+      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"preflight.detectRemoteAgents\",\"params\":{\"connectionId\":\"ssh-1\"}}"
+    },
+    "b948e8307e81": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "Unknown method",
+        "isRpcDeliveryUnknown": false
       }
-    ],
-    "bb02eec9cdfa": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    },
+    "bae1ab4f96f9": {
+      "name": "repo.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "repo.list"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "$rpc": "absent"
           }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+        },
+        {
+          "name": "options",
           "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "Error",
-            "message": "transport failure",
-            "isRpcDeliveryUnknown": true
-          }
-        }
-      }
-    ],
-    "c6b41583daa3": {
-      "load": {
-        "status": "rejected",
+      ],
+      "settlement": {
+        "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
-        "error": {
-          "category": "TypeError",
-          "message": "detectedAgents is not iterable",
-          "isRpcDeliveryUnknown": false
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "repos": [
+              {
+                "connectionId": "ssh-1",
+                "id": "repo-1"
+              }
+            ]
+          }
         }
       }
     },
-    "d01153b51693": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "c2a61640d827": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-3",
-            "ok": true
-          }
-        }
-      }
-    ],
-    "d827c78b2f7b": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "error": {
-              "code": "refused",
-              "message": "outer refused"
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      }
-    ],
-    "eb62a8d6878c": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "error": {
-              "code": "refused",
-              "message": ""
-            },
-            "id": "frame-3",
-            "ok": false
-          }
-        }
-      }
-    ],
-    "f044f1381dbf": {
-      "load": {
-        "status": "rejected",
+      ],
+      "settlement": {
+        "status": "fulfilled",
         "startedAt": 0,
         "settledAt": 0,
-        "error": {
-          "category": "Error",
-          "message": "Unknown method",
-          "isRpcDeliveryUnknown": false
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-3",
+          "ok": false
         }
       }
     },
-    "f4f48c98c112": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
-          }
-        }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-3",
-            "ok": true,
-            "result": {
-              "error": {
-                "message": "inner refused"
-              },
-              "ok": false
-            }
-          }
-        }
+    "c7584e82c72f": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "",
+        "isRpcDeliveryUnknown": true
       }
-    ],
-    "f55f6feace5e": [
-      {
-        "name": "repo.list#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "repo.list"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    },
+    "d32b9c7891a0": {
+      "name": "preflight.detectRemoteAgents#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "preflight.detectRemoteAgents"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "repos": [
-                {
-                  "connectionId": "ssh-1",
-                  "id": "repo-1"
-                }
-              ]
-            }
+            "connectionId": "ssh-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
-      },
-      {
-        "name": "settings.get#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "settings.get"
-          },
-          {
-            "name": "params",
-            "value": {
-              "$rpc": "absent"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
-          "value": {
-            "id": "frame-2",
-            "ok": true,
-            "result": {
-              "settings": {
-                "defaultTuiAgent": "codex",
-                "disabledTuiAgents": []
-              }
-            }
-          }
-        }
-      },
-      {
-        "name": "preflight.detectRemoteAgents#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "preflight.detectRemoteAgents"
-          },
-          {
-            "name": "params",
-            "value": {
-              "connectionId": "ssh-1"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
           "error": {
-            "category": "Error",
-            "message": "",
-            "isRpcDeliveryUnknown": true
-          }
+            "code": "refused",
+            "message": "outer refused"
+          },
+          "id": "frame-3",
+          "ok": false
         }
       }
-    ]
+    },
+    "eac54552d8bc": {
+      "name": "settings.get#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
+    },
+    "f3b516f62081": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "",
+        "isRpcDeliveryUnknown": false
+      }
+    }
   },
   "recording": {
     "scenario": "matrix-settings-agent-read-preflight.detectremoteagents-1",
@@ -1396,121 +601,145 @@
       {
         "id": "settings-new-tab-ssh.prelude:pending",
         "observation": {
-          "sender": "155ff7f445b7",
-          "payloads": "3076d0a13ab4",
-          "settlements": "b11c8efab170",
+          "sender": ["26accd69bc48", "090c88478661"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc"],
+          "settlements": {
+            "load": "9270aeb7d9c6"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.normal:settled",
         "observation": {
-          "sender": "08dec2e70517",
-          "payloads": "503a535a0cd0",
-          "settlements": "4990c034cddd",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "9c4be43625f0"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "b27c85677730"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.result-absent:settled",
         "observation": {
-          "sender": "d01153b51693",
-          "payloads": "503a535a0cd0",
-          "settlements": "7b678e044a1e",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "4ed35c961a4b"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "25716369cd8f"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.result-null:settled",
         "observation": {
-          "sender": "6547c0c758a0",
-          "payloads": "503a535a0cd0",
-          "settlements": "7b678e044a1e",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "6fe734ca80ae"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "25716369cd8f"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.inner-ok-missing:settled",
         "observation": {
-          "sender": "57c2497819a8",
-          "payloads": "503a535a0cd0",
-          "settlements": "c6b41583daa3",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "0fc9b6295af5"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "5651342f395d"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.inner-false-string-error:settled",
         "observation": {
-          "sender": "a664fa36782f",
-          "payloads": "503a535a0cd0",
-          "settlements": "c6b41583daa3",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "2f067ba3a711"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "5651342f395d"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.inner-false-object-error:settled",
         "observation": {
-          "sender": "f4f48c98c112",
-          "payloads": "503a535a0cd0",
-          "settlements": "c6b41583daa3",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "63c912abe2bc"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "5651342f395d"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.outer-refused:settled",
         "observation": {
-          "sender": "d827c78b2f7b",
-          "payloads": "503a535a0cd0",
-          "settlements": "745cabcc39bc",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "d32b9c7891a0"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "32a7c0ae7918"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.outer-refused-no-message:settled",
         "observation": {
-          "sender": "eb62a8d6878c",
-          "payloads": "503a535a0cd0",
-          "settlements": "11cfd9df4619",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "3cc72974b9bb"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "f3b516f62081"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.method-not-found:settled",
         "observation": {
-          "sender": "ba7b0add1400",
-          "payloads": "503a535a0cd0",
-          "settlements": "f044f1381dbf",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "c2a61640d827"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "b948e8307e81"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.transport-rejection:settled",
         "observation": {
-          "sender": "bb02eec9cdfa",
-          "payloads": "503a535a0cd0",
-          "settlements": "53c0d711b3b1",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "07d4c9b0eaf2"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "a947768bc0ed"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settings-new-tab-ssh.transport-rejection-no-message:settled",
         "observation": {
-          "sender": "f55f6feace5e",
-          "payloads": "503a535a0cd0",
-          "settlements": "6b6f4308d734",
+          "sender": ["bae1ab4f96f9", "554718767f5a", "95dee1165f95"],
+          "payloads": ["6bdbf70bafa2", "eac54552d8bc", "b69a18178af8"],
+          "settlements": {
+            "load": "c7584e82c72f"
+          },
           "state": "44136fa355b3",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

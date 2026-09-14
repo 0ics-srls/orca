@@ -5,28 +5,25 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "4f53cda18c2b": [],
-    "cede2a5d35c8": {
-      "outcome": {
+    "69f421c50546": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
         "ok": true,
         "ran": false
       }
     },
-    "ecb76b3674d9": {
-      "apply": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "ok": true,
-          "ran": false
-        }
+    "cede2a5d35c8": {
+      "outcome": {
+        "ok": true,
+        "ran": false
       }
     }
   },
@@ -36,11 +33,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "4f53cda18c2b",
-          "payloads": "4f53cda18c2b",
-          "settlements": "ecb76b3674d9",
+          "sender": [],
+          "payloads": [],
+          "settlements": {
+            "apply": "69f421c50546"
+          },
           "state": "cede2a5d35c8",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

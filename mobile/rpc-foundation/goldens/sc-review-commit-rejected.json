@@ -5,47 +5,53 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "4f53cda18c2b": [],
-    "6b52bb2bfbf5": [
-      {
-        "name": "git.commit#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.commit"
-          },
-          {
-            "name": "params",
-            "value": {
-              "message": "recorded message",
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
+    "01bab795ab1e": {
+      "name": "git.commit#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.commit"
+        },
+        {
+          "name": "params",
+          "value": {
+            "message": "recorded message",
+            "worktree": "id:repo42::/p"
           }
-        ],
-        "settlement": {
-          "status": "rejected",
-          "startedAt": 0,
-          "settledAt": 0,
-          "error": {
-            "category": "Error",
-            "message": "connection lost",
-            "isRpcDeliveryUnknown": true
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
           }
         }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "connection lost",
+          "isRpcDeliveryUnknown": true
+        }
       }
-    ],
+    },
+    "465d78c22406": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "error": "connection lost",
+        "ok": false
+      }
+    },
     "7c923ba16626": {
       "committed": {
         "error": "connection lost",
@@ -53,23 +59,10 @@
       },
       "status": "unread"
     },
-    "b2d3bde98394": {
-      "commit": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "error": "connection lost",
-          "ok": false
-        }
-      }
-    },
-    "caecd7471a83": [
-      {
-        "name": "git.commit#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.commit\",\"params\":{\"worktree\":\"id:repo42::/p\",\"message\":\"recorded message\"}}"
-      }
-    ]
+    "e9c816eee026": {
+      "name": "git.commit#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.commit\",\"params\":{\"worktree\":\"id:repo42::/p\",\"message\":\"recorded message\"}}"
+    }
   },
   "recording": {
     "scenario": "sc-review-commit-rejected",
@@ -77,11 +70,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "6b52bb2bfbf5",
-          "payloads": "caecd7471a83",
-          "settlements": "b2d3bde98394",
+          "sender": ["01bab795ab1e"],
+          "payloads": ["e9c816eee026"],
+          "settlements": {
+            "commit": "465d78c22406"
+          },
           "state": "7c923ba16626",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

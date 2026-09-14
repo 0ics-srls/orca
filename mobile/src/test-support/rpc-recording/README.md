@@ -75,13 +75,31 @@ Platform is provenance; candidate comparison does not require the same operating
 
 ### Value pool
 
-Format version 2 stores each distinct observation field value once under `values`, keyed by the
-first 12 hex of sha256 over the value's sorted-key, whitespace-free JSON. A checkpoint holds five
-hashes (`sender`, `payloads`, `settlements`, `state`, `effects`). Files stay pretty-printed so a
-diff is reviewable; compact printing, element-level interning of list fields and delta encoding
-against the previous checkpoint were measured and rejected. `readGolden` refuses any other
-`goldenFormatVersion`, resolves hashes back to values, and `compareGolden` reports the scenario,
-the checkpoint id, the field, the JSON path inside it, and both resolved values.
+Format version 3 stores each distinct observation _entry_ once under `values`, keyed by the first
+12 hex of sha256 over the entry's sorted-key, whitespace-free JSON. `golden-value-pool.ts` declares
+how each field interns rather than sniffing it from the value: `sender`, `payloads` and `effects`
+are lists of pool hashes, `settlements` is a map from action id to a pool hash, and `state` is one
+hash. A field recorded in a container its declaration does not name fails, so a projection change
+cannot silently flip a field's encoding. Files stay pretty-printed; compact printing and recursive
+interning of nested sub-values were measured and rejected.
+
+Version 2 pooled each field _whole_, which stored the shared prefix of these append-only histories
+once per checkpoint — and once per reply partition in a matrix golden. Interning per entry is a
+pure re-encoding: the resolved `Recording` is unchanged, which is why the version bump moved no
+observation. Over the 153 goldens it is 5.35 MB → 2.78 MB raw, and the pathological family
+(`hostedReview.create-intent`, 12 sites over a 12-request chain) 2.0 MB → 792 KB.
+
+It also makes a real diff smaller rather than larger, which is the opposite of what version 2's
+note predicted. Adding a `timeoutMs` to the first `git.status` of the create-intent chain — an
+early request every downstream checkpoint re-states — touches the same 16 files either way, but
+under version 2 that is ±17,100 lines and 1.03 MB of diff, and under version 3 ±3,764 lines and
+0.20 MB, because a moved entry no longer rewrites every field value that contains it.
+
+`readGolden` refuses any other `goldenFormatVersion`, checks that every pooled entry hashes to its
+own key and that no entry sits in the pool unreferenced — content addressing is what keeps an entry
+shared across checkpoints honest, and an unread entry would be content in the file that nothing
+compares. It then resolves hashes back to values, and `compareGolden` reports the scenario, the
+checkpoint id, the field, the JSON path inside it, and both resolved values.
 
 ### Prelude checkpoints
 
@@ -92,6 +110,12 @@ variant's pre-divergence prefix matches the base. Reply matrices, interruption s
 lifecycle schedules use it. Checkpoints that merely happen to be equal are never merged: reaching
 the same state through different inputs is evidence. Sibling schedules already drop their shared
 prefix, so they are unchanged.
+
+Nothing about a shared prelude is unverified. The `.prelude` scenario's checkpoints live in the same
+golden as the variants that start after them, and `compareGolden` walks every checkpoint in the
+file, so changing the prelude fails the golden it belongs to. The value pool does not weaken that:
+it is per-file and content-addressed, so a prelude entry a later checkpoint re-states is stored once
+and any change to it moves the hash in every checkpoint that reads it.
 
 Family matrices and schedule recordings retain both boundaries. Matrices execute
 raw reply partitions at the scripted sender port; they do not claim malformed-frame coverage
@@ -173,7 +197,7 @@ families because no reference states are defined for them.
 
 ## What this oracle does and does not see
 
-It replays 78 scenarios against frozen goldens and fails on any divergence: 153 goldens over 198
+It replays 78 scenarios against frozen goldens and fails on any divergence: 153 goldens over 200
 tests, all inside `pnpm --dir mobile test`. For a migration it answers one question — does the
 rewritten call site produce the same sender calls, settlements, state and effects as main did?
 

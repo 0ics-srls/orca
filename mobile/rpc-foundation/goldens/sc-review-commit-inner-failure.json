@@ -5,22 +5,19 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "4f53cda18c2b": [],
-    "910123a4e5c0": {
-      "commit": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "error": "nothing staged",
-          "ok": false
-        }
+    "88185276c233": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "error": "nothing staged",
+        "ok": false
       }
     },
     "a96ee3f6fd5e": {
@@ -30,49 +27,45 @@
       },
       "status": "unread"
     },
-    "caecd7471a83": [
-      {
-        "name": "git.commit#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.commit\",\"params\":{\"worktree\":\"id:repo42::/p\",\"message\":\"recorded message\"}}"
-      }
-    ],
-    "d34bc345f199": [
-      {
-        "name": "git.commit#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.commit"
-          },
-          {
-            "name": "params",
-            "value": {
-              "message": "recorded message",
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "e9c816eee026": {
+      "name": "git.commit#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.commit\",\"params\":{\"worktree\":\"id:repo42::/p\",\"message\":\"recorded message\"}}"
+    },
+    "f29b710be334": {
+      "name": "git.commit#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.commit"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "error": "nothing staged",
-              "success": false
-            }
+            "message": "recorded message",
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "error": "nothing staged",
+            "success": false
           }
         }
       }
-    ]
+    }
   },
   "recording": {
     "scenario": "sc-review-commit-inner-failure",
@@ -80,11 +73,13 @@
       {
         "id": "settled",
         "observation": {
-          "sender": "d34bc345f199",
-          "payloads": "caecd7471a83",
-          "settlements": "910123a4e5c0",
+          "sender": ["f29b710be334"],
+          "payloads": ["e9c816eee026"],
+          "settlements": {
+            "commit": "88185276c233"
+          },
           "state": "a96ee3f6fd5e",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]

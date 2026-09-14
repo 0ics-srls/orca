@@ -5,48 +5,44 @@
   "runnerVersion": 1,
   "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "6aed818c730a1fef9a6e07fcbb88b0aa29b064fec277dd4071017a44bacde586",
+  "recorderSha256": "e4c4ffd3676bafb675f1bb7d79600845dcaf055e9c122ec0ba4d0fc61528ffa3",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 2,
+  "goldenFormatVersion": 3,
   "values": {
-    "2abe7c0c3763": [
-      {
-        "name": "git.generateCommitMessage#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.generateCommitMessage"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
+    "125fbea5f50a": {
+      "name": "git.generateCommitMessage#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.generateCommitMessage"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo42::/p"
           }
-        ],
-        "settlement": {
-          "status": "pending",
-          "startedAt": 0
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
         }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
       }
-    ],
-    "33bfe371e5b0": {
-      "generate": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "message": "feat: recorded",
-          "success": true
-        }
+    },
+    "1290c04bc26c": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "message": "feat: recorded",
+        "success": true
       }
     },
     "3ef8a5f65bc8": {
@@ -55,57 +51,50 @@
         "success": true
       }
     },
-    "4f53cda18c2b": [],
-    "5becddaebf57": [
-      {
-        "name": "git.generateCommitMessage#1",
-        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.generateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
-      }
-    ],
-    "613b061103e5": [
-      {
-        "name": "git.generateCommitMessage#1",
-        "args": [
-          {
-            "name": "method",
-            "value": "git.generateCommitMessage"
-          },
-          {
-            "name": "params",
-            "value": {
-              "worktree": "id:repo42::/p"
-            }
-          },
-          {
-            "name": "options",
-            "value": {
-              "$rpc": "absent"
-            }
-          }
-        ],
-        "settlement": {
-          "status": "fulfilled",
-          "startedAt": 0,
-          "settledAt": 0,
+    "9270aeb7d9c6": {
+      "status": "pending",
+      "startedAt": 0
+    },
+    "a09d0ada6684": {
+      "name": "git.generateCommitMessage#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.generateCommitMessage"
+        },
+        {
+          "name": "params",
           "value": {
-            "id": "frame-1",
-            "ok": true,
-            "result": {
-              "message": "feat: recorded",
-              "success": true
-            }
+            "worktree": "id:repo42::/p"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "message": "feat: recorded",
+            "success": true
           }
         }
       }
-    ],
+    },
+    "a64074c2ba96": {
+      "name": "git.generateCommitMessage#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.generateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+    },
     "adb40821f3e2": {
       "generated": "ungenerated"
-    },
-    "b308d9d641d6": {
-      "generate": {
-        "status": "pending",
-        "startedAt": 0
-      }
     }
   },
   "recording": {
@@ -114,21 +103,25 @@
       {
         "id": "pending",
         "observation": {
-          "sender": "2abe7c0c3763",
-          "payloads": "5becddaebf57",
-          "settlements": "b308d9d641d6",
+          "sender": ["125fbea5f50a"],
+          "payloads": ["a64074c2ba96"],
+          "settlements": {
+            "generate": "9270aeb7d9c6"
+          },
           "state": "adb40821f3e2",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       },
       {
         "id": "settled",
         "observation": {
-          "sender": "613b061103e5",
-          "payloads": "5becddaebf57",
-          "settlements": "33bfe371e5b0",
+          "sender": ["a09d0ada6684"],
+          "payloads": ["a64074c2ba96"],
+          "settlements": {
+            "generate": "1290c04bc26c"
+          },
           "state": "3ef8a5f65bc8",
-          "effects": "4f53cda18c2b"
+          "effects": []
         }
       }
     ]
