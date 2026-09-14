@@ -1,8 +1,8 @@
 import { compileFunction } from 'node:vm'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
-import * as React from 'react'
 import ts from 'typescript'
+import { nativeMountingSubstitutes } from './native-mounting-substitutes'
 import { OPERATION_EXPOSURES, OPERATION_MUTATIONS, type Mutation } from './operation-mutations'
 import * as deliveryAmbiguity from '../../transport/rpc-delivery-ambiguity'
 
@@ -17,6 +17,7 @@ const SHARED_MODULE = 'mobile/src/transport/rpc-delivery-ambiguity.ts'
 // Only mounting boundaries are substituted; every operation and projection is loaded from source.
 export function operationModuleLoader(root: string, mutation?: Mutation) {
   const cache = new Map<string, OperationModule>()
+  const natives = nativeMountingSubstitutes()
   const sharedModulePath = resolve(root, SHARED_MODULE)
   let mutationCount = 0
   function pathFor(base: string): string {
@@ -29,8 +30,9 @@ export function operationModuleLoader(root: string, mutation?: Mutation) {
     return file
   }
   function imported(base: string, name: string): unknown {
-    if (name === 'react') {
-      return React
+    const native = natives.get(name)
+    if (native !== undefined) {
+      return native
     }
     if (name.startsWith('.') && pathFor(resolve(dirname(base), name)) === sharedModulePath) {
       return deliveryAmbiguity

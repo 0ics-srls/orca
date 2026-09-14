@@ -1,5 +1,8 @@
 import { observableModel } from './observable-model'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
+import { pairingJournalMountAdapters } from './pairing-journal-mount-adapters'
+import { relayCredentialMountAdapters } from './relay-credential-mount-adapters'
+import { transportStatusMountAdapters } from './transport-status-mount-adapters'
 import { settingsMountAdapters } from './settings-mount-adapters'
 import { sourceControlMountAdapters } from './source-control-mount-adapters'
 import { taskWorkspaceHookMountAdapters } from './task-workspace-hook-mount-adapters'
@@ -21,6 +24,9 @@ export function pilotMountAdapters(
     ...taskWorkspaceSenderMountAdapters(modules),
     ...taskWorkspaceHookMountAdapters(modules),
     ...hostedReviewMountAdapters(modules),
+    ...transportStatusMountAdapters(modules),
+    ...relayCredentialMountAdapters(modules),
+    ...pairingJournalMountAdapters(modules),
     'workspace.file-inventory': ({ client }) => {
       const useSearch = modules.load<
         typeof import('../../session/use-mobile-native-chat-file-search')

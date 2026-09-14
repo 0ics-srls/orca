@@ -1,0 +1,56 @@
+import * as React from 'react'
+import { sha256 } from '@noble/hashes/sha256'
+import * as zod from 'zod'
+
+/**
+ * The native modules a mounted operation may import, and what it gets instead.
+ *
+ * The loader's default is a proxy that throws on any property of a non-relative import, which is
+ * what keeps an adapter from silently mounting a device API. That default is too strict for the
+ * relay pairing modules: each builds a `defaultDependencies` object at module scope, so merely
+ * *referencing* `Platform.OS` or a storage-backed loader throws before an adapter can override it.
+ *
+ * So the table separates reference from use. `react` and `zod` are the real libraries — pure, and
+ * React additionally has to be the one instance the test renderer drives, and `@noble/hashes` is
+ * the same pure-JS digest the product would run on a device. `expo-crypto` is routed
+ * through the Web Crypto the recording scheduler already pins, which is both deterministic and
+ * what the library itself does off-device. The two secret stores resolve to members that throw when
+ * *called*: a default-dependency object may name them, and a recording that actually reaches native
+ * storage still fails loudly rather than recording a fiction.
+ */
+const NATIVE_STORAGE_MODULES = ['@react-native-async-storage/async-storage', 'expo-secure-store']
+
+function unusableNativeStore(module: string): unknown {
+  return new Proxy(
+    {},
+    {
+      get:
+        (_target, key) =>
+        (...args: unknown[]) => {
+          void args
+          throw new Error(`Native store reached during recording: ${module}.${String(key)}`)
+        }
+    }
+  )
+}
+
+export function nativeMountingSubstitutes(): Map<string, unknown> {
+  const substitutes = new Map<string, unknown>([
+    ['react', React],
+    ['zod', zod],
+    ['@noble/hashes/sha256', { sha256 }],
+    [
+      'expo-crypto',
+      {
+        getRandomBytes: (length: number) =>
+          globalThis.crypto.getRandomValues(new Uint8Array(length))
+      }
+    ],
+    // One pinned platform per recording; `platform` is golden provenance, not a compared field.
+    ['react-native', { Platform: { OS: 'ios' } }]
+  ])
+  for (const module of NATIVE_STORAGE_MODULES) {
+    substitutes.set(module, unusableNativeStore(module))
+  }
+  return substitutes
+}

@@ -1,0 +1,89 @@
+{
+  "operation": "relay.direct-upgrade",
+  "family": "relay.direct-upgrade",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "fc525c355d741ea5478dd1b106526b5b8205de1b",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "b302020ef5f957af30e16a50ec4629c8cef5d41f8f69973bd52531dc07be0e8a",
+  "scenarioSha256": "7d5cad367e76767b039fc5ebc15837930f02c5e1bed33ae7ca4695bae56287bd",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 4,
+  "values": {
+    "55af89989a85": {
+      "name": "pairing.getEndpoints#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "pairing.getEndpoints"
+        },
+        {
+          "name": "params",
+          "value": {
+            "installReqId": "install-fixture-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "6c43da669636": {
+      "journal": {
+        "$rpc": "null"
+      },
+      "outcome": "declined"
+    },
+    "a2c193508948": {
+      "name": "journal-cleared",
+      "value": "upgrade"
+    },
+    "beafd16aeb22": {
+      "name": "pairing.getEndpoints#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"pairing.getEndpoints\",\"params\":{\"installReqId\":\"install-fixture-1\"}}"
+    },
+    "ee20a1dc39e7": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "null"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "relay-direct-upgrade-unsupported-host-declines",
+    "checkpoints": [
+      {
+        "id": "upgrade-declined",
+        "observation": {
+          "sender": ["55af89989a85"],
+          "payloads": ["beafd16aeb22"],
+          "settlements": {
+            "upgrade": "ee20a1dc39e7"
+          },
+          "state": "6c43da669636",
+          "effects": ["a2c193508948"]
+        }
+      }
+    ]
+  }
+}
