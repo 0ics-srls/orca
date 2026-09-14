@@ -2,11 +2,12 @@ import { z } from 'zod'
 import { isAgentSessionId } from '../agent-session-record'
 import { normalizeExecutionHostId } from '../execution-host'
 import {
+  AGENT_SESSION_ID_MAX_LENGTH,
   AGENT_SESSION_HISTORY_DIRECTIONS,
   AGENT_SESSION_HISTORY_MAX_LIMIT
 } from '../agent-session-wire'
 
-export const MAX_ID_LENGTH = 512
+export const MAX_ID_LENGTH = AGENT_SESSION_ID_MAX_LENGTH
 
 // Four Claude questions with all four generated choices occupy 610 chars when fully percent-encoded.
 export const MAX_RESPONSE_OPTION_ID_LENGTH = 1024

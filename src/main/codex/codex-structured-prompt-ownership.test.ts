@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
+import { AGENT_SESSION_ID_MAX_LENGTH } from '../../shared/agent-session-wire'
 import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity
@@ -299,6 +300,30 @@ describe('Codex live prompt ownership', () => {
     })
     expect(terminateTurnProcesses).not.toHaveBeenCalled()
     expect(codex.connections[0]?.closed).toBe(false)
+  })
+
+  it('keeps a wire-valid multibyte prompt turn id as the exact interrupt target', async () => {
+    const promptTurnId = '界'.repeat(171)
+    expect(promptTurnId.length).toBeLessThanOrEqual(AGENT_SESSION_ID_MAX_LENGTH)
+    expect(Buffer.byteLength(promptTurnId, 'utf8')).toBeGreaterThan(AGENT_SESSION_ID_MAX_LENGTH)
+    const codex = fakeCodex({
+      'turn/interrupt': () => completeTurn(codex, 'thread-child', promptTurnId)
+    })
+    const adapter = await acquired(codex)
+    registerPrompt(adapter, codex, 'child-prompt', 'thread-child', promptTurnId)
+
+    await expect(
+      adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'root-turn',
+        fence: 7,
+        prompt: { itemId: 'child-prompt' }
+      })
+    ).resolves.toEqual({ cancelled: true })
+    expect(codex.connections[0]?.calls.at(-1)).toEqual({
+      method: 'turn/interrupt',
+      params: { threadId: 'thread-child', turnId: promptTurnId }
+    })
   })
 
   it('settles a grouped prompt and its running turn before reporting cancellation', async () => {
