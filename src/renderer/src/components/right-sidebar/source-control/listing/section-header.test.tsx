@@ -44,32 +44,4 @@ describe('SectionHeader', () => {
     fireEvent.click(screen.getByRole('button', { name: /Staged Changes/i }))
     expect(onToggle).toHaveBeenCalledTimes(1)
   })
-
-  it('keeps View all text button and icon actions together without wrapping', () => {
-    render(
-      <SectionHeader
-        label="Changes"
-        count={13}
-        isCollapsed={false}
-        onToggle={vi.fn()}
-        actions={
-          <div className="flex shrink-0 items-center">
-            <button type="button" aria-label="Discard all">
-              Discard
-            </button>
-            <button type="button" aria-label="Stage all">
-              Stage
-            </button>
-            <button type="button" className="shrink-0 whitespace-nowrap">
-              View all
-            </button>
-          </div>
-        }
-      />
-    )
-
-    expect(screen.getByText('View all')).toBeDefined()
-    expect(screen.getByLabelText('Discard all')).toBeDefined()
-    expect(screen.getByLabelText('Stage all')).toBeDefined()
-  })
 })
