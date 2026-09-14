@@ -71,6 +71,51 @@ describe('crash breadcrumb store', () => {
       expect(snapshot.filter((entry) => entry.name === 'pr_refresh_queue')).toHaveLength(15)
     })
 
+    // The one interaction fair-share eviction could plausibly break: a coalesced key
+    // owns a ring entry by reference, and `isCoalescedCrumbStillInEvidence` was written
+    // when eviction only ever removed from the FRONT. Fair share can remove from the
+    // middle, so pin that the accounting still holds — the burst is materialized exactly
+    // once when the window expires, never folded into an entry no snapshot can see and
+    // never claimed twice.
+    it('accounts a coalesced burst exactly once when its owned entry is evicted mid-ring', () => {
+      vi.useFakeTimers()
+      vi.setSystemTime(new Date('2026-09-14T12:00:00.000Z'))
+      const hit = (key: string): void => {
+        recordCoalescedCrashBreadcrumb({
+          name: 'renderer_error',
+          data: { key },
+          coalesceKey: key,
+          minIntervalMs: 30_000
+        })
+      }
+
+      hit('hot')
+      vi.advanceTimersByTime(10)
+      for (let repeat = 0; repeat < 5; repeat += 1) {
+        hit('hot')
+      }
+      // Churn on the SAME name makes it the crowded one, so fair share evicts the oldest
+      // `renderer_error` — the hot key's own entry — from the middle of the ring.
+      recordCrashBreadcrumb('app_started')
+      for (let index = 0; index < 40; index += 1) {
+        vi.advanceTimersByTime(10)
+        hit(`cold_${index}`)
+      }
+
+      // Plain FIFO loses this; fair share is why the one-off survives 41 same-name crumbs.
+      expect(getCrashBreadcrumbSnapshot().some((entry) => entry.name === 'app_started')).toBe(true)
+
+      // Expiring the window is what surrenders an orphaned owner's unclaimed repeats.
+      vi.advanceTimersByTime(30_000)
+      hit('hot')
+
+      const claimed = getCrashBreadcrumbSnapshot()
+        .filter((entry) => entry.name === 'renderer_error')
+        .reduce((total, entry) => total + Number(entry.data?.suppressedSinceLast ?? 0), 0)
+
+      expect(claimed).toBe(5)
+    })
+
     it('degenerates to oldest-first when no name repeats', () => {
       for (let index = 0; index < 40; index += 1) {
         recordCrashBreadcrumb(`event_${index}`)
