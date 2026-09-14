@@ -50,12 +50,34 @@ describe('decodeWindowsLaunchFailureCode', () => {
     expect(decodeWindowsLaunchFailureCode(code)).toBeNull()
   })
 
-  // These pin the CONTRACT (junk in, null out), not the guard: mutation-tested, deleting either
-  // term of the guard leaves them all green, because the object lookup misses anyway. -36863 is
-  // 0xFFFF7001, the Crashpad code that a `>>> 0` would wrap straight into this table — which is
-  // the regression these rows would start catching the moment anyone adds one.
-  it.each([[-1], [-36863], [1.5], [Number.NaN]])('rejects %p rather than coercing it', (value) => {
-    expect(decodeWindowsLaunchFailureCode(value)).toBeNull()
+  // Mutation-tested, and the result is worth stating exactly: adding `>>> 0` alone changes
+  // nothing (the guard rejects these first) and removing the guard alone changes nothing (the
+  // object lookup misses on a negative or fractional key). Each is individually a no-op, so no
+  // test can catch either on its own. Together they are not, and that is the realistic
+  // regression — whoever adds the coercion sees the guard as redundant and drops it. The last
+  // two rows catch exactly that, because ToUint32 maps them onto real keys: 1.5 -> 1
+  // (SBOX_ERROR_GENERIC) and -4294967278 -> 18 (CREATE_PROCESS).
+  it.each([[-1], [Number.NaN], [1.5], [-4294967278]])(
+    'rejects %p rather than coercing it',
+    (value) => {
+      expect(decodeWindowsLaunchFailureCode(value)).toBeNull()
+    }
+  )
+
+  // 66 of the table's rows are asserted nowhere individually. The enum is contiguous 0..72 by
+  // construction, so this catches a row dropped or renumbered by an edit without restating 71
+  // descriptions that would just be the table copied twice.
+  it('decodes every sandbox code in the contiguous range except the excluded ones', () => {
+    const undecodable = Array.from({ length: 73 }, (_, code) => code).filter(
+      (code) => decodeWindowsLaunchFailureCode(code) === null
+    )
+    expect(undecodable).toEqual([0, 62])
+  })
+
+  it('renders the LaunchResultCode branch too', () => {
+    expect(describeWindowsLaunchFailureCode(decodeWindowsLaunchFailureCode(1003)!)).toBe(
+      'LAUNCH_RESULT_FAILURE, generic launch failure with no sandbox stage recorded'
+    )
   })
 })
 
