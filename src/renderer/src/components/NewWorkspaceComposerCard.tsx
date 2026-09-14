@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { useAppStore } from '@/store'
 import { cn } from '@/lib/utils'
+import { getAgentPickerAvailability } from '@/lib/agent-picker-availability'
 import { getAgentCatalog } from '@/lib/agent-catalog'
 import { getScreenSubmitModifierLabel } from '@/lib/screen-submit-shortcut'
 import { resolveProjectCloneUrlPrefill } from '@/lib/project-clone-url-prefill'
@@ -17,10 +18,7 @@ import { unwrapRuntimeRpcResult } from '@/runtime/runtime-rpc-client'
 import { withUiConnectTimeout } from '@/ssh/ssh-connect-ui-timeout'
 import { isSshConnectInFlight, trackSshConnect } from '@/ssh/ssh-connect-in-flight'
 import { translate } from '@/i18n/i18n'
-import {
-  DEFAULT_DISABLED_TUI_AGENTS,
-  filterEnabledTuiAgents
-} from '../../../shared/tui-agent-selection'
+import { DEFAULT_DISABLED_TUI_AGENTS } from '../../../shared/tui-agent-selection'
 import type { RuntimeStatus } from '../../../shared/runtime-types'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { NewWorkspaceComposerAdvancedSection } from './new-workspace/NewWorkspaceComposerAdvancedSection'
@@ -158,18 +156,8 @@ export default function NewWorkspaceComposerCard(
   const showSetupAgentStartupPolicy =
     setupControlsEnabled && setupConfig !== null && setupConfig.kind !== 'default-tabs'
   const agentCatalog = getAgentCatalog()
-  const enabledAgentIds = new Set(
-    filterEnabledTuiAgents(
-      agentCatalog.map((candidate) => candidate.id),
-      disabledTuiAgents
-    )
-  )
-  const visibleQuickAgents = agentCatalog.filter((agent) => {
-    return (
-      enabledAgentIds.has(agent.id) &&
-      (props.detectedAgentIds === null || props.detectedAgentIds.has(agent.id))
-    )
-  })
+  const { available: visibleQuickAgents, unavailable: unavailableQuickAgents } =
+    getAgentPickerAvailability(agentCatalog, disabledTuiAgents, props.detectedAgentIds)
 
   const cancelNameInputFocusFrame = React.useCallback((): void => {
     if (nameInputFocusFrameRef.current !== null) {
@@ -318,6 +306,7 @@ export default function NewWorkspaceComposerCard(
         <NewWorkspaceComposerAgentSection
           {...props}
           visibleQuickAgents={visibleQuickAgents}
+          unavailableQuickAgents={unavailableQuickAgents}
           defaultTuiAgent={defaultTuiAgent}
           handleSetDefaultAgent={handleSetDefaultAgent}
         />

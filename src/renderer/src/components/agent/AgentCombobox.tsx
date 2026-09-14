@@ -30,9 +30,13 @@ import {
 } from './agent-combobox-command-state'
 import { translate } from '@/i18n/i18n'
 
+import { AgentPickerEmptyState } from './AgentPickerEmptyState'
+import type { UnavailableAgent } from '@/lib/agent-picker-availability'
+
 type DefaultAgentPreference = TuiAgent | 'blank' | null
 
 type AgentComboboxProps = {
+  unavailableAgents?: readonly UnavailableAgent[]
   agents: AgentCatalogEntry[]
   value: TuiAgent | null
   onValueChange: (agent: TuiAgent | null) => void
@@ -55,6 +59,7 @@ type AgentComboboxProps = {
   emptyLabel?: string
 }
 
+const EMPTY_UNAVAILABLE_AGENTS: readonly UnavailableAgent[] = []
 const BLANK_VALUE = '__none__'
 const TRIGGER_MIN_WIDTH_CLASS = '!min-w-[260px]'
 
@@ -149,6 +154,7 @@ function renderItem({
 
 export default function AgentCombobox({
   agents,
+  unavailableAgents = EMPTY_UNAVAILABLE_AGENTS,
   value,
   onValueChange,
   onValueSelected,
@@ -377,10 +383,7 @@ export default function AgentCombobox({
             />
             <CommandList>
               <CommandEmpty>
-                {translate(
-                  'auto.components.agent.AgentCombobox.579c768bde',
-                  'No agents match your search.'
-                )}
+                <AgentPickerEmptyState query={query} unavailable={unavailableAgents} />
               </CommandEmpty>
               {blankMatchesQuery
                 ? renderItem({

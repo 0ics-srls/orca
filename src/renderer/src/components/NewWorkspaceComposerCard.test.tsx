@@ -8,6 +8,7 @@ import type { NewWorkspaceProjectOption } from '@/lib/new-workspace-project-opti
 import type { ProjectHostSetupOption } from '@/lib/project-host-setup-options'
 
 const storeMocks = vi.hoisted(() => ({
+  pickerProps: vi.fn(),
   closeModal: vi.fn(),
   openModal: vi.fn(),
   openSettingsPage: vi.fn(),
@@ -54,7 +55,10 @@ vi.mock('@/components/ui/tooltip', () => ({
 }))
 
 vi.mock('@/components/agent/AgentCombobox', () => ({
-  default: () => <button type="button">Agent picker</button>
+  default: (props: unknown) => {
+    storeMocks.pickerProps(props)
+    return <button type="button">Agent picker</button>
+  }
 }))
 
 // Stub the host-add dialog to its `mode` — the composer's job is to open it with the right
@@ -923,4 +927,25 @@ describe('NewWorkspaceComposerCard note sizing', () => {
     expect(className).toContain('scrollbar-sleek')
     expect(className).not.toContain('overflow-hidden')
   })
+})
+
+it('passes the selected host availability through the workspace agent section', () => {
+  renderCard({ detectedAgentIds: new Set(['pi']) })
+  expect(storeMocks.pickerProps).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      agents: [expect.objectContaining({ id: 'pi' })],
+      unavailableAgents: expect.arrayContaining([
+        { agent: expect.objectContaining({ id: 'omp' }), reason: 'not-detected' }
+      ])
+    })
+  )
+  renderCard({ detectedAgentIds: new Set(['omp']) })
+  expect(storeMocks.pickerProps).toHaveBeenLastCalledWith(
+    expect.objectContaining({
+      agents: [expect.objectContaining({ id: 'omp' })],
+      unavailableAgents: expect.arrayContaining([
+        { agent: expect.objectContaining({ id: 'pi' }), reason: 'not-detected' }
+      ])
+    })
+  )
 })

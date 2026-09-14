@@ -17,6 +17,7 @@ type NewWorkspaceComposerAgentSectionProps = Pick<
   | 'advancedOpen'
   | 'onToggleAdvanced'
 > & {
+  unavailableQuickAgents: React.ComponentProps<typeof AgentCombobox>['unavailableAgents']
   visibleQuickAgents: React.ComponentProps<typeof AgentCombobox>['agents']
   defaultTuiAgent: React.ComponentProps<typeof AgentCombobox>['defaultAgent']
   handleSetDefaultAgent: (
@@ -33,6 +34,7 @@ export function NewWorkspaceComposerAgentSection({
   advancedOpen,
   onToggleAdvanced,
   visibleQuickAgents,
+  unavailableQuickAgents,
   defaultTuiAgent,
   handleSetDefaultAgent
 }: NewWorkspaceComposerAgentSectionProps): React.JSX.Element {
@@ -67,6 +69,7 @@ export function NewWorkspaceComposerAgentSection({
         </div>
         <AgentCombobox
           agents={visibleQuickAgents}
+          unavailableAgents={unavailableQuickAgents}
           value={quickAgent}
           onValueChange={onQuickAgentChange}
           onOpenManageAgents={onOpenAgentSettings}
