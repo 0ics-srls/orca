@@ -1,0 +1,173 @@
+import { useState } from 'react'
+import type { PublicKnownRuntimeEnvironment } from '../../../../shared/runtime-environments'
+import { toRuntimeExecutionHostId } from '../../../../shared/execution-host'
+import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
+import { useMountedRef } from '@/hooks/useMountedRef'
+import { translate } from '@/i18n/i18n'
+import { useAppStore } from '@/store'
+import {
+  getRuntimeServerConnectionState,
+  isRuntimeServerTransportConnected,
+  type RuntimeHostDetails
+} from './runtime-environment-host-details'
+import { SessionHistoryComputerRow } from './SessionHistoryComputerRow'
+import {
+  sessionSearchCheckingMessage,
+  sessionSearchReadErrorMessage,
+  sessionSearchStatusDetails,
+  sessionSearchStatusMessage
+} from './session-history-status-copy'
+import { useSessionSearchStatus } from './use-session-search-status'
+
+// IPC wraps a rejection's message, so the host-too-old marker arrives inside a longer string.
+function isHostTooOldError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('host-too-old')
+}
+
+export function SessionHistoryServerRow({
+  environment,
+  details,
+  onError
+}: {
+  environment: PublicKnownRuntimeEnvironment
+  details: RuntimeHostDetails | undefined
+  onError: (message: string | null) => void
+}): React.JSX.Element {
+  const hostId = toRuntimeExecutionHostId(environment.id)
+  const confirm = useConfirmationDialog()
+  const mounted = useMountedRef()
+  const openSettingsPage = useAppStore((state) => state.openSettingsPage)
+  const openSettingsTarget = useAppStore((state) => state.openSettingsTarget)
+  const [tooOld, setTooOld] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const connectionState = getRuntimeServerConnectionState(details)
+  const connected = isRuntimeServerTransportConnected(connectionState)
+  const { status, failed, adopt } = useSessionSearchStatus({
+    executionHostId: hostId,
+    active: connected && !tooOld
+  })
+  const enabled = status?.enabled === true
+
+  async function setEnabled(next: boolean): Promise<void> {
+    setBusy(true)
+    onError(null)
+    try {
+      adopt(await window.api.aiVault.setSearchEnabled(hostId, next))
+    } catch (error) {
+      if (!mounted.current) {
+        return
+      }
+      if (isHostTooOldError(error)) {
+        setTooOld(true)
+        return
+      }
+      onError(
+        translate(
+          'sessionHistory.settings.serverToggleError',
+          'Could not change session search on {{host}}. Try again.',
+          { host: environment.name }
+        )
+      )
+    } finally {
+      if (mounted.current) {
+        setBusy(false)
+      }
+    }
+  }
+
+  async function toggle(): Promise<void> {
+    if (enabled) {
+      await setEnabled(false)
+      return
+    }
+    setBusy(true)
+    let accepted = false
+    try {
+      accepted = await confirm({
+        title: translate(
+          'sessionHistory.settings.serverEnableTitle',
+          'Start indexing agent sessions on {{host}}?',
+          { host: environment.name }
+        ),
+        description: translate(
+          'sessionHistory.settings.serverEnableConsent',
+          'Orca will build a search index on {{host}}. This client only receives search results. It copies conversation text and tool output from agent transcripts as written; content is not redacted. Indexing starts now, runs in the background, and the first scan can take several minutes. You can turn it off at any time; progress is kept.',
+          { host: environment.name }
+        ),
+        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Start indexing')
+      })
+    } finally {
+      if (mounted.current) {
+        setBusy(false)
+      }
+    }
+    if (!accepted || !mounted.current) {
+      return
+    }
+    await setEnabled(true)
+  }
+
+  function openServerSettings(): void {
+    openSettingsPage()
+    openSettingsTarget({ pane: 'servers', repoId: null, sectionId: environment.id })
+  }
+
+  const row = {
+    kind: 'server' as const,
+    name: environment.name,
+    version: details?.runtimeStatus?.appVersion ?? null,
+    onToggle: () => void toggle()
+  }
+  if (tooOld) {
+    return (
+      <SessionHistoryComputerRow
+        {...row}
+        dimmed
+        checked={false}
+        disabled
+        status={translate(
+          'sessionHistory.settings.serverTooOld',
+          'Update this server to enable session search.'
+        )}
+        action={{
+          label: translate('sessionHistory.settings.updateServer', 'Update server'),
+          onClick: openServerSettings
+        }}
+      />
+    )
+  }
+  if (!connected) {
+    // Checking is not yet evidence of an unreachable host, so it does not claim the index was left behind.
+    const checking = connectionState === 'checking'
+    return (
+      <SessionHistoryComputerRow
+        {...row}
+        dimmed={!checking}
+        checked={enabled}
+        disabled
+        status={
+          checking
+            ? sessionSearchCheckingMessage()
+            : translate('sessionHistory.settings.serverOffline', 'Offline · index kept as it was')
+        }
+      />
+    )
+  }
+  let statusText = sessionSearchCheckingMessage()
+  if (failed) {
+    statusText = sessionSearchReadErrorMessage()
+  } else if (status) {
+    statusText = enabled
+      ? sessionSearchStatusMessage(status)
+      : translate('sessionHistory.settings.serverOff', 'Off')
+  }
+  return (
+    <SessionHistoryComputerRow
+      {...row}
+      checked={enabled}
+      disabled={busy}
+      status={statusText}
+      details={sessionSearchStatusDetails(status)}
+    />
+  )
+}
