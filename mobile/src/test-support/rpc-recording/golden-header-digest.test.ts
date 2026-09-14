@@ -5,11 +5,13 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { derivedGoldens } from './derived-goldens'
 import { goldenRecording, type GoldenRecording } from './golden-recording'
 import { MOUNTED_OPERATION_MODULES } from './adapters/mounted-operation-modules'
-import { ADAPTER_DIRECTORY, MUTANT_DIRECTORY, RECORDER_DIRECTORY } from './recorder-digest'
+import { ADAPTER_DIRECTORY, RECORDER_DIRECTORY } from './recorder-digest'
 import { readScenarios } from './scenario-input'
 import type { MountedOperationModule } from './mounted-operation-module'
 import type { RecordingScenario, ScenarioStep } from './recording-scenario'
 
+/** Spelled, not imported: a rename of the excluded directory must fail this suite, not follow it. */
+const MUTANT_DIRECTORY = `${RECORDER_DIRECTORY}/mutants`
 const root = resolve(import.meta.dirname, '../../../..')
 const manifest = readScenarios(
   process.env.RPC_FOUNDATION_SCENARIOS ??
