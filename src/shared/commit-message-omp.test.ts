@@ -74,3 +74,10 @@ describe('OMP Source Control AI', () => {
     }
   )
 })
+
+it('does not expose OMP config default as a terminal discovery model', async () => {
+  const { getAgentModelProbeSpec } = await import('./agent-model-probe-spec')
+  const spec = getAgentModelProbeSpec('omp')
+  expect(spec?.models.some((model) => model.id === 'default')).toBe(false)
+  expect(spec?.defaultModelId).toBe('')
+})
