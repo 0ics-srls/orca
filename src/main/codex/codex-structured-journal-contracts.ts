@@ -9,6 +9,7 @@ export type CodexJournalTranslatorDeps = {
   sessionId?: string
   now?: () => number
   bindPromptItemId?: (journalItemId: string, threadId: string, promptKey: string) => void
+  clearPromptTurn?: (threadId: string, turnId: string) => void
   primaryThreadId?: () => string | null
   subagentExecutions?: CodexSubagentExecutions
   coalesceMs?: number

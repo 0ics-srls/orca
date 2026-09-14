@@ -264,6 +264,18 @@ export class CodexPromptRegistry {
     }
   }
 
+  /** Drops requests that belonged to a turn which the provider has settled. */
+  clearTurn(threadId: string, turnId: string): void {
+    const prompts = new Set(
+      [...this.byAddress.values(), ...this.boundPrompts.values()].filter(
+        (prompt) => prompt.threadId === threadId && prompt.turnId === turnId
+      )
+    )
+    for (const prompt of prompts) {
+      this.forget(prompt)
+    }
+  }
+
   clear(): void {
     this.byAddress.clear()
     this.journalItemIds.clear()

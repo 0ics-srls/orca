@@ -3,7 +3,6 @@ import type {
   AgentJournalItemIdentity,
   AgentJournalTurnLifecycle
 } from '../../shared/agent-session-journal-types'
-import { partitionJournalLifecycleMutations } from '../native-chat/agent-session-journal/journal-lifecycle-batch-partition'
 import type { JournalLifecycleMutationInput } from '../native-chat/agent-session-journal/journal-row-builders'
 import type {
   StructuredAgentSessionEventSink,
@@ -26,6 +25,7 @@ import {
   codexTurnLifecycleBody,
   codexTurnLifecycleIdentity
 } from './codex-structured-journal-translation-turns'
+import { appendCodexLifecycleMutations } from './codex-structured-journal-sink'
 
 export type CodexActiveJournalItem = {
   threadId: string
@@ -35,6 +35,8 @@ export type CodexActiveJournalItem = {
 }
 
 export type CodexPendingJournalPrompt = {
+  threadId: string
+  turnId: string | null
   identity: AgentJournalItemIdentity
   body: AgentJournalItemBody
 }
@@ -98,7 +100,11 @@ export function settleCodexJournalSession(input: {
       turnOrdinalsToForget.push({ threadId, turnId })
     }
   }
-  const admission = appendLifecycleMutations(input.sink, exitSettlementId(input.event), mutations)
+  const admission = appendCodexLifecycleMutations(
+    input.sink,
+    exitSettlementId(input.event),
+    mutations
+  )
   if (!admission.accepted) {
     return admission
   }
@@ -117,9 +123,13 @@ export function settleCodexJournalTurn(input: {
   sink: StructuredAgentSessionEventSink
   streams: CodexStructuredItemStreams
   activeItems: Map<string, CodexActiveJournalItem>
+  pendingPrompts?: Map<string, CodexPendingJournalPrompt>
+  clearPromptTurn?: (threadId: string, turnId: string) => void
 }): StructuredAgentSessionSinkAdmission {
   const mutations: JournalLifecycleMutationInput[] = []
   const activeItemsToForget: { key: string; threadId: string; itemId: string }[] = []
+  const pendingPromptsToForget: string[] = []
+  const pendingPrompts = input.pendingPrompts ?? new Map<string, CodexPendingJournalPrompt>()
   for (const [key, active] of input.activeItems) {
     if (active.threadId !== input.threadId || active.turnId !== input.turnId) {
       continue
@@ -137,6 +147,16 @@ export function settleCodexJournalTurn(input: {
     }
     activeItemsToForget.push({ key, threadId: active.threadId, itemId: active.item.id })
   }
+  for (const [key, prompt] of pendingPrompts) {
+    if (prompt.threadId !== input.threadId || prompt.turnId !== input.turnId) {
+      continue
+    }
+    const body = cancelledJournalPromptBody(prompt.body)
+    if (body) {
+      mutations.push({ kind: 'item', identity: prompt.identity, body })
+    }
+    pendingPromptsToForget.push(key)
+  }
   // Revised, never tombstoned: the terminal row keeps the turn's duration durable.
   if (input.turnLifecycle) {
     mutations.push({
@@ -148,7 +168,7 @@ export function settleCodexJournalTurn(input: {
   if (mutations.length === 0) {
     return ADMITTED
   }
-  const admission = appendLifecycleMutations(
+  const admission = appendCodexLifecycleMutations(
     input.sink,
     `turn-completed:${input.sessionId}:${input.threadId}:${input.turnId}`,
     mutations
@@ -160,6 +180,10 @@ export function settleCodexJournalTurn(input: {
     input.streams.forget(active.threadId, active.itemId)
     input.activeItems.delete(active.key)
   }
+  for (const key of pendingPromptsToForget) {
+    pendingPrompts.delete(key)
+  }
+  input.clearPromptTurn?.(input.threadId, input.turnId)
   return ADMITTED
 }
 
@@ -195,7 +219,7 @@ export function settleCodexOversizedNotification(input: {
   if (mutations.length === 0) {
     return ADMITTED
   }
-  const admission = appendLifecycleMutations(
+  const admission = appendCodexLifecycleMutations(
     input.sink,
     `oversized-notification:${input.sessionId}:${input.threadId}:${input.method}`,
     mutations
@@ -236,54 +260,6 @@ function oversizedStreamItemType(method: string): CodexThreadItem['type'] | null
     return 'reasoning'
   }
   return null
-}
-
-function appendLifecycleMutations(
-  sink: StructuredAgentSessionEventSink,
-  settlementId: string,
-  mutations: readonly JournalLifecycleMutationInput[]
-): StructuredAgentSessionSinkAdmission {
-  const chunks = partitionJournalLifecycleMutations(settlementId, mutations)
-  for (const { settlementId: id, mutations: chunk } of chunks) {
-    let admission: StructuredAgentSessionSinkAdmission = ADMITTED
-    if (sink.tryAppendLifecycleBatch) {
-      admission = sink.tryAppendLifecycleBatch(id, chunk, { lifecycle: true })
-    } else if (sink.appendLifecycleBatch) {
-      admission = sink.appendLifecycleBatch(id, chunk, { lifecycle: true }) ?? ADMITTED
-    } else {
-      for (const mutation of chunk) {
-        if (mutation.kind === 'item') {
-          if (sink.tryAppendItem) {
-            admission = sink.tryAppendItem(mutation.identity, mutation.body, { lifecycle: true })
-            if (!admission.accepted) {
-              return admission
-            }
-          } else {
-            sink.appendItem(mutation.identity, mutation.body, { lifecycle: true })
-          }
-        } else {
-          if (sink.tryAppendTombstone) {
-            admission = sink.tryAppendTombstone(mutation.identity, { lifecycle: true })
-            if (!admission.accepted) {
-              return admission
-            }
-          } else {
-            sink.appendTombstone(mutation.identity, { lifecycle: true })
-          }
-        }
-      }
-    }
-    if (!admission.accepted) {
-      return admission
-    }
-    const publishAdmission = sink.tryPublish
-      ? sink.tryPublish({ lifecycle: true })
-      : (sink.publish({ lifecycle: true }), ADMITTED)
-    if (!publishAdmission.accepted) {
-      return publishAdmission
-    }
-  }
-  return ADMITTED
 }
 
 function interruptedBody(body: AgentJournalItemBody | null): AgentJournalItemBody | null {
