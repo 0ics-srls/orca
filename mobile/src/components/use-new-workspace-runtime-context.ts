@@ -10,6 +10,8 @@ import {
 } from '../tasks/mobile-task-providers'
 import type { NewWorktreeRuntimeSettings } from './new-worktree-agent-selection'
 
+type UiGetResult = { ui?: { trustedOrcaHooks?: PersistedTrustedOrcaHooks } } | null | undefined
+
 function settledSuccess(entry: PromiseSettledResult<RpcResponse>): RpcSuccess | null {
   return entry.status === 'fulfilled' && entry.value.ok ? (entry.value as RpcSuccess) : null
 }
@@ -60,12 +62,8 @@ export function useNewWorkspaceRuntimeContext(
       }
       const uiResult = settledSuccess(uiRes)
       if (uiResult) {
-        const ui = (
-          uiResult.result as
-            | { ui?: { trustedOrcaHooks?: PersistedTrustedOrcaHooks } }
-            | null
-            | undefined
-        )?.ui
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary; a missing result reads as untrusted.
+        const ui = (uiResult.result as UiGetResult)?.ui
         setTrustedOrcaHooks(ui?.trustedOrcaHooks ?? {})
       }
 
