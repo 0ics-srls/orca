@@ -12,6 +12,11 @@
  * step-4 migration backlog and shares one reason, stated once here instead of 144 times:
  * the call site predates the typed contract and still picks its own method string, its own
  * acceptance rule and its own decoding. Replacing one with an RpcOperation deletes its line.
+ *
+ * Where a group below names a blocker, it is a recording blocker, not a migration blocker.
+ * Pointing a site at an operation is mechanical; the golden recorded against the old code before
+ * the refactor is the only parity proof this migration has. So a site the recorder cannot mount
+ * cannot be recorded, and unrecorded sites do not migrate.
  */
 export type UnvalidatedRpcRequestPortEntry = {
   readonly file: string
@@ -63,11 +68,11 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // src/components/ — shared widgets that fetch their own data. The New Workspace drawer's
   // execution target, setup hook, runtime context and Codex capability probe migrated in step 4:
   // see new-workspace-operations.ts, codex-reset-credit-capability-operations.ts, and the SSH and
-  // agent-detection operations in tasks/mobile-workspace-source-operations.ts. Two remain. The
-  // reset-credit journal reads and writes native storage around its own send. The repo list is
-  // blocked one module further out: it renders use-last-visited-worktree-repo.ts, whose default
-  // import of async-storage is a property read the recorder's proxy refuses at module load, before
-  // any hostId guard can run.
+  // agent-detection operations in tasks/mobile-workspace-source-operations.ts. Two remain, neither
+  // recordable. codex-reset-credit.ts loads under the module loader; its attempt-journal access
+  // throws on async-storage at call time, before the send, and nothing guards it away. The repo
+  // list fails one module further out: it renders use-last-visited-worktree-repo.ts, whose default
+  // import of async-storage is a property read the loader's proxy refuses.
   { file: 'src/components/codex-reset-credit.ts', references: 3 },
   { file: 'src/components/use-new-workspace-repositories.ts', references: 1 },
 
@@ -78,7 +83,7 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // refresh and save, the session file tab and the mutation-ownership capture migrated in step 4:
   // see mobile-file-preview-operations.ts, mobile-file-tab-doc-operations.ts and
   // mobile-file-ownership-operations.ts. The explorer panel's two sends sit inline in a React
-  // Native screen the recorder cannot mount.
+  // Native screen, which the recorder cannot mount and so cannot record.
   { file: 'src/files/MobileFileExplorerPanel.tsx', references: 2 },
 
   // src/home/ — home screen host reads. The stats card and both task-provider probes migrated in
@@ -94,7 +99,8 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
 
   // src/host-screen/ — host screen catalog and actions. The repo and label metadata reads, the
   // desktop view-settings mirror and the list's pin, remove and activate mutations migrated in
-  // step 4; see host-screen-operations.ts. What is left sends from inside a React Native screen.
+  // step 4; see host-screen-operations.ts. What is left sends from inside a React Native screen,
+  // which the recorder cannot mount.
   { file: 'src/host-screen/host-screen-overlays.tsx', references: 1 },
 
   // src/notifications/ — push registration and delivery
