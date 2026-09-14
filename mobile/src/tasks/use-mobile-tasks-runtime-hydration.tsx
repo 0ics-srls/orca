@@ -1,12 +1,6 @@
 import { settingsRead } from '../transport/settings-read-operations'
 import type { ClientSettingsActionsModel } from './use-mobile-tasks-client-settings-actions'
 import {
-  taskLinearStatusRead,
-  taskPreflightRead,
-  taskRuntimeStatusRead,
-  taskUiStateRead
-} from './mobile-task-runtime-operations'
-import {
   MOBILE_TASKS_CAPABILITY,
   type PersistedTrustedOrcaHooks,
   filterAvailableTaskProviders,
@@ -24,6 +18,7 @@ import {
   type TaskRuntimeStatus,
   getTaskPresetQuery,
   githubKindFromQuery,
+  isSuccess,
   isTaskProvider,
   normalizeGitHubPreset,
   normalizeLinearFilter,
@@ -197,14 +192,14 @@ export function useMobileTasksRuntimeHydration(model: ClientSettingsActionsModel
     resetWorkspaceCreateState()
 
     const hydrateTaskState = async (): Promise<void> => {
-      const statusReply = await taskRuntimeStatusRead.request(client)
+      const statusResponse = await client.sendRequest('status.get')
       if (stale) {
         return
       }
-      // The guard stays between the request and the interpretation: a screen that has moved on
-      // must not raise a refusal it no longer owns.
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-      const status = taskRuntimeStatusRead.interpret(statusReply) as TaskRuntimeStatus
+      if (!isSuccess(statusResponse)) {
+        throw new Error(statusResponse.error.message)
+      }
+      const status = statusResponse.result as TaskRuntimeStatus
       if (!status.capabilities?.includes(MOBILE_TASKS_CAPABILITY)) {
         // Why: Tasks is additive RPC surface, so old desktop builds can still
         // pair but must not receive the newer task-specific method calls.
@@ -254,15 +249,13 @@ export function useMobileTasksRuntimeHydration(model: ClientSettingsActionsModel
       }
       setTasksSupportState({ kind: 'supported', client })
       setError('')
-      // Why raw requests in the group and not startRpcOperation: main's Promise.all rejects as soon
-      // as one leg rejects, and interpreting at an all-settled barrier would instead wait for the
-      // slowest peer and let a later policy surface a different error.
-      const [settingsResponse, uiReply, preflightReply, linearStatusReply] = await Promise.all([
-        settingsRead.request(client),
-        taskUiStateRead.request(client),
-        taskPreflightRead.request(client),
-        taskLinearStatusRead.request(client)
-      ])
+      const [settingsResponse, uiResponse, preflightResponse, linearStatusResponse] =
+        await Promise.all([
+          settingsRead.request(client),
+          client.sendRequest('ui.get'),
+          client.sendRequest('preflight.check'),
+          client.sendRequest('linear.status')
+        ])
       if (stale) {
         return
       }
@@ -273,30 +266,26 @@ export function useMobileTasksRuntimeHydration(model: ClientSettingsActionsModel
           ((settingsResult.value ?? {}) as RuntimeTaskSettings)
         : {}
       setRuntimeTaskSettings(settings)
-      const uiRead = taskUiStateRead.interpret(uiReply)
-      const uiState = uiRead.accepted
-        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          (uiRead.value as
-            | {
+      const uiState = isSuccess(uiResponse)
+        ? (
+            uiResponse.result as {
+              ui?: {
                 taskResumeState?: TaskResumeState
                 trustedOrcaHooks?: PersistedTrustedOrcaHooks
               }
-            | undefined)
+            }
+          ).ui
         : null
       setTrustedOrcaHooks(uiState?.trustedOrcaHooks ?? {})
       const resume = uiState?.taskResumeState ?? {}
       taskResumeRef.current = resume
       setGithubProjectHiddenFieldIdsByView(resume.githubProjectHiddenFieldIdsByView ?? {})
 
-      const preflightRead = taskPreflightRead.interpret(preflightReply)
-      const preflight = preflightRead.accepted
-        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          (preflightRead.value as { glab?: { installed?: boolean } })
+      const preflight = isSuccess(preflightResponse)
+        ? (preflightResponse.result as { glab?: { installed?: boolean } })
         : null
-      const linearRead = taskLinearStatusRead.interpret(linearStatusReply)
-      const linearStatus = linearRead.accepted
-        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          (linearRead.value as LinearStatusResponse)
+      const linearStatus = isSuccess(linearStatusResponse)
+        ? (linearStatusResponse.result as LinearStatusResponse)
         : null
       const preferredProviders = normalizeVisibleTaskProviders(settings.visibleTaskProviders)
       const linearIsConnected = linearStatus?.connected === true

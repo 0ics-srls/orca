@@ -5,8 +5,7 @@ import {
   useCallback,
   useEffect
 } from './mobile-tasks-dependencies'
-import { sortSparsePresetsByName } from './mobile-tasks-legacy-foundation'
-import { repoSparsePresetSaveRun, sshRepoStateRead } from './mobile-workspace-source-operations'
+import { isSuccess, sortSparsePresetsByName } from './mobile-tasks-legacy-foundation'
 
 export function useMobileTasksWorkspaceSparseActions(model: WorkspaceSourceEffectsModel) {
   const {
@@ -83,14 +82,16 @@ export function useMobileTasksWorkspaceSparseActions(model: WorkspaceSourceEffec
     setWorkspaceSparseSaving(true)
     setWorkspaceSparsePresetsError('')
     try {
-      const reply = await repoSparsePresetSaveRun.request(client, {
+      const response = await client.sendRequest('repo.saveSparsePreset', {
         repo: `id:${workspaceCreateTargetRepo.id}`,
         ...(workspaceSparseDraft.presetId ? { id: workspaceSparseDraft.presetId } : {}),
         name: workspaceSparseDraftName,
         directories: workspaceSparseDraftParsed.directories
       })
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-      const saved = repoSparsePresetSaveRun.interpret(reply) as SparsePreset | undefined
+      if (!isSuccess(response)) {
+        throw new Error(response.error.message)
+      }
+      const saved = (response.result as { preset?: SparsePreset }).preset
       if (!saved) {
         throw new Error('Failed to save sparse preset.')
       }
@@ -129,15 +130,16 @@ export function useMobileTasksWorkspaceSparseActions(model: WorkspaceSourceEffec
     }
 
     let stale = false
-    void sshRepoStateRead
-      .request(client, { targetId: workspaceCreateTargetConnectionId })
-      .then((reply) => {
+    void client
+      .sendRequest('ssh.getState', { targetId: workspaceCreateTargetConnectionId })
+      .then((response) => {
         if (stale) {
           return
         }
-        const state =
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-          (sshRepoStateRead.interpret(reply) as SshConnectionState | null | undefined) ?? null
+        if (!isSuccess(response)) {
+          throw new Error(response.error.message)
+        }
+        const state = (response.result as { state?: SshConnectionState | null }).state ?? null
         setWorkspaceSshState(
           state ?? {
             targetId: workspaceCreateTargetConnectionId,

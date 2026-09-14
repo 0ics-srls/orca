@@ -1,6 +1,5 @@
 import type { PersistedTrustedOrcaHooks } from '../../../src/shared/orca-yaml-hook-types'
 import type { RpcClient } from '../transport/rpc-client'
-import { taskUiStateWrite } from './mobile-task-runtime-operations'
 
 export type SetupHookTrust = {
   contentHash: string
@@ -46,9 +45,10 @@ export async function persistSetupHookTrustApproval(args: {
   alwaysTrust: boolean
 }): Promise<PersistedTrustedOrcaHooks> {
   const next = trustedOrcaHooksWithSetupApproval(args)
-  taskUiStateWrite.interpret(
-    await taskUiStateWrite.request(args.client, { trustedOrcaHooks: next })
-  )
+  const response = await args.client.sendRequest('ui.set', { trustedOrcaHooks: next })
+  if (!response.ok) {
+    throw new Error(response.error.message)
+  }
   return next
 }
 

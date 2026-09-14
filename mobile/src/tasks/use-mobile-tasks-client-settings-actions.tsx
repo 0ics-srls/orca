@@ -7,8 +7,12 @@ import {
   useLayoutEffect,
   useState
 } from './mobile-tasks-dependencies'
-import type { GitHubPreset, RepoSummary, TaskResumeState } from './mobile-tasks-legacy-foundation'
-import { taskSettingsWrite, taskUiStateWrite } from './mobile-task-runtime-operations'
+import {
+  type GitHubPreset,
+  type RepoSummary,
+  type TaskResumeState,
+  isSuccess
+} from './mobile-tasks-legacy-foundation'
 
 export function useMobileTasksClientSettingsActions(model: ProjectRepositoryResolutionModel) {
   const {
@@ -102,7 +106,7 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
       }
       const next = { ...taskResumeRef.current, ...updates }
       taskResumeRef.current = next
-      void taskUiStateWrite.request(client, { taskResumeState: next }).catch(() => {
+      void client.sendRequest('ui.set', { taskResumeState: next }).catch(() => {
         // Best-effort: desktop treats task resume as a convenience preference.
       })
     },
@@ -139,7 +143,7 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
       if (!client || !taskUiReady) {
         return
       }
-      void taskSettingsWrite.request(client, { defaultTaskSource: nextProvider }).catch(() => {
+      void client.sendRequest('settings.update', { defaultTaskSource: nextProvider }).catch(() => {
         // Best-effort: a failed settings write should not block switching views.
       })
     },
@@ -154,9 +158,11 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
       const nextSelection =
         selection.size === 0 || selection.size === allRepos.length ? null : [...selection]
       defaultRepoSelectionRef.current = nextSelection
-      void taskSettingsWrite.request(client, { defaultRepoSelection: nextSelection }).catch(() => {
-        // Best-effort: the in-memory repo picker already reflects the change.
-      })
+      void client
+        .sendRequest('settings.update', { defaultRepoSelection: nextSelection })
+        .catch(() => {
+          // Best-effort: the in-memory repo picker already reflects the change.
+        })
     },
     [client, taskUiReady]
   )
@@ -167,7 +173,7 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
       if (!client || !taskUiReady) {
         return
       }
-      void taskSettingsWrite.request(client, { defaultTaskViewPreset: preset }).catch(() => {
+      void client.sendRequest('settings.update', { defaultTaskViewPreset: preset }).catch(() => {
         // Best-effort: the current session still uses the selected preset.
       })
     },
@@ -180,7 +186,7 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
       if (!client || !taskUiReady) {
         return
       }
-      void taskSettingsWrite.request(client, { githubProjects: nextSettings }).catch(() => {
+      void client.sendRequest('settings.update', { githubProjects: nextSettings }).catch(() => {
         // Best-effort: project selection can still work for the current session.
       })
     },
@@ -198,7 +204,10 @@ export function useMobileTasksClientSettingsActions(model: ProjectRepositoryReso
         contentHash,
         alwaysTrust
       })
-      taskUiStateWrite.interpret(await taskUiStateWrite.request(client, { trustedOrcaHooks: next }))
+      const response = await client.sendRequest('ui.set', { trustedOrcaHooks: next })
+      if (!isSuccess(response)) {
+        throw new Error(response.error.message)
+      }
       setTrustedOrcaHooks(next)
     },
     [client, trustedOrcaHooks]

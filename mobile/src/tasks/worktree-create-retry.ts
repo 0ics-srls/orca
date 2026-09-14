@@ -1,7 +1,6 @@
 import type { RpcClient } from '../transport/rpc-client'
-import type { RpcResponse } from '../transport/types'
+import type { RpcResponse, RpcSuccess } from '../transport/types'
 import { isRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import { worktreeCreateRun } from './mobile-workspace-create-operations'
 import { waitForRpcClientReconnected } from '../transport/rpc-client-reconnect-wait'
 import { isLogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import {
@@ -11,7 +10,6 @@ import {
   isRetryableWorktreeCreateConflict
 } from '../../../src/shared/new-workspace/worktree-create-retry-policy'
 import { WORKTREE_CREATE_TIMEOUT_MS } from './workspace-create-timeout'
-import type { WorkspaceCreateParams } from './workspace-create-params'
 import {
   getWorktreeCreateReplayWindowMs,
   type WorktreeCreateIdempotencyProbe,
@@ -51,7 +49,7 @@ export type CreateWorktreeWithNameRetryArgs = {
   client: RpcClient
   baseName: string
   nameWasGenerated?: boolean
-  buildParams: (name: string) => WorkspaceCreateParams
+  buildParams: (name: string) => Record<string, unknown>
   worktreeCreateIdempotency: WorktreeCreateIdempotencyProbe
   maxAttempts?: number
   // Injected in tests; production mints a fresh idempotency key per candidate.
@@ -85,11 +83,8 @@ export async function createWorktreeWithNameRetry(
       ? { ...candidateParams, clientMutationId: mintMutationId() }
       : candidateParams
     const response = await sendWorktreeCreateResilient(client, params, worktreeCreateIdempotency)
-    // Why the raw refusal: the retry decision below is `isRetryableWorktreeCreateConflict` over the
-    // host's message, and no acceptance policy carries a refusal message through without throwing.
     if (response.ok) {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-      const result = worktreeCreateRun.interpret(response) as {
+      const result = (response as RpcSuccess).result as {
         worktree: { id: string; displayName?: string }
         warning?: string
       }
@@ -121,7 +116,7 @@ export async function createWorktreeWithNameRetry(
 // is returned to the caller untouched.
 async function sendWorktreeCreateResilient(
   client: RpcClient,
-  params: WorkspaceCreateParams,
+  params: Record<string, unknown>,
   worktreeCreateIdempotency: WorktreeCreateIdempotencySupport | false
 ): Promise<RpcResponse> {
   let migrationRetry = 0
@@ -130,9 +125,7 @@ async function sendWorktreeCreateResilient(
   let replayDeadlineAt: number | null = null
   for (;;) {
     try {
-      // `request` is the transport promise itself, so a delivery-unknown rejection reaches the
-      // catch below as the object the transport marked — the WeakSet cannot see through a wrapper.
-      return await worktreeCreateRun.request(client, params, {
+      return await client.sendRequest('worktree.create', params, {
         timeoutMs: WORKTREE_CREATE_TIMEOUT_MS
       })
     } catch (error) {

@@ -11,18 +11,13 @@ import {
   useCallback,
   wasSetupHookPreviouslyApproved
 } from './mobile-tasks-dependencies'
-import type {
-  ActionableTaskItem,
-  GitPushTarget,
-  RuntimeTaskSettings,
-  SetupDecision
-} from './mobile-tasks-legacy-foundation'
-import type { WorkspaceCreateParams } from './workspace-create-params'
 import {
-  worktreeCreateRun,
-  worktreeMrBaseResolve,
-  worktreePrBaseResolve
-} from './mobile-workspace-create-operations'
+  type ActionableTaskItem,
+  type GitPushTarget,
+  type RuntimeTaskSettings,
+  type SetupDecision,
+  isSuccess
+} from './mobile-tasks-legacy-foundation'
 
 export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateModel) {
   const {
@@ -159,7 +154,7 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
         const trimmedWorkspaceName = workspaceNameOverride?.trim() ?? ''
         const nameIsAutoManaged =
           !trimmedWorkspaceName || trimmedWorkspaceName === workspaceLastAutoName
-        let params: WorkspaceCreateParams
+        let params: Record<string, unknown>
         if (item.provider === 'github') {
           const source = item.source
           let prStartPoint: { baseBranch: string; pushTarget?: GitPushTarget } | undefined
@@ -169,8 +164,8 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
               baseBranchOverride
             })
           ) {
-            const reply = await worktreePrBaseResolve.request(
-              client,
+            const response = await client.sendRequest(
+              'worktree.resolvePrBase',
               {
                 repo: `id:${source.repoId}`,
                 prNumber: source.number,
@@ -181,8 +176,10 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
               },
               { timeoutMs: 30_000 }
             )
-            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-            const result = worktreePrBaseResolve.interpret(reply) as
+            if (!isSuccess(response)) {
+              throw new Error(response.error.message)
+            }
+            const result = response.result as
               | { baseBranch: string; pushTarget?: GitPushTarget }
               | { error: string }
             if ('error' in result) {
@@ -212,8 +209,8 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
               baseBranchOverride
             })
           ) {
-            const reply = await worktreeMrBaseResolve.request(
-              client,
+            const response = await client.sendRequest(
+              'worktree.resolveMrBase',
               {
                 repo: `id:${source.repoId}`,
                 mrIid: source.number,
@@ -224,8 +221,10 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
               },
               { timeoutMs: 30_000 }
             )
-            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-            const result = worktreeMrBaseResolve.interpret(reply) as
+            if (!isSuccess(response)) {
+              throw new Error(response.error.message)
+            }
+            const result = response.result as
               | { baseBranch: string; pushTarget?: GitPushTarget }
               | { error: string }
             if ('error' in result) {
@@ -260,11 +259,13 @@ export function useMobileTasksWorkspaceCreateActions(model: WorkspaceSshStateMod
             nameIsAutoManaged
           })
         }
-        const createReply = await worktreeCreateRun.request(client, params, {
+        const response = await client.sendRequest('worktree.create', params, {
           timeoutMs: WORKTREE_CREATE_TIMEOUT_MS
         })
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-        const result = worktreeCreateRun.interpret(createReply) as {
+        if (!isSuccess(response)) {
+          throw new Error(response.error.message)
+        }
+        const result = response.result as {
           worktree: { id: string; displayName?: string }
           warning?: string
         }

@@ -4,7 +4,6 @@ import type {
   SetupDecision
 } from '../../../src/shared/worktree/create-types'
 import type { GitPushTarget } from '../../../src/shared/worktree/types'
-import type { RpcSendParams } from '../transport/rpc-params-contract'
 import { getWorkspaceSourceName } from '../../../src/shared/new-workspace/workspace-source'
 import { resolveMobileWorkspaceCreateName } from './mobile-workspace-name'
 import type { WorkspaceAgentChoice } from './workspace-agent-selection'
@@ -56,8 +55,7 @@ export type WorkspaceCreateTaskItem =
   | WorkspaceCreateGitLabItem
   | WorkspaceCreateLinearItem
 
-/** The outgoing worktree.create params, so the builder and the operation agree by type. */
-export type WorkspaceCreateParams = RpcSendParams<'worktree.create'>
+export type WorkspaceCreateParams = Record<string, unknown>
 
 /**
  * `worktree.create` fields for launching the picked agent in a fresh session.
