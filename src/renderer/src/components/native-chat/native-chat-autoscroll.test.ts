@@ -2,9 +2,11 @@ import { describe, it, expect } from 'vitest'
 import {
   distanceFromBottom,
   isNearBottom,
+  nextFollowingEnd,
   shouldLoadEarlier,
   shouldShowJumpToLatest,
-  NATIVE_CHAT_BOTTOM_THRESHOLD_PX
+  NATIVE_CHAT_BOTTOM_THRESHOLD_PX,
+  NATIVE_CHAT_PIN_PROVENANCE_PX
 } from './native-chat-autoscroll'
 
 const atBottom = { scrollTop: 952, scrollHeight: 1000, clientHeight: 48 }
@@ -41,6 +43,47 @@ describe('shouldShowJumpToLatest', () => {
   })
   it('hides when there is nothing to scroll', () => {
     expect(shouldShowJumpToLatest(false, noOverflow)).toBe(false)
+  })
+})
+
+// A pin writes `scrollTop` itself and the browser reports that write as a scroll
+// event like any other. Distance from the end therefore cannot tell a reader who
+// left from a transcript that grew underneath one — only provenance can.
+describe('nextFollowingEnd', () => {
+  const following = { following: true, pinnedOffset: 9200, scrollTop: 9200, atEnd: true }
+
+  it('follows whenever the view is at the end, whoever put it there', () => {
+    expect(nextFollowingEnd({ ...following, pinnedOffset: null, scrollTop: 4321 })).toBe(true)
+  })
+
+  // The resume bug: history pages in and rows settle their measured heights, so
+  // the end runs away from an offset the transcript itself pinned. That is not a
+  // reader leaving, and treating it as one strands them mid-transcript.
+  it('keeps following when content grew away from an offset it pinned', () => {
+    expect(nextFollowingEnd({ ...following, atEnd: false })).toBe(true)
+  })
+
+  it('still follows at the edge of the provenance tolerance', () => {
+    const scrollTop = 9200 + NATIVE_CHAT_PIN_PROVENANCE_PX
+    expect(nextFollowingEnd({ ...following, scrollTop, atEnd: false })).toBe(true)
+  })
+
+  it('treats an offset nobody here wrote as the reader leaving', () => {
+    expect(nextFollowingEnd({ ...following, scrollTop: 2000, atEnd: false })).toBe(false)
+  })
+
+  it('detaches before the transcript has pinned anything', () => {
+    expect(
+      nextFollowingEnd({ following: true, pinnedOffset: null, scrollTop: 2000, atEnd: false })
+    ).toBe(false)
+  })
+
+  // Provenance preserves the existing answer; it never re-attaches on its own,
+  // or a settling measurement would drag a departed reader back to the end.
+  it('does not re-attach a detached reader from provenance alone', () => {
+    expect(
+      nextFollowingEnd({ following: false, pinnedOffset: 9200, scrollTop: 9200, atEnd: false })
+    ).toBe(false)
   })
 })
 

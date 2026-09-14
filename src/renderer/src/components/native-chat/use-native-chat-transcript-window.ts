@@ -38,6 +38,12 @@ export type NativeChatTranscriptWindow = {
   measureRow: (node: HTMLElement | null) => void
   /** Scroll so this element's top meets the top of the viewport. */
   alignToViewportTop: (element: HTMLElement) => void
+  /** Pin to the transcript's end. Through the virtualizer for the same reason
+   *  the reveal is: it owns the offset, and a write it does not recognise as its
+   *  own is a reconcile it will fight. Its last-item `end` target is the
+   *  browser's real max scroll, so this lands where the document bottom is,
+   *  trailing chrome included. */
+  scrollToEnd: () => void
 }
 
 /** Distance from a container's scroll origin down to a descendant, in the
@@ -219,12 +225,27 @@ export function useNativeChatTranscriptWindow({
     [scrollRef, virtualizer]
   )
 
+  const scrollToEnd = useCallback(() => {
+    const container = scrollRef.current
+    if (!container) {
+      return
+    }
+    if (virtualizer.scrollElement) {
+      virtualizer.scrollToEnd({ behavior: 'auto' })
+      return
+    }
+    // No virtualizer yet (a container without layout): the document's own bottom
+    // is the same offset the virtualizer would resolve for the last row.
+    container.scrollTop = container.scrollHeight
+  }, [scrollRef, virtualizer])
+
   return {
     virtualItems: virtualizer.getVirtualItems(),
     totalSize: virtualizer.getTotalSize(),
     scrollMargin,
     sizerRef,
     measureRow: virtualizer.measureElement,
-    alignToViewportTop
+    alignToViewportTop,
+    scrollToEnd
   }
 }

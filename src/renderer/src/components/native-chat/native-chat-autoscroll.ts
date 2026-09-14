@@ -43,6 +43,43 @@ export function shouldShowJumpToLatest(
   return distanceFromBottom(geometry) > threshold
 }
 
+/** Slack for recognising an offset the transcript itself wrote. A superset of
+ *  the virtualizer's own sub-pixel read-back epsilon in magnitude only: that one
+ *  reconciles a single intended write inside one event, while this infers
+ *  authorship across arbitrary time, so it decays where that one cannot. */
+export const NATIVE_CHAT_PIN_PROVENANCE_PX = 2
+
+export type FollowIntent = {
+  following: boolean
+  /** Offset the transcript last pinned to, or null if it has not pinned yet. */
+  pinnedOffset: number | null
+  scrollTop: number
+  /** The virtualizer's own end test — the single definition of "the end". */
+  atEnd: boolean
+}
+
+/** Whether the transcript should still follow the end after this offset.
+ *
+ *  The question is provenance, not distance. A pin writes `scrollTop` itself and
+ *  the browser reports that write as a scroll event like any other; content that
+ *  then grows underneath leaves the offset untouched while the end moves away.
+ *  Reading "far from the end" as "the reader left" is what stranded a resuming
+ *  reader halfway up their own transcript. So an offset this transcript wrote is
+ *  never a departure, an offset at the end always follows, and anything else is
+ *  the reader's. */
+export function nextFollowingEnd(intent: FollowIntent): boolean {
+  if (intent.atEnd) {
+    return true
+  }
+  if (
+    intent.pinnedOffset !== null &&
+    Math.abs(intent.scrollTop - intent.pinnedOffset) <= NATIVE_CHAT_PIN_PROVENANCE_PX
+  ) {
+    return intent.following
+  }
+  return false
+}
+
 /** Distance from the top within which the transcript pages in older history. */
 export const NATIVE_CHAT_LOAD_EARLIER_THRESHOLD_PX = 80
 

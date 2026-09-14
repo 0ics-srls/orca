@@ -6,10 +6,16 @@
 // about, not what they decide: rows resolving their measured height move the
 // content constantly, so "the content changed" and "the reader scrolled" stopped
 // being the same event and only the latter may ask for another page.
+//
+// The offset belongs to the virtualizer — every pin goes through it, so a scroll
+// it is still reconciling is replaced rather than raced, and its end test is the
+// one this file asks. Whether the reader has left is then a question of
+// provenance, not distance: see `nextFollowingEnd`.
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   isNearBottom,
+  nextFollowingEnd,
   shouldLoadEarlier,
   shouldShowJumpToLatest,
   type ScrollGeometry
@@ -40,7 +46,8 @@ export function useNativeChatTranscriptScroll({
   hasMore,
   loadingEarlier,
   loadEarlier,
-  alignToViewportTop
+  alignToViewportTop,
+  scrollToEnd
 }: {
   scrollRef: React.RefObject<HTMLDivElement | null>
   contentRef: React.RefObject<HTMLDivElement | null>
@@ -51,11 +58,32 @@ export function useNativeChatTranscriptScroll({
   loadingEarlier: boolean
   loadEarlier: () => void
   alignToViewportTop: (element: HTMLElement) => void
+  scrollToEnd: () => void
 }): NativeChatTranscriptScroll {
   const [showJump, setShowJump] = useState(false)
-  const stuckToBottomRef = useRef(true)
+  const followingRef = useRef(true)
   const previousScrollTopRef = useRef(0)
   const loadEarlierRequestedAtRef = useRef<number | null>(null)
+  // Where the last pin actually landed, read back rather than assumed: the
+  // virtualizer clamps to the container's real maximum, which is rarely the
+  // offset any caller had in mind.
+  const pinnedOffsetRef = useRef<number | null>(null)
+
+  const pinToEnd = useCallback(() => {
+    scrollToEnd()
+    const element = scrollRef.current
+    if (!element) {
+      return
+    }
+    const geometry = geometryOf(element)
+    // Only a pin that actually reached the end proves we authored this offset.
+    // The virtualizer declines to scroll when it has no measurement for the last
+    // row, and recording that no-op would certify an offset we never chose —
+    // follow state would then hold there for good.
+    if (isNearBottom(geometry)) {
+      pinnedOffsetRef.current = geometry.scrollTop
+    }
+  }, [scrollRef, scrollToEnd])
 
   const syncScrollState = useCallback((): ScrollGeometry | null => {
     const element = scrollRef.current
@@ -63,9 +91,19 @@ export function useNativeChatTranscriptScroll({
       return null
     }
     const geometry = geometryOf(element)
-    const stick = isNearBottom(geometry)
-    stuckToBottomRef.current = stick
-    setShowJump(shouldShowJumpToLatest(stick, geometry))
+    const following = nextFollowingEnd({
+      following: followingRef.current,
+      pinnedOffset: pinnedOffsetRef.current,
+      scrollTop: geometry.scrollTop,
+      // Live geometry, never the virtualizer's `isAtEnd`: that one subtracts a
+      // *cached* scroll offset from a *live* maximum, and this handler runs
+      // before the virtualizer's own scroll listener refreshes the cache. On
+      // growth it over-reports the distance and would detach a reader sitting
+      // exactly at the bottom.
+      atEnd: isNearBottom(geometry)
+    })
+    followingRef.current = following
+    setShowJump(shouldShowJumpToLatest(following, geometry))
     return geometry
   }, [scrollRef])
 
@@ -95,30 +133,27 @@ export function useNativeChatTranscriptScroll({
   }, [hasMore, itemCount, loadEarlier, loadingEarlier, syncScrollState])
 
   const scrollToBottom = useCallback(() => {
-    const element = scrollRef.current
-    if (!element) {
-      return
-    }
-    // The document's own bottom, not the window's last row: the typing indicator,
-    // the activity line and the column's end padding all live past it.
-    element.scrollTop = element.scrollHeight
-    stuckToBottomRef.current = true
+    pinToEnd()
+    followingRef.current = true
     setShowJump(false)
-  }, [scrollRef])
+  }, [pinToEnd])
 
   const scrollMessageToTop = useCallback(
     (element: HTMLElement) => {
-      stuckToBottomRef.current = false
+      followingRef.current = false
+      // The reveal owns the offset it is about to scroll to, so no pin of ours
+      // may claim it.
+      pinnedOffsetRef.current = null
       alignToViewportTop(element)
     },
     [alignToViewportTop]
   )
 
   useLayoutEffect(() => {
-    if (stuckToBottomRef.current) {
-      scrollToBottom()
+    if (followingRef.current) {
+      pinToEnd()
     }
-  }, [itemCount, isWorking, showTypingIndicator, scrollToBottom])
+  }, [itemCount, isWorking, showTypingIndicator, pinToEnd])
 
   useEffect(() => {
     const element = scrollRef.current
@@ -126,8 +161,8 @@ export function useNativeChatTranscriptScroll({
       return
     }
     const observer = new ResizeObserver(() => {
-      if (stuckToBottomRef.current) {
-        scrollToBottom()
+      if (followingRef.current) {
+        pinToEnd()
       } else {
         syncScrollState()
       }
@@ -139,7 +174,7 @@ export function useNativeChatTranscriptScroll({
       observer.observe(contentRef.current)
     }
     return () => observer.disconnect()
-  }, [contentRef, scrollRef, scrollToBottom, syncScrollState])
+  }, [contentRef, pinToEnd, scrollRef, syncScrollState])
 
   return { showJump, onScroll, scrollToBottom, scrollMessageToTop }
 }
