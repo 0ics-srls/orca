@@ -176,10 +176,10 @@ describe('registerPtyHandlers', () => {
     )
     const killPromise = handlers.get('pty:kill')!(null, { id: spawnResult.id }) as Promise<void>
 
+    await vi.waitFor(() => expect(finishSnapshot).toBeTypeOf('function'))
     expect(killSpy).not.toHaveBeenCalled()
     expect(onDataDisposable.dispose).not.toHaveBeenCalled()
     expect(onExitDisposable.dispose).not.toHaveBeenCalled()
-    await vi.waitFor(() => expect(finishSnapshot).toBeTypeOf('function'))
     finishSnapshot?.()
     await vi.waitFor(() => expect(killSpy).toHaveBeenCalledTimes(1))
     expect(onDataDisposable.dispose).not.toHaveBeenCalled()

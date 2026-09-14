@@ -35,6 +35,13 @@ const ownedPidRows = async (pids) => {
     args: ['-p', pids.join(','), '-o', 'pid=,ppid=,pgid=,stat=,comm='],
     maxOutputBytes: 16000
   })
+  expect(result.timedOut).toBe(false)
+  expect(result.signal).toBeNull()
+  expect(result.stderr.trim()).toBe('')
+  expect([0, 1]).toContain(result.code)
+  if (result.code === 1) {
+    expect(result.stdout.trim()).toBe('')
+  }
   return result.stdout.trim()
 }
 it.skipIf(!binary || process.platform === 'win32')(
