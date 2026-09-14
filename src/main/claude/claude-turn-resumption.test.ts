@@ -49,7 +49,7 @@ function harness() {
     })
     return [...byKey.values()].sort((a, b) => a.sequence - b.sequence)
   }
-  return { translator, items }
+  return { translator, items, appended }
 }
 
 function frame(
@@ -87,6 +87,23 @@ function taskNotification(uuid: string) {
         role: 'user',
         content: [{ type: 'text', text: '<task-notification><task-id>bfnmj08v6</task-id>' }]
       }
+    }
+  }
+}
+
+/** A partial-message text delta. `--include-partial-messages` is a pinned launch
+ *  contract, so this is the shape a resumed turn's first output usually takes. */
+function textDelta(uuid: string, messageId: string, text: string) {
+  return {
+    type: 'message' as const,
+    sessionId: 'orca-session',
+    message: {
+      type: 'stream_event',
+      uuid,
+      session_id: SESSION,
+      parent_tool_use_id: null,
+      event: { type: 'content_block_delta', index: 0, delta: { type: 'text_delta', text } },
+      message: { id: messageId }
     }
   }
 }
@@ -220,7 +237,7 @@ describe('a Claude turn the provider resumed on its own', () => {
     const { translator, items } = harness()
     translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
     translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
-    translator.handle({ type: 'ended', sessionId: 'orca-session', observedAt: 1 })
+    translator.handle({ type: 'ended', sessionId: 'orca-session', reason: 'exit', observedAt: 1 })
     expect(projected(items())).toBe('idle')
 
     // Nothing can close a turn opened now, so nothing may open one.
@@ -252,5 +269,62 @@ describe('a Claude turn the provider resumed on its own', () => {
     // The next accepted send is what resumes it.
     translator.handle(frame('user', 'u2', [{ type: 'text', text: 'again' }]))
     expect(projected(items())).toBe('working')
+  })
+
+  it('reports working from the first streamed delta of a resumed turn', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
+    translator.handle(result('r1'))
+    expect(projected(items())).toBe('idle')
+
+    // The resumed reply streams in before any whole assistant frame lands.
+    translator.handle(textDelta('d1', 'msg-1', 'Back '))
+    translator.handle(textDelta('d2', 'msg-1', 'on it.'))
+    expect(projected(items())).toBe('working')
+  })
+
+  it('still reports a nested result failure even though it settles no turn', () => {
+    const { translator, items, appended } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
+    const before = appended.length
+    translator.handle({
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'result',
+        subtype: 'error',
+        uuid: 'r-child-fail',
+        session_id: SESSION,
+        parent_tool_use_id: 'toolu_parent',
+        is_error: true,
+        result: 'child blew up'
+      }
+    })
+    expect(projected(items())).toBe('working')
+    expect(appended.length).toBeGreaterThan(before)
+  })
+
+  it('keeps the failure latch set when a later root result succeeds', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
+    translator.handle({
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'result',
+        subtype: 'error',
+        uuid: 'r-fail',
+        session_id: SESSION,
+        parent_tool_use_id: null,
+        is_error: true
+      }
+    })
+    // A clean result arriving afterwards must not lift the latch.
+    translator.handle(result('r-late-ok'))
+    translator.handle(frame('assistant', 'a1', [{ type: 'text', text: 'still talking' }]))
+    expect(projected(items())).toBe('idle')
   })
 })

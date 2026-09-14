@@ -9,6 +9,7 @@
 
 import {
   claudeHasReplayContent,
+  claudeText,
   type ClaudeMessageEnvelope
 } from './claude-structured-item-translation'
 import type { ClaudeCurrentTurn } from './claude-turn-lifecycle-item'
@@ -41,4 +42,44 @@ export function claudeTurnOpenedBySendEcho(
         userItemId: input.userItemId
       }
     : null
+}
+
+/** Whether a frame is the root turn's own, rather than a child's. An absent
+ *  `parent_tool_use_id` is a root frame: only a string names a parent, and a
+ *  build that omits the field on root frames must not silently stop opening
+ *  turns. */
+export function isRootClaudeFrame(frame: Record<string, unknown>): boolean {
+  return typeof frame.parent_tool_use_id !== 'string'
+}
+
+export type ClaudeTurnSource = { sessionId: string; uuid: string; assistant: boolean }
+
+/** Reads a turn source off a raw frame, for the streamed path that has no envelope. */
+export function claudeStreamTurnSource(frame: Record<string, unknown>): ClaudeTurnSource | null {
+  const sessionId = claudeText(frame.session_id)
+  const uuid = claudeText(frame.uuid)
+  // A streamed delta only ever carries model output.
+  return sessionId && uuid ? { sessionId, uuid, assistant: true } : null
+}
+
+/** The provider produced, so a turn is running. Root-ness first, then the
+ *  suppression latch, then idempotency — every frame of one reply stays inside
+ *  the turn its first frame opened. */
+export function createClaudeTurnOpener(deps: {
+  isTurnOpen: () => boolean
+  isSuppressed: () => boolean
+  open: (turn: ClaudeCurrentTurn, observedAt: number) => void
+}): (frame: Record<string, unknown>, source: ClaudeTurnSource, observedAt: number) => void {
+  return (frame, source, observedAt) => {
+    if (!source.assistant || !isRootClaudeFrame(frame)) {
+      return
+    }
+    if (deps.isSuppressed() || deps.isTurnOpen()) {
+      return
+    }
+    deps.open(
+      { sessionId: source.sessionId, turnId: source.uuid, startedAt: observedAt },
+      observedAt
+    )
+  }
 }
