@@ -6,7 +6,7 @@ import { adapterSourceByOperation } from './adapter-digest'
 import { MOUNTED_OPERATION_MODULES } from './adapters/mounted-operation-modules'
 import { operationModuleLoader } from './operation-module-loader'
 import { pilotMountAdapters } from './pilot-mount-adapters'
-import { ADAPTER_DIRECTORY } from './recorder-digest'
+import { ADAPTER_DIRECTORY, RECORDER_DIRECTORY } from './recorder-digest'
 import { readScenarios } from './scenario-input'
 
 const root = resolve(import.meta.dirname, '../../../..')
@@ -14,10 +14,20 @@ const manifest = readScenarios(
   process.env.RPC_FOUNDATION_SCENARIOS ??
     resolve(root, 'mobile/rpc-foundation/pilot-scenarios.json')
 ).scenarios
+const engine = join(root, RECORDER_DIRECTORY)
 const directory = join(root, ADAPTER_DIRECTORY)
 /** The register is the seam's own index, not an adapter: no golden is recorded through it. */
 const REGISTER = 'mounted-operation-modules.ts'
+const registerPath = join(directory, REGISTER).replace(/\.ts$/, '')
 const sources = MOUNTED_OPERATION_MODULES.map((module) => module.source)
+
+/** Relative specifiers, resolved against the importing file's directory, extension dropped. */
+function imports(from: string, contents: string): { specifier: string; target: string }[] {
+  return [...contents.matchAll(/(?:from|import\()\s*'(\.[^']*)'/g)].map((match) => ({
+    specifier: match[1]!,
+    target: resolve(from, match[1]!).replace(/\.tsx?$/, '')
+  }))
+}
 
 function read(source: string): string {
   return readFileSync(join(directory, source), 'utf8')
@@ -96,11 +106,30 @@ describe('the engine/adapter seam', () => {
   // Resolved, not spelled: `../adapters/other` climbs out and back in, and reads as an escape.
   it('leaves the seam for every import an adapter module makes', () => {
     const inward = sources.flatMap((source) =>
-      [...read(source).matchAll(/(?:from|import\()\s*'(\.[^']*)'/g)]
-        .filter((match) => resolve(directory, match[1]!).startsWith(`${directory}${sep}`))
-        .map((match) => `${source} imports ${match[1]}`)
+      imports(directory, read(source))
+        .filter(({ target }) => target.startsWith(`${directory}${sep}`))
+        .map(({ specifier }) => `${source} imports ${specifier}`)
     )
     expect(inward).toEqual([])
+  })
+
+  /**
+   * The same seam from the other side. `recorderSha256` skips this directory and `adapterSha256`
+   * names one module per golden, so an engine file that imports an adapter executes code that
+   * every golden recorded through a different domain leaves out of its header. Only the register
+   * may be crossed to, because it is the one file here that carries nothing of its own.
+   */
+  it('reaches the adapter directory only through the register, from every engine file', () => {
+    const crossings = readdirSync(engine, { withFileTypes: true })
+      .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+      .flatMap((entry) =>
+        imports(engine, readFileSync(join(engine, entry.name), 'utf8'))
+          .filter(
+            ({ target }) => target.startsWith(`${directory}${sep}`) && target !== registerPath
+          )
+          .map(({ specifier }) => `${entry.name} imports ${specifier}`)
+      )
+    expect(crossings).toEqual([])
   })
 
   /**
