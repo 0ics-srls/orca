@@ -283,7 +283,7 @@ export class OrcaRuntimeWithSyncWindowGraph extends OrcaRuntimeWithAttachWindow 
         this._orchestrationDb &&
         leaf.lastAgentStatus === 'idle' &&
         leaf.lastAgentStatusObservedLive &&
-        this.isAgentSettledForDelivery(leaf) &&
+        this.checkDeliverySettledAndArmRecheck(leaf) &&
         leaf.writable &&
         (!graphWasReady ||
           previousLeaf?.ptyId !== leaf.ptyId ||

@@ -141,7 +141,7 @@ export class OrcaRuntimeWithApplyTrackedPtyTitle extends OrcaRuntimeWithGetUnper
       if (
         agentStatus === 'idle' &&
         (prevStatus !== 'idle' || !prevObservedLive) &&
-        this.isAgentSettledForDelivery(leaf)
+        this.checkDeliverySettledAndArmRecheck(leaf)
       ) {
         this.deliverPendingMessagesForLeaf(leaf)
       }

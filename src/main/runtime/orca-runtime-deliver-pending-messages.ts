@@ -112,7 +112,7 @@ export class OrcaRuntimeWithDeliverPendingMessages extends OrcaRuntimeWithResolv
                 currentLeaf?.ptyId === probedPtyId &&
                 currentLeaf.lastAgentStatus === 'idle' &&
                 currentLeaf.lastAgentStatusObservedLive &&
-                this.isAgentSettledForDelivery(currentLeaf)
+                this.checkDeliverySettledAndArmRecheck(currentLeaf)
               ) {
                 this.deliverPendingMessages(currentLeaf, {
                   mailboxHandle,

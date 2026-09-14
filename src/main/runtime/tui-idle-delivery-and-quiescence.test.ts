@@ -84,6 +84,37 @@ describe('mailbox delivery honours the tui-idle evidence ranking', () => {
     expect(deliver).toHaveBeenCalled()
   })
 
+  // Why this case exists: the wait path POLLS, so weak evidence that only becomes valid
+  // with time eventually satisfies it. Delivery is edge-driven with no poll behind it, so a
+  // refusal at an edge is final unless another edge arrives. A hookless Codex never emits an
+  // explicit `X ready`, so without a retry the queued message strands permanently once the
+  // pane falls quiet — trading a visible mis-delivery for an invisible lost message.
+  it('retries a refused delivery once the pane falls quiet', async () => {
+    const { runtime } = await makeRuntime('codex')
+    const deliver = watchDelivery(runtime)
+    runtime.onPtyData(PTY_ID, `${osc('\u280b Codex')}working\n`, Date.now())
+    runtime.onPtyData(PTY_ID, `${osc('Codex')}output\n`, Date.now())
+    expect(deliver).not.toHaveBeenCalled()
+
+    // Output stops. No further title frame and no renderer graph sync — a daemon-hosted
+    // pane has nobody publishing one, so nothing re-fires an edge on its own.
+    await new Promise((resolve) => setTimeout(resolve, 5_000))
+    expect(deliver).toHaveBeenCalled()
+  }, 20_000)
+
+  it('does not retry into a pane that went busy again', async () => {
+    const { runtime } = await makeRuntime('codex')
+    const deliver = watchDelivery(runtime)
+    runtime.onPtyData(PTY_ID, `${osc('Codex')}output\n`, Date.now())
+    // Keep the stream alive across the whole retry window.
+    const streaming = setInterval(() => {
+      runtime.onPtyData(PTY_ID, 'more output\n', Date.now())
+    }, 250)
+    await new Promise((resolve) => setTimeout(resolve, 5_000))
+    clearInterval(streaming)
+    expect(deliver).not.toHaveBeenCalled()
+  }, 20_000)
+
   it('still delivers for an agent whose name is its only rest signal', async () => {
     const { runtime } = await makeRuntime('grok', 'grok')
     const deliver = watchDelivery(runtime)
