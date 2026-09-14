@@ -146,12 +146,9 @@ describe('formatSessionSearchResponse: results', () => {
 })
 
 describe('formatSessionSearchResponse: non-result answers', () => {
-  it('names the reason and how to enable a disabled index', () => {
+  it('reports a disabled index', () => {
     expect(formatSessionSearchResponse({ kind: 'unavailable', reason: 'disabled' })).toBe(
-      [
-        'Session search is off on this host.',
-        'Turn on Agent Session History in Orca settings to build the index.'
-      ].join('\n')
+      'Session search is off on this host.'
     )
   })
 
