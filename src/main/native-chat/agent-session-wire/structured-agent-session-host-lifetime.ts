@@ -50,6 +50,13 @@ function hasProviderChild(
   return context.sessions.get(sessionId)?.hasProviderChild === true
 }
 
+/** The wind-down this host owes for the session's child. A live child always owes one, whatever a
+ *  previous childless eviction recorded — the same session object is re-acquired in place on a
+ *  handoff back to native, so a remembered `false` must never outrank the child in front of it. */
+function owesProviderChildWindDown(session: StructuredAgentSessionHostSession): boolean {
+  return session.hasProviderChild || session.owesProviderChildWindDown === true
+}
+
 /** Runs the eviction steps under a deadline. A step that fails — or runs out of time — aborts the
  *  rest, which leaves the session indexed and the child loaded so the next close is a real retry. */
 export async function evictHeldStructuredAgentSession(
@@ -63,7 +70,7 @@ export async function evictHeldStructuredAgentSession(
   // The obligation OUTLIVES the child. `hasProviderChild` is retired the instant the adapter
   // proves the exit, so a step that aborts after that point would otherwise leave the retry
   // reading "no child here" and skipping the settlement and the lease release it still owes.
-  const owesWindDown = session.owesProviderChildWindDown ?? session.hasProviderChild
+  const owesWindDown = owesProviderChildWindDown(session)
   session.owesProviderChildWindDown = owesWindDown
   let settlementError: unknown
   const eviction: StructuredAgentSessionEvictionContext = {
@@ -127,7 +134,7 @@ export async function evictOwnedStructuredAgentSessions(
   retainOnFailure: Set<string>
 ): Promise<void> {
   const ownedSessionIds = [...context.sessions]
-    .filter(([, session]) => session.hasProviderChild || session.owesProviderChildWindDown === true)
+    .filter(([, session]) => owesProviderChildWindDown(session))
     .map(([sessionId]) => sessionId)
   // Retained up front and cleared only once an eviction settles: the quit phase is bounded, and a
   // timeout leaves these still running. Closing their journals underneath them is the one outcome

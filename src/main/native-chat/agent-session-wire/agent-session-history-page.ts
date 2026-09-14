@@ -101,23 +101,9 @@ export function readAgentSessionHistory(
  * Retiring on the way out instead lets a window land entirely on retired rows and return an empty
  * page that still claims older history — a cursor that never advances, which is a reader spinning
  * on one request rather than a transcript that finished loading.
- *
- * Keyed on the snapshot's own items array, which the reducer rebuilds on every change, so a
- * multi-page read over one snapshot filters once.
  */
-const renderableTimelines = new WeakMap<
-  readonly AgentJournalRenderItem[],
-  AgentJournalRenderItem[]
->()
-
 function renderableTimeline(snapshot: AgentJournalSnapshot): AgentJournalRenderItem[] {
-  const cached = renderableTimelines.get(snapshot.items)
-  if (cached) {
-    return cached
-  }
-  const items = withoutRetiredProviderExitStatusItems(snapshot.items, snapshot.sessionId)
-  renderableTimelines.set(snapshot.items, items)
-  return items
+  return withoutRetiredProviderExitStatusItems(snapshot.items, snapshot.sessionId)
 }
 
 /**
