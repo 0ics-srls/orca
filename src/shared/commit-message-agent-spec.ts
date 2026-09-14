@@ -67,6 +67,8 @@ export type CommitMessageAgentSpec = {
   }
   models: CommitMessageModel[]
   defaultModelId: string
+  /** OMP config default is a runtime setting, not a selectable discovered model. */
+  configuredDefaultModelId?: string
 }
 
 export type CommitMessageModelCapability = {
@@ -110,7 +112,8 @@ export const COMMIT_MESSAGE_AGENT_SPECS: Partial<Record<TuiAgent, CommitMessageA
     modelSource: 'dynamic',
     modelDiscovery: { binary: 'omp', args: OMP_MODEL_LIST_ARGS, parse: parseOmpModelList },
     models: [{ id: 'default', label: 'Config default' }],
-    defaultModelId: 'default'
+    defaultModelId: 'default',
+    configuredDefaultModelId: 'default'
   },
   ...buildPrimaryCommitMessageAgentSpecs({
     CLAUDE_THINKING_LEVELS,

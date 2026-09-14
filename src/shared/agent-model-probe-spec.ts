@@ -4,7 +4,10 @@ import type { TuiAgent } from './tui-agent'
 
 /** Why: model discovery reads only these fields; excluding the prompt-delivery
  *  half is what keeps a probe-only agent out of the commit-message registry. */
-export type AgentModelProbeSpec = Omit<CommitMessageAgentSpec, 'promptDelivery' | 'buildArgs'>
+export type AgentModelProbeSpec = Omit<
+  CommitMessageAgentSpec,
+  'promptDelivery' | 'buildArgs' | 'configuredDefaultModelId'
+>
 
 /** Agents that support model discovery but are not commit-message agents. */
 const MODEL_DISCOVERY_ONLY_SPECS: Partial<Record<TuiAgent, AgentModelProbeSpec>> = {
