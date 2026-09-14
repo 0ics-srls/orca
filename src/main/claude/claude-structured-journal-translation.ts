@@ -81,6 +81,10 @@ export function createClaudeJournalTranslator(
   const promptItems = new Map<string, AgentJournalItemIdentity[]>()
   const streamedBlocks = createClaudeStreamedBlockRegistry()
   let currentTurn: ClaudeCurrentTurn | null = null
+  /** Provider output may not reopen a turn after the session ended or a turn
+   *  failed: nothing would ever close the turn it opened, and the row would read
+   *  working for the life of the session. Only an accepted send lifts it. */
+  let reopenSuppressed = false
   const groupKeyOf = (turn: ClaudeCurrentTurn | null): string | null =>
     turn ? `${turn.sessionId}:${turn.turnId}` : null
   const providerFallback = createClaudeProviderFrameFallback(
@@ -134,7 +138,7 @@ export function createClaudeJournalTranslator(
     if (envelope.role !== 'assistant' || frame.parent_tool_use_id !== null) {
       return
     }
-    if (currentTurn) {
+    if (reopenSuppressed || currentTurn) {
       return
     }
     openTurn(
@@ -237,6 +241,7 @@ export function createClaudeJournalTranslator(
       userItemId: agentJournalItemKey(identity)
     })
     if (sendEchoTurn) {
+      reopenSuppressed = false
       openTurn(sendEchoTurn, observedAt)
     }
     if (changed) {
@@ -259,6 +264,9 @@ export function createClaudeJournalTranslator(
           })
           currentTurn = null
         }
+        // A frame that arrives after the child is gone must not open a turn no
+        // event can close.
+        reopenSuppressed = true
         deps.sink.setActivity?.(null)
         return
       }
@@ -285,6 +293,9 @@ export function createClaudeJournalTranslator(
         }
         // The turn is over however it ended, so a foreground child still
         // reported as working will never be settled by an event.
+        // A turn that failed, or that the user stopped, is not resumed by
+        // whatever the provider says next; the next send is what resumes it.
+        reopenSuppressed = event.message.is_error === true
         subagents.settleTurn(groupKeyOf(currentTurn))
         if (currentTurn) {
           publishLifecycle(

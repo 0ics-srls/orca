@@ -215,4 +215,42 @@ describe('a Claude turn the provider resumed on its own', () => {
     translator.handle(result('r-root'))
     expect(projected(items())).toBe('idle')
   })
+
+  it('never opens a turn from a frame that arrives after the session ended', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
+    translator.handle({ type: 'ended', sessionId: 'orca-session', observedAt: 1 })
+    expect(projected(items())).toBe('idle')
+
+    // Nothing can close a turn opened now, so nothing may open one.
+    translator.handle(frame('assistant', 'a1', [{ type: 'text', text: 'late frame' }]))
+    expect(projected(items())).toBe('idle')
+  })
+
+  it('does not let provider chatter resume a turn the provider failed', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'on it' }]))
+    translator.handle({
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'result',
+        subtype: 'error',
+        uuid: 'r-fail',
+        session_id: SESSION,
+        parent_tool_use_id: null,
+        is_error: true
+      }
+    })
+    expect(projected(items())).toBe('idle')
+
+    translator.handle(frame('assistant', 'a1', [{ type: 'text', text: 'still talking' }]))
+    expect(projected(items())).toBe('idle')
+
+    // The next accepted send is what resumes it.
+    translator.handle(frame('user', 'u2', [{ type: 'text', text: 'again' }]))
+    expect(projected(items())).toBe('working')
+  })
 })
