@@ -40,25 +40,31 @@ function clientAnswering(settingsResult: unknown, uiResult: unknown): RpcClient 
 
 describe('useNewWorkspaceRuntimeContext', () => {
   let renderer: ReactTestRenderer | null = null
+  let context: RuntimeContext | null = null
 
   afterEach(() => {
     act(() => renderer?.unmount())
     renderer = null
+    context = null
   })
 
-  async function mount(settingsResult: unknown, uiResult: unknown): Promise<PublishedState> {
-    // One client for the whole mount: the hook keys its effect on client identity.
-    const client = clientAnswering(settingsResult, uiResult)
-    let context!: RuntimeContext
-    function Harness(): null {
-      context = useNewWorkspaceRuntimeContext(client, true)
-      return null
-    }
+  function Harness({ client }: { client: RpcClient }): null {
+    context = useNewWorkspaceRuntimeContext(client, true)
+    return null
+  }
+
+  /** Answering twice re-renders the live harness, so the second call is a host swap, not a remount. */
+  async function answer(settingsResult: unknown, uiResult: unknown): Promise<PublishedState> {
+    const element = createElement(Harness, { client: clientAnswering(settingsResult, uiResult) })
     await act(async () => {
-      renderer = create(createElement(Harness))
+      if (renderer) {
+        renderer.update(element)
+      } else {
+        renderer = create(element)
+      }
     })
     await act(async () => {})
-    const { runtimeSettings, trustedOrcaHooks, availableProviders } = context
+    const { runtimeSettings, trustedOrcaHooks, availableProviders } = context!
     return { runtimeSettings, trustedOrcaHooks, availableProviders }
   }
 
@@ -69,7 +75,7 @@ describe('useNewWorkspaceRuntimeContext', () => {
     ['absent', undefined],
     ['without a settings member', {}]
   ])('degrades a %s settings result to absent settings', async (_label, settingsResult) => {
-    expect(await mount(settingsResult, UI_WITH_TRUST)).toEqual({
+    expect(await answer(settingsResult, UI_WITH_TRUST)).toEqual({
       runtimeSettings: null,
       trustedOrcaHooks: TRUSTED_HOOKS,
       availableProviders: ['github']
@@ -83,15 +89,24 @@ describe('useNewWorkspaceRuntimeContext', () => {
     ['absent', undefined],
     ['without a ui member', {}]
   ])('degrades a %s ui result to untrusted hooks', async (_label, uiResult) => {
-    expect(await mount({ settings: SETTINGS }, uiResult)).toEqual({
+    expect(await answer({ settings: SETTINGS }, uiResult)).toEqual({
       runtimeSettings: SETTINGS,
       trustedOrcaHooks: {},
       availableProviders: ['github']
     })
   })
 
+  // The blank, not just the absence of a throw: trustedOrcaHooks gates the setup-hook approval
+  // prompt in use-new-workspace-create-submit.ts, so a stale value would skip it.
+  it('blanks the trust an earlier host published when the next ui result is null', async () => {
+    expect((await answer({ settings: SETTINGS }, UI_WITH_TRUST)).trustedOrcaHooks).toEqual(
+      TRUSTED_HOOKS
+    )
+    expect((await answer({ settings: SETTINGS }, null)).trustedOrcaHooks).toEqual({})
+  })
+
   it('publishes the settings and trust a host does send', async () => {
-    expect(await mount({ settings: SETTINGS }, UI_WITH_TRUST)).toEqual({
+    expect(await answer({ settings: SETTINGS }, UI_WITH_TRUST)).toEqual({
       runtimeSettings: SETTINGS,
       trustedOrcaHooks: TRUSTED_HOOKS,
       availableProviders: ['github']
