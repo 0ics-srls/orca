@@ -52,6 +52,21 @@ export function taskText(value: unknown): string | undefined {
   return boundedTaskText(value)
 }
 
+/**
+ * The sentence a task frame wrote about itself.
+ *
+ * Only for a frame the row owner could not claim — one naming no task at all.
+ * It reaches the generic fallback, which has no key for `summary` and would
+ * otherwise print the bare opcode. Passed to that fallback as Claude's own
+ * display text rather than taught to its shared key list, because that list is
+ * read for every provider and already resolves `summary` by hand for two Codex
+ * methods; widening it globally to reach one malformed Claude frame would
+ * re-rank the row text of every unmodelled frame on both providers.
+ */
+export function taskFrameSentence(frame: Record<string, unknown>): string | undefined {
+  return taskText(frame.summary) ?? taskText(frame.error)
+}
+
 /** The provider-reported identity for a task. Subagent frames have carried the
  *  type under both `agent_type` and `subagent_type` across SDK versions. */
 export function taskName(frame: Record<string, unknown>): string | undefined {

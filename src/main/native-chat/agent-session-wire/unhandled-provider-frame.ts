@@ -38,7 +38,6 @@ const MESSAGE_KEYS = [
   'text',
   'warning',
   'detail',
-  'summary',
   'description',
   'reason',
   // `error` is how a failed dependency reports itself — an MCP server that could not start says

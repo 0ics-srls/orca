@@ -32,6 +32,7 @@ import {
   createClaudeProviderFrameFallback,
   isSettledClaudeResultKind
 } from './claude-structured-provider-fallback'
+import { taskFrameSentence } from './claude-background-task-frames'
 import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
@@ -270,7 +271,7 @@ export function createClaudeJournalTranslator(
         if (
           !handleMessage(event.message, event.startsTurn === true, event.observedAt ?? Date.now())
         ) {
-          providerFallback.append(kind, event.message, undefined, {
+          providerFallback.append(kind, event.message, taskFrameSentence(event.message), {
             coveredByTypedTranslator: backgroundTaskCovered
           })
         }
