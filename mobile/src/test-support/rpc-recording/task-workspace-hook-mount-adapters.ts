@@ -47,9 +47,6 @@ export function taskWorkspaceHookMountAdapters(
           if (name === 'mount') {
             return hook.mount()
           }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
           if (name === 'connect') {
             return performHookAction(() => actions.connectWorkspaceSshRepo())
           }
@@ -119,9 +116,6 @@ export function taskWorkspaceHookMountAdapters(
           if (name === 'mount') {
             return hook.mount()
           }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
           if (name === 'branch-query') {
             model.showWorkspaceBaseBranchPicker = true
             model.workspaceBaseBranchQuery = String(args.query ?? 'main')
@@ -176,9 +170,6 @@ export function taskWorkspaceHookMountAdapters(
         action(name) {
           if (name === 'mount') {
             return hook.mount()
-          }
-          if (name === 'unmount') {
-            return hook.unmount()
           }
           if (name === 'save-preset') {
             return performHookAction(() => actions.saveWorkspaceSparsePreset())
