@@ -1,5 +1,5 @@
 import type { MountAdapter } from './recording-scenario'
-import { mountModelHook } from './model-hook-mount'
+import { mountFixture, mountModelHook } from './model-hook-mount'
 import type { operationModuleLoader } from './operation-module-loader'
 import {
   GITHUB_ISSUE_ITEM,
@@ -47,21 +47,25 @@ export function taskProjectBoardMutationMountAdapters(
       actions: ({ actions }) => ({
         'set-field': () =>
           actions().mutateProjectRowField(
-            ISSUE_ROW as never,
-            STATUS_FIELD as never,
-            {
+            mountFixture(ISSUE_ROW),
+            mountFixture(STATUS_FIELD),
+            mountFixture({
               singleSelectOptionId: 'option-1'
-            } as never
+            })
           ),
         'clear-field': () =>
-          actions().mutateProjectRowField(ISSUE_ROW as never, STATUS_FIELD as never, null),
+          actions().mutateProjectRowField(
+            mountFixture(ISSUE_ROW),
+            mountFixture(STATUS_FIELD),
+            null
+          ),
         'issue-type': () =>
           actions().mutateProjectRowIssueType(
-            ISSUE_ROW as never,
-            {
+            mountFixture(ISSUE_ROW),
+            mountFixture({
               id: 'type-1',
               name: 'Bug'
-            } as never
+            })
           )
       }),
       state: (model) => ({
@@ -81,17 +85,17 @@ export function taskProjectBoardMutationMountAdapters(
       useHook: (model) => useActions(model),
       fixture: { ...boardFixture, projectRowItem: PR_ROW, projectReviewersDraft: 'octocat' },
       actions: ({ actions }) => ({
-        reviewers: () => actions().requestProjectGitHubReviewers(PR_ROW as never),
-        checks: () => actions().refreshProjectGitHubChecks(PR_ROW as never),
-        rerun: () => actions().rerunProjectGitHubChecks(PR_ROW as never, true),
+        reviewers: () => actions().requestProjectGitHubReviewers(mountFixture(PR_ROW)),
+        checks: () => actions().refreshProjectGitHubChecks(mountFixture(PR_ROW)),
+        rerun: () => actions().rerunProjectGitHubChecks(mountFixture(PR_ROW), true),
         viewed: () =>
           actions().toggleProjectGitHubFileViewed(
-            PR_ROW as never,
-            {
+            mountFixture(PR_ROW),
+            mountFixture({
               path: 'src/index.ts',
               status: 'modified',
               viewerViewedState: 'UNVIEWED'
-            } as never
+            })
           )
       }),
       state: (model) => ({
@@ -119,13 +123,19 @@ export function taskProjectBoardMutationMountAdapters(
       },
       actions: ({ actions }) => ({
         'delete-comment': () =>
-          actions().deleteProjectRowComment(PR_ROW as never, { ...REVIEW_COMMENT } as never),
+          actions().deleteProjectRowComment(
+            mountFixture(PR_ROW),
+            mountFixture({ ...REVIEW_COMMENT })
+          ),
         thread: () =>
-          actions().toggleProjectGitHubReviewThread(PR_ROW as never, REVIEW_COMMENT as never),
+          actions().toggleProjectGitHubReviewThread(
+            mountFixture(PR_ROW),
+            mountFixture(REVIEW_COMMENT)
+          ),
         'review-reply': () =>
-          actions().replyToProjectGitHubComment(PR_ROW as never, REVIEW_COMMENT as never),
+          actions().replyToProjectGitHubComment(mountFixture(PR_ROW), mountFixture(REVIEW_COMMENT)),
         'issue-reply': () =>
-          actions().replyToProjectGitHubComment(PR_ROW as never, ISSUE_COMMENT as never)
+          actions().replyToProjectGitHubComment(mountFixture(PR_ROW), mountFixture(ISSUE_COMMENT))
       }),
       state: (model) => ({
         detail: model.projectRowDetail,
@@ -157,10 +167,10 @@ export function taskProjectBoardMutationMountAdapters(
         },
         actions: ({ actions }) => ({
           'update-item': () =>
-            actions().mutateProjectRowIssueOrPr(row as never, { title: 'Renamed' }),
-          'add-comment': () => actions().addProjectRowComment(row as never),
+            actions().mutateProjectRowIssueOrPr(mountFixture(row), { title: 'Renamed' }),
+          'add-comment': () => actions().addProjectRowComment(mountFixture(row)),
           'update-comment': () =>
-            actions().updateProjectRowComment(row as never, REVIEW_COMMENT as never)
+            actions().updateProjectRowComment(mountFixture(row), mountFixture(REVIEW_COMMENT))
         }),
         state: (model) => ({
           row: model.projectRowItem,
@@ -192,23 +202,24 @@ export function taskProjectBoardMutationMountAdapters(
       actions: ({ actions }) => ({
         expand: () =>
           actions().toggleProjectGitHubFileExpansion(
-            PR_ROW as never,
-            {
+            mountFixture(PR_ROW),
+            mountFixture({
               path: 'src/index.ts',
               status: 'modified'
-            } as never
+            })
           ),
         'file-comment': () =>
           actions().addProjectGitHubFileReviewComment(
-            PR_ROW as never,
-            { path: 'src/index.ts', status: 'modified' } as never,
+            mountFixture(PR_ROW),
+            mountFixture({ path: 'src/index.ts', status: 'modified' }),
             12
           ),
-        merge: () => actions().mergeProjectGitHubPullRequest(PR_ROW as never, 'squash' as never),
+        merge: () =>
+          actions().mergeProjectGitHubPullRequest(mountFixture(PR_ROW), mountFixture('squash')),
         // The same hook also owns the item screen's open/close toggle, whose method is a local
         // two-literal ternary over the item type rather than a project-board call.
-        'issue-state': () => actions().toggleGitHubStatus(GITHUB_ISSUE_ITEM as never),
-        'pr-state': () => actions().toggleGitHubStatus(GITHUB_PR_ITEM as never)
+        'issue-state': () => actions().toggleGitHubStatus(mountFixture(GITHUB_ISSUE_ITEM)),
+        'pr-state': () => actions().toggleGitHubStatus(mountFixture(GITHUB_PR_ITEM))
       }),
       state: (model) => ({
         row: model.projectRowItem,

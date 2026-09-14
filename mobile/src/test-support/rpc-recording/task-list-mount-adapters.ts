@@ -1,5 +1,5 @@
 import type { MountAdapter } from './recording-scenario'
-import { mountModelHook } from './model-hook-mount'
+import { mountFixture, mountModelHook } from './model-hook-mount'
 import type { operationModuleLoader } from './operation-module-loader'
 import { HOSTED_REPO, REPO_ID } from './task-item-fixtures'
 
@@ -35,14 +35,14 @@ export function taskListMountAdapters(
       actions: ({ actions, model }) => ({
         'linear-context': () => actions().loadLinearContext(),
         'persist-teams': () =>
-          actions().persistLinearTeamSelection(new Set(['team-1']), [
-            { id: 'team-1' },
-            { id: 'team-2' }
-          ] as never),
+          actions().persistLinearTeamSelection(
+            new Set(['team-1']),
+            mountFixture([{ id: 'team-1' }, { id: 'team-2' }])
+          ),
         'github-page': () =>
-          actions().fetchGitHubItemsPage(model.client as never, [HOSTED_REPO] as never),
+          actions().fetchGitHubItemsPage(mountFixture(model.client), mountFixture([HOSTED_REPO])),
         'github-count': () =>
-          actions().countGitHubItems(model.client as never, [HOSTED_REPO] as never)
+          actions().countGitHubItems(mountFixture(model.client), mountFixture([HOSTED_REPO]))
       }),
       state: (model) => ({
         connected: model.linearConnected,
@@ -179,7 +179,7 @@ export function taskListMountAdapters(
         actions: ({ actions }) => ({
           create: () => actions().createTask(),
           'issue-source': () =>
-            actions().setGitHubIssueSourcePreference(HOSTED_REPO as never, 'upstream')
+            actions().setGitHubIssueSourcePreference(mountFixture(HOSTED_REPO), 'upstream')
         }),
         state: (model) => ({
           item: model.actionItem,

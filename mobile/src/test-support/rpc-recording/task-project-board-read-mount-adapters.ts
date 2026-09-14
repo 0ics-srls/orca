@@ -1,5 +1,5 @@
 import type { MountAdapter } from './recording-scenario'
-import { mountModelHook } from './model-hook-mount'
+import { mountFixture, mountModelHook } from './model-hook-mount'
 import type { operationModuleLoader } from './operation-module-loader'
 import { githubDetailPayload } from './task-item-fixtures'
 import { ISSUE_ROW, PROJECT_HOST, PROJECT_REPO, PROJECT_TABLE } from './task-project-board-fixtures'
@@ -65,12 +65,14 @@ export function taskProjectBoardReadMountAdapters(
       actions: ({ actions }) => ({
         projects: () => actions().loadGitHubProjects(),
         views: () =>
-          actions().loadGitHubProjectViews({
-            owner: 'owner',
-            ownerType: 'ORGANIZATION',
-            number: 3,
-            host: PROJECT_HOST
-          } as never),
+          actions().loadGitHubProjectViews(
+            mountFixture({
+              owner: 'owner',
+              ownerType: 'ORGANIZATION',
+              number: 3,
+              host: PROJECT_HOST
+            })
+          ),
         table: () => actions().loadGitHubProjectTable(),
         paste: () => actions().resolveGitHubProjectFromInput()
       }),

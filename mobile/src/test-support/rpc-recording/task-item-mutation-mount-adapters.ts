@@ -1,5 +1,5 @@
 import type { MountAdapter } from './recording-scenario'
-import { mountModelHook } from './model-hook-mount'
+import { mountFixture, mountModelHook } from './model-hook-mount'
 import type { operationModuleLoader } from './operation-module-loader'
 import {
   GITHUB_ISSUE_ITEM,
@@ -44,9 +44,9 @@ export function taskItemMutationMountAdapters(
           error: ''
         },
         actions: ({ actions }) => ({
-          comment: () => actions().addHostedItemComment(item as never),
-          reviewers: () => actions().requestGitHubReviewers(item as never),
-          checks: () => actions().refreshGitHubChecks(item as never)
+          comment: () => actions().addHostedItemComment(mountFixture(item)),
+          reviewers: () => actions().requestGitHubReviewers(mountFixture(item)),
+          checks: () => actions().refreshGitHubChecks(mountFixture(item))
         }),
         state: (model) => ({
           payload: model.detailPayload,
@@ -77,19 +77,19 @@ export function taskItemMutationMountAdapters(
         },
         actions: ({ actions }) => ({
           'review-reply': () =>
-            actions().replyToGitHubComment(item as never, REVIEW_COMMENT as never),
+            actions().replyToGitHubComment(mountFixture(item), mountFixture(REVIEW_COMMENT)),
           'issue-reply': () =>
-            actions().replyToGitHubComment(item as never, ISSUE_COMMENT as never),
-          merge: () => actions().mergeHostedReview(item as never, 'squash'),
+            actions().replyToGitHubComment(mountFixture(item), mountFixture(ISSUE_COMMENT)),
+          merge: () => actions().mergeHostedReview(mountFixture(item), 'squash'),
           'linear-status': () =>
             actions().setLinearStatus(
-              LINEAR_ITEM as never,
-              {
+              mountFixture(LINEAR_ITEM),
+              mountFixture({
                 id: 'state-2',
                 name: 'Done',
                 type: 'completed',
                 color: '#00ff00'
-              } as never
+              })
             )
         }),
         state: (model) => ({
@@ -118,9 +118,9 @@ export function taskItemMutationMountAdapters(
           error: ''
         },
         actions: ({ actions }) => ({
-          'gitlab-status': () => actions().toggleGitLabStatus(item as never),
+          'gitlab-status': () => actions().toggleGitLabStatus(mountFixture(item)),
           'github-metadata': () =>
-            actions().updateGitHubIssueMetadata(GITHUB_ISSUE_ITEM as never, {
+            actions().updateGitHubIssueMetadata(mountFixture(GITHUB_ISSUE_ITEM), {
               title: 'Renamed',
               addLabels: ['triage'],
               removeLabels: ['bug']
@@ -153,12 +153,12 @@ export function taskItemMutationMountAdapters(
         },
         actions: ({ actions }) => ({
           'update-pr': () =>
-            actions().updateGitHubPullRequestMetadata(GITHUB_PR_ITEM as never, {
+            actions().updateGitHubPullRequestMetadata(mountFixture(GITHUB_PR_ITEM), {
               title: 'Renamed',
               body: 'new body'
             }),
           'update-gitlab': () =>
-            actions().updateGitLabIssueMetadata(item as never, {
+            actions().updateGitLabIssueMetadata(mountFixture(item), {
               title: 'Renamed',
               addLabels: ['triage']
             })
@@ -189,15 +189,25 @@ export function taskItemMutationMountAdapters(
         error: ''
       },
       actions: ({ actions }) => ({
-        rerun: () => actions().rerunGitHubChecks(GITHUB_PR_ITEM as never, true),
+        rerun: () => actions().rerunGitHubChecks(mountFixture(GITHUB_PR_ITEM), true),
         viewed: () =>
-          actions().toggleGitHubFileViewed(GITHUB_PR_ITEM as never, DETAIL_FILE as never),
+          actions().toggleGitHubFileViewed(mountFixture(GITHUB_PR_ITEM), mountFixture(DETAIL_FILE)),
         thread: () =>
-          actions().toggleGitHubReviewThread(GITHUB_PR_ITEM as never, REVIEW_COMMENT as never),
+          actions().toggleGitHubReviewThread(
+            mountFixture(GITHUB_PR_ITEM),
+            mountFixture(REVIEW_COMMENT)
+          ),
         expand: () =>
-          actions().toggleGitHubFileExpansion(GITHUB_PR_ITEM as never, DETAIL_FILE as never),
+          actions().toggleGitHubFileExpansion(
+            mountFixture(GITHUB_PR_ITEM),
+            mountFixture(DETAIL_FILE)
+          ),
         'file-comment': () =>
-          actions().addGitHubFileReviewComment(GITHUB_PR_ITEM as never, DETAIL_FILE as never, 12)
+          actions().addGitHubFileReviewComment(
+            mountFixture(GITHUB_PR_ITEM),
+            mountFixture(DETAIL_FILE),
+            12
+          )
       }),
       state: (model) => ({
         payload: model.detailPayload,
@@ -225,13 +235,13 @@ export function taskItemMutationMountAdapters(
         error: ''
       },
       actions: ({ actions }) => ({
-        comment: () => actions().addLinearComment(LINEAR_ITEM as never),
+        comment: () => actions().addLinearComment(mountFixture(LINEAR_ITEM)),
         'sub-issue-open': () =>
           actions().openLinearSubIssue(
-            { id: 'issue-2', identifier: 'ENG-2' } as never,
+            mountFixture({ id: 'issue-2', identifier: 'ENG-2' }),
             'linear-workspace'
           ),
-        'sub-issue-create': () => actions().createLinearSubIssue(LINEAR_ITEM as never)
+        'sub-issue-create': () => actions().createLinearSubIssue(mountFixture(LINEAR_ITEM))
       }),
       state: (model) => ({
         payload: model.detailPayload,

@@ -26,6 +26,18 @@ export type ModelHookSpec<Actions> = {
   readonly state: (model: Record<string, unknown>) => Record<string, unknown>
 }
 
+/**
+ * Hands a recorder fixture to the product function that consumes it.
+ *
+ * These fixtures deliberately carry only the members the mounted hook reads — that is what makes
+ * an adapter readable, and completing them into full domain objects would invent data no scenario
+ * observes. One cast, named once here, rather than one per action.
+ */
+export function mountFixture<T>(value: unknown): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture is shaped for the single hook action it is passed to; the recorder supplies every member that action reads.
+  return value as T
+}
+
 export function mountModelHook<Actions>(
   context: MountContext,
   spec: ModelHookSpec<Actions>
