@@ -149,6 +149,7 @@ export function buildDefaultSettings(args: {
     terminalShortcutPolicy: 'orca-first',
     floatingTerminalEnabled: true,
     browserClientHostedRemoteEnabled: true,
+    browserUserAgentMode: 'clean',
     floatingTerminalDefaultedForAllUsers: true,
     floatingTerminalCwd: '~',
     floatingTerminalTrustedCwds: [],

@@ -285,7 +285,6 @@ export function formatFlagHelp(flag: string): string {
     page: '--page <id>            Stable browser page id from `orca tab list --json`',
     profile: '--profile <id>        Browser profile id',
     'show-profile': '--show-profile        Include tab profile in text output',
-    'no-ua-spoof': "--no-ua-spoof         Keep Electron's native user agent",
     format: '--format <png|jpeg>    Screenshot image format'
   }
 

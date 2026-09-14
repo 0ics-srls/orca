@@ -12,6 +12,7 @@ import { readLegacySidekickFlag } from '../applying-settings/onboarding-normaliz
 import type { PersistedState } from '../../../shared/persisted-state-types'
 import type { PreparedLoadedTerminalSettings } from './prepare-loaded-terminal-settings'
 import type { PreparedLoadedProfileSettings } from './prepare-loaded-profile-settings'
+import { normalizeBrowserUserAgentMode } from '../../../shared/browser-user-agent-mode'
 
 export function normalizeLoadedGlobalSettings(
   parsed: PersistedState,
@@ -107,6 +108,7 @@ export function normalizeLoadedGlobalSettings(
     terminalQuickCommands: normalizeTerminalQuickCommands(parsed.settings?.terminalQuickCommands),
     terminalCustomThemes: normalizeTerminalCustomThemes(parsed.settings?.terminalCustomThemes),
     appIcon: normalizeAppIconId(parsed.settings?.appIcon),
+    browserUserAgentMode: normalizeBrowserUserAgentMode(parsed.settings?.browserUserAgentMode),
     mobilePairingCustomAddress,
     mobilePairingCustomAddresses,
     // Why: persisted settings may be hand-edited or from older builds; keep tray-minimize false unless stored value is true.

@@ -111,22 +111,22 @@ describe('browser session profile IPC', () => {
     expect(detectBrowsersMock).not.toHaveBeenCalled()
   })
 
-  it('forwards the user-agent mode from a trusted renderer', async () => {
+  it('creates a profile for a trusted renderer', async () => {
     const profile = {
       id: 'profile-google',
       scope: 'isolated',
       partition: 'persist:orca-browser-session-profile-google',
       label: 'Google',
-      source: null,
-      userAgentMode: 'native'
+      source: null
     }
     createProfileMock.mockReturnValue(profile)
     registerBrowserHandlers()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the registered test handler is selected by its exact channel and called with its declared boundary shape.
     const createHandler = handleMock.mock.calls.find(
       ([channel]) => channel === 'browser:session:createProfile'
     )?.[1] as (
       event: { sender: Electron.WebContents },
-      args: { scope: 'isolated'; label: string; userAgentMode: 'native' }
+      args: { scope: 'isolated'; label: string }
     ) => unknown
     const sender = {
       id: 91,
@@ -136,10 +136,8 @@ describe('browser session profile IPC', () => {
     } as Electron.WebContents
 
     await expect(
-      createHandler({ sender }, { scope: 'isolated', label: 'Google', userAgentMode: 'native' })
+      createHandler({ sender }, { scope: 'isolated', label: 'Google' })
     ).resolves.toEqual(profile)
-    expect(createProfileMock).toHaveBeenCalledWith('isolated', 'Google', {
-      userAgentMode: 'native'
-    })
+    expect(createProfileMock).toHaveBeenCalledWith('isolated', 'Google')
   })
 })

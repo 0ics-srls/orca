@@ -44,12 +44,13 @@ vi.mock('./browser-media-access', () => ({
   requestSystemMediaAccess: vi.fn(async () => false)
 }))
 vi.mock('./browser-session-ua', () => ({
-  cleanElectronUserAgent: vi.fn((ua: string) => ua),
-  setupGoogleAuthUserAgentOverride: vi.fn()
+  installBrowserSessionUserAgentExceptions: vi.fn(() => vi.fn())
 }))
-vi.mock('./browser-session-user-agent-mode', () => ({
-  setBrowserSessionUserAgentMode: vi.fn(),
-  clearBrowserSessionUserAgentMode: vi.fn()
+vi.mock('./browser-process-user-agent', () => ({
+  getBrowserProcessUserAgentIdentity: () => ({
+    mode: 'clean',
+    userAgent: 'Mozilla/5.0 Chrome/150.0.0.0 Safari/537.36'
+  })
 }))
 vi.mock('./browser-webauthn-access', () => ({
   allowsBrowserWebAuthnPermission: vi.fn(() => false),

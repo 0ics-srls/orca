@@ -39,6 +39,7 @@ import {
   buildWorkspaceDirHistoryForUpdate,
   stripRetiredGlobalSettings
 } from './terminal-settings-migrations'
+import { normalizeBrowserUserAgentMode } from '../../../shared/browser-user-agent-mode'
 
 export type SettingsMutationOperations = {
   state: PersistedState
@@ -75,6 +76,11 @@ export function updateSettings(
   }
   if ('agentSkillSharingEnabled' in updates) {
     sanitizedUpdates.agentSkillSharingEnabled = updates.agentSkillSharingEnabled === true
+  }
+  if ('browserUserAgentMode' in updates) {
+    sanitizedUpdates.browserUserAgentMode = normalizeBrowserUserAgentMode(
+      updates.browserUserAgentMode
+    )
   }
   if ('nestedWorkerMaxDepth' in updates) {
     sanitizedUpdates.nestedWorkerMaxDepth = resolveNestedWorkerMaxDepth({

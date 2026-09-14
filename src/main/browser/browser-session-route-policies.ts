@@ -5,7 +5,6 @@ import {
   clearBrowserSessionPartitionPolicies,
   installBrowserSessionPartitionPolicies
 } from './browser-session-partition-policies'
-import { clearBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
 
 export function installBrowserRoutePartitionPolicies(
   profile: BrowserSessionProfile,
@@ -25,6 +24,5 @@ export function clearBrowserRoutePartitionPolicies(partition: string): void {
     return
   }
   const sess = session.fromPartition(partition)
-  clearBrowserSessionUserAgentMode(sess)
   clearBrowserSessionPartitionPolicies(partition, sess)
 }

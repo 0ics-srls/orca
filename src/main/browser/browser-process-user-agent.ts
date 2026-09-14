@@ -1,8 +1,8 @@
 import { app } from 'electron'
-import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
+import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 export type BrowserProcessUserAgentIdentity = Readonly<{
-  mode: BrowserSessionUserAgentMode
+  mode: BrowserUserAgentMode
   /** What every document, frame and worker in this process presents. */
   userAgent: string
 }>
@@ -23,7 +23,7 @@ export function cleanElectronUserAgent(userAgent: string): string {
  * rather than assigning the raw string back, so the engine keeps its own untouched default.
  */
 export function initializeBrowserProcessUserAgent(
-  mode: BrowserSessionUserAgentMode
+  mode: BrowserUserAgentMode
 ): BrowserProcessUserAgentIdentity {
   if (identity) {
     throw new Error('Browser process user agent was already initialized')

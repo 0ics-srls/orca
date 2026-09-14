@@ -14,14 +14,20 @@ import {
 import type {
   BrowserCookieImportResult,
   BrowserSessionProfile,
-  BrowserSessionProfileCreateOptions,
   BrowserSessionProfileScope
 } from '../../shared/browser-workspace-types'
+import {
+  clearBrowserIdentityMigrationNotice,
+  readPendingBrowserIdentityMigrationNotice
+} from '../browser/browser-identity-mode-record'
+import { getCanonicalUserDataPath } from '../persistence'
 
 export function registerBrowserSessionProfileHandlers(): void {
   ipcMain.removeHandler('browser:session:listProfiles')
   ipcMain.removeHandler('browser:session:createProfile')
   ipcMain.removeHandler('browser:session:deleteProfile')
+  ipcMain.removeHandler('browser:session:readUserAgentMigrationNotice')
+  ipcMain.removeHandler('browser:session:clearUserAgentMigrationNotice')
   ipcMain.removeHandler('browser:session:importCookies')
   ipcMain.removeHandler('browser:session:resolvePartition')
 
@@ -36,19 +42,28 @@ export function registerBrowserSessionProfileHandlers(): void {
     'browser:session:createProfile',
     async (
       event,
-      args: {
-        scope: BrowserSessionProfileScope
-        label: string
-      } & BrowserSessionProfileCreateOptions
+      args: { scope: BrowserSessionProfileScope; label: string }
     ): Promise<BrowserSessionProfile | null> => {
       if (!isTrustedBrowserRenderer(event.sender)) {
         return null
       }
-      return await browserSessionRegistry.createProfile(args.scope, args.label, {
-        userAgentMode: args.userAgentMode
-      })
+      return await browserSessionRegistry.createProfile(args.scope, args.label)
     }
   )
+
+  ipcMain.handle('browser:session:readUserAgentMigrationNotice', (event): string[] | null => {
+    if (!isTrustedBrowserRenderer(event.sender)) {
+      return null
+    }
+    return readPendingBrowserIdentityMigrationNotice(getCanonicalUserDataPath())
+  })
+
+  ipcMain.handle('browser:session:clearUserAgentMigrationNotice', (event): boolean => {
+    if (!isTrustedBrowserRenderer(event.sender)) {
+      return false
+    }
+    return clearBrowserIdentityMigrationNotice(getCanonicalUserDataPath())
+  })
 
   ipcMain.handle(
     'browser:session:deleteProfile',

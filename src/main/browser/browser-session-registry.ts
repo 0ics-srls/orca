@@ -9,7 +9,6 @@ import {
 } from '../../shared/orca-profiles'
 import type {
   BrowserSessionProfile,
-  BrowserSessionProfileCreateOptions,
   BrowserSessionProfileScope
 } from '../../shared/browser-workspace-types'
 import {
@@ -24,12 +23,13 @@ import {
 } from './browser-session-meta-store'
 import type { BrowserSessionMeta } from './browser-session-meta-store'
 import {
-  applyBrowserSessionUserAgentModes,
   forgetBrowserSessionPartitionConfiguration,
   installBrowserSessionPartitionPolicies
 } from './browser-session-partition-policies'
-import { isValidPersistedBrowserSessionProfile } from './browser-session-persisted-profile-validation'
-import { clearBrowserSessionUserAgentMode } from './browser-session-user-agent-mode'
+import {
+  isValidPersistedBrowserSessionProfile,
+  migrateRetiredBrowserSessionProfileUserAgentModes
+} from './browser-session-persisted-profile-validation'
 import {
   clearBrowserRoutePartitionPolicies,
   installBrowserRoutePartitionPolicies
@@ -38,6 +38,8 @@ import { retireProxySessionApplication } from '../network/proxy-settings'
 import { invalidateBrowserSessionProxyApplication } from './browser-session-proxy'
 import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
 import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
+import { getCanonicalUserDataPath } from '../persistence'
+import { recordRetiredNativeBrowserProfiles } from './browser-identity-mode-record'
 
 export type BrowserSessionRegistryProfileOptions = {
   orcaProfileId: string
@@ -108,14 +110,23 @@ class BrowserSessionRegistry {
   // Why re-read defaultSource: the constructor may run before app.isReady() (userData path unavailable), so loadPersistedSource() returned null.
   initializeBrowserSessionsFromPersistedState(): void {
     const meta = this.loadPersistedMeta()
+    const migration = migrateRetiredBrowserSessionProfileUserAgentModes(
+      meta.profiles,
+      this.activeOrcaProfileId
+    )
+    // Record the notice first so a metadata-write failure cannot erase the user's retired choice.
+    recordRetiredNativeBrowserProfiles(getCanonicalUserDataPath(), migration.nativeProfileIds)
+    if (migration.changed) {
+      this.persistMeta({ profiles: migration.profiles })
+    }
     if (meta.defaultSource) {
       const current = this.profiles.get('default')
       if (current && current.source === null) {
         this.profiles.set('default', { ...current, source: meta.defaultSource })
       }
     }
-    if (meta.profiles.length > 0) {
-      this.hydrateFromPersisted(meta.profiles)
+    if (migration.profiles.length > 0) {
+      this.hydrateFromPersisted(migration.profiles)
     }
 
     // Why: nothing else installs policies on the default partition (hydrate skips it), so without this its guest permissions would be denied.
@@ -123,8 +134,6 @@ class BrowserSessionRegistry {
     void installBrowserSessionPartitionPolicies(defaultProfile).catch(() => {
       console.warn('[proxy] Failed to apply proxy to browser partition', defaultProfile.partition)
     })
-
-    applyBrowserSessionUserAgentModes(this.listProfiles())
   }
 
   // Why: must run before any session.fromPartition() so CookieMonster reads the staged cookies instead of overwriting them from its in-memory DB.
@@ -208,16 +217,10 @@ class BrowserSessionRegistry {
 
   async createProfile(
     scope: BrowserSessionProfileScope,
-    label: string,
-    options: BrowserSessionProfileCreateOptions = {}
+    label: string
   ): Promise<BrowserSessionProfile | null> {
     // Why: the registry is also an IPC boundary, so runtime types alone cannot keep invalid values out of persisted metadata.
-    if (
-      (scope !== 'isolated' && scope !== 'imported') ||
-      (options.userAgentMode !== undefined &&
-        options.userAgentMode !== 'clean' &&
-        options.userAgentMode !== 'native')
-    ) {
+    if (scope !== 'isolated' && scope !== 'imported') {
       return null
     }
     const id = randomUUID()
@@ -228,8 +231,7 @@ class BrowserSessionRegistry {
       scope,
       partition,
       label,
-      source: null,
-      ...(options.userAgentMode ? { userAgentMode: options.userAgentMode } : {})
+      source: null
     }
     try {
       await installBrowserSessionPartitionPolicies(profile)
@@ -279,7 +281,6 @@ class BrowserSessionRegistry {
     // Why: clear the partition's storage so deleting a profile doesn't leave orphaned cookies/cache behind.
     try {
       const sess = session.fromPartition(profile.partition)
-      clearBrowserSessionUserAgentMode(sess)
       forgetBrowserSessionPartitionConfiguration(profile.partition)
       invalidateBrowserSessionProxyApplication(sess)
       const release = retireProxySessionApplication(sess)

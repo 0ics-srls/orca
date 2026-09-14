@@ -22,6 +22,13 @@ vi.mock('electron', () => ({
   }
 }))
 
+vi.mock('./browser-process-user-agent', () => ({
+  getBrowserProcessUserAgentIdentity: () => ({
+    mode: 'clean',
+    userAgent: 'Mozilla/5.0 Chrome/150.0.0.0 Safari/537.36'
+  })
+}))
+
 vi.mock('./browser-manager', () => ({
   browserManager: {
     notifyPermissionDenied: vi.fn(),
@@ -33,7 +40,7 @@ vi.mock('./browser-manager', () => ({
 
 import { browserSessionRegistry } from './browser-session-registry'
 import { googleAuthUserAgent } from './browser-google-auth-ua'
-import { setupGoogleAuthUserAgentOverride } from './browser-session-ua'
+import { installBrowserSessionUserAgentExceptions } from './browser-session-ua'
 import { setBrowserNetworkProxySettingsResolver } from './browser-session-proxy'
 import { handleElectronProxyLogin } from '../network/electron-proxy-credentials'
 import { applyProxySettingsToSession } from '../network/proxy-settings'
@@ -54,6 +61,8 @@ describe('BrowserSessionRegistry', () => {
     askForMediaAccessMock.mockResolvedValue(true)
     getMediaAccessStatusMock.mockReturnValue('granted')
     sessionFromPartitionMock.mockReturnValue({
+      setUserAgent: vi.fn(),
+      webRequest: { onBeforeSendHeaders: vi.fn() },
       setPermissionRequestHandler: vi.fn(),
       setPermissionCheckHandler: vi.fn(),
       setDevicePermissionHandler: vi.fn(),
@@ -191,13 +200,6 @@ describe('BrowserSessionRegistry', () => {
 
   it('rejects creating a profile with scope default', async () => {
     const profile = await browserSessionRegistry.createProfile('default', 'Sneaky')
-    expect(profile).toBeNull()
-  })
-
-  it('rejects invalid user-agent modes at the registry boundary', async () => {
-    const profile = await browserSessionRegistry.createProfile('isolated', 'Invalid UA', {
-      userAgentMode: 'rotating' as never
-    })
     expect(profile).toBeNull()
   })
 
@@ -344,8 +346,7 @@ describe('BrowserSessionRegistry', () => {
         scope: 'isolated',
         partition: claimedPartition,
         label: 'Conflicting identity',
-        source: null,
-        userAgentMode: 'native'
+        source: null
       }
     ])
 
@@ -528,12 +529,19 @@ describe('BrowserSessionRegistry', () => {
     })
   })
 
-  describe('setupGoogleAuthUserAgentOverride', () => {
+  describe('installBrowserSessionUserAgentExceptions', () => {
     function install(): (details: unknown, callback: ReturnType<typeof vi.fn>) => void {
       const onBeforeSendHeaders = vi.fn()
-      setupGoogleAuthUserAgentOverride({ webRequest: { onBeforeSendHeaders } } as never)
+      installBrowserSessionUserAgentExceptions(
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only the mocked webRequest member exercised here.
+        { webRequest: { onBeforeSendHeaders } } as never,
+        (request) =>
+          request.currentUserAgent === googleAuthUserAgent()
+            ? { userAgent: googleAuthUserAgent() }
+            : undefined
+      )
       expect(onBeforeSendHeaders).toHaveBeenCalledWith(
-        { urls: ['https://*/*'] },
+        { urls: ['http://*/*', 'https://*/*', 'ws://*/*', 'wss://*/*'] },
         expect.any(Function)
       )
       return onBeforeSendHeaders.mock.calls[0][1]

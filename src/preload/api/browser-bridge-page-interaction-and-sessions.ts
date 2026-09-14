@@ -117,11 +117,12 @@ export const browserPageInteractionAndSessionsApi = {
     skipProbe?: boolean
   }): Promise<{ partition: string }> =>
     ipcRenderer.invoke('browser:prepareSshWorkspacePartition', args),
-  sessionCreateProfile: (args: {
-    scope: 'default' | 'isolated' | 'imported'
-    label: string
-    userAgentMode?: 'clean' | 'native'
-  }) => ipcRenderer.invoke('browser:session:createProfile', args),
+  sessionCreateProfile: (args: { scope: 'default' | 'isolated' | 'imported'; label: string }) =>
+    ipcRenderer.invoke('browser:session:createProfile', args),
+  sessionReadUserAgentMigrationNotice: (): Promise<string[] | null> =>
+    ipcRenderer.invoke('browser:session:readUserAgentMigrationNotice'),
+  sessionClearUserAgentMigrationNotice: (): Promise<boolean> =>
+    ipcRenderer.invoke('browser:session:clearUserAgentMigrationNotice'),
   sessionDeleteProfile: (args: { profileId: string }): Promise<boolean> =>
     ipcRenderer.invoke('browser:session:deleteProfile', args),
   sessionImportCookies: (args: { profileId: string }) =>

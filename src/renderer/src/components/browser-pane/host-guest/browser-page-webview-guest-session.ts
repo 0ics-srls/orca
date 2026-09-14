@@ -21,6 +21,7 @@ import type {
   BrowserPageRecoveryNavigationValidation,
   BrowserTabPageState
 } from '../describe-page/browser-page-types'
+import { showPendingBrowserUserAgentMigrationNotice } from '../browser-user-agent-migration-notice'
 
 export type BrowserPageWebviewGuestSessionArgs = {
   webview: Electron.WebviewTag
@@ -101,6 +102,7 @@ export function createBrowserPageWebviewGuestSession({
       .then((registered) => {
         if (registered) {
           registeredWebContentsIds.set(browserTabId, webContentsId)
+          void showPendingBrowserUserAgentMigrationNotice().catch(() => {})
           return true
         }
         return null

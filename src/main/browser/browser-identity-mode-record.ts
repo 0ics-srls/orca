@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { writeFileAtomically } from '../codex-accounts/fs-utils'
-import type { BrowserSessionUserAgentMode } from '../../shared/browser-workspace-types'
+import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 /**
  * The browser's identity is one process-wide decision, not a per-profile one.
@@ -24,10 +24,10 @@ export const BROWSER_IDENTITY_MODE_VERSION = 1
 
 export type BrowserIdentityModeRecord = {
   version: typeof BROWSER_IDENTITY_MODE_VERSION
-  mode: BrowserSessionUserAgentMode
+  mode: BrowserUserAgentMode
   /** Profiles that carried the retired per-profile `native` mode, so the browser can say so once. */
   migratedNativeProfileIds?: string[]
-  /** Cleared once the user has been told their per-profile choice no longer exists. */
+  /** Cleared after the renderer confirms it displayed the migration notice. */
   migrationNoticePending?: boolean
 }
 
@@ -72,4 +72,50 @@ export function writeBrowserIdentityModeRecord(
     browserIdentityModeRecordPath(userDataPath),
     `${JSON.stringify(record, null, 2)}\n`
   )
+}
+
+export function updateBrowserIdentityMode(userDataPath: string, mode: BrowserUserAgentMode): void {
+  const current = readBrowserIdentityModeRecord(userDataPath)
+  if (current.mode === mode) {
+    return
+  }
+  writeBrowserIdentityModeRecord(userDataPath, { ...current, mode })
+}
+
+export function recordRetiredNativeBrowserProfiles(
+  userDataPath: string,
+  profileIds: readonly string[]
+): void {
+  if (profileIds.length === 0) {
+    return
+  }
+  const current = readBrowserIdentityModeRecord(userDataPath)
+  const migratedNativeProfileIds = [
+    ...new Set([...(current.migratedNativeProfileIds ?? []), ...profileIds])
+  ]
+  writeBrowserIdentityModeRecord(userDataPath, {
+    ...current,
+    migratedNativeProfileIds,
+    migrationNoticePending: true
+  })
+}
+
+export function readPendingBrowserIdentityMigrationNotice(userDataPath: string): string[] | null {
+  const current = readBrowserIdentityModeRecord(userDataPath)
+  if (current.migrationNoticePending !== true) {
+    return null
+  }
+  return current.migratedNativeProfileIds ?? []
+}
+
+export function clearBrowserIdentityMigrationNotice(userDataPath: string): boolean {
+  const current = readBrowserIdentityModeRecord(userDataPath)
+  if (current.migrationNoticePending !== true) {
+    return false
+  }
+  writeBrowserIdentityModeRecord(userDataPath, {
+    ...current,
+    migrationNoticePending: undefined
+  })
+  return true
 }
