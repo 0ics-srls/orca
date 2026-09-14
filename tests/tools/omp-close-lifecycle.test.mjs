@@ -40,7 +40,9 @@ const ownedPidRows = async (pids) => {
 it.skipIf(!binary || process.platform === 'win32')(
   'observes actual OMP under production owned-PTY closure policy',
   async () => {
-    const output = mkdtempSync(join(process.cwd(), '.bench-fixtures/omp-close-'))
+    const fixtures = join(process.cwd(), '.bench-fixtures')
+    mkdirSync(fixtures, { recursive: true })
+    const output = mkdtempSync(join(fixtures, 'omp-close-'))
     const report = []
     for (const launch of ['recognized', 'typed']) {
       for (const close of externalTool || daemonBackend ? ['explicit'] : ['explicit', 'quit']) {
