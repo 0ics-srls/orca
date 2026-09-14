@@ -13,7 +13,8 @@ const {
   resolveEnvironmentMock,
   rebuildAppMenuMock,
   applyBrowserSessionProxiesMock,
-  listProfilesMock
+  listProfilesMock,
+  recordSettingsChangeCrashBreadcrumbMock
 } = vi.hoisted(() => ({
   applyAppIconMock: vi.fn(),
   applyAgentStatusHooksEnabledMock: vi.fn(),
@@ -27,7 +28,8 @@ const {
   resolveEnvironmentMock: vi.fn(),
   rebuildAppMenuMock: vi.fn(),
   applyBrowserSessionProxiesMock: vi.fn(),
-  listProfilesMock: vi.fn(() => [])
+  listProfilesMock: vi.fn(() => []),
+  recordSettingsChangeCrashBreadcrumbMock: vi.fn()
 }))
 
 vi.mock('electron', () => ({
@@ -71,6 +73,10 @@ vi.mock('../worktree-root-preparation', () => ({
 
 vi.mock('../menu/register-app-menu', () => ({
   rebuildAppMenu: rebuildAppMenuMock
+}))
+
+vi.mock('../crash-reporting/settings-change-breadcrumb', () => ({
+  recordSettingsChangeCrashBreadcrumb: recordSettingsChangeCrashBreadcrumbMock
 }))
 
 vi.mock('../../shared/runtime-environment-store', () => ({
@@ -118,6 +124,7 @@ describe('registerSettingsHandlers', () => {
     store.getSettings.mockReset()
     store.updateSettings.mockReset()
     store.onSettingsChanged.mockClear()
+    recordSettingsChangeCrashBreadcrumbMock.mockClear()
   })
 
   it('registers settings:previewGhosttyImport handler', () => {
@@ -187,6 +194,42 @@ describe('registerSettingsHandlers', () => {
       updated,
       expect.objectContaining({ shouldContinue: expect.any(Function) })
     )
+  })
+
+  it('records a settings-change crash breadcrumb for the keys that actually changed', async () => {
+    // Why: field report 0d740d3f's user note could not be checked because the
+    // breadcrumb lane held no record of a setting ever changing.
+    const before = { computerAwakeMode: 'on', theme: 'dark' }
+    const updated = { computerAwakeMode: 'off', theme: 'dark' }
+    store.getSettings.mockReturnValue(before)
+    store.updateSettings.mockReturnValue(updated)
+    registerSettingsHandlers(store as never)
+    const handler = handleMock.mock.calls.find((call) => call[0] === 'settings:set')?.[1] as (
+      event: typeof settingsInvokeEvent,
+      args: Record<string, unknown>
+    ) => Promise<unknown>
+
+    await handler(settingsInvokeEvent, { computerAwakeMode: 'off', theme: 'dark' })
+
+    expect(recordSettingsChangeCrashBreadcrumbMock).toHaveBeenCalledWith(
+      ['computerAwakeMode'],
+      updated
+    )
+  })
+
+  it('records no crash breadcrumb when a re-save changes nothing', async () => {
+    const unchanged = { editorAutoSave: true }
+    store.getSettings.mockReturnValue(unchanged)
+    store.updateSettings.mockReturnValue(unchanged)
+    registerSettingsHandlers(store as never)
+    const handler = handleMock.mock.calls.find((call) => call[0] === 'settings:set')?.[1] as (
+      event: typeof settingsInvokeEvent,
+      args: Record<string, unknown>
+    ) => Promise<unknown>
+
+    await handler(settingsInvokeEvent, { editorAutoSave: true })
+
+    expect(recordSettingsChangeCrashBreadcrumbMock).toHaveBeenCalledWith([], unchanged)
   })
 
   it('rejects durable Active Server writes through generic settings:set', async () => {
