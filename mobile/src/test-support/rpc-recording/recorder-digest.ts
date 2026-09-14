@@ -3,6 +3,8 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, posix } from 'node:path'
 
 export const RECORDER_DIRECTORY = 'mobile/src/test-support/rpc-recording'
+/** The per-domain mount adapters. Excluded below and pinned per golden by `adapterSha256` instead. */
+export const ADAPTER_DIRECTORY = `${RECORDER_DIRECTORY}/adapters`
 const digests = new Map<string, string>()
 
 function collect(root: string, relative: string, files: string[]): void {
@@ -11,7 +13,9 @@ function collect(root: string, relative: string, files: string[]): void {
   )) {
     const child = `${relative}/${entry.name}`
     if (entry.isDirectory()) {
-      collect(root, child, files)
+      if (child !== ADAPTER_DIRECTORY) {
+        collect(root, child, files)
+      }
     } else if (!entry.name.endsWith('.md')) {
       files.push(child)
     }
@@ -19,14 +23,16 @@ function collect(root: string, relative: string, files: string[]): void {
 }
 
 /**
- * Every executable recorder input, so a golden is attributable to one runner. Prose is excluded
- * because it cannot change a recording; a candidate run recomputes this and `compareGolden` fails
- * the header, which forces a recorder edit to re-record deliberately.
+ * Every executable recorder input a golden shares with every other golden: the engine, and nothing
+ * domain-specific. Prose is excluded because it cannot change a recording; a candidate run
+ * recomputes this and `compareGolden` fails the header, which forces an engine edit to re-record
+ * deliberately.
  *
- * The scenario manifest is deliberately not an input. It used to be, which made every golden's
- * header a function of every other family's scenarios: adding one family re-digested all 153 files
- * and put a conflict on that line in every domain branch. `scenarioSha256` pins each golden to the
- * scenarios it was actually recorded from instead.
+ * Two inputs are deliberately absent, each for the same reason. The scenario manifest used to be
+ * here, which made every golden's header a function of every other family's scenarios. The mount
+ * adapters used to be here too, which made it a function of every other family's adapter: adding
+ * one domain's module re-digested all 153 files and put a conflict on that line in every domain
+ * branch in flight. `scenarioSha256` and `adapterSha256` pin each golden to its own instead.
  */
 export function recorderSha256(root: string): string {
   const cached = digests.get(root)

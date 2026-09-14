@@ -1,8 +1,10 @@
 # Main RPC recordings
 
 Test infrastructure only. `pilot-scenarios.json` binds logical operations/actions to small
-mount adapters. The adapters execute the actual product modules from the selected source
-root, using React's test renderer; they do not reconstruct acceptance or lifecycle logic.
+mount adapters, which live one module per domain under `adapters/` and are registered in
+`adapters/mounted-operation-modules.ts`. The adapters execute the actual product modules from the
+selected source root, using React's test renderer; they do not reconstruct acceptance or lifecycle
+logic.
 The module loader transpiles the real source with TypeScript and resolves task barrels
 lazily so unused native views do not need a device. Accessing an unspecified native import
 fails. The history metadata function is exposed to its adapter without rewriting its body.
@@ -58,14 +60,31 @@ visible, it does not make the reduction itself observable.
 ## Golden schema
 
 Each file records `runnerVersion`, `baseline`, `lockfileSha256` (mobile's lockfile),
-`recorderSha256`, `scenarioSha256`, `platform`, `scenarioVersion`, `projectionVersion`,
+`recorderSha256`, `adapterSha256`, `scenarioSha256`, `platform`, `scenarioVersion`, `projectionVersion`,
 `goldenFormatVersion`, `operation`, `family`, and `namedDeltas`. `platform` and `lockfileSha256`
 are provenance and are not compared: a dependency or OS that changes behaviour changes the trace
 itself, so comparing them would only fail candidates on unrelated bumps. The rest are pinned.
 
-`recorderSha256` covers every non-markdown file under this directory, so the runner that produced a
-golden is as pinned as the product baseline: editing an adapter projection or a fixture fails
-candidate mode on the header and forces a deliberate re-record of everything.
+`recorderSha256` covers every non-markdown file under this directory **except `adapters/`**, so the
+engine that produced a golden is as pinned as the product baseline: editing the runner, the
+transport, the projection or a fixture fails candidate mode on the header of every golden and
+forces a deliberate re-record of all of them.
+
+`adapterSha256` covers the source of the mount adapter module _that golden_ was recorded through —
+the file under `adapters/` that mounts each operation its scenarios drive, read off the same
+`mounts` calls that build the table the recording runs against, so the pin cannot name a file the
+runner did not use. Adding a domain's module re-digests nothing that was already recorded, and
+editing one fails exactly the goldens mounted through it. The adapters used to sit in
+`recorderSha256` with the engine, which made every golden's header a function of every other
+family's adapter: #20568 added two task modules and put a conflict on that one line in 153 files,
+against every domain branch in flight.
+
+The seam is the directory, not a filename convention, because a convention is a rule nobody
+enforces. `adapter-seam.test.ts` enforces this one: every file under `adapters/` is a registered
+module, every registered module is declared in the file it is registered under, no adapter module
+imports a sibling (which would leave a golden pinned to one module and driven by two), and
+`pilotMountAdapters` mounts nothing of its own — an adapter defined in an engine file would be
+pinned by `recorderSha256` on all 153 goldens instead of by `adapterSha256` on its own.
 
 `scenarioSha256` covers the scenario input _that golden_ was recorded from — one manifest scenario
 for a pilot golden, the generated variants and any hoisted prelude for a matrix or schedule golden,
@@ -75,8 +94,7 @@ it. The manifest used to be an input to `recorderSha256` instead, which made eve
 a function of every other family's scenarios: adding one domain's family re-digested all 153 files
 and put a conflict on that line in every domain branch in flight. Which goldens a manifest derives
 lives in `derived-goldens.ts`, so the digest is a function of the same derivation that records the
-file rather than of a restatement of it; `golden-header-digest.test.ts` pins the four properties
-that separation buys.
+file rather than of a restatement of it; `golden-header-digest.test.ts` pins what both separations buy.
 
 Checkpoints contain ordered sender calls and serialized physical application payloads, action and
 request settlements, projected state, and ordered external effects. Sender args have three
@@ -86,10 +104,10 @@ times and errors stay observable. Errors contain category, message and `isRpcDel
 stack paths, plus `code` and a recursively captured `cause` when the thrown error carries them.
 Platform is provenance; candidate comparison does not require the same operating system.
 
-Format version 4 adds `scenarioSha256`. A version-3 golden would already fail this reader's byte
-compare, so the bump buys the diagnosis rather than the rejection: `readGolden` names the stale
-format and says to re-record, instead of reporting an opaque `(encoding)` difference. The bump moved
-no observation.
+Format version 4 added `scenarioSha256` and version 5 adds `adapterSha256`. A stale golden would
+already fail this reader's byte compare, so each bump buys the diagnosis rather than the rejection:
+`readGolden` names the stale format and says to re-record, instead of reporting an opaque
+`(encoding)` difference. Neither bump moved an observation.
 
 ### Value pool
 
@@ -192,16 +210,17 @@ Task-model projections record setter invocations and resulting model values, not
 ## Commands and checker contract
 
 Record only from unchanged pinned product sources and lockfile. The fence exempts only
-`mobile/src/test-support/rpc-recording`, which `recorderSha256` pins instead; every other
-test-support path is compared against the baseline like product code:
+`mobile/src/test-support/rpc-recording`, which `recorderSha256` and `adapterSha256` pin between
+them; every other test-support path is compared against the baseline like product code:
 
 ```sh
 ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 pnpm --dir mobile exec tsx scripts/rpc-recording.mts --record
 ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile test src/test-support/rpc-recording
 ```
 
-Mutants are the defect evidence. `operation-mutations.ts` holds one anchored source edit per
-adapter family, and every family's recording must change visible state when its mutant is applied,
+Mutants are the defect evidence. `operation-mutations.ts` is an engine file and holds one anchored
+source edit per adapter family — it is read only when a mutant runs, never while recording, so a new
+entry cannot change a recording but does still move `recorderSha256` on every golden, and every family's recording must change visible state when its mutant is applied,
 which is what shows that family's `state()` projection observes the operation's real output.
 Anchors are asserted to match exactly one site, because a repeated anchor would half-apply while
 still counting as applied. Mutants replace the expression in memory, then run the same real hook.
@@ -286,14 +305,16 @@ ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 \
 A re-record is a claim about behaviour. State the cause in the commit; every golden the refresh
 moves should have one.
 
-Editing the recorder itself on a migration branch is the awkward case: `recorderSha256` moves, so
+Editing the recorder engine on a migration branch is the awkward case: `recorderSha256` moves, so
 every golden needs rewriting, but the product tree no longer matches `baseline`, and bumping
 `baseline` to the branch would record the migrated source and make the parity claim circular. Record
 from the pinned commit instead, with this branch's recorder laid over it — a detached checkout or a
 `git archive` extraction of `baseline`, this tree's `rpc-recording/` and `pilot-scenarios.json`
 copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scratch directory — then
 copy the result back and run the candidate suite here. Format the recorder before recording: an
-`oxfmt` pass afterwards moves `recorderSha256` again.
+`oxfmt` pass afterwards moves `recorderSha256` again. Adding or editing one domain's module under
+`adapters/` no longer needs any of this: only that domain's goldens move, and they re-record from
+its own branch like any other behaviour change.
 
 If your call site carries a mutation anchor in `operation-mutations.ts`, rewriting it will make the
 anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:
