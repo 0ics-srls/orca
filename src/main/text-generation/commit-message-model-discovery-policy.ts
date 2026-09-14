@@ -57,12 +57,9 @@ export function finalizeModelDiscoveryOutput(
     }
     return { success: false, error: `${spec.label} returned no available models.` }
   }
-  const defaultModelId =
-    'configuredDefaultModelId' in spec && typeof spec.configuredDefaultModelId === 'string'
-      ? spec.configuredDefaultModelId
-      : models.some((model) => model.id === spec.defaultModelId)
-        ? spec.defaultModelId
-        : models[0].id
+  const defaultModelId = models.some((model) => model.id === spec.defaultModelId)
+    ? spec.defaultModelId
+    : models[0].id
   return staticModelDiscoveryResult(spec, models, defaultModelId, 'probe')
 }
 

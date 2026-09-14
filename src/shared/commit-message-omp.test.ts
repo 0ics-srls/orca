@@ -52,7 +52,7 @@ describe('OMP Source Control AI', () => {
   it.each(['escape', 'literal'] as const)(
     'plans recipe model overrides with %s path parsing',
     (backslash) => {
-      const prompt = 'diff --git a/a b/a\n' + 'large patch\n'.repeat(10000)
+      const prompt = `diff --git a/a b/a\n${'large patch\n'.repeat(10000)}`
       const result = planCommitMessageGeneration(
         {
           agentId: 'omp',
