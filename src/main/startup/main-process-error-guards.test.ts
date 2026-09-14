@@ -278,12 +278,14 @@ describe('main-process fatal error guards (issue #9441)', () => {
     const originalOff = process.off.bind(process)
     let handler: ((error: unknown) => void) | null = null
     let installs = 0
+    let listenerCount = 0
     const pending: (() => void)[] = []
     vi.spyOn(console, 'error').mockImplementation(() => {})
     vi.spyOn(process, 'on').mockImplementation(((event, listener) => {
       if (event === 'uncaughtException') {
         handler = listener as (error: unknown) => void
         installs += 1
+        listenerCount += 1
         return process
       }
       return originalOn(event, listener)
@@ -291,6 +293,7 @@ describe('main-process fatal error guards (issue #9441)', () => {
     vi.spyOn(process, 'off').mockImplementation(((event, listener) => {
       if (event === 'uncaughtException') {
         handler = null
+        listenerCount -= 1
         return process
       }
       return originalOff(event, listener)
@@ -318,9 +321,14 @@ describe('main-process fatal error guards (issue #9441)', () => {
       }
     }).toThrow('survivable')
     expect(armedDuringRethrow).toBe(false)
-    pending.shift()?.()
+    // Drain to empty, not just one: add/remove balance is the whole fix, so a second
+    // queued arm would leak a listener per exception and re-record N times.
+    while (pending.length > 0) {
+      pending.shift()?.()
+    }
 
     expect(installs).toBe(2)
+    expect(listenerCount).toBe(1)
     expect(handler === null).toBe(false)
 
     // The whole point: a later uncaught exception in the same launch is still recorded.

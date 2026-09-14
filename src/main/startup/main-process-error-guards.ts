@@ -115,7 +115,8 @@ export function installUncaughtPipeErrorGuard(): void {
       return
     }
 
-    // Why (issue #9441): the re-throw below exits with a clean code and no macOS crash report; record durably first or the death is undiagnosable in the field.
+    // Why (issue #9441): the re-throw below leaves no macOS crash report, so record durably
+    // first or the fault is undiagnosable in the field.
     recordFatalMainProcessError('main_uncaught_exception', error)
     process.off('uncaughtException', onUncaughtException)
     // Why: throwing inside an uncaughtException handler exits with status 7 and hides the fault; re-throw next tick for the real stack.
@@ -123,7 +124,9 @@ export function installUncaughtPipeErrorGuard(): void {
       // Why queued before the throw: this runs only if the re-throw did NOT end the
       // process. That is not hypothetical — a win32 main survived a RangeError here
       // and ran 4h20m more with main-process reporting silently disarmed, which is
-      // the blind spot #9441 closed. When the throw is fatal the callback never runs.
+      // the blind spot #9441 closed. Electron's own permanent uncaughtException listener
+      // absorbs the re-throw, so in the main process it always survives; the nesting exists
+      // so the guard can never catch its own throw.
       setImmediate(arm)
       throw error
     })
