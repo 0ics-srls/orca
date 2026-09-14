@@ -5,6 +5,7 @@ import {
 } from '../native-chat/agent-session-journal/journal-payload-bounds'
 import { CLAUDE_STREAM_JSON_FRAME_KINDS } from '../native-chat/agent-session-wire/claude-stream-json-frame-schema'
 import {
+  type UnhandledProviderFrameJournalItemOptions,
   readableProviderFrameText,
   unhandledProviderFrameJournalItem
 } from '../native-chat/agent-session-wire/unhandled-provider-frame'
@@ -106,13 +107,24 @@ export function createClaudeProviderFrameFallback(
   acquisitionId: string
 ): {
   /** `displayText` leads the row when Claude knows the sentence the frame itself does not name. */
-  append: (kind: string, payload: unknown, displayText?: string | null) => void
+  append: (
+    kind: string,
+    payload: unknown,
+    displayText?: string | null,
+    options?: UnhandledProviderFrameJournalItemOptions
+  ) => void
 } {
   let sequence = 0
   return {
-    append: (kind, payload, displayText) => {
+    append: (kind, payload, displayText, options) => {
       sequence += 1
-      const translated = unhandledProviderFrameJournalItem('claude', kind, payload)
+      const translated = unhandledProviderFrameJournalItem(
+        'claude',
+        kind,
+        payload,
+        DEFAULT_JOURNAL_PAYLOAD_LIMITS,
+        options
+      )
       if (!translated) {
         return
       }

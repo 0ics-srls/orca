@@ -155,6 +155,27 @@ describe('claude background task rows', () => {
     expect(items).toEqual([])
   })
 
+  it('leaves foreground commands to the ordinary transcript path', () => {
+    const { rows, items } = harness()
+    expect(
+      rows.observe({
+        ...START_BASH,
+        task_id: 'foreground-1',
+        is_backgrounded: false
+      })
+    ).toBe(true)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'foreground-1',
+        status: 'failed',
+        summary: 'foreground command failed'
+      })
+    ).toBe(true)
+    expect(items).toEqual([])
+  })
+
   it('revises in place rather than opening a row from a patch', () => {
     const { rows, items, latest } = harness()
     rows.observe({
@@ -176,6 +197,52 @@ describe('claude background task rows', () => {
     expect(latest()).toMatchObject({ label: 'Wait for the verification verdict', tokens: 1_200 })
   })
 
+  it('opens a row for a terminal update that arrives before the announcement', () => {
+    const { rows, latest, latestTwin } = harness()
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_updated',
+        task_id: 'pre-journal',
+        patch: { status: 'failed', description: 'Check logs', error: 'boom' }
+      })
+    ).toBe(true)
+
+    expect(latest()).toMatchObject({
+      taskId: 'pre-journal',
+      label: 'Check logs',
+      state: 'blocked',
+      error: 'boom'
+    })
+    expect(latestTwin()).toBe('boom')
+  })
+
+  it('does not resurrect a task whose terminal edge arrived before its start', () => {
+    const { rows, items } = harness()
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'done-before-start',
+        status: 'completed'
+      })
+    ).toBe(true)
+    expect(rows.observe({ ...START_BASH, task_id: 'done-before-start' })).toBe(true)
+    expect(items).toEqual([])
+  })
+
+  it('does not resurrect after a terminal update that arrived before start', () => {
+    const { rows, items } = harness()
+    rows.observe({
+      type: 'system',
+      subtype: 'task_updated',
+      task_id: 'updated-before-start',
+      patch: { status: 'completed' }
+    })
+    rows.observe({ ...START_BASH, task_id: 'updated-before-start' })
+    expect(items).toEqual([])
+  })
+
   it('latches a reported outcome against a later live tick', () => {
     const { rows, latest } = harness()
     rows.observe(START_BASH)
@@ -186,6 +253,66 @@ describe('claude background task rows', () => {
       tasks: [{ task_id: 'byjnee2no', status: 'running' }]
     })
     expect(latest()).toMatchObject({ state: 'blocked' })
+  })
+
+  it('reopens a settled row when Claude re-announces the same task id with a new tool id', () => {
+    const { rows, latest } = harness()
+    rows.observe({ ...START_BASH, task_id: 'resume-1', tool_use_id: 'toolu_first' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'resume-1',
+      tool_use_id: 'toolu_first',
+      status: 'completed',
+      summary: 'first run finished'
+    })
+    expect(latest()).toMatchObject({ state: 'done', summary: 'first run finished' })
+
+    rows.observe({
+      ...START_BASH,
+      task_id: 'resume-1',
+      tool_use_id: 'toolu_second',
+      status: 'running',
+      description: 'Second run'
+    })
+    expect(latest()).toMatchObject({ state: 'working', label: 'Second run' })
+    expect(latest()).not.toHaveProperty('summary')
+
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'resume-1',
+      tool_use_id: 'toolu_second',
+      status: 'failed',
+      summary: 'second run failed'
+    })
+    expect(latest()).toMatchObject({ state: 'blocked', summary: 'second run failed' })
+  })
+
+  it('lets an aggregate live roster reopen a settled same-id row', () => {
+    const { rows, latest } = harness()
+    rows.observe({ ...START_BASH, task_id: 'aggregate-resume' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'aggregate-resume',
+      status: 'completed'
+    })
+
+    rows.observe({
+      type: 'system',
+      subtype: 'background_tasks_changed',
+      tasks: [
+        {
+          task_id: 'aggregate-resume',
+          status: 'running',
+          task_type: 'local_bash',
+          description: 'Resumed by roster'
+        }
+      ]
+    })
+
+    expect(latest()).toMatchObject({ state: 'working', label: 'Resumed by roster' })
   })
 
   it('never burns a revision on a duplicate delivery', () => {
@@ -210,6 +337,94 @@ describe('claude background task rows', () => {
       clientMessageId: 'claude-background-task:byjnee2no'
     })
     expect(latest()).toMatchObject({ taskId: 'byjnee2no', state: 'blocked' })
+  })
+
+  it('rejects overlong tool-use aliases instead of clipping them into collisions', () => {
+    const { rows, items, latest } = harness()
+    const overlong = `${'x'.repeat(512)}A`
+    rows.observe({ ...START_BASH, task_id: 'task-a', tool_use_id: overlong })
+    const afterStart = items.length
+
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        tool_use_id: overlong,
+        status: 'failed',
+        summary: 'misattributed failure'
+      })
+    ).toBe(false)
+    expect(items).toHaveLength(afterStart)
+    expect(latest()).toMatchObject({ taskId: 'task-a', state: 'working' })
+  })
+
+  it('evicts settled rows so the lifetime cap cannot drop a later failure', () => {
+    const { rows, latest } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `settled-${index}` })
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: `settled-${index}`,
+        status: 'completed'
+      })
+    }
+
+    rows.observe({ ...START_BASH, task_id: 'overflow' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'overflow',
+      status: 'failed',
+      summary: 'overflow failed'
+    })
+
+    expect(latest()).toMatchObject({
+      taskId: 'overflow',
+      state: 'blocked',
+      summary: 'overflow failed'
+    })
+  })
+
+  it('declines coverage so fallback can report a failure when every row is live', () => {
+    const { rows, items } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'overflow-live',
+        status: 'failed',
+        summary: 'overflow failed'
+      })
+    ).toBe(false)
+    expect(
+      items.some((item) =>
+        item.identity.provider === 'orca'
+          ? item.identity.clientMessageId === 'claude-background-task:overflow-live'
+          : false
+      )
+    ).toBe(false)
+  })
+
+  it('bounds foreign-owner memory for tasks rendered elsewhere', () => {
+    const { rows } = harness()
+    for (let index = 0; index < 600; index += 1) {
+      rows.observe({
+        type: 'system',
+        subtype: 'task_started',
+        task_id: `agent-${index}`,
+        task_type: 'local_agent',
+        subagent_type: 'explorer'
+      })
+    }
+
+    const foreign = Reflect.get(rows, 'foreign')
+    expect(foreign).toBeInstanceOf(Map)
+    expect(foreign.size).toBeLessThanOrEqual(512)
   })
 
   it('loses contact rather than claiming an outcome when the provider goes away', () => {

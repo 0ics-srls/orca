@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { DEFAULT_JOURNAL_PAYLOAD_LIMITS } from '../agent-session-journal/journal-payload-bounds'
 import { CODEX_APP_SERVER_NOTIFICATION_METHODS } from '../../codex/codex-app-server-notification-schema'
 import { CLAUDE_STREAM_JSON_FRAME_KINDS } from './claude-stream-json-frame-schema'
 import {
@@ -180,14 +181,32 @@ describe('typed translator coverage', () => {
       'message:system:background_tasks_changed'
     ]) {
       expect(
-        unhandledProviderFrameJournalItem('claude', kind, {
-          task_id: 'byjnee2no',
-          status: 'failed',
-          summary: 'Background command "Wait" failed with exit code 1'
-        }),
+        unhandledProviderFrameJournalItem(
+          'claude',
+          kind,
+          {
+            task_id: 'byjnee2no',
+            status: 'failed',
+            summary: 'Background command "Wait" failed with exit code 1'
+          },
+          DEFAULT_JOURNAL_PAYLOAD_LIMITS,
+          { coveredByTypedTranslator: true }
+        ),
         kind
       ).toBeNull()
     }
+  })
+
+  it('keeps malformed covered-kind failures eligible for the generic fallback', () => {
+    expect(
+      unhandledProviderFrameJournalItem('claude', 'message:system:task_notification', {
+        status: 'failed',
+        summary: 'Background command "Wait" failed with exit code 1'
+      })
+    ).toMatchObject({
+      classification: 'error-surface',
+      body: { text: 'Background command "Wait" failed with exit code 1' }
+    })
   })
 
   it('covers Claude only — the same method name on another provider still falls back', () => {

@@ -17,6 +17,11 @@ export type UnhandledProviderFrameJournalItem = {
   classification: 'timeline-substantive' | 'error-surface'
 }
 
+export type UnhandledProviderFrameJournalItemOptions = {
+  /** A typed translator accepted this exact frame, not merely this frame kind. */
+  coveredByTypedTranslator?: boolean
+}
+
 function serializeProviderPayload(payload: unknown): string {
   try {
     const serialized = JSON.stringify(payload)
@@ -33,6 +38,7 @@ const MESSAGE_KEYS = [
   'text',
   'warning',
   'detail',
+  'summary',
   'description',
   'reason',
   // `error` is how a failed dependency reports itself — an MCP server that could not start says
@@ -79,14 +85,18 @@ export function unhandledProviderFrameJournalItem(
   provider: string,
   kind: string,
   payload: unknown,
-  limits: JournalPayloadLimits = DEFAULT_JOURNAL_PAYLOAD_LIMITS
+  limits: JournalPayloadLimits = DEFAULT_JOURNAL_PAYLOAD_LIMITS,
+  options: UnhandledProviderFrameJournalItemOptions = {}
 ): UnhandledProviderFrameJournalItem | null {
   // A kind a typed translator owns never degrades to its opcode here, in either
   // direction: "no row" is that translator's decision, not a gap this fallback
   // has to cover. Checked before classification, because the payload sniffer
   // inside it promotes a covered frame that reports a failure and would
   // otherwise print `${provider} · ${kind}` beside the typed row.
-  if (hasTypedProviderFrameTranslator(provider, kind)) {
+  if (
+    options.coveredByTypedTranslator === true &&
+    hasTypedProviderFrameTranslator(provider, kind)
+  ) {
     return null
   }
   const classification = classifyProviderFrame(provider, kind, payload)

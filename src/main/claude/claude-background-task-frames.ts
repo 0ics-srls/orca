@@ -29,6 +29,10 @@ export function taskId(message: Record<string, unknown>): string | null {
   return typeof value === 'string' && isBoundedClaudeTaskId(value) ? value : null
 }
 
+export function taskAliasId(value: unknown): string | undefined {
+  return typeof value === 'string' && isBoundedClaudeTaskId(value) ? value : undefined
+}
+
 function boundedTaskText(value: unknown): string | undefined {
   if (typeof value !== 'string') {
     return undefined

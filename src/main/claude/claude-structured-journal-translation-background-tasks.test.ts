@@ -122,4 +122,18 @@ describe('claude journal translation — background task rows', () => {
     // sniffer for the kinds nobody has modelled.
     expect(fallbackRows()).toEqual(['claude · message:system:future_event'])
   })
+
+  it('falls back visibly when a malformed task frame reports a failure', () => {
+    const { translator, fallbackRows, taskRowIds } = harness()
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        status: 'failed',
+        summary: 'Background command "Wait" failed with exit code 1'
+      })
+    )
+
+    expect(taskRowIds()).toEqual([])
+    expect(fallbackRows()).toEqual(['Background command "Wait" failed with exit code 1'])
+  })
 })
