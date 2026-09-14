@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown } from 'lucide-react'
 import type { CommentMarkdownLinkClickHandler } from '@/components/sidebar/CommentMarkdown'
 import { translate } from '@/i18n/i18n'
@@ -26,6 +26,9 @@ import {
 } from './native-chat-transcript-slots'
 import { useNativeChatTranscriptWindow } from './use-native-chat-transcript-window'
 import { useNativeChatTranscriptScroll } from './use-native-chat-transcript-scroll'
+import { useNativeChatMessageRail } from './use-native-chat-message-rail'
+import { NativeChatMessageRail } from './NativeChatMessageRail'
+import type { NativeChatRailItem } from './native-chat-message-rail-items'
 
 import type { AgentJournalRenderItem } from '../../../../shared/agent-session-journal-types'
 import { isStructuredAgentSessionThinking } from '../../../../shared/structured-agent-session-live-turn'
@@ -78,6 +81,7 @@ export function NativeChatMessageList({
   const revealDiff = useCallback((target: NativeChatDiffTarget) => {
     setRevealedDiff((current) => ({ ...target, requestId: (current?.requestId ?? 0) + 1 }))
   }, [])
+  const [railJump, setRailJump] = useState<{ messageId: string; requestId: number } | null>(null)
   const receipts = useMemo(
     () =>
       new Map(
@@ -195,7 +199,9 @@ export function NativeChatMessageList({
   const transcriptWindow = useNativeChatTranscriptWindow({
     scrollRef,
     slots,
-    revealIndex: nativeChatSlotIndexOf(slots, revealedDiff?.messageId)
+    // One pin serves both: revealing a diff and jumping from the rail are
+    // mutually exclusive things to be doing.
+    revealIndex: nativeChatSlotIndexOf(slots, railJump?.messageId ?? revealedDiff?.messageId)
   })
   const { showJump, onScroll, scrollToBottom, scrollMessageToTop } = useNativeChatTranscriptScroll({
     scrollRef,
@@ -208,6 +214,28 @@ export function NativeChatMessageList({
     loadEarlier,
     alignToViewportTop: transcriptWindow.alignToViewportTop
   })
+  const rail = useNativeChatMessageRail({
+    scrollRef,
+    slots,
+    virtualItems: transcriptWindow.virtualItems
+  })
+  const selectRailItem = useCallback((item: NativeChatRailItem) => {
+    setRailJump((current) => ({ messageId: item.id, requestId: (current?.requestId ?? 0) + 1 }))
+  }, [])
+  // Pinning the target mounts it in the same commit, so the row exists by the time
+  // layout runs. Routed through `scrollMessageToTop` rather than the virtualizer
+  // because that is what releases the bottom pin — without it the next streamed
+  // token snaps the reader straight back down.
+  useLayoutEffect(() => {
+    if (railJump === null) {
+      return
+    }
+    const index = nativeChatSlotIndexOf(slots, railJump.messageId)
+    const row = scrollRef.current?.querySelector<HTMLElement>(`[data-index="${index}"]`)
+    if (row) {
+      scrollMessageToTop(row)
+    }
+  }, [railJump, scrollMessageToTop, slots])
 
   const rowContext = useMemo<NativeChatTranscriptRowContext>(
     () => ({
@@ -295,6 +323,7 @@ export function NativeChatMessageList({
               </div>
             </div>
           </div>
+          <NativeChatMessageRail rail={rail} scrollRef={scrollRef} onSelect={selectRailItem} />
           {showJump ? (
             <button
               type="button"
