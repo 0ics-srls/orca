@@ -3717,111 +3717,6 @@
       ]
     },
     {
-      "id": "sc-base-ref-refused",
-      "operation": "source-control.branch-base-ref",
-      "version": 1,
-      "family": "git.base-ref-chain",
-      "sites": ["mobile/src/source-control/mobile-branch-base-ref.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "resolve",
-          "id": "resolve"
-        },
-        {
-          "complete": "worktree.show#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "worktree": {}
-            }
-          }
-        },
-        {
-          "complete": "repo.list#1",
-          "params": {
-            "$undefined": true
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "repos": []
-            }
-          }
-        },
-        {
-          "complete": "repo.baseRefDefault#1",
-          "params": {
-            "repo": "id:repo42"
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-base-ref-rejected",
-      "operation": "source-control.branch-base-ref",
-      "version": 1,
-      "family": "git.base-ref-chain",
-      "sites": ["mobile/src/source-control/mobile-branch-base-ref.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "resolve",
-          "id": "resolve"
-        },
-        {
-          "complete": "worktree.show#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "worktree": {}
-            }
-          }
-        },
-        {
-          "complete": "repo.list#1",
-          "params": {
-            "$undefined": true
-          },
-          "reply": {
-            "ok": true,
-            "result": {
-              "repos": []
-            }
-          }
-        },
-        {
-          "complete": "repo.baseRefDefault#1",
-          "params": {
-            "repo": "id:repo42"
-          },
-          "reject": {
-            "message": "transport failure",
-            "deliveryUnknown": true
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
       "id": "sc-history-loaded",
       "operation": "source-control.git-history",
       "version": 1,
@@ -3862,65 +3757,6 @@
                 }
               ]
             }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-history-refused-empty-message",
-      "operation": "source-control.git-history",
-      "version": 1,
-      "family": "git.history-read",
-      "sites": ["mobile/src/source-control/mobile-git-history.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "load",
-          "id": "load"
-        },
-        {
-          "complete": "git.history#1",
-          "params": {
-            "worktree": "id:repo42::/p",
-            "limit": 50
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-history-rejected",
-      "operation": "source-control.git-history",
-      "version": 1,
-      "family": "git.history-read",
-      "sites": ["mobile/src/source-control/mobile-git-history.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "load",
-          "id": "load"
-        },
-        {
-          "complete": "git.history#1",
-          "params": {
-            "worktree": "id:repo42::/p",
-            "limit": 50
-          },
-          "reject": {
-            "message": "transport failure",
-            "deliveryUnknown": true
           }
         },
         {
@@ -4013,63 +3849,6 @@
       ]
     },
     {
-      "id": "sc-commit-message-refused-empty-message",
-      "operation": "source-control.commit-message",
-      "version": 1,
-      "family": "git.commit-message-ai",
-      "sites": ["mobile/src/source-control/mobile-commit-message-ai.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "generate",
-          "id": "generate"
-        },
-        {
-          "complete": "git.generateCommitMessage#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-commit-message-null-result",
-      "operation": "source-control.commit-message",
-      "version": 1,
-      "family": "git.commit-message-ai",
-      "sites": ["mobile/src/source-control/mobile-commit-message-ai.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "generate",
-          "id": "generate"
-        },
-        {
-          "complete": "git.generateCommitMessage#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": true,
-            "result": null
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
       "id": "sc-commit-message-cancel-rejected",
       "operation": "source-control.commit-message",
       "version": 1,
@@ -4122,65 +3901,6 @@
             "result": {
               "ok": true
             }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-pr-link-refused-empty-message",
-      "operation": "source-control.pr-link",
-      "version": 1,
-      "family": "worktree.review-link",
-      "sites": ["mobile/src/source-control/mobile-pr-link.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "link",
-          "id": "link"
-        },
-        {
-          "complete": "worktree.set#1",
-          "params": {
-            "worktree": "id:repo42::/p",
-            "linkedPR": 12
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-pr-link-rejected-empty-message",
-      "operation": "source-control.pr-link",
-      "version": 1,
-      "family": "worktree.review-link",
-      "sites": ["mobile/src/source-control/mobile-pr-link.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "link",
-          "id": "link"
-        },
-        {
-          "complete": "worktree.set#1",
-          "params": {
-            "worktree": "id:repo42::/p",
-            "linkedPR": 12
-          },
-          "reject": {
-            "message": "",
-            "deliveryUnknown": true
           }
         },
         {
@@ -4514,36 +4234,6 @@
       ]
     },
     {
-      "id": "sc-review-status-refused-empty-message",
-      "operation": "source-control.review-git-preparation",
-      "version": 1,
-      "family": "git.review-preparation",
-      "sites": ["mobile/src/source-control/mobile-hosted-review-git-preparation.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "status",
-          "id": "status"
-        },
-        {
-          "complete": "git.status#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
       "id": "sc-review-commit",
       "operation": "source-control.review-git-preparation",
       "version": 1,
@@ -4787,69 +4477,6 @@
       ]
     },
     {
-      "id": "sc-prerequisite-push-refused-empty-message",
-      "operation": "source-control.remote-prerequisite",
-      "version": 1,
-      "family": "git.remote-prerequisite",
-      "sites": ["mobile/src/source-control/mobile-hosted-review-remote-prerequisite.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "apply",
-          "id": "apply",
-          "args": {
-            "blockedReason": "needs_push"
-          }
-        },
-        {
-          "complete": "git.push#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": ""
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-prerequisite-push-rejected-empty-message",
-      "operation": "source-control.remote-prerequisite",
-      "version": 1,
-      "family": "git.remote-prerequisite",
-      "sites": ["mobile/src/source-control/mobile-hosted-review-remote-prerequisite.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "apply",
-          "id": "apply",
-          "args": {
-            "blockedReason": "needs_push"
-          }
-        },
-        {
-          "complete": "git.push#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reject": {
-            "message": "",
-            "deliveryUnknown": true
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
       "id": "sc-eligibility-fetched",
       "operation": "source-control.hosted-review-eligibility",
       "version": 1,
@@ -4885,41 +4512,6 @@
               "blockedReason": null,
               "nextAction": null,
               "reviewLookupOutcome": "none"
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-eligibility-refused",
-      "operation": "source-control.hosted-review-eligibility",
-      "version": 1,
-      "family": "hostedReview.eligibility",
-      "sites": ["mobile/src/source-control/mobile-hosted-review-service.ts"],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "fetch",
-          "id": "fetch"
-        },
-        {
-          "complete": "hostedReview.getCreationEligibility#1",
-          "params": {
-            "repo": "id:repo42",
-            "worktree": "id:repo42::/p",
-            "branch": "feature",
-            "base": null,
-            "linkedGitHubPR": null,
-            "linkedGitLabMR": null
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "refused",
-              "message": "no eligibility"
             }
           }
         },
@@ -5066,42 +4658,6 @@
             "ok": true,
             "result": {
               "ok": true
-            }
-          }
-        },
-        {
-          "checkpoint": "settled"
-        }
-      ]
-    },
-    {
-      "id": "sc-create-stops-on-push-refusal",
-      "operation": "source-control.hosted-review-create",
-      "version": 1,
-      "family": "hostedReview.create-chain",
-      "sites": [
-        "mobile/src/source-control/mobile-hosted-review-service.ts",
-        "mobile/src/source-control/mobile-pr-link.ts"
-      ],
-      "schedules": [],
-      "steps": [
-        {
-          "action": "create",
-          "id": "create",
-          "args": {
-            "pushBeforeCreate": true
-          }
-        },
-        {
-          "complete": "git.push#1",
-          "params": {
-            "worktree": "id:repo42::/p"
-          },
-          "reply": {
-            "ok": false,
-            "error": {
-              "code": "internal",
-              "message": "remote rejected"
             }
           }
         },

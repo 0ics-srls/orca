@@ -1,7 +1,8 @@
 import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { readScenarios } from './scenario-input'
-import { driveReplyMatrix } from './reply-matrix'
+import { driveReplyMatrix, replyMatrixGoldenId, replyMatrixSites } from './reply-matrix'
+import { replyMatrixNormalResult } from './reply-matrix-normal-result'
 import {
   bindCompletions,
   interruptionSchedules,
@@ -29,21 +30,6 @@ const input = readScenarios(
 )
 const directory =
   process.env.RPC_FOUNDATION_GOLDENS ?? resolve(root, 'mobile/rpc-foundation/goldens')
-const settingsNormal = {
-  settings: {
-    disabledTuiAgents: ['claude'],
-    defaultTuiAgent: 'codex',
-    prBotAuthorOverrides: ['recorded-bot'],
-    visibleTaskProviders: ['github'],
-    hostSettingOverrides: {},
-    defaultTaskSource: 'github',
-    defaultTaskViewPreset: 'all',
-    defaultRepoSelection: null,
-    defaultLinearTeamSelection: null,
-    githubProjects: {}
-  }
-}
-
 async function certify(id: string, scenarios: RecordingScenario[]) {
   let first = ''
   for (let run = 0; run < determinismRuns(); run++) {
@@ -77,35 +63,33 @@ async function certify(id: string, scenarios: RecordingScenario[]) {
 }
 
 describe('family reply partitions and owned schedules', () => {
-  const families = new Map<string, RecordingScenario>()
+  const families = new Map<string, RecordingScenario[]>()
   for (const scenario of input.scenarios) {
-    if (!families.has(scenario.family)) {
-      families.set(scenario.family, scenario)
-    }
+    families.set(scenario.family, [...(families.get(scenario.family) ?? []), scenario])
   }
-  for (const [family, base] of families) {
-    const completion = base.steps.find(
-      (step) =>
-        'complete' in step &&
-        (step.complete.startsWith('settings.') ||
-          (base.id === 'b1' && step.complete === 'fresh-inventory') ||
-          (base.id === 'b2' && step.complete.startsWith('github.project.')) ||
-          (base.id === 'b3' && step.complete.startsWith('linear.getIssue')))
-    )
-    if (!completion || !('complete' in completion)) {
-      continue
+  const goldenIds = new Set<string>()
+  const matrixed: string[] = []
+  // A census, not a count: the mechanism this replaced skipped families, so "every family has a
+  // matrix" is the property to assert rather than infer from however many tests got generated.
+  it('matrices every family in the manifest', () => {
+    expect(matrixed).toEqual([...families.keys()])
+  })
+  for (const [family, scenarios] of families) {
+    const base = scenarios[0]!
+    for (const request of replyMatrixSites(base)) {
+      const id = replyMatrixGoldenId(family, request)
+      if (goldenIds.has(id)) {
+        throw new Error(`Two matrix sites share a golden: ${id}`)
+      }
+      goldenIds.add(id)
+      it(`${family}: reply partitions at ${request}`, async () => {
+        await certify(
+          id,
+          driveReplyMatrix(base, request, replyMatrixNormalResult(family, scenarios, request))
+        )
+      }, 30_000)
     }
-    const normal =
-      base.id === 'b1'
-        ? { files: [{ relativePath: 'third.ts' }] }
-        : base.id === 'b3'
-          ? { id: 'issue-1', description: 'recorded', labels: [], subIssues: [] }
-          : completion.complete.startsWith('settings.get')
-            ? settingsNormal
-            : { ok: true }
-    it(`${family}: reply partitions once per family`, async () => {
-      await certify(`matrix-${family}`, driveReplyMatrix(base, completion.complete, normal))
-    }, 30_000)
+    matrixed.push(family)
   }
   for (const id of [
     'b3',

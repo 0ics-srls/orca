@@ -98,14 +98,45 @@ raw reply partitions at the scripted sender port; they do not claim malformed-fr
 through direct/relay frame validation. Caches
 are tested by follow-up requests; no private cache maps are inspected.
 
-Each family runs the nine partitions in `reply-matrix.ts` once, and nothing is crossed against
-consumed fields. The partitions are the reply shapes a host can send: a normal result, an absent
-result, `null`, an inner `{ok: false}` envelope with a string or object error, an inner envelope
-missing `ok`, an outer refusal, `method_not_found`, and a transport rejection. Shapes that were
-recorded before and are gone were unreachable: `successResponse` always sets `result`, so JSON
-carries no explicit-undefined slot, and no mounted method's handler returns a number, a string, an
-array, a bare `{}`, or a boolean. `null` stays because `linear.getIssue` returns it for a missing
+Every family runs the eleven partitions in `reply-matrix.ts` at **every reply its base scenario
+scripts**, one golden per site, and nothing is crossed against consumed fields. The partitions are
+the reply shapes a host can send: a normal result, an absent result, `null`, an inner `{ok: false}`
+envelope with a string or object error, an inner envelope missing `ok`, an outer refusal with and
+without a message, `method_not_found`, and a transport rejection with and without a message. Shapes
+that were recorded before and are gone were unreachable: `successResponse` always sets `result`, so
+JSON carries no explicit-undefined slot, and no mounted method's handler returns a number, a string,
+an array, a bare `{}`, or a boolean. `null` stays because `linear.getIssue` returns it for a missing
 issue and the b2 seed is a shipped null-result bug.
+
+The message-less refusal and rejection are what separate the two failure paths a migrated call site
+must keep apart: a refusal with no message falls back to the screen's copy, a transport drop with no
+message surfaces its empty message verbatim. With only the message-carrying shapes both produce the
+same text, so collapsing the two catches is invisible. Every source-control family used to carry a
+hand-written `*-empty-message` scenario for exactly that; the partition carries it now.
+
+### Which request a matrix drives
+
+All of them. Selecting one per family was a hardcoded prefix list, and it silently `continue`d past
+any family it did not name — ten of twenty-three, every family the source-control migration added,
+which is why that migration's mutation evidence came down to single hand-written scenarios.
+`replyMatrixSites` takes every completion step in the family's base scenario instead: no judgement
+about which request is the "real" one, and no edit when a domain is added. A family that scripts no
+reply at all throws, and a repeated request name throws, because the divergence would be ambiguous.
+
+A variant answers its own site differently, so the replies scripted after it may never be asked
+for. Those steps are marked `optional` and are answered only if the request is outstanding; the
+sender list in each checkpoint records which ones the operation actually sent.
+
+The `normal` partition replays a result the family already records for that request — the first
+fulfilled reply in scenario order, base first — so no migrator invents a plausible payload per
+domain. `null` and absent do not count, because each is already a partition of its own and
+replaying one would leave the site with no success control. A site whose family records no other
+success fails the suite until it is given a fulfilled scenario or a line in
+`REPLY_MATRIX_NORMAL_RESULT_INVENTORY`, which carries the reply and the reason; an entry whose
+family has since recorded a success fails too, so the list only shrinks. Four sites are on it: both
+legs of the b3 seed, whose single scenario exists to record the defect; the b2 seed, whose only
+recorded success is the shipped null result; and `settings.update`, a best-effort write whose reply
+body no call site reads.
 
 Detached unhandled rejections are captured as effects in a sequential process-scoped window,
 with prior process listeners restored afterward. This preserves the known main bug recorded
@@ -142,11 +173,11 @@ families because no reference states are defined for them.
 
 ## What this oracle does and does not see
 
-It replays 46 scenarios against frozen goldens and fails on any divergence: 73 goldens over 118
+It replays 78 scenarios against frozen goldens and fails on any divergence: 153 goldens over 198
 tests, all inside `pnpm --dir mobile test`. For a migration it answers one question — does the
 rewritten call site produce the same sender calls, settlements, state and effects as main did?
 
-It is not a substitute for reading the diff. Two facts bound it, both learned the hard way:
+It is not a substitute for reading the diff. Three facts bound it, all learned the hard way:
 
 - **It was blind to refusal ordering.** Reordering the settings and sibling refusal checks in
   `mobile-new-tab-agent-loader.ts` survives every golden except `probe-new-tab-both-refused` —
@@ -160,8 +191,14 @@ It is not a substitute for reading the diff. Two facts bound it, both learned th
   `use-new-workspace-runtime-context.ts` is caught by the refuse-after-data probe _and_ by
   `matrix-settings.workspace-context`, because a refusal from cold publishes `null` over a non-null
   initial value. Claim the recorded behaviour, not blindness.
+- **It was blind to whatever the matrix skipped.** While the driven request came from a hardcoded
+  prefix list, moving `readMobileHostedReviewGitStatus`'s `interpret` into the request chain — which
+  turns a transport rejection into an `{ok: false}` result instead of letting it propagate — survived
+  all 163 tests, because no scenario rejected `git.status` for that family. Driving every scripted
+  reply kills it on five matrix goldens. The lesson is about the skip, not about that call site: a
+  generator that opts a family out without failing is indistinguishable from coverage.
 
-`probe-hole-witness.test.ts` closes both and keeps them closed. It asserts the hole and the closure
+`probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole and the closure
 together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
 must still survive it. A probe that stops being load-bearing fails instead of lingering.
 
@@ -181,6 +218,25 @@ publishes `{}`, so a refused refresh wipes the runtime task settings. That diver
 not repaired — `settings-task-hydration-refuse-after-data.json` is the observation, and changing
 the behaviour is a product change with its own re-record.
 
+### Open parity failure: a non-string in-band error is no longer passed through
+
+`matrix-hostedreview.create-intent-git.commit-1` fails on this branch, in one variant
+(`inner-false-object-error`), on one value. Main's `commitMobileHostedReviewStagedChanges` returned
+`result?.error || 'Commit failed'`, so a host error that is not a string reached the create-intent
+outcome as the object itself. `hostReplyErrorTextOrFallback` in
+`mobile/src/transport/rpc-refusal-message.ts` returns `String(value)` instead, so the same reply now
+yields `"[object Object]"`. Its own comment claims it preserves `result?.error || fallback`, which
+holds for strings and for absent values and not for a truthy non-string.
+
+The golden records main, which is what the oracle is for. Restoring the pass-through makes the whole
+suite green — measured, one line — but it is a product change and a product decision: main put an
+object in a `string` field, and neither behaviour is obviously the one to keep. Whoever decides it
+either changes that helper or re-records this one golden with the reason stated in the commit.
+
+Reachability: the host types `git.commit`'s reply as `{success: boolean; error?: string}`, so today's
+host does not send this. Nothing validates it either — the reader is `optionalPayloadMember`, and
+mixed client/host versions are the normal state.
+
 ## Running it for a step-4 migration
 
 ```sh
@@ -198,6 +254,15 @@ ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 \
 
 A re-record is a claim about behaviour. State the cause in the commit; every golden the refresh
 moves should have one.
+
+Editing the recorder itself on a migration branch is the awkward case: `recorderSha256` moves, so
+every golden needs rewriting, but the product tree no longer matches `baseline`, and bumping
+`baseline` to the branch would record the migrated source and make the parity claim circular. Record
+from the pinned commit instead, with this branch's recorder laid over it — a detached checkout or a
+`git archive` extraction of `baseline`, this tree's `rpc-recording/` and `pilot-scenarios.json`
+copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scratch directory — then
+copy the result back and run the candidate suite here. Format the recorder before recording: an
+`oxfmt` pass afterwards moves `recorderSha256` again.
 
 If your call site carries a mutation anchor in `operation-mutations.ts`, rewriting it will make the
 anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:

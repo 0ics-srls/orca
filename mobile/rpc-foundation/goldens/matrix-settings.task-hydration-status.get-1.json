@@ -1,0 +1,2961 @@
+{
+  "operation": "settings.task-hydration",
+  "family": "settings.task-hydration",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "674202f169a3eda3555b4cf2a9fe8822b3f9bf6816f90cc0b1aadc9f9334a596",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "0131611322e3": {
+      "mount": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "undefined"
+        }
+      }
+    },
+    "110d95d1798a": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "154d5dfccf40": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "refused"
+            }
+          }
+        }
+      }
+    ],
+    "193d7d00aa00": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "method_not_found",
+              "message": "Unknown method"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "2ab3a35f9d63": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": ""
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "2e74bae4eac4": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": ""
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "37d66737f9aa": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unsupported"
+        }
+      },
+      {
+        "name": "items",
+        "value": []
+      },
+      {
+        "name": "reset-items",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "githubProjectTable",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "Update Orca desktop to use Tasks on mobile."
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "4345d70c756e": [
+      {
+        "name": "status.get#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"status.get\"}"
+      },
+      {
+        "name": "settings.get#1",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
+      },
+      {
+        "name": "ui.get#1",
+        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"ui.get\"}"
+      },
+      {
+        "name": "preflight.check#1",
+        "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"preflight.check\"}"
+      },
+      {
+        "name": "linear.status#1",
+        "json": "{\"id\":\"frame-5\",\"deviceToken\":\"recording-device\",\"method\":\"linear.status\"}"
+      }
+    ],
+    "588a105f4716": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true
+          }
+        }
+      }
+    ],
+    "58c52d8b7c76": {
+      "hydrated": true,
+      "settings": {
+        "defaultTuiAgent": "codex",
+        "disabledTuiAgents": ["claude"],
+        "hostSettingOverrides": {},
+        "prBotAuthorOverrides": ["bot-user"],
+        "visibleTaskProviders": ["github", "linear"]
+      }
+    },
+    "5a9cc1957824": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "capabilities": ["mobile.tasks.v1"]
+            }
+          }
+        }
+      },
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "settings": {
+                "defaultTuiAgent": "codex",
+                "disabledTuiAgents": ["claude"],
+                "hostSettingOverrides": {},
+                "prBotAuthorOverrides": ["bot-user"],
+                "visibleTaskProviders": ["github", "linear"]
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "ui.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "ui.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "ui": {}
+            }
+          }
+        }
+      },
+      {
+        "name": "preflight.check#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "preflight.check"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-4",
+            "ok": true,
+            "result": {
+              "glab": {
+                "installed": false
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "linear.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "linear.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-5",
+            "ok": true,
+            "result": {
+              "connected": false
+            }
+          }
+        }
+      }
+    ],
+    "5fc90efbc51e": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "outer refused"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "748b2ba12d63": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "Unknown method"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "7f26680c934a": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "outer refused"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "8574a5791dce": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "supported"
+        }
+      },
+      {
+        "name": "error",
+        "value": ""
+      },
+      {
+        "name": "runtimeTaskSettings",
+        "value": {
+          "defaultTuiAgent": "codex",
+          "disabledTuiAgents": ["claude"],
+          "hostSettingOverrides": {},
+          "prBotAuthorOverrides": ["bot-user"],
+          "visibleTaskProviders": ["github", "linear"]
+        }
+      },
+      {
+        "name": "trustedOrcaHooks",
+        "value": {}
+      },
+      {
+        "name": "githubProjectHiddenFieldIdsByView",
+        "value": {}
+      },
+      {
+        "name": "linearConnected",
+        "value": false
+      },
+      {
+        "name": "linearWorkspaces",
+        "value": []
+      },
+      {
+        "name": "linearTeams",
+        "value": []
+      },
+      {
+        "name": "selectedLinearTeamIds",
+        "value": []
+      },
+      {
+        "name": "selectedLinearWorkspaceId",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "visibleProviders",
+        "value": ["github", "linear"]
+      },
+      {
+        "name": "provider",
+        "value": "github"
+      },
+      {
+        "name": "githubMode",
+        "value": "items"
+      },
+      {
+        "name": "defaultGitHubPreset",
+        "value": "issues"
+      },
+      {
+        "name": "githubPreset",
+        "value": "issues"
+      },
+      {
+        "name": "githubKind",
+        "value": "issues"
+      },
+      {
+        "name": "linearFilter",
+        "value": "all"
+      },
+      {
+        "name": "githubProjectSettings",
+        "value": {
+          "activeProject": {
+            "$rpc": "null"
+          },
+          "lastViewByProject": {},
+          "pinned": [],
+          "recent": []
+        }
+      },
+      {
+        "name": "query",
+        "value": "is:issue is:open"
+      },
+      {
+        "name": "appliedQuery",
+        "value": "is:issue is:open"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": true
+      }
+    ],
+    "8a0a00c351e2": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": {
+                "message": "inner refused"
+              },
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "9e0ac285f67c": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "Cannot read properties of undefined (reading 'capabilities')"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "9ed6448c37d1": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "inner refused",
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "c3f33d88e338": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "supported"
+        }
+      },
+      {
+        "name": "error",
+        "value": ""
+      }
+    ],
+    "c6178e6a0f4e": {
+      "hydrated": false,
+      "settings": {}
+    },
+    "c6ded3b81a23": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "$rpc": "null"
+            }
+          }
+        }
+      }
+    ],
+    "d740483a26ae": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "transport failure"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "dcf267ed0572": [
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      },
+      {
+        "name": "tasksSupportState",
+        "value": {
+          "client": "logical-client",
+          "kind": "unknown"
+        }
+      },
+      {
+        "name": "showLinearWorkspacePicker",
+        "value": false
+      },
+      {
+        "name": "showLinearTeamPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearViewPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearGroupPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearOrderPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearDisplayPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearConnect",
+        "value": false
+      },
+      {
+        "name": "showProviderPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubKindPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPresetPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitLabFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showLinearFilterPicker",
+        "value": false
+      },
+      {
+        "name": "showSortPicker",
+        "value": false
+      },
+      {
+        "name": "showRepoPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubIssueSourcePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubPagePicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectViewPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectSortPicker",
+        "value": false
+      },
+      {
+        "name": "showGitHubProjectFieldsPicker",
+        "value": false
+      },
+      {
+        "name": "pendingGitHubProjectViewSelection",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "actionItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRepoNotInOrca",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "detailPayload",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "projectRowDetail",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "showCreateTask",
+        "value": false
+      },
+      {
+        "name": "showCreateTargetPicker",
+        "value": false
+      },
+      {
+        "name": "linearStatusPickerItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingProjectGitHubMerge",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "pendingHostedStateChange",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodTaskItem",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "mergeMethodProjectRow",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "reset-workspace",
+        "value": {
+          "$rpc": "null"
+        }
+      },
+      {
+        "name": "error",
+        "value": "Cannot read properties of null (reading 'capabilities')"
+      },
+      {
+        "name": "taskStateHydrated",
+        "value": false
+      }
+    ],
+    "e71a3d7fabe9": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "capabilities": ["mobile.tasks.v1"]
+            }
+          }
+        }
+      },
+      {
+        "name": "settings.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "settings.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      },
+      {
+        "name": "ui.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "ui.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      },
+      {
+        "name": "preflight.check#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "preflight.check"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      },
+      {
+        "name": "linear.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "linear.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "fc08fcab8b31": [
+      {
+        "name": "status.get#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "status.get"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "fd2ebc63b188": [
+      {
+        "name": "status.get#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"status.get\"}"
+      }
+    ]
+  },
+  "recording": {
+    "scenario": "matrix-settings.task-hydration-status.get-1",
+    "checkpoints": [
+      {
+        "id": "settings-task-hydration-fulfilled.normal:settings-pending",
+        "observation": {
+          "sender": "e71a3d7fabe9",
+          "payloads": "4345d70c756e",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "c3f33d88e338"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.normal:settled",
+        "observation": {
+          "sender": "5a9cc1957824",
+          "payloads": "4345d70c756e",
+          "settlements": "0131611322e3",
+          "state": "58c52d8b7c76",
+          "effects": "8574a5791dce"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.result-absent:settings-pending",
+        "observation": {
+          "sender": "588a105f4716",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "9e0ac285f67c"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.result-absent:settled",
+        "observation": {
+          "sender": "588a105f4716",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "9e0ac285f67c"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.result-null:settings-pending",
+        "observation": {
+          "sender": "c6ded3b81a23",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "dcf267ed0572"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.result-null:settled",
+        "observation": {
+          "sender": "c6ded3b81a23",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "dcf267ed0572"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-ok-missing:settings-pending",
+        "observation": {
+          "sender": "154d5dfccf40",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-ok-missing:settled",
+        "observation": {
+          "sender": "154d5dfccf40",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-false-string-error:settings-pending",
+        "observation": {
+          "sender": "9ed6448c37d1",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-false-string-error:settled",
+        "observation": {
+          "sender": "9ed6448c37d1",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-false-object-error:settings-pending",
+        "observation": {
+          "sender": "8a0a00c351e2",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.inner-false-object-error:settled",
+        "observation": {
+          "sender": "8a0a00c351e2",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "37d66737f9aa"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.outer-refused:settings-pending",
+        "observation": {
+          "sender": "5fc90efbc51e",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "7f26680c934a"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.outer-refused:settled",
+        "observation": {
+          "sender": "5fc90efbc51e",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "7f26680c934a"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.outer-refused-no-message:settings-pending",
+        "observation": {
+          "sender": "2ab3a35f9d63",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "2e74bae4eac4"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.outer-refused-no-message:settled",
+        "observation": {
+          "sender": "2ab3a35f9d63",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "2e74bae4eac4"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.method-not-found:settings-pending",
+        "observation": {
+          "sender": "193d7d00aa00",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "748b2ba12d63"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.method-not-found:settled",
+        "observation": {
+          "sender": "193d7d00aa00",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "748b2ba12d63"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.transport-rejection:settings-pending",
+        "observation": {
+          "sender": "110d95d1798a",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "d740483a26ae"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.transport-rejection:settled",
+        "observation": {
+          "sender": "110d95d1798a",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "d740483a26ae"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.transport-rejection-no-message:settings-pending",
+        "observation": {
+          "sender": "fc08fcab8b31",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "2e74bae4eac4"
+        }
+      },
+      {
+        "id": "settings-task-hydration-fulfilled.transport-rejection-no-message:settled",
+        "observation": {
+          "sender": "fc08fcab8b31",
+          "payloads": "fd2ebc63b188",
+          "settlements": "0131611322e3",
+          "state": "c6178e6a0f4e",
+          "effects": "2e74bae4eac4"
+        }
+      }
+    ]
+  }
+}

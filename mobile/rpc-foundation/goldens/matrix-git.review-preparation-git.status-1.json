@@ -1,0 +1,837 @@
+{
+  "operation": "source-control.review-git-preparation",
+  "family": "git.review-preparation",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "674202f169a3eda3555b4cf2a9fe8822b3f9bf6816f90cc0b1aadc9f9334a596",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "1f2a9cc0e495": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "inner refused",
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "1fae7e6bc27b": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "24d8a5334d54": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "branch": "feature",
+              "entries": [
+                {
+                  "area": "staged",
+                  "path": "src/app.ts",
+                  "status": "modified"
+                },
+                {
+                  "area": "untracked",
+                  "path": "src/new.ts",
+                  "status": "untracked"
+                }
+              ],
+              "head": "abc1234",
+              "upstreamStatus": {
+                "ahead": 1,
+                "behind": 0,
+                "hasUpstream": true
+              }
+            }
+          }
+        }
+      }
+    ],
+    "3b1f10f51ae6": {
+      "committed": "uncommitted",
+      "status": {
+        "error": "outer refused",
+        "ok": false
+      }
+    },
+    "3c85613db776": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "outer refused"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "45b09371d5a2": {
+      "status": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "ok": true,
+          "status": {
+            "$rpc": "null"
+          }
+        }
+      }
+    },
+    "4f53cda18c2b": [],
+    "52b183f5ead4": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "6d2e94f00516": {
+      "status": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "6decf368b25a": {
+      "committed": "uncommitted",
+      "status": {
+        "ok": true,
+        "status": {
+          "$rpc": "null"
+        }
+      }
+    },
+    "7a588b9f02dd": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": ""
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "7b33d29e7245": {
+      "status": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "Unknown method",
+          "ok": false
+        }
+      }
+    },
+    "828b48b680c4": {
+      "status": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "ok": true,
+          "status": {
+            "branch": "feature",
+            "conflictOperation": "unknown",
+            "entries": [
+              {
+                "added": {
+                  "$rpc": "undefined"
+                },
+                "area": "staged",
+                "conflictKind": {
+                  "$rpc": "undefined"
+                },
+                "conflictStatus": {
+                  "$rpc": "undefined"
+                },
+                "conflictStatusSource": {
+                  "$rpc": "undefined"
+                },
+                "oldPath": {
+                  "$rpc": "undefined"
+                },
+                "path": "src/app.ts",
+                "removed": {
+                  "$rpc": "undefined"
+                },
+                "status": "modified"
+              },
+              {
+                "added": {
+                  "$rpc": "undefined"
+                },
+                "area": "untracked",
+                "conflictKind": {
+                  "$rpc": "undefined"
+                },
+                "conflictStatus": {
+                  "$rpc": "undefined"
+                },
+                "conflictStatusSource": {
+                  "$rpc": "undefined"
+                },
+                "oldPath": {
+                  "$rpc": "undefined"
+                },
+                "path": "src/new.ts",
+                "removed": {
+                  "$rpc": "undefined"
+                },
+                "status": "untracked"
+              }
+            ],
+            "head": "abc1234",
+            "upstreamStatus": {
+              "ahead": 1,
+              "behind": 0,
+              "behindCommitsArePatchEquivalent": {
+                "$rpc": "undefined"
+              },
+              "hasConfiguredPushTarget": {
+                "$rpc": "undefined"
+              },
+              "hasUpstream": true,
+              "upstreamName": {
+                "$rpc": "undefined"
+              }
+            }
+          }
+        }
+      }
+    },
+    "89ca28c45139": {
+      "committed": "uncommitted",
+      "status": {
+        "error": "Unknown method",
+        "ok": false
+      }
+    },
+    "8ae76ead94c1": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": {
+                "message": "inner refused"
+              },
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "8c85ee8c0763": {
+      "committed": "uncommitted",
+      "status": {
+        "error": "Unable to refresh source control",
+        "ok": false
+      }
+    },
+    "95c2e5ca74fc": {
+      "committed": "uncommitted",
+      "status": {
+        "ok": true,
+        "status": {
+          "branch": "feature",
+          "conflictOperation": "unknown",
+          "entries": [
+            {
+              "added": {
+                "$rpc": "undefined"
+              },
+              "area": "staged",
+              "conflictKind": {
+                "$rpc": "undefined"
+              },
+              "conflictStatus": {
+                "$rpc": "undefined"
+              },
+              "conflictStatusSource": {
+                "$rpc": "undefined"
+              },
+              "oldPath": {
+                "$rpc": "undefined"
+              },
+              "path": "src/app.ts",
+              "removed": {
+                "$rpc": "undefined"
+              },
+              "status": "modified"
+            },
+            {
+              "added": {
+                "$rpc": "undefined"
+              },
+              "area": "untracked",
+              "conflictKind": {
+                "$rpc": "undefined"
+              },
+              "conflictStatus": {
+                "$rpc": "undefined"
+              },
+              "conflictStatusSource": {
+                "$rpc": "undefined"
+              },
+              "oldPath": {
+                "$rpc": "undefined"
+              },
+              "path": "src/new.ts",
+              "removed": {
+                "$rpc": "undefined"
+              },
+              "status": "untracked"
+            }
+          ],
+          "head": "abc1234",
+          "upstreamStatus": {
+            "ahead": 1,
+            "behind": 0,
+            "behindCommitsArePatchEquivalent": {
+              "$rpc": "undefined"
+            },
+            "hasConfiguredPushTarget": {
+              "$rpc": "undefined"
+            },
+            "hasUpstream": true,
+            "upstreamName": {
+              "$rpc": "undefined"
+            }
+          }
+        }
+      }
+    },
+    "9b6143ce01af": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "method_not_found",
+              "message": "Unknown method"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "a312141cae64": {
+      "status": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "Unable to refresh source control",
+          "ok": false
+        }
+      }
+    },
+    "ac07554f62ad": {
+      "committed": "uncommitted",
+      "status": "unread"
+    },
+    "aee3bb6cd651": {
+      "status": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "b1ef0615a51b": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "refused"
+            }
+          }
+        }
+      }
+    ],
+    "e1e765cc40b0": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "e43103e7680d": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "$rpc": "null"
+            }
+          }
+        }
+      }
+    ],
+    "ea48655ebc78": [
+      {
+        "name": "git.status#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.status\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "ed13561b7e86": {
+      "status": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "outer refused",
+          "ok": false
+        }
+      }
+    },
+    "f9ba2c75626f": [
+      {
+        "name": "git.status#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.status"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true
+          }
+        }
+      }
+    ],
+    "fb0be60f7843": {
+      "status": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "matrix-git.review-preparation-git.status-1",
+    "checkpoints": [
+      {
+        "id": "sc-review-status-normalized.prelude:pending",
+        "observation": {
+          "sender": "1fae7e6bc27b",
+          "payloads": "ea48655ebc78",
+          "settlements": "aee3bb6cd651",
+          "state": "ac07554f62ad",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.normal:settled",
+        "observation": {
+          "sender": "24d8a5334d54",
+          "payloads": "ea48655ebc78",
+          "settlements": "828b48b680c4",
+          "state": "95c2e5ca74fc",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.result-absent:settled",
+        "observation": {
+          "sender": "f9ba2c75626f",
+          "payloads": "ea48655ebc78",
+          "settlements": "45b09371d5a2",
+          "state": "6decf368b25a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.result-null:settled",
+        "observation": {
+          "sender": "e43103e7680d",
+          "payloads": "ea48655ebc78",
+          "settlements": "45b09371d5a2",
+          "state": "6decf368b25a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.inner-ok-missing:settled",
+        "observation": {
+          "sender": "b1ef0615a51b",
+          "payloads": "ea48655ebc78",
+          "settlements": "45b09371d5a2",
+          "state": "6decf368b25a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.inner-false-string-error:settled",
+        "observation": {
+          "sender": "1f2a9cc0e495",
+          "payloads": "ea48655ebc78",
+          "settlements": "45b09371d5a2",
+          "state": "6decf368b25a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.inner-false-object-error:settled",
+        "observation": {
+          "sender": "8ae76ead94c1",
+          "payloads": "ea48655ebc78",
+          "settlements": "45b09371d5a2",
+          "state": "6decf368b25a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.outer-refused:settled",
+        "observation": {
+          "sender": "3c85613db776",
+          "payloads": "ea48655ebc78",
+          "settlements": "ed13561b7e86",
+          "state": "3b1f10f51ae6",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.outer-refused-no-message:settled",
+        "observation": {
+          "sender": "7a588b9f02dd",
+          "payloads": "ea48655ebc78",
+          "settlements": "a312141cae64",
+          "state": "8c85ee8c0763",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.method-not-found:settled",
+        "observation": {
+          "sender": "9b6143ce01af",
+          "payloads": "ea48655ebc78",
+          "settlements": "7b33d29e7245",
+          "state": "89ca28c45139",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.transport-rejection:settled",
+        "observation": {
+          "sender": "e1e765cc40b0",
+          "payloads": "ea48655ebc78",
+          "settlements": "6d2e94f00516",
+          "state": "ac07554f62ad",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-review-status-normalized.transport-rejection-no-message:settled",
+        "observation": {
+          "sender": "52b183f5ead4",
+          "payloads": "ea48655ebc78",
+          "settlements": "fb0be60f7843",
+          "state": "ac07554f62ad",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

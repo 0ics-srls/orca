@@ -1,0 +1,678 @@
+{
+  "operation": "source-control.commit-message",
+  "family": "git.commit-message-ai",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "674202f169a3eda3555b4cf2a9fe8822b3f9bf6816f90cc0b1aadc9f9334a596",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "08550c229bdf": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "No commit message generated",
+          "success": false
+        }
+      }
+    },
+    "1400db9aa00b": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "outer refused",
+          "success": false
+        }
+      }
+    },
+    "19fcb56780ba": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": {
+                "message": "inner refused"
+              },
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "2a3bf1815766": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "inner refused",
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "2abe7c0c3763": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "2f20bda3b3f5": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "outer refused"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "33bfe371e5b0": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "message": "feat: recorded",
+          "success": true
+        }
+      }
+    },
+    "3ef8a5f65bc8": {
+      "generated": {
+        "message": "feat: recorded",
+        "success": true
+      }
+    },
+    "3f0453e3c8f9": {
+      "generate": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "4f53cda18c2b": [],
+    "5246b9fd2d12": {
+      "generated": {
+        "error": "outer refused",
+        "success": false
+      }
+    },
+    "55963844f040": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "5becddaebf57": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.generateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "613b061103e5": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "message": "feat: recorded",
+              "success": true
+            }
+          }
+        }
+      }
+    ],
+    "61c7ca32577a": {
+      "generate": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "6453ff669a2f": {
+      "generated": {
+        "error": "Failed to generate commit message",
+        "success": false
+      }
+    },
+    "647e7870fa6f": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "Unknown method",
+          "success": false
+        }
+      }
+    },
+    "8be8f41478d8": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "91471f1c9738": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "$rpc": "null"
+            }
+          }
+        }
+      }
+    ],
+    "915059a8a000": {
+      "generated": {
+        "error": "Unknown method",
+        "success": false
+      }
+    },
+    "927b68030eb2": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true
+          }
+        }
+      }
+    ],
+    "93f07b82cf9c": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": ""
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "adb40821f3e2": {
+      "generated": "ungenerated"
+    },
+    "b308d9d641d6": {
+      "generate": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "c44fce5322f2": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "Failed to generate commit message",
+          "success": false
+        }
+      }
+    },
+    "ea1e8dc75c9d": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "error": "refused"
+            }
+          }
+        }
+      }
+    ],
+    "eb5bf7333dc4": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "method_not_found",
+              "message": "Unknown method"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "faad14b9f95d": {
+      "generated": {
+        "error": "No commit message generated",
+        "success": false
+      }
+    }
+  },
+  "recording": {
+    "scenario": "matrix-git.commit-message-ai-git.generatecommitmessage-1",
+    "checkpoints": [
+      {
+        "id": "sc-commit-message-generated.prelude:pending",
+        "observation": {
+          "sender": "2abe7c0c3763",
+          "payloads": "5becddaebf57",
+          "settlements": "b308d9d641d6",
+          "state": "adb40821f3e2",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.normal:settled",
+        "observation": {
+          "sender": "613b061103e5",
+          "payloads": "5becddaebf57",
+          "settlements": "33bfe371e5b0",
+          "state": "3ef8a5f65bc8",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.result-absent:settled",
+        "observation": {
+          "sender": "927b68030eb2",
+          "payloads": "5becddaebf57",
+          "settlements": "c44fce5322f2",
+          "state": "6453ff669a2f",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.result-null:settled",
+        "observation": {
+          "sender": "91471f1c9738",
+          "payloads": "5becddaebf57",
+          "settlements": "c44fce5322f2",
+          "state": "6453ff669a2f",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.inner-ok-missing:settled",
+        "observation": {
+          "sender": "ea1e8dc75c9d",
+          "payloads": "5becddaebf57",
+          "settlements": "08550c229bdf",
+          "state": "faad14b9f95d",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.inner-false-string-error:settled",
+        "observation": {
+          "sender": "2a3bf1815766",
+          "payloads": "5becddaebf57",
+          "settlements": "08550c229bdf",
+          "state": "faad14b9f95d",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.inner-false-object-error:settled",
+        "observation": {
+          "sender": "19fcb56780ba",
+          "payloads": "5becddaebf57",
+          "settlements": "08550c229bdf",
+          "state": "faad14b9f95d",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.outer-refused:settled",
+        "observation": {
+          "sender": "2f20bda3b3f5",
+          "payloads": "5becddaebf57",
+          "settlements": "1400db9aa00b",
+          "state": "5246b9fd2d12",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.outer-refused-no-message:settled",
+        "observation": {
+          "sender": "93f07b82cf9c",
+          "payloads": "5becddaebf57",
+          "settlements": "c44fce5322f2",
+          "state": "6453ff669a2f",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.method-not-found:settled",
+        "observation": {
+          "sender": "eb5bf7333dc4",
+          "payloads": "5becddaebf57",
+          "settlements": "647e7870fa6f",
+          "state": "915059a8a000",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.transport-rejection:settled",
+        "observation": {
+          "sender": "8be8f41478d8",
+          "payloads": "5becddaebf57",
+          "settlements": "3f0453e3c8f9",
+          "state": "adb40821f3e2",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-commit-message-generated.transport-rejection-no-message:settled",
+        "observation": {
+          "sender": "55963844f040",
+          "payloads": "5becddaebf57",
+          "settlements": "61c7ca32577a",
+          "state": "adb40821f3e2",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

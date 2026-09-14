@@ -17,6 +17,11 @@ import {
   type GoldenRecording
 } from './golden-recording'
 import { hoistPreludeCheckpoints } from './prelude-checkpoints'
+import { replyMatrixGoldenId, replyMatrixSites } from './reply-matrix'
+import {
+  REPLY_MATRIX_NORMAL_RESULT_INVENTORY,
+  replyMatrixNormalResult
+} from './reply-matrix-normal-result'
 import { runRecording } from './run-recording'
 import type { Observation, RecordingScenario } from './recording-scenario'
 
@@ -224,6 +229,73 @@ describe('recording boundaries', () => {
         { divergence: 3, scenario: variant('family.late', { ok: false }) }
       ])
     ).toThrow('diverges from the base')
+  })
+
+  // A matrix that cannot drive a family has to fail. The prefix list it replaced returned no site
+  // and the loop skipped, which is how ten families lost their matrix without a red test.
+  it('refuses a family it cannot matrix instead of skipping it', () => {
+    const base: RecordingScenario = {
+      id: 'family',
+      operation: 'op',
+      version: 1,
+      family: 'op',
+      sites: [],
+      schedules: [],
+      steps: [{ action: 'mount', id: 'mount' }, { checkpoint: 'settled' }]
+    }
+    expect(() => replyMatrixSites(base)).toThrow('No scripted reply to drive a matrix over')
+    expect(() =>
+      replyMatrixSites({
+        ...base,
+        steps: [
+          { complete: 'a#1', params: {}, reply: { ok: true, result: 1 } },
+          { complete: 'a#1', params: {}, reply: { ok: true, result: 2 } },
+          { checkpoint: 'settled' }
+        ]
+      })
+    ).toThrow('Matrix sites must be unique')
+    expect(replyMatrixGoldenId('hostedReview.eligibility', 'hostedReview.create#1')).toBe(
+      'matrix-hostedreview.eligibility-hostedreview.create-1'
+    )
+  })
+
+  it('refuses a matrix site with no recorded success, and a redundant inventory entry', () => {
+    const scenario = (reply: unknown): RecordingScenario => ({
+      id: 'family',
+      operation: 'op',
+      version: 1,
+      family: 'op',
+      sites: [],
+      schedules: [],
+      steps: [{ complete: 'a#1', params: {}, reply }, { checkpoint: 'settled' }]
+    })
+    // Absent and null are partitions of their own, so neither can stand in as the success control.
+    for (const reply of [{ ok: true }, { ok: true, result: null }, { ok: false }]) {
+      expect(() => replyMatrixNormalResult('op', [scenario(reply)], 'a#1')).toThrow(
+        'No fulfilled reply recorded for matrix site'
+      )
+    }
+    expect(
+      replyMatrixNormalResult('op', [scenario({ ok: true, result: { n: 1 } })], 'a#1')
+    ).toEqual({
+      n: 1
+    })
+    const inventoried = REPLY_MATRIX_NORMAL_RESULT_INVENTORY[0]!
+    expect(() =>
+      replyMatrixNormalResult(
+        inventoried.family,
+        [
+          {
+            ...scenario({ ok: true, result: { n: 1 } }),
+            steps: [
+              { complete: inventoried.request, params: {}, reply: { ok: true, result: { n: 1 } } },
+              { checkpoint: 'settled' }
+            ]
+          }
+        ],
+        inventoried.request
+      )
+    ).toThrow('drop its REPLY_MATRIX_NORMAL_RESULT_INVENTORY entry')
   })
 
   it('refuses a checkpoint whose clock drifted from the scripted advances', async () => {

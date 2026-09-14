@@ -1,0 +1,1622 @@
+{
+  "operation": "source-control.branch-base-ref",
+  "family": "git.base-ref-chain",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "674202f169a3eda3555b4cf2a9fe8822b3f9bf6816f90cc0b1aadc9f9334a596",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "0088d68b8362": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true
+          }
+        }
+      }
+    ],
+    "06c7d6400ed7": {
+      "resolve": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "25fa070377ef": [
+      {
+        "name": "worktree.show#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "repo.list#1",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+      }
+    ],
+    "2e5d53018af5": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "outer refused"
+            },
+            "id": "frame-3",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "497f1beed0d6": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "4b3f55e56f33": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "4dce743b400a": {
+      "baseRef": "unresolved"
+    },
+    "4f53cda18c2b": [],
+    "5f01127e3eeb": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "method_not_found",
+              "message": "Unknown method"
+            },
+            "id": "frame-3",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "5f661e5b3de8": {
+      "baseRef": "origin/main"
+    },
+    "6f6ff4b9e4fd": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "$rpc": "null"
+            }
+          }
+        }
+      }
+    ],
+    "85ed111f045d": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "defaultBaseRef": " origin/main "
+            }
+          }
+        }
+      }
+    ],
+    "888d778f4a71": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "error": "inner refused",
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "8e9b55c2983a": {
+      "resolve": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "8f2329d55781": {
+      "resolve": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "a8a2b06783db": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": ""
+            },
+            "id": "frame-3",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "b1c11a23e2f0": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "b60556c7a61a": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "error": {
+                "message": "inner refused"
+              },
+              "ok": false
+            }
+          }
+        }
+      }
+    ],
+    "b687e9929bdc": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "baseRef": "   "
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "repos": [
+                {
+                  "id": "repo42",
+                  "worktreeBaseRef": {
+                    "$rpc": "null"
+                  }
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "error": "refused"
+            }
+          }
+        }
+      }
+    ],
+    "d635b4f255b3": {
+      "resolve": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "Unable to resolve branch base",
+          "isRpcDeliveryUnknown": false
+        }
+      }
+    },
+    "e1bb3623d5c9": {
+      "resolve": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": "origin/main"
+      }
+    },
+    "e2fbc2b9e8e9": {
+      "baseRef": {
+        "$rpc": "null"
+      }
+    },
+    "e7eb3ba89f8b": [
+      {
+        "name": "worktree.show#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "repo.list#1",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"repo.baseRefDefault\",\"params\":{\"repo\":\"id:repo42\"}}"
+      }
+    ],
+    "e83e417d6294": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ],
+    "ebeb4a5554f6": {
+      "resolve": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "outer refused",
+          "isRpcDeliveryUnknown": false
+        }
+      }
+    },
+    "f9489841db60": {
+      "resolve": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "null"
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "matrix-git.base-ref-chain-repo.baserefdefault-1",
+    "checkpoints": [
+      {
+        "id": "sc-base-ref-default.prelude:requests-pending",
+        "observation": {
+          "sender": "e83e417d6294",
+          "payloads": "25fa070377ef",
+          "settlements": "06c7d6400ed7",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.prelude:barrier-settled",
+        "observation": {
+          "sender": "497f1beed0d6",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "06c7d6400ed7",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.normal:settled",
+        "observation": {
+          "sender": "85ed111f045d",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "e1bb3623d5c9",
+          "state": "5f661e5b3de8",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.result-absent:settled",
+        "observation": {
+          "sender": "0088d68b8362",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.result-null:settled",
+        "observation": {
+          "sender": "6f6ff4b9e4fd",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.inner-ok-missing:settled",
+        "observation": {
+          "sender": "b687e9929bdc",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.inner-false-string-error:settled",
+        "observation": {
+          "sender": "888d778f4a71",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.inner-false-object-error:settled",
+        "observation": {
+          "sender": "b60556c7a61a",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.outer-refused:settled",
+        "observation": {
+          "sender": "2e5d53018af5",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "ebeb4a5554f6",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.outer-refused-no-message:settled",
+        "observation": {
+          "sender": "a8a2b06783db",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "d635b4f255b3",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.method-not-found:settled",
+        "observation": {
+          "sender": "5f01127e3eeb",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.transport-rejection:settled",
+        "observation": {
+          "sender": "4b3f55e56f33",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "8e9b55c2983a",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "sc-base-ref-default.transport-rejection-no-message:settled",
+        "observation": {
+          "sender": "b1c11a23e2f0",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "8f2329d55781",
+          "state": "4dce743b400a",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}
