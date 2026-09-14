@@ -30,6 +30,25 @@ function status(tabId: string, worktreeId: string): AgentStatusEntry {
   }
 }
 
+function hostSnapshot(tabId: string, worktreeId: string) {
+  return makeSnapshot(
+    [
+      {
+        type: 'terminal',
+        id: `${tabId}::${LEAF_ID}`,
+        parentTabId: tabId,
+        leafId: LEAF_ID,
+        title: 'OMP',
+        isActive: false,
+        status: 'ready',
+        terminal: `terminal-${tabId}`,
+        agentStatus: status(tabId, worktreeId)
+      }
+    ],
+    { worktree: worktreeId }
+  )
+}
+
 function rows(state: ReturnType<typeof makeState>, worktreeId: string) {
   return buildWorktreeAgentRows({
     tabs: state.tabsByWorktree[worktreeId] ?? [],
@@ -77,9 +96,9 @@ describe('remote completed sidebar rows before tab hydration', () => {
       expect(rows(mirror, worktreeId)).toMatchObject([{ paneKey, state: 'done', agentType: 'omp' }])
       expect(rows(mirror, worktreeId)).toHaveLength(1)
       const removed = {
-        ...mirror,
+        ...beforeTabs,
         ...applyWebSessionTabsSnapshot(
-          mirror,
+          beforeTabs,
           makeSnapshot([], { worktree: worktreeId, snapshotVersion: 2 }),
           ENV,
           NOW + 1
@@ -90,13 +109,72 @@ describe('remote completed sidebar rows before tab hydration', () => {
     }
   )
 
-  it('honors status removal before tab hydration', () => {
+  it('retracts only the publishing host and workspace when client tabs are missing', () => {
     const worktreeId = 'folder:remote-workspace'
-    const entry = status(toWebTerminalSurfaceTabId('host-tab'), worktreeId)
-    const state = makeState({ agentStatusByPaneKey: { [entry.paneKey]: entry } })
-    expect(rows(state, worktreeId)).toHaveLength(1)
-    expect(rows({ ...state, agentStatusByPaneKey: {} }, worktreeId)).toEqual([])
+    const initial = makeState()
+    const owner = applyWebSessionTabsSnapshot(initial, hostSnapshot('owner', worktreeId), ENV, NOW)
+    const sibling = applyWebSessionTabsSnapshot(
+      initial,
+      hostSnapshot('sibling', worktreeId),
+      'other-host',
+      NOW
+    )
+    const otherWorkspace = applyWebSessionTabsSnapshot(
+      initial,
+      hostSnapshot('other-workspace', 'folder:other'),
+      ENV,
+      NOW
+    )
+    const unknown = status(toWebTerminalSurfaceTabId('unknown-owner'), worktreeId)
+    const beforeTabs = makeState({
+      agentStatusByPaneKey: {
+        ...owner.agentStatusByPaneKey,
+        ...sibling.agentStatusByPaneKey,
+        ...otherWorkspace.agentStatusByPaneKey,
+        [unknown.paneKey]: unknown
+      }
+    })
+    const removed = {
+      ...beforeTabs,
+      ...applyWebSessionTabsSnapshot(
+        beforeTabs,
+        makeSnapshot([], { worktree: worktreeId, snapshotVersion: 2 }),
+        ENV,
+        NOW + 1
+      )
+    }
+    expect(Object.keys(removed.agentStatusByPaneKey).sort()).toEqual(
+      [
+        makePaneKey(toWebTerminalSurfaceTabId('sibling'), LEAF_ID),
+        makePaneKey(toWebTerminalSurfaceTabId('other-workspace'), LEAF_ID),
+        unknown.paneKey
+      ].sort()
+    )
   })
+
+  it.each(['visibility-inventory-removal', 'removed:host-epoch'])(
+    'does not treat worktree visibility removal %s as host tab retraction',
+    (publicationEpoch) => {
+      const worktreeId = 'folder:remote-workspace'
+      const initial = makeState()
+      const mirror = applyWebSessionTabsSnapshot(
+        initial,
+        hostSnapshot('host-tab', worktreeId),
+        ENV,
+        NOW
+      )
+      const beforeTabs = makeState({ agentStatusByPaneKey: mirror.agentStatusByPaneKey })
+      const tombstone = {
+        ...makeSnapshot([], { worktree: worktreeId, publicationEpoch }),
+        removed: true as const
+      }
+      const removed = {
+        ...beforeTabs,
+        ...applyWebSessionTabsSnapshot(beforeTabs, tombstone, ENV, NOW + 1)
+      }
+      expect(removed.agentStatusByPaneKey).toEqual(beforeTabs.agentStatusByPaneKey)
+    }
+  )
 
   it('rebuilds same-key buckets when SSH attribution arrives or is removed', () => {
     const worktreeId = 'folder:remote-workspace'
