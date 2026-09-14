@@ -88,14 +88,21 @@ it.skipIf(!binary || process.platform === 'win32')(
       }
       expect(snapshot?.descendants.length).toBeGreaterThan(1)
       const pids = [entry.pid, ...snapshot.descendants.map((row) => row.pid)]
-      const rows = async () =>
-        (
-          await runProcess({
-            program: 'ps',
-            args: ['-p', pids.join(','), '-o', 'pid=,ppid=,pgid=,stat=,comm='],
-            maxOutputBytes: 16000
-          })
-        ).stdout.trim()
+      const rows = async () => {
+        const result = await runProcess({
+          program: 'ps',
+          args: ['-p', pids.join(','), '-o', 'pid=,ppid=,pgid=,stat=,comm='],
+          maxOutputBytes: 16000
+        })
+        expect(result.timedOut).toBe(false)
+        expect(result.signal).toBeNull()
+        expect(result.stderr.trim()).toBe('')
+        expect([0, 1]).toContain(result.code)
+        if (result.code === 1) {
+          expect(result.stdout.trim()).toBe('')
+        }
+        return result.stdout.trim()
+      }
       const before = await rows()
       expect(before).toContain('omp')
       expect(before).toContain('sleep')
