@@ -10,6 +10,7 @@ export type CommittedQuitReason =
   | 'dev-parent-shutdown'
   | 'system-session-end'
   | 'app-quit'
+  | 'relaunch-exit'
 
 export type CommittedQuitSignals = {
   quittingForUpdate: boolean
@@ -32,8 +33,18 @@ export function resolveCommittedQuitReason(signals: CommittedQuitSignals): Commi
   return 'app-quit'
 }
 
+function recordQuitCrumb(quitReason: CommittedQuitReason): void {
+  recordDurableCrashBreadcrumb(COMMITTED_QUIT_BREADCRUMB_NAME, { quitReason })
+}
+
 export function recordCommittedQuitBreadcrumb(signals: CommittedQuitSignals): void {
-  recordDurableCrashBreadcrumb(COMMITTED_QUIT_BREADCRUMB_NAME, {
-    quitReason: resolveCommittedQuitReason(signals)
-  })
+  recordQuitCrumb(resolveCommittedQuitReason(signals))
+}
+
+/** For the relaunch paths that call `app.exit()`: it fires neither before-quit nor
+ *  will-quit, so without a crumb here the next launch reads a deliberate restart —
+ *  the GPU-fallback one lands right on the reports a GPU crash just created — as an
+ *  abrupt whole-app death. */
+export function recordRelaunchExitBreadcrumb(): void {
+  recordQuitCrumb('relaunch-exit')
 }

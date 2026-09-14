@@ -7,7 +7,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createLocalFileSink } from '../observability/local-file-sink'
 import { _resetTracerForTests, setActiveSink } from '../observability/tracer'
 import { clearCrashBreadcrumbsForTest } from './crash-breadcrumb-store'
-import { recordCommittedQuitBreadcrumb } from './committed-quit-breadcrumb'
+import {
+  recordCommittedQuitBreadcrumb,
+  recordRelaunchExitBreadcrumb
+} from './committed-quit-breadcrumb'
 import { CrashReportStore } from './crash-report-store'
 import { recordDurableCrashBreadcrumb } from './durable-crash-breadcrumb'
 import { getMainProcessLifecycleIdentity } from './main-process-lifecycle-identity'
@@ -82,6 +85,19 @@ describe('loadPreviousLaunchExit', () => {
 
     await expect(loadPreviousLaunchExit(randomUUID(), [filePath])).resolves.toEqual({
       previousLaunchId: getMainProcessLifecycleIdentity().mainProcessLaunchId,
+      diedAbruptly: false
+    })
+  })
+
+  // A GPU-fallback or renderer-requested restart leaves through app.exit(), which fires
+  // no quit event at all — the launch it ends is deliberate, not killed.
+  it('reads a relaunch that skipped the quit pipeline as an orderly exit too', async () => {
+    const filePath = await traceFileFromRealBreadcrumbs(() => {
+      recordDurableCrashBreadcrumb('main_process_lifecycle_started', { platform: 'win32' })
+      recordRelaunchExitBreadcrumb()
+    })
+
+    await expect(loadPreviousLaunchExit(randomUUID(), [filePath])).resolves.toMatchObject({
       diedAbruptly: false
     })
   })
