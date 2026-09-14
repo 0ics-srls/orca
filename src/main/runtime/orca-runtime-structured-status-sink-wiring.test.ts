@@ -15,10 +15,12 @@ vi.mock('./structured-agent-session-runtime', () => ({
   })
 }))
 
-import { readFileSync } from 'node:fs'
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { OrcaRuntimeService } from './orca-runtime'
 import type { StructuredAgentSessionStatusSink } from '../native-chat/agent-session-wire/structured-agent-session-status-feed'
+import { createLocalFileSink } from '../observability/local-file-sink'
+import { setActiveSink } from '../observability/tracer'
 
 type OrcaRuntimeDeps = NonNullable<ConstructorParameters<typeof OrcaRuntimeService>[2]>
 
@@ -71,29 +73,56 @@ describe('every host that constructs a runtime wires the agent-status store', ()
 })
 
 describe('structured status sink wiring', () => {
-  it('passes an error reporter that logs the scope and original error', async () => {
-    installed.deps = null
-    const consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      await new OrcaRuntimeService().ensureStructuredAgentSessionHost()
+  it.each([new TypeError('journal settlement failed'), 'late settlement failed'])(
+    'persists the installer error and scope through the real trace sink: %s',
+    async (error) => {
+      installed.deps = null
+      const directory = mkdtempSync(join(import.meta.dirname, '.structured-error-trace-'))
+      const filePath = join(directory, 'logs', 'main.trace.ndjson')
+      const sink = createLocalFileSink({ filePath })
+      setActiveSink(sink)
+      try {
+        await new OrcaRuntimeService().ensureStructuredAgentSessionHost()
 
-      const deps: Record<string, unknown> = installed.deps ?? {}
-      const onError = deps['onError']
-      expect(onError).toBeTypeOf('function')
-      if (typeof onError !== 'function') {
-        throw new Error('structured runtime installer omitted onError')
+        const deps: Record<string, unknown> = installed.deps ?? {}
+        const onError = deps['onError']
+        expect(onError).toBeTypeOf('function')
+        if (typeof onError !== 'function') {
+          throw new Error('structured runtime installer omitted onError')
+        }
+        onError({ scope: 'structured-agent-session-journal:session-1', error })
+
+        await vi.waitFor(() => {
+          const records: unknown[] = readFileSync(filePath, 'utf8')
+            .trim()
+            .split('\n')
+            .map((line) => JSON.parse(line))
+          expect(records).toEqual([
+            expect.objectContaining({
+              type: 'effect-span',
+              name: 'agent-session.error',
+              attributes: { scope: 'structured-agent-session-journal:session-1' },
+              exit: {
+                _tag: 'Failure',
+                cause: expect.stringContaining(String(error))
+              }
+            })
+          ])
+          if (error instanceof Error) {
+            expect(records[0]).toMatchObject({
+              exit: {
+                cause: expect.stringContaining('orca-runtime-structured-status-sink-wiring.test.ts')
+              }
+            })
+          }
+        })
+      } finally {
+        setActiveSink(null)
+        sink.close()
+        rmSync(directory, { recursive: true, force: true })
       }
-      const error = new Error('journal settlement failed')
-      onError({ scope: 'structured-agent-session-journal:session-1', error })
-
-      expect(consoleError).toHaveBeenCalledWith(
-        '[runtime] structured-agent-session-journal:session-1',
-        error
-      )
-    } finally {
-      consoleError.mockRestore()
     }
-  })
+  )
 
   it('hands the host the sink the runtime was constructed with', async () => {
     installed.deps = null
