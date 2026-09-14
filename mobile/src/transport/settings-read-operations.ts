@@ -49,7 +49,7 @@ export const settingsRead = bindDeferredRpcOperation(
   })
 )
 
-/** History resume and repo labels historically tolerate an absent or null result. */
+/** A null or absent result reads as absent settings instead of throwing the property read. */
 export const optionalSettingsRead = bindDeferredRpcOperation(
   defineRpcOperation({
     name: 'settings.optional-member-or-skip',
