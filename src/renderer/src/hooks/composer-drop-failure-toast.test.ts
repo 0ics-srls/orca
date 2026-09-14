@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const { toastError } = vi.hoisted(() => ({
-  toastError: vi.fn<(title: string, options?: { description?: string }) => void>()
+  toastError: vi.fn<(title: string, options?: { id?: string; description?: string }) => void>()
 }))
 vi.mock('sonner', () => ({ toast: { error: toastError } }))
 
@@ -15,10 +15,11 @@ const SKIP_REASON_COPY = [
   ['unsupported', 'Unsupported file type.']
 ] as const satisfies readonly (readonly [ImportSkipReason, string])[]
 
-function lastToast(): { title: string; description?: string } {
+function lastToast(): { title: string; id?: string; description?: string } {
   const call = toastError.mock.calls.at(-1)
   return {
     title: String(call?.[0]),
+    id: call?.[1]?.id,
     description: call?.[1]?.description
   }
 }
@@ -72,6 +73,14 @@ describe('showComposerDropFailureToast', () => {
       }
     })
     expect(lastToast().description).toBe('EACCES: permission denied')
+  })
+
+  it('reuses one slot so a second failed drop replaces the first instead of stacking', () => {
+    showComposerDropFailureToast({ failureCount: 1, total: 2 })
+    const first = lastToast().id
+    showComposerDropFailureToast({ failureCount: 2, total: 3 })
+    expect(first).toBeDefined()
+    expect(lastToast().id).toBe(first)
   })
 
   it('gives no reason at all when the batch failed for differing reasons', () => {

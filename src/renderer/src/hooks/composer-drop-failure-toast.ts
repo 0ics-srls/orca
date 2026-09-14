@@ -4,6 +4,9 @@ import { compactIpcErrorMessage } from '@/lib/ipc-error'
 import type { ComposerDropFailure } from './composer-drop-result'
 import type { ImportSkipReason } from '../../../shared/filesystem-import-result-types'
 
+// Own slot, not Source Control's: a drop failure must not erase an unread stage/discard failure.
+const DROP_FAILURE_TOAST_ID = 'composer-drop-failure'
+
 const SKIP_REASON_COPY: Record<ImportSkipReason, { key: string; fallback: string }> = {
   missing: {
     key: 'auto.hooks.useComposerState.attachSkipMissing',
@@ -46,6 +49,9 @@ export function showComposerDropFailureToast({
       '{{failureCount}} of {{count}} items could not be attached.',
       { failureCount, count: total }
     ),
-    { description: commonFailure ? failureDescription(commonFailure) : undefined }
+    {
+      id: DROP_FAILURE_TOAST_ID,
+      description: commonFailure ? failureDescription(commonFailure) : undefined
+    }
   )
 }
