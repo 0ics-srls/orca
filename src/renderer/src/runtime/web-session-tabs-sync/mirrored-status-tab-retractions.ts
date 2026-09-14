@@ -1,7 +1,8 @@
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import { isWebTerminalSurfaceTabId } from '../../../../shared/terminal-surface-id'
-import type { WebSessionTabsSyncState } from './state'
-import { resolveHostSessionTabIdForWebSessionTab } from './tracking-mappings'
+import type { WebSessionTabsBatchContext, WebSessionTabsSyncState } from './state'
+import { batchAgentPaneKeysForTabs } from './agent-status-primitives'
+import { hostSessionTabIdsByLocalTabForWorktree } from './tracking-mappings'
 
 /** Reuse the host mapping when a status row outlives this renderer's tab inventory. */
 export function collectUnhydratedMirroredTabRetractions(args: {
@@ -10,23 +11,29 @@ export function collectUnhydratedMirroredTabRetractions(args: {
   worktreeId: string
   nextHostTerminalTabIds: ReadonlySet<string>
   currentTerminalIds: ReadonlySet<string>
+  batchContext?: WebSessionTabsBatchContext
 }): string[] {
+  const candidates = new Set<string>()
+  for (const [tabId, hostTabId] of hostSessionTabIdsByLocalTabForWorktree(
+    args.environmentId,
+    args.worktreeId
+  )) {
+    if (
+      isWebTerminalSurfaceTabId(tabId) &&
+      !args.currentTerminalIds.has(tabId) &&
+      !args.nextHostTerminalTabIds.has(hostTabId)
+    ) {
+      candidates.add(tabId)
+    }
+  }
+  if (candidates.size === 0) {
+    return []
+  }
   const retracted = new Set<string>()
-  for (const [paneKey, entry] of Object.entries(args.state.agentStatusByPaneKey)) {
-    if (entry.worktreeId !== args.worktreeId) {
-      continue
-    }
+  for (const paneKey of batchAgentPaneKeysForTabs(args.state, candidates, args.batchContext)) {
+    const entry = args.state.agentStatusByPaneKey[paneKey]
     const tabId = parsePaneKey(paneKey)?.tabId
-    if (!tabId || !isWebTerminalSurfaceTabId(tabId) || args.currentTerminalIds.has(tabId)) {
-      continue
-    }
-    const hostTabId = resolveHostSessionTabIdForWebSessionTab(args.state, {
-      environmentId: args.environmentId,
-      worktreeId: args.worktreeId,
-      tabId
-    })
-    // A missing mapping is unknown ownership; another host's snapshot cannot retract it.
-    if (hostTabId !== null && !args.nextHostTerminalTabIds.has(hostTabId)) {
+    if (entry?.worktreeId === args.worktreeId && tabId && candidates.has(tabId)) {
       retracted.add(tabId)
     }
   }

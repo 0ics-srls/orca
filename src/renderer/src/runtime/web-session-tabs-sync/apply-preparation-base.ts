@@ -196,7 +196,8 @@ export function prepareWebSessionTabsSnapshotBase(
       environmentId,
       worktreeId,
       nextHostTerminalTabIds,
-      currentTerminalIds: new Set(existingTerminalById.keys())
+      currentTerminalIds: new Set(existingTerminalById.keys()),
+      batchContext
     })) {
       removedTerminalIds.add(tabId)
     }
