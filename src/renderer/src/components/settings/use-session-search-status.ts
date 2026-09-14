@@ -3,11 +3,13 @@ import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-typ
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 import { useWindowStreamVisible } from '@/hooks/use-window-stream-visibility'
 import { installWindowVisibilityInterval } from '@/lib/window-visibility-interval'
-import { sessionSearchPollIntervalMs } from './session-history-status-copy'
+import { isHostTooOldError, sessionSearchPollIntervalMs } from './session-history-status-copy'
 
 export type SessionSearchStatusRead = {
   status: AiVaultSearchStatus | null
   failed: boolean
+  /** The host answered that it has no session search at all; polling stops. */
+  hostTooOld: boolean
   /** Adopt a status the caller already holds, e.g. the answer to a set call. */
   adopt: (status: AiVaultSearchStatus) => void
 }
@@ -27,6 +29,7 @@ export function useSessionSearchStatus(args: {
   const visible = useWindowStreamVisible(0)
   const [status, setStatus] = useState<AiVaultSearchStatus | null>(null)
   const [failed, setFailed] = useState(false)
+  const [hostTooOld, setHostTooOld] = useState(false)
   const intervalMs = sessionSearchPollIntervalMs(status)
   const adopt = useCallback((next: AiVaultSearchStatus) => {
     setStatus(next)
@@ -38,7 +41,7 @@ export function useSessionSearchStatus(args: {
       setFailed(false)
       return
     }
-    if (!visible) {
+    if (!visible || hostTooOld) {
       return
     }
     let disposed = false
@@ -56,10 +59,13 @@ export function useSessionSearchStatus(args: {
           setStatus(next)
           setFailed(false)
         }
-      } catch {
+      } catch (error) {
         if (!disposed) {
           setStatus(null)
           setFailed(true)
+          if (isHostTooOldError(error)) {
+            setHostTooOld(true)
+          }
         }
       } finally {
         inFlight = false
@@ -70,7 +76,7 @@ export function useSessionSearchStatus(args: {
       disposed = true
       stopPolling()
     }
-  }, [executionHostId, active, visible, refresh, intervalMs])
+  }, [executionHostId, active, visible, refresh, intervalMs, hostTooOld])
 
-  return { status, failed, adopt }
+  return { status, failed, hostTooOld, adopt }
 }

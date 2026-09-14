@@ -94,3 +94,8 @@ export function sessionSearchOffMessage(): string {
 export function sessionSearchReadErrorMessage(): string {
   return translate('sessionHistory.status.error', 'Could not read index status. Retrying…')
 }
+
+// IPC wraps a rejection's message, so the host-too-old marker arrives inside a longer string.
+export function isHostTooOldError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes('host-too-old')
+}
