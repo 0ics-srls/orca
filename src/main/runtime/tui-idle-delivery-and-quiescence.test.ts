@@ -15,6 +15,8 @@ const PTY_ID = 'pty-followups'
 const ESC = String.fromCharCode(27)
 const BEL = String.fromCharCode(7)
 const osc = (title: string) => `${ESC}]0;${title}${BEL}`
+const agentStatus = (state: string, agentType: string) =>
+  `${ESC}]9999;{"state":"${state}","agentType":"${agentType}"}${BEL}`
 
 const GRAPH: RuntimeSyncWindowGraph = {
   tabs: [
@@ -113,6 +115,42 @@ describe('mailbox delivery honours the tui-idle evidence ranking', () => {
     await new Promise((resolve) => setTimeout(resolve, 5_000))
     clearInterval(streaming)
     expect(deliver).not.toHaveBeenCalled()
+  }, 20_000)
+
+  // Case B, the mainline path: a hooked Codex emits a name-only frame BEFORE the hook's
+  // `Codex ready`. The name-only frame consumes the working->idle transition, leaving the
+  // ready title as an idle->idle step that delivery was never offered — so the strongest
+  // evidence the agent ever emits could not reach it.
+  it('delivers when the ready title arrives after a name-only frame', async () => {
+    const { runtime } = await makeRuntime('codex')
+    const deliver = watchDelivery(runtime)
+    runtime.onPtyData(PTY_ID, `${osc('\u280b Codex')}working\n`, Date.now())
+    runtime.onPtyData(PTY_ID, `${osc('Codex')}out\n`, Date.now())
+    expect(deliver).not.toHaveBeenCalled()
+
+    await new Promise((resolve) => setTimeout(resolve, 100))
+    runtime.onPtyData(PTY_ID, osc('Codex ready'), Date.now())
+    // Promptly, on the ready title itself — not after waiting out a quiescence window.
+    expect(deliver).toHaveBeenCalled()
+  }, 20_000)
+
+  // Case C: the agent's own status stream vetoes the idle title, then reports done with no
+  // edge behind it. `working` stays fresh for 30 minutes, so without a re-offer the veto
+  // outlives the turn it described.
+  it('delivers when a done status lands after the idle title was vetoed', async () => {
+    const { runtime } = await makeRuntime('claude')
+    const deliver = watchDelivery(runtime)
+    runtime.onPtyData(
+      PTY_ID,
+      `${agentStatus('working', 'claude')}${osc('\u280b Claude')}w\n`,
+      Date.now()
+    )
+    runtime.onPtyData(PTY_ID, `${osc('claude')}out\n`, Date.now())
+    expect(deliver).not.toHaveBeenCalled()
+
+    runtime.onPtyData(PTY_ID, agentStatus('done', 'claude'), Date.now())
+    await new Promise((resolve) => setTimeout(resolve, 4_500))
+    expect(deliver).toHaveBeenCalled()
   }, 20_000)
 
   it('still delivers for an agent whose name is its only rest signal', async () => {
