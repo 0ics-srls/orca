@@ -330,10 +330,13 @@ moves should have one.
 Editing the recorder engine on a migration branch is the awkward case: `recorderSha256` moves, so
 every golden needs rewriting, but the product tree no longer matches `baseline`, and bumping
 `baseline` to the branch would record the migrated source and make the parity claim circular. Record
-from the pinned commit instead, with this branch's recorder laid over it — a detached checkout or a
-`git archive` extraction of `baseline`, this tree's `rpc-recording/` and `pilot-scenarios.json`
-copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scratch directory — then
-copy the result back and run the candidate suite here. Format the recorder before recording: an
+from the pinned commit instead, with this branch's recorder laid over it: `git worktree add
+--detach <dir> <baseline>`, this tree's `rpc-recording/` and `pilot-scenarios.json` copied in,
+`node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scratch directory — then copy the
+result back and run the candidate suite here. It must be a worktree, not a `git archive`
+extraction: the fence runs `git diff --quiet <baseline>` and an untracked-file check, both of which
+need a real `.git`, so an archive tree fails as `Product sources or lockfile differ from the pinned
+main baseline` — a product mismatch that is not there. Format the recorder before recording: an
 `oxfmt` pass afterwards moves `recorderSha256` again. A recorder-only branch that has merged main
 is not the awkward case: its product tree is main's, so repin `baseline` to main's tip and record
 in place — there is no migrated source for the goldens to be recorded against. Adding or editing
