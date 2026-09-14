@@ -42,9 +42,9 @@ export function normalizeMobileFilePreviewResponse(
   response: RpcResponse
 ): MobileFilePreviewResult {
   if (!response.ok) {
-    return previewErrorFromRefusal((response as RpcFailure).error)
+    return previewErrorFromRefusal(response.error)
   }
-  return normalizeMobileFilePreviewResult(relativePath, (response as RpcSuccess).result)
+  return normalizeMobileFilePreviewResult(relativePath, response.result)
 }
 
 /** The accepted arm, for a call site whose acceptance policy already admitted the payload. */

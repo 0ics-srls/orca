@@ -63,9 +63,9 @@ export function newWorkspaceMountAdapters(
       >('mobile/src/components/use-new-workspace-setup-script.ts').useNewWorkspaceSetupScript
       let state: ReturnType<typeof useSetup>
       const hook = hookMount(() => {
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only the repo's id.
         state = useSetup({
           client,
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook reads only the repo's id.
           selectedRepo: REPO as Parameters<typeof useSetup>[0]['selectedRepo']
         })
       })

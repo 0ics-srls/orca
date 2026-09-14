@@ -51,14 +51,10 @@ export function worktreeCatalogMountAdapters(
       let admitted: unknown = 'unadmitted'
       return {
         action: () =>
-          snapshots.fetch(client, HOST).then((result: unknown) => {
+          snapshots.fetch(client, HOST).then((result) => {
             fetched = result
             // Admitting is what advances the snapshot token a later poll sends back.
-            admitted =
-              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: admit takes the pending half of the result it was just handed.
-              (result as { kind: string; pending?: never }).kind === 'response'
-                ? snapshots.admit((result as { pending: never }).pending)
-                : snapshots.admit(null)
+            admitted = snapshots.admit(result.kind === 'response' ? result.pending : null)
             return result
           }),
         state: () => projectObservable({ fetched, admitted }),

@@ -93,13 +93,15 @@ export function fetchMobileHomeTaskProviders(
           ((settingsResult.value ?? {}) as HomeTaskSettings)
         : {}
       const preflightResult = taskPreflightRead.interpret(preflightResponse)
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
       const preflight = preflightResult.accepted
-        ? (preflightResult.value as HomePreflightStatus)
+        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          (preflightResult.value as HomePreflightStatus)
         : null
       const linearResult = taskLinearStatusRead.interpret(linearResponse)
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-      const linear = linearResult.accepted ? (linearResult.value as HomeLinearStatus) : null
+      const linear = linearResult.accepted
+        ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          (linearResult.value as HomeLinearStatus)
+        : null
       const providers = filterAvailableTaskProviders(
         normalizeVisibleTaskProviders(settings.visibleTaskProviders),
         {
