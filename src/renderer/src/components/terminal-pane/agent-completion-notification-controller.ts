@@ -1,6 +1,5 @@
 import type {
   AgentCompletionCoordinatorOptions,
-  AgentCompletionDispatchMeta,
   AgentCompletionStatusSnapshot
 } from './agent-completion-coordinator-types'
 import type { RecognizedAgentProcess } from '../../../../shared/agent-process-recognition'
@@ -9,11 +8,6 @@ import type {
   LastCompletionIdentity
 } from './agent-completion-identity-store'
 import { isPiCompatibleAgentType } from '../../../../shared/pi-agent-kind'
-import {
-  completionIdentityFor,
-  hookCompletionAgentIdentity,
-  hookCompletionIdentity
-} from './agent-completion-identity-derivation'
 
 type CompletionSource = 'hook' | 'title' | 'process-exit'
 
@@ -56,6 +50,10 @@ export function createAgentCompletionNotificationController({
   processState,
   identityScope
 }: CompletionControllerOptions) {
+  function isFiniteTurnCompletedAt(value: number | undefined): value is number {
+    return typeof value === 'number' && Number.isFinite(value)
+  }
+
   function completionToken(source: CompletionSource): string {
     if (state.workingStatusObserved) {
       return `turn:${state.currentTurn}`
@@ -66,10 +64,30 @@ export function createAgentCompletionNotificationController({
     return `${source}:${state.currentTurn}:${processState.processSession}`
   }
 
-  function doneShouldUseQuietWindow(payload: AgentCompletionStatusSnapshot): boolean {
-    if (payload.announceCompletion !== undefined) {
-      return false
+  function completionIdentityFor(
+    state: string,
+    agentType: string | undefined,
+    timestamp: number
+  ): string {
+    return [state, agentType ?? '', String(Math.trunc(timestamp))].join(':')
+  }
+
+  function hookCompletionIdentity(payload: AgentCompletionStatusSnapshot): string | null {
+    // Why: `stateStartedAt` is pinned while the reported state does not change. A Claude pane held at `working` by background inventory would otherwise give every turn in the run the same identity.
+    const timestamp = isFiniteTurnCompletedAt(payload.turnCompletedAt)
+      ? payload.turnCompletedAt
+      : payload.stateStartedAt
+    if (typeof timestamp !== 'number' || !Number.isFinite(timestamp)) {
+      return null
     }
+    return completionIdentityFor(payload.state, payload.agentType, timestamp)
+  }
+
+  function hookCompletionAgentIdentity(payload: AgentCompletionStatusSnapshot): string | null {
+    return payload.agentType?.trim().toLowerCase() || null
+  }
+
+  function doneShouldUseQuietWindow(payload: AgentCompletionStatusSnapshot): boolean {
     // Why: Pi/OMP emit milestone 'done' while still working, so route it through the quiet window so later work can cancel it.
     return (
       state.workingStatusObserved || isPiCompatibleAgentType(hookCompletionAgentIdentity(payload))
@@ -135,8 +153,6 @@ export function createAgentCompletionNotificationController({
       completionIdentity?: LastCompletionIdentity | null
       /** Announce only. The pane is still genuinely `working` (Claude background inventory), so the synthetic `done` must not run pane lifecycle. */
       notifyWithoutLifecycle?: boolean
-      /** Commit lifecycle and dedupe identity without producing user attention. */
-      suppressNotification?: boolean
     } = {}
   ): boolean {
     if (source !== 'hook' && state.pendingHookDoneTimer !== null) {
@@ -183,32 +199,21 @@ export function createAgentCompletionNotificationController({
     ) {
       options.dispatchHookLifecycle?.(optionsOverride.agentStatus)
     }
-    if (optionsOverride.suppressNotification === true) {
-      return true
-    }
-    if (
-      optionsOverride.quietedHookDone === true ||
-      source === 'process-exit' ||
-      (source === 'hook' &&
-        optionsOverride.agentStatus !== undefined &&
-        (optionsOverride.notifyWithoutLifecycle === true ||
-          optionsOverride.agentStatus.announceCompletion !== undefined))
-    ) {
-      // Why: a hook's accepted snapshot and identity must survive later status mutations before notification delivery.
-      const dispatchMeta: AgentCompletionDispatchMeta = {
+    if (optionsOverride.quietedHookDone === true || source === 'process-exit') {
+      // Why: confirmed process death is independent completion evidence; keep its provenance so stale hook rows can't veto it later.
+      options.dispatchCompletion(title, {
         source,
         quietedHookDone: optionsOverride.quietedHookDone === true,
         ...(optionsOverride.terminalIdleConfirmed === true ? { terminalIdleConfirmed: true } : {}),
         ...(optionsOverride.agentStatus ? { agentStatus: optionsOverride.agentStatus } : {})
-      }
-      if (
-        source === 'hook' &&
-        optionsOverride.agentStatus?.announceCompletion !== undefined &&
-        optionsOverride.completionIdentity
-      ) {
-        dispatchMeta.completionIdentity = optionsOverride.completionIdentity
-      }
-      options.dispatchCompletion(title, dispatchMeta)
+      })
+    } else if (optionsOverride.notifyWithoutLifecycle === true && optionsOverride.agentStatus) {
+      // Why: the pane is still `working`; the synthetic done must carry its own snapshot or the notification would read the pinned working row.
+      options.dispatchCompletion(title, {
+        source,
+        quietedHookDone: false,
+        agentStatus: optionsOverride.agentStatus
+      })
     } else {
       options.dispatchCompletion(title)
     }

@@ -136,25 +136,22 @@ describe('Grok hook completion notifications', () => {
     return notifications
   }
 
-  // Pins grok-events.ts → normalize-agent-status-event.ts → notification-controller.ts; reverting any announceability propagation or the ordinary snapshot dispatch must redden.
   it('replays the captured two-turn request into exactly one final announcement', async () => {
-    const notifications = await play(capturedHooks.slice(0, 9))
+    const notifications = await play(capturedHooks.slice(0, 8))
+    vi.advanceTimersByTime(1_500)
 
     expect(notifications).toHaveLength(1)
     expect(notifications[0]).toMatchObject({
-      at: Date.parse('2026-09-12T02:42:42.533962+00:00'),
+      at: Date.parse('2026-09-12T02:42:44.033962+00:00'),
       snapshot: {
         state: 'done',
         agentType: 'grok',
-        completionOutcome: 'succeeded',
-        announceCompletion: true,
         lastAssistantMessage: 'The background command finished successfully.',
         stateStartedAt: Date.parse('2026-09-12T02:42:42.533962+00:00')
       }
     })
   })
 
-  // Pins grok-events.ts: absent-inventory shutdown veto; changing the shutdown tail to fail open must redden.
   it('keeps the captured SessionEnd and shutdown Stop tail silent', async () => {
     const shutdownTail = capturedHooks.filter(
       (hook) => hook.reason === 'shutdown' || hook.hookEventName === 'session_end'
@@ -163,22 +160,18 @@ describe('Grok hook completion notifications', () => {
     expect(await play(shutdownTail)).toHaveLength(0)
   })
 
-  // Pins grok-events.ts failure/cancellation bypass plus hook-observer.ts explicit decision path; these events have no background inventory in Grok.
   it.each([
     {
       eventName: 'StopFailure',
-      outcome: 'failed',
       interrupted: undefined,
       payload: {
         error: 'server_error',
         errorDetails: 'upstream failed',
-        lastAssistantMessage: 'The request failed.',
-        subagentType: 'primary'
+        lastAssistantMessage: 'The request failed.'
       }
     },
     {
       eventName: 'StopCancelled',
-      outcome: 'cancelled',
       interrupted: true,
       payload: {
         reason: 'user_interrupt',
@@ -193,19 +186,23 @@ describe('Grok hook completion notifications', () => {
       {
         hookEventName: 'UserPromptSubmit',
         timestamp: '2026-09-12T03:00:00.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
         prompt: 'finish the request'
       },
       {
         hookEventName: scenario.eventName,
         timestamp: '2026-09-12T03:00:01.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
         ...scenario.payload
       }
     ])
+    vi.advanceTimersByTime(1_500)
 
     expect(notifications).toHaveLength(1)
     expect(notifications[0]?.snapshot).toMatchObject({
-      completionOutcome: scenario.outcome,
-      announceCompletion: true,
+      state: 'done',
       ...(scenario.interrupted ? { interrupted: true } : {})
     })
   })
@@ -242,7 +239,69 @@ describe('Grok hook completion notifications', () => {
         sessionCrons: scenario.sessionCrons
       }
     ])
+    vi.advanceTimersByTime(1_500)
 
+    expect(notifications).toHaveLength(1)
+  })
+
+  it('does not announce a delayed cancellation after the next prompt starts', async () => {
+    const notifications = await play([
+      {
+        hookEventName: 'UserPromptSubmit',
+        timestamp: '2026-09-12T03:02:00.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-old',
+        prompt: 'old turn'
+      },
+      {
+        hookEventName: 'UserPromptSubmit',
+        timestamp: '2026-09-12T03:02:01.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-new',
+        prompt: 'new turn'
+      },
+      {
+        hookEventName: 'StopCancelled',
+        timestamp: '2026-09-12T03:02:02.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-old',
+        reason: 'user_interrupt'
+      }
+    ])
+    vi.advanceTimersByTime(1_500)
+
+    expect(notifications).toHaveLength(0)
+  })
+
+  it('announces once from idle_prompt after repeated continuation Stops', async () => {
+    const notifications = await play([
+      {
+        hookEventName: 'UserPromptSubmit',
+        timestamp: '2026-09-12T03:03:00.000Z',
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
+        prompt: 'run the verification gate'
+      },
+      ...['2026-09-12T03:03:01.000Z', '2026-09-12T03:03:02.000Z'].map((timestamp) => ({
+        hookEventName: 'Stop',
+        timestamp,
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
+        reason: 'end_turn',
+        stopHookActive: true,
+        backgroundTasks: []
+      })),
+      {
+        hookEventName: 'Notification',
+        timestamp: '2026-09-12T03:04:02.000Z',
+        sessionId: 'session-1',
+        notificationType: 'idle_prompt',
+        message: 'Waiting for your next prompt'
+      }
+    ])
+
+    expect(notifications).toHaveLength(0)
+    vi.advanceTimersByTime(1_500)
     expect(notifications).toHaveLength(1)
   })
 })

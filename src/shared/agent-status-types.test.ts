@@ -486,26 +486,6 @@ Fix dispatch fallback preview for normalized status prompts`
     ).toBe(1767225601000)
   })
 
-  // Pins agent-status-types.ts: terminal metadata normalization/projection; dropping either projected field or accepting it on working must redden.
-  it('carries completion outcome and announceability only on done payloads', () => {
-    const done = normalizeAgentStatusPayload({
-      state: 'done',
-      completionOutcome: 'cancelled',
-      announceCompletion: false
-    })!
-    expect(pickParsedAgentStatusPayload(done)).toMatchObject({
-      completionOutcome: 'cancelled',
-      announceCompletion: false
-    })
-    expect(
-      normalizeAgentStatusPayload({
-        state: 'working',
-        completionOutcome: 'failed',
-        announceCompletion: false
-      })
-    ).toMatchObject({ completionOutcome: undefined, announceCompletion: undefined })
-  })
-
   it('requires strict boolean true for interrupted (rejects truthy non-boolean)', () => {
     // Why: parser uses `=== true`, so truthy string/number sentinels don't count.
     expect(

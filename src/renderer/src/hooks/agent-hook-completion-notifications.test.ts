@@ -1,4 +1,3 @@
-import { MANY_PANES } from './agent-hook-completion-pane-liveness-fixture'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
 import { YOLO_TUI_AGENT_ARGS } from '../../../shared/tui-agent-permissions'
@@ -707,10 +706,8 @@ describe('agent hook completion notifications', () => {
 
     expect(dispatchTerminalNotification).not.toHaveBeenCalled()
 
-    // Pins grok-events.ts present-empty inventory branch; treating an empty inventory as silent must redden.
     observeGrokHook({
       hookEventName: 'stop',
-      backgroundTasks: [],
       lastAssistantMessage: 'Done.'
     })
     vi.advanceTimersByTime(HOOK_DONE_QUIET_MS)
@@ -792,6 +789,14 @@ describe('agent hook completion notifications', () => {
       })
     )
   })
+
+  const MANY_PANES = [
+    { tabId: 'tab-1', leafId: '11111111-1111-4111-8111-111111111111', ptyId: 'pty-1' },
+    { tabId: 'tab-2', leafId: '22222222-2222-4222-8222-222222222222', ptyId: 'pty-2' },
+    { tabId: 'tab-3', leafId: '33333333-3333-4333-8333-333333333333', ptyId: 'pty-3' },
+    { tabId: 'tab-4', leafId: '44444444-4444-4444-8444-444444444444', ptyId: 'pty-4' },
+    { tabId: 'tab-5', leafId: '55555555-5555-4555-8555-555555555555', ptyId: 'pty-5' }
+  ]
 
   function seedManyLivePanes(): void {
     mockStoreState.ptyIdsByTabId = Object.fromEntries(MANY_PANES.map((p) => [p.tabId, [p.ptyId]]))

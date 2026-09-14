@@ -1,10 +1,10 @@
 import {
   normalizeAgentStatusPayload,
-  type AgentCompletionOutcome,
   type ParsedAgentStatusPayload
 } from '../../agent-status-types'
 import { isAskUserQuestionTool } from '../../agent-question-answered-intent'
 import { clearPaneTurnCacheState, type HookListenerState } from '../listener-state'
+import { normalizeGrokPromptId } from '../listener-limits'
 import { resolvePrompt, resolveToolState, stripGrokUserQueryWrapper } from '../prompt-fields'
 import { extractToolFields, isNewTurnEvent } from '../provider-event-routing'
 import { readString } from '../tool-input-preview'
@@ -33,48 +33,87 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null
 }
 
-function grokTerminalOutcome(eventName: unknown): AgentCompletionOutcome | undefined {
-  if (isGrokEvent(eventName, 'stop_failure')) {
-    return 'failed'
-  }
-  if (isGrokEvent(eventName, 'stop_cancelled')) {
-    return 'cancelled'
-  }
-  if (isGrokEvent(eventName, 'session_end')) {
-    return 'session-ended'
-  }
-  if (isGrokEvent(eventName, 'stop')) {
-    return 'succeeded'
-  }
-  return undefined
+function grokIdentityField(
+  hookPayload: Record<string, unknown>,
+  primary: string,
+  alias: string
+): string | undefined {
+  const value = readString(hookPayload, primary) ?? readString(hookPayload, alias)
+  return value && value.length <= 512 ? value : undefined
 }
 
-function shouldAnnounceGrokTerminal(
-  eventName: unknown,
+function isGrokSubagentEvent(hookPayload: Record<string, unknown>): boolean {
+  return (
+    readString(hookPayload, 'subagentType') !== undefined ||
+    readString(hookPayload, 'subagent_type') !== undefined
+  )
+}
+
+function grokPromptId(hookPayload: Record<string, unknown>): string | undefined {
+  return normalizeGrokPromptId(hookPayload.promptId ?? hookPayload.prompt_id)
+}
+
+function recordGrokTurn(
+  state: HookListenerState,
+  paneKey: string,
+  hookPayload: Record<string, unknown>
+): void {
+  state.grokActiveTurnByPaneKey.delete(paneKey)
+  const promptId = grokPromptId(hookPayload)
+  if (!promptId) {
+    return
+  }
+  const sessionId = grokIdentityField(hookPayload, 'sessionId', 'session_id')
+  state.grokActiveTurnByPaneKey.set(paneKey, {
+    promptId,
+    ...(sessionId ? { sessionId } : {})
+  })
+}
+
+function grokTurnEndApplies(
+  state: HookListenerState,
+  paneKey: string,
   hookPayload: Record<string, unknown>
 ): boolean {
-  // Why: failures and cancellations carry no background inventory and must never be hidden.
-  if (isGrokEvent(eventName, 'stop_failure', 'stop_cancelled')) {
+  const promptId = grokPromptId(hookPayload)
+  if (!promptId) {
     return true
   }
+  const active = state.grokActiveTurnByPaneKey.get(paneKey)
+  if (!active) {
+    return true
+  }
+  const sessionId = grokIdentityField(hookPayload, 'sessionId', 'session_id')
+  return (
+    active.promptId === promptId &&
+    (!active.sessionId || !sessionId || active.sessionId === sessionId)
+  )
+}
+
+function grokHasRunningFiniteTask(hookPayload: Record<string, unknown>): boolean {
   const backgroundTasks = aliasedField(hookPayload, 'backgroundTasks', 'background_tasks')
-  // Why: Grok's shutdown Stop omits this field; a present but unknown value fails open.
-  if (!backgroundTasks.present) {
+  if (!backgroundTasks.present || !Array.isArray(backgroundTasks.value)) {
     return false
   }
-  const stopHookActive = aliasedField(hookPayload, 'stopHookActive', 'stop_hook_active')
-  if (stopHookActive.value === true) {
-    return false
-  }
-  if (!Array.isArray(backgroundTasks.value)) {
-    return true
-  }
-  return !backgroundTasks.value.some((task) => {
+  return backgroundTasks.value.some((task) => {
     if (!isRecord(task)) {
       return false
     }
-    return (task.type === 'shell' || task.type === 'subagent') && task.status === 'running'
+    return task.type === 'shell' || task.type === 'subagent'
   })
+}
+
+function grokStopKeepsWorking(hookPayload: Record<string, unknown>): boolean {
+  const stopHookActive = aliasedField(hookPayload, 'stopHookActive', 'stop_hook_active')
+  return stopHookActive.value === true || grokHasRunningFiniteTask(hookPayload)
+}
+
+function isGrokSessionBoundary(eventName: unknown, hookPayload: Record<string, unknown>): boolean {
+  if (isGrokEvent(eventName, 'session_end')) {
+    return true
+  }
+  const reason = readString(hookPayload, 'reason')
+  return isGrokEvent(eventName, 'stop') && (reason === 'shutdown' || reason === 'channel_closed')
 }
 
 export function normalizeGrokEvent(
@@ -85,10 +124,18 @@ export function normalizeGrokEvent(
   hookPayload: Record<string, unknown>,
   grokHome?: string
 ): ParsedAgentStatusPayload | null {
+  // Why: child sessions reuse their parent's pane route; their lifecycle cannot settle the parent.
+  if (isGrokSubagentEvent(hookPayload)) {
+    return null
+  }
   if (isGrokEvent(eventName, 'session_start')) {
     // Why: SessionStart resets stale per-turn state but must not create a working row before any prompt/tool event.
     clearPaneTurnCacheState(state, paneKey)
     return null
+  }
+
+  if (isGrokEvent(eventName, 'user_prompt_submit')) {
+    recordGrokTurn(state, paneKey, hookPayload)
   }
 
   const notificationMessage = readString(hookPayload, 'message')
@@ -102,7 +149,13 @@ export function normalizeGrokEvent(
   const isUserInputPreTool =
     isGrokEvent(eventName, 'pre_tool_use') && isAskUserQuestionTool(preToolName)
 
-  const terminalOutcome = grokTerminalOutcome(eventName)
+  const isTurnEnd = isGrokEvent(eventName, 'stop', 'stop_failure', 'stop_cancelled')
+  const isIdlePrompt =
+    isGrokEvent(eventName, 'notification') && isGrokEvent(notificationType, 'idle_prompt')
+  const sessionBoundary = isGrokSessionBoundary(eventName, hookPayload)
+  if (isTurnEnd && !grokTurnEndApplies(state, paneKey, hookPayload)) {
+    return null
+  }
   let stateName: 'working' | 'waiting' | 'done' | null = null
   if (
     isGrokEvent(eventName, 'user_prompt_submit', 'post_tool_use', 'post_tool_use_failure') ||
@@ -111,13 +164,19 @@ export function normalizeGrokEvent(
     stateName = 'working'
   } else if (isUserInputPreTool) {
     stateName = 'waiting'
-  } else if (terminalOutcome) {
+  } else if (
+    isGrokEvent(eventName, 'stop') &&
+    !sessionBoundary &&
+    grokStopKeepsWorking(hookPayload)
+  ) {
+    stateName = 'working'
+  } else if (isTurnEnd || isGrokEvent(eventName, 'session_end') || isIdlePrompt) {
     stateName = 'done'
   } else if (
     isGrokEvent(eventName, 'notification') &&
-    isGrokEvent(notificationType, 'idle_prompt', 'task_complete')
+    isGrokEvent(notificationType, 'task_complete')
   ) {
-    // Why: typed idle/background-task notices are not terminal or needs-input outcomes.
+    // Why: one task finishing does not prove that every finite task and follow-up turn settled.
     return null
   } else if (
     isGrokEvent(eventName, 'notification') &&
@@ -161,13 +220,10 @@ export function normalizeGrokEvent(
     interactivePrompt: snapshot.interactivePrompt,
     lastAssistantMessage: snapshot.lastAssistantMessage,
     lastAssistantMessageIsToolOutput: snapshot.lastAssistantMessageIsToolOutput,
-    ...(terminalOutcome
-      ? {
-          completionOutcome: terminalOutcome,
-          announceCompletion: shouldAnnounceGrokTerminal(eventName, hookPayload),
-          ...(terminalOutcome === 'cancelled' ? { interrupted: true } : {}),
-          ...(terminalOutcome === 'session-ended' ? { sessionBoundary: true } : {})
-        }
-      : {})
+    ...(stateName === 'working' && isGrokEvent(eventName, 'stop')
+      ? { workingMode: 'monitoring' as const }
+      : {}),
+    ...(isGrokEvent(eventName, 'stop_cancelled') ? { interrupted: true } : {}),
+    ...(sessionBoundary ? { sessionBoundary: true } : {})
   })
 }

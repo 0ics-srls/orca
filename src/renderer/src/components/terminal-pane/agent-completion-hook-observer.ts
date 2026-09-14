@@ -192,16 +192,6 @@ export function createAgentCompletionHookObserver({
     state.lastCompletionIdentity = identity
       ? { source: 'hook', identity, agentIdentity: hookCompletionAgentIdentity(payload) }
       : null
-    if (payload.announceCompletion === false) {
-      dispatchCompletion('hook', payload.agentType ?? options.paneKey, {
-        agentStatus: payload,
-        ...(state.lastCompletionIdentity
-          ? { completionIdentity: state.lastCompletionIdentity }
-          : {}),
-        suppressNotification: true
-      })
-      return
-    }
     if (doneShouldUseQuietWindow(payload)) {
       scheduleHookDoneCompletion(payload.agentType ?? options.paneKey, payload)
       return

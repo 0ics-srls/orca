@@ -21,7 +21,7 @@ export type AgentHookEventPayload = {
   promptInteractionKey?: string
   /** Raw agent hook event name, used by main-process transition guards. */
   hookEventName?: string
-  /** Claude's provider-owned user-prompt UUID. */
+  /** Provider-owned turn identity (Claude UUID or opaque Grok prompt id). */
   providerPromptId?: string
   /** Active Claude compact generation, keyed by provider prompt identity. */
   compactTrigger?: 'manual' | 'auto'

@@ -5,6 +5,7 @@ import { isAgentHookSource, restoreShedStatusFields } from '../../../shared/agen
 import {
   MAX_PANE_KEY_LEN,
   normalizeClaudePromptId,
+  normalizeGrokPromptId,
   warnOnHookEnvOrVersionMismatch
 } from '../../../shared/agent-hook-listener/listener-limits'
 import {
@@ -104,7 +105,11 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
         : undefined
     const source = isAgentHookSource(envelope.source) ? envelope.source : undefined
     const providerPromptId =
-      source === 'claude' ? normalizeClaudePromptId(envelope.providerPromptId) : undefined
+      source === 'claude'
+        ? normalizeClaudePromptId(envelope.providerPromptId)
+        : source === 'grok'
+          ? normalizeGrokPromptId(envelope.providerPromptId)
+          : undefined
     const compactTrigger =
       source === 'claude' &&
       (envelope.compactTrigger === 'manual' || envelope.compactTrigger === 'auto')

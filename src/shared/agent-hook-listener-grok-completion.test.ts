@@ -45,8 +45,7 @@ describe('Grok completion observations', () => {
       ?.payload
   }
 
-  // Pins grok-events.ts: shouldAnnounceGrokTerminal finite-task branch; removing the shell/running check must redden.
-  it('marks the captured lead Stop silent and the follow-up Stop announceable', () => {
+  it('keeps the captured pane working until the finite task follow-up settles', () => {
     const lead = normalize(
       capturedHook(
         (hook) =>
@@ -61,19 +60,16 @@ describe('Grok completion observations', () => {
     )
 
     expect(lead).toMatchObject({
-      state: 'done',
-      completionOutcome: 'succeeded',
-      announceCompletion: false
+      state: 'working',
+      workingMode: 'monitoring'
     })
     expect(followUp).toMatchObject({
       state: 'done',
-      completionOutcome: 'succeeded',
-      announceCompletion: true
+      workingMode: undefined
     })
   })
 
-  // Pins grok-events.ts: absent backgroundTasks and SessionEnd mapping; defaulting absence open or dropping sessionBoundary must redden.
-  it('keeps the captured shutdown SessionEnd and trailing Stop silent', () => {
+  it('marks the captured shutdown SessionEnd and trailing Stop as session boundaries', () => {
     const sessionEnd = normalize(
       capturedHook((hook) => hook.hookEventName === 'session_end' && hook.reason === 'shutdown')
     )
@@ -88,36 +84,36 @@ describe('Grok completion observations', () => {
 
     expect(sessionEnd).toMatchObject({
       state: 'done',
-      sessionBoundary: true,
-      completionOutcome: 'session-ended',
-      announceCompletion: false
+      sessionBoundary: true
     })
     expect(shutdownStop).toMatchObject({
       state: 'done',
-      completionOutcome: 'succeeded',
-      announceCompletion: false
+      sessionBoundary: true
     })
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        reason: 'shutdown',
+        stopHookActive: true,
+        backgroundTasks: [{ id: 'task-1', type: 'shell', status: 'running' }]
+      })
+    ).toMatchObject({ state: 'done', sessionBoundary: true })
   })
 
-  // Pins grok-events.ts: StopFailure has no background inventory, so its outcome check must win over field absence.
-  it('announces the real-shaped StopFailure payload', () => {
+  it('settles a lead StopFailure without requiring background inventory', () => {
     expect(
       normalize({
         hookEventName: 'StopFailure',
         error: 'server_error',
         errorDetails: 'upstream failed',
-        lastAssistantMessage: 'The request failed.',
-        subagentType: 'primary'
+        lastAssistantMessage: 'The request failed.'
       })
     ).toMatchObject({
-      state: 'done',
-      completionOutcome: 'failed',
-      announceCompletion: true
+      state: 'done'
     })
   })
 
-  // Pins grok-events.ts: StopCancelled has no background inventory, so its outcome check must win over field absence.
-  it('announces the real-shaped StopCancelled payload as a non-success outcome', () => {
+  it('settles a lead StopCancelled as interrupted', () => {
     expect(
       normalize({
         hookEventName: 'StopCancelled',
@@ -129,8 +125,6 @@ describe('Grok completion observations', () => {
       })
     ).toMatchObject({
       state: 'done',
-      completionOutcome: 'cancelled',
-      announceCompletion: true,
       interrupted: true,
       lastAssistantMessage: 'Stopped by user.'
     })
@@ -152,7 +146,7 @@ describe('Grok completion observations', () => {
         { id: 'cron-1', schedule: 'every minute', recurring: true, prompt: 'check the build' }
       ]
     }
-  ])('announces when outstanding work is $label', ({ backgroundTasks, sessionCrons }) => {
+  ])('settles when outstanding work is $label', ({ backgroundTasks, sessionCrons }) => {
     expect(
       normalize({
         hookEventName: 'Stop',
@@ -160,12 +154,13 @@ describe('Grok completion observations', () => {
         stopHookActive: false,
         backgroundTasks,
         sessionCrons
-      })?.announceCompletion
-    ).toBe(true)
+      })?.state
+    ).toBe('done')
   })
 
-  // Pins grok-events.ts: strict known-value suppression; treating malformed/unknown optional fields as work must redden.
+  // Legacy Grok versions omit both fields, so only positive finite-work evidence may hold the row.
   it.each([
+    {},
     { backgroundTasks: { unexpected: true } },
     { backgroundTasks: [{ type: 'future-task', status: 'running' }] },
     { backgroundTasks: [], stopHookActive: 'true' },
@@ -177,24 +172,52 @@ describe('Grok completion observations', () => {
         reason: 'end_turn',
         stopHookActive: false,
         ...payload
-      })?.announceCompletion
-    ).toBe(true)
+      })?.state
+    ).toBe('done')
   })
 
-  // Pins grok-events.ts: stopHookActive strict-true veto; removing that veto must redden.
-  it('suppresses a Stop whose Stop hook is keeping the turn active', () => {
+  it('keeps ambiguous continuation Stops working and settles on the idle backstop', () => {
+    normalize({
+      hookEventName: 'UserPromptSubmit',
+      sessionId: 'session-1',
+      promptId: 'prompt-1',
+      prompt: 'finish the request'
+    })
     expect(
       normalize({
         hookEventName: 'Stop',
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
         reason: 'end_turn',
         backgroundTasks: [],
         stopHookActive: true
-      })?.announceCompletion
-    ).toBe(false)
+      })?.state
+    ).toBe('working')
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        sessionId: 'session-1',
+        promptId: 'prompt-1',
+        reason: 'end_turn',
+        backgroundTasks: [],
+        stopHookActive: true
+      })?.state
+    ).toBe('working')
+    expect(
+      normalize({ hookEventName: 'Notification', notificationType: 'idle_prompt' })?.state
+    ).toBe('done')
   })
 
-  // Pins grok-events.ts: type-first Notification guard; removing it or converting idle_prompt/task_complete to done must redden.
-  it('does not convert captured typed notifications into successful completions', () => {
+  it('keeps a starting finite task working until a later terminal observation', () => {
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        backgroundTasks: [{ id: 'task-1', type: 'subagent', status: 'starting' }]
+      })
+    ).toMatchObject({ state: 'working', workingMode: 'monitoring' })
+  })
+
+  it('uses only idle_prompt, not task_complete text, as the session-idle backstop', () => {
     const taskComplete = normalize(
       capturedHook((hook) => hook.notificationType === 'task_complete')
     )
@@ -212,9 +235,88 @@ describe('Grok completion observations', () => {
     })
 
     expect(taskComplete).toBeUndefined()
-    expect(idlePrompt).toBeUndefined()
-    expect(idlePromptWithQuestionCopy).toBeUndefined()
+    expect(idlePrompt?.state).toBe('done')
+    expect(idlePromptWithQuestionCopy?.state).toBe('done')
     expect(agentError).toBeUndefined()
+  })
+
+  it('ignores a delayed cancellation from the turn replaced by a newer prompt', () => {
+    normalize({
+      hookEventName: 'UserPromptSubmit',
+      sessionId: 'session-1',
+      promptId: 'prompt-old',
+      prompt: 'old turn'
+    })
+    normalize({
+      hookEventName: 'UserPromptSubmit',
+      sessionId: 'session-1',
+      promptId: 'prompt-new',
+      prompt: 'new turn'
+    })
+
+    expect(
+      normalize({
+        hookEventName: 'StopCancelled',
+        sessionId: 'session-1',
+        promptId: 'prompt-old',
+        reason: 'user_interrupt'
+      })
+    ).toBeUndefined()
+    expect(
+      normalize({
+        hookEventName: 'Stop',
+        sessionId: 'session-1',
+        promptId: 'prompt-new',
+        reason: 'end_turn'
+      })?.state
+    ).toBe('done')
+  })
+
+  it('carries the normalized Grok prompt id to the execution host', () => {
+    const event = normalizeHookPayload(
+      state,
+      'grok',
+      {
+        paneKey: PANE_KEY,
+        payload: {
+          hookEventName: 'UserPromptSubmit',
+          sessionId: 'session-1',
+          promptId: '  prompt-new  ',
+          prompt: 'new turn'
+        }
+      },
+      'production'
+    )
+
+    expect(event?.providerPromptId).toBe('prompt-new')
+  })
+
+  it.each(['Stop', 'StopFailure', 'StopCancelled', 'SessionEnd'])(
+    'ignores child-session %s events',
+    (hookEventName) => {
+      expect(
+        normalize({
+          hookEventName,
+          subagentType: 'explore',
+          promptId: 'child-prompt',
+          lastAssistantMessage: 'child finished'
+        })
+      ).toBeUndefined()
+    }
+  )
+
+  it('settles an unseen prompt id and a session-scoped idle event', () => {
+    expect(
+      normalize({
+        hookEventName: 'StopCancelled',
+        sessionId: 'session-1',
+        promptId: 'bash-mode-prompt',
+        reason: 'user_interrupt'
+      })?.state
+    ).toBe('done')
+    expect(
+      normalize({ hookEventName: 'Notification', notificationType: 'idle_prompt' })?.state
+    ).toBe('done')
   })
 
   // Pins grok-events.ts: permission/question branch ordering; gating waiting notifications on background work must redden.
