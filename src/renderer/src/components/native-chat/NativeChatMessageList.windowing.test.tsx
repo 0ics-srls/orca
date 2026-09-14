@@ -12,7 +12,10 @@ import { projectStructuredItemsToNativeChat } from '../../../../shared/structure
 import type { NativeChatMessage } from '../../../../shared/native-chat-types'
 import type { NativeChatLiveSession } from './use-native-chat-live-session'
 import { NativeChatMessageList } from './NativeChatMessageList'
-import { NATIVE_CHAT_BOTTOM_THRESHOLD_PX } from './native-chat-autoscroll'
+import {
+  NATIVE_CHAT_BOTTOM_THRESHOLD_PX,
+  NATIVE_CHAT_FOLLOW_REARM_PX
+} from './native-chat-autoscroll'
 import {
   estimateNativeChatRowHeight,
   NATIVE_CHAT_ROW_GAP_PX,
@@ -639,6 +642,50 @@ describe('a row growing in place while the view is pinned to the bottom', () => 
       expect(totalSize).toBe(BASE_TOTAL_PX + tailHeightAt(step))
     }
 
+    expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
+  })
+
+  // The same refusal to drag a reader along, for one who only stepped off the
+  // end far enough to read the line above. That step is smaller than the pin's
+  // own slack, so the windowing layer still settles the offset once as the first
+  // growth lands; what must not happen is the transcript following from there.
+  it('stops following a reader who parked just above the latest message', () => {
+    setMeasuredTail(4)
+    const { container, rerender } = render(streamingList(4))
+    paint(container)
+    const scroller = scrollRoot(container)
+
+    const parkGapPx = NATIVE_CHAT_BOTTOM_THRESHOLD_PX - 8
+    expect(parkGapPx).toBeGreaterThan(NATIVE_CHAT_FOLLOW_REARM_PX)
+    const parkedAt = scroller.scrollHeight - scroller.clientHeight - parkGapPx
+    scrollTranscript(container, parkedAt)
+    expect(distanceFromBottom(container)).toBe(parkGapPx)
+    // Not the "scrolled far away" case above: the latest message is still on
+    // screen, so there is nothing to offer a way back to yet.
+    expect(screen.queryByRole('button', { name: /jump to latest/i })).toBeNull()
+
+    setMeasuredTail(5)
+    rerender(streamingList(5))
+    paint(container)
+    // Bounded by the gap itself. Following would have tracked the whole growth.
+    const settledAt = scroller.scrollTop
+    expect(settledAt).toBeLessThanOrEqual(parkedAt + parkGapPx)
+
+    let previousDistance = distanceFromBottom(container)
+    for (let step = 6; step <= GROWTH_STEPS; step += 1) {
+      setMeasuredTail(step)
+      rerender(streamingList(step))
+      paint(container)
+
+      // The offset stops moving at all...
+      expect(scroller.scrollTop).toBe(settledAt)
+      // ...so the end runs away from the reader instead of carrying them along.
+      const distance = distanceFromBottom(container)
+      expect(distance).toBeGreaterThan(previousDistance)
+      previousDistance = distance
+    }
+
+    expect(previousDistance).toBeGreaterThan(VIEWPORT_PX)
     expect(screen.getByRole('button', { name: /jump to latest/i })).toBeInTheDocument()
   })
 

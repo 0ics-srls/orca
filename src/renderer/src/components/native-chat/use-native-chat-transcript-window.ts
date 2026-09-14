@@ -5,7 +5,10 @@
 // current offset before a count change and re-resolves its position afterwards,
 // which is what keeps a "load earlier" prepend from yanking the view;
 // `followOnAppend` + `scrollEndThreshold` keep a reader who is already at the
-// bottom pinned there as a turn streams.
+// bottom pinned there as a turn streams. That pair decides on geometry alone,
+// with no reader-intent flag behind it, so it can still settle the offset once
+// for a reader parked inside its threshold; what stops them being followed from
+// there on is the transcript's own follow state, not this option.
 //
 // Every measurement here ends up in the scroll container's own coordinate space,
 // which means `offsetTop` / `offsetHeight` rather than a bounding rect. The
