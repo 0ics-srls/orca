@@ -61,8 +61,8 @@ function extractCodeText(node: React.ReactNode): string {
   if (Array.isArray(node)) {
     return node.map(extractCodeText).join('')
   }
-  if (React.isValidElement(node)) {
-    return extractCodeText((node.props as { children?: React.ReactNode }).children)
+  if (React.isValidElement<{ children?: React.ReactNode }>(node)) {
+    return extractCodeText(node.props.children)
   }
   return ''
 }

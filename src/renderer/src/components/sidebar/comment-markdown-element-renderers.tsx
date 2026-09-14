@@ -22,11 +22,10 @@ export type DocumentCodeBlockRenderer = (props: {
 
 function extractCodeFenceLanguage(children: React.ReactNode): string | undefined {
   const child = React.Children.toArray(children)[0]
-  if (!React.isValidElement(child)) {
+  if (!React.isValidElement<{ className?: string }>(child)) {
     return undefined
   }
-  const className = (child.props as { className?: string } | null)?.className
-  return className?.match(/(?:^|\s)language-([^\s]+)/)?.[1]
+  return child.props.className?.match(/(?:^|\s)language-([^\s]+)/)?.[1]
 }
 
 export function isTrustedCompactImageSrc(src: string | undefined): src is string {
