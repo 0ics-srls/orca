@@ -42,16 +42,25 @@ export function normalizeMobileFilePreviewResponse(
   response: RpcResponse
 ): MobileFilePreviewResult {
   if (!response.ok) {
-    return previewError(
-      (response as RpcFailure).error.message || (response as RpcFailure).error.code
-    )
+    return previewErrorFromRefusal((response as RpcFailure).error)
   }
+  return normalizeMobileFilePreviewResult(relativePath, (response as RpcSuccess).result)
+}
 
-  const result = (response as RpcSuccess).result
+/** The accepted arm, for a call site whose acceptance policy already admitted the payload. */
+export function normalizeMobileFilePreviewResult(
+  relativePath: string,
+  result: unknown
+): MobileFilePreviewResult {
   if (classifyMobileArtifact(relativePath) === 'image') {
     return normalizeImagePreviewResult(result)
   }
   return normalizeTextPreviewResult(relativePath, result)
+}
+
+/** The refused arm. The code is the fallback copy, which is why the refusal itself is needed. */
+export function previewErrorFromRefusal(error: RpcFailure['error']): MobileFilePreviewResult {
+  return previewError(error.message || error.code)
 }
 
 export function previewError(message: string): MobileFilePreviewResult {
