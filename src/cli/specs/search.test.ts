@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { SEARCH_COMMAND_SPECS } from './search'
-import { effectiveAllowedFlags, GLOBAL_FLAGS } from '../args'
+import { effectiveAllowedFlags, findCommandSpec, GLOBAL_FLAGS } from '../args'
 import { buildAgentContext } from '../agent-context'
+import { suggestCommands } from '../command-suggestion'
 import { HANDLER_COMMAND_KEYS } from '../dispatch'
 import { formatCommandHelp, printHelp } from '../help'
 import { ROOT_HELP_TEXT_PRIMARY } from '../root-help-text-primary'
@@ -88,14 +89,17 @@ describe('orca search command spec', () => {
 })
 
 describe('orca search discovery surfaces', () => {
-  it('is listed in the root help', () => {
-    expect(ROOT_HELP_TEXT_PRIMARY).toContain(
-      '  search                    Search the full text of agent sessions on one Orca host'
-    )
-    expect(ROOT_HELP_TEXT_SECONDARY).toContain('orca search --index-status [--json]')
+  it('is hidden until the settings toggle ships', () => {
+    expect(searchSpec.hidden).toBe(true)
   })
 
-  it('prints its own help for `orca help search`', () => {
+  it('is absent from the root help', () => {
+    expect(ROOT_HELP_TEXT_PRIMARY).not.toContain('Agent Sessions:')
+    expect(ROOT_HELP_TEXT_PRIMARY).not.toContain('  search  ')
+    expect(ROOT_HELP_TEXT_SECONDARY).not.toContain('orca search')
+  })
+
+  it('still prints its own help for `orca search --help`', () => {
     const lines: string[] = []
     const restore = console.log
     console.log = (value: unknown) => void lines.push(String(value))
@@ -107,12 +111,18 @@ describe('orca search discovery surfaces', () => {
     expect(lines.join('\n')).toContain('Usage: orca search <query>')
   })
 
-  it('exposes the command to agent discovery with its positional and flags', () => {
+  it('still resolves for dispatch even though it is hidden', () => {
+    expect(findCommandSpec(COMMAND_SPECS, ['search'])).toBe(searchSpec)
+  })
+
+  it('is withheld from agent discovery', () => {
     const command = buildAgentContext(COMMAND_SPECS).commands.find(
       (entry) => entry.command === 'search'
     )
-    expect(command?.positionalArgs).toEqual(['query'])
-    expect(command?.flags).toContain('index-status')
-    expect(command?.flags).not.toContain('page')
+    expect(command).toBeUndefined()
+  })
+
+  it('is not offered as a suggestion for an unknown command', () => {
+    expect(suggestCommands(COMMAND_SPECS, ['serch'])).not.toContain('search')
   })
 })
