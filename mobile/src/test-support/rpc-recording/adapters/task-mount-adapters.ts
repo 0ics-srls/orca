@@ -154,6 +154,12 @@ export function taskMountAdapters(
               args.preset as Parameters<typeof actions.persistDefaultGitHubPreset>[0]
             )
           }
+          if (name === 'resume') {
+            return actions.persistTaskResumeState({ githubItemsPreset: 'issues' })
+          }
+          if (name === 'trust') {
+            return actions.persistSetupHookTrust('repo-1', 'hash-1', false)
+          }
           throw new Error(`Unknown preferences action: ${name}`)
         },
         state: () => ({ preset: model.defaultGitHubPreset }),
