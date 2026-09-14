@@ -1,5 +1,6 @@
 import { homedir } from 'node:os'
 import { basename, extname, join } from 'node:path'
+import { existsSync } from 'node:fs'
 import type { AgentType } from '../../shared/native-chat-types'
 import {
   resolveNativeChatTranscriptAgent,
@@ -68,10 +69,15 @@ function grokSessionsDir(): string {
 /** Mirrors the AI Vault scanner so an OMP_CODING_AGENT_DIR override resolves the
  *  same root for both, rather than leaving native chat pointed at the default. */
 function ompSessionsDir(): string {
-  return normalizeAgentSessionsDir(
+  const legacy = normalizeAgentSessionsDir(
     process.env.OMP_CODING_AGENT_DIR?.trim() || join(homedir(), '.omp', 'agent', 'sessions'),
     '.omp'
   )
+  const xdg = process.env.XDG_DATA_HOME?.trim()
+  const modern = xdg
+    ? join(xdg, 'omp', 'sessions')
+    : join(homedir(), '.local', 'share', 'omp', 'sessions')
+  return existsSync(legacy) || !existsSync(modern) ? legacy : modern
 }
 
 export type ResolveSessionFileOptions = {
