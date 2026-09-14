@@ -1,0 +1,198 @@
+{
+  "operation": "source-control.pr-link",
+  "family": "worktree.review-link",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "17ab8ab0a9f4": {
+      "linkedPR": 7,
+      "outcome": "unlinked"
+    },
+    "4f53cda18c2b": [],
+    "5014135c5aa7": [
+      {
+        "name": "worktree.show#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "5c33f0bec81e": [
+      {
+        "name": "worktree.show#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "worktree.show#2",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "65537f98a931": {
+      "read": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": 7
+      }
+    },
+    "7af90aa713e4": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "linkedPR": 7
+              }
+            }
+          }
+        }
+      }
+    ],
+    "8327124527e4": {
+      "read": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": 7
+      },
+      "read-again": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "null"
+        }
+      }
+    },
+    "a291d530c8b1": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "worktree": {
+                "linkedPR": 7
+              }
+            }
+          }
+        }
+      },
+      {
+        "name": "worktree.show#2",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "$rpc": "null"
+            }
+          }
+        }
+      }
+    ],
+    "ae6ed2aa18df": {
+      "linkedPR": {
+        "$rpc": "null"
+      },
+      "outcome": "unlinked"
+    }
+  },
+  "recording": {
+    "scenario": "sc-pr-link-read",
+    "checkpoints": [
+      {
+        "id": "read-settled",
+        "observation": {
+          "sender": "7af90aa713e4",
+          "payloads": "5014135c5aa7",
+          "settlements": "65537f98a931",
+          "state": "17ab8ab0a9f4",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "null-result-settled",
+        "observation": {
+          "sender": "a291d530c8b1",
+          "payloads": "5c33f0bec81e",
+          "settlements": "8327124527e4",
+          "state": "ae6ed2aa18df",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

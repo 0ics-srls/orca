@@ -1,0 +1,100 @@
+{
+  "operation": "source-control.hosted-review-eligibility",
+  "family": "hostedReview.eligibility",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "3fddd97ec779": [
+      {
+        "name": "hostedReview.getCreationEligibility#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"hostedReview.getCreationEligibility\",\"params\":{\"repo\":\"id:repo42\",\"worktree\":\"id:repo42::/p\",\"branch\":\"feature\",\"base\":null,\"linkedGitHubPR\":null,\"linkedGitLabMR\":null}}"
+      }
+    ],
+    "4bd29fccd576": {
+      "fetch": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "null"
+        }
+      }
+    },
+    "4dfe4f2ad75c": {
+      "eligibility": {
+        "$rpc": "null"
+      },
+      "prefill": "unresolved"
+    },
+    "4f53cda18c2b": [],
+    "8755b2553123": [
+      {
+        "name": "hostedReview.getCreationEligibility#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "hostedReview.getCreationEligibility"
+          },
+          {
+            "name": "params",
+            "value": {
+              "base": {
+                "$rpc": "null"
+              },
+              "branch": "feature",
+              "linkedGitHubPR": {
+                "$rpc": "null"
+              },
+              "linkedGitLabMR": {
+                "$rpc": "null"
+              },
+              "repo": "id:repo42",
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "no eligibility"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ]
+  },
+  "recording": {
+    "scenario": "sc-eligibility-refused",
+    "checkpoints": [
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "8755b2553123",
+          "payloads": "3fddd97ec779",
+          "settlements": "4bd29fccd576",
+          "state": "4dfe4f2ad75c",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

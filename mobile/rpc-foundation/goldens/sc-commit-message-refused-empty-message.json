@@ -1,0 +1,90 @@
+{
+  "operation": "source-control.commit-message",
+  "family": "git.commit-message-ai",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "4a34c9a86bb9": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.generateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "internal",
+              "message": ""
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "4f53cda18c2b": [],
+    "5becddaebf57": [
+      {
+        "name": "git.generateCommitMessage#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.generateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "6453ff669a2f": {
+      "generated": {
+        "error": "Failed to generate commit message",
+        "success": false
+      }
+    },
+    "c44fce5322f2": {
+      "generate": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": "Failed to generate commit message",
+          "success": false
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "sc-commit-message-refused-empty-message",
+    "checkpoints": [
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "4a34c9a86bb9",
+          "payloads": "5becddaebf57",
+          "settlements": "c44fce5322f2",
+          "state": "6453ff669a2f",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,140 @@
+{
+  "operation": "source-control.remote-prerequisite",
+  "family": "git.remote-prerequisite",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "06ed13845d15": [
+      {
+        "name": "git.push#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.push"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "id": "frame-1",
+            "ok": true,
+            "result": {
+              "ok": true
+            }
+          }
+        }
+      }
+    ],
+    "0fe2eb2410a4": {
+      "outcome": {
+        "ok": true,
+        "ran": true
+      }
+    },
+    "31958677ef56": {
+      "apply": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "3a055380c633": [
+      {
+        "name": "progress",
+        "value": "pushing"
+      }
+    ],
+    "403c2729a4a8": {
+      "apply": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "ok": true,
+          "ran": true
+        }
+      }
+    },
+    "bc0be0b5b196": [
+      {
+        "name": "git.push#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.push\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "cf19981c2114": {
+      "outcome": "unapplied"
+    },
+    "f4d92d59ec86": [
+      {
+        "name": "git.push#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.push"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "pending",
+          "startedAt": 0
+        }
+      }
+    ]
+  },
+  "recording": {
+    "scenario": "sc-prerequisite-push",
+    "checkpoints": [
+      {
+        "id": "pending",
+        "observation": {
+          "sender": "f4d92d59ec86",
+          "payloads": "bc0be0b5b196",
+          "settlements": "31958677ef56",
+          "state": "cf19981c2114",
+          "effects": "3a055380c633"
+        }
+      },
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "06ed13845d15",
+          "payloads": "bc0be0b5b196",
+          "settlements": "403c2729a4a8",
+          "state": "0fe2eb2410a4",
+          "effects": "3a055380c633"
+        }
+      }
+    ]
+  }
+}

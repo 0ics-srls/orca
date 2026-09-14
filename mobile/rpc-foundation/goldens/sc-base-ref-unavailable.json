@@ -1,0 +1,164 @@
+{
+  "operation": "source-control.branch-base-ref",
+  "family": "git.base-ref-chain",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "4f53cda18c2b": [],
+    "71ce70acabb7": [
+      {
+        "name": "worktree.show#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "worktree.show"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "method_not_found",
+              "message": "Unknown method"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      },
+      {
+        "name": "repo.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "$rpc": "absent"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "forbidden",
+              "message": "nope"
+            },
+            "id": "frame-2",
+            "ok": false
+          }
+        }
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "repo.baseRefDefault"
+          },
+          {
+            "name": "params",
+            "value": {
+              "repo": "id:repo42"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "forbidden",
+              "message": "git is not available to mobile clients"
+            },
+            "id": "frame-3",
+            "ok": false
+          }
+        }
+      }
+    ],
+    "e2fbc2b9e8e9": {
+      "baseRef": {
+        "$rpc": "null"
+      }
+    },
+    "e7eb3ba89f8b": [
+      {
+        "name": "worktree.show#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "repo.list#1",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+      },
+      {
+        "name": "repo.baseRefDefault#1",
+        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"repo.baseRefDefault\",\"params\":{\"repo\":\"id:repo42\"}}"
+      }
+    ],
+    "f9489841db60": {
+      "resolve": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "$rpc": "null"
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "sc-base-ref-unavailable",
+    "checkpoints": [
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "71ce70acabb7",
+          "payloads": "e7eb3ba89f8b",
+          "settlements": "f9489841db60",
+          "state": "e2fbc2b9e8e9",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

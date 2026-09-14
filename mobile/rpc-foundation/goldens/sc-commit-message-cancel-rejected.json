@@ -1,0 +1,85 @@
+{
+  "operation": "source-control.commit-message",
+  "family": "git.commit-message-ai",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "4f53cda18c2b": [],
+    "90f981f56526": [
+      {
+        "name": "git.cancelGenerateCommitMessage#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.cancelGenerateCommitMessage\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "adb40821f3e2": {
+      "generated": "ungenerated"
+    },
+    "e4594c595a3c": {
+      "cancel": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "transport failure",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    },
+    "fbb82b884f97": [
+      {
+        "name": "git.cancelGenerateCommitMessage#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "git.cancelGenerateCommitMessage"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 0,
+          "settledAt": 0,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ]
+  },
+  "recording": {
+    "scenario": "sc-commit-message-cancel-rejected",
+    "checkpoints": [
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "fbb82b884f97",
+          "payloads": "90f981f56526",
+          "settlements": "e4594c595a3c",
+          "state": "adb40821f3e2",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}

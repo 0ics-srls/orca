@@ -1,0 +1,295 @@
+{
+  "operation": "source-control.session-diff-reveal",
+  "family": "session.tab-reveal",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7ce8e18d07666955a386fb349c09b1f1e65d1a97",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "37993064f3debff71184c2b25b3e451dcd5995e3307c9bc3b288394ea36f9d1f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 2,
+  "values": {
+    "35c187910594": {
+      "reveal": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 1800,
+        "value": "timeout"
+      }
+    },
+    "4f53cda18c2b": [],
+    "6ecd2e2b463f": [
+      {
+        "name": "session.tabs.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "no tabs"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      },
+      {
+        "name": "session.tabs.list#2",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 300,
+          "settledAt": 300,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "tabs": []
+            }
+          }
+        }
+      }
+    ],
+    "6fdad14c669e": [
+      {
+        "name": "session.tabs.list#1",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 0,
+          "settledAt": 0,
+          "value": {
+            "error": {
+              "code": "refused",
+              "message": "no tabs"
+            },
+            "id": "frame-1",
+            "ok": false
+          }
+        }
+      },
+      {
+        "name": "session.tabs.list#2",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 300,
+          "settledAt": 300,
+          "value": {
+            "id": "frame-2",
+            "ok": true,
+            "result": {
+              "tabs": []
+            }
+          }
+        }
+      },
+      {
+        "name": "session.tabs.list#3",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "fulfilled",
+          "startedAt": 900,
+          "settledAt": 900,
+          "value": {
+            "id": "frame-3",
+            "ok": true,
+            "result": {
+              "tabs": [
+                {
+                  "id": 1
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "name": "session.tabs.list#4",
+        "args": [
+          {
+            "name": "method",
+            "value": "session.tabs.list"
+          },
+          {
+            "name": "params",
+            "value": {
+              "worktree": "id:repo42::/p"
+            }
+          },
+          {
+            "name": "options",
+            "value": {
+              "$rpc": "absent"
+            }
+          }
+        ],
+        "settlement": {
+          "status": "rejected",
+          "startedAt": 1800,
+          "settledAt": 1800,
+          "error": {
+            "category": "Error",
+            "message": "transport failure",
+            "isRpcDeliveryUnknown": true
+          }
+        }
+      }
+    ],
+    "792993bdd92b": {
+      "reveal": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "9790953f54c3": [
+      {
+        "name": "session.tabs.list#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "session.tabs.list#2",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "a36fd11fd7a6": [
+      {
+        "name": "session.tabs.list#1",
+        "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "session.tabs.list#2",
+        "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "session.tabs.list#3",
+        "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      },
+      {
+        "name": "session.tabs.list#4",
+        "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.list\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      }
+    ],
+    "b78420b7aa2c": {
+      "result": "timeout"
+    },
+    "c7a157cde28d": {
+      "result": "unrevealed"
+    }
+  },
+  "recording": {
+    "scenario": "sc-reveal-timeout",
+    "checkpoints": [
+      {
+        "id": "second-poll-empty",
+        "observation": {
+          "sender": "6ecd2e2b463f",
+          "payloads": "9790953f54c3",
+          "settlements": "792993bdd92b",
+          "state": "c7a157cde28d",
+          "effects": "4f53cda18c2b"
+        }
+      },
+      {
+        "id": "settled",
+        "observation": {
+          "sender": "6fdad14c669e",
+          "payloads": "a36fd11fd7a6",
+          "settlements": "35c187910594",
+          "state": "b78420b7aa2c",
+          "effects": "4f53cda18c2b"
+        }
+      }
+    ]
+  }
+}
