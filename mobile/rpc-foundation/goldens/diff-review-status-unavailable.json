@@ -1,0 +1,88 @@
+{
+  "operation": "session.diff-review-load",
+  "family": "session.diff-review",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "e53f1557e1b5a6e26e85cfca390b34f7f8a7d26c",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "6859a6cd08be916c8c37b982e3d57e44887bc2c23866946f9586f7666a51a6e9",
+  "scenarioSha256": "182f37fbe6ae7c0694b50d603ecd4a03bc9a8c7c9738ebb775b47eb5f3b9660f",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 4,
+  "values": {
+    "14804a5e414f": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "kind": "unavailable",
+        "message": "Update Orca desktop to review changes on mobile."
+      }
+    },
+    "317a243394fa": {
+      "name": "git.status#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.status\",\"params\":{\"worktree\":\"id:repo-9::/w\"}}"
+    },
+    "55c07df45014": {
+      "branchCompare": "unloaded",
+      "diff": "unloaded",
+      "snapshot": {
+        "kind": "unavailable",
+        "message": "Update Orca desktop to review changes on mobile."
+      }
+    },
+    "93b9682c496c": {
+      "name": "git.status#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "git.status"
+        },
+        {
+          "name": "params",
+          "value": {
+            "worktree": "id:repo-9::/w"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "diff-review-status-unavailable",
+    "checkpoints": [
+      {
+        "id": "unavailable",
+        "observation": {
+          "sender": ["93b9682c496c"],
+          "payloads": ["317a243394fa"],
+          "settlements": {
+            "unavailable": "14804a5e414f"
+          },
+          "state": "55c07df45014",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

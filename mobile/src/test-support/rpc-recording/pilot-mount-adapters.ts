@@ -1,4 +1,6 @@
 import { observableModel } from './observable-model'
+import { diffReviewMountAdapters } from './diff-review-mount-adapters'
+import { githubPrMountAdapters } from './github-pr-mount-adapters'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { settingsMountAdapters } from './settings-mount-adapters'
 import { sourceControlMountAdapters } from './source-control-mount-adapters'
@@ -16,6 +18,8 @@ export function pilotMountAdapters(
     ...settingsMountAdapters(modules),
     ...workspaceSettingsMounts(modules),
     ...sourceControlMountAdapters(modules),
+    ...githubPrMountAdapters(modules),
+    ...diffReviewMountAdapters(modules),
     ...hostedReviewMountAdapters(modules),
     'workspace.file-inventory': ({ client }) => {
       const useSearch = modules.load<
