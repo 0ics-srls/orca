@@ -17874,5 +17874,12 @@
       "stopped": "stopped",
       "finished": "finished"
     }
+  },
+  "agents": {
+    "picker": {
+      "noneAvailable": "No agents available. Open Manage agents to check installation and enabled agents on the workspace host.",
+      "disabled": "Disabled in Agents settings. Enable it in Manage agents.",
+      "notDetected": "Not detected on the workspace host. Make sure {{command}} is on that host’s PATH, then recheck in Manage agents."
+    }
   }
 }
