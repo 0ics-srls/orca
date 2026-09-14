@@ -229,10 +229,7 @@ export const createRefreshEventActions = (
         }
       }
 
-      // Why `s` and not `{}`: zustand bails out only on Object.is(next, state). An empty
-      // object is a fresh reference, so `Object.assign({}, state, {})` rebuilds the root
-      // with every field unchanged and still notifies every listener — all of the cost of
-      // an update and none of the content.
+      // Preserve root identity so no-op writes do not notify every store subscriber.
       return changed
         ? {
             prRefreshSequences: capPrRefreshSequences(nextSequences),

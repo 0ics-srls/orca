@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 import { create } from 'zustand'
+import { useAppStore } from '../index'
 import { createGitHubSlice } from '../slices/github'
 import { createHostedReviewSlice } from '../slices/hosted-review'
 import type { AppState } from '../types'
@@ -8,13 +9,11 @@ import type { AppState } from '../types'
 globalThis.window = { api: { gh: { prChecks: vi.fn() }, cache: { setGitHub: vi.fn() } } }
 
 function createTestStore() {
-  return create<AppState>()(
-    (...a) =>
-      ({
-        ...createGitHubSlice(...a),
-        ...createHostedReviewSlice(...a)
-      }) as AppState
-  )
+  return create<AppState>()((...a) => ({
+    ...useAppStore.getInitialState(),
+    ...createGitHubSlice(...a),
+    ...createHostedReviewSlice(...a)
+  }))
 }
 
 const inFlightEvent = (sequence: number) => ({
