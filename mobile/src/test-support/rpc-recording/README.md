@@ -238,11 +238,15 @@ observes only sender calls and settlements.
 
 ### Recorded finding: a refused refresh is not handled the same way twice
 
-The five refuse-after-data probes record `settingsRead` refusing a _refresh_ after a success.
-Four call sites retain what they had. `use-mobile-tasks-runtime-hydration.tsx` does not: it
-publishes `{}`, so a refused refresh wipes the runtime task settings. That divergence is recorded,
-not repaired — `settings-task-hydration-refuse-after-data.json` is the observation, and changing
-the behaviour is a product change with its own re-record.
+The five refuse-after-data probes record a `settings.get` read refusing a _refresh_ after a
+success: home providers and task hydration read through `settingsRead`, workspace context, resume
+metadata and repo metadata through `optionalSettingsRead`. Which one a site uses does not change
+what these probes record — the two share an acceptance and differ only in how they read a null
+result, and a refusal never reaches the reader. Four call sites retain what they had.
+`use-mobile-tasks-runtime-hydration.tsx` does not: it publishes `{}`, so a refused refresh wipes
+the runtime task settings. That divergence is recorded, not repaired —
+`settings-task-hydration-refuse-after-data.json` is the observation, and changing the behaviour is
+a product change with its own re-record.
 
 ### Running it for a step-4 migration
 
