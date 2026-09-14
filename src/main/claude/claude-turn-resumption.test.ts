@@ -91,7 +91,7 @@ function taskNotification(uuid: string) {
   }
 }
 
-function result(uuid: string) {
+function result(uuid: string, parentToolUseId: string | null = null) {
   return {
     type: 'message' as const,
     sessionId: 'orca-session',
@@ -100,6 +100,7 @@ function result(uuid: string) {
       subtype: 'success',
       uuid,
       session_id: SESSION,
+      parent_tool_use_id: parentToolUseId,
       duration_ms: 322_937
     }
   }
@@ -198,5 +199,20 @@ describe('a Claude turn the provider resumed on its own', () => {
     expect(projected(items())).toBe('working')
     expect(activeStructuredAgentSessionToolCall(items())?.name).toBe('Bash')
     expect(projectStructuredAgentSessionStatusSummary(items(), [], null).toolName).toBe('Bash')
+  })
+
+  it('leaves the turn running when a nested result settles a child', () => {
+    const { translator, items } = harness()
+    translator.handle(frame('user', 'u1', [{ type: 'text', text: 'go' }]))
+    translator.handle(frame('assistant', 'a0', [{ type: 'text', text: 'working on it' }]))
+
+    // A child's result ends the child, not the turn that spawned it. No real
+    // stream has been observed carrying one; this holds the symmetry with the
+    // open path, which already refuses to open a turn from nested output.
+    translator.handle(result('r-child', 'toolu_parent'))
+    expect(projected(items())).toBe('working')
+
+    translator.handle(result('r-root'))
+    expect(projected(items())).toBe('idle')
   })
 })

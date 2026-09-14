@@ -128,7 +128,13 @@ export function createClaudeJournalTranslator(
     frame: Record<string, unknown>,
     observedAt: number
   ): void => {
-    if (currentTurn || envelope.role !== 'assistant' || frame.parent_tool_use_id !== null) {
+    // Root-ness first, then idempotency — the same order the close path reads in.
+    // A child's output is its parent turn's work: letting it open a turn would
+    // report the session working because a subagent spoke.
+    if (envelope.role !== 'assistant' || frame.parent_tool_use_id !== null) {
+      return
+    }
+    if (currentTurn) {
       return
     }
     openTurn(
@@ -269,6 +275,14 @@ export function createClaudeJournalTranslator(
         promptItems.delete(event.promptKey)
         deps.sink.publish()
       } else if (event.type === 'message' && event.message.type === 'result') {
+        // Only a root result ends the session's turn, mirroring the open path.
+        // The two read the field differently on purpose, and both fail towards
+        // not over-claiming: opening needs proof of root-ness, so an absent
+        // field opens nothing; closing needs proof of nesting, so an absent
+        // field still closes.
+        if (typeof event.message.parent_tool_use_id === 'string') {
+          return
+        }
         // The turn is over however it ended, so a foreground child still
         // reported as working will never be settled by an event.
         subagents.settleTurn(groupKeyOf(currentTurn))
