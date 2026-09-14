@@ -138,6 +138,22 @@ describe('CodexPromptRegistry', () => {
     expect(registry.find('journal-root')).toBeNull()
   })
 
+  it('bounds an oversized request turn id and still clears its prompt', () => {
+    const registry = new CodexPromptRegistry()
+    const turnId = 'turn-'.padEnd(MAX_CODEX_PROMPT_REGISTRY_BYTES + 1, 'x')
+    const prompt = registry.register({
+      id: 1,
+      method: 'item/commandExecution/requestApproval',
+      params: { itemId: 'root-item', threadId: 'thread-1', turnId }
+    })
+
+    expect(prompt).not.toBeNull()
+    expect(registry.bytes).toBeLessThanOrEqual(MAX_CODEX_PROMPT_REGISTRY_BYTES)
+    registry.bindJournalItemId('journal-root', 'thread-1', 'root-item')
+    registry.clearTurn('thread-1', turnId)
+    expect(registry.find('journal-root')).toBeNull()
+  })
+
   it('addresses a prompt by its journal item id once bound, and forgets both', () => {
     const registry = new CodexPromptRegistry()
     const prompt = registry.register(userInputRequest(['q1']))

@@ -88,11 +88,12 @@ export class CodexPromptRegistry {
     if (optionAnswers === null) {
       return null
     }
+    const turnId = readString(request.params, 'turnId')
     const prompt: CodexPendingPrompt = {
       requestId: request.id,
       method: request.method,
       threadId,
-      turnId: readString(request.params, 'turnId'),
+      ...(turnId ? codexPromptTurnIdentity(turnId) : { turnId: null }),
       codexItemId,
       promptKey: readString(request.params, 'approvalId') ?? codexItemId,
       questionIds,
