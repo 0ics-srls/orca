@@ -85,9 +85,45 @@ export function recordCrashBreadcrumb(
   }
   breadcrumbs.push(breadcrumb)
   if (breadcrumbs.length > MAX_BREADCRUMBS) {
-    breadcrumbs.shift()
+    breadcrumbs.splice(evictionIndex(breadcrumbs), 1)
   }
   return breadcrumb
+}
+
+/**
+ * Index of the entry to drop when the ring overflows: the oldest entry of
+ * whichever name currently occupies the most slots.
+ *
+ * Why not the oldest overall: a once-a-minute sampler outnumbers the whole
+ * lifecycle trail within the hour, so plain FIFO spends the ring on the one
+ * series that repeats and evicts the singletons that explain the death. Across
+ * 293 field reports, `renderer_memory`, `agent_state_changed` and
+ * `pr_refresh_queue` held 77% of every slot ever shipped and 39% of reports
+ * arrived with no lifecycle crumb at all. Charging the overflow to the most
+ * redundant name instead bounds any series without naming it, so a new periodic
+ * emitter cannot reopen the hole the way an allowlist lets it.
+ *
+ * Every name appearing once degenerates to the oldest entry, i.e. plain FIFO.
+ */
+function evictionIndex(ring: CrashReportBreadcrumb[]): number {
+  const counts = new Map<string, number>()
+  for (const entry of ring) {
+    counts.set(entry.name, (counts.get(entry.name) ?? 0) + 1)
+  }
+  let crowdedIndex = 0
+  let crowdedCount = 0
+  for (let index = 0; index < ring.length; index += 1) {
+    const count = counts.get(ring[index].name) ?? 0
+    // Why strictly greater: `ring` is oldest-first, so the first index holding
+    // the maximum is the OLDEST entry of the most crowded name. Accepting ties
+    // would walk to that name's newest entry and thin the series from the wrong
+    // end, leaving a stale head instead of the minutes before the crash.
+    if (count > crowdedCount) {
+      crowdedIndex = index
+      crowdedCount = count
+    }
+  }
+  return crowdedIndex
 }
 
 export function recordCoalescedCrashBreadcrumb({

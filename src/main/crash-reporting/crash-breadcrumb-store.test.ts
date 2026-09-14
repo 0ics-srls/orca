@@ -24,6 +24,65 @@ describe('crash breadcrumb store', () => {
     expect(snapshot[29].name).toBe('event_31')
   })
 
+  describe('fair-share eviction', () => {
+    it('spends the overflow on the most repeated series, not the oldest event', () => {
+      recordCrashBreadcrumb('app_started', { packaged: true })
+      recordCrashBreadcrumb('main_window_created')
+      recordCrashBreadcrumb('main_window_loaded')
+      for (let sample = 0; sample < 200; sample += 1) {
+        recordCrashBreadcrumb('renderer_memory', { sample })
+      }
+
+      const snapshot = getCrashBreadcrumbSnapshot()
+
+      expect(snapshot.map((entry) => entry.name).slice(0, 3)).toEqual([
+        'app_started',
+        'main_window_created',
+        'main_window_loaded'
+      ])
+      expect(snapshot.filter((entry) => entry.name === 'renderer_memory')).toHaveLength(27)
+    })
+
+    it('thins the crowded series from its oldest end, keeping the run before the crash', () => {
+      recordCrashBreadcrumb('app_started')
+      for (let sample = 0; sample < 200; sample += 1) {
+        recordCrashBreadcrumb('renderer_memory', { sample })
+      }
+
+      const samples = getCrashBreadcrumbSnapshot()
+        .filter((entry) => entry.name === 'renderer_memory')
+        .map((entry) => entry.data?.sample)
+
+      expect(samples.at(-1)).toBe(199)
+      expect(samples).toEqual(
+        Array.from({ length: samples.length }, (_, i) => 200 - samples.length + i)
+      )
+    })
+
+    it('splits the ring between two competing series', () => {
+      for (let round = 0; round < 100; round += 1) {
+        recordCrashBreadcrumb('renderer_memory', { round })
+        recordCrashBreadcrumb('pr_refresh_queue', { round })
+      }
+
+      const snapshot = getCrashBreadcrumbSnapshot()
+
+      expect(snapshot.filter((entry) => entry.name === 'renderer_memory')).toHaveLength(15)
+      expect(snapshot.filter((entry) => entry.name === 'pr_refresh_queue')).toHaveLength(15)
+    })
+
+    it('degenerates to oldest-first when no name repeats', () => {
+      for (let index = 0; index < 40; index += 1) {
+        recordCrashBreadcrumb(`event_${index}`)
+      }
+
+      const snapshot = getCrashBreadcrumbSnapshot()
+
+      expect(snapshot[0].name).toBe('event_10')
+      expect(snapshot[29].name).toBe('event_39')
+    })
+  })
+
   it('retains bounded renderer high-water profiles across later activity', () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-07-22T12:00:00.000Z'))
@@ -235,7 +294,10 @@ describe('crash breadcrumb store', () => {
     }
     const burstSize = 34
 
-    it('erases the entire pre-crash trail when uncoalesced', () => {
+    // Fair-share eviction spares the one-off trail, but the burst still takes
+    // two thirds of the ring — enough to starve any *other* series and to lose
+    // the pane count entirely. Coalescing is still the right answer for bursts.
+    it('takes most of the ring when uncoalesced, but no longer erases the trail', () => {
       recordPreCrashTrail()
       for (let pane = 0; pane < burstSize; pane += 1) {
         recordCrashBreadcrumb('terminal_safe_fit_retry_exhausted', { paneId: 1 })
@@ -244,11 +306,11 @@ describe('crash breadcrumb store', () => {
       const snapshot = getCrashBreadcrumbSnapshot()
 
       expect(snapshot.filter((entry) => entry.name.startsWith('pre_crash_evidence_'))).toHaveLength(
-        0
+        10
       )
       expect(
         snapshot.filter((entry) => entry.name === 'terminal_safe_fit_retry_exhausted')
-      ).toHaveLength(30)
+      ).toHaveLength(20)
     })
 
     it('costs one slot when coalesced, and keeps the pane count on the payload', () => {
