@@ -22,8 +22,9 @@ The behavior matches OMP's `packages/utils/src/dirs.ts`:
   they never fall back to a different profile or the process working directory.
 
 The desktop scanner child allowlist forwards only the required directory/profile
-variables. Relay scanner children still take explicit roots from host-owned init
-messages. Client XDG/profile values are not applied to WSL home roots. Exact hook
+variables. SSH relay discovery still builds legacy roots from its host-owned home
+and does not gain XDG/profile discovery here. Client XDG/profile values are not
+applied to WSL home roots. Exact hook
 paths and existing WSL attestation/refusal remain authoritative. No wire fields
 or opcodes change; older clients receive the existing session record shape.
 
@@ -40,3 +41,13 @@ ORCA_BACKGROUND_LAUNCH=1 bun tests/tools/omp-session-root-upstream-smoke.mjs /pa
 The smoke uses disposable home/data roots and compares Orca's result with OMP's
 actual directory resolver. It makes no model requests. Unit tests also cover
 Windows XDG exclusion, legacy override normalization and refusal paths.
+
+For actual persistence-to-reader validation, run:
+
+```sh
+ORCA_BACKGROUND_LAUNCH=1 bun tests/tools/omp-transcript-root-reader-smoke.mjs /path/to/oh-my-pi
+```
+
+This creates default and named-profile transcripts through OMP's SessionManager,
+with legacy directories still present, then resolves and decodes each by session
+ID through Orca's native reader. All files use disposable roots; no model runs.
