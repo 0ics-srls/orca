@@ -60,7 +60,12 @@ export function useNewWorkspaceRuntimeContext(
       }
       const uiResult = settledSuccess(uiRes)
       if (uiResult) {
-        const ui = (uiResult.result as { ui?: { trustedOrcaHooks?: PersistedTrustedOrcaHooks } }).ui
+        const ui = (
+          uiResult.result as
+            | { ui?: { trustedOrcaHooks?: PersistedTrustedOrcaHooks } }
+            | null
+            | undefined
+        )?.ui
         setTrustedOrcaHooks(ui?.trustedOrcaHooks ?? {})
       }
 
