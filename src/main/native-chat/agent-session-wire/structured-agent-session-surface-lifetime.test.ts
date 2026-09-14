@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from 'vite
 import type { AgentSessionOwnerProbe } from '../../../shared/agent-session-lease-adjudication'
 import { hasUnansweredStructuredAgentSessionDispatch } from '../../../shared/structured-agent-session-projection'
 import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
+import type { AgentJournalSubmission } from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionMutationEnvelope,
   AgentSessionSubscribeEvent
@@ -268,6 +269,44 @@ describe('a chat that closes', () => {
     await expect(host.close(SESSION)).resolves.toBeUndefined()
     expect(host.hasSession(SESSION)).toBe(false)
     expect(closeSession).toHaveBeenCalledOnce()
+  })
+
+  it('settles and releases on the retry when a step after the child stopped aborts', async () => {
+    await attach()
+    dispatch.mockResolvedValueOnce({ state: 'admitted' })
+    const body = hostTestMessage('pending across an aborted eviction')
+    const sent = await host.send(CALLER, {
+      envelope: envelope('agentSession.send', { body }),
+      body
+    })
+    expect(sent).toMatchObject({ ok: true, value: { submission: { dispatchState: 'pending' } } })
+    const session = host['sessions'].get(SESSION)
+    expect(session).toBeDefined()
+    vi.spyOn(host['runtimeState'].eventSinkFor(SESSION), 'drained').mockResolvedValueOnce({
+      ok: false,
+      error: new Error('drain barrier lost')
+    })
+    // The journal is gone once the retry forgets the session, so read it on its way out.
+    let settledSubmissions: AgentJournalSubmission[] = []
+    const journal = session!.journal
+    const closeJournal = journal.close.bind(journal)
+    vi.spyOn(journal, 'close').mockImplementation(async () => {
+      settledSubmissions = journal.snapshot().submissions
+      await closeJournal()
+    })
+
+    await expect(host.close(SESSION)).rejects.toMatchObject({ step: 'drain-published' })
+    // The child is proven gone, but the wind-down it owes is not done: nothing settled, no release.
+    expect(session!.hasProviderChild).toBe(false)
+    expect(store.getRecord(SESSION)?.lease.claimStatus).not.toBe('released')
+
+    await expect(host.close(SESSION)).resolves.toBeUndefined()
+    expect(closeSession).toHaveBeenCalledOnce()
+    expect(store.getRecord(SESSION)?.lease).toMatchObject({
+      claimStatus: 'released',
+      ownerProcess: null
+    })
+    expect(hasUnansweredStructuredAgentSessionDispatch(settledSubmissions)).toBe(false)
   })
 })
 

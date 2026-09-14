@@ -60,11 +60,17 @@ export async function evictHeldStructuredAgentSession(
   if (!session) {
     return
   }
-  const ownedProviderChild = session.hasProviderChild
+  // The obligation OUTLIVES the child. `hasProviderChild` is retired the instant the adapter
+  // proves the exit, so a step that aborts after that point would otherwise leave the retry
+  // reading "no child here" and skipping the settlement and the lease release it still owes.
+  const owesWindDown = session.owesProviderChildWindDown ?? session.hasProviderChild
+  session.owesProviderChildWindDown = owesWindDown
   let settlementError: unknown
   const eviction: StructuredAgentSessionEvictionContext = {
     sessionId,
-    hasProviderChild: ownedProviderChild,
+    // The retry must not re-stop a child the adapter already proved gone, so this stays honest.
+    hasProviderChild: session.hasProviderChild,
+    owesProviderChildWindDown: owesWindDown,
     eventSink: context.runtimeState.eventSinkFor(sessionId),
     adapter: context.deps.adapter,
     // Host state must not disagree with the adapter for the seven steps in between.
@@ -99,10 +105,11 @@ export async function evictHeldStructuredAgentSession(
       await releaseStoredStructuredAgentSessionOwner({
         store: context.deps.store,
         sessionId,
-        hasProviderChild: ownedProviderChild,
+        hasProviderChild: owesWindDown,
         expectedFence: session.fence,
         now: context.now()
       })
+      session.owesProviderChildWindDown = false
       context.forgetStatus(sessionId)
     }
   }
@@ -112,13 +119,15 @@ export async function evictHeldStructuredAgentSession(
   )
 }
 
-/** Stops every provider child owned by this host while keeping failed evictions reachable. */
+/** Stops every provider child owned by this host while keeping failed evictions reachable. A
+ *  session whose child is already stopped but whose wind-down aborted is still in scope — that is
+ *  the retry. */
 export async function evictOwnedStructuredAgentSessions(
   context: StructuredAgentSessionLifetimeContext,
   retainOnFailure: Set<string>
 ): Promise<void> {
   const ownedSessionIds = [...context.sessions]
-    .filter(([, session]) => session.hasProviderChild)
+    .filter(([, session]) => session.hasProviderChild || session.owesProviderChildWindDown === true)
     .map(([sessionId]) => sessionId)
   // Retained up front and cleared only once an eviction settles: the quit phase is bounded, and a
   // timeout leaves these still running. Closing their journals underneath them is the one outcome

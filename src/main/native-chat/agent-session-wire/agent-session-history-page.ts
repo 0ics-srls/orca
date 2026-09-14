@@ -21,9 +21,10 @@ import {
   type AgentSessionHistoryRequest,
   type AgentSessionHistoryResult
 } from '../../../shared/agent-session-wire'
+import type { JournalRow } from '../agent-session-journal/journal-row-schema'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
-import { projectJournalBatch } from './agent-session-journal-batch'
-import { withoutRestartEvictionStatusItems } from './agent-session-restart-eviction-status-filter'
+import { projectJournalBatch, type JournalBatchProjection } from './agent-session-journal-batch'
+import { withoutRetiredProviderExitStatusItems } from './agent-session-retired-provider-exit-status-filter'
 import {
   boundHistoryItemsByBytes,
   HISTORY_PAGE_CONTENT_BUDGET_BYTES,
@@ -67,9 +68,8 @@ export function readAgentSessionHistory(
       return historyReset(snapshot, 'cursor_ahead')
     }
   }
-  const older = cursor
-    ? snapshot.items.filter((item) => item.sequence < cursor.sequence)
-    : snapshot.items
+  const timeline = renderableTimeline(snapshot)
+  const older = cursor ? timeline.filter((item) => item.sequence < cursor.sequence) : timeline
   const windowed = newestWholeSequenceGroups(older, limit)
   const { items, dropped } = boundHistoryItemsByBytes(
     windowed,
@@ -84,13 +84,40 @@ export function readAgentSessionHistory(
       direction: request.direction,
       items,
       hasOlder: older.length > windowed.length || dropped > 0,
-      hasNewer: older.length < snapshot.items.length,
+      hasNewer: older.length < timeline.length,
       fallbackCursor: cursor ?? { epoch: snapshot.cursor.epoch, sequence: 0 },
       nextCursor: items[0]
         ? { epoch: snapshot.cursor.epoch, sequence: items[0].sequence }
         : undefined
     })
   }
+}
+
+/**
+ * The snapshot timeline with retired rows already gone. Every backward read measures THIS array:
+ * the window bound, `hasOlder`, `hasNewer`, `window.oldest` and `nextCursor` all have to agree
+ * with what the page actually carries.
+ *
+ * Retiring on the way out instead lets a window land entirely on retired rows and return an empty
+ * page that still claims older history — a cursor that never advances, which is a reader spinning
+ * on one request rather than a transcript that finished loading.
+ *
+ * Keyed on the snapshot's own items array, which the reducer rebuilds on every change, so a
+ * multi-page read over one snapshot filters once.
+ */
+const renderableTimelines = new WeakMap<
+  readonly AgentJournalRenderItem[],
+  AgentJournalRenderItem[]
+>()
+
+function renderableTimeline(snapshot: AgentJournalSnapshot): AgentJournalRenderItem[] {
+  const cached = renderableTimelines.get(snapshot.items)
+  if (cached) {
+    return cached
+  }
+  const items = withoutRetiredProviderExitStatusItems(snapshot.items, snapshot.sessionId)
+  renderableTimelines.set(snapshot.items, items)
+  return items
 }
 
 /**
@@ -122,7 +149,8 @@ function buildHydrationPage(
   snapshot: AgentJournalSnapshot,
   fence?: number
 ): AgentSessionHistoryPage {
-  const items = newestWholeSequenceGroups(snapshot.items, AGENT_SESSION_HISTORY_MAX_LIMIT)
+  const timeline = renderableTimeline(snapshot)
+  const items = newestWholeSequenceGroups(timeline, AGENT_SESSION_HISTORY_MAX_LIMIT)
   const bounded = boundHistoryItemsByBytes(
     items,
     'newest',
@@ -133,7 +161,7 @@ function buildHydrationPage(
     snapshot,
     direction: 'tail',
     items: bounded.items,
-    hasOlder: snapshot.items.length > items.length || bounded.dropped > 0,
+    hasOlder: timeline.length > items.length || bounded.dropped > 0,
     hasNewer: false,
     fallbackCursor: { epoch: snapshot.cursor.epoch, sequence: 0 },
     nextCursor: bounded.items[0]
@@ -152,6 +180,30 @@ function historyReset(
     reset,
     page: buildHydrationPage(snapshot)
   }
+}
+
+/** The other source of render items in this module. Retiring here keeps the forward page's byte
+ *  budget honest too — a hidden row must not spend the budget a visible one needs. The cursor is
+ *  row-derived, so a forward page may legitimately be empty and still advance. */
+function projectRenderableBatch(
+  journal: AgentSessionJournal,
+  snapshot: AgentJournalSnapshot,
+  rows: readonly JournalRow[],
+  afterSequence: number
+): JournalBatchProjection {
+  const projected = projectJournalBatch({
+    rows,
+    snapshot,
+    afterSequence,
+    canonicalItemId: (itemId) => journal.canonicalItemId(itemId)
+  })
+  if (!projected.ok) {
+    return projected
+  }
+  const items = withoutRetiredProviderExitStatusItems(projected.batch.items, snapshot.sessionId)
+  return items.length === projected.batch.items.length
+    ? projected
+    : { ok: true, batch: { ...projected.batch, items } }
 }
 
 function readForward(
@@ -188,24 +240,14 @@ function readForward(
   // clipping projected items: dropping an item while advancing the cursor past
   // the rows that touched it would lose that revision for good.
   let rows = since.rows.slice(0, limit)
-  let projected = projectJournalBatch({
-    rows,
-    snapshot,
-    afterSequence: cursor.sequence,
-    canonicalItemId: (itemId) => journal.canonicalItemId(itemId)
-  })
+  let projected = projectRenderableBatch(journal, snapshot, rows, cursor.sequence)
   if (!projected.ok) {
     return historyReset(snapshot, projected.reset)
   }
   let contentBytes = pageContentBytes(projected.batch.items, projected.batch.removedItemIds)
   while (rows.length > 1 && contentBytes > HISTORY_PAGE_CONTENT_BUDGET_BYTES) {
     rows = rows.slice(0, Math.ceil(rows.length / 2))
-    const shrunk = projectJournalBatch({
-      rows,
-      snapshot,
-      afterSequence: cursor.sequence,
-      canonicalItemId: (itemId) => journal.canonicalItemId(itemId)
-    })
+    const shrunk = projectRenderableBatch(journal, snapshot, rows, cursor.sequence)
     if (!shrunk.ok) {
       return historyReset(snapshot, shrunk.reset)
     }
@@ -258,9 +300,10 @@ function buildPage(input: {
   fence?: number
 }): AgentSessionHistoryPage {
   const epoch = input.snapshot.cursor.epoch
-  // Every renderer-bound page funnels through here, so it is the one place that can retire a
-  // historical row without rewriting durable history.
-  const items = withoutRestartEvictionStatusItems(input.items, input.snapshot.sessionId)
+  // PRECONDITION: `items` is already renderable. Every path in this module reaches here through
+  // `renderableTimeline` or `projectRenderableBatch`, which is what keeps the paging math and the
+  // page's own contents reading the same array.
+  const items = input.items
   const pageItemIds = new Set(items.map((item) => item.itemId))
   const oldest = items[0]
   const newest = items.at(-1)
