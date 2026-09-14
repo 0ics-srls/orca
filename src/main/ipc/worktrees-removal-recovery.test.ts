@@ -427,6 +427,31 @@ describe('registerWorktreeHandlers', () => {
     expect(store.removeWorktreeMeta).toHaveBeenCalledWith(worktreeId, 'local')
   })
 
+  it('cleans a prunable Git-file row before archive or checkout teardown', async () => {
+    const root = await mkdtemp(join(tmpdir(), 'orca-prunable-ipc-'))
+    const markerPath = join(root, '.git')
+    await writeFile(markerPath, 'gitdir: /preserved/admin\n')
+    const worktreeId = `repo-1::${markerPath}`
+    const rows = mockKnownFeatureWorktree(markerPath).map((row) =>
+      row.path === markerPath ? { ...row, branch: 'refs/heads/feature', prunable: true } : row
+    )
+    listWorktreesMock.mockResolvedValueOnce(rows).mockResolvedValue([])
+    try {
+      const result = await handlers['worktrees:remove'](null, { worktreeId })
+      expect(result).toEqual({ preservedBranch: { branchName: 'feature', head: 'feature' } })
+      expect(runHookMock).not.toHaveBeenCalled()
+      expect(killAllProcessesForWorktreeMock).not.toHaveBeenCalled()
+      expect(removeWorktreeMock).not.toHaveBeenCalled()
+      expect(gitExecFileAsyncMock).toHaveBeenCalledWith(['worktree', 'prune'], {
+        cwd: '/workspace/repo'
+      })
+      expect(store.removeWorktreeMeta).toHaveBeenCalledWith(worktreeId, 'local')
+      expect((await lstat(markerPath)).isFile()).toBe(true)
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
+  })
+
   it('preserves a locked missing registration even with force', async () => {
     setPlatform('win32')
     const missingWorktreePath = 'C:\\workspace\\locked-already-removed'

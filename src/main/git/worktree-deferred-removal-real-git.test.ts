@@ -7,7 +7,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { removeWorktree } from './worktree'
+import { listWorktreesStrict, removeWorktree } from './worktree'
+import { isPrunableGitFileWorktree } from '../worktree-prunable-git-file'
+import { removeStaleLocalWorktreeRegistration } from '../local-worktree-removal-recovery'
 import {
   getWorktreeTrashRoot,
   isWorktreeTrashEntryName,
@@ -112,6 +114,37 @@ describe('deferred worktree removal against the real Git binary', () => {
     expect(await readFile(join(worktreePath, 'untracked.txt'), 'utf8')).toBe('keep this work\n')
     expect(await git(['branch', '--list', 'feature'], repoPath)).toContain('feature')
     expect(existsSync(getWorktreeTrashRoot(markerPath))).toBe(false)
+  })
+
+  it('prunes a proven malformed registration while retaining checkout files and its branch', async () => {
+    const markerPath = join(worktreePath, '.git')
+    const marker = await readFile(markerPath, 'utf8')
+    const adminPath = marker.trim().replace(/^gitdir: /, '')
+    await writeFile(join(adminPath, 'gitdir'), `${join(markerPath, '.git')}\n`)
+    await writeFile(join(worktreePath, 'untracked.txt'), 'keep this work\n')
+    const row = (await listWorktreesStrict(repoPath)).find((entry) => entry.path === markerPath)
+    expect(row).toBeDefined()
+    if (!row) {
+      throw new Error('Missing malformed registration')
+    }
+    expect(await isPrunableGitFileWorktree(row)).toBe(true)
+
+    const result = await removeStaleLocalWorktreeRegistration({
+      canonicalWorktreePath: markerPath,
+      repoPath,
+      localWorktreeGitOptions: {},
+      registeredWorktree: row,
+      deleteBranch: true
+    })
+
+    expect(result).toEqual({ preservedBranch: { branchName: 'feature', head: row.head } })
+    expect(await readFile(markerPath, 'utf8')).toBe(marker)
+    expect(await readFile(join(worktreePath, 'untracked.txt'), 'utf8')).toBe('keep this work\n')
+    expect(await git(['rev-parse', 'refs/heads/feature'], repoPath)).toBe(`${row.head}\n`)
+    expect((await listWorktreesStrict(repoPath)).some((entry) => entry.path === markerPath)).toBe(
+      false
+    )
+    expect(existsSync(adminPath)).toBe(false)
   })
 
   it('sweeps trash a previous run left behind', async () => {
