@@ -702,4 +702,46 @@ describe('Claude live prompt ownership', () => {
     expect(tryAppendTombstone).not.toHaveBeenCalled()
     expect(tombstones).toEqual([])
   })
+
+  it('dedupes, bounds, and clears prompt cancellation retries', () => {
+    const prompts = new ClaudeJournalPrompts({
+      sink: {
+        appendItem: () => {},
+        appendTombstone: () => {},
+        publish: () => {},
+        tryAppendLifecycleBatch: () => ({ accepted: false, reason: 'backpressure' })
+      }
+    })
+    const registerCancellation = (index: number): void => {
+      const promptKey = `permission-${index}`
+      const prompt: ClaudePendingPrompt = {
+        requestId: promptKey,
+        promptKey,
+        toolUseId: `tool-${index}`,
+        toolName: 'Bash',
+        kind: 'approval',
+        input: { command: 'git status' },
+        suggestions: [],
+        questionIds: [],
+        answers: new Map(),
+        settle: vi.fn()
+      }
+      prompts.handle({ type: 'prompt', sessionId: 'session-1', prompt })
+      prompts.cancel(promptKey)
+    }
+
+    registerCancellation(0)
+    prompts.cancel('permission-0')
+    expect(prompts.pendingCancellationCount).toBe(1)
+    for (let index = 1; index < 65; index += 1) {
+      registerCancellation(index)
+    }
+    expect(prompts.pendingCancellationCount).toBe(64)
+
+    prompts.resolve('permission-0')
+    expect(prompts.pendingCancellationCount).toBe(63)
+    prompts.clear()
+    expect(prompts.pendingCancellationCount).toBe(0)
+    expect(prompts.size).toBe(0)
+  })
 })

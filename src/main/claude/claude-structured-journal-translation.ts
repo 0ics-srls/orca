@@ -255,6 +255,7 @@ export function createClaudeJournalTranslator(
 
   return {
     handle: (event) => {
+      prompts.retryPendingCancellations()
       if (event.type === 'ended') {
         streamedText.flush()
         // No event will ever settle a child once the provider is gone.

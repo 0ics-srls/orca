@@ -18,6 +18,7 @@ import {
 import type { ClaudeStructuredSessionEvent } from './claude-structured-session-state'
 
 const ADMITTED = { accepted: true } as const
+const MAX_PENDING_PROMPT_CANCELLATIONS = 64
 
 type ClaudeJournalPrompt = {
   identity: AgentJournalItemIdentity
@@ -36,9 +37,14 @@ function cancelledPromptBody(
 
 export class ClaudeJournalPrompts {
   private readonly items = new Map<string, ClaudeJournalPrompt[]>()
+  private readonly pendingCancellations = new Set<string>()
 
   get size(): number {
     return this.items.size
+  }
+
+  get pendingCancellationCount(): number {
+    return this.pendingCancellations.size
   }
 
   constructor(
@@ -77,7 +83,7 @@ export class ClaudeJournalPrompts {
     this.deps.sink.publish()
   }
 
-  cancel(promptKey: string): StructuredAgentSessionSinkAdmission {
+  private admitCancellation(promptKey: string): StructuredAgentSessionSinkAdmission {
     const items = this.items.get(promptKey) ?? []
     if (items.length === 0) {
       return ADMITTED
@@ -125,11 +131,39 @@ export class ClaudeJournalPrompts {
     return published
   }
 
+  cancel(promptKey: string): StructuredAgentSessionSinkAdmission {
+    const admission = this.admitCancellation(promptKey)
+    if (admission.accepted || admission.reason !== 'backpressure') {
+      this.pendingCancellations.delete(promptKey)
+    } else if (
+      this.pendingCancellations.has(promptKey) ||
+      this.pendingCancellations.size < MAX_PENDING_PROMPT_CANCELLATIONS
+    ) {
+      this.pendingCancellations.add(promptKey)
+    }
+    return admission
+  }
+
+  retryPendingCancellations(): void {
+    if (this.pendingCancellations.size === 0) {
+      return
+    }
+    for (const promptKey of this.pendingCancellations) {
+      const admission = this.admitCancellation(promptKey)
+      if (!admission.accepted && admission.reason === 'backpressure') {
+        return
+      }
+      this.pendingCancellations.delete(promptKey)
+    }
+  }
+
   resolve(promptKey: string): void {
     this.items.delete(promptKey)
+    this.pendingCancellations.delete(promptKey)
   }
 
   clear(): void {
     this.items.clear()
+    this.pendingCancellations.clear()
   }
 }
