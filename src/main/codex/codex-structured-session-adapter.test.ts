@@ -139,7 +139,8 @@ describe('CodexStructuredSessionAdapter.acquire', () => {
       itemId: 'codex-item-early',
       kind: 'approval',
       optionId: 'accept',
-      fence: 7
+      fence: 7,
+      commit: async () => undefined
     })
     expect(codex.connections[0].replies).toEqual([{ id: 5, result: { decision: 'accept' } }])
   })
@@ -524,7 +525,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
       itemId: 'codex:thread-abc:turn-1:3',
       kind: 'approval',
       optionId: 'accept',
-      fence: 7
+      fence: 7,
+      commit: async () => undefined
     })
 
     expect(events.at(-1)).toMatchObject({ type: 'prompt', codexItemId: 'codex-item-1' })
@@ -536,7 +538,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
         itemId: 'codex:thread-abc:turn-1:3',
         kind: 'approval',
         optionId: 'decline',
-        fence: 7
+        fence: 7,
+        commit: async () => undefined
       })
     ).rejects.toThrow('no longer waiting on')
     expect(codex.connections[0].replies).toHaveLength(1)
@@ -576,7 +579,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
         itemId: 'codex-item-1',
         kind: 'approval',
         optionId: 'accept',
-        fence: 7
+        fence: 7,
+        commit: async () => undefined
       })
     ).rejects.toThrow('no longer waiting on')
   })
@@ -662,7 +666,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
         itemId,
         kind: 'approval',
         optionId,
-        fence: 7
+        fence: 7,
+        commit: async () => undefined
       })
     }
 
@@ -688,7 +693,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
         itemId: 'codex-item-1',
         kind: 'approval',
         optionId: 'yolo',
-        fence: 7
+        fence: 7,
+        commit: async () => undefined
       })
     ).rejects.toThrow('is not a Codex approval decision')
     expect(codex.connections[0].replies).toEqual([])
@@ -716,7 +722,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
       itemId: 'codex-item-2',
       kind: 'question',
       optionId: encodeCodexQuestionOptionId('q1', 'yes'),
-      fence: 7
+      fence: 7,
+      commit: async () => undefined
     })
     expect(codex.connections[0].replies).toEqual([])
 
@@ -725,7 +732,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
       itemId: 'codex-item-2',
       kind: 'question',
       optionId: encodeCodexQuestionOptionId('q2', 'no'),
-      fence: 7
+      fence: 7,
+      commit: async () => undefined
     })
 
     expect(codex.connections[0].replies).toEqual([
@@ -760,7 +768,8 @@ describe('CodexStructuredSessionAdapter prompts', () => {
         itemId: 'codex-item-gone',
         kind: 'approval',
         optionId: 'accept',
-        fence: 7
+        fence: 7,
+        commit: async () => undefined
       })
     ).rejects.toThrow('no longer waiting on codex-item-gone')
   })

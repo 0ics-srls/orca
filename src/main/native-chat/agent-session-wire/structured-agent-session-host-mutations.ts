@@ -37,6 +37,7 @@ export type StructuredAgentSessionMutationContext = {
   deps: StructuredAgentSessionHostDeps
   sessions: Map<string, StructuredAgentSessionHostSession>
   publish: (sessionId: string, journal: StructuredAgentSessionHostSession['journal']) => void
+  flushStreamedEvents: (sessionId: string) => Promise<void>
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
   now: () => number
@@ -57,6 +58,7 @@ function mutate<TValue>(
       plan,
       journal: context.sessions.get(envelope.sessionId)?.journal,
       publish: (journal) => context.publish(envelope.sessionId, journal),
+      flushStreamedEvents: context.flushStreamedEvents,
       now: () => context.now()
     })
   )
@@ -109,6 +111,7 @@ export function cancelStructuredAgentSessionTurn(
     turnId: string
     scope?: 'background-tasks'
     taskId?: string
+    prompt?: { itemId: string; expectedRevision: number }
   }
 ): Promise<AgentSessionMutationResult<AgentSessionCancelResult>> {
   const command = context.deps.store.getRecord(params.envelope.sessionId)?.conversationCommand

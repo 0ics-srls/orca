@@ -101,7 +101,11 @@ describe('answerClaudePrompt', () => {
     prompts.bindJournalItemId('journal-1', prompt.promptKey)
     const { session } = sessionWith({ interrupt: async () => undefined, prompts })
 
-    await answerClaudePrompt(session, { itemId: 'journal-1', kind: 'approval', optionId: 'allow' })
+    const claim = prompts.claim('journal-1', 'approval')
+    if (!claim) {
+      throw new Error('expected prompt claim')
+    }
+    await answerClaudePrompt(session, claim, 'allow')
 
     expect(settle).toHaveBeenCalledWith(
       expect.objectContaining({ behavior: 'allow', toolUseID: 'tool-1' })
@@ -109,11 +113,9 @@ describe('answerClaudePrompt', () => {
     expect(prompts.find('journal-1')).toBeNull()
   })
 
-  it('refuses an answer for a prompt Claude is no longer waiting on', async () => {
-    const { session } = sessionWith({ interrupt: async () => undefined })
-    await expect(
-      answerClaudePrompt(session, { itemId: 'missing', kind: 'approval', optionId: 'allow' })
-    ).rejects.toThrow(/no longer waiting/)
+  it('refuses to claim a prompt Claude is no longer waiting on', () => {
+    const prompts = new ClaudePromptRegistry()
+    expect(prompts.claim('missing', 'approval')).toBeNull()
   })
 })
 
