@@ -7902,6 +7902,46 @@
           "checkpoint": "dismissed"
         }
       ]
+    },
+    {
+      "id": "browser-dialog-dismissed",
+      "operation": "browser.page-commands",
+      "version": 1,
+      "family": "browser.dialog",
+      "sites": [
+        "mobile/src/browser/use-mobile-browser-request.ts",
+        "mobile/src/browser/use-mobile-browser-commands.ts"
+      ],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "action": "dialog",
+          "id": "dialog",
+          "args": {
+            "accept": false
+          }
+        },
+        {
+          "complete": "browser.dialogDismiss#1",
+          "params": {
+            "page": "page-1",
+            "worktree": "id:worktree-1"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "dismissed": true
+            }
+          }
+        },
+        {
+          "checkpoint": "dismissed"
+        }
+      ]
     }
   ]
 }

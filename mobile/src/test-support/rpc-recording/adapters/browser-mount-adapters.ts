@@ -1,3 +1,4 @@
+import type { Dispatch, SetStateAction } from 'react'
 import type { MountAdapter } from '../recording-scenario'
 import { hookMount, performHookAction } from '../hook-mount'
 import type { operationModuleLoader } from '../operation-module-loader'
@@ -29,6 +30,12 @@ export function browserMountAdapters(
       let dialog: { dialogType: string; message: string } | null = null
       let keyboardValue = 'hello'
       let pointerModifiers: string[] = []
+      // React's own setter shape, so the recorder reads an updater the way the hook writes one.
+      const setter =
+        <T>(read: () => T, write: (value: T) => void): Dispatch<SetStateAction<T>> =>
+        (next) =>
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: SetStateAction's function arm is exactly this updater; the typeof check is what narrows it.
+          write(typeof next === 'function' ? (next as (prev: T) => T)(read()) : next)
       let commands: ReturnType<typeof useCommands>
       const hook = hookMount(() => {
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies plain setters where the hook declares React dispatchers.
@@ -36,12 +43,18 @@ export function browserMountAdapters(
           busyRef,
           client,
           pageId: PAGE_ID,
-          setBusy: (next: unknown) => {
-            busy = typeof next === 'function' ? next(busy) : next === true
-          },
-          setError: (next: unknown) => {
-            error = typeof next === 'function' ? next(error) : (next as string | null)
-          },
+          setBusy: setter(
+            () => busy,
+            (value) => {
+              busy = value
+            }
+          ),
+          setError: setter(
+            () => error,
+            (value) => {
+              error = value
+            }
+          ),
           worktreeId: WORKTREE_ID
         } as unknown as Parameters<typeof useRequest>[0])
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the refs, setters and geometry the commands hook reads.
@@ -54,18 +67,30 @@ export function browserMountAdapters(
           pageParams,
           pointerModifiers,
           sendBrowserRequest,
-          setDialog: (next: unknown) => {
-            dialog = typeof next === 'function' ? next(dialog) : next
-          },
-          setError: (next: unknown) => {
-            error = typeof next === 'function' ? next(error) : (next as string | null)
-          },
-          setKeyboardValue: (next: string) => {
-            keyboardValue = next
-          },
-          setPointerModifiers: (next: unknown) => {
-            pointerModifiers = typeof next === 'function' ? next(pointerModifiers) : next
-          },
+          setDialog: setter(
+            () => dialog,
+            (value) => {
+              dialog = value
+            }
+          ),
+          setError: setter(
+            () => error,
+            (value) => {
+              error = value
+            }
+          ),
+          setKeyboardValue: setter(
+            () => keyboardValue,
+            (value) => {
+              keyboardValue = value
+            }
+          ),
+          setPointerModifiers: setter(
+            () => pointerModifiers,
+            (value) => {
+              pointerModifiers = value
+            }
+          ),
           zoomRef: { current: { scale: 1, offsetX: 0, offsetY: 0 } }
         } as unknown as Parameters<typeof useCommands>[0])
       })

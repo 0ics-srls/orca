@@ -1,8 +1,8 @@
 import { optionalSettingsRead } from '../transport/settings-read-operations'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import { rpcPayloadMember } from '../transport/rpc-reader-payload'
+import { readAcceptedResumeList } from './resume-metadata-lists'
 import {
-  readAcceptedResumeList,
   resumeFolderWorkspaceListRead,
   resumeProjectGroupListRead,
   resumeRepoListRead,

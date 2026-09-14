@@ -79,18 +79,3 @@ export const resumeWorktreeListRead = bindDeferredRpcOperation(
     read: rpcUncheckedPayloadReader('resume-worktrees')
   })
 )
-
-/**
- * One list off an enrichment read. Optional-chained on purpose: main tolerated both a refusal and
- * a null result here, and folding the member read into the reader would have thrown on the latter.
- */
-export function readAcceptedResumeList<T>(
-  accepted: { accepted: false } | { accepted: true; value: unknown } | null,
-  key: string
-): T[] | undefined {
-  if (!accepted?.accepted) {
-    return undefined
-  }
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-  return (accepted.value as Record<string, T[] | undefined> | null | undefined)?.[key]
-}

@@ -243,12 +243,13 @@ export function MobileBrowserPane({
       setError('Enter a valid URL.')
       return
     }
-    const result = (await sendBrowserRequest(
+    const settled = await sendBrowserRequest(
       async (rpc, page, options) =>
         browserNavigate.interpret(await browserNavigate.request(rpc, { ...page, url }, options)),
       { showBusy: true, timeoutMs: 30_000 }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
-    )) as { url?: string } | null
+    )
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+    const result = settled as { url?: string } | null
     if (typeof result?.url === 'string') {
       setAddressValue(displayBrowserUrl(result.url))
       lastZoomResetUrlRef.current = result.url

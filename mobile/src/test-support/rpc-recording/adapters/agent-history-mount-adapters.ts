@@ -72,13 +72,14 @@ export function agentHistoryMountAdapters(
       let worktreesLoaded = true
       let renderer: ReactTestRenderer | undefined
       function Harness() {
-        observed.history = useHistory({
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook and its scope derivation read only these three worktree fields.
+        const params = {
           hostId: HOST_ID,
           worktreeId: WORKTREE_ID,
           worktrees: WORKTREES,
           worktreesLoaded
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook and its scope derivation read only these three worktree fields.
-        } as unknown as Parameters<typeof useHistory>[0])
+        } as unknown as Parameters<typeof useHistory>[0]
+        observed.history = useHistory(params)
         return null
       }
       const element = () =>

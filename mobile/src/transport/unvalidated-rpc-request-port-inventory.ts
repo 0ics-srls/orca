@@ -53,9 +53,9 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'app/terminal-settings.tsx', references: 3 },
 
   // src/agent-history/ — agent history loads
+  // Holdout: the last reach is a worktree.ps inside the screen component's own effect, which no
+  // recording can mount without a fabricated react-native view tree.
   { file: 'src/agent-history/MobileAgentSessionHistoryPanel.tsx', references: 1 },
-
-  // src/browser/ — hosted browser control
 
   // src/components/ — shared widgets that fetch their own data
   { file: 'src/components/codex-reset-credit-capability.ts', references: 2 },
@@ -64,8 +64,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/components/use-new-workspace-repositories.ts', references: 1 },
   { file: 'src/components/use-new-workspace-runtime-context.ts', references: 3 },
   { file: 'src/components/use-new-workspace-setup-script.ts', references: 1 },
-
-  // src/dictation/ — dictation session control
 
   // src/files/ — file read, write and preview
   { file: 'src/files/mobile-file-mutation-ownership.ts', references: 3 },
@@ -77,8 +75,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // src/home/ — home screen host reads
   { file: 'src/home/mobile-home-host-requests.ts', references: 5 },
 
-  // src/hooks/ — cross-screen data hooks
-
   // src/host-screen/ — host screen catalog and actions
   { file: 'src/host-screen/host-screen-overlays.tsx', references: 1 },
   { file: 'src/host-screen/use-host-repo-metadata.ts', references: 1 },
@@ -86,7 +82,11 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/host-screen/use-host-worktree-actions.ts', references: 3 },
 
   // src/notifications/ — push registration and delivery
+  // Holdout: the unsubscribe is a closure inside a `subscribe` callback, and subscriptions are a
+  // later step; the request-only recording runner refuses to open one.
   { file: 'src/notifications/mobile-notifications.ts', references: 1 },
+  // Holdout: the send is gated behind the OS notification tray and the keychain host catalog, and
+  // faking either would record a fiction of device state rather than of the wire.
   { file: 'src/notifications/push-dismissal-reconciliation.ts', references: 2 },
 
   // src/session/ — session screen: chat, diff review, PR actions, tabs
@@ -138,8 +138,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/session/use-mobile-terminal-paste.ts', references: 1 },
   { file: 'src/session/use-quick-commands.ts', references: 2 },
 
-  // src/settings/ — settings screen actions
-
   // src/settings/ — notification display probe
   { file: 'src/settings/notification-display-test.tsx', references: 1 },
 
@@ -185,8 +183,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/tasks/use-mobile-tasks-task-create-actions.tsx', references: 3 },
   { file: 'src/tasks/use-mobile-tasks-task-list-loading.tsx', references: 4 },
   { file: 'src/tasks/use-mobile-tasks-task-pagination-actions.tsx', references: 1 },
-
-  // src/terminal/ — terminal input, viewport and queries
 
   // src/transport/ — pairing, endpoint probing and capability reads
   { file: 'src/transport/host-status-gates.ts', references: 1 },
