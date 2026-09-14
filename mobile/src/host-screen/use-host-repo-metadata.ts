@@ -2,6 +2,7 @@ import { optionalSettingsRead } from '../transport/settings-read-operations'
 import { useCallback } from 'react'
 import { getRepoExecutionHostId } from '../../../src/shared/execution-host'
 import { setCachedRepos } from '../cache/repo-cache'
+import type { RpcAcceptedResult } from '../transport/rpc-accepted-result'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState, RpcResponse } from '../transport/types'
 import type { RepoSummary } from '../worktree/host-worktree-rpc-types'
@@ -33,7 +34,7 @@ async function settledMetadataReply(send: () => Promise<RpcResponse>): Promise<R
 /** An accepted metadata payload, or null for a refusal or a send that never landed. */
 function acceptedMetadata(
   reply: RpcResponse | null,
-  interpret: (reply: RpcResponse) => ReturnType<typeof hostRepoCatalogRead.interpret>
+  interpret: (reply: RpcResponse) => RpcAcceptedResult<unknown>
 ): unknown {
   if (!reply) {
     return null

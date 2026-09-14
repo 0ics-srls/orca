@@ -1,4 +1,5 @@
 import { classifyMobileArtifact } from '../session/mobile-artifact-kind'
+import type { RpcAcceptedResult } from '../transport/rpc-accepted-result'
 import type { RpcFailure, RpcResponse } from '../transport/types'
 import {
   filePreviewImageRead,
@@ -127,7 +128,7 @@ async function sendMobileFilePreviewRead(
 
 function settlePreviewSend(
   reply: RpcResponse,
-  interpret: (reply: RpcResponse) => ReturnType<typeof filePreviewTextRead.interpret>
+  interpret: (reply: RpcResponse) => RpcAcceptedResult<unknown>
 ): MobileFilePreviewOutcome {
   const verdict = interpret(reply)
   return verdict.accepted
