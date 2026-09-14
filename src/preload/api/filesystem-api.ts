@@ -17,6 +17,7 @@ import type {
   LocalLogTailWatchArgs
 } from '../../shared/local-log-tail-types'
 import type { SshMutationExpectation } from '../../shared/ssh-types'
+import type { RuntimeUploadFileStreamRequest } from '../../shared/runtime-upload-staging-contract'
 
 export type ExportApi = {
   htmlToPdf: (args: {
@@ -143,6 +144,9 @@ export type FilesystemApi = {
     stageExternalPathsForRuntimeUpload: (args: {
       sourcePaths: string[]
     }) => Promise<{ sources: StagedExternalImportSource[] }>
+    uploadExternalFileToRuntime: (
+      args: RuntimeUploadFileStreamRequest
+    ) => Promise<{ byteLength: number }>
     resolveDroppedPathsForAgent: (
       args: {
         paths: string[]

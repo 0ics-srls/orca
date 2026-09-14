@@ -113,7 +113,16 @@ export async function importExternalPathsToRuntime(
           importSession,
           context.worktreeId,
           entryRelativePath,
-          entry.contentBase64,
+          {
+            sourceRootPath: source.sourcePath,
+            entryRelativePath: entry.relativePath,
+            expected: {
+              byteLength: entry.byteLength,
+              inode: entry.inode,
+              deviceId: entry.deviceId,
+              modifiedAtMs: entry.modifiedAtMs
+            }
+          },
           context.expectedSshConnectionGeneration,
           context.expectedSshTargetId,
           context.expectedExecutionHostId ??

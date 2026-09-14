@@ -1,6 +1,7 @@
 import type { PathExistenceResult } from '../../shared/path-existence-batch'
 import { ipcRenderer } from 'electron'
 import type { SshMutationExpectation } from '../../shared/ssh-types'
+import type { RuntimeUploadFileStreamRequest } from '../../shared/runtime-upload-staging-contract'
 import type { SearchResult } from '../../shared/code-search-types'
 import type { FsChangedPayload } from '../../shared/filesystem-entry-types'
 import type {
@@ -161,6 +162,9 @@ export const fsApi = {
     sourcePaths: string[]
   }): Promise<{ sources: StagedExternalImportSource[] }> =>
     ipcRenderer.invoke('fs:stageExternalPathsForRuntimeUpload', args),
+  uploadExternalFileToRuntime: (
+    args: RuntimeUploadFileStreamRequest
+  ): Promise<{ byteLength: number }> => ipcRenderer.invoke('fs:uploadExternalFileToRuntime', args),
   resolveDroppedPathsForAgent: (
     args: {
       paths: string[]
