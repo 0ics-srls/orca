@@ -61,8 +61,17 @@ export function reserveAgentSessionOwner(args: {
   reservation: AgentSessionReservation
 }): { record: AgentSessionRecord; disposition: 'reserved' | 'retry-reservation' } {
   const { record, reservation } = args
+  // A released legacy settlement latch no longer speaks for an owner. Clear its stage
+  // only as part of the winning reservation; the settlement hint still follows it.
+  const reservable =
+    record.lease.settlementRetryRequired &&
+    record.lease.claimStatus === 'released' &&
+    record.lease.ownerProcess === null &&
+    record.lease.handoffStage === 'recovering'
+      ? withLease(record, { ...record.lease, handoffStage: null })
+      : record
   const decision = evaluateAgentSessionAcquisition({
-    lease: record.lease,
+    lease: reservable.lease,
     expectedFence: args.expectedFence,
     handoffOperationId: reservation.handoffOperationId,
     probe: args.probe
@@ -75,8 +84,8 @@ export function reserveAgentSessionOwner(args: {
   }
   return {
     disposition: 'reserved',
-    record: withLease(record, {
-      ...record.lease,
+    record: withLease(reservable, {
+      ...reservable.lease,
       runtimeKind: reservation.runtimeKind,
       runtimeFence: decision.nextFence,
       // Why: a reserved owner is not yet a writer; it may only talk to the provider to prove resume.

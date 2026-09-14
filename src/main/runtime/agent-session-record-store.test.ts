@@ -683,7 +683,7 @@ describe('restart reconciliation', () => {
     })
   })
 
-  it('derives a pre-migration settlement boundary before reserving a replacement', async () => {
+  it('reserves through a childless legacy recovery latch in one transition', async () => {
     const store = await open()
     await establishOwner(store)
     await releaseStoredAgentSessionOwnerAfterSurfaceClose(store, {
@@ -694,7 +694,7 @@ describe('restart reconciliation', () => {
     })
     await store.transitionHandoff('session-alpha', (record) => ({
       ...record,
-      lease: { ...record.lease, settlementRetryFence: undefined }
+      lease: { ...record.lease, handoffStage: 'recovering', settlementRetryFence: undefined }
     }))
     const reserved = await store.reserveOwner(
       reserveRequest({
@@ -705,8 +705,15 @@ describe('restart reconciliation', () => {
     )
     expect(reserved.record.lease).toMatchObject({
       runtimeFence: 3,
+      handoffStage: 'new-owner-proving',
       settlementRetryFence: 1,
       settlementRetryId: 'legacy-exit'
+    })
+    const reopened = await open()
+    expect(reopened.getRecord('session-alpha')?.lease).toMatchObject({
+      runtimeFence: 3,
+      handoffStage: 'new-owner-proving',
+      settlementRetryFence: 1
     })
   })
 

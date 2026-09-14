@@ -55,28 +55,6 @@ export function attachStructuredAgentSession(
     if (unreconciled) {
       return refuseAgentSessionMutation(unreconciled)
     }
-    const latched = context.deps.store.getRecord(sessionId)
-    if (
-      latched?.lease.settlementRetryRequired &&
-      latched.lease.claimStatus === 'released' &&
-      latched.lease.ownerProcess === null &&
-      latched.lease.handoffStage === 'recovering'
-    ) {
-      // Old records used recovery stage as a journal-write gate. The owner is already gone;
-      // retain the hint, but never let bookkeeping refuse the next user action.
-      await context.deps.store.transitionHandoff(sessionId, (latest) => ({
-        ...latest,
-        lease: {
-          ...latest.lease,
-          handoffStage:
-            latest.lease.settlementRetryRequired &&
-            latest.lease.claimStatus === 'released' &&
-            latest.lease.ownerProcess === null
-              ? null
-              : latest.lease.handoffStage
-        }
-      }))
-    }
     await context.runtimeState.resolveRecovery(sessionId)
     // A death hint is read before reservation clears it. Bookkeeping never gates attach or send.
     const previousLease = context.deps.store.getRecord(sessionId)?.lease
