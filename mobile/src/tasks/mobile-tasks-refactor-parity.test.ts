@@ -24,9 +24,9 @@ const hash = (parts: string[] | string): string =>
 // `rpc:` call signatures, 75 method literals over 58 methods, and three duplicated discriminant
 // comparisons that only existed because one `sendRequest` had to pick both a method and a matching
 // params shape from the same `item.source.type` test.
-const PROVIDER_RPC_SCREEN_HOOKS = '525b72ae5fbc061edd5afb45c2b6f6295c9db459f650a4679722f0841ae6612c'
+const PROVIDER_RPC_SCREEN_HOOKS = '25cf6820b26eb40e6c7afe8769206aa37a52d45b154458bc07ce106db82ebc59'
 const PRE_REFACTOR_DIFF_HOOKS = '93c7189b32bed8456cc51814fffa8ce80cf62011ef968a9d53ddec2b9686f58f'
-const PROVIDER_RPC_STATEMENTS = '19230b9cd4aae8c2a45ba7a893d0f95561ab4edb6d4f2596000157b58d3fef51'
+const PROVIDER_RPC_STATEMENTS = '6a28ee202f8fa399ab014aa8f687b914039abb8d4bc1b8a2eb8bd803104e7c63'
 const MAIN_REBASED_DECLARATIONS = '6ad0397123e59fc1047a14049c86ff31d81723673a7a7f5c41677471aec58415'
 const PROVIDER_RPC_SEMANTICS = '3d9fa237c5a2aa471004dd745cfb76ffe1600a351058e3d4ea08185421175301'
 const PRE_REFACTOR_STYLES = '1db6af69c791d9963928541ad5310942fcbda6d984b422c90b6eb92b6816579a'
