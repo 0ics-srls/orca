@@ -144,7 +144,7 @@ describe('legacy agent-status adapter', () => {
     expect(adapter.view.get('immutable')?.payload.prompt).toBe('work')
   })
 
-  it('assigns listing order once per live row and preserves it across refresh and move', () => {
+  it('preserves Map insertion order across refresh, explicit reorder and relocation', () => {
     let nextOrder = 40
     const adapter = createAgentStatusLegacyAdapter({ nextListingOrder: () => nextOrder++ })
     adapter.admit('main-status-update', AGENT_STATUS_2A_CURRENT_PRODUCER_MODE, status('pane'))
@@ -153,12 +153,18 @@ describe('legacy agent-status adapter', () => {
     adapter.admit(
       'main-status-update',
       AGENT_STATUS_2A_CURRENT_PRODUCER_MODE,
+      status('pane', 'ordinary refresh')
+    )
+    expect(adapter.listingOrder('pane')).toBe(40)
+    adapter.admit(
+      'main-status-update',
+      AGENT_STATUS_2A_CURRENT_PRODUCER_MODE,
       status('pane', 'refresh'),
       { moveToEnd: true }
     )
-    expect(adapter.listingOrder('pane')).toBe(40)
+    expect(adapter.listingOrder('pane')).toBe(41)
     adapter.move('pane', 'moved-pane')
-    expect(adapter.listingOrder('moved-pane')).toBe(40)
+    expect(adapter.listingOrder('moved-pane')).toBe(42)
 
     adapter.delete('moved-pane')
     adapter.admit(
@@ -166,6 +172,6 @@ describe('legacy agent-status adapter', () => {
       AGENT_STATUS_2A_CURRENT_PRODUCER_MODE,
       status('moved-pane', 'new lifecycle')
     )
-    expect(adapter.listingOrder('moved-pane')).toBe(41)
+    expect(adapter.listingOrder('moved-pane')).toBe(43)
   })
 })
