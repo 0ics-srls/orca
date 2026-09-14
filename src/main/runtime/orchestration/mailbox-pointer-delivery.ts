@@ -39,7 +39,11 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
     }
     try {
       const leaf = this.deps.getLiveLeafForHandle(terminalHandle)
-      if (leaf.lastAgentStatus !== 'idle' || !leaf.lastAgentStatusObservedLive) {
+      if (
+        leaf.lastAgentStatus !== 'idle' ||
+        !leaf.lastAgentStatusObservedLive ||
+        !this.deps.isAgentSettledForDelivery(leaf)
+      ) {
         return
       }
       const mailboxHandle = this.deps.mailboxOwner.resolve(leaf, handle)
@@ -226,7 +230,8 @@ export class OrchestrationMailboxPointerDelivery<TWaiter extends OrchestrationMe
     if (
       currentLeaf?.ptyId === ptyId &&
       currentLeaf.lastAgentStatus === 'idle' &&
-      currentLeaf.lastAgentStatusObservedLive
+      currentLeaf.lastAgentStatusObservedLive &&
+      this.deps.isAgentSettledForDelivery(currentLeaf)
     ) {
       this.deliver(currentLeaf, { mailboxHandle, skipAbsenceProbe: true })
     }

@@ -138,7 +138,11 @@ export class OrcaRuntimeWithApplyTrackedPtyTitle extends OrcaRuntimeWithGetUnper
       // an agent whose first live title is already idle (claude --resume at its
       // prompt) then shows no transition — the row would strand, which is
       // exactly #12536. Waiter semantics stay transition-only above.
-      if (agentStatus === 'idle' && (prevStatus !== 'idle' || !prevObservedLive)) {
+      if (
+        agentStatus === 'idle' &&
+        (prevStatus !== 'idle' || !prevObservedLive) &&
+        this.isAgentSettledForDelivery(leaf)
+      ) {
         this.deliverPendingMessagesForLeaf(leaf)
       }
     }

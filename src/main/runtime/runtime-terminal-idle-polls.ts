@@ -17,6 +17,16 @@ import {
   type FirstPartyAgentStatus
 } from './tui-idle-evidence'
 import type { TuiAgent } from '../../shared/tui-agent'
+
+/**
+ * Why null counts as quiet: a record with no output timestamp has produced nothing since
+ * it was created, which is the quietest a pane can be. Reading it as `0ms since output`
+ * inverted that — `0 >= quiescenceMs` is false forever, so an adopted pane that never
+ * emitted could not settle no matter how long the caller waited.
+ */
+function isQuietForQuiescence(lastOutputAt: number | null, quiescenceMs: number): boolean {
+  return lastOutputAt === null ? true : Date.now() - lastOutputAt >= quiescenceMs
+}
 import type { TerminalWaiter } from './runtime-terminal-contracts'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 
@@ -141,7 +151,7 @@ export class RuntimeTerminalIdlePolls {
         if (
           foreground &&
           !isShellProcess(foreground) &&
-          (live.lastOutputAt ? Date.now() - live.lastOutputAt : 0) >= this.deps.quiescenceMs
+          isQuietForQuiescence(live.lastOutputAt, this.deps.quiescenceMs)
         ) {
           this.stop(entry)
           this.deps.resolve(waiter, buildTerminalWaitResult(waiter.handle, 'tui-idle', live))
@@ -206,7 +216,7 @@ export class RuntimeTerminalIdlePolls {
         if (
           foreground &&
           !isShellProcess(foreground) &&
-          (pty.lastOutputAt ? Date.now() - pty.lastOutputAt : 0) >= this.deps.quiescenceMs
+          isQuietForQuiescence(pty.lastOutputAt, this.deps.quiescenceMs)
         ) {
           this.stop(entry)
           this.deps.resolve(waiter, buildPtyTerminalWaitResult(waiter.handle, 'tui-idle', pty))

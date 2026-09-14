@@ -117,6 +117,20 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     })
   }
 
+  /**
+   * Whether this pane is settled enough to TYPE INTO.
+   *
+   * Why the same ranking as the wait path: mailbox delivery writes the pointer plus Enter
+   * into the pane, so acting on a name-only `Codex` title mid-turn injects keystrokes into
+   * a running agent's session. That is the #6011 mis-settlement in a path with a worse
+   * failure mode than a racing script. Liveness stays a separate requirement — callers
+   * keep their own `lastAgentStatusObservedLive` checks.
+   */
+  protected isAgentSettledForDelivery(leaf: { tabId: string; leafId: string }): boolean {
+    const live = this.leaves.get(this.getLeafKey(leaf.tabId, leaf.leafId))
+    return live ? this.isTuiIdleSatisfiedForLeaf(live) : false
+  }
+
   protected isTuiIdleSatisfiedForPty(pty: RuntimePtyWorktreeRecord): boolean {
     return isTuiIdleSatisfied({
       record: pty,
