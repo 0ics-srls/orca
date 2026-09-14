@@ -12,6 +12,9 @@ describe('generated status input redaction', () => {
   it.each([
     '/home/test/.ssh/id_rsa:raw',
     'cat .ssh/id_rsa',
+    'cd .ssh&&cat id_rsa',
+    'cat .mcp-secrets.env; printf done',
+    'cat .omp-backups-archive/omp-bak-keyfile|base64',
     'cat <.ssh/id_rsa',
     'curl --key=.ssh/id_rsa',
     'cat <.omp-backups-archive/omp-bak-keyfile',
