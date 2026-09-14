@@ -3,8 +3,13 @@ import type { Store } from '../persistence'
 import { isWindowlessLaunch, showWindowWithoutStealingFocus } from './foreground-activation-policy'
 import { MIN_HEIGHT, MIN_WIDTH, syncTrafficLightPosition } from './main-window-visual-lifecycle'
 
+/** Last-resort reveal when no first frame ever arrives. */
+export const INITIAL_REVEAL_FALLBACK_MS = 10_000
+
 export type MainWindowStateLifecycle = {
   clearInitialRevealFallbackTimer: () => void
+  /** Reveal the startup window now, for callers that learn no first frame is coming. */
+  revealInitialWindow: () => void
   dispose: () => void
   freezeBoundsOnQuit: () => void
   isWindowClosing: () => boolean
@@ -29,14 +34,14 @@ export function installMainWindowStateLifecycle(args: {
 
   // Why: macOS+Electron 41 re-emits ready-to-show on webview-guest creation; a one-shot guard stops re-running maximize() after resize (#591).
   let handledInitialReadyToShow = false
-  let initialRevealFallbackTimer: ReturnType<typeof setTimeout> | null =
-    process.platform === 'win32' || process.platform === 'linux'
-      ? setTimeout(() => {
-          // Why: GPU/driver failures on Windows/Linux can prevent ready-to-show forever, hiding the only app window (#8421).
-          initialRevealFallbackTimer = null
-          revealInitialWindow()
-        }, 10_000)
-      : null
+  // Why every platform: ready-to-show needs a first frame, so a renderer or GPU process that dies
+  // before painting never fires it and leaves the only app window hidden forever (#8421). macOS was
+  // excluded until the darwin SIGTRAP-at-startup cluster (fa0a6033/8468e3ec) showed the same shape:
+  // GPU, network service and renderer all trap ~200-750ms after window creation, before first paint.
+  let initialRevealFallbackTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
+    initialRevealFallbackTimer = null
+    revealInitialWindow()
+  }, INITIAL_REVEAL_FALLBACK_MS)
   initialRevealFallbackTimer?.unref?.()
 
   const clearInitialRevealFallbackTimer = (): void => {
@@ -61,10 +66,21 @@ export function installMainWindowStateLifecycle(args: {
     if (isWindowlessLaunch()) {
       return
     }
-    if (savedMaximized) {
-      mainWindow.maximize()
+    // Why: also runs from render-process-gone, where maximize()'s 'window:maximize-changed' send hits
+    // a dead renderer — a throw here must not abort the caller's crash recording, and must leave the
+    // next reveal signal free to retry rather than latching the window hidden forever.
+    try {
+      if (savedMaximized) {
+        mainWindow.maximize()
+      }
+      showWindowWithoutStealingFocus(mainWindow)
+    } catch (error) {
+      handledInitialReadyToShow = false
+      console.warn(
+        '[window] Startup window reveal failed; retrying on the next reveal signal',
+        error
+      )
     }
-    showWindowWithoutStealingFocus(mainWindow)
   }
   mainWindow.on('ready-to-show', revealInitialWindow)
   if (revealOnDidFinishLoad === true) {
@@ -148,6 +164,7 @@ export function installMainWindowStateLifecycle(args: {
   }
   return {
     clearInitialRevealFallbackTimer,
+    revealInitialWindow,
     dispose: () => app.removeListener('before-quit', freezeBoundsOnQuit),
     freezeBoundsOnQuit,
     isWindowClosing: () => windowClosing,

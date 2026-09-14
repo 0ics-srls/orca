@@ -204,16 +204,90 @@ describe('createMainWindow', () => {
     })
   })
 
-  it('does not install the startup reveal fallback on macOS', () => {
+  // Field: darwin SIGTRAP-at-startup (reports fa0a6033 / 8468e3ec, one machine, 9 launches in 77 min).
+  // GPU, network service and renderer all trap 195-738ms after main_window_created, before any paint,
+  // so ready-to-show never fires and macOS had no fallback: the app ran with no window at all.
+  it('reveals the startup window on macOS when ready-to-show never fires', () => {
     vi.useFakeTimers()
     const { browserWindowInstance } = createStartupRevealWindowFixture()
 
     withPlatform('darwin', () => {
       createMainWindow(null)
-      vi.advanceTimersByTime(10_000)
+      vi.advanceTimersByTime(9_999)
+      expect(browserWindowInstance.show).not.toHaveBeenCalled()
+
+      vi.advanceTimersByTime(1)
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // The fallback timer is not enough on its own: in fa0a6033 the main thread wedged ~5.5s after the
+  // window was created, before the 10s timer could run. The death itself is the signal.
+  it('reveals the startup window as soon as the renderer dies before first paint', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+
+    withPlatform('darwin', () => {
+      createMainWindow(null)
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
+
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  // Project rule: an automated/background launch must never be forced on screen. The pre-paint
+  // death reveal is a second entry point into revealInitialWindow and has to honour it too.
+  it('keeps an explicit background launch hidden when the renderer dies before first paint', () => {
+    vi.stubEnv('ORCA_BACKGROUND_LAUNCH', '1')
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    const showInactive = vi.fn()
+    Object.assign(browserWindowInstance, { showInactive })
+
+    withPlatform('darwin', () => {
+      createMainWindow(createStartupRevealStore(true) as never)
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
 
       expect(browserWindowInstance.show).not.toHaveBeenCalled()
+      expect(showInactive).not.toHaveBeenCalled()
       expect(browserWindowInstance.maximize).not.toHaveBeenCalled()
+    })
+  })
+
+  // The reveal is best-effort UI; the crash record and the recovery reload behind it are not.
+  it('still records the crash and schedules recovery when the pre-paint reveal throws', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+    browserWindowInstance.show.mockImplementation(() => {
+      throw new Error('NSWindow orderFront failed')
+    })
+    const onRendererProcessGone = vi.fn()
+
+    withPlatform('darwin', () => {
+      createMainWindow(null, { onRendererProcessGone })
+      const loadsBefore = browserWindowInstance.loadFile.mock.calls.length
+      windowHandlers['render-process-gone']({}, { reason: 'crashed', exitCode: 5 })
+
+      expect(onRendererProcessGone).toHaveBeenCalledTimes(1)
+      vi.advanceTimersByTime(250)
+      expect(browserWindowInstance.loadFile.mock.calls.length).toBeGreaterThan(loadsBefore)
+
+      // A failed reveal must not latch the window hidden: the recovered load gets another chance.
+      browserWindowInstance.show.mockImplementation(() => undefined)
+      windowHandlers['ready-to-show']()
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(2)
+    })
+  })
+
+  it('cancels the macOS startup reveal fallback after ready-to-show', () => {
+    vi.useFakeTimers()
+    const { browserWindowInstance, windowHandlers } = createStartupRevealWindowFixture()
+
+    withPlatform('darwin', () => {
+      createMainWindow(null)
+      windowHandlers['ready-to-show']()
+      vi.advanceTimersByTime(10_000)
+
+      expect(browserWindowInstance.show).toHaveBeenCalledTimes(1)
     })
   })
 
