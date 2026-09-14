@@ -12,21 +12,26 @@
 // non-breaking spaces into plain ones, so spaces are the whole alphabet here.
 const LEADING_SPACES = /^ */
 
-function measureIndent(line: string): number {
-  return LEADING_SPACES.exec(line)?.[0].length ?? 0
-}
+type SelectionLine = { indent: number; text: string; terminator: string }
 
 // xterm joins rows with CRLF on Windows, so split('\n') leaves the CR behind.
-function splitTerminator(rawLine: string): readonly [text: string, terminator: string] {
-  return rawLine.endsWith('\r') ? [rawLine.slice(0, -1), '\r'] : [rawLine, '']
+// It has to travel with the line: without it a blank CRLF row looks like a
+// zero-indent content row and would cancel the gutter on Windows only.
+function parseLine(rawLine: string): SelectionLine {
+  const carriageReturn = rawLine.endsWith('\r')
+  const text = carriageReturn ? rawLine.slice(0, -1) : rawLine
+  return {
+    indent: LEADING_SPACES.exec(text)?.[0].length ?? 0,
+    text,
+    terminator: carriageReturn ? '\r' : ''
+  }
 }
 
-function measureGutter(lines: readonly string[]): number {
+function measureGutter(lines: readonly SelectionLine[]): number {
   let gutter = Number.POSITIVE_INFINITY
-  for (const line of lines) {
-    const indent = measureIndent(line)
+  for (const { indent, text } of lines) {
     // Blank and whitespace-only lines are evidence of nothing either way.
-    if (indent === line.length) {
+    if (indent === text.length) {
       continue
     }
     gutter = Math.min(gutter, indent)
@@ -38,12 +43,12 @@ function measureGutter(lines: readonly string[]): number {
 }
 
 export function stripTerminalSelectionGutter(selection: string): string {
-  const lines = selection.split('\n').map(splitTerminator)
-  const gutter = measureGutter(lines.map(([text]) => text))
+  const lines = selection.split('\n').map(parseLine)
+  const gutter = measureGutter(lines)
   if (gutter === 0) {
     return selection
   }
   return lines
-    .map(([text, terminator]) => text.slice(Math.min(measureIndent(text), gutter)) + terminator)
+    .map(({ indent, text, terminator }) => text.slice(Math.min(indent, gutter)) + terminator)
     .join('\n')
 }

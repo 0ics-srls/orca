@@ -65,6 +65,21 @@ describe('stripTerminalSelectionGutter', () => {
     expect(stripTerminalSelectionGutter('  first\r\n  second\r\n')).toBe('first\r\nsecond\r\n')
   })
 
+  // Regression: a blank CRLF row is '\r', which reads as a zero-indent content
+  // row unless the CR is split off first — that would cancel the gutter on
+  // Windows only.
+  it('still finds the gutter across a blank CRLF row', () => {
+    expect(stripTerminalSelectionGutter('  first\r\n\r\n  second\r\n')).toBe(
+      'first\r\n\r\nsecond\r\n'
+    )
+  })
+
+  it('leaves wide characters and emoji in the content alone', () => {
+    expect(
+      stripTerminalSelectionGutter(['  変更を適用しました 🎉', '  お疲れさま'].join('\n'))
+    ).toBe(['変更を適用しました 🎉', 'お疲れさま'].join('\n'))
+  })
+
   it('does not strip past a shorter line', () => {
     const uneven = ['    deep', '  shallow'].join('\n')
     expect(stripTerminalSelectionGutter(uneven)).toBe(['  deep', 'shallow'].join('\n'))
