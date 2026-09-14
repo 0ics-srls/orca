@@ -10,6 +10,7 @@ import { requireSshGitProvider } from '../../../providers/ssh-git-dispatch'
 import { resolveWorktreeRemovalMetadata } from '../../../worktree-removal-repo-owner'
 import { isPrunableGitFileWorktree } from '../../../worktree-prunable-git-file'
 import { findRegisteredDeletableWorktree } from '../../../worktree-removal-safety'
+import { resolveWorktreeRemovalHomeForConnection } from '../../../worktree-removal-execution-host-route'
 import { removeStaleLocalWorktreeRegistration } from '../../../local-worktree-removal-recovery'
 import { runHook } from '../../../hooks'
 import { withWorktreeRemoveStageSpan } from '../../../observability/instrumentation'
@@ -57,7 +58,8 @@ export async function executeWorktreeRemoval(
   const registeredWorktree = findRegisteredDeletableWorktree(
     repo.path,
     worktreePath,
-    registeredWorktrees
+    registeredWorktrees,
+    resolveWorktreeRemovalHomeForConnection(repo.connectionId)
   )
   if (!registeredWorktree) {
     return removeUnregisteredWorktree(

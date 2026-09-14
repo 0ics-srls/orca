@@ -10,7 +10,10 @@ import { preservedBranchCleanupScopeKey } from '../../shared/preserved-branch-cl
 import { getRuntimeWorktreeRemovalOptionsKey } from './runtime-worktree-selection'
 import { withWorktreeSpan } from '../observability/instrumentation'
 import { invalidateAuthorizedRootsCache } from '../ipc/filesystem-auth'
-import { resolveWorktreeRemovalRoute } from '../worktree-removal-execution-host-route'
+import {
+  resolveWorktreeRemovalHome,
+  resolveWorktreeRemovalRoute
+} from '../worktree-removal-execution-host-route'
 import { getLocalProjectWorktreeGitOptions } from '../project-runtime-git-options'
 import { listWorktreesStrict } from '../git/worktree'
 import { isPrunableGitFileWorktree } from '../worktree-prunable-git-file'
@@ -99,10 +102,12 @@ export class OrcaRuntimeWithRemoveManagedWorktree extends OrcaRuntimeWithCreateM
           removalHostId
         )
         const removedPushTarget = removedMeta?.pushTarget ?? removalTarget.pushTarget
+        const removalHome = resolveWorktreeRemovalHome(route)
         const registeredWorktree = findRegisteredDeletableWorktree(
           repo.path,
           removalTarget.path,
-          registeredWorktrees
+          registeredWorktrees,
+          removalHome
         )
         if (!registeredWorktree) {
           return removeRuntimeUnregisteredWorktree({
