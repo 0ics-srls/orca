@@ -4,7 +4,7 @@ import { isWindowlessLaunch, showWindowWithoutStealingFocus } from './foreground
 import { MIN_HEIGHT, MIN_WIDTH, syncTrafficLightPosition } from './main-window-visual-lifecycle'
 
 /** Last-resort reveal when no first frame ever arrives. */
-export const INITIAL_REVEAL_FALLBACK_MS = 10_000
+const INITIAL_REVEAL_FALLBACK_MS = 10_000
 
 export type MainWindowStateLifecycle = {
   clearInitialRevealFallbackTimer: () => void
@@ -38,11 +38,15 @@ export function installMainWindowStateLifecycle(args: {
   // before painting never fires it and leaves the only app window hidden forever (#8421). macOS was
   // excluded until the darwin SIGTRAP-at-startup cluster (fa0a6033/8468e3ec) showed the same shape:
   // GPU, network service and renderer all trap ~200-750ms after window creation, before first paint.
-  let initialRevealFallbackTimer: ReturnType<typeof setTimeout> | null = setTimeout(() => {
-    initialRevealFallbackTimer = null
-    revealInitialWindow()
-  }, INITIAL_REVEAL_FALLBACK_MS)
-  initialRevealFallbackTimer?.unref?.()
+  let initialRevealFallbackTimer: ReturnType<typeof setTimeout> | null = null
+  const armInitialRevealFallbackTimer = (): void => {
+    initialRevealFallbackTimer = setTimeout(() => {
+      initialRevealFallbackTimer = null
+      revealInitialWindow()
+    }, INITIAL_REVEAL_FALLBACK_MS)
+    initialRevealFallbackTimer.unref?.()
+  }
+  armInitialRevealFallbackTimer()
 
   const clearInitialRevealFallbackTimer = (): void => {
     if (initialRevealFallbackTimer) {
@@ -66,16 +70,23 @@ export function installMainWindowStateLifecycle(args: {
     if (isWindowlessLaunch()) {
       return
     }
-    // Why: also runs from render-process-gone, where maximize()'s 'window:maximize-changed' send hits
-    // a dead renderer — a throw here must not abort the caller's crash recording, and must leave the
-    // next reveal signal free to retry rather than latching the window hidden forever.
-    try {
-      if (savedMaximized) {
+    // Why separate from the show below: restoring maximized geometry is optional, and it runs renderer
+    // notifications that can throw on a dead frame. A failed restore must never cost the reveal.
+    if (savedMaximized) {
+      try {
         mainWindow.maximize()
+      } catch (error) {
+        console.warn('[window] Startup maximize failed; revealing unmaximized', error)
       }
+    }
+    // Why re-arm rather than just unlatch: this also runs from render-process-gone, and the fallback
+    // timer was already spent above. Without re-arming, a throw here leaves no reveal signal at all in
+    // exactly the no-first-frame case this exists for.
+    try {
       showWindowWithoutStealingFocus(mainWindow)
     } catch (error) {
       handledInitialReadyToShow = false
+      armInitialRevealFallbackTimer()
       console.warn(
         '[window] Startup window reveal failed; retrying on the next reveal signal',
         error
@@ -129,18 +140,32 @@ export function installMainWindowStateLifecycle(args: {
   }
   app.on('before-quit', freezeBoundsOnQuit)
 
+  // Why: maximize() is reachable from the pre-paint reveal path, where the renderer is already gone;
+  // an unguarded send throws out of maximize() and would starve the reveal that called it.
+  const sendMaximizeChanged = (maximized: boolean): void => {
+    const contents = mainWindow.webContents
+    if (contents.isDestroyed() || contents.isCrashed?.() === true) {
+      return
+    }
+    try {
+      contents.send('window:maximize-changed', maximized)
+    } catch (error) {
+      console.warn('[window] Skipped maximize notification for an unavailable frame', error)
+    }
+  }
+
   mainWindow.on('maximize', () => {
     if (windowClosing) {
       return
     }
     store?.updateUI({ windowMaximized: true })
-    mainWindow.webContents.send('window:maximize-changed', true)
+    sendMaximizeChanged(true)
   })
   mainWindow.on('unmaximize', () => {
     if (windowClosing) {
       return
     }
-    mainWindow.webContents.send('window:maximize-changed', false)
+    sendMaximizeChanged(false)
     const bounds = mainWindow.getBounds()
     // Why: mirror the saveBounds guard — unmaximize during teardown can land at min size; don't persist that as remembered size.
     if (bounds.width <= MIN_WIDTH || bounds.height <= MIN_HEIGHT) {

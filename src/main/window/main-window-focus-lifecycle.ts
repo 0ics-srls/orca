@@ -226,7 +226,7 @@ export function installMainWindowFocusLifecycle(args: {
     // ready-to-show, and the recovery prompt is a sheet inside this window. Waiting the full fallback
     // lost the window entirely when the main thread wedged first (fa0a6033: wedged ~2s after the last
     // reload, ~4s before the timer would have run).
-    if (!isWindowClosing()) {
+    if (!isWindowClosing() && opts?.getIsQuitting?.() !== true) {
       revealInitialWindow()
     }
     retireBrowserClientPageRenderer(rendererWebContents)

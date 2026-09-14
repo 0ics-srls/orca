@@ -28,6 +28,7 @@ function harness(overrides: Partial<RendererRecoveryPromptDeps> & { responses?: 
   const quit = vi.fn()
   const deps: RendererRecoveryPromptDeps = {
     recentRecoveryCount: 4,
+    revealSurface: () => {},
     isQuitting: () => false,
     diagnose: () => null,
     showMessageBox: async (options: MessageBoxOptions): Promise<MessageBoxReturnValue> => {
