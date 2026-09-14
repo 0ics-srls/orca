@@ -61,10 +61,10 @@ visible, it does not make the reduction itself observable.
 
 Each file records `runnerVersion`, `baseline`, `lockfileSha256` (mobile's lockfile),
 `recorderSha256`, `adapterSha256`, `scenarioSha256`, `platform`, `scenarioVersion`,
-`projectionVersion`,
-`goldenFormatVersion`, `operation`, `family`, and `namedDeltas`. `platform` and `lockfileSha256`
-are provenance and are not compared: a dependency or OS that changes behaviour changes the trace
-itself, so comparing them would only fail candidates on unrelated bumps. The rest are pinned.
+`projectionVersion`, `goldenFormatVersion`, `operation`, `family`, and `namedDeltas`. `platform`
+and `lockfileSha256` are provenance and are not compared: a dependency or OS that changes
+behaviour changes the trace itself, so comparing them would only fail candidates on unrelated
+bumps. The rest are pinned.
 
 `recorderSha256` covers every non-markdown file under this directory **except `adapters/`**, so the
 engine that produced a golden is as pinned as the product baseline: editing the runner, the
@@ -243,13 +243,12 @@ ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 pnpm --dir mobile exec tsx scri
 ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile test src/test-support/rpc-recording
 ```
 
-Mutants are the defect evidence. `mutants/operation-mutations.ts` holds one anchored
-source edit per adapter family, and every family's recording must change visible state when its
-mutant is applied,
-which is what shows that family's `state()` projection observes the operation's real output.
-Anchors are asserted to match exactly one site, because a repeated anchor would half-apply while
-still counting as applied. Mutants replace the expression in memory, then run the same real hook.
-`runRecordingMutant` accepts a mutated mounting adapter, scheduler, baseline and optional
+Mutants are the defect evidence. `mutants/operation-mutations.ts` holds one anchored source edit
+per adapter family, and every family's recording must change visible state when its mutant is
+applied, which is what shows that family's `state()` projection observes the operation's real
+output. Anchors are asserted to match exactly one site, because a repeated anchor would half-apply
+while still counting as applied. Mutants replace the expression in memory, then run the same real
+hook. `runRecordingMutant` accepts a mutated mounting adapter, scheduler, baseline and optional
 observation projection, and returns `{verdict: "killed" | "survived", recording}`. Every mutant
 test requires the mutation to apply exactly once and change visible state to count as killed.
 
@@ -288,10 +287,10 @@ It is not a substitute for reading the diff. Three facts bound it, all learned t
   reply kills it on five matrix goldens. The lesson is about the skip, not about that call site: a
   generator that opts a family out without failing is indistinguishable from coverage.
 
-`mutants/probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole
-and the closure
-together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
-must still survive it. A probe that stops being load-bearing fails instead of lingering.
+`mutants/probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the
+hole and the closure together: each probe must kill its mutation _and_ every pre-probe scenario of
+the same operation must still survive it. A probe that stops being load-bearing fails instead of
+lingering.
 
 What is still not covered: what the count-based raw-port inventory covers instead (which files
 reach `sendRequest`, and how often), native storage, transport skew, the `subscribe`/
@@ -349,9 +348,8 @@ and they re-record from its own branch like any other behaviour change. Adding a
 a suite that does not record needs none of it either, and moves no golden at all.
 
 If your call site carries a mutation anchor in `mutants/operation-mutations.ts`, rewriting it will
-make the
-anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:
-#20499 broke five anchors that way, and each one had a new home.
+make the anchor match zero sites. Re-anchor the same defect at its new home rather than deleting
+the mutant: #20499 broke five anchors that way, and each one had a new home.
 
 `live-probe/` holds the runtime companion: `mock-desktop-settings-reply-modes.patch` teaches the
 mock desktop server to answer `settings.get` with a refusal, `method_not_found`, a null or absent
