@@ -141,6 +141,9 @@ export function taskItemDetailMountAdapters(
   return {
     'tasks.item-detail-github': itemDetail(GITHUB_PR_ITEM),
     'tasks.item-detail-gitlab': itemDetail(GITLAB_ISSUE_ITEM),
+    // The Linear arm with its issue leg answered. The b3 seed refuses that leg, so its matrix
+    // never reaches the comment leg's acceptance: the issue error is raised first either way.
+    'tasks.item-detail-linear': itemDetail(LINEAR_ITEM),
     'tasks.item-detail-metadata': itemMetadata,
     'tasks.linear-team-context': linearTeamContext
   }

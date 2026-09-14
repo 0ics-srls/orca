@@ -6843,6 +6843,75 @@
       ]
     },
     {
+      "id": "tk-item-detail-linear",
+      "operation": "tasks.item-detail-linear",
+      "version": 1,
+      "family": "tasks.item-detail-linear",
+      "sites": ["mobile/src/tasks/use-mobile-tasks-item-detail-loading.tsx"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "complete": "linear.getIssue#1",
+          "params": {
+            "id": "issue-1",
+            "workspaceId": "linear-workspace"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "id": "issue-2",
+              "identifier": "ENG-2",
+              "title": "A sub-issue",
+              "url": "",
+              "description": "a description",
+              "state": {
+                "name": "Todo",
+                "type": "unstarted",
+                "color": "#000"
+              },
+              "team": {
+                "id": "team-1",
+                "key": "ENG",
+                "name": "Engineering"
+              },
+              "labels": [],
+              "priority": 0,
+              "updatedAt": "2020-01-01T00:00:00.000Z",
+              "workspaceId": "linear-workspace",
+              "subIssues": []
+            }
+          }
+        },
+        {
+          "complete": "linear.issueComments#1",
+          "params": {
+            "issueId": "issue-1",
+            "workspaceId": "linear-workspace"
+          },
+          "reply": {
+            "ok": true,
+            "result": [
+              {
+                "id": "comment-1",
+                "body": "a comment",
+                "createdAt": "2020-01-01T00:00:00.000Z",
+                "user": {
+                  "displayName": "Octo"
+                }
+              }
+            ]
+          }
+        },
+        {
+          "checkpoint": "mounted"
+        }
+      ]
+    },
+    {
       "id": "tk-item-detail-metadata",
       "operation": "tasks.item-detail-metadata",
       "version": 1,
