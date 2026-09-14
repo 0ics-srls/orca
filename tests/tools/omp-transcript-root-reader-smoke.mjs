@@ -21,8 +21,9 @@ for (const key of [
   'PI_PROFILE',
   'PI_CONFIG_DIR',
   'PI_CONFIG_FILES'
-])
+]) {
   delete process.env[key]
+}
 const source = (root, file) => pathToFileURL(join(resolve(root), file)).href
 const managers = []
 try {
@@ -74,6 +75,8 @@ try {
   }
   console.log(JSON.stringify({ results, modelCalls: 0, legacyDirectoryCoexists: true }))
 } finally {
-  for (const manager of managers) await manager.close()
+  for (const manager of managers) {
+    await manager.close()
+  }
   await rm(scratch, { recursive: true, force: true })
 }
