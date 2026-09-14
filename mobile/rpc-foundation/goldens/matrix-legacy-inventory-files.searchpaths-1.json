@@ -5,12 +5,13 @@
   "runnerVersion": 1,
   "baseline": "e53f1557e1b5a6e26e85cfca390b34f7f8a7d26c",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "58a461dbc99f5ce803aaec650e72eaa2934fccd405e56b77932286f05742ec6b",
+  "recorderSha256": "73183719c23e091af918dcf78612ee71be429ace87aa528fba2cc65fa82fd6d6",
+  "adapterSha256": "262eaad263a45aa13ec5b27c12b59946b12c202474229fff7a5727dba6d702ca",
   "scenarioSha256": "4f6472fb7add960be9bcc8596a748264d7cb0755a782ebe9e85753ab1d1d5710",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 5,
   "values": {
     "003a57e2bf31": {
       "files": ["alpha.ts"]

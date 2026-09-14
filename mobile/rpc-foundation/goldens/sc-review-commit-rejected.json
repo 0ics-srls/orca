@@ -5,12 +5,13 @@
   "runnerVersion": 1,
   "baseline": "e53f1557e1b5a6e26e85cfca390b34f7f8a7d26c",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "58a461dbc99f5ce803aaec650e72eaa2934fccd405e56b77932286f05742ec6b",
+  "recorderSha256": "73183719c23e091af918dcf78612ee71be429ace87aa528fba2cc65fa82fd6d6",
+  "adapterSha256": "c582ce355b0704b38d7e84cbce352630096c91231bf09aecd1f6dbb409fed17f",
   "scenarioSha256": "de079de9cc21bfb40da6e1431273b10c3e2a5b5402b91b2b8a85c8d7ac41bc97",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 5,
   "values": {
     "01bab795ab1e": {
       "name": "git.commit#1",
