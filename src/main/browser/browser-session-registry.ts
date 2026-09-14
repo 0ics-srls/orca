@@ -38,7 +38,7 @@ import { retireProxySessionApplication } from '../network/proxy-settings'
 import { invalidateBrowserSessionProxyApplication } from './browser-session-proxy'
 import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
 import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
-import { getCanonicalUserDataPath } from '../persistence'
+import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { recordRetiredNativeBrowserProfiles } from './browser-identity-mode-record'
 
 export type BrowserSessionRegistryProfileOptions = {
@@ -115,8 +115,11 @@ class BrowserSessionRegistry {
       this.activeOrcaProfileId
     )
     // Record the notice first so a metadata-write failure cannot erase the user's retired choice.
-    recordRetiredNativeBrowserProfiles(getCanonicalUserDataPath(), migration.nativeProfileIds)
-    if (migration.changed) {
+    const noticePersisted = recordRetiredNativeBrowserProfiles(
+      getCanonicalUserDataPath(),
+      migration.nativeProfileIds
+    )
+    if (migration.changed && noticePersisted) {
       this.persistMeta({ profiles: migration.profiles })
     }
     if (meta.defaultSource) {

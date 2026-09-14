@@ -22,6 +22,12 @@ import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 export const BROWSER_IDENTITY_MODE_FILE = 'browser-identity-mode.json'
 export const BROWSER_IDENTITY_MODE_VERSION = 1
 
+let browserIdentityPersistenceFailure: string | null = null
+
+export function getBrowserIdentityPersistenceFailure(): string | null {
+  return browserIdentityPersistenceFailure
+}
+
 export type BrowserIdentityModeRecord = {
   version: typeof BROWSER_IDENTITY_MODE_VERSION
   mode: BrowserUserAgentMode
@@ -74,30 +80,53 @@ export function writeBrowserIdentityModeRecord(
   )
 }
 
+function persistBrowserIdentityOperation(
+  userDataPath: string,
+  record: BrowserIdentityModeRecord,
+  operation: string
+): boolean {
+  try {
+    writeBrowserIdentityModeRecord(userDataPath, record)
+    browserIdentityPersistenceFailure = null
+    return true
+  } catch (error) {
+    browserIdentityPersistenceFailure = error instanceof Error ? error.message : String(error)
+    console.error(
+      `[browser-identity] Could not persist ${operation}:`,
+      browserIdentityPersistenceFailure
+    )
+    return false
+  }
+}
+
 export function updateBrowserIdentityMode(userDataPath: string, mode: BrowserUserAgentMode): void {
   const current = readBrowserIdentityModeRecord(userDataPath)
   if (current.mode === mode) {
     return
   }
-  writeBrowserIdentityModeRecord(userDataPath, { ...current, mode })
+  persistBrowserIdentityOperation(userDataPath, { ...current, mode }, 'process identity mode')
 }
 
 export function recordRetiredNativeBrowserProfiles(
   userDataPath: string,
   profileIds: readonly string[]
-): void {
+): boolean {
   if (profileIds.length === 0) {
-    return
+    return true
   }
   const current = readBrowserIdentityModeRecord(userDataPath)
   const migratedNativeProfileIds = [
     ...new Set([...(current.migratedNativeProfileIds ?? []), ...profileIds])
   ]
-  writeBrowserIdentityModeRecord(userDataPath, {
-    ...current,
-    migratedNativeProfileIds,
-    migrationNoticePending: true
-  })
+  return persistBrowserIdentityOperation(
+    userDataPath,
+    {
+      ...current,
+      migratedNativeProfileIds,
+      migrationNoticePending: true
+    },
+    'retired profile notice'
+  )
 }
 
 export function readPendingBrowserIdentityMigrationNotice(userDataPath: string): string[] | null {

@@ -40,14 +40,20 @@ export function migrateRetiredBrowserSessionProfileUserAgentModes(
   profiles: BrowserSessionProfile[],
   activeOrcaProfileId: string
 ): { profiles: BrowserSessionProfile[]; nativeProfileIds: string[]; changed: boolean } {
-  const nativeProfileIds = profiles
+  // Why: JSON arrays may contain scalars or null even though the persisted type says profiles.
+  const inspectableProfiles = profiles.filter(
+    (profile) => profile !== null && typeof profile === 'object'
+  )
+  const nativeProfileIds = inspectableProfiles
     .filter((profile) => isValidPersistedBrowserSessionProfile(profile, activeOrcaProfileId))
     .filter((profile) => Reflect.get(profile, 'userAgentMode') === 'native')
     .map((profile) => profile.id)
   return {
-    profiles: profiles.map(withoutRetiredUserAgentMode),
+    profiles: inspectableProfiles.map(withoutRetiredUserAgentMode),
     nativeProfileIds,
-    changed: profiles.some(hasRetiredUserAgentMode)
+    changed:
+      inspectableProfiles.length !== profiles.length ||
+      inspectableProfiles.some(hasRetiredUserAgentMode)
   }
 }
 
