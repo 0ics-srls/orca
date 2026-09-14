@@ -4,11 +4,13 @@ import {
   MAX_CODEX_PROMPT_JOURNAL_BINDINGS,
   MAX_CODEX_PROMPT_REGISTRY_BYTES,
   MAX_CODEX_PROMPT_REGISTRY_ENTRIES,
+  codexPromptMatchesTurn,
+  codexPromptRegistryEntryBytes,
+  codexPromptTurnIdentity,
   codexJournalPromptIdPart,
   readQuestionIds,
   readQuestionOptionAnswers
 } from './codex-prompt-registry-bounds'
-import { digestPayload } from '../native-chat/agent-session-journal/journal-payload-bounds'
 export {
   codexJournalPromptIdPart,
   MAX_CODEX_PROMPT_REGISTRY_ENTRIES,
@@ -112,22 +114,7 @@ export class CodexPromptRegistry {
   }
 
   private promptBytes(prompt: CodexPendingPrompt): number {
-    let bytes = 0
-    for (const value of [prompt.threadId, prompt.codexItemId, prompt.promptKey]) {
-      bytes += Buffer.byteLength(value, 'utf8')
-    }
-    const turnId = prompt.turnId ?? prompt.turnIdDigest
-    bytes += turnId ? Buffer.byteLength(turnId, 'utf8') : 512
-    for (const id of prompt.questionIds) {
-      bytes += Buffer.byteLength(id, 'utf8')
-    }
-    for (const entry of prompt.optionAnswers.values()) {
-      bytes += Buffer.byteLength(entry.questionId, 'utf8') + Buffer.byteLength(entry.answer, 'utf8')
-    }
-    for (const value of prompt.answers.values()) {
-      bytes += Buffer.byteLength(value, 'utf8')
-    }
-    return bytes
+    return codexPromptRegistryEntryBytes(prompt)
   }
 
   private retainedPromptBytes(): number {
@@ -239,11 +226,7 @@ export class CodexPromptRegistry {
       return
     }
     if (prompt.turnId === null && prompt.turnIdDigest === undefined && turnId) {
-      if (Buffer.byteLength(turnId, 'utf8') <= 512) {
-        prompt.turnId = turnId
-      } else {
-        prompt.turnIdDigest = digestPayload(turnId)
-      }
+      Object.assign(prompt, codexPromptTurnIdentity(turnId))
     }
     this.journalItemIds.set(journalItemId, address)
     this.boundPrompts.set(journalItemId, prompt)
@@ -278,12 +261,9 @@ export class CodexPromptRegistry {
 
   /** Drops requests that belonged to a turn which the provider has settled. */
   clearTurn(threadId: string, turnId: string): void {
-    const turnIdDigest = digestPayload(turnId)
     const prompts = new Set(
       [...this.byAddress.values(), ...this.boundPrompts.values()].filter(
-        (prompt) =>
-          prompt.threadId === threadId &&
-          (prompt.turnId === turnId || prompt.turnIdDigest === turnIdDigest)
+        (prompt) => prompt.threadId === threadId && codexPromptMatchesTurn(prompt, turnId)
       )
     )
     for (const prompt of prompts) {
