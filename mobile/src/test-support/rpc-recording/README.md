@@ -163,8 +163,11 @@ recorded success is the shipped null result; and `settings.update`, a best-effor
 body no call site reads.
 
 Detached unhandled rejections are captured as effects in a sequential process-scoped window,
-with prior process listeners restored afterward. This preserves the known main bug recorded
-as `new-workspace-runtime-context-null-settings-typeerror`; it does not repair the effect.
+with prior process listeners restored afterward. The settings leg of the known main bug it first
+recorded is fixed: `new-workspace-runtime-context-null-settings-degrades-to-absent` now records a
+null or absent `settings.get` result degrading the way a reply with no `settings` member does. The
+`ui.get` leg of the same hook is not fixed, and `matrix-settings.workspace-context-ui.get-1` still
+records its `reading 'ui'` TypeError as an effect.
 Task-model projections record setter invocations and resulting model values, not native UI.
 
 ## Commands and checker contract
