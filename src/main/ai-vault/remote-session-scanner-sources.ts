@@ -17,7 +17,6 @@ import { parseHermesSessionContent } from './session-scanner-hermes-parser'
 import { partitionSubagentTranscriptPaths } from './session-scanner-subagent-transcripts'
 import { partitionOmpSubagentTranscriptPaths } from './session-scanner-omp-subagent-transcripts'
 import type { FileWithMtime } from './session-scanner-types'
-import { normalizeAgentSessionsDir } from './session-scanner-values'
 import { remoteCodexIndexedTitleReader } from './remote-session-scanner-codex-index'
 import { remoteClineSource } from './remote-session-scanner-cline-source'
 import type {
@@ -98,12 +97,18 @@ export function remoteSessionSources(
       ['.json'],
       parseDevinSessionContent
     ),
-    jsonlSource('pi', remoteHome, hostPlatform, remotePiSessionsSegments(), piParser),
+    jsonlSource('pi', remoteHome, hostPlatform, ['.pi', 'agent', 'sessions'], piParser),
     ...(ompSessionsDir === ''
       ? []
       : [
           {
-            ...jsonlSource('omp', remoteHome, hostPlatform, remoteOmpSessionsSegments(), ompParser),
+            ...jsonlSource(
+              'omp',
+              remoteHome,
+              hostPlatform,
+              ['.omp', 'agent', 'sessions'],
+              ompParser
+            ),
             ...(ompSessionsDir === undefined ? {} : { rootDir: ompSessionsDir }),
             partitionSubagentTranscripts: partitionOmpSubagentTranscriptPaths
           }
@@ -312,14 +317,6 @@ function openClawParser(
 
 function remotePathSegments(path: string): string[] {
   return path.replace(/\\/g, '/').split('/').filter(Boolean)
-}
-
-function remotePiSessionsSegments(): string[] {
-  return normalizeAgentSessionsDir('/.pi/agent/sessions', '.pi').split('/').filter(Boolean)
-}
-
-function remoteOmpSessionsSegments(): string[] {
-  return normalizeAgentSessionsDir('/.omp/agent/sessions', '.omp').split('/').filter(Boolean)
 }
 
 // Why: remote roots are posix regardless of the client platform, so these stay literal
