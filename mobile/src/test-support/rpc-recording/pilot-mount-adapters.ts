@@ -1,6 +1,6 @@
 import { MOUNTED_OPERATION_MODULES } from './adapters/mounted-operation-modules'
 import { operationModuleLoader, type OperationMutation } from './operation-module-loader'
-import type { MountedOperationModule, MountOptions } from './mounted-operation-module'
+import type { MountOptions } from './mounted-operation-module'
 import type { MountAdapter } from './recording-scenario'
 
 /**
@@ -14,10 +14,9 @@ import type { MountAdapter } from './recording-scenario'
  */
 export function pilotMountAdapters(
   root: string,
-  options: MountOptions & { mutation?: OperationMutation } = {},
-  registered: readonly MountedOperationModule[] = MOUNTED_OPERATION_MODULES
+  options: MountOptions & { mutation?: OperationMutation } = {}
 ) {
-  const loaders = registered.map((module) => ({
+  const loaders = MOUNTED_OPERATION_MODULES.map((module) => ({
     module,
     modules: operationModuleLoader(root, options.mutation, module.exposes ?? [])
   }))
