@@ -26,7 +26,10 @@ import {
 } from './mobile-relay-physical-client'
 import { createRecoveringPairingRelayCandidate } from './pairing-relay-candidate'
 import type { HostProfile } from './types'
-import { requireRpcResultOrThrowCodedError } from './rpc-acceptance-policies'
+import {
+  relayCredentialProvision,
+  relayPairingEndpointsRead
+} from './mobile-relay-pairing-operations'
 
 export type MobileRelayPairingRecoveryResult = 'none' | 'recovered' | 'deferred' | 'abandoned'
 
@@ -129,8 +132,8 @@ async function runRecovery(
       if (credential.kind === 'invite' && endpoints.installStatus?.state === 'not-found') {
         journal = await transitionToInviteAuthorization(journal, dependencies)
         const installed = DeviceCredentialInstalledSchema.parse(
-          requireRpcResultOrThrowCodedError(
-            await client.sendRequest('pairing.provisionRelay', {
+          relayCredentialProvision.interpret(
+            await relayCredentialProvision.request(client, {
               reqId: journal.metadata.installReqId,
               newResumeTokenHash: journal.metadata.pendingResumeTokenHash
             })
@@ -221,8 +224,8 @@ async function getRecoveryStatus(
   kind: 'resume' | 'invite'
 ) {
   return PairingGetEndpointsResultSchema.parse(
-    requireRpcResultOrThrowCodedError(
-      await client.sendRequest('pairing.getEndpoints', {
+    relayPairingEndpointsRead.interpret(
+      await relayPairingEndpointsRead.request(client, {
         installReqId: journal.metadata.installReqId,
         ...(kind === 'resume' ? { resumeConfirmReqId: journal.metadata.resumeConfirmReqId } : {})
       })

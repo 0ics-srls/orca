@@ -8,10 +8,11 @@ import {
 import { connect, type ConnectOptions } from './rpc-client'
 import { resolvePairingHostIdentity, saveHost } from './host-store'
 import type { HostProfile, PairingOffer } from './types'
+import { isMethodNotFoundRefusal } from './rpc-acceptance-policies'
 import {
-  isMethodNotFoundRefusal,
-  requireRpcResultOrThrowCodedError
-} from './rpc-acceptance-policies'
+  relayCredentialProvision,
+  relayPairingEndpointsRead
+} from './mobile-relay-pairing-operations'
 import {
   createMobileRelayPairingJournal,
   type MobileRelayPairingJournal
@@ -219,7 +220,7 @@ async function runPairing(
     }
   }
   await dependencies.updateJournal(journal.metadata.journalId, () => journal!.metadata)
-  const provision = await winner.client.sendRequest('pairing.provisionRelay', {
+  const provision = await relayCredentialProvision.request(winner.client, {
     reqId: journal.metadata.installReqId,
     newResumeTokenHash: journal.metadata.pendingResumeTokenHash
   })
@@ -232,11 +233,11 @@ async function runPairing(
     return { hostId }
   }
   const installed = DeviceCredentialInstalledSchema.parse(
-    requireRpcResultOrThrowCodedError(provision)
+    relayCredentialProvision.interpret(provision)
   )
   const endpoints = PairingGetEndpointsResultSchema.parse(
-    requireRpcResultOrThrowCodedError(
-      await winner.client.sendRequest('pairing.getEndpoints', {
+    relayPairingEndpointsRead.interpret(
+      await relayPairingEndpointsRead.request(winner.client, {
         installReqId: journal.metadata.installReqId
       })
     )

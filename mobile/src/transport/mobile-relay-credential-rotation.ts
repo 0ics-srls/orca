@@ -10,6 +10,10 @@ import {
   type MobileRelayCredentialBundle
 } from './mobile-relay-credential-bundle'
 import { hashMobileRelayCredential } from './mobile-relay-credential-hash'
+import {
+  relayCredentialProvision,
+  relayPairingEndpointsRead
+} from './mobile-relay-pairing-operations'
 import type { RpcClient } from './rpc-client'
 
 const CREDENTIAL_ROTATION_WINDOW_MS = 7 * 24 * 60 * 60 * 1000
@@ -48,15 +52,15 @@ export async function rotateMobileRelayCredential(args: {
   }
   let endpoints = await getEndpoints(args.client, pending.reqId)
   if (endpoints.installStatus?.state !== 'committed') {
-    const response = await args.client.sendRequest('pairing.provisionRelay', {
-      reqId: pending.reqId,
-      newResumeTokenHash: pending.hash,
-      expectedCurrentHash: bundle.current.hash
-    })
-    if (!response.ok) {
-      throw new Error(`${response.error.code}: ${response.error.message}`)
-    }
-    const installed = DeviceCredentialInstalledSchema.parse(response.result)
+    const installed = DeviceCredentialInstalledSchema.parse(
+      relayCredentialProvision.interpret(
+        await relayCredentialProvision.request(args.client, {
+          reqId: pending.reqId,
+          newResumeTokenHash: pending.hash,
+          expectedCurrentHash: bundle.current.hash
+        })
+      )
+    )
     endpoints = await getEndpoints(args.client, pending.reqId)
     if (
       endpoints.installStatus?.state !== 'committed' ||
@@ -163,11 +167,11 @@ export async function persistResumeConfirmation(args: {
 }
 
 async function getEndpoints(client: RpcClient, installReqId: string) {
-  const response = await client.sendRequest('pairing.getEndpoints', { installReqId })
-  if (!response.ok) {
-    throw new Error(`${response.error.code}: ${response.error.message}`)
-  }
-  return PairingGetEndpointsResultSchema.parse(response.result)
+  return PairingGetEndpointsResultSchema.parse(
+    relayPairingEndpointsRead.interpret(
+      await relayPairingEndpointsRead.request(client, { installReqId })
+    )
+  )
 }
 
 function encodeBase64Url(value: Uint8Array): string {
