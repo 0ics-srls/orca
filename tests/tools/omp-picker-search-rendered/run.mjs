@@ -46,7 +46,9 @@ try {
   })
   const baseline = process.env.ORCA_OMP_PICKER_BASELINE === '1'
   const fixtureUrl = pathToFileURL(path.join(output, 'renderer/index.html'))
-  if (baseline) fixtureUrl.searchParams.set('baseline', '1')
+  if (baseline) {
+    fixtureUrl.searchParams.set('baseline', '1')
+  }
   await page.goto(fixtureUrl.href)
   await page.locator('button[role=combobox]').click()
   const search = page.getByPlaceholder('Search agents...')
