@@ -188,13 +188,12 @@ export function renderSessionHistorySettingsSection(
       title={translate('sessionHistory.settings.title', 'Agent Session History')}
       description={translate(
         'sessionHistory.settings.description',
-        'Manage session search on this computer. These settings do not enable indexing on SSH or paired hosts.'
+        'Each computer keeps its own index of the transcripts it owns. Turn on indexing here for this computer and for any paired Orca server.'
       )}
       searchEntries={navigation.getSectionSearchEntries('session-history')}
     >
       {view.isSectionMounted('session-history') ? (
         <SessionHistorySettingsPane
-          key={JSON.stringify(model.settings.aiVaultSearch)}
           settings={model.settings}
           updateSettings={model.updateSettingsOrThrow}
         />
