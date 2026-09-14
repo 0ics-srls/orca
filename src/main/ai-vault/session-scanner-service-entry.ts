@@ -46,7 +46,13 @@ function titleKey(request: { agent: string; sessionId: string }): string {
 
 async function executeRequest(request: AiVaultServiceRequest): Promise<AiVaultServiceResultValue> {
   if (sessionSearch.handles(request)) {
-    return sessionSearch.execute(request)
+    try {
+      return await sessionSearch.execute(request)
+    } finally {
+      // A search registers no controller, so nothing else consumes a cancel sent
+      // for one; without this the id sits in the set for the process's life.
+      cancelled.delete(request.id)
+    }
   }
   const controller = new AbortController()
   controllers.set(request.id, controller)

@@ -90,9 +90,7 @@ export class AiVaultScannerServiceClient {
       return
     }
     this.idleRetirement.clear()
-    void this.ensureChild().catch((error: unknown) => {
-      this.options.onStderr?.(`session search child unavailable: ${aiVaultServiceErrorText(error)}`)
-    })
+    this.startSessionSearchChild()
   }
 
   clearRestartCircuit(): void {
@@ -155,7 +153,23 @@ export class AiVaultScannerServiceClient {
         }
       )
     }
+    this.startSessionSearchChild()
     this.scheduleIdleIfNeeded()
+  }
+
+  /**
+   * The index's own restart. A child indexing for the hold has no queued call to
+   * bring it back, so without this a fault stops the indexing until an unrelated
+   * request happens to arrive. The restart delay and circuit bound it, exactly as
+   * they bound a queued call's start.
+   */
+  private startSessionSearchChild(): void {
+    if (this.disposed || !this.sessionSearch.holdsChild || this.child || this.readyWaiter) {
+      return
+    }
+    void this.ensureChild().catch((error: unknown) => {
+      this.options.onStderr?.(`session search child unavailable: ${aiVaultServiceErrorText(error)}`)
+    })
   }
 
   private sendCall(child: ChildProcess, call: AiVaultServicePendingCall): void {

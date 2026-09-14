@@ -1,6 +1,10 @@
 import type { OrcadOptions } from './orcad-entry'
 
-/** orcad's flags. A `--`-prefixed value stays a flag, so `--bind --json` is a missing value. */
+/**
+ * orcad's flags. A value-taking flag consumes the next token whatever it looks
+ * like, so `--bind --json` binds to the literal `--json`; only a missing token
+ * is an error. Pinned by orcad-launch-contract.test.ts.
+ */
 export function parseArgs(argv: string[]): OrcadOptions {
   const options: OrcadOptions = {}
   for (let i = 0; i < argv.length; i += 1) {

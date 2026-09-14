@@ -1,11 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { AiVaultScannerServiceClient } from './session-scanner-service-client'
 import { AI_VAULT_SERVICE_READY_TIMEOUT_MS } from './session-scanner-service-client-state'
+import type { AiVaultSessionSearchInit } from './session-scanner-service-protocol'
 import {
   AiVaultServiceTestChild,
   aiVaultServiceRequestId,
   readyAiVaultServiceChild
 } from './session-scanner-service-test-child'
+
+const SESSION_SEARCH_ON: AiVaultSessionSearchInit = {
+  databasePath: '/data/ai-vault/session-search.sqlite',
+  settings: { enabled: true, historyDays: null },
+  roots: {}
+}
+
+/** Every fork the client makes, so a respawn can be told from the first start. */
+function setupChildren(policy: () => AiVaultSessionSearchInit | null): {
+  children: AiVaultServiceTestChild[]
+  client: AiVaultScannerServiceClient
+} {
+  const children: AiVaultServiceTestChild[] = []
+  const client = new AiVaultScannerServiceClient({
+    processFactory: () => {
+      const child = new AiVaultServiceTestChild(12_345 + children.length)
+      children.push(child)
+      return child.asChildProcess()
+    },
+    init: () => ({ sessionParseCache: null, sessionSearch: policy() })
+  })
+  return { children, client }
+}
 
 function setup(idleTimeoutMs?: number): {
   child: AiVaultServiceTestChild
@@ -458,6 +482,50 @@ describe('AiVaultScannerServiceClient', () => {
     for (const respawned of children.slice(1)) {
       expect(respawned.sent[0]).toMatchObject({ sessionSearch: { settings: { enabled: true } } })
     }
+    client.dispose()
+  })
+
+  // The hold is the only thing keeping this child alive, so nothing else will
+  // restart it: without its own restart, an idle indexing child that crashes
+  // leaves the index stopped until some unrelated request happens to arrive.
+  it('restarts a child that faulted while the index was holding it', async () => {
+    vi.useFakeTimers()
+    const { children, client } = setupChildren(() => SESSION_SEARCH_ON)
+    client.updateSessionSearch(SESSION_SEARCH_ON)
+    readyAiVaultServiceChild(children[0]!)
+    await Promise.resolve()
+
+    // No queued call and no outstanding invalidation: an idle child simply dies.
+    children[0]!.emit('error', new Error('crashed'))
+    expect(children).toHaveLength(1)
+    vi.advanceTimersByTime(250)
+
+    expect(children).toHaveLength(2)
+    expect(children[1]!.sent[0]).toMatchObject({
+      type: 'init',
+      sessionSearch: { settings: { enabled: true } }
+    })
+    client.dispose()
+  })
+
+  it('leaves a faulted idle child dead while the index is off', async () => {
+    vi.useFakeTimers()
+    const { children, client } = setupChildren(() => null)
+    const titles = client.request({ type: 'request', operation: 'titles', requests: [] })
+    readyAiVaultServiceChild(children[0]!)
+    await Promise.resolve()
+    children[0]!.emit('message', {
+      type: 'result',
+      id: aiVaultServiceRequestId(children[0]!, 'titles'),
+      operation: 'titles',
+      value: { titles: [] }
+    })
+    await titles
+
+    children[0]!.emit('error', new Error('crashed'))
+    vi.advanceTimersByTime(5_000)
+
+    expect(children).toHaveLength(1)
     client.dispose()
   })
 
