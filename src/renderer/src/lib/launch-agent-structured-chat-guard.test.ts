@@ -49,6 +49,7 @@ const store = {
     experimentalNativeChat: true,
     experimentalStructuredNativeChat: true,
     openAgentTabsInChatByDefault: true,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture deliberately covers both configured-shell and omitted-shell states.
     terminalWindowsShell: undefined as string | undefined,
     nativeChatSessionOptions: undefined as
       | Record<

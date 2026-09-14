@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the tested flow reads only pendingWorktreeCreations from this store fixture.
   state: { pendingWorktreeCreations: { 'creation-1': {} } } as Record<string, unknown>,
   listener: null as ((state: { pendingWorktreeCreations: Record<string, unknown> }) => void) | null,
   unsubscribe: vi.fn(),
@@ -155,6 +156,7 @@ describe('launchStructuredWorktreeSession', () => {
     })
     const result = launchStructuredWorktreeSession(args())
     mocks.state = { pendingWorktreeCreations: {} }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the listener contract reads only pendingWorktreeCreations from this fixture.
     mocks.listener?.(mocks.state as { pendingWorktreeCreations: Record<string, unknown> })
     await expect(result).resolves.toMatchObject({ cancelled: true })
     expect(signal?.aborted).toBe(true)

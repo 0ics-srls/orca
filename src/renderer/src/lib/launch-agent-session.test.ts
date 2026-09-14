@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
   activateStructuredAgentSessionById: vi.fn(),
   closeStructuredAgentSession: vi.fn(),
   callRuntimeRpc: vi.fn(),
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the launcher reads only unifiedTabsByWorktree from this store fixture.
   state: { unifiedTabsByWorktree: {} } as Record<string, unknown>
 }))
 
@@ -99,6 +100,7 @@ describe('launchAgentSession', () => {
 
   it('uses a caller-planned route and targets the created workspace', async () => {
     const launch = vi.fn().mockResolvedValue({ kind: 'structured', sessionId: 'session-1' })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this plan double implements the route and launch members exercised by the test.
     const launchPlan = { route: 'structured-native-chat', launch } as never
 
     await expect(launchAgentSession({ ...request, launchPlan })).resolves.toMatchObject({

@@ -14,6 +14,7 @@ vi.mock('@/lib/launch-agent-session', () => ({
 
 import { revealOnboardingFolderWithAgentLaunch } from './onboarding-folder-agent-launch'
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the launcher mock reads only route, agent, and launch from this plan fixture.
 const structuredPlan = {
   route: 'structured-native-chat',
   agent: 'codex',
@@ -35,6 +36,7 @@ describe('revealOnboardingFolderWithAgentLaunch', () => {
       launch: {
         agent: 'codex',
         plan: structuredPlan,
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mocked launcher treats this value as an opaque startup payload.
         fallbackStartup: { command: 'codex', launchAgent: 'codex' } as never
       }
     })

@@ -202,6 +202,7 @@ export async function launchAgentSession(
         if (!viaRefusal) {
           await retireCancelledStructuredSession(request.workspaceId, settlement.sessionId)
         }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fallback hook is the only writer, and this read occurs after plan.launch settles.
         const fallbackState = fallback as TerminalLaunchResult | null
         const fallbackTabId = fallbackState?.tabId ?? null
         const fallbackRan = fallbackState !== null
