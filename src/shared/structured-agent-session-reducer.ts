@@ -45,7 +45,6 @@ export type StructuredAgentSessionAction =
   | { type: 'error'; message: string }
   | { type: 'handoff'; handoff: AgentSessionHandoffStatus }
   | { type: 'event'; event: AgentSessionSubscribeEvent }
-  | { type: 'tail-page'; page: AgentSessionHistoryPage }
   | { type: 'older-page'; requestedCursor: AgentJournalCursor; page: AgentSessionHistoryPage }
 
 const MAX_RETAINED_SUBMISSIONS = 256
@@ -165,59 +164,6 @@ export function reduceStructuredAgentSession(
   if (action.type === 'handoff') {
     return { ...state, handoff: action.handoff }
   }
-  if (action.type === 'tail-page') {
-    const pageCursor = action.page.liveCursor ?? action.page.window.newest
-    // An equal cursor means the page holds nothing the stream has not already
-    // delivered; replacing would throw away paged-in older items mid-scroll.
-    if (
-      state.epoch === action.page.epoch &&
-      state.cursor &&
-      (!pageCursor || pageCursor.sequence <= state.cursor.sequence)
-    ) {
-      const backgroundTasksChanged =
-        action.page.backgroundTasks !== undefined &&
-        !backgroundTaskStatesEqual(action.page.backgroundTasks, state.backgroundTasks)
-      if (
-        pageCursor?.sequence === state.cursor.sequence &&
-        ((action.page.fence !== undefined && action.page.fence !== state.fence) ||
-          backgroundTasksChanged)
-      ) {
-        return {
-          ...state,
-          ...(action.page.fence !== undefined ? { fence: action.page.fence } : {}),
-          ...(action.page.backgroundTasks !== undefined
-            ? { backgroundTasks: action.page.backgroundTasks }
-            : {}),
-          ...hostClockField(action.page.hostNow, receivedAt, state.hostClock),
-          status: 'ready',
-          error: undefined
-        }
-      }
-      return state
-    }
-    const sameEpoch = state.epoch === action.page.epoch
-    return {
-      epoch: action.page.epoch,
-      cursor: action.page.liveCursor ?? null,
-      fence: action.page.fence ?? null,
-      items: action.page.items,
-      submissions: sameEpoch
-        ? mergeSubmissions(state.submissions, action.page.submissions, action.page.items)
-        : action.page.submissions,
-      retainedItemLimit: Math.max(MAX_RETAINED_ITEMS, action.page.items.length),
-      hasOlder: action.page.hasOlder,
-      status: 'ready',
-      handoff: state.handoff,
-      ...(sameEpoch ? { commands: state.commands } : {}),
-      ...(sameEpoch && state.activity !== undefined ? { activity: state.activity } : {}),
-      ...(action.page.backgroundTasks !== undefined
-        ? { backgroundTasks: action.page.backgroundTasks }
-        : state.backgroundTasks !== undefined
-          ? { backgroundTasks: state.backgroundTasks }
-          : {}),
-      ...hostClockField(action.page.hostNow, receivedAt, state.hostClock)
-    }
-  }
   if (action.type === 'older-page') {
     const requested = action.requestedCursor
     if (state.epoch !== requested.epoch || action.page.epoch !== requested.epoch) {
@@ -308,13 +254,4 @@ export function oldestStructuredAgentSessionCursor(
 ): AgentJournalCursor | null {
   const oldest = state.items[0]
   return state.epoch && oldest ? { epoch: state.epoch, sequence: oldest.sequence } : null
-}
-
-export function shouldAdvanceStructuredResumeCursor(
-  current: AgentJournalCursor | null,
-  incoming: AgentJournalCursor
-): boolean {
-  return (
-    current === null || (current.epoch === incoming.epoch && incoming.sequence >= current.sequence)
-  )
 }
