@@ -90,7 +90,7 @@ describe('RPC main recordings', () => {
             loading: false
           })
         }
-        const golden = goldenRecording(root, input.baseline, scenario, recording)
+        const golden = goldenRecording(root, input.baseline, [scenario], recording)
         const bytes = goldenBytes(golden)
         if (run) {
           expect(bytes).toBe(first)
