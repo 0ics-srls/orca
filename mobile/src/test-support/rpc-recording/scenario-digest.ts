@@ -18,9 +18,6 @@ import type { RecordingScenario } from './recording-scenario'
  * would drop and so conflate with an absent one.
  */
 export function scenarioSha256(scenarios: readonly RecordingScenario[]): string {
-  if (!scenarios.length) {
-    throw new Error('A golden records at least one scenario')
-  }
   return createHash('sha256')
     .update(canonicalJson(captureValue(scenarios)))
     .digest('hex')

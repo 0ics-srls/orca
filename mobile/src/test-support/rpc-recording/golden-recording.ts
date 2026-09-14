@@ -18,8 +18,8 @@ import type { RecordedValue } from './recording-values'
 export const RUNNER_VERSION = 1
 // 2 stamps every settlement with startedAt/settledAt on the pinned virtual clock.
 export const PROJECTION_VERSION = 2
-// 4 pins scenarioSha256 per golden; a version-3 header has no such field, so it would compare as
-// though the golden's own scenarios were unpinned.
+// 4 pins scenarioSha256 per golden. The byte compare would fail a version-3 golden anyway; the bump
+// buys the diagnosis, reporting the stale format instead of an opaque `(encoding)` difference.
 export const GOLDEN_FORMAT_VERSION = 4
 export type GoldenRecording = {
   operation: string

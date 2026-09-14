@@ -4,9 +4,9 @@ import { join, resolve } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
 import { derivedGoldens } from './derived-goldens'
 import { goldenRecording, type GoldenRecording } from './golden-recording'
-import { RECORDER_DIRECTORY, recorderSha256 } from './recorder-digest'
+import { RECORDER_DIRECTORY } from './recorder-digest'
 import { readScenarios } from './scenario-input'
-import type { RecordingScenario } from './recording-scenario'
+import type { RecordingScenario, ScenarioStep } from './recording-scenario'
 
 const root = resolve(import.meta.dirname, '../../../..')
 const manifest = readScenarios(
@@ -16,6 +16,9 @@ const manifest = readScenarios(
 const BASELINE = 'a'.repeat(40)
 const EDITED_SCENARIO = 'b1'
 const EDITED_SITE = 'files.searchPaths#1'
+/** The only `legacy-inventory` scenario with a fulfilled reply at `EDITED_SITE`. */
+const REPLAYED_SCENARIO = 'inventory-repeat-query'
+const REPLAYED_GOLDEN = 'matrix-legacy-inventory-files.searchpaths-1'
 /**
  * Every golden derived from `b1`: its own, and its family's four matrix sites, which expand from it
  * as the family's base. The two other `legacy-inventory` scenarios and the interruption and
@@ -38,16 +41,14 @@ afterAll(() => {
 })
 
 /** The two files a root contributes to a header, plus the manifest the old digest also read. */
-function stubRoot(recorder: string, scenarioFile?: string): string {
+function stubRoot(recorder: string, scenarioFile: string): string {
   const directory = mkdtempSync(join(tmpdir(), 'rpc-header-'))
   created.push(directory)
   mkdirSync(join(directory, RECORDER_DIRECTORY), { recursive: true })
   writeFileSync(join(directory, RECORDER_DIRECTORY, 'runner.ts'), recorder)
   writeFileSync(join(directory, 'mobile/pnpm-lock.yaml'), 'lockfile: stub\n')
-  if (scenarioFile !== undefined) {
-    mkdirSync(join(directory, 'mobile/rpc-foundation'), { recursive: true })
-    writeFileSync(join(directory, 'mobile/rpc-foundation/pilot-scenarios.json'), scenarioFile)
-  }
+  mkdirSync(join(directory, 'mobile/rpc-foundation'), { recursive: true })
+  writeFileSync(join(directory, 'mobile/rpc-foundation/pilot-scenarios.json'), scenarioFile)
   return directory
 }
 
@@ -92,24 +93,32 @@ const ADDED_FAMILY: RecordingScenario = {
   ]
 }
 
-function editOneScenarioField(scenarios: readonly RecordingScenario[]): RecordingScenario[] {
+type Completion = Extract<ScenarioStep, { complete: string }>
+
+/** Rewrites one named completion, and fails loudly if the step it names has moved or multiplied. */
+function editCompletion(
+  scenarios: readonly RecordingScenario[],
+  scenarioId: string,
+  request: string,
+  rewrite: (step: Completion) => Completion
+): RecordingScenario[] {
   let edits = 0
   const edited = scenarios.map((scenario) =>
-    scenario.id !== EDITED_SCENARIO
+    scenario.id !== scenarioId
       ? scenario
       : {
           ...scenario,
           steps: scenario.steps.map((step) => {
-            if (!('complete' in step) || step.complete !== EDITED_SITE) {
+            if (!('complete' in step) || step.complete !== request) {
               return step
             }
             edits++
-            return { ...step, params: { worktree: 'id:A', query: 'old', limit: 17 } }
+            return rewrite(step)
           })
         }
   )
   if (edits !== 1) {
-    throw new Error(`Expected one ${EDITED_SITE} step in ${EDITED_SCENARIO}, edited ${edits}`)
+    throw new Error(`Expected one ${request} completion in ${scenarioId}, edited ${edits}`)
   }
   return edited
 }
@@ -125,12 +134,33 @@ describe('golden header digests', () => {
 
   it('re-digests exactly the goldens derived from an edited scenario', () => {
     const before = headers('export const runner = 1', manifest)
-    const after = headers('export const runner = 1', editOneScenarioField(manifest))
+    const after = headers(
+      'export const runner = 1',
+      editCompletion(manifest, EDITED_SCENARIO, EDITED_SITE, (step) => ({
+        ...step,
+        params: { worktree: 'id:A', query: 'old', limit: 17 }
+      }))
+    )
     expect(moved(before, after)).toEqual([...EDITED_GOLDENS].sort())
     for (const id of EDITED_GOLDENS) {
       expect(after.get(id)?.recorderSha256).toBe(before.get(id)?.recorderSha256)
       expect(after.get(id)?.scenarioSha256).not.toBe(before.get(id)?.scenarioSha256)
     }
+  })
+
+  // The generated variants are hashed, not the base they expand from, and this is what that buys:
+  // the `normal` partition replays a sibling's recorded reply, so the sibling is a real input to a
+  // matrix golden that its own scenario never appears in.
+  it('re-digests a matrix golden whose replayed success comes from an edited sibling', () => {
+    const before = headers('export const runner = 1', manifest)
+    const after = headers(
+      'export const runner = 1',
+      editCompletion(manifest, REPLAYED_SCENARIO, EDITED_SITE, (step) => ({
+        ...step,
+        reply: { ok: true, result: { files: [{ relativePath: 'edited.ts' }] } }
+      }))
+    )
+    expect(moved(before, after)).toEqual([REPLAYED_SCENARIO, REPLAYED_GOLDEN].sort())
   })
 
   it('re-digests every golden when a recorder file changes', () => {
@@ -141,13 +171,5 @@ describe('golden header digests', () => {
       expect(after.get(id)?.recorderSha256).not.toBe(header.recorderSha256)
       expect(after.get(id)?.scenarioSha256).toBe(header.scenarioSha256)
     }
-  })
-
-  it('digests the recorder without reading the scenario manifest', () => {
-    const one = stubRoot('export const runner = 1', JSON.stringify({ baseline: BASELINE }))
-    const other = stubRoot('export const runner = 1', '{"scenarios":"edited"}')
-    const absent = stubRoot('export const runner = 1')
-    expect(recorderSha256(other)).toBe(recorderSha256(one))
-    expect(recorderSha256(absent)).toBe(recorderSha256(one))
   })
 })

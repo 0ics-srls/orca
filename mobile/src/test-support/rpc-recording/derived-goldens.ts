@@ -52,12 +52,16 @@ function baseScenario(manifest: readonly RecordingScenario[], id: string): Recor
   return found
 }
 
+/** The manifest scenario a pilot golden expands from, which its suite also mounts and mutates. */
+export type PilotGolden = DerivedGolden & { scenario: RecordingScenario }
+
 /** One golden per manifest scenario: frozen main parity for the scenario as written. */
-export function pilotGoldens(manifest: readonly RecordingScenario[]): DerivedGolden[] {
+export function pilotGoldens(manifest: readonly RecordingScenario[]): PilotGolden[] {
   return manifest.map((scenario) => ({
     id: scenario.id,
     title: `${scenario.id}: frozen main parity and determinism`,
     family: scenario.family,
+    scenario,
     scenarios: () => [scenario]
   }))
 }

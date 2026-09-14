@@ -86,8 +86,9 @@ times and errors stay observable. Errors contain category, message and `isRpcDel
 stack paths, plus `code` and a recursively captured `cause` when the thrown error carries them.
 Platform is provenance; candidate comparison does not require the same operating system.
 
-Format version 4 adds `scenarioSha256`; a version-3 header has no such field, so a reader that
-accepted one would compare that golden's own scenarios as though they were unpinned. The bump moved
+Format version 4 adds `scenarioSha256`. A version-3 golden would already fail this reader's byte
+compare, so the bump buys the diagnosis rather than the rejection: `readGolden` names the stale
+format and says to re-record, instead of reporting an opaque `(encoding)` difference. The bump moved
 no observation.
 
 ### Value pool
