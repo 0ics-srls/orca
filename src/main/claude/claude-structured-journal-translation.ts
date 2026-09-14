@@ -34,6 +34,7 @@ import {
 } from './claude-structured-provider-fallback'
 import { taskFrameSentence } from './claude-background-task-frames'
 import { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
+import { ClaudeForwardedToolRegistry } from './claude-forwarded-tool-registry'
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
@@ -92,7 +93,11 @@ export function createClaudeJournalTranslator(
     sink: deps.sink,
     currentGroupKey: () => groupKeyOf(currentTurn)
   })
-  const backgroundTasks = new ClaudeBackgroundTaskRows({ sink: deps.sink })
+  const forwardedTools = new ClaudeForwardedToolRegistry()
+  const backgroundTasks = new ClaudeBackgroundTaskRows({
+    sink: deps.sink,
+    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId)
+  })
   const streamedText = createClaudeStreamedTextCheckpoints({
     ...(deps.coalesceMs === undefined ? {} : { coalesceMs: deps.coalesceMs }),
     ...(deps.schedule ? { schedule: deps.schedule } : {}),
@@ -152,6 +157,11 @@ export function createClaudeJournalTranslator(
     }
     for (const tool of claudeToolUses(outputEnvelope)) {
       tools.set(tool.id, tool)
+      // Only a TOP-LEVEL call can be the parent of a top-level task row; a
+      // sidechain's own tool ids never reach the transcript.
+      if (!envelope.parentToolUseId) {
+        forwardedTools.record(tool.id)
+      }
       deps.sink.appendItem(
         claudeToolIdentity(envelope.sessionId, tool.id),
         claudeToolBody({ tool })
@@ -292,6 +302,7 @@ export function createClaudeJournalTranslator(
       streamedBlocks.clear()
       subagents.dispose()
       backgroundTasks.dispose()
+      forwardedTools.clear()
     }
   }
 }

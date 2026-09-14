@@ -19,6 +19,8 @@ export type ClaudeBackgroundTaskRow = {
   block: NativeChatBackgroundTaskBlock
   lastSerialized: string | null
   toolUseId?: string
+  /** Which RUN of this task id the row records. 1 for the first. */
+  generation: number
 }
 
 export type ClaudeBackgroundTaskChange = {
@@ -71,18 +73,21 @@ export function claudeBackgroundTaskPatchChange(
 export function newClaudeBackgroundTaskRow(
   id: string,
   message: Record<string, unknown>,
-  now: number
+  now: number,
+  generation: number
 ): ClaudeBackgroundTaskRow {
   const totalTokens = taskUsageTotalTokens(message)
   const toolUseId = claudeBackgroundTaskToolUseId(message)
   return {
     lastSerialized: null,
+    generation,
     ...(toolUseId === undefined ? {} : { toolUseId }),
     block: {
       type: 'background-task',
       taskId: id,
       kind: classifyClaudeBackgroundTaskKind(message.task_type),
       label: taskDescription(message.description) ?? taskName(message) ?? '',
+      ...(toolUseId === undefined ? {} : { parentToolUseId: toolUseId }),
       state:
         terminalClaudeTaskRunState(message.status) ??
         liveClaudeTaskRunState(message.status) ??
@@ -95,19 +100,22 @@ export function newClaudeBackgroundTaskRow(
 
 export function newClaudeBackgroundTaskTerminalRow(
   id: string,
-  message: Record<string, unknown>
+  message: Record<string, unknown>,
+  generation: number
 ): ClaudeBackgroundTaskRow {
   const patch = record(message.patch)
   const source = patch ?? message
   const toolUseId = claudeBackgroundTaskToolUseId(message)
   return {
     lastSerialized: null,
+    generation,
     ...(toolUseId === undefined ? {} : { toolUseId }),
     block: {
       type: 'background-task',
       taskId: id,
       kind: 'task_type' in source ? classifyClaudeBackgroundTaskKind(source.task_type) : 'unknown',
       label: taskDescription(source.description) ?? taskName(source) ?? '',
+      ...(toolUseId === undefined ? {} : { parentToolUseId: toolUseId }),
       state: 'working'
     }
   }
@@ -132,6 +140,9 @@ export function reopenClaudeBackgroundTaskRow(
       taskId: id,
       kind: kind === 'unknown' ? row.block.kind : kind,
       label: taskDescription(message.description) ?? taskName(message) ?? row.block.label,
+      ...((toolUseId ?? row.block.parentToolUseId)
+        ? { parentToolUseId: toolUseId ?? row.block.parentToolUseId }
+        : {}),
       state,
       startedAt: now,
       ...(totalTokens === undefined ? {} : { tokens: totalTokens })
@@ -162,11 +173,27 @@ export function canReopenClaudeBackgroundTaskRowFromAggregate(
   )
 }
 
+/** Task types the transcript materializes as a row.
+ *
+ *  Type is the whole gate. A MONITOR is never admitted: it is Claude's own
+ *  ambient housekeeping, runs for the life of the session, and has no outcome a
+ *  transcript row could report. A type this build does not recognise is not
+ *  evidence of anything a row could truthfully say either. Agents are
+ *  materialized too, by the subagent roster, which claims them upstream of this
+ *  owner — so the set left here is the backgrounded shell command and the
+ *  workflow. */
+const MATERIALIZED_TASK_KINDS: ReadonlySet<NativeChatBackgroundTaskBlock['kind']> = new Set([
+  'command',
+  'workflow'
+])
+
 export function isClaudeBackgroundTranscriptTask(
   message: Record<string, unknown>,
   kind: NativeChatBackgroundTaskBlock['kind']
 ): boolean {
-  return message.is_backgrounded === true || kind === 'workflow' || kind === 'monitor'
+  // A task the provider explicitly calls foreground is the turn's own work and
+  // already has the tool row that invoked it.
+  return MATERIALIZED_TASK_KINDS.has(kind) && message.is_backgrounded !== false
 }
 
 export function reviseClaudeBackgroundTaskRow(

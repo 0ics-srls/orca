@@ -42,7 +42,11 @@ function twinOf(body: AgentJournalItemBody | undefined): string | null {
   return block?.type === 'text' ? block.text : null
 }
 
-function harness() {
+/** The spawn call the harness treats as forwarded to the top-level transcript.
+ *  Admission consults this, so a test that wants a row must name it. */
+const FORWARDED_TOOL = 'toolu_01CqPd7y'
+
+function harness(forwarded: readonly string[] = [FORWARDED_TOOL, 'toolu_first', 'toolu_second']) {
   const items: { identity: AgentJournalItemIdentity; body: AgentJournalItemBody }[] = []
   const sink: StructuredAgentSessionEventSink = {
     appendItem: (identity, body) => items.push({ identity, body }),
@@ -50,10 +54,21 @@ function harness() {
     publish: vi.fn()
   }
   let clock = 1_000
-  const rows = new ClaudeBackgroundTaskRows({ sink, now: () => (clock += 10) })
+  const forwardedTools = new Set(forwarded)
+  const rows = new ClaudeBackgroundTaskRows({
+    sink,
+    isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
+    now: () => (clock += 10)
+  })
+  const keys = (): string[] =>
+    items.map((item) =>
+      item.identity.provider === 'orca' ? item.identity.clientMessageId : item.identity.provider
+    )
   return {
     rows,
     items,
+    keys,
+    forwardedTools,
     latest: () => blockOf(items.at(-1)?.body),
     latestTwin: () => twinOf(items.at(-1)?.body)
   }
@@ -98,6 +113,10 @@ describe('claude background task rows', () => {
     expect(latestTwin()).not.toContain('task_notification')
   })
 
+  // NAMED DEVIATION from the stricter rule, which drops a terminal frame for an
+  // unknown task. This payload is a REAL capture and names no `tool_use_id`, so
+  // nothing can prove it had a forwarded parent — and dropping it reports the
+  // failure nowhere at all.
   it('opens a row for a failure whose announcement this session never saw', () => {
     const { rows, latest, latestTwin } = harness()
     rows.observe({
@@ -340,16 +359,18 @@ describe('claude background task rows', () => {
   })
 
   it('rejects overlong tool-use aliases instead of clipping them into collisions', () => {
+    // The row is opened under a usable alias; a later frame carrying an
+    // oversized one must resolve to NO task rather than being clipped into this
+    // one and attaching another task's failure to it.
     const { rows, items, latest } = harness()
-    const overlong = `${'x'.repeat(512)}A`
-    rows.observe({ ...START_BASH, task_id: 'task-a', tool_use_id: overlong })
+    rows.observe({ ...START_BASH, task_id: 'task-a' })
     const afterStart = items.length
 
     expect(
       rows.observe({
         type: 'system',
         subtype: 'task_notification',
-        tool_use_id: overlong,
+        tool_use_id: `${'x'.repeat(512)}A`,
         status: 'failed',
         summary: 'misattributed failure'
       })
@@ -450,5 +471,89 @@ describe('claude background task rows', () => {
     expect(rows.observe({ type: 'system', subtype: 'init' })).toBe(false)
     expect(rows.observe({ type: 'assistant' })).toBe(false)
     expect(rows.observe({ type: 'system', subtype: 'task_started', task_id: 'x' })).toBe(true)
+  })
+  it('refuses a nested child whose spawning tool was never forwarded', () => {
+    // A Task spawned inside a subagent's sidechain names a tool id that only
+    // exists in that sidechain. A top-level row for it would claim an
+    // invocation the user never saw.
+    const { rows, items } = harness([])
+    rows.observe({ ...START_BASH, task_id: 'nested-1', tool_use_id: 'toolu_sidechain' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'nested-1',
+      tool_use_id: 'toolu_sidechain',
+      status: 'failed',
+      summary: 'the nested child failed'
+    })
+    expect(items).toEqual([])
+  })
+
+  it('never lets a monitor reach the timeline', () => {
+    // A monitor is Claude's own housekeeping: it runs for the life of the
+    // session and has no outcome a transcript row could report.
+    const { rows, items } = harness()
+    rows.observe({
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'monitor-1',
+      tool_use_id: FORWARDED_TOOL,
+      task_type: 'monitor',
+      description: 'Watch the build',
+      is_backgrounded: true
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'monitor-1',
+      status: 'failed',
+      summary: 'monitor stopped'
+    })
+    expect(items).toEqual([])
+  })
+
+  it('admits a task type it does not recognise as no task at all', () => {
+    const { rows, items } = harness()
+    rows.observe({ ...START_BASH, task_id: 'weird-1', task_type: 'local_teleport' })
+    expect(items).toEqual([])
+  })
+
+  it('gives a reused task id a fresh row instead of overwriting the finished run', () => {
+    const { rows, keys, latest } = harness([FORWARDED_TOOL, 'toolu_second_run'])
+    rows.observe(START_BASH)
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'byjnee2no',
+      status: 'failed',
+      summary: 'first run failed'
+    })
+    rows.observe({ ...START_BASH, tool_use_id: 'toolu_second_run' })
+    const written = [...new Set(keys())]
+    expect(written).toEqual([
+      'claude-background-task:byjnee2no',
+      'claude-background-task:byjnee2no#2'
+    ])
+    expect(latest()).toMatchObject({ state: 'working', parentToolUseId: 'toolu_second_run' })
+  })
+
+  it('carries the spawning tool call on the row', () => {
+    const { rows, latest } = harness()
+    rows.observe(START_BASH)
+    expect(latest()).toMatchObject({ parentToolUseId: FORWARDED_TOOL })
+  })
+
+  it('does not re-open a task that is already running', () => {
+    // A redelivered announcement is not a second run. The row it would revise
+    // is one the user is already reading, so it yields no deltas at all — even
+    // when the redelivery carries metadata the first announcement lacked.
+    const { rows, items, latest } = harness()
+    rows.observe({ ...START_BASH, description: undefined })
+    const afterStart = items.length
+    expect(latest()).toMatchObject({ label: '', state: 'working' })
+
+    rows.observe({ ...START_BASH, description: 'Named on redelivery' })
+    expect(items.length).toBe(afterStart)
+    expect(latest()).toMatchObject({ label: '' })
   })
 })

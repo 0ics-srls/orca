@@ -112,6 +112,7 @@ const Block = z.union([
       kind: z.string().min(1),
       label: z.string(),
       state: z.string().min(1),
+      parentToolUseId: z.string().optional(),
       summary: z.string().optional(),
       error: z.string().optional(),
       outputFile: z.string().optional(),

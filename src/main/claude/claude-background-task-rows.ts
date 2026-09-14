@@ -45,11 +45,19 @@ type ForeignOwner = 'roster' | 'ambient' | 'foreground'
 
 export type ClaudeBackgroundTaskRowsDeps = {
   sink: StructuredAgentSessionEventSink
+  /** Whether a tool id names a tool call this session forwarded at the TOP
+   *  level. Consulted on first admission only: a task whose spawning tool never
+   *  reached the transcript is a nested child, and a top-level row minted for it
+   *  would claim an invocation the user never saw. */
+  isForwardedParentTool: (toolUseId: string) => boolean
   now?: () => number
 }
 
 export class ClaudeBackgroundTaskRows {
   private readonly rows = new Map<string, ClaudeBackgroundTaskRow>()
+  /** Runs seen per task id, so a reused id opens a new row instead of
+   *  overwriting the finished one. Survives the row being evicted. */
+  private readonly generations = new Map<string, number>()
   private readonly foreign = new Map<string, ForeignOwner>()
   private readonly terminalTaskIds = new Set<string>()
   private readonly ids = new ClaudeSubagentIds()
@@ -100,6 +108,7 @@ export class ClaudeBackgroundTaskRows {
   dispose(): void {
     this.settleSession()
     this.rows.clear()
+    this.generations.clear()
     this.foreign.clear()
     this.terminalTaskIds.clear()
     this.ids.clear()
@@ -135,9 +144,14 @@ export class ClaudeBackgroundTaskRows {
     this.foreign.delete(id)
     const existing = this.rows.get(id)
     if (existing) {
+      // A task that already exists and has not finished is not re-opened: a
+      // duplicate announcement is a redelivery, not a second run, and treating
+      // it as one would restate a row the user is already reading.
+      if (!isSettledBackgroundTaskState(existing.block.state)) {
+        return true
+      }
       if (shouldRestartClaudeBackgroundTaskRow(existing, message)) {
-        this.rows.set(id, newClaudeBackgroundTaskRow(id, message, this.now()))
-        this.write(id)
+        this.openRow(id, message, existing.generation + 1)
       } else {
         this.revise(id, claudeBackgroundTaskPatchChange(message))
       }
@@ -146,12 +160,37 @@ export class ClaudeBackgroundTaskRows {
     if (this.terminalTaskIds.has(id)) {
       return true
     }
+    if (!this.admitsFirstRun(message)) {
+      return true
+    }
     if (!this.ensureRowSlot()) {
       return false
     }
-    this.rows.set(id, newClaudeBackgroundTaskRow(id, message, this.now()))
-    this.write(id)
+    this.openRow(id, message, (this.generations.get(id) ?? 0) + 1)
     return true
+  }
+
+  /** The gate a task passes ONCE, when its first row is minted. Later frames
+   *  for an admitted task are never re-gated: the decision belongs to the
+   *  announcement, and re-asking it on a patch that carries no `tool_use_id`
+   *  would drop the outcome of a task already on screen. */
+  private admitsFirstRun(message: Record<string, unknown>): boolean {
+    const toolUseId = claudeBackgroundTaskToolUseId(message)
+    return toolUseId !== undefined && this.deps.isForwardedParentTool(toolUseId)
+  }
+
+  /** Admission for a row minted from terminal evidence alone. A frame that
+   *  names no tool cannot be judged this way; see the deviation recorded in the
+   *  PR for why such a frame is still allowed to report its failure. */
+  private admitsTerminalOnly(message: Record<string, unknown>): boolean {
+    const toolUseId = claudeBackgroundTaskToolUseId(message)
+    return toolUseId === undefined || this.deps.isForwardedParentTool(toolUseId)
+  }
+
+  private openRow(id: string, message: Record<string, unknown>, generation: number): void {
+    this.generations.set(id, generation)
+    this.rows.set(id, newClaudeBackgroundTaskRow(id, message, this.now(), generation))
+    this.write(id)
   }
 
   private observeNotification(id: string, message: Record<string, unknown>): boolean {
@@ -165,12 +204,31 @@ export class ClaudeBackgroundTaskRows {
     if (state === 'done' && change.error === undefined) {
       return true
     }
+    // A terminal frame naming a tool this session never forwarded is a nested
+    // child reporting into its own sidechain. It is refused here for the same
+    // reason its announcement would have been: a top-level row for it claims an
+    // invocation the user never saw.
+    if (!this.admitsTerminalOnly(message)) {
+      return true
+    }
+    // NAMED DEVIATION — a terminal frame naming NO tool still opens a row.
+    //
+    // The stricter rule would drop it. A real captured failure has this exact
+    // shape: `{subtype:'task_notification', task_id:'bo2vuy8qb',
+    // status:'failed', output_file:'', summary:"Check the verifier's state"}`,
+    // with no `tool_use_id` to prove a forwarded parent. Dropping it reports
+    // that failure NOWHERE: the strip unmounts once no live task remains, the
+    // subagent roster excludes shell commands, and the status feed publishes
+    // only live tasks.
+    //
+    // Whether such a frame can follow a `task_started` we simply refused is not
+    // knowable from that capture: it records journal ROWS, and `task_started`
+    // carries no failure so it never became one. See the PR for the full
+    // measurement.
     if (!this.ensureRowSlot()) {
       return false
     }
-    this.rows.set(id, {
-      ...newClaudeBackgroundTaskTerminalRow(id, message)
-    })
+    this.openTerminalRow(id, message)
     this.revise(id, change)
     return true
   }
@@ -191,14 +249,24 @@ export class ClaudeBackgroundTaskRows {
       if (change.state === 'done' && change.error === undefined) {
         return true
       }
+      if (!this.admitsTerminalOnly(message)) {
+        return true
+      }
       if (!this.ensureRowSlot()) {
         return false
       }
-      this.rows.set(id, newClaudeBackgroundTaskTerminalRow(id, message))
+      this.openTerminalRow(id, message)
       this.revise(id, change)
       return true
     }
     return change.error === undefined
+  }
+
+  /** A row minted straight from terminal evidence — see `observeNotification`. */
+  private openTerminalRow(id: string, message: Record<string, unknown>): void {
+    const generation = (this.generations.get(id) ?? 0) + 1
+    this.generations.set(id, generation)
+    this.rows.set(id, newClaudeBackgroundTaskTerminalRow(id, message, generation))
   }
 
   private observeAggregateRoster(value: unknown): void {

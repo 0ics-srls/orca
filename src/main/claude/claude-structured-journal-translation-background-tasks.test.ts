@@ -57,7 +57,31 @@ function systemFrame(fields: Record<string, unknown>) {
   }
 }
 
+/** The assistant turn that invokes the spawn tool. Admission consults it: a task
+ *  whose spawning tool never reached the transcript is a nested child, so every
+ *  realistic sequence forwards this first. */
+function spawnToolCall(
+  translator: ReturnType<typeof harness>['translator'],
+  toolUseId = 'toolu_01CqPd7y'
+): void {
+  translator.handle({
+    type: 'message' as const,
+    sessionId: 'orca-session',
+    message: {
+      type: 'assistant',
+      uuid: `assistant-${toolUseId}`,
+      session_id: 'claude-session',
+      parent_tool_use_id: null,
+      message: {
+        role: 'assistant',
+        content: [{ type: 'tool_use', id: toolUseId, name: 'Bash', input: { command: 'wait' } }]
+      }
+    }
+  })
+}
+
 function playFailedBackgroundCommand(translator: ReturnType<typeof harness>['translator']): void {
+  spawnToolCall(translator)
   translator.handle(
     systemFrame({
       subtype: 'task_started',
@@ -139,10 +163,12 @@ describe('claude journal translation — background task rows', () => {
 
   it('settles live background rows when the provider ends before disposal', () => {
     const { translator, taskRowTexts } = harness()
+    spawnToolCall(translator)
     translator.handle(
       systemFrame({
         subtype: 'task_started',
         task_id: TASK_ID,
+        tool_use_id: 'toolu_01CqPd7y',
         task_type: 'local_bash',
         description: 'Wait for the verification verdict',
         is_backgrounded: true
@@ -154,5 +180,75 @@ describe('claude journal translation — background task rows', () => {
     expect(taskRowTexts().at(-1)).toBe(
       'Background command "Wait for the verification verdict" stopped reporting'
     )
+  })
+  it('keeps a nested child spawned inside a sidechain off the top-level transcript', () => {
+    const { translator, taskRowIds, fallbackRows } = harness()
+    // The spawn tool call is emitted by a SUBAGENT, so it carries a parent tool
+    // id and is never a top-level invocation.
+    translator.handle({
+      type: 'message' as const,
+      sessionId: 'orca-session',
+      message: {
+        type: 'assistant',
+        uuid: 'nested-assistant',
+        session_id: 'claude-session',
+        parent_tool_use_id: 'toolu_parent_agent',
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: 'toolu_sidechain', name: 'Bash', input: { command: 'wait' } }
+          ]
+        }
+      }
+    })
+    translator.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'nested-1',
+        tool_use_id: 'toolu_sidechain',
+        task_type: 'local_bash',
+        description: 'nested work',
+        is_backgrounded: true
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'nested-1',
+        tool_use_id: 'toolu_sidechain',
+        status: 'failed',
+        summary: 'nested child failed'
+      })
+    )
+
+    expect(taskRowIds()).toEqual([])
+    expect(fallbackRows()).toEqual([])
+  })
+
+  it('keeps a monitor off the timeline entirely', () => {
+    const { translator, taskRowIds, fallbackRows } = harness()
+    spawnToolCall(translator)
+    translator.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'monitor-1',
+        tool_use_id: 'toolu_01CqPd7y',
+        task_type: 'monitor',
+        description: 'Watch the build',
+        is_backgrounded: true
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'monitor-1',
+        tool_use_id: 'toolu_01CqPd7y',
+        status: 'failed',
+        summary: 'monitor stopped'
+      })
+    )
+
+    expect(taskRowIds()).toEqual([])
+    expect(fallbackRows()).toEqual([])
   })
 })

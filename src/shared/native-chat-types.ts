@@ -158,6 +158,10 @@ export type NativeChatBackgroundTaskBlock = {
   label: string
   /** Run state, in the vocabulary the background-tasks strip already renders. */
   state: AgentSessionBackgroundTaskRunState
+  /** The tool call that spawned this task. The transcript has no structural
+   *  parent link for a row, so the relationship is carried as a field here and
+   *  consumers co-locate the row with that tool call. */
+  parentToolUseId?: string
   /** The provider's own sentence about the outcome, when it sent one. */
   summary?: string
   /** The provider's error text, when it reported one apart from the summary. */
