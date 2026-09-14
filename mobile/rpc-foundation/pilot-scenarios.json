@@ -7787,6 +7787,52 @@
           "checkpoint": "timed-out"
         }
       ]
+    },
+    {
+      "id": "transport-capability-probe-cutover-reasks-fast",
+      "operation": "transport.capability-probe",
+      "version": 1,
+      "family": "transport.capability-probe",
+      "sites": ["mobile/src/transport/runtime-capability-probe.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "start",
+          "id": "start"
+        },
+        {
+          "action": "cutover",
+          "id": "migrate"
+        },
+        {
+          "checkpoint": "cutover-rejected-the-probe"
+        },
+        {
+          "advance": 250
+        },
+        {
+          "bind": "status-after-cutover",
+          "request": "status.get#2",
+          "params": {
+            "$undefined": true
+          }
+        },
+        {
+          "complete": "status-after-cutover",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "capabilities": ["push.v1"]
+            }
+          }
+        },
+        {
+          "checkpoint": "published-after-cutover-reask"
+        }
+      ]
     }
   ]
 }
