@@ -69,12 +69,17 @@ vi.mock('@/components/ui/dropdown-menu', () => {
     ),
     DropdownMenuLabel: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
     DropdownMenuSeparator: () => <hr />,
+    // Forwards role/aria-* and hands onSelect an event: the switch rows set both,
+    // and preventDefault is how a toggle keeps the menu open.
     DropdownMenuItem: ({
       children,
       disabled,
-      onSelect
-    }: React.ButtonHTMLAttributes<HTMLButtonElement> & { onSelect?: () => void }) => (
-      <button disabled={disabled} onClick={() => onSelect?.()}>
+      onSelect,
+      ...rest
+    }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+      onSelect?: (event: { preventDefault: () => void }) => void
+    }) => (
+      <button {...rest} disabled={disabled} onClick={() => onSelect?.({ preventDefault: () => {} })}>
         {children}
       </button>
     ),
@@ -456,7 +461,7 @@ describe('NativeChatSessionOptionPickers', () => {
     expect(setOption).not.toHaveBeenCalled()
   })
 
-  it('uses On/Off radios for known boolean options without inventing a selection', async () => {
+  it('uses one switch row for a boolean option without inventing a selection', async () => {
     const setOption = vi.fn().mockResolvedValue({ snapshot: [] })
     const liveSurface = { ...surface, setOption }
     const { rerender } = render(
@@ -475,14 +480,17 @@ describe('NativeChatSessionOptionPickers', () => {
       />
     )
     expect(screen.queryByText('Toggle fast mode')).toBeNull()
-    const onRadio = screen.getByRole('radio', { name: 'On' })
-    expect(onRadio.getAttribute('data-state')).toBe('checked')
-    expect(onRadio.getAttribute('aria-checked')).toBe('true')
-    const fastGroup = onRadio.parentElement
-    expect(fastGroup?.getAttribute('data-radio-value')).toBe('on')
-    expect(fastGroup?.getAttribute('data-on-value-change')).toBe('1')
-    expect(screen.getByRole('radiogroup', { name: 'Fast mode' })).toBe(fastGroup)
-    screen.getByRole('radio', { name: 'Off' }).click()
+    // One control, not an On/Off pair, and the row carries the label itself.
+    expect(screen.queryByRole('radio', { name: 'On' })).toBeNull()
+    expect(screen.queryByRole('radio', { name: 'Off' })).toBeNull()
+    const fastSwitch = screen.getByRole('switch', { name: 'Fast mode' })
+    expect(fastSwitch.getAttribute('aria-checked')).toBe('true')
+    expect(fastSwitch.querySelector('[data-slot="switch-indicator"]')?.getAttribute('data-state')).toBe(
+      'checked'
+    )
+    // The label is not duplicated by a separate group header.
+    expect(screen.getAllByText('Fast mode')).toHaveLength(1)
+    fastSwitch.click()
     await waitFor(() => expect(setOption).toHaveBeenCalledWith('fastMode', false))
 
     setOption.mockClear()
@@ -504,12 +512,13 @@ describe('NativeChatSessionOptionPickers', () => {
         isWorking={false}
       />
     )
-    // Unknown composed boolean: hint + radios present, nothing pre-selected.
-    expect(screen.getByText('Current value unknown — pick On or Off')).not.toBeNull()
-    const thinkingGroup = screen.getByRole('radio', { name: 'On' }).parentElement
-    expect(thinkingGroup?.getAttribute('data-radio-value')).toBe('')
-    screen.getByRole('radio', { name: 'Off' }).click()
-    await waitFor(() => expect(setOption).toHaveBeenCalledWith('thinking', false))
+    // Unknown composed boolean: the caption says so, and the switch reads unchecked
+    // rather than claiming a value; toggling it commits an explicit on.
+    expect(screen.getByText('Current value unknown')).not.toBeNull()
+    const thinkingSwitch = screen.getByRole('switch', { name: 'Thinking' })
+    expect(thinkingSwitch.getAttribute('aria-checked')).toBe('false')
+    thinkingSwitch.click()
+    await waitFor(() => expect(setOption).toHaveBeenCalledWith('thinking', true))
   })
 
   it('tooltips a dispatched option pill with the category alone', () => {

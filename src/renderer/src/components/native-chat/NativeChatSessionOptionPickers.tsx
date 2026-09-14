@@ -2,6 +2,7 @@ import { memo, useState } from 'react'
 import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { SwitchIndicator } from '@/components/ui/switch'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -140,37 +141,32 @@ function DescriptorMenuRows(props: {
       </DropdownMenuItem>
     )
   }
-  // Why: absolute On/Off only when we have tracked truth. Unknown composed
-  // booleans leave the group unselected so empty radios are not a selection.
+  // Why one switch row and not On/Off: the option is binary, so a single control
+  // carries it. The row owns the label, which is why the caller drops its header.
+  // An unknown value still shows the caption — the switch alone cannot say "unset".
   if (descriptor.kind.type === 'boolean') {
-    const selected =
-      descriptor.kind.currentValue === true
-        ? 'on'
-        : descriptor.kind.currentValue === false
-          ? 'off'
-          : undefined
+    const checked = descriptor.kind.currentValue === true
     return (
       <>
-        {selected === undefined ? (
+        {descriptor.kind.currentValue === undefined ? (
           <DropdownMenuLabel className="font-normal text-muted-foreground">
-            {translate(
-              'components.native-chat.composer.valueUnknown',
-              'Current value unknown — pick On or Off'
-            )}
+            {translate('components.native-chat.composer.valueUnknown', 'Current value unknown')}
           </DropdownMenuLabel>
         ) : null}
-        <DropdownMenuRadioGroup
-          aria-label={nativeChatSessionOptionLabel(descriptor)}
-          value={selected}
-          onValueChange={(next) => setValue(next === 'on')}
+        <DropdownMenuItem
+          role="switch"
+          aria-checked={checked}
+          disabled={!descriptor.settable || pending}
+          // Keep the menu open: the write is async and its result lands in this row.
+          onSelect={(event) => {
+            event.preventDefault()
+            setValue(!checked)
+          }}
+          className="justify-between gap-2"
         >
-          <DropdownMenuRadioItem value="on" disabled={!descriptor.settable || pending}>
-            {translate('components.native-chat.composer.optionValue.on', 'On')}
-          </DropdownMenuRadioItem>
-          <DropdownMenuRadioItem value="off" disabled={!descriptor.settable || pending}>
-            {translate('components.native-chat.composer.optionValue.off', 'Off')}
-          </DropdownMenuRadioItem>
-        </DropdownMenuRadioGroup>
+          <span>{nativeChatSessionOptionLabel(descriptor)}</span>
+          <SwitchIndicator checked={checked} />
+        </DropdownMenuItem>
       </>
     )
   }
@@ -287,7 +283,9 @@ function NativeChatSessionOptionPickersInner({
               return (
                 <div key={descriptor.id}>
                   {index > 0 ? <DropdownMenuSeparator /> : null}
-                  <DropdownMenuLabel>{nativeChatSessionOptionLabel(descriptor)}</DropdownMenuLabel>
+                  {descriptor.kind.type === 'boolean' && !descriptor.action ? null : (
+                    <DropdownMenuLabel>{nativeChatSessionOptionLabel(descriptor)}</DropdownMenuLabel>
+                  )}
                   {reason && !descriptor.settable ? (
                     <DropdownMenuLabel className="font-normal">{reason}</DropdownMenuLabel>
                   ) : null}

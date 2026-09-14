@@ -1,7 +1,7 @@
 // The pill and choice-row primitives the session-option card is built from, kept
 // beside it so the card file stays about layout and apply wiring.
 
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, StyleSheet, Switch, Text, View } from 'react-native'
 import { Check, ChevronDown, ChevronRight } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type {
@@ -90,6 +90,36 @@ function ChoiceRow({
         ) : null}
       </View>
     </Pressable>
+  )
+}
+
+function ToggleRow({
+  label,
+  checked,
+  disabled,
+  grouped,
+  onToggle
+}: {
+  label: string
+  checked: boolean
+  disabled: boolean
+  grouped: boolean
+  onToggle: (next: boolean) => void
+}): React.JSX.Element {
+  return (
+    <View style={[styles.row, grouped && styles.rowGrouped, disabled && styles.rowDisabled]}>
+      <View style={styles.rowBody}>
+        <Text style={styles.rowLabel}>{label}</Text>
+      </View>
+      <Switch
+        accessibilityLabel={label}
+        value={checked}
+        onValueChange={onToggle}
+        disabled={disabled}
+        trackColor={{ false: colors.bgRaised, true: colors.textSecondary }}
+        thumbColor={colors.textPrimary}
+      />
+    </View>
   )
 }
 
@@ -191,29 +221,21 @@ export function DescriptorRows({
       />
     )
   }
-  // Unknown booleans leave both radios unselected instead of inventing truth.
+  // One switch, not an On/Off pair: the option is binary. An unknown value still
+  // shows the caption — the switch alone cannot say "unset".
   if (descriptor.kind.type === 'boolean') {
     const current = descriptor.kind.currentValue
     return (
       <>
         {current === undefined ? (
-          <SessionOptionCaption>Current value unknown — pick On or Off</SessionOptionCaption>
+          <SessionOptionCaption>Current value unknown</SessionOptionCaption>
         ) : null}
-        <ChoiceRow
-          label="On"
-          selected={current === true}
+        <ToggleRow
+          label={descriptor.label}
+          checked={current === true}
           disabled={locked}
           grouped={grouped}
-          divided={grouped}
-          onPress={() => onSetOption(true)}
-        />
-        <ChoiceRow
-          label="Off"
-          selected={current === false}
-          disabled={locked}
-          grouped={grouped}
-          divided={false}
-          onPress={() => onSetOption(false)}
+          onToggle={(next) => onSetOption(next)}
         />
       </>
     )
