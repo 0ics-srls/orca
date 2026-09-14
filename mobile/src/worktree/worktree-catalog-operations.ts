@@ -33,6 +33,3 @@ export const retiredWorktreeNamesRead = bindDeferredRpcOperation(
     read: rpcUncheckedPayloadReader('retired-names')
   })
 )
-
-/** What a catalog read sends with, named from an operation so no module names the raw port. */
-export type MobileWorktreeCatalogRpcSender = Parameters<typeof worktreeCatalogRead.request>[0]

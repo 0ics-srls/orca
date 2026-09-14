@@ -38,6 +38,3 @@ export const newWorkspaceUiStateRead = bindDeferredRpcOperation(
     read: optionalUiMemberReader
   })
 )
-
-/** What a drawer read sends with, named from an operation so no module names the raw port. */
-export type MobileNewWorkspaceRpcSender = Parameters<typeof newWorkspaceUiStateRead.request>[0]

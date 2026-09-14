@@ -66,9 +66,6 @@ export const hostViewSettingsWrite = bindDeferredRpcOperation(
   })
 )
 
-/** What a host-screen read sends with, named from an operation so no module names the raw port. */
-export type MobileHostScreenRpcSender = Parameters<typeof hostRepoCatalogRead.request>[0]
-
 /**
  * The host list's three row mutations.
  *
