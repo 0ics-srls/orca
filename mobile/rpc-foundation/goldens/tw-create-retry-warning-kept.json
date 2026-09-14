@@ -1,0 +1,91 @@
+{
+  "operation": "tasks.worktree-create-retry",
+  "family": "worktree.create-retry",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "e9244ffbbcc61320dcad42624690b86cee1d682906562a48117c3928025005c8",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 3,
+  "values": {
+    "43a221c63628": {
+      "name": "worktree.create#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.create\",\"params\":{\"repo\":\"id:repo-1\",\"name\":\"kestrel\",\"clientMutationId\":\"mutation-1\"}}"
+    },
+    "6ad759c47a41": {
+      "name": "worktree.create#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.create"
+        },
+        {
+          "name": "params",
+          "value": {
+            "clientMutationId": "mutation-1",
+            "name": "kestrel",
+            "repo": "id:repo-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "timeoutMs": 600000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "warning": "  startup terminal failed  ",
+            "worktree": {
+              "id": "repo-1::/w"
+            }
+          }
+        }
+      }
+    },
+    "97555d579c32": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "name": "kestrel",
+        "warning": "startup terminal failed",
+        "worktreeId": "repo-1::/w"
+      }
+    },
+    "f800fc04633e": {
+      "outcome": {
+        "name": "kestrel",
+        "warning": "startup terminal failed",
+        "worktreeId": "repo-1::/w"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "tw-create-retry-warning-kept",
+    "checkpoints": [
+      {
+        "id": "created-with-warning",
+        "observation": {
+          "sender": ["6ad759c47a41"],
+          "payloads": ["43a221c63628"],
+          "settlements": {
+            "create": "97555d579c32"
+          },
+          "state": "f800fc04633e",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "operation": "tasks.worktree-create-retry",
+  "family": "worktree.create-retry",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "e9244ffbbcc61320dcad42624690b86cee1d682906562a48117c3928025005c8",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 3,
+  "values": {
+    "240b0b1c72b2": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "error": ""
+      }
+    },
+    "43a221c63628": {
+      "name": "worktree.create#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.create\",\"params\":{\"repo\":\"id:repo-1\",\"name\":\"kestrel\",\"clientMutationId\":\"mutation-1\"}}"
+    },
+    "43e8315bc2fe": {
+      "name": "worktree.create#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.create"
+        },
+        {
+          "name": "params",
+          "value": {
+            "clientMutationId": "mutation-1",
+            "name": "kestrel",
+            "repo": "id:repo-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "timeoutMs": 600000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "internal",
+            "message": ""
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "7d651cae8837": {
+      "outcome": {
+        "error": ""
+      }
+    }
+  },
+  "recording": {
+    "scenario": "tw-create-retry-unretryable-refusal",
+    "checkpoints": [
+      {
+        "id": "refused-empty-message",
+        "observation": {
+          "sender": ["43e8315bc2fe"],
+          "payloads": ["43a221c63628"],
+          "settlements": {
+            "create": "240b0b1c72b2"
+          },
+          "state": "7d651cae8837",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

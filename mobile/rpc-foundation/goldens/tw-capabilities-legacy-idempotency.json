@@ -1,0 +1,94 @@
+{
+  "operation": "tasks.worktree-capabilities",
+  "family": "worktree.runtime-capabilities",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "e9244ffbbcc61320dcad42624690b86cee1d682906562a48117c3928025005c8",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 3,
+  "values": {
+    "03f6a4ac937a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "hostPlatform": {
+          "$rpc": "null"
+        },
+        "tasksSupported": false,
+        "worktreeCreateIdempotency": {
+          "dedupeTtlMs": 60000
+        }
+      }
+    },
+    "1e5b32902af7": {
+      "name": "status.get#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"status.get\"}"
+    },
+    "3b0c9705ec9a": {
+      "capabilities": {
+        "hostPlatform": {
+          "$rpc": "null"
+        },
+        "tasksSupported": false,
+        "worktreeCreateIdempotency": {
+          "dedupeTtlMs": 60000
+        }
+      }
+    },
+    "488c988b5918": {
+      "name": "status.get#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "status.get"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "capabilities": ["worktree.create-idempotency.v1"]
+          }
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "tw-capabilities-legacy-idempotency",
+    "checkpoints": [
+      {
+        "id": "legacy-host-window",
+        "observation": {
+          "sender": ["488c988b5918"],
+          "payloads": ["1e5b32902af7"],
+          "settlements": {
+            "probe": "03f6a4ac937a"
+          },
+          "state": "3b0c9705ec9a",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

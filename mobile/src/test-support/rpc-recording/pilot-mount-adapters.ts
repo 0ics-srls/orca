@@ -2,6 +2,7 @@ import { observableModel } from './observable-model'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { settingsMountAdapters } from './settings-mount-adapters'
 import { sourceControlMountAdapters } from './source-control-mount-adapters'
+import { taskWorkspaceMountAdapters } from './task-workspace-mount-adapters'
 import { workspaceSettingsMounts } from './workspace-settings-mounts'
 import type { MountAdapter } from './recording-scenario'
 import { hookMount, performHookAction } from './hook-mount'
@@ -16,6 +17,7 @@ export function pilotMountAdapters(
     ...settingsMountAdapters(modules),
     ...workspaceSettingsMounts(modules),
     ...sourceControlMountAdapters(modules),
+    ...taskWorkspaceMountAdapters(modules),
     ...hostedReviewMountAdapters(modules),
     'workspace.file-inventory': ({ client }) => {
       const useSearch = modules.load<
@@ -219,6 +221,12 @@ export function pilotMountAdapters(
               // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the preset arrives from the scenario JSON as a string.
               args.preset as Parameters<typeof actions.persistDefaultGitHubPreset>[0]
             )
+          }
+          if (name === 'resume') {
+            return actions.persistTaskResumeState({ githubItemsPreset: 'issues' })
+          }
+          if (name === 'trust') {
+            return actions.persistSetupHookTrust('repo-1', 'hash-1', false)
           }
           throw new Error(`Unknown preferences action: ${name}`)
         },

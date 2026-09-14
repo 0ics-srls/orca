@@ -1,0 +1,81 @@
+{
+  "operation": "tasks.worktree-create-retry",
+  "family": "worktree.create-retry",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "e9244ffbbcc61320dcad42624690b86cee1d682906562a48117c3928025005c8",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 3,
+  "values": {
+    "3f946ad0279c": {
+      "outcome": "uncreated"
+    },
+    "6d0209806267": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "Connection lost",
+        "isRpcDeliveryUnknown": true
+      }
+    },
+    "99d539e63c12": {
+      "name": "worktree.create#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.create\",\"params\":{\"repo\":\"id:repo-1\",\"name\":\"kestrel\"}}"
+    },
+    "a179866627c5": {
+      "name": "worktree.create#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "worktree.create"
+        },
+        {
+          "name": "params",
+          "value": {
+            "name": "kestrel",
+            "repo": "id:repo-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "timeoutMs": 600000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "rejected",
+        "startedAt": 0,
+        "settledAt": 0,
+        "error": {
+          "category": "Error",
+          "message": "Connection lost",
+          "isRpcDeliveryUnknown": true
+        }
+      }
+    }
+  },
+  "recording": {
+    "scenario": "tw-create-retry-ambiguous-without-idempotency",
+    "checkpoints": [
+      {
+        "id": "unstamped-create-is-not-replayed",
+        "observation": {
+          "sender": ["a179866627c5"],
+          "payloads": ["99d539e63c12"],
+          "settlements": {
+            "create": "6d0209806267"
+          },
+          "state": "3f946ad0279c",
+          "effects": []
+        }
+      }
+    ]
+  }
+}
