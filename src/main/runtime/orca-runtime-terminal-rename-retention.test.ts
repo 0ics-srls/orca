@@ -1,6 +1,7 @@
 import './orca-runtime-test-lifecycle.spec'
 import type { RuntimeStore } from './runtime-store-contract'
 import { describe, expect, it, vi } from 'vitest'
+import { createMobileCreateTestNotifier } from './orca-runtime-test-scenario-builders.spec'
 import { OrcaRuntimeService } from './orca-runtime-test-mocks.spec'
 import {
   HEADLESS_LEAF_ID,
@@ -63,4 +64,29 @@ describe('terminal rename before renderer graph hydration', () => {
       expect(getSession().tabsByWorktree[TEST_WORKTREE_ID][0].customTitle).toBe(title)
     }
   )
+  it('does not recreate a closed persisted tab from a surviving PTY record', async () => {
+    const session = makeWorkspaceSessionWithHeadlessTerminal()
+    const { runtimeStore, getSession, setSession } = makeRuntimeStoreWithWorkspaceSession(session)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Shared fixture implements RuntimeStore; its legacy Mock typing loses callable signatures.
+    const runtime = new OrcaRuntimeService(runtimeStore as RuntimeStore)
+    const notifier = createMobileCreateTestNotifier(vi.fn())
+    runtime.setNotifier(notifier)
+    runtime.setPtyController({
+      spawn: vi.fn(async () => ({ id: 'surviving-pty' })),
+      write: () => true,
+      kill: () => true,
+      getForegroundProcess: async () => null
+    })
+    const created = await runtime.createTerminal(`id:${TEST_WORKTREE_ID}`, {
+      tabId: 'host-tab',
+      leafId: HEADLESS_LEAF_ID
+    })
+    setSession({ ...getSession(), tabsByWorktree: { [TEST_WORKTREE_ID]: [] } })
+    runtimeStore.setWorkspaceSession.mockClear()
+
+    await runtime.renameTerminal(created.handle, 'Late rename')
+
+    expect(getSession().tabsByWorktree[TEST_WORKTREE_ID]).toEqual([])
+    expect(runtimeStore.setWorkspaceSession).not.toHaveBeenCalled()
+  })
 })
