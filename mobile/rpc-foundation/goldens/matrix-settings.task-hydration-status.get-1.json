@@ -3,14 +3,13 @@
   "family": "settings.task-hydration",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
+  "baseline": "5ec0b2698fbb74574650d21f96ccef8d4cb33d4f",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "7a24b68bbe213096752519e737485fe0a9159a7e8d860a62b0807f9911984ea3",
-  "scenarioSha256": "3f448feff463b59c3927dae020ecd8d4931bb4a6036df6d6af080de2ec5fcf2b",
+  "recorderSha256": "70aa6f59e01f8195ab8512a6fb4834315f54b64fa8009d377a45d271422bcf6b",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 3,
   "values": {
     "002ad269dd44": {
       "name": "showLinearConnect",

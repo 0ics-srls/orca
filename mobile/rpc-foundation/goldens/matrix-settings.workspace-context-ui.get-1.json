@@ -1,16 +1,15 @@
 {
   "operation": "settings.workspace-context",
   "family": "settings.workspace-context",
-  "namedDeltas": ["new-workspace-runtime-context-null-settings-typeerror"],
+  "namedDeltas": ["new-workspace-runtime-context-null-results-degrade-to-absent"],
   "runnerVersion": 1,
-  "baseline": "16d1ab81d3fd08e342b2f0ac0cc6f9e4aea4aaee",
+  "baseline": "5ec0b2698fbb74574650d21f96ccef8d4cb33d4f",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "7a24b68bbe213096752519e737485fe0a9159a7e8d860a62b0807f9911984ea3",
-  "scenarioSha256": "c9fff8ddb129fb13f394281d317d74e3ac7e6032613a311b7c9e3121cef787f9",
+  "recorderSha256": "70aa6f59e01f8195ab8512a6fb4834315f54b64fa8009d377a45d271422bcf6b",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 3,
   "values": {
     "0039f2221403": {
       "name": "ui.get#1",
@@ -96,14 +95,6 @@
           "id": "frame-4",
           "ok": true
         }
-      }
-    },
-    "0d56880d8286": {
-      "name": "unhandled-rejection",
-      "value": {
-        "category": "TypeError",
-        "isRpcDeliveryUnknown": false,
-        "message": "Cannot read properties of undefined (reading 'ui')"
       }
     },
     "0fb6ff3590e2": {
@@ -378,14 +369,6 @@
         }
       }
     },
-    "78b8435a485f": {
-      "name": "unhandled-rejection",
-      "value": {
-        "category": "TypeError",
-        "isRpcDeliveryUnknown": false,
-        "message": "Cannot read properties of null (reading 'ui')"
-      }
-    },
     "822040616fbb": {
       "name": "settings.get#1",
       "args": [
@@ -461,17 +444,6 @@
           }
         }
       }
-    },
-    "8a63b85fee0c": {
-      "providers": [],
-      "settings": {
-        "defaultTuiAgent": "codex",
-        "disabledTuiAgents": ["claude"],
-        "hostSettingOverrides": {},
-        "prBotAuthorOverrides": ["bot-user"],
-        "visibleTaskProviders": ["github", "linear"]
-      },
-      "trust": {}
     },
     "8be416d0b1ef": {
       "name": "ui.get#1",
@@ -687,8 +659,8 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "8a63b85fee0c",
-          "effects": ["0d56880d8286"]
+          "state": "2a7485a88169",
+          "effects": []
         }
       },
       {
@@ -699,8 +671,8 @@
           "settlements": {
             "mount": "eb79a9b3682a"
           },
-          "state": "8a63b85fee0c",
-          "effects": ["78b8435a485f"]
+          "state": "2a7485a88169",
+          "effects": []
         }
       },
       {
