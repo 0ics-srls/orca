@@ -55,6 +55,10 @@ export class ClaudeBackgroundTaskRows {
   private readonly generations = new Map<string, number>()
   private readonly foreign = new Map<string, ForeignOwner>()
   private readonly terminalTaskIds = new Set<string>()
+  /** The parent alias for the terminal run, when one was reported. Keeping it
+   *  lets an evicted row distinguish a late duplicate start from a genuine
+   *  restart under a fresh tool invocation. */
+  private readonly terminalToolUseIds = new Map<string, string | undefined>()
   private readonly ids = new ClaudeSubagentIds()
   private readonly now: () => number
 
@@ -106,6 +110,7 @@ export class ClaudeBackgroundTaskRows {
     this.generations.clear()
     this.foreign.clear()
     this.terminalTaskIds.clear()
+    this.terminalToolUseIds.clear()
     this.ids.clear()
   }
 
@@ -152,14 +157,31 @@ export class ClaudeBackgroundTaskRows {
       }
       return true
     }
+    let restartedTerminal = false
     if (this.terminalTaskIds.has(id)) {
-      return true
+      const previousToolUseId = this.terminalToolUseIds.get(id)
+      const currentToolUseId = claudeBackgroundTaskToolUseId(message)
+      // A terminal edge that had no usable tool id cannot prove a later start
+      // is a new run, so keep the conservative orphan guard. When both runs
+      // name their parent, a different alias is the provider's restart signal.
+      if (
+        previousToolUseId === undefined ||
+        currentToolUseId === undefined ||
+        previousToolUseId === currentToolUseId
+      ) {
+        return true
+      }
+      restartedTerminal = true
     }
     if (!this.admitsFirstRun(message)) {
       return true
     }
     if (!this.ensureRowSlot()) {
       return false
+    }
+    if (restartedTerminal) {
+      this.terminalTaskIds.delete(id)
+      this.terminalToolUseIds.delete(id)
     }
     this.openRow(id, message, (this.generations.get(id) ?? 0) + 1)
     return true
@@ -188,7 +210,7 @@ export class ClaudeBackgroundTaskRows {
     // Remembered even for a task never admitted: Orca is deliberately stricter
     // than the reference here, which keeps no trace of one. It stops a late
     // announcement from opening a row for work already reported finished.
-    this.rememberTerminalId(id)
+    this.rememberTerminalId(id, claudeBackgroundTaskToolUseId(message))
     if (!this.rows.has(id)) {
       // Matched on `task_id` alone. A terminal frame for a task that was never
       // admitted names nothing this transcript is tracking, so it yields no
@@ -202,13 +224,16 @@ export class ClaudeBackgroundTaskRows {
 
   private observePatch(id: string, message: Record<string, unknown>): boolean {
     const patch = record(message.patch)
-    if (patch?.is_backgrounded === false) {
+    // A tracked row remains this owner's responsibility even if a later patch
+    // reports foreground execution; its terminal notification still revises
+    // the durable row. Only an untracked task belongs to the foreground owner.
+    if (patch?.is_backgrounded === false && !this.rows.has(id)) {
       this.rememberForeign(id, 'foreground')
       return true
     }
     const change = claudeBackgroundTaskPatchChange(message)
     if (change.state && isSettledBackgroundTaskState(change.state)) {
-      this.rememberTerminalId(id)
+      this.rememberTerminalId(id, claudeBackgroundTaskToolUseId(message))
     }
     // A patch is folded into the row it names and is never a row of its own, so
     // an untracked task takes no row from it.
@@ -286,16 +311,18 @@ export class ClaudeBackgroundTaskRows {
     }
   }
 
-  private rememberTerminalId(id: string): void {
+  private rememberTerminalId(id: string, toolUseId?: string): void {
     if (this.terminalTaskIds.has(id)) {
       this.terminalTaskIds.delete(id)
     }
     this.terminalTaskIds.add(id)
+    this.terminalToolUseIds.set(id, toolUseId ?? this.rows.get(id)?.toolUseId)
     while (this.terminalTaskIds.size > MAX_TERMINAL_TASK_IDS) {
       const oldest = this.terminalTaskIds.values().next()
       if (oldest.done || oldest.value === id) {
         break
       }
+      this.terminalToolUseIds.delete(oldest.value)
       this.terminalTaskIds.delete(oldest.value)
     }
   }

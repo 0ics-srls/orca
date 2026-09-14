@@ -80,6 +80,7 @@ export function taskName(frame: Record<string, unknown>): string | undefined {
 export function classifyClaudeBackgroundTaskKind(taskType: unknown): ClaudeBackgroundTaskKind {
   switch (taskType) {
     case 'local_agent':
+    case 'local_subagent':
       return 'agent'
     case 'local_workflow':
       return 'workflow'

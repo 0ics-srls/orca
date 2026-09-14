@@ -183,6 +183,25 @@ describe('claude background task rows', () => {
     expect(items).toEqual([])
   })
 
+  it('leaves legacy local_subagent tasks to the subagent roster', () => {
+    const { rows, items } = harness()
+    rows.observe({
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'task-legacy-agent',
+      task_type: 'local_subagent',
+      subagent_type: 'explorer'
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'task-legacy-agent',
+      status: 'failed',
+      summary: 'the child failed'
+    })
+    expect(items).toEqual([])
+  })
+
   it('writes nothing for ambient housekeeping the user never asked for', () => {
     const { rows, items } = harness()
     rows.observe({ ...START_BASH, task_id: 'ambient-1', ambient: true })
@@ -214,6 +233,25 @@ describe('claude background task rows', () => {
       })
     ).toBe(true)
     expect(items).toEqual([])
+  })
+
+  it('keeps terminal ownership after a tracked task reports foregrounded', () => {
+    const { rows, latest } = harness()
+    rows.observe(START_BASH)
+    rows.observe({
+      type: 'system',
+      subtype: 'task_updated',
+      task_id: START_BASH.task_id,
+      patch: { is_backgrounded: false, status: 'running' }
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: START_BASH.task_id,
+      status: 'failed',
+      summary: 'foreground transition failed'
+    })
+    expect(latest()).toMatchObject({ state: 'blocked', summary: 'foreground transition failed' })
   })
 
   it('revises in place rather than opening a row from a patch', () => {
@@ -451,6 +489,42 @@ describe('claude background task rows', () => {
       taskId: 'overflow',
       state: 'blocked',
       summary: 'overflow failed'
+    })
+  })
+
+  it('reopens a settled task after its row was evicted when the parent alias changes', () => {
+    const { rows, keys, latest } = harness([FORWARDED_TOOL, 'toolu_second'])
+    rows.observe({ ...START_BASH, task_id: 'evicted-restart' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'evicted-restart',
+      tool_use_id: FORWARDED_TOOL,
+      status: 'completed'
+    })
+    for (let index = 0; index < 63; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `settled-${index}` })
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: `settled-${index}`,
+        status: 'completed'
+      })
+    }
+    // The first settled row is evicted to make room for this one.
+    rows.observe({ ...START_BASH, task_id: 'evictor' })
+    rows.observe({
+      ...START_BASH,
+      task_id: 'evicted-restart',
+      tool_use_id: 'toolu_second',
+      description: 'second invocation'
+    })
+
+    expect([...new Set(keys())]).toContain('claude-background-task:evicted-restart#2')
+    expect(latest()).toMatchObject({
+      taskId: 'evicted-restart',
+      state: 'working',
+      label: 'second invocation'
     })
   })
 
