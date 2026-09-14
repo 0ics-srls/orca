@@ -2,10 +2,9 @@ import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-o
 import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import { rpcReadUnchecked } from '../transport/rpc-reader-payload'
 import type { MobileGitBranchCompareResult } from '../source-control/mobile-branch-compare'
-import type { MobileGitStatusResult } from '../source-control/mobile-git-status'
+import { gitStatusProjectionReader } from '../source-control/mobile-git-read-operations'
 import {
   readMobileBranchCompareResult,
-  readMobileGitStatusResult,
   readMobileReviewGitDiffResult,
   readMobileReviewWorktreeMetadata,
   type MobileReviewGitDiffResult,
@@ -16,19 +15,13 @@ import {
 // projections — normalized status, normalized branch compare, the review notes on the worktree —
 // and neither reads a raw host payload.
 
-const statusProjectionReader: RpcCompatibleReader<
-  unknown,
-  'normalized-status',
-  MobileGitStatusResult | null
-> = (raw) => rpcReadUnchecked('normalized-status', readMobileGitStatusResult(raw))
-
 /**
  * git.status read for the PR branch context. The third policy on this method, and the only one that
  * skips: the standalone PR entry point derives branch and head SHA from status and falls back to
  * branchCompare's headOid, so a refused status leaves it with no branch rather than an error to
  * show. The review screen's read (`gitStatusProjectionRead`) must surface the message instead,
- * because the screen has nothing to render without it. One reader serves both — the projection is
- * the same, only what a refusal means differs.
+ * because the screen has nothing to render without it. Both bind the same
+ * `gitStatusProjectionReader`; only what a refusal means differs.
  */
 export const branchContextStatusRead = bindDeferredRpcOperation(
   defineRpcOperation({
@@ -36,7 +29,7 @@ export const branchContextStatusRead = bindDeferredRpcOperation(
     method: 'git.status',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: statusProjectionReader
+    read: gitStatusProjectionReader
   })
 )
 
