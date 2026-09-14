@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { MUTANT_DIRECTORY, RECORDER_DIRECTORY } from '../recorder-digest'
+import { RECORDING_DRIVERS } from '../recording-drivers'
 
 const root = resolve(import.meta.dirname, '../../../../..')
 const recorder = join(root, RECORDER_DIRECTORY)
@@ -39,13 +40,16 @@ describe('the mutant seam', () => {
     expect(sources(mutants).length).toBeGreaterThan(1)
   })
 
-  // A test cannot change a recording, so naming the directory there is free; the engine may not.
-  it('is named in no engine file but the digest that excludes it', () => {
+  // A test that does not record cannot change a recording; the drivers do record, so they are held
+  // to the engine's rule — a driver that read the table would change what it records silently.
+  it('is named in no recording file but the digest that excludes it', () => {
     const naming = outside
       .filter(
         (file) =>
           !file.endsWith(EXCLUDER) &&
-          !file.endsWith('.test.ts') &&
+          !(
+            file.endsWith('.test.ts') && !RECORDING_DRIVERS.some((driver) => file.endsWith(driver))
+          ) &&
           readFileSync(file, 'utf8').includes('mutants')
       )
       .map((file) => file.slice(recorder.length + 1))
