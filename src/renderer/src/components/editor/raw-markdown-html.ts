@@ -15,11 +15,6 @@ import { matchHtmlSuperscriptLinkSource } from './rich-markdown-html-superscript
 
 const INLINE_HTML_PATTERN = /^<!--[\s\S]*?-->|^<\/?[A-Za-z][\w.:-]*(?:\s[^<>]*?)?\/?>/
 
-function matchInlineHtml(src: string): string | null {
-  const match = src.match(INLINE_HTML_PATTERN)
-  return match?.[0] ?? null
-}
-
 function isEscaped(content: string, index: number): boolean {
   let backslashCount = 0
   for (let i = index - 1; i >= 0 && content[i] === '\\'; i -= 1) {
@@ -189,7 +184,7 @@ export function encodeRawMarkdownHtmlForRichEditor(
       const inlineHtml =
         normalizedContent.startsWith('<!--', index) && index + 4 > lastCommentClose
           ? null
-          : matchInlineHtml(normalizedContent.slice(index))
+          : (normalizedContent.slice(index).match(INLINE_HTML_PATTERN)?.[0] ?? null)
       if (inlineHtml) {
         result += transport.create('inline-html', inlineHtml)
         index += inlineHtml.length
