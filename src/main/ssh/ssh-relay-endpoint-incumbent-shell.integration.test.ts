@@ -268,3 +268,76 @@ posixOnly('empty relay husk reap against a real process', () => {
     expect(bystander.killed).toBe(false)
   })
 })
+
+/**
+ * `lsof` reports the same empty stdout whether nothing holds the socket or it could not answer
+ * at all, and under `-t` it exits 1 either way. Measured on Debian 12: against a wedged NFS
+ * mount it blocks indefinitely (killed at 120s, no stdout, no stderr), and with `-b` it returns
+ * in 2ms having reported no holder for a socket a live process was holding. Reading either as
+ * "nobody holds it" unlinks a live relay's endpoint, so the script has to tell an answer from a
+ * failure before the parser is allowed to see `HOLDERS_SOURCE=lsof`.
+ */
+posixOnly('holder enumeration when lsof cannot answer', () => {
+  async function probeWithStubLsof(
+    sockPath: string,
+    stubBody: string
+  ): Promise<RelayEndpointIncumbent> {
+    const binDir = mkdtempSync(join(workDir, 'stub-lsof-'))
+    writeFileSync(join(binDir, 'lsof'), `#!/bin/sh\n${stubBody}\n`, { mode: 0o755 })
+    const output = await sh(
+      `PATH=${binDir}:$PATH\n${relayEndpointIncumbentProbeCommand(process.execPath, sockPath)}`
+    )
+    return parseRelayEndpointIncumbentProbe(sockPath, output)
+  }
+
+  /** A socket inode with no listener: the one shape whose honest verdict is `exited`. */
+  async function staleSocket(name: string): Promise<string> {
+    const sockPath = join(workDir, name)
+    const relay = await startFakeRelay(sockPath)
+    relay.kill('SIGKILL')
+    await new Promise((resolve) => relay.on('exit', resolve))
+    return sockPath
+  }
+
+  it('refuses to call the endpoint exited when lsof failed to stat the path', async () => {
+    // Verbatim shape of `lsof -b -t -a -U <sock>` against a socket a live relay was holding.
+    const incumbent = await probeWithStubLsof(
+      await staleSocket('lsof-status-error.sock'),
+      'echo "lsof: status error on $4: Resource temporarily unavailable" >&2\nexit 1'
+    )
+
+    expect(incumbent.holdersEnumerable).toBe(false)
+    expect(incumbent.verdict).toBe('unverifiable')
+  })
+
+  it('refuses to call the endpoint exited when lsof was killed mid-probe', async () => {
+    // What any `timeout`/`-S` bound around the blocking case produces: no output, no stderr.
+    const incumbent = await probeWithStubLsof(
+      await staleSocket('lsof-signalled.sock'),
+      'kill -KILL $$'
+    )
+
+    expect(incumbent.holdersEnumerable).toBe(false)
+    expect(incumbent.verdict).toBe('unverifiable')
+  })
+
+  it('still reports exited when lsof cleanly found no holder', async () => {
+    // The over-correction guard: a silent exit 1 is lsof answering "nobody", not failing.
+    const incumbent = await probeWithStubLsof(await staleSocket('lsof-clean-empty.sock'), 'exit 1')
+
+    expect(incumbent.holdersEnumerable).toBe(true)
+    expect(incumbent.verdict).toBe('exited')
+  })
+
+  it('keeps holders lsof did report even when it also emitted a diagnostic', async () => {
+    const sockPath = join(workDir, 'lsof-noisy-holder.sock')
+    const relay = await startFakeRelay(sockPath)
+    const incumbent = await probeWithStubLsof(
+      sockPath,
+      `echo "lsof: WARNING: can't stat() nfs file system /mnt/share" >&2\necho ${relay.pid}\nexit 1`
+    )
+
+    expect(incumbent.holdersEnumerable).toBe(true)
+    expect(incumbent.holders.map((holder) => holder.pid)).toEqual([relay.pid])
+  })
+})

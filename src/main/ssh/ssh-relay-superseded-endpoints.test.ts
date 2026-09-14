@@ -87,6 +87,14 @@ describe('classifySupersededRelay', () => {
     ).toBe('stale-endpoint-removed')
   })
 
+  it('does not unlink a socket when lsof ran but could not enumerate its holders', () => {
+    // This classification is what reaches `rm -f`. An lsof that blocked, was signalled, or
+    // could not stat the path reports the same empty holder set as a genuinely stale socket.
+    expect(
+      classifySupersededRelay(incumbent(['PRESENT=yes', 'LISTEN=refused', 'HOLDERS_SOURCE=error']))
+    ).toBe('unverifiable')
+  })
+
   it('does nothing at all for an unverifiable endpoint', () => {
     expect(
       classifySupersededRelay(

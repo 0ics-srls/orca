@@ -74,6 +74,17 @@ describe('parseRelayEndpointIncumbentProbe', () => {
     expect(incumbent.holdersEnumerable).toBe(false)
   })
 
+  it('reports unverifiable when lsof ran but could not answer', () => {
+    // An lsof that blocked, was signalled, or could not stat the path produces the same empty
+    // result as "nobody holds it". Only the source line separates them.
+    const incumbent = parseRelayEndpointIncumbentProbe(
+      SOCK,
+      probeOutput(['PRESENT=yes', 'LISTEN=refused', 'HOLDERS_SOURCE=error'])
+    )
+    expect(incumbent.verdict).toBe('unverifiable')
+    expect(incumbent.holdersEnumerable).toBe(false)
+  })
+
   it('reports unverifiable when the connect probe timed out', () => {
     const incumbent = parseRelayEndpointIncumbentProbe(
       SOCK,

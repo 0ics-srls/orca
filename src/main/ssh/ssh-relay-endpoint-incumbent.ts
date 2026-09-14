@@ -15,8 +15,9 @@
  *   nothing holds this socket path, established positively (a connect that was refused *and*
  *   an enumeration that found no holder). A relay whose socket was already unlinked is
  *   invisible to this probe by construction — that is what the superseded sweep is for.
- * - a probe that could not run, a host without `lsof`, or a connect that failed for any other
- *   reason is `unverifiable`. It never authorizes unlinking, rebinding over, or signalling.
+ * - a probe that could not run, a host without `lsof`, an `lsof` that ran but could not answer,
+ *   or a connect that failed for any other reason is `unverifiable`. It never authorizes
+ *   unlinking, rebinding over, or signalling.
  */
 import type { SshConnection } from './ssh-connection'
 import { shellEscape } from './ssh-connection-utils'
@@ -58,7 +59,12 @@ export type RelayEndpointIncumbent = {
   socketPresent: boolean
   /** Pids proven to hold this exact socket. Empty when the host could not enumerate them. */
   holders: RelayEndpointHolder[]
-  /** False when no enumeration tool was available — an empty `holders` then proves nothing. */
+  /**
+   * False when no enumeration tool was available *or* the one that ran could not answer — an
+   * empty `holders` then proves nothing. `lsof` blocks indefinitely on an unresponsive network
+   * mount and reports nothing when it cannot stat the socket path, and neither is
+   * distinguishable from "nobody holds it" by exit status alone.
+   */
   holdersEnumerable: boolean
 }
 
@@ -99,17 +105,41 @@ export function relayEndpointIncumbentProbeCommand(nodePath: string, sockPath: s
     'fi',
     'printf \'LISTEN=%s\\n\' "$listen"',
     'if command -v lsof >/dev/null 2>&1; then',
-    "  printf 'HOLDERS_SOURCE=lsof\\n'",
     // Why -a: lsof ORs its selectors, so without it every unix-socket holder on the box
     // would be reported as holding this path (#8762).
-    '  for pid in $(lsof -t -a -U "$sock" 2>/dev/null); do',
-    '    args=$(ps -o args= -p "$pid" 2>/dev/null | tr "\\n" " ")',
-    '    match=no',
-    '    case "$args" in *relay.js*"$sock"*) match=yes ;; esac',
-    ...relayDaemonChildCensusShell().map((line) => `    ${line}`),
-    '    printf \'HOLDER=%s %s %s %s\\n\' "$pid" "$match" ' +
-      `"$${RELAY_CHILD_COUNT_VAR}" "$${RELAY_UNRECOGNIZED_CHILD_COUNT_VAR}"`,
+    // Why 2>&1 rather than 2>/dev/null: under -t, lsof exits 1 both for "nobody holds it" and
+    // for "could not answer", so its diagnostics are the only thing separating the two. -t
+    // prints bare pids, so any non-numeric word is a diagnostic.
+    // Never -b: it declines to stat the socket path and then reports no holder at all, even on
+    // a host with no network mounts.
+    '  lsof_out=$(lsof -t -a -U "$sock" 2>&1)',
+    '  lsof_rc=$?',
+    '  holder_pids=',
+    '  lsof_answered=yes',
+    '  for word in $lsof_out; do',
+    '    case "$word" in',
+    '      *[!0-9]*) lsof_answered=no ;;',
+    '      *) holder_pids="$holder_pids $word" ;;',
+    '    esac',
     '  done',
+    // An exit outside lsof's own 0/1 is a signal or a wrapper timeout, never an answer.
+    '  [ "$lsof_rc" -le 1 ] || lsof_answered=no',
+    // Pids it did report stand on their own; only an empty result needs a clean run behind it.
+    // An absent path is exempt: nothing can hold it, and lsof's own ENOENT about a path this
+    // script already found missing is an answer, not a failure to answer.
+    '  if [ -z "$holder_pids" ] && [ "$lsof_answered" = no ] && [ "$listen" != absent ]; then',
+    "    printf 'HOLDERS_SOURCE=error\\n'",
+    '  else',
+    "    printf 'HOLDERS_SOURCE=lsof\\n'",
+    '    for pid in $holder_pids; do',
+    '      args=$(ps -o args= -p "$pid" 2>/dev/null | tr "\\n" " ")',
+    '      match=no',
+    '      case "$args" in *relay.js*"$sock"*) match=yes ;; esac',
+    ...relayDaemonChildCensusShell().map((line) => `      ${line}`),
+    '      printf \'HOLDER=%s %s %s %s\\n\' "$pid" "$match" ' +
+      `"$${RELAY_CHILD_COUNT_VAR}" "$${RELAY_UNRECOGNIZED_CHILD_COUNT_VAR}"`,
+    '    done',
+    '  fi',
     'else',
     "  printf 'HOLDERS_SOURCE=unavailable\\n'",
     'fi',
