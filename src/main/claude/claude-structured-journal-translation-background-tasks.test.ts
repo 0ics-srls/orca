@@ -136,4 +136,23 @@ describe('claude journal translation — background task rows', () => {
     expect(taskRowIds()).toEqual([])
     expect(fallbackRows()).toEqual(['Background command "Wait" failed with exit code 1'])
   })
+
+  it('settles live background rows when the provider ends before disposal', () => {
+    const { translator, taskRowTexts } = harness()
+    translator.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: TASK_ID,
+        task_type: 'local_bash',
+        description: 'Wait for the verification verdict',
+        is_backgrounded: true
+      })
+    )
+
+    translator.handle({ type: 'ended', sessionId: 'orca-session', reason: 'closed' })
+
+    expect(taskRowTexts().at(-1)).toBe(
+      'Background command "Wait for the verification verdict" stopped reporting'
+    )
+  })
 })

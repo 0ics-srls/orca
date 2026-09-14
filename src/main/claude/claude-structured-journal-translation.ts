@@ -223,6 +223,7 @@ export function createClaudeJournalTranslator(
       if (event.type === 'ended') {
         streamedText.flush()
         subagents.settleSession()
+        backgroundTasks.settleSession()
         if (currentTurn) {
           publishLifecycle(currentTurn, {
             state: 'interrupted',
