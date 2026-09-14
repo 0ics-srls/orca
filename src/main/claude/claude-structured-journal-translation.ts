@@ -19,6 +19,7 @@ import {
   claudeToolResults,
   claudeToolUses,
   readClaudeMessageEnvelope,
+  type ClaudeMessageEnvelope,
   type ClaudeToolUse
 } from './claude-structured-item-translation'
 import { journalClaudePrompt } from './claude-prompt-journaling'
@@ -34,7 +35,7 @@ import {
 import { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { createClaudeStreamedBlockRegistry } from './claude-streamed-block-identity'
 import { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
-import { claudeTurnOpenedByFrame } from './claude-turn-opening'
+import { claudeTurnOpenedBySendEcho } from './claude-turn-opening'
 import {
   claudeTurnEndForResult,
   claudeTurnLifecycleItem,
@@ -119,6 +120,23 @@ export function createClaudeJournalTranslator(
     deps.sink.setActivity?.(null)
   }
 
+  /** The provider produced, so a turn is running. Idempotent: every frame of one
+   *  reply stays inside the turn its first frame opened. A subagent's output is
+   *  its parent turn's work and never a turn of its own. */
+  const ensureTurnOpen = (
+    envelope: ClaudeMessageEnvelope,
+    frame: Record<string, unknown>,
+    observedAt: number
+  ): void => {
+    if (currentTurn || envelope.role !== 'assistant' || frame.parent_tool_use_id !== null) {
+      return
+    }
+    openTurn(
+      { sessionId: envelope.sessionId, turnId: envelope.uuid, startedAt: observedAt },
+      observedAt
+    )
+  }
+
   const publishActivity = (kind: string, payload: unknown): void => {
     if (!currentTurn) {
       return
@@ -158,26 +176,17 @@ export function createClaudeJournalTranslator(
       (body && envelope.role === 'assistant' ? streamedBlocks.reconcile(envelope) : null) ??
       claudeMessageIdentity(envelope)
     streamedText.forget(agentJournalItemKey(identity))
-    const opened = claudeTurnOpenedByFrame({
-      envelope,
-      frame: message,
-      startsTurn,
-      hasOpenTurn: currentTurn !== null,
-      observedAt,
-      // A user echo lands on its own message identity, so this is the user row's key.
-      userItemId: agentJournalItemKey(identity)
-    })
-    // A resumed turn has no user row to anchor it, so it must bracket its own
-    // first output: every reader that stops at the turn record scanning back
-    // would otherwise look straight past the tool call that opened it.
-    if (opened && opened.userItemId === undefined) {
-      openTurn(opened, observedAt)
-    }
+    const thinking = claudeThinkingText(outputEnvelope)
     if (body) {
+      // Opening before the append is what brackets a turn around its own first
+      // output; a reader that scans back to the turn record and stops would
+      // otherwise look straight past the row that opened it.
+      ensureTurnOpen(envelope, message, observedAt)
       deps.sink.appendItem(identity, body)
       changed = true
     }
     for (const tool of claudeToolUses(outputEnvelope)) {
+      ensureTurnOpen(envelope, message, observedAt)
       tools.set(tool.id, tool)
       deps.sink.appendItem(
         claudeToolIdentity(envelope.sessionId, tool.id),
@@ -201,8 +210,8 @@ export function createClaudeJournalTranslator(
       tools.delete(result.toolUseId)
       changed = true
     }
-    const thinking = claudeThinkingText(outputEnvelope)
     if (thinking) {
+      ensureTurnOpen(envelope, message, observedAt)
       deps.sink.appendItem(claudeThinkingIdentity(envelope.sessionId, envelope.uuid), {
         kind: 'message',
         role: 'reasoning',
@@ -214,8 +223,15 @@ export function createClaudeJournalTranslator(
     }
     changed = appendUnmodeledClaudeContent(providerFallback, outputEnvelope, message) || changed
     // The send's turn is anchored to the user row journaled just above it.
-    if (opened?.userItemId !== undefined) {
-      openTurn(opened, observedAt)
+    const sendEchoTurn = claudeTurnOpenedBySendEcho({
+      envelope,
+      frame: message,
+      startsTurn,
+      observedAt,
+      userItemId: agentJournalItemKey(identity)
+    })
+    if (sendEchoTurn) {
+      openTurn(sendEchoTurn, observedAt)
     }
     if (changed) {
       deps.sink.publish()

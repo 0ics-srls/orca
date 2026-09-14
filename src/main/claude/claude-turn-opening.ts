@@ -1,61 +1,44 @@
-// Which provider frame opens a Claude turn, and what it opens.
+// Whether Orca's own send echo opens a turn.
 //
-// Orca's own send echo used to be the only opener, while any `result` frame
-// closed the turn. That asymmetry is what leaves a working session reading
-// idle: the provider resumes on its own — a background task reports in and
-// wakes the agent after a `result` settled the turn — and nothing Orca sent
-// ever arrives to reopen one. The model's own output is the evidence a turn is
-// running, so it opens one; whichever opened it, the next `result` settles it.
+// The provider's own output opens one too — see `ensureTurnOpen` in the
+// translator, which the content sites call as they journal. Orca's turn used to
+// open only here, while any `result` frame closed it, and that asymmetry is what
+// leaves a working session reading idle: the provider resumes on its own when a
+// background task reports in and wakes the agent, and nothing Orca sent ever
+// arrives to reopen a turn.
 
 import {
   claudeHasReplayContent,
-  claudeMessageBody,
-  claudeOutputEnvelope,
-  claudeThinkingText,
-  claudeToolUses,
   type ClaudeMessageEnvelope
 } from './claude-structured-item-translation'
 import type { ClaudeCurrentTurn } from './claude-turn-lifecycle-item'
 
-export type ClaudeTurnOpeningInput = {
+export type ClaudeSendEchoTurnInput = {
   envelope: ClaudeMessageEnvelope
-  /** The raw frame: the turn boundary reads `parent_tool_use_id` off it, and an
-   *  absent field is not the same claim as an explicit `null`. */
+  /** The raw frame: an absent `parent_tool_use_id` is not the same claim as an
+   *  explicit `null`, and only a root frame carries a root turn. */
   frame: Record<string, unknown>
   /** Orca dispatched this send and the provider is replaying it back. */
   startsTurn: boolean
-  hasOpenTurn: boolean
   observedAt: number
-  /** Provider key of the user row, used only by the send echo. */
+  /** Provider key of the user row this turn is anchored to. */
   userItemId: string
 }
 
-/** Whether this frame carries model output, which is what makes it evidence of a
- *  running turn. Provider traffic the host cannot model is not: an unmodeled
- *  frame reaching the bounded fallback says nothing about whether work resumed. */
-function producesModelOutput(envelope: ClaudeMessageEnvelope): boolean {
-  const output = claudeOutputEnvelope(envelope)
-  return (
-    claudeMessageBody(output) !== null ||
-    claudeToolUses(output).length > 0 ||
-    claudeThinkingText(output) !== null
-  )
-}
-
-export function claudeTurnOpenedByFrame(input: ClaudeTurnOpeningInput): ClaudeCurrentTurn | null {
-  // A subagent's frames are its parent turn's work, never a turn of their own.
-  if (input.frame.parent_tool_use_id !== null) {
-    return null
-  }
-  const { envelope, observedAt } = input
-  const turn = { sessionId: envelope.sessionId, turnId: envelope.uuid, startedAt: observedAt }
-  if (envelope.role === 'user') {
-    return input.startsTurn && claudeHasReplayContent(envelope)
-      ? { ...turn, userItemId: input.userItemId }
-      : null
-  }
-  // Reopening only when no turn is open keeps every frame of one reply inside the
-  // turn its first frame opened, and keeps this off the path of a turn Orca is
-  // already tracking.
-  return !input.hasOpenTurn && producesModelOutput(envelope) ? turn : null
+/** The turn a replayed send echo opens, or null when this frame is not one. */
+export function claudeTurnOpenedBySendEcho(
+  input: ClaudeSendEchoTurnInput
+): ClaudeCurrentTurn | null {
+  const { envelope } = input
+  return envelope.role === 'user' &&
+    input.startsTurn &&
+    claudeHasReplayContent(envelope) &&
+    input.frame.parent_tool_use_id === null
+    ? {
+        sessionId: envelope.sessionId,
+        turnId: envelope.uuid,
+        startedAt: input.observedAt,
+        userItemId: input.userItemId
+      }
+    : null
 }
