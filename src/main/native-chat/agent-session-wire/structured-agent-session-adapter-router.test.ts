@@ -187,7 +187,7 @@ describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
     expect(acquire).not.toHaveBeenCalled()
   })
 
-  it('publishes one global close proof without retaining session ids', async () => {
+  it('keeps a per-session stop proof and reports no stop for a session it never routed', async () => {
     const claude = adapterOf(vi.fn(async () => true))
     const closeAdapters = vi.fn(async () => undefined)
     const router = new StructuredAgentSessionAdapterRouter(
@@ -202,12 +202,28 @@ describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
 
     await router.closeAll()
 
+    // The routed session carries the shutdown's own exit proof; the other two are sessions this
+    // router has no record of, and an absent record is not a stop it can report.
     await expect(router.closeSession('session-1')).resolves.toBe(true)
-    await expect(router.closeSession('never-routed')).resolves.toBe(true)
+    await expect(router.closeSession('never-routed')).resolves.toBe(false)
     router.acknowledgeSessionRelease('session-1')
-    await expect(router.closeSession('session-1')).resolves.toBe(true)
+    await expect(router.closeSession('session-1')).resolves.toBe(false)
     await router.closeAll()
     expect(closeAdapters).toHaveBeenCalledOnce()
+  })
+
+  it('asks the adapters to release an unrouted session rather than answering from the close proof', async () => {
+    const claudeRelease = vi.fn(async () => true)
+    const codexRelease = vi.fn(async () => false)
+    const router = new StructuredAgentSessionAdapterRouter(
+      { claude: adapterOf(claudeRelease), codex: adapterOf(codexRelease) },
+      async () => undefined
+    )
+    await router.closeAll()
+
+    await expect(router.releaseAcquisition({ sessionId: 'never-routed' })).resolves.toBe(true)
+    expect(claudeRelease).toHaveBeenCalledWith({ sessionId: 'never-routed' })
+    expect(codexRelease).toHaveBeenCalledWith({ sessionId: 'never-routed' })
   })
 
   it('retains live routes and publishes no global proof when closeAll fails', async () => {
@@ -268,9 +284,10 @@ describe('StructuredAgentSessionAdapterRouter.closeAll', () => {
     await router.closeAll()
     resolveAcquire(acquisition(2, 'spawn-2'))
 
-    // The route is NOT published behind a closed adapter, so nothing routes back out to it.
+    // The route is NOT published behind a closed adapter, so nothing routes back out to it — and
+    // with no route the router has nothing to stop and no stop to report.
     await expect(acquiring).rejects.toThrow('router is closed')
-    await expect(router.closeSession('session-1')).resolves.toBe(true)
+    await expect(router.closeSession('session-1')).resolves.toBe(false)
     expect(closeSession).not.toHaveBeenCalled()
   })
 })

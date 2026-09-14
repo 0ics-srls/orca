@@ -51,9 +51,6 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
         this.routes.delete(input.sessionId)
       }
     }
-    if (this.allAdaptersClosed) {
-      return true
-    }
     let released = false
     for (const candidate of Object.values(this.adapters)) {
       released = (await candidate.releaseAcquisition?.(input)) === true || released
@@ -145,7 +142,10 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
   ): Promise<boolean> {
     const route = this.routes.get(sessionId)
     if (!route) {
-      return this.allAdaptersClosed
+      // No route is loss of contact, never proof of a stop. Answering `true` here would hand a
+      // caller a receipt for a session this router never acted on — and the caller spends that
+      // receipt by releasing the durable lease.
+      return false
     }
     if (route.state === 'stopped') {
       return true
@@ -169,7 +169,13 @@ export class StructuredAgentSessionAdapterRouter implements StructuredAgentSessi
     this.closePromise = (async () => {
       try {
         await this.closeAdapters()
-        this.routes.clear()
+        // Adapter shutdown only resolves once every child is PROVEN stopped, so each routed
+        // session inherits that proof and keeps it per session. Clearing the map instead would
+        // leave one boolean as the only surviving evidence, and an empty map cannot tell a
+        // session this router stopped from one it never saw.
+        for (const route of this.routes.values()) {
+          route.state = 'stopped'
+        }
         this.allAdaptersClosed = true
       } finally {
         this.closePromise = null
