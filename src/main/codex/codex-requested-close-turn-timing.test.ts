@@ -70,6 +70,7 @@ describe('requested-close durable turn timing', () => {
         prompts: new CodexPromptRegistry(),
         options: new Map(),
         reportedOptions: {},
+        fastModeTierByModel: new Map(),
         dispatchEchoes: createCodexDispatchEchoes(),
         translator
       }
