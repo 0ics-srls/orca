@@ -1,7 +1,16 @@
+import type { OperationExposure } from '../operation-module-loader'
 import type { MountAdapter } from '../recording-scenario'
 import { hookMount } from '../hook-mount'
 import { observableModel, projectObservable } from '../observable-model'
 import { operationModuleLoader } from '../operation-module-loader'
+
+/** `loadMobileResumeMetadata` is module-private in the panel; exposing it beats editing pinned source. */
+export const settingsMountExposures: readonly OperationExposure[] = [
+  [
+    'MobileAgentSessionHistoryPanel.tsx',
+    '\nexports.loadMobileResumeMetadata = loadMobileResumeMetadata;'
+  ]
+]
 
 export function settingsMountAdapters(
   modules: ReturnType<typeof operationModuleLoader>

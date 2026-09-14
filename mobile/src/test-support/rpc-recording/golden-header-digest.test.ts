@@ -5,7 +5,7 @@ import { afterAll, describe, expect, it } from 'vitest'
 import { derivedGoldens } from './derived-goldens'
 import { goldenRecording, type GoldenRecording } from './golden-recording'
 import { MOUNTED_OPERATION_MODULES } from './adapters/mounted-operation-modules'
-import { ADAPTER_DIRECTORY, RECORDER_DIRECTORY } from './recorder-digest'
+import { ADAPTER_DIRECTORY, MUTANT_DIRECTORY, RECORDER_DIRECTORY } from './recorder-digest'
 import { readScenarios } from './scenario-input'
 import type { MountedOperationModule } from './mounted-operation-module'
 import type { RecordingScenario, ScenarioStep } from './recording-scenario'
@@ -43,14 +43,15 @@ afterAll(() => {
 })
 
 /**
- * One state of the recorder tree: the engine, the registered adapter modules, and the source each
- * one holds. A module left out of `sources` gets identical stub source, so only what a revision
- * names is different between two of them.
+ * One state of the recorder tree: the engine, the registered adapter modules, the source each one
+ * holds, and the mutant evidence beside them. A module left out of `sources` gets identical stub
+ * source, so only what a revision names is different between two of them.
  */
 type Revision = {
   engine: string
   registered?: readonly MountedOperationModule[]
   sources?: Record<string, string>
+  mutants?: Record<string, string>
 }
 
 /** The files a root contributes to a header, plus the manifest the oldest digest also read. */
@@ -62,6 +63,10 @@ function stubRoot(revision: Revision, scenarioFile: string): string {
   for (const { source } of revision.registered ?? MOUNTED_OPERATION_MODULES) {
     const stub = revision.sources?.[source] ?? 'export const adapter = 1'
     writeFileSync(join(directory, ADAPTER_DIRECTORY, source), stub)
+  }
+  mkdirSync(join(directory, MUTANT_DIRECTORY), { recursive: true })
+  for (const [file, source] of Object.entries(revision.mutants ?? {})) {
+    writeFileSync(join(directory, MUTANT_DIRECTORY, file), source)
   }
   writeFileSync(join(directory, 'mobile/pnpm-lock.yaml'), 'lockfile: stub\n')
   mkdirSync(join(directory, 'mobile/rpc-foundation'), { recursive: true })
@@ -168,12 +173,20 @@ function editCompletion(
 describe('golden header digests', () => {
   const ENGINE = 'export const runner = 1'
 
-  // A domain PR lands a family and the module that mounts it together. Neither is an input to any
-  // other golden's header, so no existing golden re-records and no branch conflicts on that line.
-  it('re-digests nothing when a domain adds a family and its adapter module', () => {
-    const before = headers({ engine: ENGINE }, manifest)
+  // A whole domain PR: a family, the module that mounts it, and the mutant that proves its
+  // projection load-bearing. None is an input to any other golden's header, so nothing already
+  // recorded re-records and two such branches conflict on no golden line at all.
+  it('re-digests nothing when a domain adds a family, an adapter module and a mutant', () => {
+    const before = headers(
+      { engine: ENGINE, mutants: { 'operation-mutations.ts': 'one' } },
+      manifest
+    )
     const after = headers(
-      { engine: ENGINE, registered: [...MOUNTED_OPERATION_MODULES, ADDED_MODULE] },
+      {
+        engine: ENGINE,
+        registered: [...MOUNTED_OPERATION_MODULES, ADDED_MODULE],
+        mutants: { 'operation-mutations.ts': 'two', 'digest-probe-mutants.test.ts': 'added' }
+      },
       [...manifest, ADDED_FAMILY]
     )
     expect(moved(before, after)).toEqual([])

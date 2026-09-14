@@ -79,7 +79,25 @@ editing one fails exactly the goldens mounted through it. The adapters used to s
 family's adapter: #20568 added two task modules and put a conflict on that one line in 153 files,
 against every domain branch in flight.
 
-The seam is the directory, not a filename convention, because a convention is a rule nobody
+`mutants/` is excluded for a different reason: nothing there is pinned by anything. A file that
+cannot change a recording is not provenance for one, and pinning it would claim a provenance the
+golden does not have — while charging every domain that adds a mutant a re-record of all 153 files.
+The mutant table, the per-family mutant registry, the reference states and the suites that apply
+them all live there. What makes the exclusion sound is that no recording can reach them: the loader
+takes a resolved mutation spec instead of importing a table by name, so nothing on the recording
+path names `mutants/` at all, and `mutants/mutant-seam.test.ts` is the check.
+
+For the same reason `recorderSha256` pins only the suites in `recording-drivers.ts`. A golden's
+bytes come from `pilot-recordings.test.ts` or `family-recordings.test.ts` and from what they
+import; a suite that reads goldens, or writes one to a scratch directory, puts no observation in a
+recorded file. `scripts/rpc-recording.mts` records exactly that list, so the two cannot drift apart.
+
+A module-private product export an adapter drives is exposed by its own module — see
+`settingsMountExposures` — not by a shared table, because the exposure text does change what a
+recording loads. Each domain module gets its own loader carrying its own exposures, and one
+recording mounts one adapter, so `adapterSha256` pins exactly the exposures that reached it.
+
+The adapter seam is the directory, not a filename convention, because a convention is a rule nobody
 enforces. `adapter-seam.test.ts` enforces this one: every file under `adapters/` is a registered
 module, every registered module is declared in the file it is registered under, no adapter module
 imports a sibling (which would leave a golden pinned to one module and driven by two), and
@@ -218,9 +236,8 @@ ORCA_BACKGROUND_LAUNCH=1 RPC_FOUNDATION_RECORD=1 pnpm --dir mobile exec tsx scri
 ORCA_BACKGROUND_LAUNCH=1 pnpm --dir mobile test src/test-support/rpc-recording
 ```
 
-Mutants are the defect evidence. `operation-mutations.ts` is an engine file and holds one anchored
-source edit per adapter family — it is read only when a mutant runs, never while recording, so a new
-entry cannot change a recording but does still move `recorderSha256` on every golden, and every family's recording must change visible state when its mutant is applied,
+Mutants are the defect evidence. `mutants/operation-mutations.ts` holds one anchored
+source edit per adapter family, and every family's recording must change visible state when its mutant is applied,
 which is what shows that family's `state()` projection observes the operation's real output.
 Anchors are asserted to match exactly one site, because a repeated anchor would half-apply while
 still counting as applied. Mutants replace the expression in memory, then run the same real hook.
@@ -263,7 +280,7 @@ It is not a substitute for reading the diff. Three facts bound it, all learned t
   reply kills it on five matrix goldens. The lesson is about the skip, not about that call site: a
   generator that opts a family out without failing is indistinguishable from coverage.
 
-`probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole and the closure
+`mutants/probe-hole-witness.test.ts` closes the first two and keeps them closed. It asserts the hole and the closure
 together: each probe must kill its mutation _and_ every pre-probe scenario of the same operation
 must still survive it. A probe that stops being load-bearing fails instead of lingering.
 
@@ -314,9 +331,10 @@ copied in, `node_modules` symlinked, `RPC_FOUNDATION_GOLDENS` pointed at a scrat
 copy the result back and run the candidate suite here. Format the recorder before recording: an
 `oxfmt` pass afterwards moves `recorderSha256` again. Adding or editing one domain's module under
 `adapters/` no longer needs any of this: only that domain's goldens move, and they re-record from
-its own branch like any other behaviour change.
+its own branch like any other behaviour change. Adding a mutant, a probe or a suite that does not
+record needs none of it either, and moves no golden at all.
 
-If your call site carries a mutation anchor in `operation-mutations.ts`, rewriting it will make the
+If your call site carries a mutation anchor in `mutants/operation-mutations.ts`, rewriting it will make the
 anchor match zero sites. Re-anchor the same defect at its new home rather than deleting the mutant:
 #20499 broke five anchors that way, and each one had a new home.
 
