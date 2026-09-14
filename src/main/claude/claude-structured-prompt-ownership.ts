@@ -4,14 +4,19 @@ import {
 } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
 import type { StructuredSessionCompaction } from '../native-chat/agent-session-wire/structured-session-compaction'
 import { CLAUDE_DEFAULT_REQUEST_TIMEOUT_MS } from './claude-agent-sdk-control-requests'
-import { answerClaudePrompt, cancelClaudeTurn } from './claude-structured-control-actions'
+import {
+  answerClaudePrompt,
+  cancelClaudeTurn,
+  supportsClaudeQueuedInterruptCancellation
+} from './claude-structured-control-actions'
+import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
 
 type CancelInput = Parameters<StructuredAgentSessionAdapter['cancelTurn']>[0]
 type AnswerInput = Parameters<StructuredAgentSessionAdapter['answerPrompt']>[0]
 
 export function admitClaudePromptCancellation(session: ClaudeSession, promptKey: string): boolean {
-  const admission = session.translator?.cancelPrompt(promptKey)
+  const admission = session.translator?.journalPrompts.cancel(promptKey)
   return admission?.accepted ?? true
 }
 
@@ -48,6 +53,7 @@ export async function cancelClaudeStructuredTurn(input: {
   compactions: StructuredSessionCompaction
   timeoutMs?: number
   admitPromptCancellation: (session: ClaudeSession, promptKey: string) => boolean
+  onDispatchSettledLate?: ClaudeLateDispatchSettlement
 }): Promise<{ cancelled: boolean }> {
   const { request, sessions, compactions, timeoutMs } = input
   const session = requireSession(sessions, request.sessionId)
@@ -69,17 +75,24 @@ export async function cancelClaudeStructuredTurn(input: {
     sessions.get(request.sessionId) === session &&
     session.fence === request.fence &&
     session.acquisitionGeneration === acquisitionGeneration &&
-    (compactions.ownsTurn(request.sessionId, request.turnId) ||
-      (session.activeTurnId === undefined
-        ? session.dispatchSequence === 0
-        : session.activeTurnId === request.turnId &&
-          session.activeTurnSequence === session.dispatchSequence)) &&
-    (!claim ||
-      (prompt !== undefined &&
-        session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId)))
+    (claim && prompt
+      ? session.activeTurnId === request.turnId &&
+        session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId) &&
+        (session.activeTurnSequence === session.dispatchSequence ||
+          supportsClaudeQueuedInterruptCancellation(session))
+      : compactions.ownsTurn(request.sessionId, request.turnId) ||
+        (session.activeTurnId === undefined
+          ? session.dispatchSequence === 0
+          : session.activeTurnId === request.turnId &&
+            session.activeTurnSequence === session.dispatchSequence))
   let interruptConfirmed = false
   try {
-    const result = await cancelClaudeTurn(session, timeoutMs, isCurrent)
+    const result = await cancelClaudeTurn(
+      session,
+      timeoutMs,
+      isCurrent,
+      input.onDispatchSettledLate
+    )
     if (result.cancelled && claim && cancellationObserved) {
       interruptConfirmed = true
       await waitForClaudePromptCancellation(cancellationObserved, timeoutMs)

@@ -213,6 +213,159 @@ describe('Claude live prompt ownership', () => {
     expect(commit).not.toHaveBeenCalled()
   })
 
+  it('cancels an owned prompt after another dispatch queues behind its turn', async () => {
+    const controller = new AbortController()
+    let queuedUuid = ''
+    const claude = fakeClaude({
+      replayUuids: ['turn-1', null],
+      capabilities: ['interrupt_cancel_queued_v1'],
+      routes: {
+        interrupt: () => {
+          controller.abort()
+          return { still_queued: [], cancelled: [queuedUuid] }
+        }
+      }
+    })
+    const lateSettlements: unknown[] = []
+    const adapter = await acquired(claude, {}, [], (settlement) => lateSettlements.push(settlement))
+    await startTurn(adapter)
+    const connection = claude.connections[0]
+    if (!connection) {
+      throw new Error('expected Claude connection')
+    }
+    const answered = invokeCanUseTool(connection, 'Bash', 'permission-queued', 'tool-queued', {
+      input: { command: 'git status' },
+      signal: controller.signal
+    })
+    adapter.bindPromptItemId('session-1', 'journal-prompt', 'permission-queued')
+    await expect(
+      adapter.dispatch({
+        sessionId: 'session-1',
+        clientMessageId: 'queued-message',
+        body: USER_MESSAGE,
+        fence: 7
+      })
+    ).resolves.toEqual({ state: 'admitted' })
+    const sentUuid = connection.sent.at(-1)?.uuid
+    if (typeof sentUuid !== 'string') {
+      throw new Error('expected queued dispatch uuid')
+    }
+    queuedUuid = sentUuid
+
+    await expect(
+      adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'turn-1',
+        fence: 7,
+        prompt: { itemId: 'journal-prompt' }
+      })
+    ).resolves.toEqual({ cancelled: true })
+    await expect(answered.promise).resolves.toBeNull()
+    expect(connection.calls).toContainEqual({
+      subtype: 'interrupt',
+      params: { cancelQueued: true }
+    })
+    expect(lateSettlements).toContainEqual({
+      sessionId: 'session-1',
+      clientMessageId: 'queued-message',
+      state: 'rejected',
+      reason: 'provider_cancelled_before_start'
+    })
+  })
+
+  it('does not interrupt a queued turn when the CLI cannot cancel queued messages', async () => {
+    const claude = fakeClaude({ replayUuids: ['turn-1', null] })
+    const adapter = await acquired(claude)
+    await startTurn(adapter)
+    const connection = claude.connections[0]
+    if (!connection) {
+      throw new Error('expected Claude connection')
+    }
+    const controller = new AbortController()
+    const answered = invokeCanUseTool(connection, 'Bash', 'permission-legacy', 'tool-legacy', {
+      input: { command: 'git status' },
+      signal: controller.signal
+    })
+    adapter.bindPromptItemId('session-1', 'journal-prompt', 'permission-legacy')
+    await expect(
+      adapter.dispatch({
+        sessionId: 'session-1',
+        clientMessageId: 'queued-message',
+        body: USER_MESSAGE,
+        fence: 7
+      })
+    ).resolves.toEqual({ state: 'admitted' })
+
+    await expect(
+      adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'turn-1',
+        fence: 7,
+        prompt: { itemId: 'journal-prompt' }
+      })
+    ).resolves.toEqual({ cancelled: false })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+    controller.abort()
+    await expect(answered.promise).resolves.toBeNull()
+  })
+
+  it('does not interrupt a newer active turn through a stale prompt callback', async () => {
+    const claude = fakeClaude({ replayUuids: ['turn-1', 'turn-2'] })
+    const adapter = await acquired(claude)
+    await startTurn(adapter)
+    const connection = claude.connections[0]
+    if (!connection) {
+      throw new Error('expected Claude connection')
+    }
+    const controller = new AbortController()
+    const answered = invokeCanUseTool(connection, 'Bash', 'permission-stale', 'tool-stale', {
+      input: { command: 'git status' },
+      signal: controller.signal
+    })
+    adapter.bindPromptItemId('session-1', 'journal-prompt', 'permission-stale')
+    await startTurn(adapter, 'turn-2')
+
+    await expect(
+      adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'turn-1',
+        fence: 7,
+        prompt: { itemId: 'journal-prompt' }
+      })
+    ).resolves.toEqual({ cancelled: false })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+    expect(answered.settled()).toBe(false)
+    controller.abort()
+    await expect(answered.promise).resolves.toBeNull()
+  })
+
+  it('drops resolved prompt bodies instead of retaining them for the session lifetime', () => {
+    const prompts = new ClaudeJournalPrompts({ sink: lifecycleRecorder().sink })
+
+    for (let index = 0; index < 128; index += 1) {
+      const promptKey = `resolved-${index}`
+      prompts.handle({
+        type: 'prompt',
+        sessionId: 'session-1',
+        prompt: {
+          requestId: promptKey,
+          promptKey,
+          toolUseId: `tool-${index}`,
+          toolName: 'Bash',
+          kind: 'approval',
+          input: { command: 'git status' },
+          suggestions: [],
+          questionIds: [],
+          answers: new Map(),
+          settle: vi.fn()
+        }
+      })
+      prompts.resolve(promptKey)
+    }
+
+    expect(prompts.size).toBe(0)
+  })
+
   it('releases the callback claim after a failed interrupt', async () => {
     const claude = fakeClaude({
       replayUuid: 'turn-1',

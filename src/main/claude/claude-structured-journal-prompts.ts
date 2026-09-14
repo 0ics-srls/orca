@@ -37,6 +37,10 @@ function cancelledPromptBody(
 export class ClaudeJournalPrompts {
   private readonly items = new Map<string, ClaudeJournalPrompt[]>()
 
+  get size(): number {
+    return this.items.size
+  }
+
   constructor(
     private readonly deps: {
       sink: StructuredAgentSessionEventSink
@@ -119,6 +123,10 @@ export class ClaudeJournalPrompts {
       this.items.delete(promptKey)
     }
     return published
+  }
+
+  resolve(promptKey: string): void {
+    this.items.delete(promptKey)
   }
 
   clear(): void {

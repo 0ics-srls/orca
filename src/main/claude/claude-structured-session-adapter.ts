@@ -249,6 +249,8 @@ export class ClaudeStructuredSessionAdapter implements StructuredAgentSessionAda
       compactions: this.compactions,
       admitPromptCancellation: (session, promptKey) =>
         admitClaudePromptCancellation(session, promptKey),
+      onDispatchSettledLate: (settlement) =>
+        this.deps.onDispatchSettledLate?.({ sessionId: request.sessionId, ...settlement }),
       ...(this.deps.requestTimeoutMs === undefined ? {} : { timeoutMs: this.deps.requestTimeoutMs })
     })
   stopBackgroundTasks: StructuredAgentSessionAdapter['stopBackgroundTasks'] = (input) => {

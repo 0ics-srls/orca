@@ -6,8 +6,9 @@ import {
 } from './claude-structured-control-actions'
 import { ClaudeControlRequestError } from './claude-stream-json-connection'
 import { ClaudePromptRegistry } from './claude-structured-prompt-replies'
-import type { ClaudeSession } from './claude-structured-session-state'
+import type { ClaudeDispatchWaiter, ClaudeSession } from './claude-structured-session-state'
 import { ClaudeBackgroundTaskTracker } from './claude-background-task-tracker'
+import { sessionFor } from './claude-structured-dispatch-test-support'
 
 type InterruptResult = Awaited<ReturnType<ClaudeSession['connection']['interrupt']>>
 
@@ -23,11 +24,11 @@ function sessionWith(input: {
 } {
   const interrupt = vi.fn(input.interrupt)
   const cancelAsyncMessage = vi.fn(input.cancelAsyncMessage ?? (async () => {}))
-  const session = {
-    capabilities: input.capabilities ?? [],
-    prompts: input.prompts ?? new ClaudePromptRegistry(),
-    connection: { interrupt, cancelAsyncMessage }
-  } as unknown as ClaudeSession
+  const session = sessionFor()
+  session.capabilities = input.capabilities ?? []
+  session.prompts = input.prompts ?? new ClaudePromptRegistry()
+  session.connection.interrupt = interrupt
+  session.connection.cancelAsyncMessage = cancelAsyncMessage
   return { session, interrupt, cancelAsyncMessage }
 }
 
@@ -54,15 +55,36 @@ describe('cancelClaudeTurn', () => {
     expect(cancelAsyncMessage.mock.calls.map((call) => call[0])).toEqual(['queued-1', 'queued-2'])
   })
 
-  it('sends cancel_queued and never sweeps when the CLI advertises the capability', async () => {
+  it('settles every cancelled queued waiter when the CLI advertises the capability', async () => {
+    const cancelled = Array.from({ length: 64 }, (_, index) => `queued-${index}`)
     const { session, interrupt, cancelAsyncMessage } = sessionWith({
       capabilities: ['interrupt_receipt_v1', 'interrupt_cancel_queued_v1'],
-      interrupt: async () => ({ still_queued: [], cancelled: ['queued-1'] })
+      interrupt: async () => ({ still_queued: [], cancelled })
     })
+    const resolutions = cancelled.map(() => vi.fn())
+    session.dispatchWaiters = cancelled.map((sentUuid, index): ClaudeDispatchWaiter => ({
+      acceptsResult: false,
+      clientMessageId: `client-${index}`,
+      sentUuid,
+      dispatchSequence: index + 1,
+      replayContentKey: `content-${index}`,
+      resolve: resolutions[index]!
+    }))
+    const settled = vi.fn()
 
-    await expect(cancelClaudeTurn(session, 5_000)).resolves.toEqual({ cancelled: true })
+    await expect(cancelClaudeTurn(session, 5_000, () => true, settled)).resolves.toEqual({
+      cancelled: true
+    })
     expect(interrupt).toHaveBeenCalledWith({ cancelQueued: true, timeoutMs: 5_000 })
     expect(cancelAsyncMessage).not.toHaveBeenCalled()
+    expect(session.dispatchWaiters).toEqual([])
+    expect(resolutions.every((resolve) => resolve.mock.calls[0]?.[0] === null)).toBe(true)
+    expect(settled).toHaveBeenCalledTimes(64)
+    expect(settled).toHaveBeenNthCalledWith(1, {
+      clientMessageId: 'client-0',
+      state: 'rejected',
+      reason: 'provider_cancelled_before_start'
+    })
   })
 
   it('reports a not-running interrupt as not cancelled without throwing', async () => {
@@ -100,6 +122,17 @@ describe('answerClaudePrompt', () => {
     })!
     prompts.bindJournalItemId('journal-1', prompt.promptKey)
     const { session } = sessionWith({ interrupt: async () => undefined, prompts })
+    const resolvePrompt = vi.fn()
+    session.translator = {
+      handle: vi.fn(),
+      journalPrompts: {
+        cancel: vi.fn(() => ({ accepted: true as const })),
+        resolve: resolvePrompt
+      },
+      flush: vi.fn(),
+      pendingStreamedBlocks: 0,
+      dispose: vi.fn()
+    }
 
     const claim = prompts.claim('journal-1', 'approval')
     if (!claim) {
@@ -111,6 +144,7 @@ describe('answerClaudePrompt', () => {
       expect.objectContaining({ behavior: 'allow', toolUseID: 'tool-1' })
     )
     expect(prompts.find('journal-1')).toBeNull()
+    expect(resolvePrompt).toHaveBeenCalledWith(prompt.promptKey)
   })
 
   it('refuses to claim a prompt Claude is no longer waiting on', () => {

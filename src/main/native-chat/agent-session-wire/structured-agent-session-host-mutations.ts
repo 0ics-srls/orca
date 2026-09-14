@@ -180,20 +180,28 @@ export async function settleStructuredAgentSessionLateDispatch(
   input: {
     sessionId: string
     clientMessageId: string
-    providerIdentity: AgentJournalItemIdentity
-  }
+  } & ({ providerIdentity: AgentJournalItemIdentity } | { state: 'rejected'; reason: string })
 ): Promise<void> {
   const session = context.sessions.get(input.sessionId)
   if (!session) {
     return
   }
   // The journal queue drains before close; the host queue would defer this past teardown.
-  await session.journal.resolveDispatch({
-    clientMessageId: input.clientMessageId,
-    state: 'accepted',
-    providerIdentity: input.providerIdentity,
-    fence: session.fence
-  })
+  await session.journal.resolveDispatch(
+    'providerIdentity' in input
+      ? {
+          clientMessageId: input.clientMessageId,
+          state: 'accepted',
+          providerIdentity: input.providerIdentity,
+          fence: session.fence
+        }
+      : {
+          clientMessageId: input.clientMessageId,
+          state: 'rejected',
+          reason: input.reason,
+          fence: session.fence
+        }
+  )
   context.publish(input.sessionId, session.journal)
 }
 

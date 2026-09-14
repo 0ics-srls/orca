@@ -1,9 +1,6 @@
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
 import type { AgentSessionDeltaCoalescerDeps } from '../native-chat/agent-session-wire/agent-session-delta-coalescer'
-import type {
-  StructuredAgentSessionEventSink,
-  StructuredAgentSessionSinkAdmission
-} from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import {
   boundInlineText,
   DEFAULT_JOURNAL_PAYLOAD_LIMITS
@@ -61,7 +58,7 @@ export type ClaudeJournalTranslatorDeps = {
 
 export type ClaudeJournalTranslator = {
   handle: (event: ClaudeStructuredSessionEvent) => void
-  cancelPrompt: (promptKey: string) => StructuredAgentSessionSinkAdmission
+  journalPrompts: Pick<ClaudeJournalPrompts, 'cancel' | 'resolve'>
   flush: () => void
   /** Streamed blocks still awaiting a final frame. A settled turn leaves none. */
   readonly pendingStreamedBlocks: number
@@ -334,7 +331,7 @@ export function createClaudeJournalTranslator(
         publishActivity(event.kind, event.payload)
       }
     },
-    cancelPrompt: (promptKey) => prompts.cancel(promptKey),
+    journalPrompts: prompts,
     flush: streamedText.flush,
     get pendingStreamedBlocks() {
       return streamedText.pending
