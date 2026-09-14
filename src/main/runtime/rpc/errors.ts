@@ -126,6 +126,9 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   'stale_delivery',
   'waiter_exists',
   'invalid_argument',
+  // Why here and not only on the transport: a method that admits paired clients only refuses
+  // with the same code the mobile-allowlist check does, so a caller reads one answer either way.
+  'forbidden',
   NESTED_WORKER_DEPTH_EXCEEDED_CODE,
   GIT_DIFF_TOO_LARGE_CODE,
   ARTIFACT_SHARING_DISABLED_CODE,
