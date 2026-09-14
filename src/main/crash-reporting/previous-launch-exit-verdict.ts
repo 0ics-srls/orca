@@ -34,6 +34,10 @@ const PREVIOUS_LAUNCH_CRUMB_SCAN_LIMIT = 200
 
 type TracedBreadcrumb = { name: string; launchId: string; writesQuitCrumb: boolean }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 function tracedBreadcrumb(line: string): TracedBreadcrumb | null {
   let parsed: unknown
   try {
@@ -42,17 +46,16 @@ function tracedBreadcrumb(line: string): TracedBreadcrumb | null {
     // A tail read starts mid-line, and a killed process leaves a half-line.
     return null
   }
-  if (!parsed || typeof parsed !== 'object') {
+  if (!isRecord(parsed) || parsed.name !== BREADCRUMB_SPAN_NAME) {
     return null
   }
-  const record = parsed as { name?: unknown; attributes?: unknown }
-  if (record.name !== BREADCRUMB_SPAN_NAME || !record.attributes) {
+  const attributes = parsed.attributes
+  if (!isRecord(attributes)) {
     return null
   }
-  const attributes = record.attributes as Record<string, unknown>
   const name = attributes['breadcrumb.name']
-  const data = attributes['breadcrumb.data'] as Record<string, unknown> | undefined
-  const launchId = data?.mainProcessLaunchId
+  const data = attributes['breadcrumb.data']
+  const launchId = isRecord(data) ? data.mainProcessLaunchId : undefined
   if (typeof name !== 'string' || typeof launchId !== 'string' || !launchId) {
     return null
   }

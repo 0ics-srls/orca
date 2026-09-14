@@ -64,15 +64,19 @@ describe('recordCommittedQuitBreadcrumb', () => {
   it('writes a durable crumb carrying this launch id, so the next launch can find it', () => {
     recordCommittedQuitBreadcrumb(noQuitSignals)
 
-    const crumb = sink.records.find(
-      (record) =>
-        (record as { attributes?: Record<string, unknown> }).attributes?.['breadcrumb.name'] ===
-        COMMITTED_QUIT_BREADCRUMB_NAME
-    ) as { attributes: { 'breadcrumb.data': Record<string, unknown> } } | undefined
-
-    expect(crumb?.attributes['breadcrumb.data']).toMatchObject({
-      quitReason: 'app-quit',
-      mainProcessLaunchId: getMainProcessLifecycleIdentity().mainProcessLaunchId
-    })
+    // Exactly one crumb: an extra durable write here would make the next launch's
+    // "did this launch commit a quit?" scan answer for the wrong event.
+    expect(sink.records).toEqual([
+      expect.objectContaining({
+        name: 'crash.breadcrumb',
+        attributes: expect.objectContaining({
+          'breadcrumb.name': COMMITTED_QUIT_BREADCRUMB_NAME,
+          'breadcrumb.data': expect.objectContaining({
+            quitReason: 'app-quit',
+            mainProcessLaunchId: getMainProcessLifecycleIdentity().mainProcessLaunchId
+          })
+        })
+      })
+    ])
   })
 })

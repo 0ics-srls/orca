@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { CrashReportCreateInput, CrashReportRecord } from '../../shared/crash-reporting'
 
 const { appMetricsMock } = vi.hoisted(() => ({
   appMetricsMock: vi.fn((): unknown[] => [
@@ -31,7 +32,14 @@ const killedRendererEvent: ProcessGoneCrashEvent = {
 }
 
 async function recordedDetails(): Promise<Record<string, unknown>> {
-  const record = vi.fn().mockResolvedValue({ id: 'report-1' })
+  const record = vi.fn(async (input: CrashReportCreateInput): Promise<CrashReportRecord> => ({
+    ...input,
+    id: 'report-1',
+    createdAt: '2026-09-12T00:00:00.000Z',
+    status: 'pending',
+    details: {},
+    breadcrumbs: undefined
+  }))
   recordProcessGoneCrash(
     { record, attachDetails: async () => null },
     killedRendererEvent,
@@ -39,8 +47,7 @@ async function recordedDetails(): Promise<Record<string, unknown>> {
     noMinidump
   )
   await vi.waitFor(() => expect(record).toHaveBeenCalledOnce())
-  const [recorded] = record.mock.calls[0] as [{ details: Record<string, unknown> }]
-  return recorded.details
+  return record.mock.calls[0][0].details
 }
 
 beforeEach(() => {
@@ -64,7 +71,7 @@ describe('abrupt whole-app death legibility on process-gone reports', () => {
 
     expect(details.processMetricsBrowserCount).toBe(1)
     expect(details.processMetricsSampleAfterGoneMs).toBeTypeOf('number')
-    expect(details.processMetricsSampleAfterGoneMs as number).toBeLessThan(1_000)
+    expect(details.processMetricsSampleAfterGoneMs).toBeLessThan(1_000)
   })
 
   it('names the previous launch that died abruptly', async () => {
