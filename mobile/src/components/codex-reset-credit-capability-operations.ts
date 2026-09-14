@@ -11,11 +11,11 @@ const capabilityListReader: RpcCompatibleReader<
 > = (raw) => rpcReadUnchecked('capabilities', raw.capabilities)
 
 /**
- * status.get read for the Codex reset-credit probe, the fourth policy on this method.
+ * status.get read for the Codex reset-credit probe, with its own policy on that method.
  *
- * `object-result-or-null` is the only one that matches: the probe treats a refusal, a null result
- * and a non-object result identically as "unsupported", where the tasks and files families throw
- * or skip. It is the policy `rpcObjectResultOrNull` already spelled at this call site.
+ * The probe treats a refusal, a null result and a non-object result identically as "unsupported",
+ * which only `object-result-or-null` expresses, and which is what `rpcObjectResultOrNull` already
+ * spelled at this call site.
  */
 export const codexResetCreditCapabilityRead = bindDeferredRpcOperation(
   defineRpcOperation({
