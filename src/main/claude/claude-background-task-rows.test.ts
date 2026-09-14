@@ -113,12 +113,19 @@ describe('claude background task rows', () => {
     expect(latestTwin()).not.toContain('task_notification')
   })
 
-  // NAMED DEVIATION from the stricter rule, which drops a terminal frame for an
-  // unknown task. This payload is a REAL capture and names no `tool_use_id`, so
-  // nothing can prove it had a forwarded parent — and dropping it reports the
-  // failure nowhere at all.
-  it('opens a row for a failure whose announcement this session never saw', () => {
-    const { rows, latest, latestTwin } = harness()
+  it('lands the captured failure on its row when the announcement carried no tool id', () => {
+    // An announcement naming NO tool is admitted — absence of the field is not
+    // evidence of an unforwarded parent — so by the time this REAL captured
+    // frame arrives its row already exists and simply takes the sentence.
+    const { rows, latestTwin } = harness()
+    rows.observe({
+      type: 'system',
+      subtype: 'task_started',
+      task_id: 'bo2vuy8qb',
+      task_type: 'local_bash',
+      description: 'verify',
+      is_backgrounded: true
+    })
     rows.observe({
       type: 'system',
       subtype: 'task_notification',
@@ -127,8 +134,22 @@ describe('claude background task rows', () => {
       output_file: '',
       summary: "Check the verifier's state"
     })
-    expect(latest()).toMatchObject({ taskId: 'bo2vuy8qb', state: 'blocked', kind: 'unknown' })
     expect(latestTwin()).toBe("Check the verifier's state")
+  })
+
+  it('drops a terminal frame for a task that was never admitted', () => {
+    // Matched on `task_id` alone. The forwarded-parent question was settled at
+    // admission and is never re-asked here, so a frame naming nothing this
+    // transcript tracks yields no row rather than inventing one.
+    const { rows, items } = harness()
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'never-admitted',
+      status: 'failed',
+      summary: 'orphan failure'
+    })
+    expect(items).toEqual([])
   })
 
   it('writes nothing for a silent success it never saw start', () => {
@@ -216,8 +237,8 @@ describe('claude background task rows', () => {
     expect(latest()).toMatchObject({ label: 'Wait for the verification verdict', tokens: 1_200 })
   })
 
-  it('opens a row for a terminal update that arrives before the announcement', () => {
-    const { rows, latest, latestTwin } = harness()
+  it('takes no row from a terminal patch for an untracked task', () => {
+    const { rows, items } = harness()
     expect(
       rows.observe({
         type: 'system',
@@ -226,14 +247,7 @@ describe('claude background task rows', () => {
         patch: { status: 'failed', description: 'Check logs', error: 'boom' }
       })
     ).toBe(true)
-
-    expect(latest()).toMatchObject({
-      taskId: 'pre-journal',
-      label: 'Check logs',
-      state: 'blocked',
-      error: 'boom'
-    })
-    expect(latestTwin()).toBe('boom')
+    expect(items).toEqual([])
   })
 
   it('does not resurrect a task whose terminal edge arrived before its start', () => {
@@ -440,28 +454,15 @@ describe('claude background task rows', () => {
     })
   })
 
-  it('declines coverage so fallback can report a failure when every row is live', () => {
-    const { rows, items } = harness()
+  it('declines coverage so the fallback still reports when every row slot is live', () => {
+    // The row map is bounded. A task that cannot be admitted for lack of a slot
+    // is not silently swallowed: coverage is declined so the generic fallback
+    // reports it instead.
+    const { rows } = harness()
     for (let index = 0; index < 64; index += 1) {
       rows.observe({ ...START_BASH, task_id: `live-${index}` })
     }
-
-    expect(
-      rows.observe({
-        type: 'system',
-        subtype: 'task_notification',
-        task_id: 'overflow-live',
-        status: 'failed',
-        summary: 'overflow failed'
-      })
-    ).toBe(false)
-    expect(
-      items.some((item) =>
-        item.identity.provider === 'orca'
-          ? item.identity.clientMessageId === 'claude-background-task:overflow-live'
-          : false
-      )
-    ).toBe(false)
+    expect(rows.observe({ ...START_BASH, task_id: 'overflow-live' })).toBe(false)
   })
 
   it('bounds foreign-owner memory for tasks rendered elsewhere', () => {

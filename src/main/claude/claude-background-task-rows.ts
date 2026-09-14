@@ -16,7 +16,6 @@ import {
   claudeBackgroundTaskToolUseId,
   isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
-  newClaudeBackgroundTaskTerminalRow,
   reviseClaudeBackgroundTaskRow,
   shouldRestartClaudeBackgroundTaskRow,
   type ClaudeBackgroundTaskChange,
@@ -172,14 +171,10 @@ export class ClaudeBackgroundTaskRows {
    *  would drop the outcome of a task already on screen. */
   private admitsFirstRun(message: Record<string, unknown>): boolean {
     const toolUseId = claudeBackgroundTaskToolUseId(message)
-    return toolUseId !== undefined && this.deps.isForwardedParentTool(toolUseId)
-  }
-
-  /** Admission for a row minted from terminal evidence alone. A frame that
-   *  names no tool cannot be judged this way; see the deviation recorded in the
-   *  PR for why such a frame is still allowed to report its failure. */
-  private admitsTerminalOnly(message: Record<string, unknown>): boolean {
-    const toolUseId = claudeBackgroundTaskToolUseId(message)
+    // Conditional on the field being PRESENT. An announcement that names a tool
+    // this session never forwarded is a nested child and is refused; one that
+    // names no tool at all is admitted, because there is nothing to contradict
+    // — absence of the field is not evidence of an unforwarded parent.
     return toolUseId === undefined || this.deps.isForwardedParentTool(toolUseId)
   }
 
@@ -190,42 +185,18 @@ export class ClaudeBackgroundTaskRows {
   }
 
   private observeNotification(id: string, message: Record<string, unknown>): boolean {
-    const change = claudeBackgroundTaskNotificationChange(message)
-    const state = change.state ?? 'done'
+    // Remembered even for a task never admitted: Orca is deliberately stricter
+    // than the reference here, which keeps no trace of one. It stops a late
+    // announcement from opening a row for work already reported finished.
     this.rememberTerminalId(id)
-    if (this.rows.has(id)) {
-      this.revise(id, change)
+    if (!this.rows.has(id)) {
+      // Matched on `task_id` alone. A terminal frame for a task that was never
+      // admitted names nothing this transcript is tracking, so it yields no
+      // row — the forwarded-parent question was already settled at admission
+      // and is never re-asked here.
       return true
     }
-    if (state === 'done' && change.error === undefined) {
-      return true
-    }
-    // A terminal frame naming a tool this session never forwarded is a nested
-    // child reporting into its own sidechain. It is refused here for the same
-    // reason its announcement would have been: a top-level row for it claims an
-    // invocation the user never saw.
-    if (!this.admitsTerminalOnly(message)) {
-      return true
-    }
-    // NAMED DEVIATION — a terminal frame naming NO tool still opens a row.
-    //
-    // The stricter rule would drop it. A real captured failure has this exact
-    // shape: `{subtype:'task_notification', task_id:'bo2vuy8qb',
-    // status:'failed', output_file:'', summary:"Check the verifier's state"}`,
-    // with no `tool_use_id` to prove a forwarded parent. Dropping it reports
-    // that failure NOWHERE: the strip unmounts once no live task remains, the
-    // subagent roster excludes shell commands, and the status feed publishes
-    // only live tasks.
-    //
-    // Whether such a frame can follow a `task_started` we simply refused is not
-    // knowable from that capture: it records journal ROWS, and `task_started`
-    // carries no failure so it never became one. See the PR for the full
-    // measurement.
-    if (!this.ensureRowSlot()) {
-      return false
-    }
-    this.openTerminalRow(id, message)
-    this.revise(id, change)
+    this.revise(id, claudeBackgroundTaskNotificationChange(message))
     return true
   }
 
@@ -236,33 +207,15 @@ export class ClaudeBackgroundTaskRows {
       return true
     }
     const change = claudeBackgroundTaskPatchChange(message)
-    if (this.rows.has(id)) {
-      this.revise(id, change)
-      return true
-    }
     if (change.state && isSettledBackgroundTaskState(change.state)) {
       this.rememberTerminalId(id)
-      if (change.state === 'done' && change.error === undefined) {
-        return true
-      }
-      if (!this.admitsTerminalOnly(message)) {
-        return true
-      }
-      if (!this.ensureRowSlot()) {
-        return false
-      }
-      this.openTerminalRow(id, message)
-      this.revise(id, change)
-      return true
     }
-    return change.error === undefined
-  }
-
-  /** A row minted straight from terminal evidence — see `observeNotification`. */
-  private openTerminalRow(id: string, message: Record<string, unknown>): void {
-    const generation = (this.generations.get(id) ?? 0) + 1
-    this.generations.set(id, generation)
-    this.rows.set(id, newClaudeBackgroundTaskTerminalRow(id, message, generation))
+    // A patch is folded into the row it names and is never a row of its own, so
+    // an untracked task takes no row from it.
+    if (this.rows.has(id)) {
+      this.revise(id, change)
+    }
+    return true
   }
 
   private observeAggregateRoster(value: unknown): void {

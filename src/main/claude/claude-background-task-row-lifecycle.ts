@@ -98,29 +98,6 @@ export function newClaudeBackgroundTaskRow(
   }
 }
 
-export function newClaudeBackgroundTaskTerminalRow(
-  id: string,
-  message: Record<string, unknown>,
-  generation: number
-): ClaudeBackgroundTaskRow {
-  const patch = record(message.patch)
-  const source = patch ?? message
-  const toolUseId = claudeBackgroundTaskToolUseId(message)
-  return {
-    lastSerialized: null,
-    generation,
-    ...(toolUseId === undefined ? {} : { toolUseId }),
-    block: {
-      type: 'background-task',
-      taskId: id,
-      kind: 'task_type' in source ? classifyClaudeBackgroundTaskKind(source.task_type) : 'unknown',
-      label: taskDescription(source.description) ?? taskName(source) ?? '',
-      ...(toolUseId === undefined ? {} : { parentToolUseId: toolUseId }),
-      state: 'working'
-    }
-  }
-}
-
 export function shouldRestartClaudeBackgroundTaskRow(
   row: ClaudeBackgroundTaskRow,
   message: Record<string, unknown>
