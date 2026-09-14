@@ -72,7 +72,6 @@ export async function evictHeldStructuredAgentSession(
   // reading "no child here" and skipping the settlement and the lease release it still owes.
   const owesWindDown = owesProviderChildWindDown(session)
   session.owesProviderChildWindDown = owesWindDown
-  let settlementError: unknown
   const eviction: StructuredAgentSessionEvictionContext = {
     sessionId,
     // The retry must not re-stop a child the adapter already proved gone, so this stays honest.
@@ -90,7 +89,7 @@ export async function evictHeldStructuredAgentSession(
     },
     discardSink: () => context.runtimeState.discardEventSink(sessionId),
     settleWork: async () => {
-      const settled = await settleStructuredAgentSessionDeadGeneration({
+      await settleStructuredAgentSessionDeadGeneration({
         journal: session.journal,
         sessionId,
         fence: session.fence,
@@ -99,14 +98,10 @@ export async function evictHeldStructuredAgentSession(
         verdict: { state: 'interrupted', completedAt: context.now() },
         showUnexpectedExitOutcome: false,
         onError: (id, error) => {
-          settlementError = error
           context.deps.onEventSinkError?.({ sessionId: id, error })
+          console.error('agent-session close settlement deferred', id, error)
         }
       })
-      if (!settled) {
-        // Without the cause the quit log names the step and nothing else.
-        throw new Error('dead generation work settlement failed', { cause: settlementError })
-      }
     },
     releaseLease: async () => {
       await releaseStoredStructuredAgentSessionOwner({

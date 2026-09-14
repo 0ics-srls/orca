@@ -103,6 +103,7 @@ export async function settleStructuredAgentSessionDeadGeneration(input: {
   settlementId: string
   verdict: StructuredAgentSessionTurnVerdict
   pendingSubmissionReason: string
+  submissionRecoveryMode?: 'death-confirmed' | 'new-owner-not-publishing'
   showUnexpectedExitOutcome?: boolean
   /** Why the provider stopped, when the host has it. Rendered with the outcome copy. */
   unexpectedExitReason?: string
@@ -114,7 +115,11 @@ export async function settleStructuredAgentSessionDeadGeneration(input: {
     if (!showUnexpectedExitOutcome && !hasUnfinishedWork) {
       return true
     }
-    await input.journal.markPendingSubmissionsUnknown(input.fence, input.pendingSubmissionReason)
+    await input.journal.markPendingSubmissionsUnknown(
+      input.fence,
+      { mode: input.submissionRecoveryMode ?? 'death-confirmed' },
+      input.pendingSubmissionReason
+    )
     const items = input.journal.snapshot().items
     const mutations: JournalLifecycleMutationInput[] = []
     if (showUnexpectedExitOutcome) {

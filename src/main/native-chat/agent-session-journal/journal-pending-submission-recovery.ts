@@ -6,6 +6,7 @@ import type { AgentSessionJournal } from './journal-store'
 export async function markJournalPendingSubmissionsUnknown(
   journal: AgentSessionJournal,
   fence: number,
+  _boundary: { mode: 'death-confirmed' | 'new-owner-not-publishing' },
   reason: string = DISPATCH_DOUBT_HOST_RESTARTED
 ): Promise<string[]> {
   const unresolved = journal

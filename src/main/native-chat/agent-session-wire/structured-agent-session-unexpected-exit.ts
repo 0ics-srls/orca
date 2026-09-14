@@ -135,7 +135,7 @@ export async function settleUnexpectedStructuredAgentSessionExit<
         }
       }
     }
-    if (settlementFailed || !released) {
+    if (!released) {
       return null
     }
     if (!context.hasResumeCapableHolder(unexpectedEvent.sessionId)) {
@@ -194,7 +194,10 @@ async function retryUnexpectedExitSettlement(input: {
     pendingSubmissionReason: 'provider_exited_before_acknowledgement',
     showUnexpectedExitOutcome: input.showUnexpectedExitOutcome,
     unexpectedExitReason: input.event.reason,
-    onError: input.context.onBarrierError
+    onError: (id, error) => {
+      input.context.onBarrierError?.(id, error)
+      console.error('agent-session provider-exit settlement deferred', id, error)
+    }
   })
 }
 

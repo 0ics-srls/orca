@@ -79,6 +79,44 @@ async function seedUnfinishedWork(): Promise<void> {
 }
 
 describe('dead structured-session generation settlement', () => {
+  it('leaves a replacement prompt pending when it is published after settlement', async () => {
+    await seedUnfinishedWork()
+    await settleStructuredAgentSessionDeadGeneration({
+      journal,
+      sessionId: SESSION,
+      fence: 8,
+      settlementId: 'acquire-before-bind',
+      pendingSubmissionReason: 'provider_exited_before_acknowledgement',
+      verdict: { state: 'unverifiable' },
+      showUnexpectedExitOutcome: false
+    })
+    await journal.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'replacement', ordinal: 1 },
+      {
+        kind: 'approval',
+        title: 'Replacement approval',
+        detail: null,
+        options: [{ id: 'yes', label: 'Allow' }],
+        resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
+      },
+      { fence: 8 }
+    )
+    expect(journal.snapshot().items.map((item) => item.body)).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          kind: 'approval',
+          title: 'Run command?',
+          resolution: expect.objectContaining({ state: 'cancelled' })
+        }),
+        expect.objectContaining({
+          kind: 'approval',
+          title: 'Replacement approval',
+          resolution: expect.objectContaining({ state: 'pending' })
+        })
+      ])
+    )
+  })
+
   it('settles probe-proven work as unverifiable without a technical chat row or fake end time', async () => {
     await seedUnfinishedWork()
 

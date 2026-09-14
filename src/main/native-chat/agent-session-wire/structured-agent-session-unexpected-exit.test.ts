@@ -246,6 +246,7 @@ describe('provider-exit recovery tickets', () => {
     expect(result).toMatchObject({ releasedFence: 8 })
     expect(session.journal.markPendingSubmissionsUnknown).toHaveBeenCalledWith(
       7,
+      { mode: 'death-confirmed' },
       'provider_exited_before_acknowledgement'
     )
     expect(session.hasProviderChild).toBe(false)
@@ -393,6 +394,7 @@ describe('provider-exit recovery tickets', () => {
 
     expect(markPendingSubmissionsUnknown).toHaveBeenCalledWith(
       7,
+      { mode: 'death-confirmed' },
       'provider_exited_before_acknowledgement'
     )
     expect(session.journal.appendLifecycleBatch).toHaveBeenCalledWith(
@@ -406,7 +408,7 @@ describe('provider-exit recovery tickets', () => {
     )
   })
 
-  it('does not release or reacquire while terminal settlement retry is still failing', async () => {
+  it('releases for reacquisition while terminal settlement retry is still failing', async () => {
     const session: StructuredAgentSessionUnexpectedExitSession = {
       hasProviderChild: true,
       fence: 7,
@@ -444,7 +446,7 @@ describe('provider-exit recovery tickets', () => {
     }
     const result = await settleUnexpectedStructuredAgentSessionExit(context, event)
 
-    expect(result).toBeNull()
+    expect(result).toMatchObject({ releasedFence: 8 })
     expect(session.hasProviderChild).toBe(false)
     expect(session.fence).toBe(8)
     expect(publishFence).toHaveBeenCalledTimes(1)

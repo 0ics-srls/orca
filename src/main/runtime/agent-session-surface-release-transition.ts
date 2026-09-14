@@ -46,7 +46,7 @@ export function releaseAgentSessionOwnerAfterSurfaceClose(args: {
     reservedSpawnToken: null,
     processlessAt: null,
     claimStatus: 'released',
-    handoffStage: args.settlementRetry ? 'recovering' : null,
+    handoffStage: null,
     settlementRetryRequired: args.settlementRetry ? true : undefined,
     settlementRetryId: args.settlementRetry?.settlementId,
     lastRenewedAt: args.now,

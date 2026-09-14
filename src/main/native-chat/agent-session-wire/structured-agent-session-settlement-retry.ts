@@ -72,8 +72,10 @@ export async function retryLoadedStructuredAgentSessionSettlement(input: {
   }
   const retrySession = input.session
   retrySession.fence = record.lease.runtimeFence
-  const onError = (id: string, error: unknown): void =>
+  const onError = (id: string, error: unknown): void => {
     input.deps.onEventSinkError?.({ sessionId: id, error })
+    console.error('agent-session restore settlement deferred', id, error)
+  }
   // Only an observed exit earns an end time; a probe-proven death never saw one.
   const verdict = turnVerdictFromDeathEvidence(record.lease.deathEvidence)
   const ok = await settleStructuredAgentSessionDeadGeneration({

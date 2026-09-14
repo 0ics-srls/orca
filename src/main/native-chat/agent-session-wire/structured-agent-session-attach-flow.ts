@@ -229,7 +229,8 @@ export async function performAttach(
       params,
       journalRoot: input.journalRoot,
       adapter: input.adapter,
-      providerHistoryWindow
+      providerHistoryWindow,
+      recoverPending: acquiredOwner ? 'new-owner-not-publishing' : false
     })
     await importAdoptedTranscript(params, attached, record, preparedTranscript.items)
     await input.onAttached(attached, acquisitionGeneration, acquiredOwner)

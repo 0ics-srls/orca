@@ -29,7 +29,7 @@ import { AGENT_SESSION_STORE_FILE_NAME } from '../../runtime/agent-session-recor
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { openAgentSessionJournal } from '../agent-session-journal/journal-store-factory'
 import { journalDirectoryFor } from '../agent-session-journal/journal-paths'
-import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
+import { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
 import type { StructuredAgentSessionHostDeps } from './structured-agent-session-host-types'
 import {
@@ -339,6 +339,32 @@ describe('already-wedged profiles become usable on load', () => {
       settlementRetryRequired: undefined,
       settlementRetryId: undefined
     })
+  })
+
+  it('admits a legacy settlement latch even while its journal batch keeps failing', async () => {
+    const record = wedgedRecord({ claimStatus: 'released', handoffStage: 'recovering' })
+    record.lease.settlementRetryRequired = true
+    record.lease.settlementRetryId = `provider-exit:${SESSION}:12:generation-1`
+    record.lease.deathEvidence = {
+      kind: 'exit-observed',
+      detail: 'transport closed',
+      observedAt: NOW - 1_000
+    }
+    await seedStore(record)
+    await seedRunningTurn()
+    const failedBatch = vi
+      .spyOn(AgentSessionJournal.prototype, 'appendLifecycleBatch')
+      .mockRejectedValue(new Error('settlement unavailable'))
+    openHost()
+
+    expect(await host.attach(CALLER, hostTestAttachParams(13))).toMatchObject({ ok: true })
+    expect(store.getRecord(SESSION)?.lease).toMatchObject({
+      claimStatus: 'live',
+      handoffStage: null,
+      settlementRetryRequired: undefined
+    })
+    expect(activeStructuredAgentSessionTurnId(restoredJournal().snapshot().items)).toBe('turn-1')
+    failedBatch.mockRestore()
   })
 
   it('marks a running turn left behind by a released lease unverifiable on a cold acquire', async () => {

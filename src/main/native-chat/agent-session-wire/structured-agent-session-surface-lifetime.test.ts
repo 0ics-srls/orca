@@ -25,7 +25,11 @@ import type {
   StructuredTuiOwner
 } from './structured-agent-session-handoff-types'
 import { StructuredHandoffTestRequests } from './structured-agent-session-handoff-test-requests'
-import { unexpectedProviderExitOutcome } from './structured-agent-session-dead-generation-settlement'
+import {
+  unexpectedProviderExitOutcome,
+  UNEXPECTED_PROVIDER_EXIT_OUTCOME
+} from './structured-agent-session-dead-generation-settlement'
+import { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionStatusSink } from './structured-agent-session-status-feed'
 import {
   HOST_TEST_NOW as NOW,
@@ -730,6 +734,12 @@ describe('an unexpected provider exit', () => {
       : []
     expect(statuses).toEqual([unexpectedProviderExitOutcome('provider exited')])
     expect(statuses.some((text) => text.startsWith('Provider exited'))).toBe(false)
+    expect(
+      history.ok &&
+        history.page.items.find(
+          (item) => item.body.kind === 'status' && item.body.text === statuses[0]
+        )?.recovered
+    ).toBe(true)
 
     dispatch.mockResolvedValueOnce({
       state: 'accepted',
@@ -742,7 +752,7 @@ describe('an unexpected provider exit', () => {
     expect(dispatch).toHaveBeenCalledTimes(2)
   })
 
-  it('latches a failed exit settlement and blocks attach until the terminal batch is written', async () => {
+  it('keeps attach and send writable when settlement fails, then settles on reopen', async () => {
     await attach()
     await host.hold(SESSION, SURFACE)
     emitTurnLifecycle('running', 1)
@@ -756,17 +766,8 @@ describe('an unexpected provider exit', () => {
       ok: false,
       error: new Error('journal failed')
     })
-    const session = (
-      host as unknown as {
-        sessions: Map<
-          string,
-          { journal: { appendLifecycleBatch: (...args: never[]) => Promise<never> } }
-        >
-      }
-    ).sessions.get(SESSION)
-    expect(session).toBeDefined()
     const appendSettlement = vi
-      .spyOn(session!.journal, 'appendLifecycleBatch')
+      .spyOn(AgentSessionJournal.prototype, 'appendLifecycleBatch')
       .mockRejectedValue(new Error('settlement still unavailable'))
     const exitedFence = store.getRecord(SESSION)?.lease.runtimeFence ?? 0
 
@@ -780,29 +781,42 @@ describe('an unexpected provider exit', () => {
     })
 
     expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      claimStatus: 'released',
-      handoffStage: 'recovering',
-      settlementRetryRequired: true,
-      settlementRetryId: `provider-exit:${SESSION}:${exitedFence}:generation-1`,
-      ownerProcess: null,
-      runtimeFence: exitedFence + 1
-    })
-    expect(await host.attach(CALLER, hostTestAttachParams(exitedFence + 1))).toMatchObject({
-      ok: false,
-      refusal: { code: 'agent_session_ownership_unknown' }
-    })
-    expect(acquire).toHaveBeenCalledOnce()
-
-    appendSettlement.mockRestore()
-    expect(await host.attach(CALLER, hostTestAttachParams(exitedFence + 1))).toMatchObject({
-      ok: true
-    })
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
       claimStatus: 'live',
       handoffStage: null,
-      settlementRetryRequired: undefined
+      settlementRetryRequired: undefined,
+      runtimeFence: exitedFence + 2
     })
     expect(acquire).toHaveBeenCalledTimes(2)
+    dispatch.mockResolvedValueOnce({
+      state: 'accepted',
+      providerIdentity: { provider: 'codex', threadId: THREAD, turnId: 'after-exit', ordinal: 1 }
+    })
+    const body = hostTestMessage('a new message after the failed settlement')
+    expect(
+      await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
+    ).toMatchObject({ ok: true, value: { submission: { dispatchState: 'accepted' } } })
+    await host.close(SESSION)
+    expect(host.hasSession(SESSION)).toBe(false)
+
+    appendSettlement.mockRestore()
+    expect(await host.attach(CALLER, hostTestAttachParams(exitedFence + 3))).toMatchObject({
+      ok: true
+    })
+    const history = host.history({ sessionId: SESSION, direction: 'tail' })
+    expect(
+      history.ok &&
+        history.page.items.some(
+          (item) => item.body.kind === 'status' && item.body.turnLifecycle?.state === 'running'
+        )
+    ).toBe(false)
+    expect(
+      history.ok &&
+        history.page.items.find(
+          (item) =>
+            item.body.kind === 'status' && item.body.text === UNEXPECTED_PROVIDER_EXIT_OUTCOME
+        )?.recovered
+    ).toBe(true)
+    expect(acquire).toHaveBeenCalledTimes(3)
   })
 })
 
