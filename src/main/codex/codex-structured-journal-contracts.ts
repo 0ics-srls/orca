@@ -9,7 +9,13 @@ export type CodexJournalTranslatorDeps = {
   /** Keys restored lifecycle rows to the live identity; without it history restore skips them. */
   sessionId?: string
   now?: () => number
-  bindPromptItemId?: (journalItemId: string, threadId: string, promptKey: string) => void
+  bindPromptItemId?: (
+    journalItemId: string,
+    threadId: string,
+    promptKey: string,
+    turnId?: string | null
+  ) => void
+  clearPromptTurn?: (threadId: string, turnId: string) => void
   /** Settles a send's identity off the echoed user message, using the very
    *  identity the journal row carries so a replay computes the same key. */
   onUserMessageEcho?: (clientMessageId: string, identity: AgentJournalItemIdentity) => void
