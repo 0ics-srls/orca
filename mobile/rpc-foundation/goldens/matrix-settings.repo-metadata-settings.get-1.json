@@ -5,11 +5,12 @@
   "runnerVersion": 1,
   "baseline": "e53f1557e1b5a6e26e85cfca390b34f7f8a7d26c",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "83483a1a8e73fe65cf38eced766128e938e10778589d96aee20948d5ebf9bf7f",
+  "recorderSha256": "58a461dbc99f5ce803aaec650e72eaa2934fccd405e56b77932286f05742ec6b",
+  "scenarioSha256": "5e9c3ff57cf432b24a17ee046636b61b94116a687cfa506cd79dee464542b76b",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 3,
+  "goldenFormatVersion": 4,
   "values": {
     "02449e890487": {
       "name": "host.platform#1",
