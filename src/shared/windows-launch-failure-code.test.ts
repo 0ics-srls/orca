@@ -64,7 +64,7 @@ describe('decodeWindowsLaunchFailureCode', () => {
     }
   )
 
-  // 66 of the table's rows are asserted nowhere individually. The enum is contiguous 0..72 by
+  // 65 of the table's 71 rows are asserted nowhere individually. The enum is contiguous 0..72 by
   // construction, so this catches a row dropped or renumbered by an edit without restating 71
   // descriptions that would just be the table copied twice.
   it('decodes every sandbox code in the contiguous range except the excluded ones', () => {

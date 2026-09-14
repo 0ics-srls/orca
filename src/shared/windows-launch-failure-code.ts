@@ -158,8 +158,9 @@ const LAUNCH_RESULT_CODES: Record<number, readonly [string, string]> = {
  *
  * Deliberately absent, on one rule — never name a code that would mislead: SBOX_ALL_OK (0) and
  * LAUNCH_RESULT_SUCCESS (1002) both contradict launch-failed, LAUNCH_RESULT_START (1001) is a
- * range sentinel, and SBOX_ERROR_UNSANDBOXED_PROCESS (62) is ordinary control flow that
- * sandbox_win.cc returns to route a child down the unsandboxed path.
+ * range sentinel, and SBOX_ERROR_UNSANDBOXED_PROCESS (62) is sandbox_win.h's documented "this
+ * process should be run unsandboxed" status rather than a fault — and is in any case unreachable
+ * from the pinned Chromium's launch path, which decides that before it generates a policy.
  */
 export function decodeWindowsLaunchFailureCode(
   exitCode: number
