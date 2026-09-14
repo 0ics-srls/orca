@@ -1,7 +1,7 @@
 import type { ExecutionHostId } from '../../../shared/execution-host'
 import type { WorkspaceVisibleTabType } from '../../../shared/tab-types'
-import { createBrowserUuid } from './browser-uuid'
 import { recoverWorkspaceActivationOwned } from './workspace-activation-recovery-coordinator'
+import { createWorkspaceActivationRecoveryOwnerContext } from './workspace-activation-recovery-retry'
 import {
   markLatestActivationRecoveryAttempt,
   readLatestActivationRecoveryAttempt
@@ -23,10 +23,6 @@ export type WorkspaceActivationContext = {
   signal?: AbortSignal
 }
 
-export type WorkspaceActivationRecoveryOwnerContext = WorkspaceActivationContext & {
-  retry: () => void
-}
-
 export type WorkspaceActivationRecoveryResult =
   | {
       kind: 'materialized'
@@ -41,15 +37,11 @@ export async function recoverWorkspaceActivation(
   identity: WorkspaceActivationIdentity,
   context: WorkspaceActivationContext
 ): Promise<WorkspaceActivationRecoveryResult> {
-  const ownerContext: WorkspaceActivationRecoveryOwnerContext = {
-    ...context,
-    retry: () => {
-      void recoverWorkspaceActivation(
-        { ...identity, attemptId: createBrowserUuid() },
-        { mode: context.mode }
-      )
-    }
-  }
+  const ownerContext = createWorkspaceActivationRecoveryOwnerContext(
+    identity,
+    context,
+    recoverWorkspaceActivation
+  )
   try {
     return await recoverWorkspaceActivationOwned(identity, ownerContext)
   } catch (error) {

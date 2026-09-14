@@ -111,7 +111,7 @@ describe('activation recovery architecture census', () => {
   it('routes all production recovery requests through the owner, watcher, or create failure adapter', () => {
     expect(callerCounts('recoverWorkspaceActivation')).toEqual({
       'src/renderer/src/components/use-terminal-watcher-effects.ts': 1,
-      'src/renderer/src/lib/workspace-activation-recovery-settlement.ts': 1,
+      'src/renderer/src/lib/workspace-activation-recovery-retry.ts': 1,
       'src/renderer/src/lib/worktree-activation-recovery-routing.ts': 1,
       'src/renderer/src/lib/worktree-activation-recovery.ts': 1,
       'src/renderer/src/lib/worktree-creation-flow-execute.ts': 1

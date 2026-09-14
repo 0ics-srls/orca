@@ -8,9 +8,9 @@ import {
 } from './workspace-execution-evidence'
 import type {
   WorkspaceActivationIdentity,
-  WorkspaceActivationRecoveryOwnerContext,
   WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
+import type { WorkspaceActivationRecoveryOwnerContext } from './workspace-activation-recovery-retry'
 import {
   canInspectAgentActivationInventory,
   captureActivationRecoverySelectionRevision,

@@ -18,9 +18,9 @@ import {
 } from './workspace-activation-recovery-state'
 import type {
   WorkspaceActivationIdentity,
-  WorkspaceActivationRecoveryOwnerContext,
   WorkspaceActivationRecoveryResult
 } from './worktree-activation-recovery'
+import type { WorkspaceActivationRecoveryOwnerContext } from './workspace-activation-recovery-retry'
 
 const failureSurfaceIdsByProducerAttempt = new Map<string, ReadonlySet<string>>()
 
