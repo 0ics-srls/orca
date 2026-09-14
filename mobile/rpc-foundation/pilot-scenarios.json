@@ -7615,6 +7615,119 @@
           "checkpoint": "settled"
         }
       ]
+    },
+    {
+      "id": "host-worktree-actions-pin-open-delete",
+      "operation": "host.worktree-actions",
+      "version": 1,
+      "family": "host.worktree-actions",
+      "sites": ["mobile/src/host-screen/use-host-worktree-actions.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "action": "toggle-pin",
+          "id": "toggle-pin"
+        },
+        {
+          "checkpoint": "pin-optimistic"
+        },
+        {
+          "complete": "worktree.set#1",
+          "params": {
+            "worktree": "id:wt-1",
+            "isPinned": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "ok": true
+            }
+          }
+        },
+        {
+          "action": "open-session",
+          "id": "open-session"
+        },
+        {
+          "complete": "worktree.activate#1",
+          "params": {
+            "worktree": "id:wt-1",
+            "notifyClients": false,
+            "navigation": "caller"
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "ok": true
+            }
+          }
+        },
+        {
+          "action": "delete",
+          "id": "delete"
+        },
+        {
+          "checkpoint": "delete-optimistic"
+        },
+        {
+          "complete": "worktree.rm#1",
+          "params": {
+            "worktree": "id:wt-1",
+            "force": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "ok": true
+            }
+          }
+        },
+        {
+          "checkpoint": "settled"
+        }
+      ]
+    },
+    {
+      "id": "host-worktree-delete-refused",
+      "operation": "host.worktree-actions",
+      "version": 1,
+      "family": "host.worktree-actions",
+      "sites": ["mobile/src/host-screen/use-host-worktree-actions.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount"
+        },
+        {
+          "action": "delete",
+          "id": "delete"
+        },
+        {
+          "checkpoint": "delete-optimistic"
+        },
+        {
+          "complete": "worktree.rm#1",
+          "params": {
+            "worktree": "id:wt-1",
+            "force": true
+          },
+          "reply": {
+            "ok": false,
+            "error": {
+              "code": "worktree_busy",
+              "message": "Worktree is busy"
+            }
+          }
+        },
+        {
+          "checkpoint": "restored"
+        }
+      ]
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { fileInventoryMountAdapters } from './file-inventory-mount-adapters'
 import { fileRequestMountAdapters } from './file-request-mount-adapters'
 import { hostScreenMountAdapters } from './host-screen-mount-adapters'
+import { hostWorktreeActionMountAdapters } from './host-worktree-action-mount-adapters'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { newTabAgentMountAdapters } from './new-tab-agent-mount-adapters'
 import { newWorkspaceMountAdapters } from './new-workspace-mount-adapters'
@@ -22,6 +23,10 @@ export const MOUNTED_OPERATION_MODULES: readonly MountedOperationModule[] = [
   { source: 'file-inventory-mount-adapters.ts', mounts: fileInventoryMountAdapters },
   { source: 'file-request-mount-adapters.ts', mounts: fileRequestMountAdapters },
   { source: 'host-screen-mount-adapters.ts', mounts: hostScreenMountAdapters },
+  {
+    source: 'host-worktree-action-mount-adapters.ts',
+    mounts: hostWorktreeActionMountAdapters
+  },
   { source: 'hosted-review-mount-adapters.ts', mounts: hostedReviewMountAdapters },
   { source: 'new-tab-agent-mount-adapters.ts', mounts: newTabAgentMountAdapters },
   { source: 'new-workspace-mount-adapters.ts', mounts: newWorkspaceMountAdapters },
