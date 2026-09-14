@@ -167,7 +167,7 @@ export function SourceControlUncommittedSections(props: {
                       type="button"
                       variant="ghost"
                       size="xs"
-                      className="shrink-0 whitespace-nowrap px-1.5 text-muted-foreground hover:text-foreground"
+                      className="px-1.5 text-muted-foreground hover:text-foreground"
                       onClick={(event) => {
                         event.stopPropagation()
                         props.onViewSection(sectionViewAction)

@@ -144,8 +144,8 @@ describe('source control section header actions', () => {
   it('keeps the View all label on a single line', () => {
     renderBranchSection()
 
-    // Comes from the shared Button base variant, not the section's own className,
-    // so this pins the rendered outcome against either layer regressing.
+    // Supplied by the shared Button base variant; pinned here so a change to that
+    // variant can't silently start wrapping these labels.
     expect(screen.getByRole('button', { name: 'View all' })).toHaveClass('whitespace-nowrap')
   })
 })
