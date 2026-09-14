@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "baseline": "7d98c8e2f377832f1146591f00e43a63e29f53b8",
+  "baseline": "e53f1557e1b5a6e26e85cfca390b34f7f8a7d26c",
   "scenarios": [
     {
       "id": "b1",
@@ -514,7 +514,7 @@
           "checkpoint": "settled"
         }
       ],
-      "namedDeltas": ["new-workspace-runtime-context-null-settings-typeerror"]
+      "namedDeltas": ["new-workspace-runtime-context-null-results-degrade-to-absent"]
     },
     {
       "id": "settings-workspace-context-refused",
@@ -586,7 +586,7 @@
           "checkpoint": "settled"
         }
       ],
-      "namedDeltas": ["new-workspace-runtime-context-null-settings-typeerror"]
+      "namedDeltas": ["new-workspace-runtime-context-null-results-degrade-to-absent"]
     },
     {
       "id": "settings-workspace-context-transport-error",
@@ -655,7 +655,7 @@
           "checkpoint": "settled"
         }
       ],
-      "namedDeltas": ["new-workspace-runtime-context-null-settings-typeerror"]
+      "namedDeltas": ["new-workspace-runtime-context-null-results-degrade-to-absent"]
     },
     {
       "id": "settings-home-providers-fulfilled",
