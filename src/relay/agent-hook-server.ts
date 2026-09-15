@@ -30,7 +30,7 @@ import { drainAgentHookSpool } from '../shared/agent-hook-spool'
 import { buildRelayHookPtyEnv, defaultEndpointDir } from './agent-hook-endpoint-coordinates'
 import { buildRelayHookEnvelope } from './agent-hook-envelope-build'
 import { AgentHookResultRetryScheduler } from './agent-hook-result-retry-scheduler'
-import { evictCachedPanesOverCap } from './agent-hook-cached-pane-status'
+import { cacheRelayLegacyAgentStatus } from '../shared/agent-status-legacy-relay-cache'
 import { RelayAgentStatusStoreSource } from './agent-hook-status-store-source'
 import { handleRelayHookHttpRequest } from './agent-hook-http-handler'
 import { ingestRelaySpoolRecord, replayCachedRelayPayloads } from './agent-hook-cache-actions'
@@ -286,11 +286,14 @@ export class RelayAgentHookServer {
     // Why: keep PostCompact identity in the replay cache so the client can re-run ownership when
     // it reconnects. Stripping it would let a cold relay replay a completion as an ordinary `done`
     // row and resurrect a pane that the client had already retired.
-    const cachedEvent = event
     const previous = this.state.lastStatusByPaneKey.get(event.paneKey)
-    // Why: delete-then-set makes Map insertion order = recency, so the cap below evicts the longest-idle pane.
-    this.state.lastStatusByPaneKey.delete(event.paneKey)
-    this.state.lastStatusByPaneKey.set(event.paneKey, cachedEvent)
+    if (
+      !cacheRelayLegacyAgentStatus(this.state, event, 256, (paneKey) =>
+        this.clearPaneState(paneKey)
+      )
+    ) {
+      return
+    }
     this.lastEnvelopeMetaByPaneKey.delete(event.paneKey)
     this.lastEnvelopeMetaByPaneKey.set(event.paneKey, { source, env, version })
     this.statusStoreSource.recordEvent(event, previous)
