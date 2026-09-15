@@ -1,4 +1,9 @@
 import { agentChildWorkBelongsTo, type AgentChildWorkRecord } from './agent-status-child-work'
+import {
+  serializeAgentChildWorkAliasKey,
+  type AgentChildWorkAliasIdentity,
+  type AgentChildWorkAliasRecord
+} from './agent-status-child-work-alias'
 import { parseAgentChildWorkRecord } from './agent-status-child-work-codec'
 import type { AgentStatusStoreSnapshot } from './agent-status-store-contract'
 import {
@@ -7,6 +12,7 @@ import {
   parseAgentStatusStoreSnapshot
 } from './agent-status-store-codec'
 import { applyAgentStatusStoreMutation } from './agent-status-store-mutation'
+import type { AgentStatusRunAliasIndex } from './agent-status-run-alias-index'
 import {
   parseAgentStatusParentRecord,
   type AgentStatusParentRecord
@@ -17,6 +23,7 @@ import {
   deepFreezeAgentStatusStoreValue,
   snapshotFromAgentStatusStoreState
 } from './agent-status-store-state'
+import { deriveAgentStatusStoreRunAliasIndex } from './agent-status-store-run-index'
 import {
   parseAgentStatusSubject,
   serializeAgentStatusSubject,
@@ -32,6 +39,10 @@ export type AgentStatusStoreMode = 'authority' | 'replica'
 export type AgentStatusStore = {
   getParent(subject: AgentStatusSubject): AgentStatusParentRecord | null
   getChildren(subject: AgentStatusSubject): AgentChildWorkRecord[]
+  getChild(childWorkId: string): AgentChildWorkRecord | null
+  getAlias(identity: AgentChildWorkAliasIdentity): AgentChildWorkAliasRecord | null
+  getAliasesForChild(childWorkId: string): AgentChildWorkAliasRecord[]
+  getRunAliasIndex(): AgentStatusRunAliasIndex
   getSnapshot(): AgentStatusStoreSnapshot
   applyMutation(mutation: unknown): AgentStatusMutationEnvelope | null
   applySnapshot(snapshot: unknown): boolean
@@ -69,6 +80,20 @@ export function createAgentStatusStore(options: CreateAgentStatusStoreOptions): 
         .map((child) => parseAgentChildWorkRecord(child))
         .filter((child): child is AgentChildWorkRecord => child !== null)
       return deepFreezeAgentStatusStoreValue(children)
+    },
+    getChild(childWorkId) {
+      return state.children.get(childWorkId) ?? null
+    },
+    getAlias(identity) {
+      return state.aliases.get(serializeAgentChildWorkAliasKey(identity)) ?? null
+    },
+    getAliasesForChild(childWorkId) {
+      return deepFreezeAgentStatusStoreValue(
+        [...state.aliases.values()].filter((alias) => alias.childWorkId === childWorkId)
+      )
+    },
+    getRunAliasIndex() {
+      return deriveAgentStatusStoreRunAliasIndex(state.parents.values())
     },
     getSnapshot() {
       return snapshotFromAgentStatusStoreState(state)

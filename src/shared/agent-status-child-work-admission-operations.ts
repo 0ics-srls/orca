@@ -187,8 +187,11 @@ export function resumeAgentChildWork(
   if (invalid || !child) {
     return invalid ?? rejectAgentChildWorkAdmission('unknown-child')
   }
-  if (!nextFence || agentChildWorkFencesEqual(child.invocation, nextFence)) {
+  if (!nextFence) {
     return rejectAgentChildWorkAdmission('invalid')
+  }
+  if (nextFence.generation <= child.invocation.generation) {
+    return rejectAgentChildWorkAdmission('stale-invocation')
   }
   const aliases = buildAgentChildWorkAliases(
     request.parent,
@@ -215,6 +218,12 @@ export function resumeAgentChildWork(
       ...(child.membership === 'settled' ? { settledAt: child.observedAt } : {})
     }
   ].slice(-AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX)
+  const retainedFences = [nextFence, ...previousInvocations.map((entry) => entry.fence)]
+  const removeAliases = agentChildWorkAliasesForChild(store, child.childWorkId)
+    .filter(
+      (alias) => !retainedFences.some((fence) => agentChildWorkFencesEqual(alias.fence, fence))
+    )
+    .map(serializeAgentChildWorkAliasKey)
   const resumed = buildAgentChildWork(
     request,
     child.childWorkId,
@@ -223,7 +232,7 @@ export function resumeAgentChildWork(
     previousInvocations
   )
   return resumed
-    ? commitAgentChildWork(store, resumed, aliases, false)
+    ? commitAgentChildWork(store, resumed, aliases, false, removeAliases)
     : rejectAgentChildWorkAdmission('invalid')
 }
 

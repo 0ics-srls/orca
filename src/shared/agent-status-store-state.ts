@@ -13,6 +13,7 @@ import { parseAgentChildWorkRecord } from './agent-status-child-work-codec'
 import {
   AGENT_STATUS_STORE_LIMITS,
   AGENT_STATUS_STORE_SNAPSHOT_VERSION,
+  AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS,
   type AgentStatusFactIdentity,
   type AgentStatusFactRecord,
   type AgentStatusStoreSnapshot,
@@ -20,6 +21,7 @@ import {
   type AgentStatusTombstoneRecord
 } from './agent-status-store-contract'
 import {
+  isAgentStatusStoreValueWithinSerializedLimit,
   parseAgentStatusStoreSnapshot,
   parseAgentStatusTombstoneRecord
 } from './agent-status-store-codec'
@@ -89,6 +91,19 @@ export function cloneAgentStatusStoreState(state: AgentStatusStoreState): AgentS
   }
 }
 
+function snapshotCandidateFromAgentStatusStoreState(state: AgentStatusStoreState) {
+  return {
+    version: AGENT_STATUS_STORE_SNAPSHOT_VERSION,
+    epoch: state.epoch,
+    revision: state.revision,
+    parents: [...state.parents.values()],
+    children: [...state.children.values()],
+    aliases: [...state.aliases.values()],
+    facts: [...state.facts.values()],
+    tombstones: [...state.tombstones.values()]
+  }
+}
+
 function hasMatchingFence(child: AgentChildWorkRecord, alias: AgentChildWorkAliasRecord): boolean {
   if (agentChildWorkFencesEqual(child.invocation, alias.fence)) {
     return true
@@ -114,7 +129,8 @@ export function validateAgentStatusStoreState(state: AgentStatusStoreState): boo
     if (
       key !== serializeAgentStatusSubject(parent.subject) ||
       parent.revision > state.revision ||
-      state.tombstones.has(agentStatusTombstoneMapKey('parent', key))
+      (state.tombstones.get(agentStatusTombstoneMapKey('parent', key))?.revision ?? -1) >=
+        parent.revision
     ) {
       return false
     }
@@ -166,22 +182,15 @@ export function validateAgentStatusStoreState(state: AgentStatusStoreState): boo
       return false
     }
   }
-  return true
+  return isAgentStatusStoreValueWithinSerializedLimit(
+    snapshotCandidateFromAgentStatusStoreState(state)
+  )
 }
 
 export function snapshotFromAgentStatusStoreState(
   state: AgentStatusStoreState
 ): AgentStatusStoreSnapshot {
-  const snapshot = parseAgentStatusStoreSnapshot({
-    version: AGENT_STATUS_STORE_SNAPSHOT_VERSION,
-    epoch: state.epoch,
-    revision: state.revision,
-    parents: [...state.parents.values()],
-    children: [...state.children.values()],
-    aliases: [...state.aliases.values()],
-    facts: [...state.facts.values()],
-    tombstones: [...state.tombstones.values()]
-  })
+  const snapshot = parseAgentStatusStoreSnapshot(snapshotCandidateFromAgentStatusStoreState(state))
   if (!snapshot) {
     throw new Error('Agent status store produced an invalid snapshot')
   }
@@ -234,7 +243,9 @@ export function agentStatusStoreStateFromSnapshot(
     }
     state.facts.set(key, deepFreezeAgentStatusStoreValue(record))
   }
-  for (const tombstone of snapshot.tombstones) {
+  for (const tombstone of [...snapshot.tombstones].sort(
+    (left, right) => left.revision - right.revision
+  )) {
     const record = parseAgentStatusTombstoneRecord(tombstone)
     if (!record) {
       return null
@@ -244,6 +255,12 @@ export function agentStatusStoreStateFromSnapshot(
       return null
     }
     state.tombstones.set(key, deepFreezeAgentStatusStoreValue(record))
+  }
+  for (const [key, tombstone] of state.tombstones) {
+    if (state.revision - tombstone.revision < AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS) {
+      break
+    }
+    state.tombstones.delete(key)
   }
   return validateAgentStatusStoreState(state) ? state : null
 }

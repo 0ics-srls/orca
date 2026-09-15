@@ -3,6 +3,7 @@ import {
   createAgentChildWorkAdmission,
   type AgentChildWorkAnnounceRequest
 } from './agent-status-child-work-admission'
+import { AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX } from './agent-status-child-work'
 import { serializeAgentChildWorkAliasKey } from './agent-status-child-work-alias'
 import { createAgentStatusStore } from './agent-status-store'
 import {
@@ -86,6 +87,16 @@ describe('agent child-work admission', () => {
     expect(store.getSnapshot().aliases).toHaveLength(2)
   })
 
+  it('admits a child without materializing the entire store snapshot', () => {
+    const parent = subject()
+    const { admission, store } = setup([parent])
+    const snapshot = vi.spyOn(store, 'getSnapshot')
+
+    expect(admission.announce(announce(parent)).accepted).toBe(true)
+    expect(admission.announce(announce(parent, { observedAt: 11 })).accepted).toBe(true)
+    expect(snapshot).not.toHaveBeenCalled()
+  })
+
   it('adopts and reclassifies a provisional child without changing its id', () => {
     const parent = subject()
     const { admission, store } = setup([parent])
@@ -145,6 +156,64 @@ describe('agent child-work admission', () => {
         }
       ]
     })
+  })
+
+  it('rejects a backwards resume generation before it can authorize stale stop input', () => {
+    const parent = subject()
+    const { admission, store } = setup([parent])
+    admission.announce(
+      announce(parent, {
+        fence: { invocationId: 'invocation-5', generation: 5 }
+      })
+    )
+    const before = store.getSnapshot()
+
+    expect(
+      admission.resume({
+        ...announce(parent, { observedAt: 20 }),
+        childWorkId: 'child-1',
+        expectedFence: { invocationId: 'invocation-5', generation: 5 },
+        nextFence: { invocationId: 'invocation-4', generation: 4 }
+      })
+    ).toEqual({ accepted: false, reason: 'stale-invocation' })
+    expect(store.getSnapshot()).toEqual(before)
+  })
+
+  it('retires aliases when their invocation fence ages out of bounded history', () => {
+    const parent = subject()
+    const { admission, store } = setup([parent])
+    expect(admission.announce(announce(parent)).accepted).toBe(true)
+
+    for (
+      let generation = 2;
+      generation <= AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 2;
+      generation += 1
+    ) {
+      expect(
+        admission.resume({
+          ...announce(parent, {
+            aliases: [
+              {
+                segmentId: `segment-${generation}`,
+                aliasKind: 'task_id',
+                alias: `task-${generation}`
+              }
+            ],
+            observedAt: 10 + generation
+          }),
+          childWorkId: 'child-1',
+          expectedFence: {
+            invocationId: `invocation-${generation - 1}`,
+            generation: generation - 1
+          },
+          nextFence: { invocationId: `invocation-${generation}`, generation }
+        })
+      ).toMatchObject({ accepted: true, childWorkId: 'child-1' })
+    }
+
+    const aliases = store.getAliasesForChild('child-1')
+    expect(aliases).toHaveLength(AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 1)
+    expect(aliases.some((entry) => entry.alias === 'task-1')).toBe(false)
   })
 
   it('mints a distinct id for proven reuse and rejects delayed predecessor updates and stops', () => {

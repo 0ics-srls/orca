@@ -2,9 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 import type { AgentStatusIpcPayload } from './agent-status-ipc-payload'
 import type { AgentChildWorkAliasInput } from './agent-status-child-work-alias'
 import type { AgentChildWorkInput } from './agent-status-child-work'
+import { serializeAgentStatusProviderAliasKey } from './agent-status-run-alias-index'
 import { createAgentStatusStore } from './agent-status-store'
 import {
   AGENT_STATUS_STORE_LIMITS,
+  AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS,
   type AgentStatusStoreSnapshot
 } from './agent-status-store-contract'
 import {
@@ -182,6 +184,120 @@ describe('AgentStatusStore', () => {
     ).toBeNull()
   })
 
+  it('indexes all run owners of one scoped provider session and reconstructs the index on restore', () => {
+    const store = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
+    const providerAlias = {
+      ...scope(),
+      provider: 'claude',
+      sessionKeyKind: 'session_id',
+      providerId: 'shared-session'
+    } as const
+    const aliasKey = serializeAgentStatusProviderAliasKey(providerAlias)
+    for (const runId of ['run-1', 'run-2']) {
+      const run = {
+        runId,
+        paneKey: `pane-${runId}`,
+        attachment: { executionId: `execution-${runId}` },
+        attribution: 'token',
+        providerSessions: [
+          {
+            provider: providerAlias.provider,
+            sessionKeyKind: providerAlias.sessionKeyKind,
+            providerId: providerAlias.providerId
+          }
+        ],
+        role: 'root',
+        verdict: 'live'
+      } as const
+      expect(
+        store.applyMutation({
+          parent: { subject: makePtyRunAgentStatusSubject(scope(), runId), run }
+        })
+      ).not.toBeNull()
+    }
+    expect(store.getRunAliasIndex().get(aliasKey)).toEqual(new Set(['run-1', 'run-2']))
+
+    const restored = createAgentStatusStore({ epoch: 'epoch-b', mode: 'authority' })
+    expect(restored.applySnapshot(store.getSnapshot())).toBe(true)
+    expect(restored.getRunAliasIndex().get(aliasKey)).toEqual(new Set(['run-1', 'run-2']))
+    expect(
+      store.applyMutation({ removeParent: makePtyRunAgentStatusSubject(scope(), 'run-1') })
+    ).not.toBeNull()
+    expect(store.getRunAliasIndex().get(aliasKey)).toEqual(new Set(['run-2']))
+  })
+
+  it('allows a removed structured session to be observed again at a later revision', () => {
+    const parent = subject()
+    const store = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
+    expect(store.applyMutation({ parent: { subject: parent, firstObservedAt: 10 } })).not.toBeNull()
+    expect(store.applyMutation({ removeParent: parent })).not.toBeNull()
+    expect(store.applyMutation({ parent: { subject: parent, firstObservedAt: 30 } })).not.toBeNull()
+    expect(store.getParent(parent)?.firstObservedAt).toBe(30)
+    expect(store.getSnapshot().tombstones).toContainEqual({
+      entity: 'parent',
+      key: serializeAgentStatusSubject(parent),
+      revision: 2
+    })
+  })
+
+  it('bounds tombstones while revision envelopes reject stale replay after reacquisition and compaction', () => {
+    const parent = subject()
+    const store = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
+    const first = store.applyMutation({ parent: { subject: parent, firstObservedAt: 10 } })
+    expect(first).not.toBeNull()
+    const replica = createAgentStatusStore({ epoch: 'replica', mode: 'replica' })
+    expect(replica.applySnapshot(store.getSnapshot())).toBe(true)
+
+    const removal = store.applyMutation({ removeParent: parent })
+    expect(removal).not.toBeNull()
+    expect(replica.applyTransportEnvelope(removal)).toBe(true)
+    const reopened = store.applyMutation({ parent: { subject: parent, firstObservedAt: 30 } })
+    expect(reopened).not.toBeNull()
+    expect(replica.applyTransportEnvelope(reopened)).toBe(true)
+    expect(replica.applyTransportEnvelope(first)).toBe(false)
+    expect(replica.getParent(parent)?.firstObservedAt).toBe(30)
+
+    expect(
+      store.applyMutation({
+        removeChildren: Array.from(
+          { length: AGENT_STATUS_STORE_LIMITS.tombstones + 1 },
+          (_, index) => `unused-child-${index}`
+        )
+      })
+    ).not.toBeNull()
+    expect(store.getSnapshot().tombstones).toHaveLength(AGENT_STATUS_STORE_LIMITS.tombstones)
+    expect(store.getSnapshot().tombstones.some((item) => item.entity === 'parent')).toBe(false)
+    expect(replica.applySnapshot(store.getSnapshot())).toBe(true)
+    expect(replica.applyTransportEnvelope(first)).toBe(false)
+    expect(replica.getParent(parent)?.firstObservedAt).toBe(30)
+  })
+
+  it.fails('does not roll a replica back to a superseded epoch snapshot', () => {
+    const parent = subject()
+    const first = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
+    first.applyMutation({ parent: { subject: parent, firstObservedAt: 10 } })
+    const second = createAgentStatusStore({ epoch: 'epoch-b', mode: 'authority' })
+    second.applyMutation({ parent: { subject: parent, firstObservedAt: 20 } })
+    const replica = createAgentStatusStore({ epoch: 'replica', mode: 'replica' })
+    expect(replica.applySnapshot(first.getSnapshot())).toBe(true)
+    expect(replica.applySnapshot(second.getSnapshot())).toBe(true)
+    expect(replica.applySnapshot(first.getSnapshot())).toBe(false)
+    expect(replica.getParent(parent)?.firstObservedAt).toBe(20)
+  })
+
+  it('expires tombstones from a restored snapshot after the retention revision window', () => {
+    const parent = subject()
+    const source = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
+    expect(source.applyMutation({ removeParent: parent })).not.toBeNull()
+    const snapshot = {
+      ...source.getSnapshot(),
+      revision: AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS + 1
+    }
+    const restored = createAgentStatusStore({ epoch: 'epoch-b', mode: 'authority' })
+    expect(restored.applySnapshot(snapshot)).toBe(true)
+    expect(restored.getSnapshot().tombstones).toEqual([])
+  })
+
   it('uses parsed immutable copies instead of caller-owned objects', () => {
     const parent = subject()
     const store = createAgentStatusStore({ epoch: 'epoch-a', mode: 'authority' })
@@ -228,12 +344,11 @@ describe('AgentStatusStore', () => {
     expect(new Set(removed.tombstones.map((item) => item.revision))).toEqual(new Set([2]))
   })
 
-  it('never resurrects an exactly removed parent or child id', () => {
+  it('never resurrects an exactly removed child id within tombstone retention', () => {
     const { parent, store } = populatedStore()
     expect(store.applyMutation({ removeChildren: ['child-1'] })).not.toBeNull()
     expect(store.applyMutation({ children: [child(parent, { observedAt: 30 })] })).toBeNull()
     expect(store.applyMutation({ removeParent: parent })).not.toBeNull()
-    expect(store.applyMutation({ parent: { subject: parent, status: status(parent) } })).toBeNull()
   })
 
   it('persists a bounded snapshot and restores child identity under a new epoch', () => {

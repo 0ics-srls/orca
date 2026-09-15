@@ -34,14 +34,14 @@ export function findAgentChildWork(
   store: AgentStatusStore,
   childWorkId: string
 ): AgentChildWorkRecord | null {
-  return store.getSnapshot().children.find((child) => child.childWorkId === childWorkId) ?? null
+  return store.getChild(childWorkId)
 }
 
 export function agentChildWorkAliasesForChild(
   store: AgentStatusStore,
   childWorkId: string
 ): AgentChildWorkAliasRecord[] {
-  return store.getSnapshot().aliases.filter((alias) => alias.childWorkId === childWorkId)
+  return store.getAliasesForChild(childWorkId)
 }
 
 export function buildAgentChildWorkAliases(
@@ -146,10 +146,10 @@ export function resolveAgentChildWorkAliasRecords(
   store: AgentStatusStore,
   aliases: AgentChildWorkAliasInput[]
 ): AgentChildWorkAliasRecord[] {
-  const keys = new Set(aliases.map(serializeAgentChildWorkAliasKey))
-  return store
-    .getSnapshot()
-    .aliases.filter((alias) => keys.has(serializeAgentChildWorkAliasKey(alias)))
+  return aliases.flatMap((alias) => {
+    const found = store.getAlias(alias)
+    return found ? [found] : []
+  })
 }
 
 export function validateExistingAgentChildWork(

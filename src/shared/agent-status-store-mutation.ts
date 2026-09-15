@@ -8,6 +8,10 @@ import type {
   AgentStatusStoreMutation,
   AgentStatusTombstoneEntity
 } from './agent-status-store-contract'
+import {
+  AGENT_STATUS_STORE_LIMITS,
+  AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS
+} from './agent-status-store-contract'
 import { parseAgentStatusFactRecord } from './agent-status-store-fact-codec'
 import { parseAgentStatusParentRecord } from './agent-status-store-parent'
 import {
@@ -32,7 +36,21 @@ function addTombstone(
   revision: number
 ): void {
   const record = deepFreezeAgentStatusStoreValue({ entity, key, revision })
-  state.tombstones.set(agentStatusTombstoneMapKey(entity, key), record)
+  const mapKey = agentStatusTombstoneMapKey(entity, key)
+  state.tombstones.delete(mapKey)
+  state.tombstones.set(mapKey, record)
+}
+
+function compactTombstones(state: AgentStatusStoreState): void {
+  for (const [key, tombstone] of state.tombstones) {
+    if (
+      state.tombstones.size <= AGENT_STATUS_STORE_LIMITS.tombstones &&
+      state.revision - tombstone.revision < AGENT_STATUS_STORE_TOMBSTONE_RETENTION_REVISIONS
+    ) {
+      break
+    }
+    state.tombstones.delete(key)
+  }
 }
 
 function removeAlias(state: AgentStatusStoreState, key: string, revision: number): void {
@@ -108,7 +126,8 @@ function upsertParent(
   revision: number
 ): boolean {
   const key = serializeAgentStatusSubject(input.subject)
-  if (state.tombstones.has(agentStatusTombstoneMapKey('parent', key))) {
+  const tombstone = state.tombstones.get(agentStatusTombstoneMapKey('parent', key))
+  if (tombstone && tombstone.revision >= revision) {
     return false
   }
   const previous = state.parents.get(key)
@@ -222,5 +241,6 @@ export function applyAgentStatusStoreMutation(
   if (mutation.facts && !upsertFacts(next, mutation.facts, revision)) {
     return null
   }
+  compactTombstones(next)
   return validateAgentStatusStoreState(next) ? next : null
 }
