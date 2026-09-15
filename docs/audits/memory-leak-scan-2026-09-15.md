@@ -41,6 +41,8 @@ alive for a scenario were reviewed separately from application code.
 | ML-004 | `src/renderer/src/components/activity/activity-clear-completed.ts` | Module-level pagehide listener retained old HMR module closures. | Added Vite HMR disposer. | oxlint/oxfmt passed. |
 | ML-005 | `src/renderer/src/components/ContextualTourOverlaySurface.tsx` | Global Escape listener survived HMR and retained stale closure behind a window guard. | Added disposer that removes the listener and resets the guard. | oxlint/oxfmt passed. |
 | ML-006 | `src/renderer/src/lib/keyboard-layout/layout-base-character.ts` | HMR could duplicate the focus listener and API layout-change subscription after the module guard reset. | Added disposer removing both hooks and resetting the installation guard. | oxlint/oxfmt passed. |
+| ML-007 | `src/renderer/src/lib/input-quiet-scheduler.ts` | HMR could stack global capture listeners and stale `recordInput` closures. | Added disposer removing listeners from the installed window. | oxlint/oxfmt passed. |
+| ML-008 | `src/main/hang-watchdog/main-thread-hang-watchdog.ts` | Repeated watchdog lifecycles retained the app `will-quit` stop listener after manual stop/worker exit. | Remove the app listener whenever the watchdog stops. | Hang watchdog tests: 8 passed; oxlint passed. |
 | ML-002 | `src/preload/preload-runtime-support.ts` | Installation functions could add duplicate global listeners if setup ran repeatedly, retaining closures and processing each drop more than once. | Added idempotent guards to native drop and browser-find listener installation. | Native chat drop scope test: 10 passed; oxlint passed. |
 
 The ledger is updated as each agent returns a concrete finding or a verified
