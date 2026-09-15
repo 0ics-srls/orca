@@ -52,7 +52,15 @@ export function NativeChatResolutionReceipt({
       ) : null}
       {answers.map((answer, index) => (
         <div key={body.kind === 'question' ? (body.questions?.[index]?.id ?? 'answer') : 'answer'}>
-          {answer.question ? <p>{answer.question}</p> : null}
+          {answer.question &&
+          !(
+            body.kind === 'question' &&
+            body.questions?.length === 1 &&
+            subject.kind === 'question' &&
+            answer.question === subject.text
+          ) ? (
+            <p>{answer.question}</p>
+          ) : null}
           <p className="line-clamp-3 whitespace-pre-wrap break-words">
             {answer.answer ??
               translate(

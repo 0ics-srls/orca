@@ -162,6 +162,25 @@ describe('resolution receipts', () => {
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
   })
 
+  it('does not repeat a single question above its answer', () => {
+    const body: AgentJournalQuestionItem = {
+      kind: 'question',
+      question: 'Libraries?',
+      options: [],
+      questions: [{ id: 'q1', question: 'Libraries?', multiSelect: false, options: [] }],
+      resolution: {
+        ...approval.resolution,
+        selectedOptionId: encodeAgentSessionQuestionAnswers([
+          { questionId: 'q1', optionIds: [], other: 'TypeScript' }
+        ])
+      }
+    }
+
+    render(<NativeChatResolutionReceipt body={body} />)
+    expect(screen.getAllByText('Libraries?')).toHaveLength(1)
+    expect(screen.getByText('TypeScript')).toBeInTheDocument()
+  })
+
   it('names the actual question while a single grouped prompt is pending', () => {
     const body: AgentJournalQuestionItem = {
       kind: 'question',
