@@ -3,6 +3,7 @@ import type { ExecutionHostId } from './execution-host'
 
 export const AGENT_STATUS_STORE_REPLICA_CAPABILITY = 'agent-status.store-replica.v1' as const
 export const AGENT_STATUS_STORE_REPLICA_BUFFER_MAX = 256
+export const AGENT_STATUS_STORE_FRAME_NOTIFICATION = 'agentStatus.storeFrame' as const
 
 export type AgentStatusStoreRowIdentity = {
   paneKey: string
