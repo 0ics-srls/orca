@@ -142,6 +142,7 @@ describe('useStructuredAgentSessionOutbox', () => {
       throw new Error('fixture outbox entry was not persisted')
     }
     mocks.call.mockResolvedValue(acceptedResultFor(stagedEntry.clientMessageId, 1))
+    const initialProps: { fence: number | null } = { fence: null }
     const { result, rerender } = renderHook(
       ({ fence }) =>
         useStructuredAgentSessionOutbox({
@@ -150,7 +151,7 @@ describe('useStructuredAgentSessionOutbox', () => {
           fence,
           submissions: []
         }),
-      { initialProps: { fence: null as number | null } }
+      { initialProps }
     )
     expect(result.current.outbox).toHaveLength(1)
 
