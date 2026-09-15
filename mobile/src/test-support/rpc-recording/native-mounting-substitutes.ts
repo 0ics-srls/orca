@@ -32,7 +32,7 @@ function partialNativeModule(module: string, members: Record<string, unknown>): 
       if (typeof key === 'string' && key !== '__esModule' && !(key in target)) {
         throw new Error(`Unsubstituted native member: ${module}.${key}`)
       }
-      return target[key as string]
+      return Reflect.get(target, key)
     }
   })
 }
