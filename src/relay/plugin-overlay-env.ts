@@ -1,4 +1,6 @@
 import { readSessionShellStartupEnvVar } from '../main/pty/shell-startup-env'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 import {
   PRIMARY_AGENT_DIR_ENV_BY_KIND,
   SOURCE_AGENT_DIR_ENV_BY_KIND,
@@ -33,10 +35,27 @@ export function resolveOpenCodeSourceConfigDir(
 export function resolvePiSourceAgentDir(
   env: Record<string, string>,
   shell: string | undefined,
-  kind: PiAgentKind
+  kind: PiAgentKind,
+  launchCommand?: string
 ): string | undefined {
   const sourceKey = SOURCE_AGENT_DIR_ENV_BY_KIND[kind]
   const primaryKey = PRIMARY_AGENT_DIR_ENV_BY_KIND[kind]
+
+  const ompProfile =
+    kind === 'omp'
+      ? [readOmpProfileFromCommand(launchCommand), env.OMP_PROFILE, env.PI_PROFILE].find(
+          (candidate) => candidate !== undefined && isSafeOmpProfile(candidate)
+        )
+      : undefined
+
+  if (kind === 'omp' && ompProfile) {
+    const configuredRoot = firstNonEmpty(
+      env.PI_CONFIG_DIR,
+      readStartupEnv('PI_CONFIG_DIR', env, shell)
+    )
+    const configDir = configuredRoot ?? join(env.HOME ?? process.env.HOME ?? homedir(), '.omp')
+    return join(configDir, 'profiles', ompProfile, 'agent')
+  }
 
   const sourceDir = firstNonEmpty(env[sourceKey])
   if (sourceDir) {
@@ -65,5 +84,49 @@ export function resolvePiSourceAgentDir(
   ) {
     return env[primaryKey]
   }
+
+  // OMP resolves its agent directory from PI_CONFIG_DIR before it populates
+  // PI_CODING_AGENT_DIR. Resolve the launch profile up front so the relay
+  // materializes the extension where the remote OMP process will load it.
+  if (kind === 'omp') {
+    const configuredRoot = firstNonEmpty(
+      env.PI_CONFIG_DIR,
+      readStartupEnv('PI_CONFIG_DIR', env, shell)
+    )
+    if (configuredRoot) {
+      return join(configuredRoot, 'agent')
+    }
+    if (launchCommand?.trim()) {
+      return join(env.HOME ?? process.env.HOME ?? homedir(), '.omp', 'agent')
+    }
+  }
   return undefined
+}
+
+function readOmpProfileFromCommand(command: string | undefined): string | undefined {
+  const match = command?.match(/(?:^|\s)--profile(?:=|\s+)(?:"([^"]+)"|'([^']+)'|([^\s]+))/)
+  const profile = match?.[1] ?? match?.[2] ?? match?.[3]
+  return profile && isSafeOmpProfile(profile) ? profile : undefined
+}
+
+function isSafeOmpProfile(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/.test(value)
+}
+
+/** Carry shell-selected XDG roots into relay-spawned daemon children. */
+export function inheritOmpXdgEnvironment(
+  env: Record<string, string>,
+  shell: string | undefined
+): Record<string, string> {
+  const next: Record<string, string> = {}
+  for (const name of ['XDG_DATA_HOME', 'XDG_STATE_HOME', 'XDG_CACHE_HOME'] as const) {
+    if (env[name] !== undefined) {
+      continue
+    }
+    const value = readStartupEnv(name, env, shell) ?? process.env[name]
+    if (value) {
+      next[name] = value
+    }
+  }
+  return next
 }

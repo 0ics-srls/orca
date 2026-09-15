@@ -23,6 +23,7 @@ import {
   writeConfigFile,
   writePluginFiles
 } from './hermes-home-filesystem'
+import { resolveHermesHomeForLaunch } from './hermes-home-filesystem'
 import {
   HERMES_EVENTS,
   HERMES_PLUGIN_NAME,
@@ -30,8 +31,12 @@ import {
   getPluginManifest
 } from './hermes-managed-plugin-source'
 
-function buildStatus(configPath: string, config: HermesConfig): AgentHookInstallStatus {
-  const pluginFiles = getPluginFilesState()
+function buildStatus(
+  configPath: string,
+  config: HermesConfig,
+  home: string
+): AgentHookInstallStatus {
+  const pluginFiles = getPluginFilesState(getPluginDir(home))
   const enablement = getConfigEnablement(config)
   const details = [
     pluginFiles.detail,
@@ -68,37 +73,39 @@ function stripTrailingSlash(path: string): string {
 }
 
 export class HermesHookService {
-  getStatus(): AgentHookInstallStatus {
-    const configPath = getConfigPath()
+  getStatus(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
+    const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
+    const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
     if (!parsed.ok) {
       return {
         agent: 'hermes',
         state: 'error',
         configPath,
-        managedHooksPresent: getPluginFilesState().managed,
+        managedHooksPresent: getPluginFilesState(getPluginDir(home)).managed,
         detail: `Could not parse Hermes config.yaml: ${parsed.detail}`
       }
     }
-    return buildStatus(configPath, parsed.config)
+    return buildStatus(configPath, parsed.config, home)
   }
 
-  install(): AgentHookInstallStatus {
-    const configPath = getConfigPath()
+  install(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
+    const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
+    const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
     if (!parsed.ok) {
       return {
         agent: 'hermes',
         state: 'error',
         configPath,
-        managedHooksPresent: getPluginFilesState().managed,
+        managedHooksPresent: getPluginFilesState(getPluginDir(home)).managed,
         detail: `Could not parse Hermes config.yaml: ${parsed.detail}`
       }
     }
 
-    writePluginFiles()
-    writeConfigFile(configPath, enablePlugin(parsed.config))
-    return this.getStatus()
+    writePluginFiles(getPluginDir(home))
+    writeConfigFile(configPath, enablePlugin(parsed.config), parsed.source)
+    return this.getStatus(options)
   }
 
   async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AgentHookInstallStatus> {
@@ -138,24 +145,25 @@ export class HermesHookService {
     }
   }
 
-  remove(): AgentHookInstallStatus {
-    const configPath = getConfigPath()
+  remove(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
+    const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
+    const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
     if (!parsed.ok) {
       return {
         agent: 'hermes',
         state: 'error',
         configPath,
-        managedHooksPresent: getPluginFilesState().managed,
+        managedHooksPresent: getPluginFilesState(getPluginDir(home)).managed,
         detail: `Could not parse Hermes config.yaml: ${parsed.detail}`
       }
     }
-    const pluginDir = getPluginDir()
+    const pluginDir = getPluginDir(home)
     if (getPluginFilesState(pluginDir).managed) {
       rmSync(pluginDir, { recursive: true, force: true })
     }
-    writeConfigFile(configPath, disablePlugin(parsed.config))
-    return this.getStatus()
+    writeConfigFile(configPath, disablePlugin(parsed.config), parsed.source)
+    return this.getStatus(options)
   }
 }
 

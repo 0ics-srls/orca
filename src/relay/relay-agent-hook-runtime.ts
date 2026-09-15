@@ -9,7 +9,11 @@ import {
 } from '../shared/agent-hook-relay'
 import { publishAgentHookEnvelope } from './agent-hook-envelope-publication'
 import { assertPluginSourceUnderByteCap } from './plugin-source-limit'
-import { resolveOpenCodeSourceConfigDir, resolvePiSourceAgentDir } from './plugin-overlay-env'
+import {
+  inheritOmpXdgEnvironment,
+  resolveOpenCodeSourceConfigDir,
+  resolvePiSourceAgentDir
+} from './plugin-overlay-env'
 import {
   detectExplicitPiAgentKindFromCommand,
   isPiCompatibleAgentType
@@ -110,9 +114,10 @@ export class RelayAgentHookRuntime {
       }
     }
     if (kind === 'omp' || !hasLaunchCommand) {
+      Object.assign(env, inheritOmpXdgEnvironment(context.env, context.shell))
       const sourceDir =
         kind === 'omp'
-          ? resolvePiSourceAgentDir(context.env, context.shell, 'omp')
+          ? resolvePiSourceAgentDir(context.env, context.shell, 'omp', launchCommandHint)
           : context.env.ORCA_OMP_SOURCE_AGENT_DIR
       const result = this.pluginOverlay.materializePi(overlayId, sourceDir, 'omp', {
         materializeDefaultHome: explicitKind === 'omp'

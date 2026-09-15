@@ -6,7 +6,11 @@ import {
   parseClaudeStatusLineBody
 } from '../../../shared/claude-statusline-rate-limits'
 import { mergeAgentHookRequestHeaders } from '../../../shared/agent-hook-listener/hook-envelope'
-import { readRequestBody } from '../../../shared/agent-hook-listener/request-body'
+import {
+  isAgentHookRequestTooLargeError,
+  readRequestBody,
+  respondWithAgentHookRequestTooLarge
+} from '../../../shared/agent-hook-listener/request-body'
 import { resolveHookSource } from '../../../shared/agent-hook-listener/source-routing'
 import { HOOK_REQUEST_SLOWLORIS_MS } from '../../../shared/agent-hook-listener/listener-limits'
 import { isHookRequestTruncatedError } from '../../../shared/agent-hook-transport-interference'
@@ -122,6 +126,13 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
         res.writeHead(204)
         res.end()
       } catch (error) {
+        if (isAgentHookRequestTooLargeError(error)) {
+          // Return an explicit bounded-transport classification while keeping
+          // the hook fail-open for the agent. Destroy only after the response
+          // is flushed so callers can observe 413 instead of ECONNRESET.
+          respondWithAgentHookRequestTooLarge(res, req)
+          return
+        }
         // Why (#11217): an authenticated POST whose body dies short of its own Content-Length was cut
         // by something on the loopback path, not by a bad payload. Fail open as before, but count it —
         // this is the one failure mode that silently stops status for every runtime at once.

@@ -20,7 +20,11 @@ import {
 import { HOOK_REQUEST_SLOWLORIS_MS } from '../shared/agent-hook-listener/listener-limits'
 import { normalizeHookPayload } from '../shared/agent-hook-listener'
 import { mergeAgentHookRequestHeaders } from '../shared/agent-hook-listener/hook-envelope'
-import { readRequestBody } from '../shared/agent-hook-listener/request-body'
+import {
+  isAgentHookRequestTooLargeError,
+  readRequestBody,
+  respondWithAgentHookRequestTooLarge
+} from '../shared/agent-hook-listener/request-body'
 import { resolveHookSource } from '../shared/agent-hook-listener/source-routing'
 import type { AgentHookEventPayload } from '../shared/agent-hook-listener/listener-event'
 import {
@@ -29,16 +33,12 @@ import {
   isHookRequestTruncatedError
 } from '../shared/agent-hook-transport-interference'
 import {
-  isAgentHookSource,
   REMOTE_AGENT_HOOK_ENV,
   type AgentHookRelayEnvelope,
   type AgentHookSource
 } from '../shared/agent-hook-relay'
-import {
-  buildSpoolHookBody,
-  drainAgentHookSpool,
-  type SpoolRecord
-} from '../shared/agent-hook-spool'
+import { drainAgentHookSpool } from '../shared/agent-hook-spool'
+import { ingestRelayAgentHookSpoolRecord } from './agent-hook-spool-ingest'
 import { buildRelayHookPtyEnv, defaultEndpointDir } from './agent-hook-endpoint-coordinates'
 import { buildRelayHookEnvelope, hookBodyEnv, hookBodyVersion } from './agent-hook-envelope-build'
 import { AgentHookResultRetryScheduler } from './agent-hook-result-retry-scheduler'
@@ -123,7 +123,14 @@ export class RelayAgentHookServer {
       drainAgentHookSpool({
         endpointDir: this.endpointDir,
         getPersistedLaunchTokenHash: () => undefined,
-        ingest: (record) => this.ingestSpoolRecord(record)
+        ingest: (record) =>
+          ingestRelayAgentHookSpoolRecord(
+            record,
+            this.state,
+            this.env,
+            (event, source, env, version, options) =>
+              this.applyEvent(event, source, env, version, options)
+          )
       })
     } catch (err) {
       // Why: a downstream relay failure must not prevent the loopback listener from starting;
@@ -289,6 +296,10 @@ export class RelayAgentHookServer {
       res.writeHead(204)
       res.end()
     } catch (err) {
+      if (isAgentHookRequestTooLargeError(err)) {
+        respondWithAgentHookRequestTooLarge(res, req)
+        return
+      }
       // Why (#11217): a remote host can run the same IDS; count truncations here so a blocked SSH
       // relay reports the cause instead of an anonymous "hook request failed".
       if (isHookRequestTruncatedError(err) && !destroyedBySlowlorisCap) {
@@ -334,21 +345,5 @@ export class RelayAgentHookServer {
     this.lastEnvelopeMetaByPaneKey.delete(event.paneKey)
     this.lastEnvelopeMetaByPaneKey.set(event.paneKey, { source, env, version })
     this.forward(buildRelayHookEnvelope(event, source, env, version, options))
-  }
-
-  private ingestSpoolRecord(record: SpoolRecord): void {
-    if (!isAgentHookSource(record.source)) {
-      return
-    }
-    const body = buildSpoolHookBody(record)
-    const event = normalizeHookPayload(this.state, record.source, body, this.env, {
-      deferCompactOwnershipToClient: true
-    })
-    if (!event) {
-      return
-    }
-    this.applyEvent(event, record.source, hookBodyEnv(body), hookBodyVersion(body), {
-      isReplay: true
-    })
   }
 }

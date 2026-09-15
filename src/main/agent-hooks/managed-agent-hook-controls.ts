@@ -13,7 +13,8 @@ import {
   MANAGED_AGENT_HOOK_REMOVERS,
   MANAGED_AGENT_HOOK_SCRIPT_REFRESHERS,
   MANAGED_AGENT_HOOK_STATUS_READERS,
-  type ManagedAgentHookInstaller,
+  MANAGED_AGENT_INTEGRATIONS,
+  type ManagedAgentIntegration,
   type ManagedAgentHookInstallOptions
 } from './managed-agent-hook-registry'
 
@@ -103,20 +104,42 @@ function skippedStatus(
   }
 }
 
-function selectedInstallers(options: InstallOptions): readonly ManagedAgentHookInstaller[] {
+function managedIntegrations(): readonly ManagedAgentIntegration[] {
+  if (Array.isArray(MANAGED_AGENT_INTEGRATIONS)) {
+    return MANAGED_AGENT_INTEGRATIONS
+  }
+
+  // Compatibility for embedders that mocked the tuple projections before the
+  // descriptor registry existed. Production always takes the branch above.
+  const refreshers = new Map(MANAGED_AGENT_HOOK_SCRIPT_REFRESHERS)
+  const removers = new Map(MANAGED_AGENT_HOOK_REMOVERS)
+  const asyncRemovers = new Map(MANAGED_AGENT_HOOK_ASYNC_REMOVERS)
+  const readers = new Map(MANAGED_AGENT_HOOK_STATUS_READERS)
+  return MANAGED_AGENT_HOOK_INSTALLERS.map(([agent, install]) => ({
+    agent,
+    install,
+    refreshManagedScripts: refreshers.get(agent),
+    remove: removers.get(agent) ?? (() => errorStatus(agent, 'remove is unavailable')),
+    removeAsync: asyncRemovers.get(agent),
+    getStatus: readers.get(agent) ?? (() => errorStatus(agent, 'status is unavailable'))
+  }))
+}
+
+function selectedIntegrations(options: InstallOptions): readonly ManagedAgentIntegration[] {
+  const integrations = managedIntegrations()
   if (!options.agents) {
-    return MANAGED_AGENT_HOOK_INSTALLERS
+    return integrations
   }
   const allowed = new Set(options.agents)
-  return MANAGED_AGENT_HOOK_INSTALLERS.filter(([agent]) => allowed.has(agent))
+  return integrations.filter(({ agent }) => allowed.has(agent))
 }
 
 async function runInstaller(
-  entry: ManagedAgentHookInstaller,
+  entry: ManagedAgentIntegration,
   onInstallError: InstallOptions['onInstallError'],
   options: ManagedAgentHookInstallOptions
 ): Promise<AgentHookInstallStatus> {
-  const [agent, install] = entry
+  const { agent, install } = entry
   try {
     return await install(options)
   } catch (error) {
@@ -136,8 +159,8 @@ async function runInstaller(
 // current before any gating; creating new ones remains install()'s presence-gated job.
 async function refreshExistingManagedScripts(options: InstallOptions): Promise<void> {
   const allowed = options.agents ? new Set(options.agents) : null
-  for (const [agent, refresh] of MANAGED_AGENT_HOOK_SCRIPT_REFRESHERS) {
-    if (allowed !== null && !allowed.has(agent)) {
+  for (const { agent, refreshManagedScripts: refresh } of managedIntegrations()) {
+    if (!refresh || (allowed !== null && !allowed.has(agent))) {
       continue
     }
     try {
@@ -153,10 +176,10 @@ export async function installManagedAgentHooks(
   options: InstallOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
   await refreshExistingManagedScripts(options)
-  const installers = selectedInstallers(options)
+  const installers = selectedIntegrations(options)
   const disabled = new Set(normalizeDisabledTuiAgents(settings?.disabledTuiAgents))
-  const enabledInstallers = installers.filter(([agent]) => !disabled.has(agent))
-  const targets = enabledInstallers.flatMap(([agent]) => {
+  const enabledInstallers = installers.filter(({ agent }) => !disabled.has(agent))
+  const targets = enabledInstallers.flatMap(({ agent }) => {
     const target = getManagedAgentHookTarget(agent)
     return target ? [target] : []
   })
@@ -167,7 +190,7 @@ export async function installManagedAgentHooks(
     })
   } catch (error) {
     const detail = error instanceof Error ? error.message : String(error)
-    return installers.map(([agent]) =>
+    return installers.map(({ agent }) =>
       disabled.has(agent)
         ? skippedStatus(agent, 'agent_disabled', 'Agent is disabled in Settings.')
         : skippedStatus(agent, 'cli_presence_unknown', detail)
@@ -176,7 +199,7 @@ export async function installManagedAgentHooks(
 
   const results: AgentHookInstallStatus[] = []
   for (const entry of installers) {
-    const [agent] = entry
+    const { agent } = entry
     if (disabled.has(agent)) {
       results.push(skippedStatus(agent, 'agent_disabled', 'Agent is disabled in Settings.'))
       continue
@@ -221,7 +244,7 @@ export async function removeManagedAgentHooks(
 ): Promise<AgentHookInstallStatus[]> {
   const allowed = options.agents ? new Set(options.agents) : null
   const results: AgentHookInstallStatus[] = []
-  for (const [agent, remove] of MANAGED_AGENT_HOOK_REMOVERS) {
+  for (const { agent, remove } of managedIntegrations()) {
     if (allowed !== null && !allowed.has(agent)) {
       continue
     }
@@ -239,20 +262,26 @@ export async function removeManagedAgentHooksAsync(
 ): Promise<AgentHookInstallStatus[]> {
   const allowed = options.agents ? new Set(options.agents) : null
   return await Promise.all(
-    MANAGED_AGENT_HOOK_ASYNC_REMOVERS.filter(
-      ([agent]) => allowed === null || allowed.has(agent)
-    ).map(async ([agent, remove]) => {
-      try {
-        return await remove()
-      } catch (error) {
-        return errorStatus(agent, error)
-      }
-    })
+    managedIntegrations()
+      .filter(
+        ({ agent, removeAsync }) =>
+          removeAsync !== undefined && (allowed === null || allowed.has(agent))
+      )
+      .map(async ({ agent, removeAsync }) => {
+        if (!removeAsync) {
+          return errorStatus(agent, 'remove is unavailable')
+        }
+        try {
+          return await removeAsync()
+        } catch (error) {
+          return errorStatus(agent, error)
+        }
+      })
   )
 }
 
 export function getManagedAgentHookStatuses(): AgentHookInstallStatus[] {
-  return MANAGED_AGENT_HOOK_STATUS_READERS.map(([agent, getStatus]) => {
+  return managedIntegrations().map(({ agent, getStatus }) => {
     try {
       return getStatus()
     } catch (error) {

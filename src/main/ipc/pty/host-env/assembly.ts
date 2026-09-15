@@ -19,6 +19,7 @@ import { stripInheritedOrcaCodexHomeOverride } from './codex-home'
 import {
   clearPiAgentShadowEnv,
   exposePiManagedExtensionEnv,
+  inheritOmpXdgEnvironment,
   isMimoLaunchCommand,
   resolveMimocodeSourceHome,
   resolveOpenCodeSourceConfigDir,
@@ -54,6 +55,14 @@ export function buildPtyHostEnv(
   const hasLaunchCommand =
     typeof launchCommandHint === 'string' && launchCommandHint.trim().length > 0
 
+  if (piAgentKind === 'omp' || !hasLaunchCommand) {
+    // OMP uses XDG data/state/cache roots for daemon-owned fragments. Shell
+    // startup exports are not present in a direct daemon spawn, so carry the
+    // effective values into this PTY rather than silently falling back to
+    // ~/.omp.
+    inheritOmpXdgEnvironment(baseEnv)
+  }
+
   // Why: unattended agents must fail instead of looping on OS credential prompts; user terminals keep normal Git behavior.
   applyTerminalGitCredentialPromptGuard(baseEnv, {
     launchCommand: launchCommandHint,
@@ -66,7 +75,7 @@ export function buildPtyHostEnv(
   const preexistingPiAgentDir = resolvePiAgentSourceDir(baseEnv, 'pi')
   const preexistingOmpAgentDir =
     piAgentKind === 'omp'
-      ? resolvePiAgentSourceDir(baseEnv, 'omp')
+      ? resolvePiAgentSourceDir(baseEnv, 'omp', launchCommandHint)
       : resolveScopedPiAgentSourceDir(baseEnv, 'omp')
   const preexistingPrimeAgentDir =
     piAgentKind === 'prime-agent'

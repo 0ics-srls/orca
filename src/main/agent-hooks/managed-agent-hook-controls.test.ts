@@ -24,6 +24,24 @@ vi.mock('../claude/claude-session-end-hook-capability', () => ({
 }))
 
 vi.mock('./managed-agent-hook-registry', () => ({
+  MANAGED_AGENT_INTEGRATIONS: [
+    {
+      agent: 'claude',
+      install: mocks.installClaude,
+      refreshManagedScripts: mocks.refreshClaude,
+      remove: mocks.removeClaude,
+      removeAsync: mocks.removeClaudeAsync,
+      getStatus: mocks.statusClaude
+    },
+    {
+      agent: 'codex',
+      install: mocks.installCodex,
+      refreshManagedScripts: mocks.refreshCodex,
+      remove: mocks.removeCodex,
+      removeAsync: mocks.removeCodexAsync,
+      getStatus: mocks.statusCodex
+    }
+  ],
   MANAGED_AGENT_HOOK_INSTALLERS: [
     ['claude', mocks.installClaude],
     ['codex', mocks.installCodex]

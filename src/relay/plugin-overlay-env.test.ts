@@ -3,7 +3,11 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { __resetShellStartupEnvCache } from '../main/pty/shell-startup-env'
-import { resolveOpenCodeSourceConfigDir, resolvePiSourceAgentDir } from './plugin-overlay-env'
+import {
+  inheritOmpXdgEnvironment,
+  resolveOpenCodeSourceConfigDir,
+  resolvePiSourceAgentDir
+} from './plugin-overlay-env'
 
 describe('plugin overlay env source resolution', () => {
   let homeDir: string
@@ -41,6 +45,28 @@ describe('plugin overlay env source resolution', () => {
         join(homeDir, 'company-opencode')
       )
       expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'pi')).toBe(join(homeDir, 'company-pi'))
+    }
+  )
+
+  it.skipIf(process.platform === 'win32')(
+    'resolves OMP profile and XDG roots from the remote shell',
+    () => {
+      const configDir = join(homeDir, 'omp-config')
+      const dataDir = join(homeDir, 'xdg-data')
+      mkdirSync(dataDir, { recursive: true })
+      writeFileSync(
+        join(homeDir, '.zshrc'),
+        [
+          `export PI_CONFIG_DIR="$HOME/${configDir.slice(homeDir.length + 1)}"`,
+          `export XDG_DATA_HOME="$HOME/${dataDir.slice(homeDir.length + 1)}"`
+        ].join('\n')
+      )
+
+      const env: Record<string, string> = { HOME: homeDir, SHELL: '/bin/zsh' }
+      expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'omp', 'omp --profile review')).toBe(
+        join(configDir, 'profiles', 'review', 'agent')
+      )
+      expect(inheritOmpXdgEnvironment(env, '/bin/zsh')).toEqual({ XDG_DATA_HOME: dataDir })
     }
   )
 
