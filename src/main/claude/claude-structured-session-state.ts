@@ -153,6 +153,8 @@ export type ClaudeSession = {
   commands: ClaudeSlashCommandCatalog
   /** Monotonic fence advanced when a dispatch starts, including unresolved dispatches. */
   dispatchSequence: number
+  /** Dispatch sequence whose provider replay admitted the most recent send. */
+  lastAdmittedDispatchSequence?: number
   /** Fences overlapping option writes so a late completion cannot restore stale state. */
   optionMutationSequence: number
   /** Shared durable-close write; a failed write clears this for a retry. */

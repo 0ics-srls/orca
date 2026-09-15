@@ -30,14 +30,6 @@ const MAX_ACTIVE_DISPATCH_WAITERS = 64
 /** Settles a provider-proven late outcome; replay rows independently reconcile acceptance. */
 export type ClaudeLateDispatchSettlement = (input: ClaudeLateDispatchOutcome) => void
 
-/** A send is still awaiting its echo, so an interrupt would let it loose as an
- *  unexpected turn unless the CLI cancels the queue in the same round trip.
- *  Derived from the live waiters: a retired one is no longer awaited, and gating
- *  Stop on it would strand the user for the life of the session. */
-export function claudeHasUnsettledDispatch(session: ClaudeSession): boolean {
-  return session.dispatchWaiters.length > 0
-}
-
 export function resolveClaudeReplayWaiter(
   session: ClaudeSession,
   message: Record<string, unknown>,
@@ -159,6 +151,9 @@ function settleWaiter(
       providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }
     })
   }
+  if (waiter.dispatchSequence === session.dispatchSequence) {
+    session.lastAdmittedDispatchSequence = waiter.dispatchSequence
+  }
 }
 
 function forgetRetiredWaiter(session: ClaudeSession, waiter: ClaudeDispatchWaiter): void {
@@ -186,6 +181,9 @@ function recoverLateIdentity(
       clientMessageId: waiter.clientMessageId,
       providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }
     })
+  }
+  if (waiter.dispatchSequence === session.dispatchSequence) {
+    session.lastAdmittedDispatchSequence = waiter.dispatchSequence
   }
   return isUserReplay && waiter.dispatchSequence === session.dispatchSequence
 }
@@ -318,6 +316,9 @@ export async function dispatchClaudeTurn(
     if (waiter.settledUuid) {
       const uuid = await replayed
       if (uuid) {
+        if (waiter.dispatchSequence === session.dispatchSequence) {
+          session.lastAdmittedDispatchSequence = waiter.dispatchSequence
+        }
         return {
           state: 'accepted',
           providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }

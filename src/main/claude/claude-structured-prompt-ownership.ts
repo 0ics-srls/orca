@@ -9,10 +9,7 @@ import {
   cancelClaudeTurn,
   supportsClaudeQueuedInterruptCancellation
 } from './claude-structured-control-actions'
-import {
-  claudeHasUnsettledDispatch,
-  type ClaudeLateDispatchSettlement
-} from './claude-structured-dispatch'
+import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
 
 type CancelInput = Parameters<StructuredAgentSessionAdapter['cancelTurn']>[0]
@@ -86,6 +83,10 @@ export async function cancelClaudeStructuredTurn(input: {
       ? session.dispatchSequence === 0
       : currentTurnId === request.turnId
   }
+  const dispatchAdmissionIsCurrent = (): boolean =>
+    session.dispatchSequence === 0 ||
+    session.lastAdmittedDispatchSequence === session.dispatchSequence ||
+    supportsClaudeQueuedInterruptCancellation(session)
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
     session.fence === request.fence &&
@@ -93,9 +94,9 @@ export async function cancelClaudeStructuredTurn(input: {
     (claim && prompt
       ? ownsRequestedTurn() &&
         session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId) &&
-        (!claudeHasUnsettledDispatch(session) || supportsClaudeQueuedInterruptCancellation(session))
+        dispatchAdmissionIsCurrent()
       : compactions.ownsTurn(request.sessionId, request.turnId) ||
-        (ownsRequestedTurn() && !claudeHasUnsettledDispatch(session)))
+        (ownsRequestedTurn() && dispatchAdmissionIsCurrent()))
   let interruptConfirmed = false
   try {
     const result = await cancelClaudeTurn(

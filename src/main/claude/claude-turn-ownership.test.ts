@@ -129,6 +129,40 @@ describe('Claude turn ownership', () => {
     expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
   })
 
+  it('keeps the prior dispatch fence after an unknown later send', async () => {
+    const claude = fakeClaude({ replayUuid: 'echo-turn' })
+    const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+
+    await adapter.dispatch({
+      sessionId: 'session-1',
+      clientMessageId: 'client-1',
+      body: USER_MESSAGE,
+      fence: 7
+    })
+    expect(runningTurnId(bodies)).toBe('echo-turn')
+    const sendFirst = connection.send
+    connection.send = async (message) => {
+      if (connection.sent.length > 0) {
+        throw new Error('input pump stopped')
+      }
+      await sendFirst(message)
+    }
+
+    await expect(
+      adapter.dispatch({
+        sessionId: 'session-1',
+        clientMessageId: 'client-2',
+        body: USER_MESSAGE,
+        fence: 7
+      })
+    ).resolves.toMatchObject({ state: 'unknown' })
+
+    await expect(
+      adapter.cancelTurn({ sessionId: 'session-1', turnId: 'echo-turn', fence: 7 })
+    ).resolves.toEqual({ cancelled: false })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+  })
+
   it('still stops an echo-opened turn', async () => {
     const claude = fakeClaude({ replayUuid: 'echo-turn' })
     const { adapter, bodies, connection } = await acquiredWithJournal(claude)

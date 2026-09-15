@@ -31,6 +31,7 @@ function sessionFor(setModel: ClaudeSession['connection']['setModel']): ClaudeSe
     backgroundTasks: new ClaudeBackgroundTaskTracker(),
     commands: new ClaudeSlashCommandCatalog(),
     dispatchSequence: 0,
+    lastAdmittedDispatchSequence: undefined,
     optionMutationSequence: 0,
     options: new Map(),
     reportedOptions: {},
