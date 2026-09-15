@@ -61,10 +61,29 @@ afterEach(() => {
 describe('describeCreatedWorktree when Git and the repo disagree', () => {
   it('reports nothing when the witness proves a different object store', async () => {
     // A real `.git` file pointing somewhere else: the worktree genuinely is not this repo's.
-    writeFileSync(join(repoPath, '.git'), `gitdir: ${join(scratchDir, 'other-repo', '.git')}\n`)
+    const otherGitDir = join(scratchDir, 'other-repo', '.git')
+    mkdirSync(otherGitDir, { recursive: true })
+    writeFileSync(join(repoPath, '.git'), `gitdir: ${otherGitDir}\n`)
     await expect(
       describeCreatedWorktree(repoPath, worktreePath, 'feature')
     ).resolves.toBeUndefined()
+  })
+
+  it('throws when the .git marker points at a path that does not exist', async () => {
+    // Nothing is there to prove a store either way: a fabricated candidate would decide the create.
+    writeFileSync(join(repoPath, '.git'), `gitdir: ${join(scratchDir, 'gone', '.git')}\n`)
+    await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).rejects.toMatchObject({
+      message: expect.stringContaining('gitdir marker target unreadable')
+    })
+  })
+
+  it('throws when the .git marker points at a file', async () => {
+    const notAGitDir = join(scratchDir, 'not-a-git-dir')
+    writeFileSync(notAGitDir, 'not a git dir\n')
+    writeFileSync(join(repoPath, '.git'), `gitdir: ${notAGitDir}\n`)
+    await expect(describeCreatedWorktree(repoPath, worktreePath, 'feature')).rejects.toMatchObject({
+      message: expect.stringContaining('gitdir marker target is not a directory')
+    })
   })
 
   it('reports nothing for a bare repo, whose missing .git is a real answer', async () => {

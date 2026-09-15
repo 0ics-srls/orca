@@ -188,9 +188,28 @@ async function resolveRepoCommonDirFromDisk(
       return undefined
     }
     gitDir = resolveGitMetadataPath(repoPath, pointer) ?? dotGit
+    await assertGitDirIsDirectory(gitDir)
   }
 
   return readCommonDirMarker(gitDir)
+}
+
+/**
+ * A marker target that is missing or is not a directory is unverifiable, not an absent `.git`:
+ * without this, `commondir`'s own ENOENT/ENOTDIR would pass as absence and hand the caller the
+ * pointer target as a common dir it never proved exists.
+ */
+async function assertGitDirIsDirectory(gitDir: string): Promise<void> {
+  let gitDirStats
+  try {
+    gitDirStats = await stat(gitDir)
+  } catch (error) {
+    // Rewrapped so the outer absence check cannot read this errno as a bare repo's missing `.git`.
+    throw new Error(`gitdir marker target unreadable: ${gitDir}`, { cause: error })
+  }
+  if (!gitDirStats.isDirectory()) {
+    throw new Error(`gitdir marker target is not a directory: ${gitDir}`)
+  }
 }
 
 async function readCommonDirMarker(gitDir: string): Promise<string> {
