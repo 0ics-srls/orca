@@ -74,8 +74,20 @@ export function flushPendingClearCompletedEvictions(): void {
     evict()
   }
 }
+export function disposePendingClearCompletedEvictionListener(): void {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('pagehide', flushPendingClearCompletedEvictions)
+  }
+}
+
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', flushPendingClearCompletedEvictions)
+}
+
+if (import.meta !== undefined && import.meta.hot) {
+  // Vite can replace this module without a full renderer reload. Remove the
+  // pagehide hook so dev sessions do not retain stale eviction closures.
+  import.meta.hot.dispose(disposePendingClearCompletedEvictionListener)
 }
 
 // Why a fallback: sonner only fires onDismiss/onAutoClose for the toast's own close paths; a
