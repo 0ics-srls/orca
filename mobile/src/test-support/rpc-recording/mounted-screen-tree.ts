@@ -10,7 +10,7 @@ type CrashProps = { onCrash: (message: string) => void; children?: ReactNode }
  * and the message becomes state.
  */
 class MountedScreenCrash extends Component<CrashProps, { crash: string | null }> {
-  state = { crash: null as string | null }
+  state: { crash: string | null } = { crash: null }
   static getDerivedStateFromError(error: unknown): { crash: string } {
     return { crash: error instanceof Error ? error.message : String(error) }
   }
