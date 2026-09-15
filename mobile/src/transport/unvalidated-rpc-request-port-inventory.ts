@@ -115,9 +115,9 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // effect as a `runtime.clientEvents` subscription, and the request-only recording runner refuses
   // to open one, so no golden can hold this file's behaviour.
   { file: 'src/session/use-live-worktree-name.ts', references: 1 },
-  // Holdout: unrecorded site, record-first rule. Mounting the hook runs a `nativeChat.subscribe`
-  // in the same effect, which the request-only runner refuses; the paging read next to it cannot
-  // be reached without it.
+  // Holdout: unrecorded site, record-first rule. The `nativeChat.readSession` read lives in the
+  // paging callback, not in an effect, but only the mount effect's `nativeChat.subscribe` arms the
+  // offset and generation it pages against — and the request-only runner refuses to open one.
   { file: 'src/session/use-mobile-native-chat-session.ts', references: 1 },
   // Holdout: unrecorded site, record-first rule. The hook reads the pasteboard and the PTY mode
   // registry before the send, so a recording would pin device state rather than the wire.
