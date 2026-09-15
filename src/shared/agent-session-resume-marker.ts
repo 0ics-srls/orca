@@ -34,14 +34,6 @@ export type AgentSessionResumeMarker = {
    * preserve — a resume that changes it forked — which is exactly what this guard is for.
    */
   providerHandleRoot: string
-  /**
-   * Whether the chat was blocked on the USER — a pending approval or question — at teardown.
-   *
-   * CAPTURED, never re-derived, because teardown itself destroys the evidence: a later phase
-   * cancels the pending prompt, so by the next launch the projection no longer reports `attention`
-   * for precisely the sessions this exists to refuse. Re-reading it was inert.
-   */
-  awaitsUser: boolean
 }
 
 const MAX_FIELD_LENGTH = 512
@@ -59,7 +51,6 @@ export function isAgentSessionResumeMarker(value: unknown): value is AgentSessio
     isMarkerField(marker.sessionId) &&
     isMarkerField(marker.turnId) &&
     isMarkerField(marker.providerHandleRoot) &&
-    typeof marker.awaitsUser === 'boolean' &&
     Number.isSafeInteger(marker.recordedAt) &&
     (marker.recordedAt as number) >= 0 &&
     (marker.trigger === 'quit' || marker.trigger === 'update')

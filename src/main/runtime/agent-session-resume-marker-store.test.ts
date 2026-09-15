@@ -22,7 +22,6 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     recordedAt: NOW,
     trigger: 'quit',
     providerHandleRoot: 'codex:"thread-1"',
-    awaitsUser: false,
     ...overrides
   }
 }

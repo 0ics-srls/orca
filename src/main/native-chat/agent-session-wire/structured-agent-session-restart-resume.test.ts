@@ -136,7 +136,6 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     recordedAt: NOW,
     trigger: 'quit',
     providerHandleRoot: HANDLE_ROOT,
-    awaitsUser: false,
     ...overrides
   }
 }
@@ -175,7 +174,6 @@ describe('deriving what was working at teardown', () => {
         turnId: 'turn-1',
         recordedAt: NOW,
         trigger: 'quit',
-        awaitsUser: false,
         providerHandleRoot: HANDLE_ROOT
       }
     ])
@@ -367,13 +365,6 @@ describe('the resumable set', () => {
     )
   })
 
-  // The flag is CAPTURED at teardown because teardown then cancels the prompt: by the time this
-  // predicate runs, the live journal no longer reports `attention`, so only the recorded value can
-  // still refuse. Re-deriving it here was inert for exactly the sessions it was written for.
-  it('refuses a marker recorded while the chat was blocked on the user', () => {
-    expect(resumableSet({ markers: [marker({ awaitsUser: true })] })).toEqual([])
-  })
-
   it('offers a turn whose end the host could not verify', () => {
     expect(
       resumableSet({ markers: [marker()], items: [turnItem('turn-1', 'unverifiable')] })
@@ -539,7 +530,6 @@ describe('the restart-resume surface', () => {
         turnId: 'turn-2',
         recordedAt: NOW,
         trigger: 'update',
-        awaitsUser: false,
         providerHandleRoot: HANDLE_ROOT
       }
     ])

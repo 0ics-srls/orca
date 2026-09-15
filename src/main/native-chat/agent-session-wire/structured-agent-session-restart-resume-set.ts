@@ -84,12 +84,6 @@ export function structuredAgentSessionResumableSet(
     if (turn.state !== 'interrupted' && turn.state !== 'unverifiable') {
       continue
     }
-    // Read off the MARKER, never re-derived. Teardown cancels the pending prompt a few phases after
-    // it writes the marker, so by now the live journal no longer reports `attention` for exactly the
-    // sessions this refuses — which is what made the re-derived version inert.
-    if (marker.awaitsUser) {
-      continue
-    }
     candidates.push({
       sessionId: marker.sessionId,
       workspaceId: record.location.workspaceId,
