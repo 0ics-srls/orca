@@ -47,8 +47,10 @@ export async function requestMobileMarkdownFromRenderer(
       }
       if (error) {
         reject(error)
-      } else {
+      } else if (result) {
         resolve(result)
+      } else {
+        reject(new Error('renderer_unavailable'))
       }
     }
     const timeout = setTimeout(
