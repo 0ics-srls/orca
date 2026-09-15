@@ -1,4 +1,10 @@
 import { hookMount, performHookAction } from '../hook-mount'
+import type {
+  FileDocState,
+  MarkdownDocState,
+  MobileSessionTab
+} from '../../../session/mobile-session-route-types'
+import type { TerminalRecord } from '../../../session/mobile-terminal-records'
 import { mountFixture } from '../recorder-fixture-shape'
 import type { MountAdapter } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
@@ -23,8 +29,8 @@ export function sessionScreenReadMountAdapters(
       const useReaders = modules.load<
         typeof import('../../../session/use-mobile-session-document-readers')
       >('mobile/src/session/use-mobile-session-document-readers.ts').useMobileSessionDocumentReaders
-      let markdownDocs = new Map<string, unknown>()
-      let fileDocs = new Map<string, unknown>()
+      let markdownDocs = new Map<string, MarkdownDocState>()
+      let fileDocs = new Map<string, FileDocState>()
       let readers: ReturnType<typeof useReaders>
       const hook = hookMount(() => {
         readers = useReaders(
@@ -80,9 +86,9 @@ export function sessionScreenReadMountAdapters(
       const useList = modules.load<
         typeof import('../../../session/use-mobile-session-terminal-list')
       >('mobile/src/session/use-mobile-session-terminal-list.ts').useMobileSessionTerminalList
-      let terminals: unknown[] = []
-      const terminalsRef = { current: [] as unknown[] }
-      const sessionTabsRef = { current: [] as unknown[] }
+      let terminals: TerminalRecord[] = []
+      const terminalsRef: { current: TerminalRecord[] } = { current: [] }
+      const sessionTabsRef: { current: MobileSessionTab[] } = { current: [] }
       const unsubs = new Map<string, () => void>([[HANDLE, () => {}]])
       let listModel: ReturnType<typeof useList>
       const hook = hookMount(() => {

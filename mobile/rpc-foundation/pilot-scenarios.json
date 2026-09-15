@@ -18371,7 +18371,8 @@
         "filePath": "src/app.ts",
         "id": "note-1",
         "lineNumber": 4,
-        "worktreeId": "workspace-1"
+        "worktreeId": "workspace-1",
+        "side": "modified"
        }
       ],
       "mobileDiffReview": {
@@ -18437,7 +18438,8 @@
         "filePath": "src/app.ts",
         "id": "note-1",
         "lineNumber": 4,
-        "worktreeId": "workspace-1"
+        "worktreeId": "workspace-1",
+        "side": "modified"
        }
       ],
       "mobileDiffReview": {

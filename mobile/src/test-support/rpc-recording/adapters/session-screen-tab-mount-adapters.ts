@@ -1,4 +1,6 @@
 import { hookMount, performHookAction } from '../hook-mount'
+import type { MobileSessionTab } from '../../../session/mobile-session-route-types'
+import type { TerminalRecord } from '../../../session/mobile-terminal-records'
 import { mountFixture } from '../recorder-fixture-shape'
 import type { MountAdapter } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
@@ -96,12 +98,17 @@ export function sessionScreenTabMountAdapters(
       const useClose = modules.load<
         typeof import('../../../session/use-mobile-session-close-actions')
       >('mobile/src/session/use-mobile-session-close-actions.ts').useMobileSessionCloseActions
-      type Terminal = { handle: string; title?: string; isActive?: boolean }
-      type Tab = { id: string; type: string; terminal?: string }
-      let terminals: Terminal[] = [{ handle: HANDLE, title: 'Terminal' }]
+      const terminalTab = mountFixture<Extract<MobileSessionTab, { type: 'terminal' }>>({
+        id: 'tab-1',
+        type: 'terminal',
+        title: 'Terminal',
+        terminal: HANDLE,
+        isActive: true
+      })
+      let terminals: TerminalRecord[] = [{ handle: HANDLE, title: 'Terminal', isActive: true }]
       const terminalsRef = { current: terminals }
-      const sessionTabsRef = { current: [{ id: 'tab-1', type: 'terminal', terminal: HANDLE }] }
-      let sessionTabs: Tab[] = sessionTabsRef.current
+      const sessionTabsRef = { current: [terminalTab] }
+      let sessionTabs: MobileSessionTab[] = sessionTabsRef.current
       let activeHandle: string | null = HANDLE
       const activeHandleRef = { current: HANDLE as string | null }
       const renameTarget: { handle: string } | null = { handle: HANDLE }
@@ -122,7 +129,7 @@ export function sessionScreenTabMountAdapters(
               sessionTabs = typeof update === 'function' ? update(sessionTabs) : update
             },
             reconcileBufferedDraftsRef: { current: () => {} },
-            closedTabTombstonesRef: { current: { remember: () => {} } },
+            closedTabTombstonesRef: { current: new Map() },
             clearTerminalLiveInputDefault: (handle: string) =>
               effect('clear-live-input', { handle }),
             setActiveHandle: (value) => {
@@ -160,17 +167,13 @@ export function sessionScreenTabMountAdapters(
             )
           }
           if (name === 'close-terminal') {
-            return performHookAction(() => actions.handleCloseTerminal({ handle: HANDLE }))
+            return performHookAction(() =>
+              actions.handleCloseTerminal({ handle: HANDLE, title: 'Terminal', isActive: true })
+            )
           }
           if (name === 'close-tab') {
             return performHookAction(() =>
-              actions.handleCloseSessionTab(
-                mountFixture<Parameters<typeof actions.handleCloseSessionTab>[0]>({
-                  id: 'tab-1',
-                  type: 'terminal',
-                  terminal: HANDLE
-                })
-              )
+              actions.handleCloseSessionTab(terminalTab)
             )
           }
           throw new Error(`Unknown tab close action: ${name}`)

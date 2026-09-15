@@ -6,7 +6,7 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
-  "adapterSha256": "fb75fcbd959cc76e8302f3cb2e893e5e472216d4b7acd8d320a753fc96e7c521",
+  "adapterSha256": "128acbf6739a1ad2a12ae0f34e479e0c787714d59f1b633741aba14fb05f117a",
   "scenarioSha256": "9e877af8539e5425f65edd6b3ff8af73e719aae2033980411a8e8a3b508dcd9e",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -16,6 +16,25 @@
     "152143d8809f": {
       "name": "fetch-terminals",
       "value": {}
+    },
+    "42b6d6d7fdf9": {
+      "activeHandle": "terminal-1",
+      "sessionTabs": [
+        {
+          "id": "tab-1",
+          "isActive": true,
+          "terminal": "terminal-1",
+          "title": "Terminal",
+          "type": "terminal"
+        }
+      ],
+      "terminals": [
+        {
+          "handle": "terminal-1",
+          "isActive": true,
+          "title": "build"
+        }
+      ]
     },
     "89e4126272a3": {
       "name": "terminal.rename#1",
@@ -55,22 +74,6 @@
         }
       }
     },
-    "ca22256e0492": {
-      "activeHandle": "terminal-1",
-      "sessionTabs": [
-        {
-          "id": "tab-1",
-          "terminal": "terminal-1",
-          "type": "terminal"
-        }
-      ],
-      "terminals": [
-        {
-          "handle": "terminal-1",
-          "title": "build"
-        }
-      ]
-    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -91,7 +94,7 @@
           "settlements": {
             "rename": "eb79a9b3682a"
           },
-          "state": "ca22256e0492",
+          "state": "42b6d6d7fdf9",
           "effects": ["152143d8809f"]
         }
       }

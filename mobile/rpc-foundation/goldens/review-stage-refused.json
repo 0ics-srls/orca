@@ -6,7 +6,7 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
-  "adapterSha256": "a7d69102e30b486dd475741bc47190e0d4fddf3f1ff5e6583cc0d64f86e80824",
+  "adapterSha256": "fd443c85a6d2b0c1355e29f6f366e35d330a2033c7ddb90ab6713584ddda2f6f",
   "scenarioSha256": "46b720fed417d29f79dbde4cc7941579f2d6a2f920bae24234537480079e7de5",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -48,7 +48,7 @@
         }
       }
     },
-    "2a4f72d50b21": {
+    "36787858f78b": {
       "actionError": "Cannot discard during a merge",
       "busyAction": {
         "$rpc": "null"
@@ -64,6 +64,7 @@
             "filePath": "src/app.ts",
             "id": "note-1",
             "lineNumber": 4,
+            "side": "modified",
             "worktreeId": "workspace-1"
           }
         ],
@@ -73,10 +74,7 @@
           "version": 1
         },
         "status": {
-          "entries": [],
-          "staged": [],
-          "unstaged": [],
-          "untracked": []
+          "entries": []
         }
       },
       "sendSheet": {
@@ -107,7 +105,7 @@
           "settlements": {
             "discard": "eb79a9b3682a"
           },
-          "state": "2a4f72d50b21",
+          "state": "36787858f78b",
           "effects": []
         }
       }

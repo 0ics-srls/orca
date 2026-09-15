@@ -6,26 +6,13 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
-  "adapterSha256": "fb75fcbd959cc76e8302f3cb2e893e5e472216d4b7acd8d320a753fc96e7c521",
+  "adapterSha256": "128acbf6739a1ad2a12ae0f34e479e0c787714d59f1b633741aba14fb05f117a",
   "scenarioSha256": "194b010d00fdeca85418870fd053ac500c38cae02e98c4bfc544b8fea78bbcb8",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "29140c529cd0": {
-      "activeHandle": {
-        "$rpc": "null"
-      },
-      "sessionTabs": [
-        {
-          "id": "tab-1",
-          "terminal": "terminal-1",
-          "type": "terminal"
-        }
-      ],
-      "terminals": []
-    },
     "2d697fe0c9bf": {
       "name": "terminal.close#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.close\",\"params\":{\"terminal\":\"terminal-1\"}}"
@@ -75,6 +62,21 @@
         }
       }
     },
+    "de039f500462": {
+      "activeHandle": {
+        "$rpc": "null"
+      },
+      "sessionTabs": [
+        {
+          "id": "tab-1",
+          "isActive": true,
+          "terminal": "terminal-1",
+          "title": "Terminal",
+          "type": "terminal"
+        }
+      ],
+      "terminals": []
+    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -95,7 +97,7 @@
           "settlements": {
             "close-terminal": "eb79a9b3682a"
           },
-          "state": "29140c529cd0",
+          "state": "de039f500462",
           "effects": ["5fde1571425b", "66725af7058c"]
         }
       }

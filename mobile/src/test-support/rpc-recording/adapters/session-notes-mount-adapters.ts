@@ -1,5 +1,10 @@
 import { hookMount, performHookAction } from '../hook-mount'
 import { mountFixture } from '../recorder-fixture-shape'
+import type { DiffComment } from '../../../../../src/shared/diff-comment-types'
+import type {
+  DiffNotesDelivery,
+  MarkdownDocState
+} from '../../../session/mobile-session-route-types'
 import type { MountAdapter } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
 
@@ -22,11 +27,10 @@ export function sessionNotesMountAdapters(
       const useComments = modules.load<
         typeof import('../../../session/use-mobile-session-diff-comments')
       >('mobile/src/session/use-mobile-session-diff-comments.ts').useMobileSessionDiffComments
-      type Comment = { id: string; filePath: string; lineNumber: number; body: string }
-      let diffComments: Comment[] = []
+      let diffComments: DiffComment[] = []
       const diffCommentsRef = { current: diffComments }
       let busy = false
-      let pendingDelivery: unknown = null
+      let pendingDelivery: DiffNotesDelivery | null = null
       let comments: ReturnType<typeof useComments>
       const hook = hookMount(() => {
         comments = useComments(
@@ -84,7 +88,7 @@ export function sessionNotesMountAdapters(
       const useMarkdown = modules.load<
         typeof import('../../../session/use-mobile-session-markdown-actions')
       >('mobile/src/session/use-mobile-session-markdown-actions.ts').useMobileSessionMarkdownActions
-      let markdownDocs = new Map<string, Record<string, unknown>>([
+      let markdownDocs = new Map<string, MarkdownDocState>([
         [
           TAB,
           {

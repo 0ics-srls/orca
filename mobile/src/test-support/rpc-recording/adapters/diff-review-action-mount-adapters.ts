@@ -1,5 +1,11 @@
 import { hookMount, performHookAction } from '../hook-mount'
 import { mountFixture } from '../recorder-fixture-shape'
+import type { DiffComment } from '../../../../../src/shared/diff-comment-types'
+import type { MobileDiffReviewQueueItem } from '../../../session/mobile-diff-review-queue'
+import type {
+  ReviewScreenState,
+  SendSheetState
+} from '../../../session/mobile-diff-review-screen-model'
 import type { MountAdapter } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
 
@@ -29,7 +35,8 @@ export function diffReviewActionMountAdapters(
         typeof import('../../../session/mobile-native-chat-stale-input')
       >('mobile/src/session/mobile-native-chat-stale-input.ts')
       staleInput.resetMobileNativeChatStaleInputForTests()
-      const comment = {
+      const comment: DiffComment = {
+        side: 'modified',
         id: 'note-1',
         worktreeId: WORKSPACE,
         filePath: FILE,
@@ -37,10 +44,10 @@ export function diffReviewActionMountAdapters(
         body: 'needs a test',
         createdAt: 0
       }
-      const item = {
+      const item: MobileDiffReviewQueueItem = {
         key: `unstaged:${FILE}`,
         scope: 'unstaged' as const,
-        area: 'unstaged',
+        area: 'unstaged' as const,
         filePath: FILE,
         status: 'modified' as const,
         title: 'app.ts',
@@ -56,16 +63,19 @@ export function diffReviewActionMountAdapters(
         isReviewed: true,
         changedSinceReview: false
       }
-      let screenState: unknown = {
+      let screenState: ReviewScreenState = {
         kind: 'ready',
-        status: { entries: [], staged: [], unstaged: [], untracked: [] },
+        // These actions never read the status; the queue item above is what they branch on.
+        status: mountFixture<Extract<ReviewScreenState, { kind: 'ready' }>['status']>({
+          entries: []
+        }),
         branchCompare: null,
         comments: [comment],
         reviewState: { version: 1, files: {} }
       }
       let actionError: string | null = null
       let busyAction: string | null = null
-      let sendSheet: unknown = null
+      let sendSheet: SendSheetState | null = null
       let interactions: ReturnType<typeof useInteractions>
       const hook = hookMount(() => {
         interactions = useInteractions(
@@ -74,8 +84,7 @@ export function diffReviewActionMountAdapters(
             connState: 'connected',
             hostId: HOST,
             worktreeId: WORKSPACE,
-            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the ready-state literal above is the union member these actions read.
-            screenState: screenState as Parameters<typeof useInteractions>[0]['screenState'],
+            screenState,
             diffState: { kind: 'idle' },
             currentItem: item,
             queue: [item],

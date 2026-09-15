@@ -6,7 +6,7 @@
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
   "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
-  "adapterSha256": "a7d69102e30b486dd475741bc47190e0d4fddf3f1ff5e6583cc0d64f86e80824",
+  "adapterSha256": "fd443c85a6d2b0c1355e29f6f366e35d330a2033c7ddb90ab6713584ddda2f6f",
   "scenarioSha256": "7099d7311b2046dde21a2750201718995c0869bc4f17fb7f3ce2b997ce0e6506",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -50,6 +50,41 @@
       "settledAt": 0,
       "value": "terminal-1"
     },
+    "2fc890e4b748": {
+      "actionError": {
+        "$rpc": "null"
+      },
+      "busyAction": {
+        "$rpc": "null"
+      },
+      "screenState": {
+        "branchCompare": {
+          "$rpc": "null"
+        },
+        "comments": [
+          {
+            "body": "needs a test",
+            "createdAt": 0,
+            "filePath": "src/app.ts",
+            "id": "note-1",
+            "lineNumber": 4,
+            "side": "modified",
+            "worktreeId": "workspace-1"
+          }
+        ],
+        "kind": "ready",
+        "reviewState": {
+          "files": {},
+          "version": 1
+        },
+        "status": {
+          "entries": []
+        }
+      },
+      "sendSheet": {
+        "$rpc": "null"
+      }
+    },
     "8e18c9a6a750": {
       "name": "terminal.send#1",
       "args": [
@@ -92,43 +127,6 @@
       "status": "pending",
       "startedAt": 0
     },
-    "b567ccd139ba": {
-      "actionError": {
-        "$rpc": "null"
-      },
-      "busyAction": {
-        "$rpc": "null"
-      },
-      "screenState": {
-        "branchCompare": {
-          "$rpc": "null"
-        },
-        "comments": [
-          {
-            "body": "needs a test",
-            "createdAt": 0,
-            "filePath": "src/app.ts",
-            "id": "note-1",
-            "lineNumber": 4,
-            "worktreeId": "workspace-1"
-          }
-        ],
-        "kind": "ready",
-        "reviewState": {
-          "files": {},
-          "version": 1
-        },
-        "status": {
-          "entries": [],
-          "staged": [],
-          "unstaged": [],
-          "untracked": []
-        }
-      },
-      "sendSheet": {
-        "$rpc": "null"
-      }
-    },
     "c5d2e61b325b": {
       "name": "terminal.send#2",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.send\",\"params\":{\"terminal\":\"terminal-1\",\"text\":\"You are reviewing the current worktree. Address the following mobile review notes.\\n\\nFile: src/app.ts\\nLine: 4\\nUser comment: \\\"needs a test\\\"\\n\\nAfter applying fixes:\\n1. Summarize changed files.\\n2. Run relevant tests.\\n3. Tell me if anything remains risky.\",\"enter\":true}}"
@@ -146,7 +144,7 @@
             "mark-stale": "0db3b6958ec7",
             "send-notes": "9270aeb7d9c6"
           },
-          "state": "b567ccd139ba",
+          "state": "2fc890e4b748",
           "effects": []
         }
       }
