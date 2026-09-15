@@ -54,3 +54,36 @@ export function resolveLocalWindowsAgentStartupShell(args: {
   }
   return resolveWindowsShellStartupFamily(args.terminalWindowsShell)
 }
+
+/**
+ * Shell names a caller may request for a single Windows terminal.
+ *
+ * The relay owns the spawn and has always refused anything outside this set, but the set lived
+ * only there — so a bad value from `terminal create --shell` surfaced as a spawn-time throw with
+ * no way for the CLI to answer before the round trip. Shared so the RPC boundary and the relay
+ * agree on the same names.
+ */
+const WINDOWS_SHELL_OVERRIDES: ReadonlySet<string> = new Set([
+  'powershell.exe',
+  'powershell',
+  'pwsh.exe',
+  'pwsh',
+  'cmd.exe',
+  'cmd',
+  'wsl.exe',
+  'wsl',
+  // Why: both spellings classify as a POSIX startup family, so rejecting them here made the relay
+  // the one host that hard-failed a setting the local and daemon PTYs accept.
+  'bash.exe',
+  'bash',
+  WINDOWS_GIT_BASH_SHELL
+])
+
+export function isSupportedWindowsShellOverride(shell: string): boolean {
+  return WINDOWS_SHELL_OVERRIDES.has(shell.toLowerCase())
+}
+
+/** Sorted for a stable error message; callers list these when refusing a value. */
+export function listSupportedWindowsShellOverrides(): string[] {
+  return [...WINDOWS_SHELL_OVERRIDES].sort()
+}

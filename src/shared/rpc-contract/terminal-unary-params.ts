@@ -1,6 +1,10 @@
 import { z } from 'zod'
 import { OptionalFiniteNumber, OptionalString, requiredString } from './rpc-param-primitives'
 import { isTuiAgent } from '../tui-agent-config'
+import {
+  isSupportedWindowsShellOverride,
+  listSupportedWindowsShellOverrides
+} from '../windows-terminal-shell'
 import { TERMINAL_PANE_SPLIT_SOURCES } from '../feature-education-telemetry'
 
 export const TerminalHandle = z.object({
@@ -180,7 +184,15 @@ export const TerminalCreateParams = z.object({
   activate: z.unknown().optional(),
   presentation: z.enum(['background', 'focused']).optional(),
   tabId: OptionalString,
-  leafId: OptionalString
+  leafId: OptionalString,
+  // Why refused at the boundary rather than at spawn: only the host knows the allowlist, and a
+  // relay-side throw reaches the caller as an opaque spawn failure after the round trip.
+  shell: z
+    .string()
+    .refine(isSupportedWindowsShellOverride, {
+      message: `shell must be one of: ${listSupportedWindowsShellOverrides().join(', ')}`
+    })
+    .optional()
 })
 
 export const TerminalSplit = TerminalHandle.extend({

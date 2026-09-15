@@ -63,6 +63,7 @@ export async function createDesktopTerminal(
       ...(launchOpts.launchAgent ? { launchAgent: launchOpts.launchAgent } : {}),
       ...(launchOpts.viewMode ? { viewMode: launchOpts.viewMode } : {}),
       startupCommandDelivery: launchOpts.startupCommandDelivery,
+      ...(launchOpts.shellOverride ? { shellOverride: launchOpts.shellOverride } : {}),
       title: launchOpts.title,
       activate: presentation === 'focused',
       ...(presentation ? { presentation } : {}),

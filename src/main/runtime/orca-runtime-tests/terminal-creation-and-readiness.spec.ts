@@ -92,6 +92,31 @@ describe('OrcaRuntimeService', () => {
     })
   })
 
+  it('spawns a requested shell AS the pty instead of typing it into the host default', async () => {
+    const spawn = vi.fn().mockResolvedValue({ id: 'pty-shell' })
+    const runtime = new OrcaRuntimeService(store)
+    runtime.setPtyController({
+      spawn,
+      write: () => true,
+      kill: () => true,
+      getForegroundProcess: async () => null
+    })
+    runtime.attachWindow(1)
+    runtime.syncWindowGraph(1, { tabs: [], leaves: [] })
+
+    await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+      shellOverride: 'cmd.exe',
+      title: 'win shell'
+    })
+
+    // The defect this pins: a caller asking for cmd could only pass it as `command`, which the
+    // provider types into whatever shell it spawned — so the pty stayed the default shell and
+    // leaving cmd dropped the handle back onto a prompt the caller never asked for.
+    expect(spawn).toHaveBeenCalledWith(
+      expect.objectContaining({ shellOverride: 'cmd.exe', command: undefined })
+    )
+  })
+
   it('retires inherited launch authority when the agent command exits', async () => {
     const spawn = vi.fn().mockResolvedValue({ id: 'pty-authority', incarnationId: 'process-1' })
     const retireAuthority = vi.fn()

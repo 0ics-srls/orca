@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { resolveWindowsShellStartupFamily } from './windows-terminal-shell'
+import {
+  isSupportedWindowsShellOverride,
+  listSupportedWindowsShellOverrides,
+  resolveWindowsShellStartupFamily
+} from './windows-terminal-shell'
 
 describe('resolveWindowsShellStartupFamily', () => {
   it('defaults to PowerShell when unset', () => {
@@ -31,5 +35,29 @@ describe('resolveWindowsShellStartupFamily', () => {
     expect(resolveWindowsShellStartupFamily('bash')).toBe('posix')
     expect(resolveWindowsShellStartupFamily('wsl')).toBe('posix')
     expect(resolveWindowsShellStartupFamily('C:\\Program Files\\Git\\bin\\bash')).toBe('posix')
+  })
+})
+
+describe('isSupportedWindowsShellOverride', () => {
+  it('accepts every shell the relay is willing to spawn', () => {
+    for (const shell of listSupportedWindowsShellOverrides()) {
+      expect(isSupportedWindowsShellOverride(shell)).toBe(true)
+    }
+    expect(listSupportedWindowsShellOverrides()).toContain('cmd.exe')
+    expect(listSupportedWindowsShellOverrides()).toContain('powershell.exe')
+    expect(listSupportedWindowsShellOverrides()).toContain('git-bash')
+  })
+
+  it('accepts a differently cased spelling of an allowed shell', () => {
+    expect(isSupportedWindowsShellOverride('CMD.EXE')).toBe(true)
+    expect(isSupportedWindowsShellOverride('PowerShell.exe')).toBe(true)
+  })
+
+  // The allowlist is what stops `--shell` from naming an arbitrary executable to spawn.
+  it('refuses anything else, including a path to an allowed shell', () => {
+    expect(isSupportedWindowsShellOverride('nu.exe')).toBe(false)
+    expect(isSupportedWindowsShellOverride('')).toBe(false)
+    expect(isSupportedWindowsShellOverride('C:\\Windows\\System32\\cmd.exe')).toBe(false)
+    expect(isSupportedWindowsShellOverride('cmd.exe /c calc')).toBe(false)
   })
 })

@@ -186,7 +186,8 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
     const queuedShell = resolveLocalWindowsAgentStartupShell({
       platform,
       isRemote,
-      terminalWindowsShell: settings.terminalWindowsShell
+      // A requested shell is the one this PTY will actually be, so it owns the quoting family.
+      terminalWindowsShell: opts.shellOverride ?? settings.terminalWindowsShell
     })
     if (opts.startupAgent && !isTuiAgentEnabled(opts.startupAgent, settings.disabledTuiAgents)) {
       throw new Error(`Agent ${opts.startupAgent} is disabled. Choose an enabled agent.`)

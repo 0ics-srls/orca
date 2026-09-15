@@ -250,17 +250,20 @@ export const CORE_COMMAND_SPECS: CommandSpec[] = [
     path: ['terminal', 'create'],
     summary: 'Create a terminal session in the current worktree',
     usage:
-      'orca terminal create [--worktree <selector>] [--title <name>] [--command <text>] [--focus] [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'worktree', 'command', 'title', 'focus'],
+      'orca terminal create [--worktree <selector>] [--title <name>] [--command <text>] [--shell <shell>] [--focus] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'worktree', 'command', 'shell', 'title', 'focus'],
     notes: [
       'Creates a visible terminal tab without switching focus when possible; falls back to a background handle if the UI cannot adopt it. Pass --focus to switch to it.',
-      'Use this, not worktree create, for a fresh agent in the current checkout.'
+      'Use this, not worktree create, for a fresh agent in the current checkout.',
+      '--shell picks the shell the terminal IS on a Windows host (cmd.exe, powershell.exe, pwsh.exe, wsl.exe, bash.exe, git-bash); --command is typed into whatever shell the host started, so `--command cmd.exe` leaves a cmd running INSIDE the default shell and exiting it drops back to that shell.',
+      '--shell has no effect on macOS and Linux hosts, which spawn the login shell.'
     ],
     examples: [
       'orca terminal create --json',
       'orca terminal create --worktree active --command "codex" --json',
       'orca terminal create --worktree path:/projects/myapp --title "RUNNER" --command "opencode"',
-      'orca terminal create --worktree path:/projects/myapp --command "opencode" --focus'
+      'orca terminal create --worktree path:/projects/myapp --command "opencode" --focus',
+      'orca terminal create --worktree path:C:/src/app --shell cmd.exe --json'
     ]
   },
   {
