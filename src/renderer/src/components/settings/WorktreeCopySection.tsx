@@ -262,7 +262,6 @@ export function WorktreeCopySection({
                         value={entry.name}
                         disabled={saving}
                         onSelect={() => commit(entry.name)}
-                        className="px-3 py-2 font-mono text-xs"
                       >
                         {entry.name}
                         {entry.isDirectory ? '/' : ''}
@@ -296,7 +295,7 @@ export function WorktreeCopySection({
             <Button
               size="icon-xs"
               variant="ghost"
-              className="shrink-0 text-muted-foreground"
+              className="shrink-0"
               onClick={() => void removePath(path)}
               aria-label={translate('worktreeCopies.remove', 'Remove {{path}}', { path })}
             >

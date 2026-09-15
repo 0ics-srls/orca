@@ -41,6 +41,7 @@ import {
   writeSshTerminalArtifact
 } from './ssh-filesystem-terminal-artifact'
 import { readSshDocPreviewFile } from './ssh-filesystem-doc-preview'
+import { requestSshWorktreeMaterialization } from './ssh-worktree-materialization'
 const WORKSPACE_SPACE_SCAN_TIMEOUT_MS = 130_000
 export class SshFilesystemProvider implements IFilesystemProvider {
   materializeWorktreePaths(
@@ -57,7 +58,6 @@ export class SshFilesystemProvider implements IFilesystemProvider {
   private disposed = false
   private loggedStreamFallback = false
   readonly downloadFolder?: IFilesystemProvider['downloadFolder']
-
   constructor(
     private readonly connectionId: string,
     private readonly mux: SshChannelMultiplexer,
@@ -76,12 +76,10 @@ export class SshFilesystemProvider implements IFilesystemProvider {
           windowsRemotePaths
         })
     }
-
     this.unsubscribeNotifications = mux.onNotification((method, params) =>
       routeSshFilesystemWatchNotification(this.watchListeners, method, params)
     )
   }
-
   dispose(): void {
     if (this.disposed) {
       return
