@@ -1,7 +1,7 @@
 # Agent status C2 review
 
 Date: 2026-09-15  
-Reviewed implementation HEAD: `caa0f996d3`  
+Reviewed implementation HEAD: `34599257b4`
 Base: `origin/main` at `9ab0a18e82`
 
 ## Outcome
@@ -17,6 +17,9 @@ The provider evidence and reducer conformance work is functionally sound at its 
 - Made recovery custody admission atomic: a turn-capacity failure now rolls back the custody entry instead of leaking bounded slots.
 - Reconciled a late joined-child fact after root completion to `unresolved` rather than leaving a previously committed dispatch permanently `completed`; resident background work remains non-gating.
 - Reordered local, daemon, and direct-SSH PTY exit funnels so the runtime observes certified exit before pane state is cleared; transport loss remains unverifiable.
+- Rejected anonymous child evidence instead of rebinding delayed facts to whichever root turn is currently active; exact owner replacement now requires the previous binding.
+- Classified all provider interrupt marker variants as attributable acknowledgements, and observed certified exits even when the legacy status row was already cleared.
+- Routed synthetic stop/kill teardown through a shared reconcile-before-cleanup helper on certified paths, preserving the one lifecycle reducer and avoiding status erasure before exit evidence.
 
 ## Production entrypoint map
 
@@ -34,7 +37,9 @@ Passed at the adapter/reducer boundary:
 - Provider turn start, terminal completion/failure, explicit terminal markers, child outcomes, resident background work, provider interrupt acknowledgement, and matching attributable terminal-record recovery.
 - Complete current-turn inventory, empty inventory, deterministic replay identity, malformed/incomplete inventory rejection, duplicate work-id rejection, and preservation of uncertainty for omitted work.
 - SSH/fire-and-forget interrupt input remains delivery evidence only; it does not settle a turn without provider acknowledgement or bounded recovery.
+- Provider `turn/interrupted`, `interrupt_acknowledged`, `interrupted`, and `cancelled` markers settle only the attributable turn as `interrupted`.
 - Certified `exited` marks active/recovering work unresolved and blocks late evidence; contact loss does not become process death.
+- Anonymous child delivery is ignored rather than assigned to a later root turn; certified exit is reduced even after legacy row dismissal.
 - Recovery expiry, explicit abandon, capacity rollback, owner replacement tests, and late joined-child dispatch re-opening.
 
 Missing for end-to-end acceptance:
@@ -43,13 +48,16 @@ Missing for end-to-end acceptance:
 - C4 must supply the actual provider inventory and terminal-record producers for every supported provider and execution host. The adapter APIs alone cannot recover a lost completion.
 - C6 must publish authoritative `live` / `unverifiable` / `exited` observations and run the bounded recovery scheduler; no production scheduler or query caller exists here.
 - C7 must consume committed outcomes into the one execution-host status store and replicate them to desktop, headless, direct SSH, CLI, and mobile with mixed-version negotiation.
+- C5 must carry exact execution-host/connection binding into the lifecycle bridge; provider-only matching is insufficient to reject stale remote evidence for a local attachment.
 - Restart/replay durability needs a durable journal or complete host resnapshot with cursor continuity; the in-memory lifecycle map cannot re-derive a lost turn after restart from a single cached status row.
 - Full two-direction wire-compatibility validation for the new semantic publication is pending the producer/consumer integrations.
+- C4/C6 must populate resident-background identities and provider cursors; those adapter fields remain unused by production producers in this stack.
 
 ## Validation
 
-- `pnpm test src/shared/agent-hook-listener/provider-turn-evidence.test.ts src/shared/agent-turn-lifecycle-reducer.test.ts src/main/agent-hooks/server-turn-lifecycle.test.ts src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts` — 4 files, 45 tests passed.
-- `pnpm tc:node` — passed.
+- `pnpm test src/shared/agent-hook-listener/provider-turn-evidence.test.ts src/shared/agent-turn-lifecycle-reducer.test.ts src/main/agent-hooks/server-turn-lifecycle.test.ts src/main/ssh/ssh-relay-session-agent-hooks.integration.test.ts` — 4 files, 45 tests passed before the final focused additions.
+- `./node_modules/.bin/vitest run src/shared/agent-hook-listener/provider-turn-evidence.test.ts src/shared/agent-hook-listener/provider-turn-lifecycle.test.ts src/main/agent-hooks/server-turn-lifecycle.test.ts src/main/agent-hooks/ended-process-reconciliation.test.ts` — 4 files, 40 tests passed after the final fixes.
+- `./node_modules/.bin/tsc --noEmit -p config/tsconfig.node.json` — passed.
 - `pnpm run check:code-quality:changed` — 0 new findings across 74 changed files.
 - `git diff --check` — passed.
 - Commit hooks for the scoped fixes ran oxlint, React doctor lint, and formatter successfully.
