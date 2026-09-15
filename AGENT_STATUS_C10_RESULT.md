@@ -30,7 +30,7 @@ The inspected implementations consistently create a pre-execution membership rec
 
 - `pnpm tc:node`
 - `pnpm tc:web`
-- Focused launch/projection tests: 17 passed across 3 files; additional status/runtime regression set: 87 passed across 8 files.
+- Focused launch/projection tests: 11 passed across 3 files, including the native owner-inventory seam.
 - Aggregate `src/main/runtime/orca-runtime.test.ts`: **1,268 passed, 1 skipped**.
 - `node config/scripts/check-changed-code-quality.mjs`: 0 new findings in all gates.
 - `git diff --check`: passed.
@@ -51,4 +51,4 @@ The inspected implementations consistently create a pre-execution membership rec
 
 ## Commit
 
-Pending local implementation commit.
+Implementation: `2d715e87cb`.
