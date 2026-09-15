@@ -151,9 +151,6 @@ function settleWaiter(
       providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }
     })
   }
-  if (waiter.dispatchSequence === session.dispatchSequence) {
-    session.lastAdmittedDispatchSequence = waiter.dispatchSequence
-  }
 }
 
 function forgetRetiredWaiter(session: ClaudeSession, waiter: ClaudeDispatchWaiter): void {
@@ -181,9 +178,6 @@ function recoverLateIdentity(
       clientMessageId: waiter.clientMessageId,
       providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }
     })
-  }
-  if (waiter.dispatchSequence === session.dispatchSequence) {
-    session.lastAdmittedDispatchSequence = waiter.dispatchSequence
   }
   return isUserReplay && waiter.dispatchSequence === session.dispatchSequence
 }
@@ -316,9 +310,6 @@ export async function dispatchClaudeTurn(
     if (waiter.settledUuid) {
       const uuid = await replayed
       if (uuid) {
-        if (waiter.dispatchSequence === session.dispatchSequence) {
-          session.lastAdmittedDispatchSequence = waiter.dispatchSequence
-        }
         return {
           state: 'accepted',
           providerIdentity: { provider: 'claude', sessionId: session.providerSessionId, uuid }

@@ -83,10 +83,20 @@ export async function cancelClaudeStructuredTurn(input: {
       ? session.dispatchSequence === 0
       : currentTurnId === request.turnId
   }
+  // The host supplies the durable latest submission; direct adapter callers fall back to
+  // the current in-memory waiter so an unknown dispatch remains fenced without a latch.
   const dispatchAdmissionIsCurrent = (): boolean =>
     session.dispatchSequence === 0 ||
-    session.lastAdmittedDispatchSequence === session.dispatchSequence ||
-    supportsClaudeQueuedInterruptCancellation(session)
+    (request.dispatchStatus
+      ? request.dispatchStatus.state === 'accepted' ||
+        request.dispatchStatus.state === 'rejected' ||
+        (request.dispatchStatus.state === 'unknown' && request.dispatchStatus.recovered)
+      : ![...session.dispatchWaiters, ...session.retiredDispatchWaiters].some(
+          (waiter) => waiter.dispatchSequence === session.dispatchSequence
+        ))
+  const dispatchAdmissionAllowsCancellation = (): boolean =>
+    dispatchAdmissionIsCurrent() ||
+    (Boolean(prompt) && supportsClaudeQueuedInterruptCancellation(session))
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
     session.fence === request.fence &&
@@ -94,9 +104,9 @@ export async function cancelClaudeStructuredTurn(input: {
     (claim && prompt
       ? ownsRequestedTurn() &&
         session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId) &&
-        dispatchAdmissionIsCurrent()
+        dispatchAdmissionAllowsCancellation()
       : compactions.ownsTurn(request.sessionId, request.turnId) ||
-        (ownsRequestedTurn() && dispatchAdmissionIsCurrent()))
+        (ownsRequestedTurn() && dispatchAdmissionAllowsCancellation()))
   let interruptConfirmed = false
   try {
     const result = await cancelClaudeTurn(

@@ -61,7 +61,6 @@ export function createClaudeSessionPublication(input: {
       backgroundTasks: new ClaudeBackgroundTaskTracker(),
       commands: new ClaudeSlashCommandCatalog(input.init.message, input.initialization),
       dispatchSequence: 0,
-      lastAdmittedDispatchSequence: undefined,
       optionMutationSequence: 0,
       options: new Map(input.options),
       capabilities: input.capabilities,
