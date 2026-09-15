@@ -141,6 +141,7 @@ export function decideAgentLaunchMode(args: {
       detail: `Started ${vocabulary.terminal}, the default for new agent tabs in your settings.`
     }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an unrecognized agent name is handled rather than trusted; isAgentSessionHandleProvider rejects it and the launch downgrades to a terminal.
   const agent = placement.agent as TuiAgent
   const support = resolveStructuredNativeChatSupport({
     agent,
