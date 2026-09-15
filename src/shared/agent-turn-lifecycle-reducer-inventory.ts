@@ -27,9 +27,9 @@ export function applyInventoryWork(
   kind: AgentTurnWorkKind,
   event: AgentTurnLifecycleEvent
 ): boolean {
-  const ids: string[] = []
+  const ids = new Set<string>()
   for (const item of items) {
-    ids.push(item.workId)
+    ids.add(item.workId)
     const existing = findWork(state, turnId, item.workId)
     const normalised = normaliseInventoryWork(item)
     if (existing) {
@@ -92,7 +92,7 @@ export function applyInventoryWork(
       existing.turnId === turnId &&
       existing.kind === kind &&
       existing.phase === 'active' &&
-      !ids.includes(existing.workId)
+      !ids.has(existing.workId)
     ) {
       existing.phase = 'unresolved'
       existing.outcome = null
