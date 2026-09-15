@@ -31,7 +31,10 @@ import { seedNativeChatAppliedSessionOptions } from '@/components/native-chat/na
 import { launchAgentInStructuredNewTab } from '@/lib/launch-agent-in-new-tab-structured'
 import type { StructuredAgentLaunchSettlement } from '@/lib/structured-agent-launch-settlement'
 import { workspaceKindForWorktreeId } from '@/lib/agent-launch-route-input'
-import { planAgentSessionLaunch } from '@/lib/agent-session-launch-plan'
+import {
+  planAgentSessionLaunch,
+  type AgentSessionLaunchPlan
+} from '@/lib/agent-session-launch-plan'
 
 export type LaunchAgentInNewTabArgs = {
   agent: TuiAgent
@@ -53,14 +56,26 @@ export type LaunchAgentInNewTabArgs = {
   launchPlatform?: NodeJS.Platform
   /** Called after the prompt is actually delivered to the agent input path. */
   onPromptDelivered?: () => void
+  /** Keeps a preflighted route authoritative across workspace creation. */
+  agentSessionLaunchPlan?: AgentSessionLaunchPlan
+  /** Lets a workspace reveal itself before the selected surface opens. */
+  beforeSurfaceOpen?: (
+    surface:
+      | { kind: 'local-terminal' }
+      | { kind: 'local-agent-session'; sessionId: string }
+      | { kind: 'host-published' }
+  ) => boolean | void
 }
 
+export type AgentLaunchSurface =
+  | { kind: 'local-terminal'; tabId: string }
+  | { kind: 'local-agent-session'; tabId: string; sessionId: string }
+  | { kind: 'host-published' }
+
 export type LaunchAgentInNewTabResult = {
-  tabId: string | null
+  surface: AgentLaunchSurface
   startupPlan: AgentStartupPlan
   pasteDraftAfterLaunch: boolean
-  /** The host will publish and focus a structured tab asynchronously. */
-  focusAfterMenuClose?: 'structured-session'
   promptDeliveryResult?: Promise<{ delivered: boolean; failureNotified: boolean }>
   /** Structured route only: what the launch did once it settled. The call stays synchronous. */
   structuredSettlement?: Promise<StructuredAgentLaunchSettlement>
@@ -69,7 +84,7 @@ export type LaunchAgentInNewTabResult = {
 export function shouldQueueTerminalFocusAfterMenuClose(
   result: NonNullable<LaunchAgentInNewTabResult>
 ): boolean {
-  return result.tabId === null && result.focusAfterMenuClose !== 'structured-session'
+  return result.surface.kind === 'host-published'
 }
 
 /**
@@ -94,7 +109,9 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     launchSource,
     quickCommandLabel,
     launchPlatform,
-    onPromptDelivered
+    onPromptDelivered,
+    agentSessionLaunchPlan,
+    beforeSurfaceOpen
   } = args
   const store = useAppStore.getState()
   const worktree = store.allWorktrees?.().find((entry: { id: string }) => entry.id === worktreeId)
@@ -165,6 +182,9 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
 
   const runtimeEnvironmentId = getRuntimeEnvironmentIdForWorktree(store, worktreeId)
   if (isWebRuntimeSessionActive(runtimeEnvironmentId)) {
+    if (beforeSurfaceOpen?.({ kind: 'host-published' }) === false) {
+      return null
+    }
     const webHostDelivery = launchAgentInWebHostTab({
       agent,
       worktreeId,
@@ -183,7 +203,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
       onPromptDelivered
     })
     return {
-      tabId: null,
+      surface: { kind: 'host-published' },
       startupPlan,
       pasteDraftAfterLaunch: pasteDraftAfterLaunch !== null,
       ...(pasteDraftAfterLaunch !== null && promptDelivery === 'submit-after-ready'
@@ -192,22 +212,39 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     }
   }
 
-  const plan = planAgentSessionLaunch(store, {
-    agent,
-    workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
-    prompt: trimmedPrompt,
-    promptDelivery: viewModePromptDelivery,
-    tuiCustomization: { cwd: initialCwd, agentArgs },
-    initialSessionOptions: startupPlan.sessionOptions,
-    onPromptDelivered
-  })
+  const plan =
+    agentSessionLaunchPlan ??
+    planAgentSessionLaunch(store, {
+      agent,
+      workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
+      prompt: trimmedPrompt,
+      promptDelivery: viewModePromptDelivery,
+      tuiCustomization: { cwd: initialCwd, agentArgs },
+      initialSessionOptions: startupPlan.sessionOptions,
+      onPromptDelivered
+    })
   if (plan?.route === 'structured-native-chat') {
-    const structured = launchAgentInStructuredNewTab({ plan })
+    const structured = launchAgentInStructuredNewTab({
+      plan,
+      ...(beforeSurfaceOpen
+        ? {
+            beforeOpen: (sessionId: string) =>
+              beforeSurfaceOpen({ kind: 'local-agent-session', sessionId })
+          }
+        : {}),
+      ...(groupId ? { targetGroupId: groupId } : {})
+    })
+    if (!structured) {
+      return null
+    }
     return {
-      tabId: null,
+      surface: {
+        kind: 'local-agent-session',
+        tabId: structured.tabId,
+        sessionId: structured.sessionId
+      },
       startupPlan,
       pasteDraftAfterLaunch: false,
-      focusAfterMenuClose: 'structured-session',
       structuredSettlement: structured.structuredSettlement,
       ...(structured.promptDeliveryResult
         ? { promptDeliveryResult: structured.promptDeliveryResult }
@@ -215,6 +252,9 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
     }
   }
 
+  if (beforeSurfaceOpen?.({ kind: 'local-terminal' }) === false) {
+    return null
+  }
   // Why: queue startup BEFORE TerminalPane mounts — it snapshots pendingStartupByTabId in useState on first render.
   // Why: followup path pastes an unsubmitted draft, so gate the initial chat view like a draft launch, not auto-submit.
   const tab = store.createTab(worktreeId, groupId, undefined, {
@@ -296,7 +336,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
   persistAgentLaunchTabOrder(worktreeId, tab.id)
 
   return {
-    tabId: tab.id,
+    surface: { kind: 'local-terminal', tabId: tab.id },
     startupPlan,
     pasteDraftAfterLaunch: pasteDraftAfterLaunch !== null,
     ...(promptDeliveryResult ? { promptDeliveryResult } : {})

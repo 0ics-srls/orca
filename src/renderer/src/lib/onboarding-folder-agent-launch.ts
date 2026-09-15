@@ -11,6 +11,7 @@ import {
   type OnboardingFolderAgentStartup
 } from '@/lib/onboarding-folder-agent-startup'
 import { activateAndRevealWorktree } from '@/lib/worktree-activation'
+import { beginStructuredAgentSessionProvisionalLaunch } from '@/lib/structured-agent-session-provisional-tab'
 
 export type OnboardingFolderAgentLaunch = {
   agent: TuiAgent | null
@@ -70,10 +71,14 @@ export async function revealOnboardingFolderWithAgentLaunch(args: {
     })
   const { plan } = args.launch
   const structured = plan?.route === 'structured-native-chat'
-  reveal(args.launch.startup, structured)
   if (!structured) {
+    reveal(args.launch.startup)
     return
   }
-  // Why: the outcome is not consumed; the workspace is already revealed and the launch layer toasts.
-  await plan.launch({}, { worktreeId: args.worktreeId })
+  beginStructuredAgentSessionProvisionalLaunch({
+    plan,
+    hooks: {},
+    target: { worktreeId: args.worktreeId },
+    beforeOpen: () => reveal(undefined, true) !== false
+  })
 }

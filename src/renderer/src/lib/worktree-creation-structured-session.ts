@@ -3,16 +3,12 @@ import { activateAndRevealWorktree, type ActivateAndRevealResult } from '@/lib/w
 import { isAgentSessionHandleProvider } from '../../../shared/agent-session-provider-handle'
 import { adoptAgentSessionLaunchVerdict } from '@/lib/agent-session-launch-plan'
 import type { AgentLaunchRoute } from '@/lib/agent-launch-routing'
-import { activateStructuredAgentSessionById } from '@/lib/structured-agent-session-tab-activation'
 import type { WorktreeCreationRequest } from '@/lib/pending-worktree-creation'
-import { closeStructuredAgentSession } from '@/runtime/structured-agent-session-close'
-import { callRuntimeRpc } from '@/runtime/runtime-rpc-client'
-import { toRuntimeWorktreeSelector } from '@/runtime/runtime-worktree-selector'
+import { beginStructuredAgentSessionProvisionalLaunch } from '@/lib/structured-agent-session-provisional-tab'
 
 export type WorktreeCreationStructuredSessionResult = {
   accepted: boolean
   cancelled: boolean
-  visibilityUnknown: boolean
   activation: ActivateAndRevealResult | false
   primaryTabId: string | null
 }
@@ -26,27 +22,13 @@ type LaunchStructuredWorktreeSessionArgs = {
   shouldActivateOnCompletion: boolean
   activation: ActivateAndRevealResult | false
   primaryTabId: string | null
-  recoverUnknownLaunch?: boolean
-}
-
-async function retireCancelledStructuredSession(
-  worktreeId: string,
-  sessionId: string
-): Promise<void> {
-  const target = { kind: 'local' } as const
-  await closeStructuredAgentSession(target, sessionId).catch(() => undefined)
-  await callRuntimeRpc(target, 'session.tabs.close', {
-    worktree: toRuntimeWorktreeSelector(worktreeId),
-    tabId: `agent-session:${sessionId}`,
-    reason: 'user'
-  }).catch(() => undefined)
 }
 
 export async function launchStructuredWorktreeSession(
   args: LaunchStructuredWorktreeSessionArgs
 ): Promise<WorktreeCreationStructuredSessionResult> {
   let { activation, primaryTabId } = args
-  const settled = { accepted: true, cancelled: false, visibilityUnknown: false }
+  const settled = { accepted: true, cancelled: false }
   const { agent } = args.request
   if (!isAgentSessionHandleProvider(agent)) {
     return { ...settled, activation, primaryTabId }
@@ -62,43 +44,51 @@ export async function launchStructuredWorktreeSession(
   const plan = adoptAgentSessionLaunchVerdict({
     route: args.agentLaunchRoute,
     agent,
-    ...(args.recoverUnknownLaunch
-      ? {}
-      : {
-          prompt: args.request.launchDraftPrompt ?? args.request.quickPrompt,
-          ...(args.request.promptDelivery ? { promptDelivery: args.request.promptDelivery } : {})
-        })
+    prompt: args.request.launchDraftPrompt ?? args.request.quickPrompt,
+    ...(args.request.promptDelivery ? { promptDelivery: args.request.promptDelivery } : {})
   })
   const abandoned = new AbortController()
+  let ownershipTransferred = false
   const unsubscribe = useAppStore.subscribe((state) => {
-    if (!state.pendingWorktreeCreations[args.creationId]) {
+    if (!ownershipTransferred && !state.pendingWorktreeCreations[args.creationId]) {
       abandoned.abort()
     }
   })
-  let settlement: Awaited<ReturnType<typeof plan.launch>>
   try {
-    useAppStore.getState().updatePendingWorktreeCreation(args.creationId, {
-      phase: 'starting-chat'
-    })
-    settlement = await plan.launch(
-      {
-        signal: abandoned.signal,
-        onStructuredReady: (sessionId) => {
-          if (!args.shouldActivateOnCompletion) {
-            return
-          }
-          // Why: chat selection requires its workspace to be active.
-          if (!activation) {
+    const launch = beginStructuredAgentSessionProvisionalLaunch({
+      plan,
+      hooks: { signal: abandoned.signal },
+      target: { worktreeId: args.worktreeId },
+      activate: args.shouldActivateOnCompletion,
+      beforeOpen: () => {
+        // Why: cancellation can arrive through the launch signal while reveal is running, before
+        // the pending-creation store snapshot has caught up.
+        if (abandoned.signal.aborted || isCancelled()) {
+          return false
+        }
+        if (args.shouldActivateOnCompletion && !activation) {
+          try {
             activation = activateAndRevealWorktree(args.worktreeId, {
               providesInitialSurface: true
             })
-            primaryTabId = activation === false ? null : activation.primaryTabId
+          } catch (error) {
+            // Why: without a revealed workspace the provisional tab has no visible owner.
+            console.error('worktree create: structured chat reveal failed', args.worktreeId, error)
+            activation = false
+            return false
           }
-          activateStructuredAgentSessionById({ worktreeId: args.worktreeId, sessionId })
+          if (activation === false) {
+            return false
+          }
+          primaryTabId = activation.primaryTabId
         }
-      },
-      { worktreeId: args.worktreeId }
-    )
+        return !abandoned.signal.aborted && !isCancelled()
+      }
+    })
+    ownershipTransferred = launch !== null
+    if (launch) {
+      primaryTabId = launch.tab.id
+    }
   } catch {
     // Why: nothing awaits this creation's caller, so an escaped throw would strand the panel
     // mid-create. Report it the way a failed launch already does; the launch layer toasts it.
@@ -106,24 +96,5 @@ export async function launchStructuredWorktreeSession(
   } finally {
     unsubscribe()
   }
-  if (!settlement) {
-    return { ...settled, activation, primaryTabId }
-  }
-  switch (settlement.kind) {
-    case 'cancelled': {
-      await retireCancelledStructuredSession(args.worktreeId, settlement.sessionId)
-      return {
-        ...settled,
-        cancelled: true,
-        activation,
-        primaryTabId
-      }
-    }
-    case 'visibility-unknown':
-      return { ...settled, visibilityUnknown: true, activation, primaryTabId }
-    case 'structured':
-    case 'failed':
-      // Why: a failed launch has always reported as accepted here; the launch layer toasts it.
-      return { ...settled, activation, primaryTabId }
-  }
+  return { ...settled, activation, primaryTabId }
 }

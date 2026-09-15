@@ -7,6 +7,23 @@ import {
 } from './inventory-generation-fence'
 import { applyStructuredSessionTabSnapshots } from './snapshot-apply'
 
+type StructuredSessionInventoryResponse = {
+  snapshots?: RuntimeMobileSessionTabsResult[]
+  authoritative?: boolean
+}
+
+function isStructuredSessionInventoryResponse(
+  value: unknown
+): value is StructuredSessionInventoryResponse {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  if (!('snapshots' in value)) {
+    return true
+  }
+  return value.snapshots === undefined || Array.isArray(value.snapshots)
+}
+
 export function restoreLocalStructuredSessionTabsOnce(
   expectedGeneration = localStructuredSessionGeneration()
 ): Promise<void> {
@@ -35,10 +52,13 @@ export function refreshLocalStructuredSessionTabs(
       if (!response.ok) {
         throw new Error('structured session inventory unavailable')
       }
-      const result = response.result as { snapshots?: RuntimeMobileSessionTabsResult[] }
+      const result = isStructuredSessionInventoryResponse(response.result) ? response.result : {}
       const snapshots = result.snapshots ?? []
       if (isCurrentLocalStructuredSessionGeneration(expectedGeneration)) {
-        applyStructuredSessionTabSnapshots(snapshots, undefined, options)
+        applyStructuredSessionTabSnapshots(snapshots, undefined, {
+          ...options,
+          authoritative: options.authoritative === true || result.authoritative === true
+        })
       }
       return snapshots
     })

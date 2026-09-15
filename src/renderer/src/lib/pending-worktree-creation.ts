@@ -14,19 +14,13 @@ import type { AgentStartupPlan } from '@/lib/tui-agent-startup'
 import type { AgentStartedTelemetry } from '@/lib/worktree-startup-payload'
 import type { TaskSourceContext, WorkspaceRunContext } from '../../../shared/task-source-context'
 import type { AgentLaunchRoute } from '@/lib/agent-launch-routing'
-import { getAgentCatalog } from './agent-catalog'
 
 /** Two-phase status reported by the main process while a worktree is created.
  *  `preparing` covers renderer-side preflight before `createWorktree` starts;
  *  `fetching` covers the base-ref git fetch; `creating` covers `git worktree
  *  add`. Remote/runtime creates may skip git phases; VM recipes add a
  *  provider-provisioning phase before the runtime worktree exists. */
-export type WorktreeCreationPhase =
-  | 'preparing'
-  | 'provisioning-vm'
-  | 'fetching'
-  | 'creating'
-  | 'starting-chat'
+export type WorktreeCreationPhase = 'preparing' | 'provisioning-vm' | 'fetching' | 'creating'
 
 export type WorktreeCreationProgressMode = 'stepped' | 'indeterminate'
 
@@ -144,8 +138,6 @@ export type PendingWorktreeCreation = {
   loaderVisible: boolean
   error?: string
   provisioningLog?: string
-  /** Existing worktree whose uncertain structured launch must be reconciled instead of recreated. */
-  structuredLaunchRecoveryWorktreeId?: string
   request: WorktreeCreationRequest
 }
 
@@ -180,13 +172,6 @@ export function getCreationProgressLabel(
 ): string {
   if (entry.phase === 'provisioning-vm') {
     return 'Provisioning VM…'
-  }
-  if (entry.phase === 'starting-chat') {
-    const agent = entry.request.agent
-    const agentLabel = agent
-      ? getAgentCatalog().find((candidate) => candidate.id === agent)?.label
-      : null
-    return agentLabel ? `Starting ${agentLabel} chat…` : 'Starting chat…'
   }
   if (entry.indeterminate) {
     return 'Setting up your workspace…'

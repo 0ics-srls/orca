@@ -6,6 +6,16 @@ import type {
   StructuredAgentLaunchOptions,
   StructuredLaunchCallerGroup
 } from './structured-agent-session-launch-callers'
+import {
+  deleteStructuredAgentLaunchRecord,
+  hasStructuredAgentLaunchCancellationTombstonePersisted,
+  markStructuredAgentLaunchCancelledPersisted,
+  readStructuredAgentLaunchRecord,
+  retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted,
+  retireStructuredAgentLaunchCancellationTombstonePersisted,
+  writeStructuredAgentLaunchRecord,
+  type StructuredAgentLaunchPersistedRecord
+} from './structured-agent-session-launch-persistence'
 
 export type StructuredLaunchState = StructuredLaunchRecoveryState & {
   identity: string
@@ -15,11 +25,27 @@ export type StructuredLaunchState = StructuredLaunchRecoveryState & {
 }
 
 export type StructuredAgentLaunchStatus = 'idle' | 'pending' | 'unknown'
+export type StructuredAgentSessionLaunchLifecycle =
+  | 'pending'
+  | 'visibility-unknown'
+  | 'failed'
+  | 'published'
+  | 'cancelled'
 
 const pendingStructuredLaunchesByIdentity = new Map<string, StructuredLaunchState>()
+const structuredLaunchesBySessionId = new Map<string, StructuredLaunchState>()
 const structuredLaunchListeners = new Set<() => void>()
 
+export function resetStructuredAgentLaunchRegistryForTests(): void {
+  pendingStructuredLaunchesByIdentity.clear()
+  structuredLaunchesBySessionId.clear()
+  structuredLaunchListeners.clear()
+}
+
 export function notifyStructuredLaunchListeners(): void {
+  for (const state of pendingStructuredLaunchesByIdentity.values()) {
+    persistStructuredLaunchState(state)
+  }
   for (const listener of structuredLaunchListeners) {
     listener()
   }
@@ -46,8 +72,16 @@ export function getStructuredLaunchState(identity: string): StructuredLaunchStat
   return pendingStructuredLaunchesByIdentity.get(identity)
 }
 
+export function getStructuredLaunchStateBySessionId(
+  sessionId: string
+): StructuredLaunchState | undefined {
+  return structuredLaunchesBySessionId.get(sessionId)
+}
+
 export function setStructuredLaunchState(state: StructuredLaunchState): void {
   pendingStructuredLaunchesByIdentity.set(state.identity, state)
+  structuredLaunchesBySessionId.set(state.intent.sessionId, state)
+  persistStructuredLaunchState(state)
 }
 
 export function deleteStructuredLaunchStateIfCurrent(state: StructuredLaunchState): boolean {
@@ -55,11 +89,186 @@ export function deleteStructuredLaunchStateIfCurrent(state: StructuredLaunchStat
     return false
   }
   pendingStructuredLaunchesByIdentity.delete(state.identity)
+  if (structuredLaunchesBySessionId.get(state.intent.sessionId) === state) {
+    structuredLaunchesBySessionId.delete(state.intent.sessionId)
+  }
+  deleteStructuredAgentLaunchRecord(state.intent.sessionId)
   return true
+}
+
+function persistStructuredLaunchState(state: StructuredLaunchState): void {
+  const lifecycle = launchStateLifecycle(state)
+  if (lifecycle === 'published' || lifecycle === 'cancelled') {
+    deleteStructuredAgentLaunchRecord(state.intent.sessionId)
+    return
+  }
+  const { envelope, resumeFrom } = state.intent.params
+  const record: StructuredAgentLaunchPersistedRecord = {
+    sessionId: state.intent.sessionId,
+    agent: state.intent.agent,
+    lifecycle,
+    clientOperationId: envelope.clientOperationId,
+    payloadFingerprint: envelope.payloadFingerprint,
+    expectedRuntimeFence: envelope.expectedRuntimeFence,
+    ...(resumeFrom ? { resumeFrom } : {})
+  }
+  writeStructuredAgentLaunchRecord(record)
+}
+
+export function getPersistedStructuredAgentLaunchRecord(
+  sessionId: string
+): StructuredAgentLaunchPersistedRecord | undefined {
+  return readStructuredAgentLaunchRecord(sessionId)
 }
 
 export function structuredLaunchStates(): IterableIterator<StructuredLaunchState> {
   return pendingStructuredLaunchesByIdentity.values()
+}
+
+function launchStateLifecycle(state: StructuredLaunchState): StructuredAgentSessionLaunchLifecycle {
+  if (state.cancelled || state.callers.outcome === 'cancelled') {
+    return 'cancelled'
+  }
+  if (state.callers.outcome === 'published') {
+    return 'published'
+  }
+  if (state.visibilityUnknown || state.callers.outcome === 'unknown') {
+    return 'visibility-unknown'
+  }
+  return state.callers.outcome === 'failed' ? 'failed' : 'pending'
+}
+
+function matchesLaunchWorktree(
+  state: StructuredLaunchState | undefined,
+  worktreeId: string
+): boolean {
+  return state?.intent.worktreeId === worktreeId
+}
+
+export function getStructuredAgentSessionLaunchLifecycle(
+  worktreeId: string,
+  sessionId: string
+): StructuredAgentSessionLaunchLifecycle | null {
+  if (hasStructuredAgentSessionLaunchCancellationTombstone(worktreeId, sessionId)) {
+    return 'cancelled'
+  }
+  const state = getStructuredLaunchStateBySessionId(sessionId)
+  if (state && matchesLaunchWorktree(state, worktreeId)) {
+    return launchStateLifecycle(state)
+  }
+  return getPersistedStructuredAgentLaunchRecord(sessionId)?.lifecycle ?? null
+}
+
+export function useStructuredAgentSessionLaunchLifecycle(
+  worktreeId: string,
+  sessionId: string
+): StructuredAgentSessionLaunchLifecycle | null {
+  return useSyncExternalStore(
+    subscribeStructuredAgentLaunchStatus,
+    () => getStructuredAgentSessionLaunchLifecycle(worktreeId, sessionId),
+    () => null
+  )
+}
+
+export function shouldRetainStructuredAgentSessionLaunchTab(
+  worktreeId: string,
+  sessionId: string
+): boolean {
+  const lifecycle = getStructuredAgentSessionLaunchLifecycle(worktreeId, sessionId)
+  return lifecycle === 'pending' || lifecycle === 'visibility-unknown' || lifecycle === 'failed'
+}
+
+export function markStructuredAgentSessionLaunchPublished(
+  worktreeId: string,
+  sessionId: string
+): boolean {
+  const state = getStructuredLaunchStateBySessionId(sessionId)
+  if (!state) {
+    const persisted = getPersistedStructuredAgentLaunchRecord(sessionId)
+    if (!persisted) {
+      return false
+    }
+    deleteStructuredAgentLaunchRecord(sessionId)
+    notifyStructuredLaunchListeners()
+    return true
+  }
+  if (!matchesLaunchWorktree(state, worktreeId) || state.cancelled) {
+    return false
+  }
+  if (state.callers.outcome === 'published') {
+    return true
+  }
+  state.callers.outcome = 'published'
+  deleteStructuredAgentLaunchRecord(sessionId)
+  state.callers.onSettled()
+  notifyStructuredLaunchListeners()
+  return true
+}
+
+function markStructuredAgentSessionLaunchCancelledInternal(
+  worktreeId: string,
+  sessionId: string,
+  notify: boolean
+): boolean {
+  const alreadyCancelled = hasStructuredAgentLaunchCancellationTombstonePersisted(sessionId)
+  markStructuredAgentLaunchCancelledPersisted(sessionId)
+  const state = getStructuredLaunchStateBySessionId(sessionId)
+  if (matchesLaunchWorktree(state, worktreeId) && state) {
+    state.cancelled = true
+    state.callers.outcome = 'cancelled'
+    // The tombstone is the durable authority; drop the in-memory launch so bulk closes cannot
+    // retain a dead promise for the lifetime of the renderer.
+    deleteStructuredLaunchStateIfCurrent(state)
+  }
+  if (!alreadyCancelled && notify) {
+    notifyStructuredLaunchListeners()
+  }
+  return !alreadyCancelled
+}
+
+export function markStructuredAgentSessionLaunchCancelled(
+  worktreeId: string,
+  sessionId: string
+): boolean {
+  return markStructuredAgentSessionLaunchCancelledInternal(worktreeId, sessionId, true)
+}
+
+/** Bulk workspace purges run inside a store updater; persist cancellation without notifying React. */
+export function markStructuredAgentSessionLaunchCancelledSilently(
+  worktreeId: string,
+  sessionId: string
+): boolean {
+  return markStructuredAgentSessionLaunchCancelledInternal(worktreeId, sessionId, false)
+}
+
+export function hasStructuredAgentSessionLaunchCancellationTombstone(
+  _worktreeId: string,
+  sessionId: string
+): boolean {
+  return hasStructuredAgentLaunchCancellationTombstonePersisted(sessionId)
+}
+
+export function retireStructuredAgentSessionLaunchCancellationTombstone(
+  worktreeId: string,
+  sessionId: string
+): boolean {
+  if (!hasStructuredAgentSessionLaunchCancellationTombstone(worktreeId, sessionId)) {
+    return false
+  }
+  retireStructuredAgentLaunchCancellationTombstonePersisted(sessionId)
+  notifyStructuredLaunchListeners()
+  return true
+}
+
+export function retireAbsentStructuredAgentSessionLaunchCancellationTombstones(
+  publishedSessionIds: ReadonlySet<string>
+): boolean {
+  const changed =
+    retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted(publishedSessionIds)
+  if (changed) {
+    notifyStructuredLaunchListeners()
+  }
+  return changed
 }
 
 export function getStructuredAgentLaunchStatus(

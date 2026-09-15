@@ -29,8 +29,13 @@ import {
 import { forgetRetiredEpochRepairsOutside } from './retired-epoch-repair'
 import { projectLocalStructuredSessionTabs } from './snapshot-projection'
 import { hostSnapshotAffirmsWorktreeContents } from '../host-session-snapshot-authority'
-
-export const LOCAL_STRUCTURED_SESSION_OWNER = 'local-structured-session'
+import {
+  hasStructuredAgentSessionLaunchCancellationTombstone,
+  markStructuredAgentSessionLaunchPublished,
+  retireAbsentStructuredAgentSessionLaunchCancellationTombstones
+} from '../../lib/structured-agent-session-launch-registry'
+import { suppressCancelledStructuredSessionTabs } from '../structured-agent-session-tab-retirement'
+import { LOCAL_STRUCTURED_SESSION_OWNER } from '../local-structured-session-owner'
 
 /** The host saying it no longer publishes this worktree at all, rather than publishing an empty one. */
 function isWorktreeRetraction(
@@ -49,6 +54,8 @@ export type StructuredSessionSnapshotApplyOptions = {
   authoritative?: boolean
   /** Called for each snapshot the retired-epoch fence rejects; the repair lane listens here. */
   onRetiredEpochDrop?: (worktreeId: string, publicationEpoch: string) => void
+  /** Collects accepted publications so lifecycle listeners run after the store patch settles. */
+  onAcceptedAgentSession?: (worktreeId: string, sessionId: string) => void
 }
 
 export function applyStructuredSessionTabSnapshots(
@@ -56,11 +63,33 @@ export function applyStructuredSessionTabSnapshots(
   owner = LOCAL_STRUCTURED_SESSION_OWNER,
   options: StructuredSessionSnapshotApplyOptions = {}
 ): void {
+  const acceptedAgentSessions = new Map<string, string>()
   const settleStructuredSessionMirror = applyWebSessionTabsStorePatch(
-    (state) => applyLocalStructuredSessionTabSnapshots(state, snapshots, owner, undefined, options),
+    (state) =>
+      applyLocalStructuredSessionTabSnapshots(state, snapshots, owner, undefined, {
+        ...options,
+        onAcceptedAgentSession: (worktreeId, sessionId) => {
+          acceptedAgentSessions.set(sessionId, worktreeId)
+          options.onAcceptedAgentSession?.(worktreeId, sessionId)
+        }
+      }),
     { frames: [] }
   )
   settleStructuredSessionMirror()
+  for (const [sessionId, worktreeId] of acceptedAgentSessions) {
+    if (!hasStructuredAgentSessionLaunchCancellationTombstone(worktreeId, sessionId)) {
+      markStructuredAgentSessionLaunchPublished(worktreeId, sessionId)
+    }
+  }
+  if (options.authoritative) {
+    retireAbsentStructuredAgentSessionLaunchCancellationTombstones(
+      new Set(
+        snapshots.flatMap((snapshot) =>
+          snapshot.tabs.filter((tab) => tab.type === 'agent-session').map((tab) => tab.sessionId)
+        )
+      )
+    )
+  }
 }
 
 export function removeLocalStructuredSessionTabs<
@@ -128,9 +157,15 @@ export function applyLocalStructuredSessionTabSnapshots<
     if (prior && sharesLineage && snapshot.snapshotVersion <= prior.snapshotVersion) {
       continue
     }
+    const effectiveSnapshot = suppressCancelledStructuredSessionTabs(snapshot, { kind: 'local' })
+    for (const tab of effectiveSnapshot.tabs) {
+      if (tab.type === 'agent-session') {
+        options.onAcceptedAgentSession?.(snapshot.worktree, tab.sessionId)
+      }
+    }
     const patch = applyWebSessionTabsSnapshot(
       next,
-      projectLocalStructuredSessionTabs(snapshot),
+      projectLocalStructuredSessionTabs(effectiveSnapshot),
       owner,
       now,
       {
@@ -140,7 +175,7 @@ export function applyLocalStructuredSessionTabSnapshots<
       }
     )
     next = patch === next ? next : ({ ...next, ...patch } as State)
-    if (isWorktreeRetraction(snapshot)) {
+    if (isWorktreeRetraction(effectiveSnapshot)) {
       // A retraction was applied above — the mirrored rows must go — but it is not a publication
       // to fence later frames against. Recording it would retire the renderer's own epoch, which
       // is one string for the whole process lifetime, and every republication afterwards would be

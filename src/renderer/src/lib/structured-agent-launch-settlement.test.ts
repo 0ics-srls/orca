@@ -15,7 +15,10 @@ vi.mock('@/lib/launch-structured-agent-session', () => ({
 }))
 
 import { StructuredAgentSessionCreateRefusalError } from '@/lib/launch-structured-agent-session'
-import { settleStructuredAgentLaunch } from './structured-agent-launch-settlement'
+import {
+  beginStructuredAgentLaunchSettlement,
+  settleStructuredAgentLaunch
+} from './structured-agent-launch-settlement'
 
 type FakeLaunch = {
   launchResult: Promise<unknown>
@@ -68,6 +71,24 @@ describe('settleStructuredAgentLaunch', () => {
       prompt: 'Fix'
     })
     expect(onStructuredReady).toHaveBeenCalledWith('session-1')
+  })
+
+  it('returns the session identity before the launch settles', async () => {
+    let resolveLaunch!: (receipt: { sessionId: string; fence: number }) => void
+    fakeLaunch({
+      launchResult: new Promise((resolve) => {
+        resolveLaunch = resolve
+      })
+    })
+
+    const handle = beginStructuredAgentLaunchSettlement('worktree-1', 'codex', {}, {})
+
+    expect(handle.sessionId).toBe('session-1')
+    resolveLaunch({ sessionId: 'session-1', fence: 1 })
+    await expect(handle.settlement).resolves.toEqual({
+      kind: 'structured',
+      sessionId: 'session-1'
+    })
   })
 
   it('keeps a structured refusal on the structured failure path', async () => {

@@ -7,6 +7,7 @@ import type { AgentSessionLaunchPlan } from '@/lib/agent-session-launch-plan'
 import { isNativeChatTranscriptLocalReadable } from '@/lib/native-chat-transcript-readability'
 import { resolveSourceControlLaunchPlatform } from '@/lib/source-control-launch-platform'
 import { preflightAgentTrust } from '@/lib/agent-trust-preflight'
+import { beginStructuredAgentSessionProvisionalLaunch } from '@/lib/structured-agent-session-provisional-tab'
 
 export function buildDirectWorkItemStartup(args: {
   agent: TuiAgent | null
@@ -95,68 +96,35 @@ export async function markDirectWorkItemAgentTrusted(args: {
   })
 }
 
-export async function settleDirectWorkItemStructuredLaunch(args: {
+export function beginDirectWorkItemStructuredLaunch(args: {
   plan: AgentSessionLaunchPlan | null
   primaryTabId: string | null
-}): Promise<{
+  beforeOpen: (sessionId: string) => boolean | void
+}): {
   completed: boolean
   structuredLaunch: boolean
-  visibilityUnknown: boolean
-  /** The structured launch ended without a surface. */
-  failed: boolean
   primaryTabId: string | null
-}> {
+} {
   const { plan } = args
   const notLaunched = (structuredLaunch: boolean) => ({
     completed: false,
     structuredLaunch,
-    visibilityUnknown: false,
-    failed: false,
     primaryTabId: args.primaryTabId
   })
   if (plan?.route !== 'structured-native-chat') {
     return notLaunched(false)
   }
-  // Why no tab: the pre-launch tab is the setup shell or default tab, never an agent tab, so
-  // handing it back would paste the prompt there.
-  const withoutAgentSurface = {
-    completed: false,
-    structuredLaunch: true,
-    visibilityUnknown: false,
-    failed: true,
-    primaryTabId: null
-  }
-  let settlement: Awaited<ReturnType<typeof plan.launch>>
-  try {
-    settlement = await plan.launch({})
-  } catch {
-    // Why: this runs outside the caller's try, so an escaped throw would surface as an unhandled
-    // rejection rather than the failure the caller already knows how to report.
-    return withoutAgentSurface
-  }
-  if (!settlement) {
+  const launch = beginStructuredAgentSessionProvisionalLaunch({
+    plan,
+    hooks: {},
+    beforeOpen: args.beforeOpen
+  })
+  if (!launch) {
     return notLaunched(true)
   }
-  switch (settlement.kind) {
-    case 'structured':
-      return {
-        completed: true,
-        structuredLaunch: true,
-        visibilityUnknown: false,
-        failed: false,
-        primaryTabId: args.primaryTabId
-      }
-    case 'visibility-unknown':
-      return {
-        completed: false,
-        structuredLaunch: true,
-        visibilityUnknown: true,
-        failed: false,
-        primaryTabId: args.primaryTabId
-      }
-    case 'failed':
-    case 'cancelled':
-      // Why: the launch layer already toasted the failure.
-      return withoutAgentSurface
+  return {
+    completed: true,
+    structuredLaunch: true,
+    primaryTabId: launch.tab.id
   }
 }

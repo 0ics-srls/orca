@@ -24,13 +24,16 @@ export type StructuredAgentSessionMutate = <T>(
 export function useStructuredAgentSessionMutate(args: {
   sessionId: string
   target: RuntimeClientTarget
+  enabled?: boolean
   /** Read at settle time, not at call time: the fence can move while a request
    *  is in flight, and a result from the previous fence is not this session's. */
   stateRef: { current: { fence: number | null } }
 }): { mutate: StructuredAgentSessionMutate; writeError: string | null } {
-  const { sessionId, stateRef, target } = args
+  const { enabled = true, sessionId, stateRef, target } = args
   const [writeError, setWriteError] = useState<string | null>(null)
   const operationIds = useRef(new Map<string, string>())
+  const enabledRef = useRef(enabled)
+  enabledRef.current = enabled
 
   const mutate = useCallback(
     async <T>(
@@ -39,7 +42,7 @@ export function useStructuredAgentSessionMutate(args: {
       fields: Record<string, unknown>,
       operationIdOverride?: string | null
     ): Promise<T | null> => {
-      if (stateRef.current.fence === null) {
+      if (!enabledRef.current || stateRef.current.fence === null) {
         return null
       }
       const targetFence = stateRef.current.fence
@@ -63,7 +66,7 @@ export function useStructuredAgentSessionMutate(args: {
           ...fields
         })
       } catch (error) {
-        if (stateRef.current.fence === targetFence) {
+        if (enabledRef.current && stateRef.current.fence === targetFence) {
           setWriteError(error instanceof Error ? error.message : 'Request was not sent')
         }
         return null
@@ -75,12 +78,12 @@ export function useStructuredAgentSessionMutate(args: {
         ) {
           operationIds.current.delete(key)
         }
-        if (stateRef.current.fence === targetFence) {
+        if (enabledRef.current && stateRef.current.fence === targetFence) {
           setWriteError(result.refusal.message)
         }
         return null
       }
-      if (stateRef.current.fence !== targetFence) {
+      if (!enabledRef.current || stateRef.current.fence !== targetFence) {
         return null
       }
       if (!conversationCommands.isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {

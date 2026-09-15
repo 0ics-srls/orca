@@ -24,7 +24,6 @@ import {
   type WorktreeCreationStructuredSessionResult
 } from '@/lib/worktree-creation-structured-session'
 import { completeWorktreeCreation } from '@/lib/worktree-creation-completion'
-import { markStructuredWorktreeLaunchUnconfirmed } from '@/lib/worktree-creation-structured-recovery'
 import { ensureWebRuntimeWorktreeTerminalAfterWake } from '@/lib/web-runtime-worktree-terminal-after-wake'
 
 // Why: activePendingCreationId can outlive the terminal route when the user
@@ -236,7 +235,7 @@ export async function executeWorktreeCreation(
       }
     }
   } else {
-    // Keep chat creation on its pending surface until the session is ready.
+    // Why: backgrounded creates still need explicit setup/issue terminals, but must not activate them.
     const hasExplicitTerminalWork = Boolean(
       startupOpt || result.setup || preparedRequest.issueCommand || result.defaultTabs
     )
@@ -300,10 +299,6 @@ export async function executeWorktreeCreation(
       activation = structuredSession.activation
       primaryTabId = structuredSession.primaryTabId
       if (structuredSession.cancelled) {
-        return
-      }
-      if (structuredSession.visibilityUnknown) {
-        markStructuredWorktreeLaunchUnconfirmed(creationId, worktree.id, structuredAgent)
         return
       }
     }

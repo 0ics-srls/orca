@@ -27,18 +27,18 @@ export type StructuredAgentLaunchHooks = {
   signal?: AbortSignal
 }
 
-/**
- * The one start / await / branch loop every structured entrypoint shares.
- * Callers decide the route before calling and consume the settlement; they never touch the launch
- * handle themselves.
- */
-export async function settleStructuredAgentLaunch(
+export type StructuredAgentLaunchHandle = {
+  sessionId: string
+  settlement: Promise<StructuredAgentLaunchSettlement>
+  promptDeliveryResult?: Promise<StructuredPromptDeliveryResult>
+  cancel: () => void
+}
+
+async function settleStartedStructuredAgentLaunch(
   worktreeId: string,
-  agent: AgentSessionHandleProvider,
-  options: StructuredAgentLaunchOptions,
+  launch: ReturnType<typeof startStructuredAgentLaunch>,
   hooks: StructuredAgentLaunchHooks
 ): Promise<StructuredAgentLaunchSettlement> {
-  const launch = startStructuredAgentLaunch(worktreeId, agent, options)
   const signal = hooks.signal
   let cancelRequested = false
   const isCancelled = (): boolean => cancelRequested || signal?.aborted === true
@@ -85,4 +85,30 @@ export async function settleStructuredAgentLaunch(
   } finally {
     signal?.removeEventListener('abort', cancelLaunch)
   }
+}
+
+/** Exposes the durable identity before host acquisition so its chat can render immediately. */
+export function beginStructuredAgentLaunchSettlement(
+  worktreeId: string,
+  agent: AgentSessionHandleProvider,
+  options: StructuredAgentLaunchOptions,
+  hooks: StructuredAgentLaunchHooks
+): StructuredAgentLaunchHandle {
+  const launch = startStructuredAgentLaunch(worktreeId, agent, options)
+  return {
+    sessionId: launch.sessionId,
+    settlement: settleStartedStructuredAgentLaunch(worktreeId, launch, hooks),
+    cancel: () => cancelStructuredAgentLaunch(worktreeId, launch.sessionId),
+    ...(launch.promptDeliveryResult ? { promptDeliveryResult: launch.promptDeliveryResult } : {})
+  }
+}
+
+/** Compatibility wrapper for callers that do not need the provisional identity. */
+export function settleStructuredAgentLaunch(
+  worktreeId: string,
+  agent: AgentSessionHandleProvider,
+  options: StructuredAgentLaunchOptions,
+  hooks: StructuredAgentLaunchHooks
+): Promise<StructuredAgentLaunchSettlement> {
+  return beginStructuredAgentLaunchSettlement(worktreeId, agent, options, hooks).settlement
 }

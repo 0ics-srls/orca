@@ -1,35 +1,38 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { StructuredAgentLaunchSettlement } from './structured-agent-launch-settlement'
 
+type BeginArgs = {
+  plan: unknown
+  targetGroupId?: string
+  beforeOpen?: (sessionId: string) => boolean | void
+}
+type Launch = {
+  sessionId: string
+  tab: { id: string }
+  settlement: Promise<StructuredAgentLaunchSettlement>
+  promptDeliveryResult?: Promise<{ delivered: boolean; failureNotified: boolean }>
+}
+
 const mocks = vi.hoisted(() => ({
-  settleStructuredAgentLaunch: vi.fn()
+  beginStructuredAgentSessionProvisionalLaunch: vi.fn<(args: BeginArgs) => Launch | null>()
 }))
 
-vi.mock('@/lib/structured-agent-launch-settlement', () => ({
-  settleStructuredAgentLaunch: mocks.settleStructuredAgentLaunch
+vi.mock('@/lib/structured-agent-session-provisional-tab', () => ({
+  beginStructuredAgentSessionProvisionalLaunch: mocks.beginStructuredAgentSessionProvisionalLaunch
 }))
 
 import { adoptAgentSessionLaunchVerdict } from './agent-session-launch-plan'
 import { launchAgentInStructuredNewTab } from './launch-agent-in-new-tab-structured'
 
 type Delivery = 'auto-submit' | 'submit-after-ready' | 'draft'
-
-const structuredPlan = (prompt: string, promptDelivery: Delivery, onPromptDelivered?: () => void) =>
+const structuredPlan = (prompt: string, promptDelivery: Delivery) =>
   adoptAgentSessionLaunchVerdict({
     route: 'structured-native-chat',
     agent: 'codex',
     worktreeId: 'wt-1',
     prompt,
-    promptDelivery,
-    ...(onPromptDelivered ? { onPromptDelivered } : {})
+    promptDelivery
   })
-
-const delivered = { delivered: true, failureNotified: false }
-const undelivered = { delivered: false, failureNotified: true }
-
-function settleWith(settlement: StructuredAgentLaunchSettlement) {
-  mocks.settleStructuredAgentLaunch.mockResolvedValue(settlement)
-}
 
 describe('launchAgentInStructuredNewTab', () => {
   let consoleError: ReturnType<typeof vi.spyOn>
@@ -37,87 +40,62 @@ describe('launchAgentInStructuredNewTab', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
-  })
-
-  afterEach(() => {
-    consoleError.mockRestore()
-  })
-
-  it('hands the launch to the shared loop with no terminal fallback', async () => {
-    const promptDeliveryResult = Promise.resolve(delivered)
-    settleWith({ kind: 'structured', sessionId: 'session-1', promptDeliveryResult })
-    const onPromptDelivered = vi.fn()
-
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan('Fix it', 'submit-after-ready', onPromptDelivered)
-    })
-
-    expect(mocks.settleStructuredAgentLaunch).toHaveBeenCalledWith(
-      'wt-1',
-      'codex',
-      { prompt: 'Fix it', promptDelivery: 'submit-after-ready', onPromptDelivered },
-      {}
-    )
-    await expect(result.structuredSettlement).resolves.toEqual({
-      kind: 'structured',
+    mocks.beginStructuredAgentSessionProvisionalLaunch.mockImplementation(() => ({
       sessionId: 'session-1',
-      promptDeliveryResult
+      tab: { id: 'agent-session:session-1' },
+      settlement: Promise.resolve({ kind: 'structured', sessionId: 'session-1' })
+    }))
+  })
+
+  afterEach(() => consoleError.mockRestore())
+
+  it('returns the usable chat surface immediately and settles in the background', async () => {
+    const result = launchAgentInStructuredNewTab({
+      plan: structuredPlan('Fix it', 'submit-after-ready'),
+      targetGroupId: 'group-1'
     })
-    await expect(result.promptDeliveryResult).resolves.toEqual(delivered)
+
+    expect(result).toMatchObject({ sessionId: 'session-1', tabId: 'agent-session:session-1' })
+    expect(mocks.beginStructuredAgentSessionProvisionalLaunch).toHaveBeenCalledWith(
+      expect.objectContaining({ plan: expect.anything(), targetGroupId: 'group-1', hooks: {} })
+    )
+    await expect(result?.structuredSettlement).resolves.toEqual({
+      kind: 'structured',
+      sessionId: 'session-1'
+    })
     expect(consoleError).not.toHaveBeenCalled()
   })
 
-  it('keeps a failed structured launch failed and reports no delivery', async () => {
+  it('reports failed settlement without opening a terminal fallback', async () => {
     const error = new Error('boom')
-    settleWith({ kind: 'failed', error })
-
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan('Fix it', 'submit-after-ready')
+    mocks.beginStructuredAgentSessionProvisionalLaunch.mockReturnValue({
+      sessionId: 'session-1',
+      tab: { id: 'agent-session:session-1' },
+      settlement: Promise.resolve({ kind: 'failed', error })
     })
 
-    await expect(result.structuredSettlement).resolves.toEqual({ kind: 'failed', error })
-    await expect(result.promptDeliveryResult).resolves.toEqual(undelivered)
+    const result = launchAgentInStructuredNewTab({ plan: structuredPlan('Fix it', 'auto-submit') })
+
+    await expect(result?.structuredSettlement).resolves.toEqual({ kind: 'failed', error })
     expect(consoleError).toHaveBeenCalledWith('Structured agent launch failed', error)
   })
 
-  it('treats a thrown settle loop as a failed settlement', async () => {
-    const error = new Error('intent unavailable')
-    mocks.settleStructuredAgentLaunch.mockRejectedValue(error)
-
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan('Fix it', 'submit-after-ready')
-    })
-
-    await expect(result.structuredSettlement).resolves.toEqual({ kind: 'failed', error })
-    await expect(result.promptDeliveryResult).resolves.toEqual(undelivered)
+  it('returns null when the route cannot begin', () => {
+    mocks.beginStructuredAgentSessionProvisionalLaunch.mockReturnValue(null)
+    expect(
+      launchAgentInStructuredNewTab({ plan: structuredPlan('Fix it', 'auto-submit') })
+    ).toBeNull()
   })
 
-  it('surfaces an unknown outcome silently', async () => {
-    settleWith({ kind: 'visibility-unknown', sessionId: 'session-1' })
-
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan('Fix it', 'submit-after-ready')
+  it('does not expose a delivery promise for drafts', () => {
+    mocks.beginStructuredAgentSessionProvisionalLaunch.mockReturnValue({
+      sessionId: 'session-1',
+      tab: { id: 'agent-session:session-1' },
+      settlement: Promise.resolve({ kind: 'structured', sessionId: 'session-1' }),
+      promptDeliveryResult: Promise.resolve({ delivered: true, failureNotified: false })
     })
 
-    await expect(result.structuredSettlement).resolves.toEqual({
-      kind: 'visibility-unknown',
-      sessionId: 'session-1'
-    })
-    await expect(result.promptDeliveryResult).resolves.toEqual(undelivered)
-    expect(consoleError).not.toHaveBeenCalled()
-  })
-
-  it.each([
-    ['no prompt', '', 'auto-submit' as const],
-    ['a draft prompt', 'Fix it', 'draft' as const]
-  ])('exposes no delivery promise for %s', async (_label, prompt, promptDelivery) => {
-    settleWith({ kind: 'structured', sessionId: 'session-1' })
-
-    const result = launchAgentInStructuredNewTab({
-      plan: structuredPlan(prompt, promptDelivery)
-    })
-
-    expect(result.promptDeliveryResult).toBeUndefined()
-    await expect(result.structuredSettlement).resolves.toMatchObject({ kind: 'structured' })
+    const result = launchAgentInStructuredNewTab({ plan: structuredPlan('Fix it', 'draft') })
+    expect(result?.promptDeliveryResult).toBeUndefined()
   })
 })
