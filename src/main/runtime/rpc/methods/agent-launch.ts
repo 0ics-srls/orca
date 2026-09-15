@@ -96,12 +96,21 @@ export const AGENT_LAUNCH_METHODS = [
       }
       const intent = await agentLaunchIntent(params, context.runtime)
       await validateReusedTerminal(intent, context.runtime)
-      return executeAgentLaunch({
-        runtime: context.runtime,
-        intent,
-        surfaces: agentLaunchSurfaceFactory(context),
-        workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
-      })
+      const execute = () =>
+        executeAgentLaunch({
+          runtime: context.runtime,
+          intent,
+          surfaces: agentLaunchSurfaceFactory(context),
+          workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
+        })
+      if (params.target.kind === 'create-worktree' && params.target.create.clientMutationId) {
+        return context.runtime.dedupeWorktreeCreate(
+          params.target.create.repo,
+          `agent.launch:${params.target.create.clientMutationId}`,
+          execute
+        )
+      }
+      return execute()
     }
   })
 ]

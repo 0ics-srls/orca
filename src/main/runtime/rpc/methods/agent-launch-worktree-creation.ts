@@ -39,51 +39,49 @@ export function agentLaunchWorkspaceFactory(
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: already validated by `AgentLaunch`; the executor only removed the reserved agent fields, so the rest of the payload is the parsed shape.
       const params = create as WorktreeCreateParams
       const { runtime } = context
-      return runtime.dedupeWorktreeCreate(params.repo, params.clientMutationId, async () => {
-        const repo = await runtime.showRepo(params.repo)
-        const automationProvenance = resolveAutomationWorkspaceProvenance({
-          authority: runtime,
-          repoSelector: params.repo,
-          repo,
-          request: params.automationProvenanceRequest
-        })
-        // Reserved before creation so a retry can recover; a failed attempt has to release it.
-        try {
-          const result = await runtime.createManagedWorktree({
-            ...buildManagedWorktreeCreateArgs(
-              { ...params, ...(startupAgent ? { startupAgent } : {}) },
-              {
-                automationProvenance,
-                cliProvenance: buildCliWorkspaceProvenance(params.cliProvenanceRequest, {
-                  startupAgent: agent,
-                  createdAt: Date.now()
-                }),
-                creatorProvenance: resolveRpcWorkspaceCreatorProvenance(context)
-              },
-              context.clientKind ? { clientKind: context.clientKind } : {}
-            ),
-            // The launch owns the agent whichever surface it settles on, so the workspace records
-            // it even when no startup terminal was created for it.
-            createdWithAgent: agent,
-            // Structured sessions have no startup command to sequence behind setup. Provision the
-            // setup terminal synchronously and attach a completion token so the launch can wait
-            // before creating the chat surface.
-            awaitTerminalProvisioning: true,
-            observeSetupCompletion: true
-          })
-          if (!startupAgent) {
-            await waitForStructuredSetup(runtime, result.setupReceipt)
-          }
-          finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
-          return {
-            worktreeId: result.worktree.id,
-            startupTerminalHandle: result.startupTerminal?.handle
-          }
-        } catch (error) {
-          releaseAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
-          throw error
-        }
+      const repo = await runtime.showRepo(params.repo)
+      const automationProvenance = resolveAutomationWorkspaceProvenance({
+        authority: runtime,
+        repoSelector: params.repo,
+        repo,
+        request: params.automationProvenanceRequest
       })
+      // Reserved before creation so a retry can recover; a failed attempt has to release it.
+      try {
+        const result = await runtime.createManagedWorktree({
+          ...buildManagedWorktreeCreateArgs(
+            { ...params, ...(startupAgent ? { startupAgent } : {}) },
+            {
+              automationProvenance,
+              cliProvenance: buildCliWorkspaceProvenance(params.cliProvenanceRequest, {
+                startupAgent: agent,
+                createdAt: Date.now()
+              }),
+              creatorProvenance: resolveRpcWorkspaceCreatorProvenance(context)
+            },
+            context.clientKind ? { clientKind: context.clientKind } : {}
+          ),
+          // The launch owns the agent whichever surface it settles on, so the workspace records
+          // it even when no startup terminal was created for it.
+          createdWithAgent: agent,
+          // Structured sessions have no startup command to sequence behind setup. Provision the
+          // setup terminal synchronously and attach a completion token so the launch can wait
+          // before creating the chat surface.
+          awaitTerminalProvisioning: true,
+          observeSetupCompletion: true
+        })
+        if (!startupAgent) {
+          await waitForStructuredSetup(runtime, result.setupReceipt)
+        }
+        finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
+        return {
+          worktreeId: result.worktree.id,
+          startupTerminalHandle: result.startupTerminal?.handle
+        }
+      } catch (error) {
+        releaseAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
+        throw error
+      }
     }
   }
 }
@@ -100,12 +98,16 @@ async function waitForStructuredSetup(
   ) {
     return
   }
+  const abort = new AbortController()
   let timer: ReturnType<typeof setTimeout> | undefined
   try {
     await Promise.race([
-      runtime.waitForSetupTerminalCompletion(receipt.terminalHandle),
+      runtime.waitForSetupTerminalCompletion(receipt.terminalHandle, abort.signal),
       new Promise<void>((resolve) => {
-        timer = setTimeout(resolve, STRUCTURED_SETUP_WAIT_TIMEOUT_MS)
+        timer = setTimeout(() => {
+          abort.abort(new Error('structured_setup_wait_timeout'))
+          resolve()
+        }, STRUCTURED_SETUP_WAIT_TIMEOUT_MS)
       })
     ])
   } catch {
