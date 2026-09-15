@@ -66,11 +66,15 @@ const HEAD_MAIN_HOOK_SHA256 = 'c7a1bbc0588a5d27797bbab13168e76eb20200288921fdc33
 const HEAD_HOOK_BINDING_SHA256 = '06edf1a4314eba41b1d3e1cb67b0cfab2a936aef7d127c5dc48e789c9adc6c8f'
 const HEAD_CALLBACK_IDENTITY_SHA256 =
   '2a9e4825df007f6ef53b81aa5004991d6318eee7507b44d625c07e630be432eb'
-const HEAD_CALLBACK_BODY_SHA256 = '529bdb4e55d35ea6cd4e0ffa3cc9c1efac1fa0cf3cb582951724d5c643b7016e'
+// Body text, not behaviour: refreshed when the session hooks' refusal try/catch blocks became
+// `interpretOrThrowRefusalMessage` calls. One of them lives in a callback.
+const HEAD_CALLBACK_BODY_SHA256 = '309666c03fdfaa4b48fe6e32d86e885e0c92c42954bc2917ac605ef1e50061de'
 const HEAD_EFFECT_SHA256 = '73d80845e0a4b6363cfb4bb55551af97965b1f676b97adf0b2a8504219b9a501'
 const HEAD_CONTENT_HOOK_SHA256 = '9c3b612fef3f370d66873aefdbe1d701f20cb64ded31fef5cc45fde6f8189581'
+// Same refresh as the callback-body hash above, for the three of those blocks that sit in
+// nested functions rather than callbacks. Count still 12.
 const HEAD_NESTED_FUNCTION_SHA256 =
-  'b1a5e95a00f2b07d40bc362b08acd2f803b6639fa66b4d248b507931d6530022'
+  '74772a16be98781d85d12caa7771b373a908e3da00651412a1e15647ec67398c'
 const HEAD_NATIVE_REGISTRATION_SHA256 =
   'cab85e4e4a3f43289ba93ddea9ccce57aea83e0bf14fd1620a965aad0c1cb49e'
 const HEAD_NATIVE_REMOVAL_SHA256 =

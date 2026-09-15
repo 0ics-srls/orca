@@ -10,7 +10,7 @@ import {
   sessionBrowserTabCreate,
   sessionMarkdownNoteCreate
 } from './mobile-session-launch-operations'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import type { MobileBrowserNavigationMethod } from './MobileBrowserTabActionSheet'
 import { isFileExistsErrorMessage } from './mobile-session-route-helpers'
 import type { MobileSessionTab } from './mobile-session-route-types'
@@ -73,11 +73,7 @@ export function useMobileSessionContentCreateActions(
           { worktree, relativePath },
           { timeoutMs: 15_000 }
         )
-        try {
-          sourceFileOpenRun.interpret(openResponse)
-        } catch (error) {
-          throw new Error(refusedRpcMessageOrFallback(error, ''))
-        }
+        interpretOrThrowRefusalMessage(() => sourceFileOpenRun.interpret(openResponse), '')
         scheduleDelayedAction(() => void fetchSessionTabs(), 300)
         return
       }
@@ -121,13 +117,11 @@ export function useMobileSessionContentCreateActions(
         },
         { timeoutMs: 30_000 }
       )
-      let created
-      try {
+      const created = interpretOrThrowRefusalMessage(
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader hands it back whole.
-        created = sessionBrowserTabCreate.interpret(response) as { browserPageId?: string }
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, ''))
-      }
+        () => sessionBrowserTabCreate.interpret(response) as { browserPageId?: string },
+        ''
+      )
       // Focus the new browser tab once it syncs; refresh a few times since the desktop registers the tab asynchronously.
       if (created.browserPageId) {
         pendingBrowserFocusPageIdRef.current = created.browserPageId
@@ -166,11 +160,7 @@ export function useMobileSessionContentCreateActions(
         },
         { timeoutMs: 15_000 }
       )
-      try {
-        command.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, ''))
-      }
+      interpretOrThrowRefusalMessage(() => command.interpret(response), '')
       scheduleDelayedAction(() => void fetchSessionTabs(), 250)
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Browser command failed'

@@ -1,6 +1,6 @@
 import { useEffect, useCallback } from 'react'
 import * as Clipboard from 'expo-clipboard'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { sessionWorktreeNotesRead } from './mobile-session-read-operations'
 import { sessionWorktreeNotesWrite } from './mobile-session-write-operations'
 import { triggerSelection, triggerSuccess, triggerError } from '../platform/haptics'
@@ -52,11 +52,10 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
         worktree: `id:${worktreeId}`,
         diffComments: [...comments]
       })
-      try {
-        sessionWorktreeNotesWrite.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to save review notes'))
-      }
+      interpretOrThrowRefusalMessage(
+        () => sessionWorktreeNotesWrite.interpret(response),
+        'Failed to save review notes'
+      )
     },
     [client, connState, worktreeId]
   )
