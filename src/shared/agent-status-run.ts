@@ -24,6 +24,35 @@ export type AgentStatusExecutionBinding = {
   continuityOf?: AgentStatusRunId
 }
 
+/** Minimal execution claim carried by an emitter; the host resolves the canonical binding. */
+export type AgentStatusReportedExecutionBinding = {
+  runId: AgentStatusRunId
+  executionId: AgentStatusExecutionId
+}
+
+export const ORCA_AGENT_STATUS_RUN_ID_ENV = 'ORCA_AGENT_STATUS_RUN_ID' as const
+export const ORCA_AGENT_STATUS_EXECUTION_ID_ENV = 'ORCA_AGENT_STATUS_EXECUTION_ID' as const
+
+export function parseAgentStatusReportedExecutionBinding(
+  value: unknown
+): AgentStatusReportedExecutionBinding | null {
+  if (!isRecord(value)) {
+    return null
+  }
+  return isAgentStatusRunId(value.runId) && isAgentStatusExecutionId(value.executionId)
+    ? { runId: value.runId, executionId: value.executionId }
+    : null
+}
+
+export function agentStatusExecutionBindingEnv(
+  binding: AgentStatusExecutionBinding
+): Record<typeof ORCA_AGENT_STATUS_RUN_ID_ENV | typeof ORCA_AGENT_STATUS_EXECUTION_ID_ENV, string> {
+  return {
+    [ORCA_AGENT_STATUS_RUN_ID_ENV]: binding.runId,
+    [ORCA_AGENT_STATUS_EXECUTION_ID_ENV]: binding.attachment.executionId
+  }
+}
+
 export type AgentStatusProviderAlias = {
   provider: AgentHookSource
   sessionKeyKind: AgentProviderSessionKey

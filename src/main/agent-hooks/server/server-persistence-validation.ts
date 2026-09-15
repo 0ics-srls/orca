@@ -13,6 +13,11 @@ import {
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookAuthorityEvidence, EnrichedAgentHookEventPayload } from './server-types'
 import { isValidPaneKey, isValidPiProviderSessionOnly } from './server-status-identity'
+import {
+  parseAgentStatusProviderAlias,
+  isAgentStatusExecutionId,
+  isAgentStatusRunId
+} from '../../../shared/agent-status-run'
 
 export function dropHydratedIdleClaudeSubagents(
   payload: ParsedAgentStatusPayload
@@ -89,6 +94,15 @@ export function sanitizeHydratedEntry(
     return null
   }
   const providerSession = normalizeAgentProviderSession(record.providerSession) ?? undefined
+  const runId = isAgentStatusRunId(record.runId) ? record.runId : undefined
+  const executionId = isAgentStatusExecutionId(record.executionId) ? record.executionId : undefined
+  const providerAlias = parseAgentStatusProviderAlias(record.providerAlias) ?? undefined
+  if (
+    (record.runId !== undefined && runId === undefined) ||
+    (record.executionId !== undefined && executionId === undefined)
+  ) {
+    return null
+  }
   const providerSessionOnly = record.providerSessionOnly === true
   const retainedForLiveness = record.retainedForLiveness === true
   const validRetainedIdentity = Boolean(
@@ -115,6 +129,8 @@ export function sanitizeHydratedEntry(
   return {
     paneKey,
     source,
+    ...(runId && executionId ? { runId, executionId } : {}),
+    ...(providerAlias ? { providerAlias } : {}),
     tabId: typeof tabId === 'string' ? tabId : undefined,
     worktreeId: typeof worktreeId === 'string' ? worktreeId : undefined,
     connectionId,

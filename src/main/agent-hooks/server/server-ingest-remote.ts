@@ -30,6 +30,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       env?: string
       version?: string
       launchToken?: string
+      reportedExecutionBinding?: AgentHookEventPayload['reportedExecutionBinding']
       hasExplicitPrompt?: boolean
       promptInteractionKey?: string
       hookEventName?: string
@@ -252,6 +253,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       paneKey,
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
+      reportedExecutionBinding: envelope.reportedExecutionBinding,
       tabId,
       worktreeId,
       connectionId: trimmedConnectionId,
