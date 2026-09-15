@@ -30,17 +30,20 @@ export function inspectRetiredBrowserSessionProfileUserAgentModes(
   let noticePending = false
   let degraded = false
   for (const profile of profiles) {
-    if (!isValidPersistedBrowserSessionProfile(profile, activeOrcaProfileId)) {
-      noticePending = true
-      degraded = true
-      continue
-    }
-    if (!Object.hasOwn(profile, 'userAgentMode')) {
+    // Refusing to hydrate an entry is not the same as finding a retired choice: hydrateFromPersisted
+    // already skips it silently, and a notice here would claim an old choice could not be inspected
+    // for a profile that never carried one.
+    if (!profile || typeof profile !== 'object' || !Object.hasOwn(profile, 'userAgentMode')) {
       continue
     }
     noticePending = true
     const mode = Reflect.get(profile, 'userAgentMode')
-    if (mode !== 'clean' && mode !== 'native') {
+    // Degraded covers both ways the choice is uninspectable: an unreadable mode, and a mode sitting
+    // on an entry we refuse to hydrate, where we cannot say which profile it belonged to.
+    if (
+      (mode !== 'clean' && mode !== 'native') ||
+      !isValidPersistedBrowserSessionProfile(profile, activeOrcaProfileId)
+    ) {
       degraded = true
     }
   }
