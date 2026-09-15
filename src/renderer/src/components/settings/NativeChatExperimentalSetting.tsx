@@ -159,13 +159,13 @@ export function NativeChatExperimentalSetting({
                 <Label>
                   {translate(
                     'auto.components.settings.ExperimentalPane.nativeChat.resumeTitle',
-                    'Resume working chats after a restart'
+                    'Reconnect working chats automatically after a restart'
                   )}
                 </Label>
                 <p className="text-xs text-muted-foreground">
                   {translate(
                     'auto.components.settings.ExperimentalPane.nativeChat.resumeCopy',
-                    'When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. Turn this on to resume them automatically instead of choosing from the list.'
+                    'When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. On, they are reconnected without asking and Orca tells you afterwards — the same thing as ticking "Don\'t ask again" in that prompt. Off, you choose from the list each time. Reconnecting restores a chat where it stopped; it does not continue the interrupted reply.'
                   )}
                 </p>
               </div>
@@ -173,7 +173,7 @@ export function NativeChatExperimentalSetting({
                 checked={resumeOnRestartEnabled}
                 ariaLabel={translate(
                   'auto.components.settings.ExperimentalPane.nativeChat.resumeToggleLabel',
-                  'Toggle automatic resume after a restart'
+                  'Toggle automatic reconnect after a restart'
                 )}
                 onChange={() =>
                   updateSettings({ nativeChatResumeWorkOnRestart: !resumeOnRestartEnabled })

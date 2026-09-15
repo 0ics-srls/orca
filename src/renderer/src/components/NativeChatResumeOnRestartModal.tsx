@@ -14,15 +14,19 @@ import {
 import { useAppStore } from '../store'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { translate } from '@/i18n/i18n'
+import { formatUiRelativeTime } from '@/i18n/relative-time-format'
 
 /**
- * What would resume, shown before anything runs.
+ * What would be reconnected, shown before anything runs.
  *
- * The list is the point. Resuming a chat that was not working spends tokens and can make an agent
- * redo work it already finished, so the user sees exactly which chats the last teardown recorded as
- * mid-turn and decides. The checkbox is the opt-in to skipping this prompt in future — it removes
- * the PROMPT, never a safety check: automatic mode calls the same RPC, which re-derives the same
- * predicate and staggers the same way.
+ * The list is the point. Reconnecting a chat that was not working starts a provider the user never
+ * asked for and puts a misleading row in front of them, so they see exactly which chats the last
+ * teardown recorded as mid-turn and decide. The checkbox is the opt-in to skipping this prompt in
+ * future — it removes the PROMPT, never a safety check: automatic mode calls the same RPC, which
+ * re-derives the same predicate and staggers the same way.
+ *
+ * Reconnecting restores the session at the point it stopped; it does NOT continue the interrupted
+ * reply — that was measured. Every user-facing string here has to keep saying so.
  *
  * Turning the offer down spends the markers. A prompt that returns at every launch is worse than
  * the problem it solves, and nothing is lost: opening a chat takes a resume-capable hold, which
@@ -35,6 +39,8 @@ type ResumeCandidate = {
   agent: 'claude' | 'codex'
   trigger: 'quit' | 'update'
   latestPrompt: string
+  /** Host clock when teardown recorded the marker; the row shows its age. */
+  recordedAt: number
 }
 
 type ResumeOutcome = { sessionId: string; outcome: 'resumed' | 'refused' }
@@ -49,10 +55,10 @@ function announceResumed(count: number): void {
   }
   toast(
     count === 1
-      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Resumed 1 chat')
+      ? translate('auto.components.NativeChatResumeOnRestartModal.resumedOne', 'Reconnected 1 chat')
       : translate(
           'auto.components.NativeChatResumeOnRestartModal.resumedMany',
-          'Resumed {{value0}} chats',
+          'Reconnected {{value0}} chats',
           {
             value0: count
           }
@@ -67,6 +73,9 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   const autoResume = useAppStore((store) => store.settings?.nativeChatResumeWorkOnRestart === true)
   const updateSettings = useAppStore((store) => store.updateSettings)
   const [candidates, setCandidates] = useState<ResumeCandidate[]>([])
+  /** Clock stamped when the list arrived. Row ages read against this rather than a render-time
+   *  `Date.now()`, so they stay stable across re-renders and the render stays pure. */
+  const [listedAt, setListedAt] = useState(0)
   const [dontAskAgain, setDontAskAgain] = useState(false)
   const [busy, setBusy] = useState(false)
   const [resolved, setResolved] = useState(false)
@@ -97,6 +106,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           announceResumed(result.results.filter((entry) => entry.outcome === 'resumed').length)
           return
         }
+        setListedAt(Date.now())
         setCandidates(offered.sessions)
       } catch {
         // A host that cannot answer offers nothing. There is no failure worth a modal of its own.
@@ -164,26 +174,26 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         }
       }}
     >
-      {/* Height is capped, never the data: seeing WHICH chats would resume is the whole point, so
-          the list scrolls inside the dialog while the header and the primary action stay put. */}
+      {/* Height is capped, never the data: seeing WHICH chats would be reconnected is the whole
+          point, so the list scrolls inside the dialog while the header and primary action stay. */}
       <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto_auto] sm:max-w-xl max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <RotateCcw className="size-4 text-muted-foreground" />
             {translate(
               'auto.components.NativeChatResumeOnRestartModal.title',
-              'Resume interrupted chats?'
+              'Reconnect interrupted chats?'
             )}
           </DialogTitle>
           <DialogDescription>
             {interruptedByUpdate
               ? translate(
                   'auto.components.NativeChatResumeOnRestartModal.updateBody',
-                  'These chats were mid-turn when Orca installed an update. Resuming continues each agent where it left off, without re-sending your prompt.'
+                  'These chats were mid-turn when Orca installed an update. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.'
                 )
               : translate(
                   'auto.components.NativeChatResumeOnRestartModal.body',
-                  'These chats were mid-turn when Orca closed. Resuming continues each agent where it left off, without re-sending your prompt.'
+                  'These chats were mid-turn when Orca closed. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.'
                 )}
           </DialogDescription>
         </DialogHeader>
@@ -192,7 +202,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           tabIndex={0}
           aria-label={translate(
             'auto.components.NativeChatResumeOnRestartModal.listLabel',
-            'Chats that would resume'
+            'Chats that would be reconnected'
           )}
           className="flex min-h-0 flex-col gap-1 overflow-y-auto scrollbar-sleek rounded-md border bg-muted/35 p-1.5"
         >
@@ -206,8 +216,12 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
                       'Untitled chat'
                     )}
                 </p>
+                {/* Age matters: the TTL is 24h, so an eight-hour-old offer must not look like one
+                    from a minute ago. */}
                 <p className="truncate text-[11px] text-muted-foreground">
-                  {candidate.agent} · {candidate.workspaceId}
+                  {`${candidate.agent} · ${candidate.workspaceId} · ${formatUiRelativeTime(
+                    candidate.recordedAt - listedAt
+                  )}`}
                 </p>
               </div>
               <Button
@@ -218,7 +232,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
                 onClick={() => void resume([candidate.sessionId])}
               >
                 <Play className="size-3" />
-                {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Resume')}
+                {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
               </Button>
             </li>
           ))}
@@ -229,7 +243,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         <p className="text-xs text-muted-foreground">
           {translate(
             'auto.components.NativeChatResumeOnRestartModal.notNowHint',
-            'Not now keeps everything — opening a chat later still picks it up where it left off.'
+            'Not now keeps everything — you can reopen any chat later and carry on from the same point.'
           )}
         </p>
 
@@ -244,7 +258,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             <span className="block text-sm">
               {translate(
                 'auto.components.NativeChatResumeOnRestartModal.dontAskAgain',
-                "Don't ask again — resume automatically next time"
+                "Don't ask again — reconnect automatically next time"
               )}
             </span>
             {/* Spelled out: a bare "don't ask again" reads as "stop bothering me", not as consent
@@ -252,7 +266,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             <span className="block text-xs text-muted-foreground">
               {translate(
                 'auto.components.NativeChatResumeOnRestartModal.dontAskAgainHint',
-                'Qualifying chats will resume on their own after a restart, and Orca will tell you when it happens. You can turn this off in Settings → Experimental → Chat UI.'
+                'Qualifying chats will be reconnected automatically after a restart, and Orca will tell you when it happens. You can turn this off in Settings → Experimental → Chat UI.'
               )}
             </span>
           </span>
@@ -269,8 +283,14 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             onClick={() => void resume(candidates.map((candidate) => candidate.sessionId))}
           >
             {busy
-              ? translate('auto.components.NativeChatResumeOnRestartModal.resuming', 'Resuming…')
-              : translate('auto.components.NativeChatResumeOnRestartModal.resumeAll', 'Resume all')}
+              ? translate(
+                  'auto.components.NativeChatResumeOnRestartModal.resuming',
+                  'Reconnecting…'
+                )
+              : translate(
+                  'auto.components.NativeChatResumeOnRestartModal.resumeAll',
+                  'Reconnect all'
+                )}
           </Button>
         </DialogFooter>
       </DialogContent>
