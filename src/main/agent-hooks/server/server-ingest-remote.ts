@@ -19,6 +19,7 @@ import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import {
   normalizeProviderTurnId,
+  normalizeProviderTurnInventoryFields,
   readProviderTurnEvidence
 } from '../../../shared/agent-hook-listener/provider-turn-evidence'
 import {
@@ -46,6 +47,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       providerPromptId?: unknown
       providerTurnId?: unknown
       providerTurnTerminal?: unknown
+      providerTurnInventory?: unknown
+      providerTurnInventoryComplete?: unknown
       grokPromptBoundary?: unknown
       compactTrigger?: unknown
       toolUseId?: string
@@ -137,6 +140,13 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
           : undefined
     const providerTurnId = normalizeProviderTurnId(envelope.providerTurnId)
     const providerTurnTerminal = envelope.providerTurnTerminal === true
+    const providerTurnInventoryFields = normalizeProviderTurnInventoryFields(
+      envelope.providerTurnInventory,
+      envelope.providerTurnInventoryComplete
+    )
+    if (!providerTurnInventoryFields) {
+      return
+    }
     const grokPromptBoundary =
       source === 'grok' && envelope.grokPromptBoundary === true ? true : undefined
     const compactTrigger =
@@ -287,6 +297,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       providerPromptId,
       providerTurnId,
       ...(providerTurnTerminal ? { providerTurnTerminal: true } : {}),
+      ...providerTurnInventoryFields,
       grokPromptBoundary,
       compactTrigger,
       toolUseId,
@@ -302,7 +313,17 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
           : undefined,
       payload: normalizedPayload
     }
-    const providerEvidence = readProviderTurnEvidence({ event: eventWithoutEvidence }).evidence
+    const providerEvidence = readProviderTurnEvidence({
+      event: {
+        ...eventWithoutEvidence,
+        ...(providerTurnInventoryFields.providerTurnInventoryComplete
+          ? {
+              currentTurnInventory: providerTurnInventoryFields.providerTurnInventory ?? null,
+              currentTurnInventoryComplete: true
+            }
+          : {})
+      }
+    }).evidence
     const event: AgentHookEventPayload =
       providerEvidence.length > 0
         ? { ...eventWithoutEvidence, providerTurnEvidence: providerEvidence }

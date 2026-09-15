@@ -37,6 +37,8 @@ export abstract class AgentHookServerPersistence extends AgentHookServerHydratio
         claudeRunningNonAgentTask: _claudeRunningNonAgentTask,
         promptInteractionKey: _promptInteractionKey,
         providerTurnEvidence: _providerTurnEvidence,
+        providerTurnInventory: _providerTurnInventory,
+        providerTurnInventoryComplete: _providerTurnInventoryComplete,
         // Why: never persisted — hydrate re-stamps it, so a stored copy could only drift.
         restoredUnconfirmed: _restoredUnconfirmed,
         // Why: same — the sequencer that issued it dies with the process (see PersistedAgentHookEventPayload).

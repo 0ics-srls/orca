@@ -7,8 +7,20 @@ import type {
 
 const MAX_WORK_IDS = 128
 
+type ProviderTurnInventoryFields = {
+  providerTurnInventory?: ProviderCurrentTurnInventory | null
+  providerTurnInventoryComplete?: true
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function optionalTimestamp(value: unknown): number | undefined | null {
+  if (value === undefined) {
+    return undefined
+  }
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? value : null
 }
 
 export function providerCurrentTurnInventory(
@@ -50,15 +62,26 @@ export function providerCurrentTurnInventory(
         item.outcome === 'completed' || item.outcome === 'failed' || item.outcome === 'interrupted'
           ? item.outcome
           : undefined
+      if ((phase === 'active' || phase === 'unresolved') && outcome !== undefined) {
+        return null
+      }
+      const startedAt = optionalTimestamp(item.startedAt)
+      const settledAt = optionalTimestamp(item.settledAt)
+      if (startedAt === null || settledAt === null) {
+        return null
+      }
       result.push({
         workId,
         kind,
         phase,
         ...(outcome ? { outcome } : {}),
-        ...(typeof item.startedAt === 'number' ? { startedAt: item.startedAt } : {}),
-        ...(typeof item.settledAt === 'number' ? { settledAt: item.settledAt } : {})
+        ...(startedAt !== undefined ? { startedAt } : {}),
+        ...(settledAt !== undefined ? { settledAt } : {})
       })
     }
+    result.sort((left, right) =>
+      left.workId < right.workId ? -1 : left.workId > right.workId ? 1 : 0
+    )
     return result
   }
   const joinedChildren = readWork(record.joinedChildren ?? record.joined_children, 'joined-child')
@@ -69,10 +92,30 @@ export function providerCurrentTurnInventory(
   if (joinedChildren === null || residentBackground === null) {
     return null
   }
+  const startedAt = optionalTimestamp(record.startedAt)
+  if (startedAt === null) {
+    return null
+  }
   return {
     turnId,
-    ...(typeof record.startedAt === 'number' ? { startedAt: record.startedAt } : {}),
+    ...(startedAt !== undefined ? { startedAt } : {}),
     joinedChildren,
     residentBackground
   }
+}
+
+export function normalizeProviderTurnInventoryFields(
+  inventoryValue: unknown,
+  completeValue: unknown
+): ProviderTurnInventoryFields | null {
+  if (completeValue !== true) {
+    return inventoryValue === undefined ? {} : null
+  }
+  if (inventoryValue === null) {
+    return { providerTurnInventory: null, providerTurnInventoryComplete: true }
+  }
+  const inventory = providerCurrentTurnInventory(inventoryValue, true)
+  return inventory
+    ? { providerTurnInventory: inventory, providerTurnInventoryComplete: true }
+    : null
 }

@@ -27,6 +27,7 @@ import { createHash } from 'node:crypto'
 import type { AgentSubagentSnapshot, ParsedAgentStatusPayload } from './agent-status-types'
 import type { AgentProviderSessionMetadata } from './agent-session-resume'
 import type { AgentHookTarget } from './agent-hook-types'
+import type { ProviderCurrentTurnInventory } from './agent-hook-listener/provider-turn-evidence-types'
 
 // Why: the local hook server knows the discriminator from URL pathname routing
 // (`/hook/<source>`); the relay equally must tag each forwarded notification
@@ -91,6 +92,10 @@ export type AgentHookRelayEnvelope = {
   providerTurnId?: string
   /** Provider-owned terminal marker; optional for mixed-version relay peers. */
   providerTurnTerminal?: boolean
+  /** Complete provider inventory queried by the execution host. */
+  providerTurnInventory?: ProviderCurrentTurnInventory | null
+  /** True only when `providerTurnInventory` enumerates complete current provider state. */
+  providerTurnInventoryComplete?: true
   /** The row belongs to an observed Grok prompt boundary whose opaque id may be absent. */
   grokPromptBoundary?: true
   /** Active Claude compact generation, keyed by provider prompt identity. */

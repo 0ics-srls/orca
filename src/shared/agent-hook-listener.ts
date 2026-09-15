@@ -23,13 +23,18 @@ import {
   normalizeProviderTurnId,
   readProviderTurnEvidence
 } from './agent-hook-listener/provider-turn-evidence'
+import type { ProviderCurrentTurnInventory } from './agent-hook-listener/provider-turn-evidence-types'
 /** Canonical transport-agnostic normalization entry shared by main and relay listeners. */
 export function normalizeHookPayload(
   state: HookListenerState,
   source: AgentHookSource,
   body: unknown,
   expectedEnv: string,
-  options: { deferCompactOwnershipToClient?: boolean } = {}
+  options: {
+    deferCompactOwnershipToClient?: boolean
+    /** Optional complete inventory supplied by a provider query adapter. */
+    providerTurnInventory?: ProviderCurrentTurnInventory | null
+  } = {}
 ): AgentHookEventPayload | null {
   const envelope = parseHookEnvelope(state, source, body, expectedEnv)
   if (!envelope) {
@@ -183,6 +188,12 @@ export function normalizeHookPayload(
       source === 'grok' ? (grokActiveTurn?.promptId ?? providerPromptId) : providerPromptId,
     ...(providerTurnId ? { providerTurnId } : {}),
     ...(providerTurnTerminal ? { providerTurnTerminal: true } : {}),
+    ...(options.providerTurnInventory !== undefined
+      ? {
+          providerTurnInventory: options.providerTurnInventory,
+          providerTurnInventoryComplete: true as const
+        }
+      : {}),
     grokPromptBoundary: grokActiveTurn ? true : undefined,
     compactTrigger,
     toolUseId: readFirstString(hookPayloadRecord, ['tool_use_id', 'toolUseId']),
@@ -203,7 +214,17 @@ export function normalizeHookPayload(
     ...(providerSessionOnly ? { providerSessionOnly: true } : {}),
     payload: transportPayload
   }
-  const providerEvidence = readProviderTurnEvidence({ event: normalizedEvent }).evidence
+  const providerEvidence = readProviderTurnEvidence({
+    event: {
+      ...normalizedEvent,
+      ...(normalizedEvent.providerTurnInventoryComplete === true
+        ? {
+            currentTurnInventory: normalizedEvent.providerTurnInventory ?? null,
+            currentTurnInventoryComplete: true
+          }
+        : {})
+    }
+  }).evidence
   return providerEvidence.length > 0
     ? { ...normalizedEvent, providerTurnEvidence: providerEvidence }
     : normalizedEvent

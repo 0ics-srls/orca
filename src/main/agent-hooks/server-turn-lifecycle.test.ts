@@ -205,6 +205,29 @@ describe('AgentHookServer turn lifecycle integration', () => {
     )
   })
 
+  it('reconciles a complete remote inventory instead of treating a missing field as empty', () => {
+    const server = new AgentHookServer()
+    server.registerAgentTurnOwner(PANE, owner)
+    ingest(server, 'UserPromptSubmit', 'turn-inventory', { state: 'working' })
+
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'codex',
+        hookEventName: 'SessionIdle',
+        providerTurnInventoryComplete: true,
+        providerTurnInventory: null,
+        payload: { state: 'done', prompt: 'ship it', agentType: 'codex' }
+      },
+      'conn-c2'
+    )
+
+    expect(server.getAgentTurnLifecycleSnapshot(PANE)?.currentTurnId).toBeNull()
+    expect(server.getAgentTurnLifecycleSnapshot(PANE)?.turns).toContainEqual(
+      expect.objectContaining({ turnId: 'turn-inventory', phase: 'unresolved', outcome: null })
+    )
+  })
+
   it('bounds recovery custody and still accepts a later attributable terminal record', () => {
     const server = new AgentHookServer()
     server.registerAgentTurnOwner(PANE, owner)

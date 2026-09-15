@@ -188,6 +188,27 @@ describe('provider turn evidence adapter', () => {
         true
       )
     ).toBeNull()
+    expect(
+      providerCurrentTurnInventory(
+        {
+          turnId: 'turn-1',
+          joinedChildren: [{ id: 'child-1', phase: 'active', outcome: 'completed' }],
+          residentBackground: []
+        },
+        true
+      )
+    ).toBeNull()
+    expect(
+      providerCurrentTurnInventory(
+        {
+          turnId: 'turn-1',
+          startedAt: -1,
+          joinedChildren: [],
+          residentBackground: []
+        },
+        true
+      )
+    ).toBeNull()
 
     const noActiveTurn = readProviderTurnEvidence({
       event: event({
@@ -219,6 +240,72 @@ describe('provider turn evidence adapter', () => {
     })
     expect(malformedInventory.evidence).toEqual([])
     expect(malformedInventory.ignored).toBe('unsupported')
+  })
+
+  it('assigns distinct evidence identities to successive complete inventories', () => {
+    const first = readProviderTurnEvidence({
+      event: event({
+        hookEventName: undefined,
+        currentTurnInventoryComplete: true,
+        currentTurnInventory: {
+          turnId: 'turn-1',
+          joinedChildren: [{ workId: 'child-1', kind: 'joined-child', phase: 'active' }],
+          residentBackground: []
+        }
+      })
+    }).evidence[0]
+    const second = readProviderTurnEvidence({
+      event: event({
+        hookEventName: undefined,
+        currentTurnInventoryComplete: true,
+        currentTurnInventory: {
+          turnId: 'turn-1',
+          joinedChildren: [],
+          residentBackground: []
+        }
+      })
+    }).evidence[0]
+
+    expect(first?.kind).toBe('current-turn-inventory')
+    expect(second?.kind).toBe('current-turn-inventory')
+    expect(second?.eventId).not.toBe(first?.eventId)
+  })
+
+  it('canonicalizes inventory row order for replay dedupe', () => {
+    const first = readProviderTurnEvidence({
+      event: event({
+        hookEventName: undefined,
+        currentTurnInventoryComplete: true,
+        currentTurnInventory: {
+          turnId: 'turn-1',
+          joinedChildren: [
+            { workId: 'child-z', kind: 'joined-child', phase: 'active' },
+            { workId: 'child-a', kind: 'joined-child', phase: 'active' }
+          ],
+          residentBackground: []
+        }
+      })
+    }).evidence[0]
+    const second = readProviderTurnEvidence({
+      event: event({
+        hookEventName: undefined,
+        currentTurnInventoryComplete: true,
+        currentTurnInventory: {
+          turnId: 'turn-1',
+          joinedChildren: [
+            { workId: 'child-a', kind: 'joined-child', phase: 'active' },
+            { workId: 'child-z', kind: 'joined-child', phase: 'active' }
+          ],
+          residentBackground: []
+        }
+      })
+    }).evidence[0]
+
+    expect(second?.eventId).toBe(first?.eventId)
+    expect(second?.inventory?.joinedChildren.map((work) => work.workId)).toEqual([
+      'child-a',
+      'child-z'
+    ])
   })
 
   it('recovers a missed start only from a matching terminal record', () => {

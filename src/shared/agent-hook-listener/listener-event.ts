@@ -1,7 +1,7 @@
 import type { ParsedAgentStatusPayload } from '../agent-status-types'
 import type { AgentHookSource } from '../agent-hook-relay'
 import type { AgentProviderSessionMetadata } from '../agent-session-resume'
-import type { ProviderTurnEvidence } from './provider-turn-evidence'
+import type { ProviderCurrentTurnInventory, ProviderTurnEvidence } from './provider-turn-evidence'
 
 export type AgentHookEventPayload = {
   paneKey: string
@@ -30,6 +30,9 @@ export type AgentHookEventPayload = {
   providerTurnTerminal?: boolean
   /** Host-local provider facts. This is recomputed at each trust boundary and never persisted. */
   providerTurnEvidence?: readonly ProviderTurnEvidence[]
+  /** Complete provider inventory queried by the execution host; never infer completeness from omission. */
+  providerTurnInventory?: ProviderCurrentTurnInventory | null
+  providerTurnInventoryComplete?: true
   /** This row belongs to an observed Grok prompt boundary even when its opaque id is absent. */
   grokPromptBoundary?: true
   /** Active Claude compact generation, keyed by provider prompt identity. */

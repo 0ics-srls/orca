@@ -1590,6 +1590,12 @@ export class SshRelaySession {
             typeof envelope.hookEventName === 'string' ? envelope.hookEventName : undefined,
           source: envelope.source,
           providerPromptId: envelope.providerPromptId,
+          providerTurnId:
+            typeof envelope.providerTurnId === 'string' ? envelope.providerTurnId : undefined,
+          providerTurnTerminal: envelope.providerTurnTerminal === true ? true : undefined,
+          providerTurnInventory: envelope.providerTurnInventory,
+          providerTurnInventoryComplete:
+            envelope.providerTurnInventoryComplete === true ? true : undefined,
           grokPromptBoundary: envelope.grokPromptBoundary === true ? true : undefined,
           compactTrigger: envelope.compactTrigger,
           toolUseId: typeof envelope.toolUseId === 'string' ? envelope.toolUseId : undefined,

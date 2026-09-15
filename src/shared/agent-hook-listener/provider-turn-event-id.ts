@@ -10,8 +10,14 @@ export function providerTurnEventId(
   turnId: string | undefined,
   outcome: ProviderTurnOutcome | undefined,
   recordKind: 'event' | 'terminal-record' = 'event',
-  workId?: string
+  workId?: string,
+  /**
+   * Optional provider-owned event identity. Complete snapshots need their
+   * contents/cursor here: a pane can emit several different inventories for
+   * one turn and each must reach the reducer once.
+   */
+  eventFingerprint?: string
 ): string {
-  const raw = `provider-turn:${recordKind}:${source}:${paneKey}:${name}:${turnId ?? 'anonymous'}:${workId ?? 'root'}:${outcome ?? 'transition'}`
+  const raw = `provider-turn:${recordKind}:${source}:${paneKey}:${name}:${turnId ?? 'anonymous'}:${workId ?? 'root'}:${outcome ?? 'transition'}:${eventFingerprint ?? 'default'}`
   return boundedAgentTurnEvidenceId(raw)
 }

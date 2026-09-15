@@ -24,6 +24,7 @@ export type {
   ProviderWorkKind
 } from './provider-turn-evidence-types'
 export { providerCurrentTurnInventory } from './provider-turn-inventory'
+export { normalizeProviderTurnInventoryFields } from './provider-turn-inventory'
 export { readProviderTerminalTurnRecord } from './provider-turn-terminal-record'
 
 const TURN_START_EVENTS = new Set([
@@ -203,7 +204,19 @@ export function readProviderTurnEvidence(
     evidence.push({
       source,
       producerId: `provider:${source}`,
-      eventId: providerTurnEventId(source, input.event.paneKey, name, inventory?.turnId, undefined),
+      // Inventory is a complete snapshot, not a one-shot hook. Include its
+      // contents in the dedupe identity so later child/background changes and
+      // the eventual empty snapshot are not discarded as duplicates.
+      eventId: providerTurnEventId(
+        source,
+        input.event.paneKey,
+        name,
+        inventory?.turnId,
+        undefined,
+        'event',
+        undefined,
+        JSON.stringify(inventory ?? null)
+      ),
       observedAt,
       kind: 'current-turn-inventory',
       ...(inventory?.turnId ? { turnId: inventory.turnId } : {}),
