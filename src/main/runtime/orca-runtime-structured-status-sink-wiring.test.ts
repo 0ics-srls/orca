@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const installed = vi.hoisted(() => ({ deps: null as Record<string, unknown> | null }))
 
@@ -21,6 +21,7 @@ import { OrcaRuntimeService } from './orca-runtime'
 import type { StructuredAgentSessionStatusSink } from '../native-chat/agent-session-wire/structured-agent-session-status-feed'
 import { createLocalFileSink } from '../observability/local-file-sink'
 import { setActiveSink } from '../observability/tracer'
+import { setAppEnvironment } from '../../shared/app-environment'
 
 type OrcaRuntimeDeps = NonNullable<ConstructorParameters<typeof OrcaRuntimeService>[2]>
 
@@ -33,6 +34,18 @@ const AGENT_STATUS_STORE_DEPS = [
 ] as const satisfies readonly (keyof OrcaRuntimeDeps)[]
 
 const MAIN_ROOT = join(import.meta.dirname, '..')
+
+beforeAll(() => {
+  setAppEnvironment({
+    getPath: () => '/tmp',
+    getAppPath: () => '/tmp',
+    getVersion: () => '0.0.0-test',
+    isPackaged: () => false,
+    onWillQuit: () => {},
+    exit: () => {},
+    getAppMetrics: () => []
+  })
+})
 
 /** The text of the `new OrcaRuntimeService(...)` call in one entry point. */
 function runtimeConstruction(relativePath: string): string {
