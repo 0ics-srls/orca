@@ -78,4 +78,24 @@ describe('requestTerminalTabCloseFromRenderer', () => {
 
     await expect(pending).rejects.toThrow('terminal_tab_pinned')
   })
+
+  it('rejects and removes the pending listener when the renderer closes', async () => {
+    const { requestTerminalTabCloseFromRenderer } =
+      await import('./terminal-tab-close-request-relay')
+    const webContents = Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      send: vi.fn()
+    })
+    const mainWindow = Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      webContents
+    })
+    const pending = requestTerminalTabCloseFromRenderer(mainWindow as never, 'tab-closed')
+    expect(ipcEmitter.listenerCount('ui:terminalTabCloseResponse')).toBe(1)
+
+    mainWindow.emit('closed')
+
+    await expect(pending).rejects.toThrow('renderer_unavailable')
+    expect(ipcEmitter.listenerCount('ui:terminalTabCloseResponse')).toBe(0)
+  })
 })

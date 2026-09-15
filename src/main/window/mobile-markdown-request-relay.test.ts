@@ -67,4 +67,27 @@ describe('requestMobileMarkdownFromRenderer', () => {
 
     await expect(pending).resolves.toMatchObject({ content: '# ok' })
   })
+
+  it('rejects and removes the pending listener when the renderer is destroyed', async () => {
+    const { requestMobileMarkdownFromRenderer } = await import('./mobile-markdown-request-relay')
+    const mainWebContents = Object.assign(new EventEmitter(), {
+      send: vi.fn()
+    })
+    const mainWindow = Object.assign(new EventEmitter(), {
+      isDestroyed: () => false,
+      webContents: mainWebContents
+    })
+
+    const pending = requestMobileMarkdownFromRenderer(mainWindow as never, {
+      operation: 'read',
+      worktreeId: 'wt-1',
+      tabId: 'tab-md'
+    })
+    expect(ipcEmitter.listenerCount('ui:mobileMarkdownResponse')).toBe(1)
+
+    mainWebContents.emit('destroyed')
+
+    await expect(pending).rejects.toThrow('renderer_unavailable')
+    expect(ipcEmitter.listenerCount('ui:mobileMarkdownResponse')).toBe(0)
+  })
 })
