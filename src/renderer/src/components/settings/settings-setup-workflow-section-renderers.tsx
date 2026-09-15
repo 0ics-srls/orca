@@ -188,7 +188,7 @@ export function renderSessionHistorySettingsSection(
       title={translate('sessionHistory.settings.title', 'Agent Session History')}
       description={translate(
         'sessionHistory.settings.description',
-        'Each computer keeps its own index of the transcripts it owns. Turn on indexing here for this computer and for any paired Orca server.'
+        'Search everything your agents have said and done, on this computer and on any paired Orca server.'
       )}
       searchEntries={navigation.getSectionSearchEntries('session-history')}
     >
