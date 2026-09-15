@@ -12,7 +12,7 @@ The audit then reviewed every production `.addEventListener`, `Event` subscripti
 
 Findings:
 
-- Ten low-risk lifecycle leaks were fixed during the audit:
+- Eleven low-risk lifecycle leaks were fixed during the audit:
   - terminal editor close debounce timers are cleared on unmount (`7b527daf07`);
   - deferred Monaco diff-model disposal is coalesced and cancelled on unmount (`8613e91878`);
   - unexpected-signout auth retries are cancelled on unmount (`3ae769decd`);
@@ -21,7 +21,8 @@ Findings:
   - mobile-markdown and terminal-tab-close IPC relays settle and remove listeners on renderer teardown (`9e21318f86`);
   - the combined-diff external-file-change listener is disposed during Vite HMR (`b43e985388`);
   - contextual-tour Escape listener teardown resets its HMR guard (`3fe8f7b6eb`);
-  - activity pagehide listener teardown runs during Vite HMR (`a68b7aa080`).
+  - activity pagehide listener teardown runs during Vite HMR (`a68b7aa080`);
+  - keyboard-layout prefetch focus/API hooks are disposed during Vite HMR (`38e5dc8809`).
 - Repeated renderer listeners have effect cleanup (including terminal sessions, visibility hooks, resize/drag hooks, audio tracks, and primary-selection handling).
 - Main/relay abort listeners are one-shot or explicitly removed on settlement.
 - Browser grab overlays remove listeners in `freezeHighlight`/`cleanup`; repeated arming tears down the prior overlay.
