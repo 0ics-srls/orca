@@ -28,6 +28,9 @@ export function pushRegistrationMountAdapters(
       const results: Record<string, unknown> = {}
       return {
         action(name, args) {
+          if (name !== 'register' && name !== 'unregister') {
+            throw new Error(`Unknown push registration action: ${name}`)
+          }
           const request =
             name === 'unregister'
               ? push.sendUnregister(client, Number(args.timeoutMs ?? REGISTER_TIMEOUT_MS))

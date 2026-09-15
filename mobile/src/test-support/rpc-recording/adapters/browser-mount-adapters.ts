@@ -99,9 +99,6 @@ export function browserMountAdapters(
           if (name === 'mount') {
             return hook.mount()
           }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
           if (name === 'keyboard-text') {
             return performHookAction(() => commands.sendKeyboardText())
           }
@@ -118,9 +115,15 @@ export function browserMountAdapters(
           if (name === 'wheel') {
             return performHookAction(() => commands.sendWheel({ x: 40, y: 80 }, 0, 120, 1))
           }
-          return performHookAction(() =>
-            commands.sendPointerClick({ x: 40, y: 80 }, args.button === 'right' ? 'right' : 'left')
-          )
+          if (name === 'click') {
+            return performHookAction(() =>
+              commands.sendPointerClick(
+                { x: 40, y: 80 },
+                args.button === 'right' ? 'right' : 'left'
+              )
+            )
+          }
+          throw new Error(`Unknown browser command action: ${name}`)
         },
         state: () => ({
           busy,

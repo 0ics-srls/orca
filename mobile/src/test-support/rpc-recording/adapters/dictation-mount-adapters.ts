@@ -42,6 +42,9 @@ export function dictationMountAdapters(
       const results: Record<string, unknown> = {}
       return {
         action(name, args) {
+          if (name !== 'download' && name !== 'delete' && name !== 'configure' && name !== 'list') {
+            throw new Error(`Unknown dictation setup action: ${name}`)
+          }
           const modelId = String(args.modelId ?? MODEL_ID)
           const request =
             name === 'download'
@@ -66,7 +69,6 @@ export function dictationMountAdapters(
       ).startMobileDictationDesktopSession
       let generation = 1
       let activeId: string | null = DICTATION_ID
-      let enabled = true
       let started: unknown = 'unstarted'
       let idle = false
       return {
@@ -75,16 +77,15 @@ export function dictationMountAdapters(
             generation += 1
             return
           }
-          if (name === 'disable') {
-            enabled = false
-            return
+          if (name !== 'start') {
+            throw new Error(`Unknown dictation start action: ${name}`)
           }
           return start({
             client,
             dictationId: DICTATION_ID,
             generation: 1,
             getCurrentGeneration: () => generation,
-            getEnabled: () => enabled,
+            getEnabled: () => true,
             getActiveId: () => activeId,
             clearActiveId: (id: string) => {
               if (activeId === id) {
@@ -165,16 +166,16 @@ export function dictationMountAdapters(
           if (name === 'mount') {
             return hook.mount()
           }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
           if (name === 'start') {
             return performHookAction(() => session.start())
           }
           if (name === 'cancel') {
             return performHookAction(() => session.cancel())
           }
-          return performHookAction(() => session.stop())
+          if (name === 'stop') {
+            return performHookAction(() => session.stop())
+          }
+          throw new Error(`Unknown dictation session action: ${name}`)
         },
         state: () => ({
           status: session.status,

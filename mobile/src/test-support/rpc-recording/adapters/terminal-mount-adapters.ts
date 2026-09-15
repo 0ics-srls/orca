@@ -39,7 +39,7 @@ export function terminalMountAdapters(
       const subscribed = new Set([HANDLE])
       let accepted: unknown = 'unsent'
       return {
-        action: (name, args) =>
+        action: (_name, args) =>
           send({
             bytes: String(args.bytes ?? '[0n'),
             client,
@@ -99,7 +99,7 @@ export function terminalMountAdapters(
       const terminalRefs = { current: new Map([[HANDLE, terminalWebViewHandle(effect, VIEWPORT)]]) }
       const viewportRef: { current: { cols: number; rows: number } | null } = { current: null }
       const viewportMeasuredRef = { current: false }
-      let connState = 'connected'
+      const connState = 'connected'
       let notifications: ReturnType<typeof useRefit>
       const hook = hookMount(() => {
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies only the refs and callbacks the hook reads.
@@ -126,16 +126,10 @@ export function terminalMountAdapters(
           if (name === 'mount') {
             return hook.mount()
           }
-          if (name === 'reconnect') {
-            connState = 'disconnected'
-            hook.update()
-            connState = 'connected'
-            return hook.update()
+          if (name === 'height') {
+            return notifications.notifyTerminalFrameHeight(Number(args.height ?? 640))
           }
-          if (name === 'unmount') {
-            return hook.unmount()
-          }
-          return notifications.notifyTerminalFrameHeight(Number(args.height ?? 640))
+          throw new Error(`Unknown terminal viewport action: ${name}`)
         },
         state: () => ({ viewport: viewportRef.current, measured: viewportMeasuredRef.current }),
         dispose: hook.unmount

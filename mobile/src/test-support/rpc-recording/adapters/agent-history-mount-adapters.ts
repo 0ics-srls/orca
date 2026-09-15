@@ -2,7 +2,6 @@ import { createElement } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import type { OperationExposure } from '../operation-module-loader'
 import type { MountAdapter, MountContext } from '../recording-scenario'
-import { performHookAction } from '../hook-mount'
 import type { operationModuleLoader } from '../operation-module-loader'
 
 const HOST_ID = 'host-1'
@@ -104,28 +103,13 @@ export function agentHistoryMountAdapters(
             })
             return
           }
-          if (name === 'unmount') {
-            act(() => {
-              renderer?.unmount()
-              renderer = undefined
-            })
-            return
-          }
           if (name === 'worktrees-loaded') {
             worktrees = WORKTREES
             worktreesLoaded = true
             act(() => renderer?.update(element()))
             return
           }
-          if (name === 'select-scope') {
-            return performHookAction(() =>
-              observed.history!.onSelectScope(args.scope === 'all' ? 'all' : 'workspace')
-            )
-          }
-          if (name === 'retry') {
-            return performHookAction(() => observed.history!.retry())
-          }
-          return performHookAction(() => observed.history!.onRefresh())
+          throw new Error(`Unknown agent history action: ${name}`)
         },
         state: () => ({
           scope: observed.history!.scope,
