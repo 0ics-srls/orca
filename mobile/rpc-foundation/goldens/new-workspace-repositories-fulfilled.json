@@ -1,0 +1,145 @@
+{
+  "operation": "workspace.repositories",
+  "family": "components.new-workspace-repositories",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "4c01dd266bfd945d6810a267110e02b020b35814b6b8eed80be984d40ea52bbd",
+  "adapterSha256": "6abaa10f7eb5a9f0fcc678c9b33c632dc9c12a1f6fd2889a8b89365a8e6e7363",
+  "scenarioSha256": "41ac47445191a24de5e48877478bdab6fd9c030f48024ea43e053de7b6b68bb5",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "26accd69bc48": {
+      "name": "repo.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "repo.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "pending",
+        "startedAt": 0
+      }
+    },
+    "288dd3529eaf": {
+      "name": "repo.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "repo.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "repos": [
+              {
+                "displayName": "alpha",
+                "id": "repo-a",
+                "path": "/tmp/repo-a"
+              },
+              {
+                "displayName": "beta",
+                "id": "repo-b",
+                "path": "/tmp/repo-b"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "4e8b4e3e814f": {
+      "crash": {
+        "$rpc": "null"
+      },
+      "loading": true,
+      "repos": [],
+      "selected": {
+        "$rpc": "null"
+      }
+    },
+    "6bdbf70bafa2": {
+      "name": "repo.list#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+    },
+    "eac6e56c2d2c": {
+      "crash": {
+        "$rpc": "null"
+      },
+      "loading": false,
+      "repos": ["repo-a", "repo-b"],
+      "selected": "repo-b"
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "new-workspace-repositories-fulfilled",
+    "checkpoints": [
+      {
+        "id": "loading",
+        "observation": {
+          "sender": ["26accd69bc48"],
+          "payloads": ["6bdbf70bafa2"],
+          "settlements": {
+            "mount": "eb79a9b3682a"
+          },
+          "state": "4e8b4e3e814f",
+          "effects": []
+        }
+      },
+      {
+        "id": "selected",
+        "observation": {
+          "sender": ["288dd3529eaf"],
+          "payloads": ["6bdbf70bafa2"],
+          "settlements": {
+            "mount": "eb79a9b3682a"
+          },
+          "state": "eac6e56c2d2c",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

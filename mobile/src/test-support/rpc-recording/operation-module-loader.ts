@@ -26,10 +26,12 @@ const SHARED_MODULE = 'mobile/src/transport/rpc-delivery-ambiguity.ts'
 export function operationModuleLoader(
   root: string,
   mutation?: OperationMutation,
-  exposures: readonly OperationExposure[] = []
+  exposures: readonly OperationExposure[] = [],
+  /** What this recording declared about its device, overlaid on the refusing defaults. */
+  declared: ReadonlyMap<string, unknown> = new Map()
 ) {
   const cache = new Map<string, OperationModule>()
-  const natives = nativeMountingSubstitutes()
+  const natives = new Map([...nativeMountingSubstitutes(), ...declared])
   const sharedModulePath = resolve(root, SHARED_MODULE)
   let mutationCount = 0
   function pathFor(base: string): string {
@@ -53,7 +55,16 @@ export function operationModuleLoader(
       return new Proxy(
         {},
         {
-          get: () => {
+          // `__esModule` is the module system's interop marker, not a native API. Refusing it kills
+          // a default import inside `__importDefault`, before any member is read; answering
+          // `undefined` defers the refusal to the first real member, the same rule the substitute
+          // traps follow. A namespace import is the one shape that loses it: `__importStar` copies
+          // own keys into a fresh object, of which there are none, so an unlisted member of an
+          // `import * as` reads back `undefined` and fails at the call instead of at the read.
+          get: (_target, key) => {
+            if (key === '__esModule') {
+              return undefined
+            }
             throw new Error(`Unspecified native mounting dependency: ${name}`)
           }
         }
@@ -133,7 +144,9 @@ export function operationModuleLoader(
       compilerOptions: {
         module: ts.ModuleKind.CommonJS,
         target: ts.ScriptTarget.ES2022,
-        jsx: ts.JsxEmit.React
+        // Product sources use the automatic runtime and never import React, so a classic
+        // `React.createElement` emit throws `React is not defined` on the first screen render.
+        jsx: ts.JsxEmit.ReactJSX
       }
     }).outputText
     const exposure = exposures.find(([suffix]) => file.endsWith(suffix))?.[1] ?? ''

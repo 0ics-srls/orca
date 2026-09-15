@@ -8,11 +8,49 @@ logic.
 The module loader transpiles the real source with TypeScript and resolves task barrels
 lazily so unused native views do not need a device. Accessing an unspecified native import
 fails. The history metadata function is exposed to its adapter without rewriting its body.
+JSX compiles through the automatic runtime, because product sources use it and never import React;
+a classic `React.createElement` emit throws `React is not defined` on the first screen render.
 
 The transport reuses `createStableLogicalRpcClient`, `projectMobileRpcRequestParams`
 (through that client), `RpcClientRequestTracker`, and the delivery-unknown marker. Hook
 mounting follows `use-mobile-native-chat-file-search.test.ts`; physical session mounting
 follows `stable-logical-rpc-client.test.ts`. Neither test exported a reusable mount utility.
+
+## Mounting a screen
+
+`screenMount` mounts a component rather than a hook, and `projectMountedScreen` reads back what it
+rendered: the inert primitives it chose, the copy it put on them, the labels it gave them, and the
+crash instead if a reply took it down. A screen that throws is a recording, not a suite failure —
+several reply partitions do exactly that, and refusing to record them would leave the shapes that
+break a screen the only ones this oracle cannot see.
+
+The view packages a screen imports are in `screen-native-substitutes.ts`, under the table's usual
+rule: only what a screen reads is listed, the rest throws. Every element there is inert. It renders
+its children and keeps its props where a projection can read them, and does nothing else: no
+callback it is handed is ever invoked, nothing is measured, no gesture is recognised, no animation
+runs and no navigation happens. `renderedElementProps` is the consequence — an inert list never
+calls `renderItem`, so the data it was handed is the only record of what the screen would have
+drawn. `screen-native-substitutes.test.ts` is the census; it renders every element with a callback
+prop and a render callback as children and fails if either is called.
+
+Two members deserve naming because inertness costs something. `InteractionManager.runAfterInteractions`
+never runs its task, so a call site that defers a request behind one records no send; and
+`Alert.alert` never answers, so a flow gated on a confirmation stops there. Both are deliberate —
+a recording that needs either has to schedule it on the pinned clock or drive it through the
+operation's own API — but neither is a substitute for noticing.
+
+## What a scenario declares about its device
+
+Two device surfaces are backed by the scenario instead of refused: `deviceStore` backs
+`@react-native-async-storage/async-storage`, and `deviceState.notificationTray` backs
+`expo-notifications`. Undeclared, both stay exactly as they were — a throwing store and an unlisted
+package — so no existing recording changes and no new one reaches a device by accident.
+
+Reads resolve the declared entry or `null`, and never a write. A write that fed back into a read
+would let a later read return a byte nothing declared, which is the device back inside the
+recording; writes are recorded as effects instead, where they are observed rather than assumed.
+That is the whole point of the declaration: every byte a read can return is visible in the scenario
+file, and `scenarioSha256` pins it per golden like any other scenario field.
 
 ## Scenario actions
 
@@ -365,9 +403,10 @@ so closing them needs new adapter capability rather than another scenario. Anyon
 call sites should not assume the recordings will notice a change here:
 
 - **`use-host-repo-metadata.ts` cross-module cache write.** Deleting `setCachedRepos(...)` survives.
-  No adapter mounts `useNewWorkspaceRepositories`, which is the consumer that reads that cache to
-  open workspace creation without waiting, so the write has no observer. Closing it needs a
-  cache-consumer mount after the metadata fetch.
+  `workspace.repositories` now mounts `useNewWorkspaceRepositories`, which is the consumer that
+  reads that cache to open workspace creation without waiting, but no recording runs the metadata
+  fetch and that consumer in the same mount, so the write still has no observer. Closing it needs
+  one recording that does both, not another scenario for either.
 - **`use-pr-bot-author-overrides.ts` client-identity guard.** Forcing
   `sourceClientRef.current !== client` to `false` survives. The adapter closes over one client
   object: `reset` changes only the refresh key, `cutover` migrates the same stable logical client,
