@@ -327,13 +327,11 @@ describe('createWorkspaceFromComposerSource', () => {
 
     expect(result).toEqual({ worktreeId: 'wt-branch-launch', name: 'topic' })
     expect(calls[0]!.method).toBe('agent.launch')
-    const params = calls[0]!.params as {
-      agent: string
-      target: { create: Record<string, unknown> }
-    }
-    expect(params.agent).toBe('claude')
-    expect(params.target.create).toMatchObject({ baseBranch: 'main', name: 'topic' })
-    expect('startupAgent' in params.target.create).toBe(false)
+    expect(calls[0]?.params).toMatchObject({
+      agent: 'claude',
+      target: { create: { baseBranch: 'main', name: 'topic' } }
+    })
+    expect(calls[0]?.params).not.toHaveProperty(['target', 'create', 'startupAgent'])
   })
 
   it('routes a reused branch through agent.launch without spending the retry budget', async () => {
@@ -375,9 +373,10 @@ describe('createWorkspaceFromComposerSource', () => {
     })
 
     expect(calls[0]!.method).toBe('agent.launch')
-    const params = calls[0]!.params as { target: { create: Record<string, unknown> } }
-    expect(params.target.create).toMatchObject({ name: 'topic', branchNameOverride: 'topic' })
-    expect('startupAgent' in params.target.create).toBe(false)
+    expect(calls[0]?.params).toMatchObject({
+      target: { create: { name: 'topic', branchNameOverride: 'topic' } }
+    })
+    expect(calls[0]?.params).not.toHaveProperty(['target', 'create', 'startupAgent'])
   })
 
   it('keeps a work-item create on worktree.create so its unsent draft survives', async () => {

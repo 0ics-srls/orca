@@ -25,8 +25,16 @@ function fakeClient(script: (method: string, call: number) => unknown, calls: Ca
         }
       }
       return { id: '1', ok: true, result, _meta: { runtimeId: 'r' } }
-    }
-  } as unknown as RpcClient
+    },
+    subscribe: () => () => {},
+    updateTerminalSubscriptionViewport: () => {},
+    getState: () => 'connected',
+    getReconnectAttempt: () => 0,
+    getLastConnectedAt: () => null,
+    onStateChange: () => () => {},
+    notifyForeground: () => {},
+    close: () => {}
+  }
 }
 
 describe('createBlankWorkspace', () => {
@@ -144,23 +152,23 @@ describe('createBlankWorkspace', () => {
     expect(result).toEqual({ worktreeId: 'wt-9', name: 'manatee' })
     expect(calls).toHaveLength(1)
     expect(calls[0]?.method).toBe('agent.launch')
-    const params = calls[0]?.params as {
-      agent: string
-      target: { kind: string; create: Record<string, unknown> }
-    }
-    expect(params.agent).toBe('claude')
-    expect(params.target.kind).toBe('create-worktree')
     // Everything the create needs survives the move; only the agent fields the launch owns go.
-    expect(params.target.create).toMatchObject({
-      repo: 'id:repo-2',
-      name: 'manatee',
-      setupDecision: 'run',
-      displayName: 'manatee',
-      displayNameKind: 'user',
-      comment: 'spike',
-      clientMutationId: expect.any(String)
+    expect(calls[0]?.params).toMatchObject({
+      agent: 'claude',
+      target: {
+        kind: 'create-worktree',
+        create: {
+          repo: 'id:repo-2',
+          name: 'manatee',
+          setupDecision: 'run',
+          displayName: 'manatee',
+          displayNameKind: 'user',
+          comment: 'spike',
+          clientMutationId: expect.any(String)
+        }
+      }
     })
-    expect('startupAgent' in params.target.create).toBe(false)
+    expect(calls[0]?.params).not.toHaveProperty(['target', 'create', 'startupAgent'])
   })
 
   it('keeps the agent-first create on a host that does not advertise agent.launch', async () => {
@@ -201,7 +209,7 @@ describe('createBlankWorkspace', () => {
     })
 
     expect(calls[0]?.method).toBe('worktree.create')
-    expect('startupAgent' in (calls[0]!.params as Record<string, unknown>)).toBe(false)
+    expect(calls[0]?.params).not.toHaveProperty('startupAgent')
   })
 
   it('keeps the name-collision retry when the create goes through agent.launch', async () => {
@@ -227,8 +235,7 @@ describe('createBlankWorkspace', () => {
 
     expect(result).toEqual({ worktreeId: 'wt-12', name: 'octopus-2' })
     expect(calls.map((call) => call.method)).toEqual(['agent.launch', 'agent.launch'])
-    const retry = calls[1]?.params as { target: { create: { name: string } } }
-    expect(retry.target.create.name).toBe('octopus-2')
+    expect(calls[1]?.params).toMatchObject({ target: { create: { name: 'octopus-2' } } })
   })
 
   it('downgrades to worktree.create when the host refuses the method itself', async () => {

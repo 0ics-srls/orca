@@ -60,6 +60,32 @@ describe('readAgentLaunchCreateOutcome', () => {
       expect(readAgentLaunchCreateOutcome(result)).toBeNull()
     }
   )
+
+  it('carries a terminal launch warning, so a workspace whose agent never started says why', () => {
+    // The warning passthrough landed on worktree.create while this route was being written, so it
+    // has to be carried here too: a launch can seat the workspace and still fail to start the pty,
+    // and dropping the reason is what leaves the phone on an unexplained empty session.
+    expect(
+      readAgentLaunchCreateOutcome({
+        worktreeId: 'wt-1',
+        outcome: { kind: 'terminal', handle: 'term-1', warning: 'No pty available' }
+      })
+    ).toEqual({ worktreeId: 'wt-1', warning: 'No pty available' })
+  })
+
+  it.each([
+    { label: 'blank', warning: '   ' },
+    { label: 'absent', warning: undefined },
+    { label: 'non-string', warning: 7 },
+    { label: 'structured-surface', warning: 'ignored', kind: 'structured' }
+  ])('reports no warning when it is $label', ({ warning, kind }) => {
+    expect(
+      readAgentLaunchCreateOutcome({
+        worktreeId: 'wt-1',
+        outcome: { kind: kind ?? 'terminal', handle: 'term-1', warning }
+      })
+    ).toEqual({ worktreeId: 'wt-1' })
+  })
 })
 
 describe('isAgentLaunchUnsupportedRefusal', () => {

@@ -26,7 +26,12 @@ export type WorktreeCreateAgentLaunch = {
   supported: boolean | Promise<boolean>
 }
 
-export type AgentLaunchCreateOutcome = { worktreeId: string; warning?: string }
+/** `worktreeId` is tied to the shared contract so a change to it fails this reader's typecheck
+ *  rather than silently passing a differently-typed field through. */
+export type AgentLaunchCreateOutcome = {
+  worktreeId: AgentLaunchResult['worktreeId']
+  warning?: string
+}
 
 export function agentLaunchCreateParams(
   agent: TuiAgent,
@@ -47,19 +52,34 @@ export function agentLaunchCreateParams(
  * destination — a create-time guess would just race the snapshot that already knows.
  */
 export function readAgentLaunchCreateOutcome(result: unknown): AgentLaunchCreateOutcome | null {
-  if (!result || typeof result !== 'object') {
+  if (!result || typeof result !== 'object' || !('worktreeId' in result)) {
     return null
   }
-  const receipt = result as Partial<AgentLaunchResult>
-  const worktreeId = receipt.worktreeId
+  const worktreeId = result.worktreeId
   if (typeof worktreeId !== 'string' || !worktreeId.trim()) {
     return null
   }
-  // Why: a launch can seat the workspace and still fail to start the terminal (pty exhaustion).
-  // Dropping the warning is what lands the phone on an unexplained empty session.
-  const outcome = receipt.outcome
-  const warning = outcome?.kind === 'terminal' ? (outcome.warning ?? '').trim() : ''
+  const warning = terminalLaunchWarning(result)
   return { worktreeId, ...(warning ? { warning } : {}) }
+}
+
+/**
+ * The startup failure a terminal launch reports: the workspace exists, the agent did not start
+ * (pty exhaustion). Dropping it is what lands the phone on an unexplained empty session.
+ *
+ * Narrowed rather than asserted, because the payload is whatever the host sent — a reader that
+ * claims the contract's shape without checking it is how a malformed reply reaches the UI as a
+ * TypeError instead of a message.
+ */
+function terminalLaunchWarning(result: object): string {
+  if (!('outcome' in result) || !result.outcome || typeof result.outcome !== 'object') {
+    return ''
+  }
+  const outcome = result.outcome
+  if (!('kind' in outcome) || outcome.kind !== 'terminal') {
+    return ''
+  }
+  return 'warning' in outcome && typeof outcome.warning === 'string' ? outcome.warning.trim() : ''
 }
 
 /**
