@@ -2,6 +2,7 @@ import { hookMount, performHookAction } from '../hook-mount'
 import { observableModel, projectObservable } from '../observable-model'
 import type { MountAdapter, MountContext, MountedOperation } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
+import type { PartialRecorderFixture } from '../../recorder-fixture-shape'
 
 const REPO_ID = 'repo-1'
 
@@ -27,10 +28,14 @@ type ModelHookSpec<Actions> = {
   readonly state: (model: Record<string, unknown>) => Record<string, unknown>
 }
 
-/** The recorder supplies only the members the mounted action reads; completing the fixture into a
- * full domain object would invent data no scenario observes. */
-function mountFixture<T>(value: unknown): T {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries every member the action it is passed to reads.
+/**
+ * The recorder supplies only the members the mounted action reads; completing the fixture into a
+ * full domain object would invent data no scenario observes. `NoInfer` makes the target the
+ * parameter's type rather than the fixture's, so a member the real type does not have is an error
+ * here instead of a silently wrong recording.
+ */
+function mountFixture<T>(value: PartialRecorderFixture<NoInfer<T>>): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: checked as a deep subset of T above; the recorder supplies every member the action reads.
   return value as T
 }
 
@@ -97,17 +102,19 @@ export function taskListMountAdapters(
         selectedLinearTeamIds: new Set<string>(),
         selectedLinearWorkspaceId: null
       },
-      actions: ({ actions, model }) => ({
+      actions: ({ actions }) => ({
         'linear-context': () => actions().loadLinearContext(),
         'persist-teams': () =>
           actions().persistLinearTeamSelection(
             new Set(['team-1']),
             mountFixture([{ id: 'team-1' }, { id: 'team-2' }])
           ),
+        // `context.client` rather than `model.client`: the model holds that same client under an
+        // `unknown` fixture record, and reading it there would need a cast the context does not.
         'github-page': () =>
-          actions().fetchGitHubItemsPage(mountFixture(model.client), mountFixture([HOSTED_REPO])),
+          actions().fetchGitHubItemsPage(context.client, mountFixture([HOSTED_REPO])),
         'github-count': () =>
-          actions().countGitHubItems(mountFixture(model.client), mountFixture([HOSTED_REPO]))
+          actions().countGitHubItems(context.client, mountFixture([HOSTED_REPO]))
       }),
       state: (model) => ({
         connected: model.linearConnected,
