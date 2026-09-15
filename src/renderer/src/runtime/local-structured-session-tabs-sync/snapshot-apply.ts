@@ -30,6 +30,7 @@ import { forgetRetiredEpochRepairsOutside } from './retired-epoch-repair'
 import { projectLocalStructuredSessionTabs } from './snapshot-projection'
 import { hostSnapshotAffirmsWorktreeContents } from '../host-session-snapshot-authority'
 import {
+  beginStructuredAgentSessionAuthoritativeInventory,
   hasStructuredAgentSessionLaunchCancellationTombstone,
   markStructuredAgentSessionLaunchPublished,
   retireAbsentStructuredAgentSessionLaunchCancellationTombstones
@@ -52,6 +53,8 @@ export type StructuredSessionSnapshotApplyOptions = {
    * whereas a subscription frame can be, and stays fenced.
    */
   authoritative?: boolean
+  /** Sequence allocated when the inventory request began, before a close can race its reply. */
+  authoritativeInventory?: number
   /** Called for each snapshot the retired-epoch fence rejects; the repair lane listens here. */
   onRetiredEpochDrop?: (worktreeId: string, publicationEpoch: string) => void
   /** Collects accepted publications so lifecycle listeners run after the store patch settles. */
@@ -87,7 +90,8 @@ export function applyStructuredSessionTabSnapshots(
         snapshots.flatMap((snapshot) =>
           snapshot.tabs.filter((tab) => tab.type === 'agent-session').map((tab) => tab.sessionId)
         )
-      )
+      ),
+      options.authoritativeInventory ?? beginStructuredAgentSessionAuthoritativeInventory()
     )
   }
 }

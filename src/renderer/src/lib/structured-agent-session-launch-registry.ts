@@ -9,13 +9,16 @@ import type {
 import {
   deleteStructuredAgentLaunchRecord,
   hasStructuredAgentLaunchCancellationTombstonePersisted,
-  markStructuredAgentLaunchCancelledPersisted,
   readStructuredAgentLaunchRecord,
-  retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted,
-  retireStructuredAgentLaunchCancellationTombstonePersisted,
   writeStructuredAgentLaunchRecord,
   type StructuredAgentLaunchPersistedRecord
 } from './structured-agent-session-launch-persistence'
+import {
+  markStructuredAgentLaunchCancellation,
+  resetStructuredAgentLaunchCancellationForTests,
+  retireAbsentStructuredAgentLaunchCancellations,
+  retireStructuredAgentLaunchCancellation
+} from './structured-agent-session-launch-cancellation'
 
 export type StructuredLaunchState = StructuredLaunchRecoveryState & {
   identity: string
@@ -40,6 +43,7 @@ export function resetStructuredAgentLaunchRegistryForTests(): void {
   pendingStructuredLaunchesByIdentity.clear()
   structuredLaunchesBySessionId.clear()
   structuredLaunchListeners.clear()
+  resetStructuredAgentLaunchCancellationForTests()
 }
 
 export function notifyStructuredLaunchListeners(): void {
@@ -211,14 +215,16 @@ function markStructuredAgentSessionLaunchCancelledInternal(
   notify: boolean
 ): boolean {
   const alreadyCancelled = hasStructuredAgentLaunchCancellationTombstonePersisted(sessionId)
-  markStructuredAgentLaunchCancelledPersisted(sessionId)
   const state = getStructuredLaunchStateBySessionId(sessionId)
   if (matchesLaunchWorktree(state, worktreeId) && state) {
+    markStructuredAgentLaunchCancellation(sessionId, alreadyCancelled, state.promise)
     state.cancelled = true
     state.callers.outcome = 'cancelled'
     // The tombstone is the durable authority; drop the in-memory launch so bulk closes cannot
     // retain a dead promise for the lifetime of the renderer.
     deleteStructuredLaunchStateIfCurrent(state)
+  } else if (!alreadyCancelled) {
+    markStructuredAgentLaunchCancellation(sessionId, alreadyCancelled)
   }
   if (!alreadyCancelled && notify) {
     notifyStructuredLaunchListeners()
@@ -255,16 +261,19 @@ export function retireStructuredAgentSessionLaunchCancellationTombstone(
   if (!hasStructuredAgentSessionLaunchCancellationTombstone(worktreeId, sessionId)) {
     return false
   }
-  retireStructuredAgentLaunchCancellationTombstonePersisted(sessionId)
+  retireStructuredAgentLaunchCancellation(sessionId)
   notifyStructuredLaunchListeners()
   return true
 }
 
 export function retireAbsentStructuredAgentSessionLaunchCancellationTombstones(
-  publishedSessionIds: ReadonlySet<string>
+  publishedSessionIds: ReadonlySet<string>,
+  authoritativeInventory: number
 ): boolean {
-  const changed =
-    retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted(publishedSessionIds)
+  const changed = retireAbsentStructuredAgentLaunchCancellations(
+    publishedSessionIds,
+    authoritativeInventory
+  )
   if (changed) {
     notifyStructuredLaunchListeners()
   }
@@ -286,15 +295,4 @@ export function getStructuredAgentLaunchStatus(
     return 'idle'
   }
   return states.some((state) => state.visibilityUnknown) ? 'unknown' : 'pending'
-}
-
-export function useStructuredAgentLaunchStatus(
-  worktreeId: string,
-  agent: AgentSessionHandleProvider
-): StructuredAgentLaunchStatus {
-  return useSyncExternalStore(
-    subscribeStructuredAgentLaunchStatus,
-    () => getStructuredAgentLaunchStatus(worktreeId, agent),
-    () => 'idle'
-  )
 }

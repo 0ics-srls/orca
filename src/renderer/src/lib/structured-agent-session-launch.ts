@@ -50,10 +50,10 @@ export {
   shouldRetainStructuredAgentSessionLaunchTab,
   subscribeStructuredAgentLaunchStatus,
   useStructuredAgentSessionLaunchLifecycle,
-  useStructuredAgentLaunchStatus,
   type StructuredAgentLaunchStatus,
   type StructuredAgentSessionLaunchLifecycle
 } from './structured-agent-session-launch-registry'
+export { useStructuredAgentLaunchStatus } from './structured-agent-session-launch-status'
 
 type StructuredLaunchStateResult = {
   state: StructuredLaunchState

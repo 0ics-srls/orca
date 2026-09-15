@@ -6,6 +6,7 @@ import {
   localStructuredSessionGeneration
 } from './inventory-generation-fence'
 import { applyStructuredSessionTabSnapshots } from './snapshot-apply'
+import { beginStructuredAgentSessionAuthoritativeInventory } from '../../lib/structured-agent-session-launch-cancellation'
 
 type StructuredSessionInventoryResponse = {
   snapshots?: RuntimeMobileSessionTabsResult[]
@@ -46,6 +47,8 @@ export function refreshLocalStructuredSessionTabs(
   expectedGeneration = localStructuredSessionGeneration(),
   options: { authoritative?: boolean } = {}
 ): Promise<RuntimeMobileSessionTabsResult[]> {
+  // Capture request order before IPC: a reply that began before a close cannot retire its fence.
+  const authoritativeInventory = beginStructuredAgentSessionAuthoritativeInventory()
   return window.api.runtime
     .call({ method: 'session.tabs.listAll', params: {} })
     .then((response) => {
@@ -57,7 +60,8 @@ export function refreshLocalStructuredSessionTabs(
       if (isCurrentLocalStructuredSessionGeneration(expectedGeneration)) {
         applyStructuredSessionTabSnapshots(snapshots, undefined, {
           ...options,
-          authoritative: options.authoritative === true || result.authoritative === true
+          authoritative: options.authoritative === true || result.authoritative === true,
+          authoritativeInventory
         })
       }
       return snapshots
