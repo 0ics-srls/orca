@@ -1,4 +1,4 @@
-import type { AgentStatus } from '../../shared/agent-detection'
+import { detectAgentStatusFromTitle, type AgentStatus } from '../../shared/agent-detection'
 import { isFreshNonDoneAgentStatus } from '../../shared/agent-status-freshness'
 import type { AgentStatusState } from '../../shared/agent-status-types'
 import { getAgentReadinessCapability } from '../../shared/agent-readiness-capabilities'
@@ -111,6 +111,18 @@ export function observeTuiIdle(input: TuiIdleSatisfactionInput): TuiIdleObservat
   const bodyAgent = input.positiveBodyEvidenceAgent ?? agent
   if (hasFreshWorkingFirstPartyStatus(input.firstPartyStatus)) {
     return { state: 'busy', source: 'first-party', agent }
+  }
+  // A provider-owned working title is a positive busy observation for title-capable launch
+  // paths. Automation consumers use this edge to distinguish a real working turn from an
+  // unknown/unsupported pane; it never satisfies `tui-idle` and therefore cannot prove readiness.
+  if (
+    agent &&
+    supportsEvidence(agent, 'title') &&
+    [input.rendererTitle, input.record.lastOscTitle].some(
+      (title) => title && detectAgentStatusFromTitle(title) === 'working'
+    )
+  ) {
+    return { state: 'busy', source: 'title', agent }
   }
   if (hasExplicitIdleTitle(input.record, input.rendererTitle) && supportsEvidence(agent, 'title')) {
     return { state: 'ready', source: 'title', agent }

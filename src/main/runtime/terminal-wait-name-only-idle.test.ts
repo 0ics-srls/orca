@@ -125,6 +125,18 @@ describe('tui-idle evidence ranking', () => {
     ).resolves.toMatchObject({ satisfied: true })
   })
 
+  it('reports an explicit provider working title as busy instead of unknown', async () => {
+    const pty = makeTuiIdlePty({ lastAgentStatus: 'working', lastOscTitle: '⠋ Codex' })
+    const { wait } = createWait({ pty, agent: 'codex' })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 100 })
+
+    await vi.advanceTimersByTimeAsync(100)
+    await expect(result).resolves.toMatchObject({
+      satisfied: false,
+      readiness: { state: 'busy', source: 'title', agent: 'codex' }
+    })
+  })
+
   it('accepts a provider-specific ready screen when launch metadata is absent', async () => {
     const pty = makeTuiIdlePty({
       preview: 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'

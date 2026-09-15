@@ -23,7 +23,7 @@ type FakeWaiter = {
 
 function createFakeRuntime(
   initial: Partial<FakePane>,
-  readinessOptions: { resolveUnknown?: boolean } = {}
+  readinessOptions: { resolveUnknown?: boolean; resolveBusy?: boolean } = {}
 ) {
   const pane: FakePane = {
     lastAgentStatus: null,
@@ -59,6 +59,12 @@ function createFakeRuntime(
         return Promise.resolve({
           satisfied: false,
           readiness: { state: 'unknown' as const }
+        })
+      }
+      if (readinessOptions.resolveBusy && waitOptions?.timeoutMs !== undefined) {
+        return Promise.resolve({
+          satisfied: false,
+          readiness: { state: 'busy' as const }
         })
       }
       return new Promise((resolve, reject) => {
@@ -207,6 +213,22 @@ describe('createRuntimeAutomationRunTerminalObserver', () => {
     await vi.advanceTimersByTimeAsync(10)
     expect(run.settled[0]?.status).toBe('completed')
     expect(run.settled[0]?.outputSnapshot?.content).toContain('previous run output')
+    await run.promise
+  })
+
+  it('accepts a title-only working observation before the pane returns to ready', async () => {
+    const runtime = createFakeRuntime(
+      { lastAgentStatus: null, paneTitle: '✳ Claude — working' },
+      { resolveBusy: true }
+    )
+    const run = observe(runtime)
+
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(run.settled).toEqual([])
+
+    runtime.setPane({ paneTitle: '✳ Claude — idle' })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(run.settled[0]?.status).toBe('completed')
     await run.promise
   })
 
