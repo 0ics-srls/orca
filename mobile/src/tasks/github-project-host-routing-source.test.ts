@@ -1,7 +1,9 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
+import { join, relative, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const readSource = (path: string): string => readFileSync(new URL(path, import.meta.url), 'utf8')
+const productRoot = resolve(import.meta.dirname, '..')
 const source = [
   readSource('./use-mobile-tasks-project-loading-actions.tsx'),
   readSource('./use-mobile-tasks-project-workspace-comment-actions.tsx'),
@@ -25,18 +27,52 @@ function sendsMethod(operations: string, operation: string, method: string): boo
   return offset !== -1 && operations.slice(offset, offset + 400).includes(`method: '${method}'`)
 }
 
+/** Every product file that could send a board request. Recorder fixtures are not call sites. */
+function productSources(directory: string): string[] {
+  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    if (entry.isDirectory()) {
+      return entry.name === 'test-support' ? [] : productSources(path)
+    }
+    return /\.tsx?$/.test(entry.name) && !entry.name.includes('.test.') ? [path] : []
+  })
+}
+
+/**
+ * The board's operations by the method each declares, never by the `githubProject` identifier
+ * prefix: renaming an operation off that prefix takes it out of a prefix match, so the rename can
+ * delete the host with this test still green. The method it sends is what routing follows.
+ */
+function projectOperations(): string[] {
+  const declarations = [...boardOperations.matchAll(/export const (\w+) =/g)]
+  return declarations
+    .filter((declaration, index) =>
+      boardOperations
+        .slice(declaration.index, declarations[index + 1]?.index ?? boardOperations.length)
+        .includes("method: 'github.project.")
+    )
+    .map((declaration) => declaration[1]!)
+}
+
 describe('mobile GitHub Project host routing boundary', () => {
   it('host-qualifies every Project RPC request', () => {
-    const calls = [...source.matchAll(/\b(githubProject[A-Za-z]+)\.request\(/g)]
-    expect(calls.length).toBeGreaterThan(10)
-    for (const call of calls) {
-      const request = source.slice(call.index, call.index + 700)
-      expect(request, `${call[1]} must carry a host`).toMatch(/\bhost\s*:/)
-      expect(
-        boardOperations.includes(`export const ${call[1]} =`),
-        `${call[1]} must be a declared Project operation`
-      ).toBe(true)
+    const operations = projectOperations()
+    expect(operations.length).toBeGreaterThan(10)
+    const unrouted: string[] = []
+    const wired = new Set<string>()
+    for (const path of productSources(productRoot)) {
+      const contents = readFileSync(path, 'utf8')
+      for (const operation of operations) {
+        for (const call of contents.matchAll(new RegExp(`\\b${operation}\\s*\\.request\\(`, 'g'))) {
+          wired.add(operation)
+          if (!/\bhost\s*:/.test(contents.slice(call.index, call.index + 700))) {
+            unrouted.push(`${relative(productRoot, path)} sends ${operation} with no host`)
+          }
+        }
+      }
     }
+    expect(unrouted).toEqual([])
+    expect(operations.filter((operation) => !wired.has(operation))).toEqual([])
   })
 
   it('pins Project-row PR actions to the row repository identity', () => {
