@@ -26,24 +26,8 @@ function refusalText(value: RecordedValue): boolean {
   return typeof value === 'object' && value !== null && Object.values(value).some(refusalText)
 }
 
-function detachedRejection(effects: RecordedValue): boolean {
-  return (
-    Array.isArray(effects) &&
-    effects.some(
-      (effect) =>
-        typeof effect === 'object' &&
-        effect !== null &&
-        !Array.isArray(effect) &&
-        effect.name === 'unhandled-rejection'
-    )
-  )
-}
-
 function failures(at: string, observation: Observation): string[] {
   const found: string[] = []
-  if (detachedRejection(observation.effects)) {
-    found.push(`${at}: unhandled-rejection effect`)
-  }
   for (const field of OBSERVATION_FIELDS) {
     if (refusalText(observation[field])) {
       found.push(`${at}.${field}: recorder refused to project a value`)
@@ -53,27 +37,32 @@ function failures(at: string, observation: Observation): string[] {
 }
 
 /**
- * A recorder failure settles as data — a captured rejection, a `pending` action — so `--record`
- * writes it and the suite goes green over it. Two adapters shipped that way (#20667, and the
- * worktree catalog), and a revert plus a re-record would restore either one silently.
+ * A refused projection settles as data — the throw is captured as an effect and the action stays
+ * `pending` — so `--record` writes it and the suite goes green over it. Two adapters shipped that
+ * way (#20667, and the worktree catalog), and a revert plus a re-record would restore either one
+ * silently. A detached rejection is not banned here: recording one is how a real main bug gets
+ * pinned, and `unhandled-recording.test.ts` pins the capture itself.
  */
 describe('recorder failures never reach a golden', () => {
-  it('records no detached rejection and no refused projection', () => {
+  it('records no refused projection in any observation field', () => {
     const ids = readdirSync(directory)
       .filter((file) => file.endsWith('.json'))
       .map((file) => file.replace(/\.json$/, ''))
 
-    // Positive control: absence proves nothing unless both detectors fire on the shapes they name.
+    // Positive control: absence proves nothing unless the detector fires. `effects` carries the
+    // shape both real defects took — the refusal captured as the message of a recorded error.
     const seeded: Observation = {
       sender: [],
       payloads: [],
-      settlements: { fetch: { status: 'rejected' } },
-      state: { fetched: 'Unsupported observation: function' },
-      effects: [{ name: 'unhandled-rejection', value: {} }]
+      settlements: { fetch: { status: 'pending' } },
+      state: { fetched: 'Observation requires an explicit projection for non-plain objects' },
+      effects: [
+        { name: 'unhandled-rejection', value: { message: 'Unsupported observation: function' } }
+      ]
     }
     expect(failures('seeded', seeded)).toEqual([
-      'seeded: unhandled-rejection effect',
-      'seeded.state: recorder refused to project a value'
+      'seeded.state: recorder refused to project a value',
+      'seeded.effects: recorder refused to project a value'
     ])
 
     let checkpoints = 0
