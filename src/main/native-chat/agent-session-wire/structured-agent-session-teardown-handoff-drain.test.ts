@@ -155,9 +155,12 @@ describe('structured agent-session host teardown', () => {
       runtimeState: { stopLeaseRenewal: () => undefined, flushAllEventSinks: noop },
       handoffs: { stopTuiHistoryCatchup: () => undefined, drain: noop },
       tasks: { drainAttaches: noop },
-      evictOwnedSessions: noop
+      evictOwnedSessions: noop,
+      recordResumeMarkers: noop
     })
     expect(phases.map((phase) => phase.name)).toEqual([
+      // First: eviction settles every running turn, so the live signal is gone after it.
+      'record-resume-markers',
       'dispose-holds',
       'stop-lease-renewal',
       'stop-tui-catchup',
@@ -177,7 +180,8 @@ describe('structured agent-session host teardown', () => {
     vi.useFakeTimers()
     try {
       const teardown = host.flushAllStreamedEvents()
-      await vi.advanceTimersByTimeAsync(5_000)
+      // Covers both bounded phases: the resume-marker write gives up first, then the handoff drain.
+      await vi.advanceTimersByTimeAsync(10_000)
       await expect(teardown).resolves.toBeUndefined()
     } finally {
       vi.useRealTimers()

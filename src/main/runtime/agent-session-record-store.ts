@@ -16,6 +16,11 @@ import {
   type AgentSessionMutationOperationAdmission,
   type AgentSessionOperationAdmission
 } from './agent-session-operation-admission'
+import { createAgentSessionResumeMarkerStore } from './agent-session-resume-marker-store'
+import {
+  isAgentSessionClaimKeyVerifiable,
+  retireAgentSessionClaimKey
+} from './agent-session-claim-key-retention'
 import type { AgentSessionOwnerProbe } from '../../shared/agent-session-lease-adjudication'
 import { classifyObservedAgentSessionSpawnToken } from '../../shared/agent-session-lease-adjudication'
 import type { AgentSessionProviderHandleLink } from '../../shared/agent-session-provider-handle'
@@ -71,11 +76,15 @@ import {
 
 export const AGENT_SESSION_LEASE_TTL_MS = 30_000,
   AGENT_SESSION_LEASE_RENEW_INTERVAL_MS = 10_000
-/** Retired claim keys stay verifiable this long so a rotation cannot strand a running agent. */
-export const AGENT_SESSION_CLAIM_KEY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
+export { AGENT_SESSION_CLAIM_KEY_RETENTION_MS } from './agent-session-claim-key-retention'
 
 export class AgentSessionRecordStore {
-  private constructor(private readonly transactions: AgentSessionStoreTransactionQueue) {}
+  /** Teardown's record of what was working; spent once by the resume that uses one. */
+  readonly resumeMarkers: ReturnType<typeof createAgentSessionResumeMarkerStore>
+
+  private constructor(private readonly transactions: AgentSessionStoreTransactionQueue) {
+    this.resumeMarkers = createAgentSessionResumeMarkerStore(transactions)
+  }
 
   static async open(args: { directory: string; hostId: string }): Promise<AgentSessionRecordStore> {
     const filePath = agentSessionStorePath(args.directory)
@@ -159,10 +168,8 @@ export class AgentSessionRecordStore {
 
   listOperationRows = (): AgentSessionOperationRow[] => [...this.state.operations.values()]
 
-  isClaimKeyVerifiable(keyId: string, now: number): boolean {
-    const retired = this.state.retiredClaimKeys.find((entry) => entry.keyId === keyId)
-    return !retired || now - retired.retiredAt <= AGENT_SESSION_CLAIM_KEY_RETENTION_MS
-  }
+  isClaimKeyVerifiable = (keyId: string, now: number): boolean =>
+    isAgentSessionClaimKeyVerifiable(this.state, keyId, now)
 
   /** Spawn tokens observed on the host with no matching lease. Stop them; never adopt them. */
   listOrphanSpawnTokens(observedTokens: readonly string[]): string[] {
@@ -320,16 +327,8 @@ export class AgentSessionRecordStore {
   replaceSessionOptions = (args: AgentSessionOptionsReplacement): Promise<AgentSessionRecord> =>
     this.mutate(args.sessionId, (record) => replaceAgentSessionRecordOptions(record, args))
 
-  async retireClaimKey(keyId: string, now: number): Promise<void> {
-    await this.transact(() => {
-      if (!this.state.retiredClaimKeys.some((entry) => entry.keyId === keyId)) {
-        this.state.retiredClaimKeys.push({ keyId, retiredAt: now })
-      }
-      this.state.retiredClaimKeys = this.state.retiredClaimKeys.filter(
-        (entry) => now - entry.retiredAt <= AGENT_SESSION_CLAIM_KEY_RETENTION_MS
-      )
-    })
-  }
+  retireClaimKey = (keyId: string, now: number): Promise<void> =>
+    this.transact(() => retireAgentSessionClaimKey(this.state, keyId, now))
 
   private async mutate(
     sessionId: string,

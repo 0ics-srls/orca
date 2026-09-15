@@ -21,6 +21,21 @@ export function activeStructuredAgentSessionTurnId(
   return null
 }
 
+/** The newest turn's id whatever state it ended in. Restart resume compares this against the
+ *  teardown marker, and by then eviction has already settled that turn to `interrupted` — so the
+ *  running-only reader above would answer null for exactly the sessions this has to identify. */
+export function newestStructuredAgentSessionTurnId(
+  items: readonly AgentJournalRenderItem[]
+): string | null {
+  for (let index = items.length - 1; index >= 0; index -= 1) {
+    const turn = readAgentJournalTurn(items[index]?.body)
+    if (turn) {
+      return turn.turnId
+    }
+  }
+  return null
+}
+
 /**
  * Whether the newest thing the active turn produced is the model's own reasoning.
  *

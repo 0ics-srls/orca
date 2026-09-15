@@ -10,6 +10,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import type { AgentSessionRecord } from '../../shared/agent-session-record'
+import type { AgentSessionResumeTrigger } from '../../shared/agent-session-resume-marker'
 import { createCodexStructuredLaunchResolver } from '../codex/codex-structured-launch-resolution'
 import {
   CodexStructuredSessionAdapter,
@@ -111,6 +112,15 @@ export const CLAUDE_STRUCTURED_AUTH_POLICY_REQUIRED =
  */
 const pendingTeardown = new Set<InstalledRuntime>()
 
+/** Why the app is going away, for the resume markers teardown stamps. A module-level latch rather
+ *  than an argument because the quit path's call to `stopStructuredAgentSessionRuntime()` is
+ *  asserted verbatim by the startup-ordering ratchet. */
+let teardownTrigger: AgentSessionResumeTrigger = 'quit'
+
+export function setStructuredAgentSessionTeardownTrigger(trigger: AgentSessionResumeTrigger): void {
+  teardownTrigger = trigger
+}
+
 export function ensureStructuredAgentSessionHost(
   deps: StructuredAgentSessionRuntimeDeps
 ): Promise<StructuredAgentSessionHost> {
@@ -139,7 +149,10 @@ export async function waitForStructuredAgentSessionRecovery(): Promise<void> {
  *  A teardown that fails is RETRIED by the next stop rather than forgotten: the
  *  host keeps every journal whose close rejected, and this is the only handle
  *  onto that host once the module slot is cleared. */
-export async function stopStructuredAgentSessionRuntime(): Promise<void> {
+export async function stopStructuredAgentSessionRuntime(options?: {
+  trigger?: AgentSessionResumeTrigger
+}): Promise<void> {
+  const trigger = options?.trigger ?? teardownTrigger
   const pending = installing
   installing = null
   setStructuredAgentSessionHost(null)
@@ -153,7 +166,7 @@ export async function stopStructuredAgentSessionRuntime(): Promise<void> {
   const failures: unknown[] = []
   for (const runtime of outstanding) {
     try {
-      await tearDownRuntime(runtime)
+      await tearDownRuntime(runtime, trigger)
     } catch (error) {
       pendingTeardown.add(runtime)
       failures.push(error)
@@ -167,7 +180,10 @@ export async function stopStructuredAgentSessionRuntime(): Promise<void> {
   }
 }
 
-async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
+async function tearDownRuntime(
+  installed: InstalledRuntime,
+  trigger: AgentSessionResumeTrigger
+): Promise<void> {
   // Drain an in-flight recovery before stopping children; recovery may still
   // be writing lifecycle rows or acquiring a replacement child.
   await installed.waitForRecovery()
@@ -185,7 +201,7 @@ async function tearDownRuntime(installed: InstalledRuntime): Promise<void> {
   // A row a child delivers during that backstop close is not captured, and was not captured
   // under the old order either. The drain below keeps a late callback from outliving the runtime.
   try {
-    await installed.host.flushAllStreamedEvents()
+    await installed.host.flushAllStreamedEvents({ trigger })
   } catch (error) {
     failures.push(error)
   }

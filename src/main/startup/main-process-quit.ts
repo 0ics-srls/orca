@@ -8,7 +8,10 @@ import { beginSshShutdown } from '../ipc/ssh-shutdown-drain'
 import { agentHookServer } from '../agent-hooks/server'
 import { wslHookRelayManager } from '../agent-hooks/wsl-hook-relay-manager'
 import { removeManagedAgentHooksAsync } from '../agent-hooks/managed-agent-hook-controls'
-import { stopStructuredAgentSessionRuntime } from '../runtime/structured-agent-session-runtime'
+import {
+  setStructuredAgentSessionTeardownTrigger,
+  stopStructuredAgentSessionRuntime
+} from '../runtime/structured-agent-session-runtime'
 import { awaitRuntimeFileWatcherUnsubscribes } from '../runtime/orca-runtime-files'
 import { clearRuntimeMetadataIfOwned } from '../runtime/runtime-metadata'
 import { shutdownPairedRuntimeBrowserClientHosts } from '../browser/paired-runtime-browser-client-host-runtime'
@@ -133,6 +136,9 @@ function installWillQuitHandler(): void {
     state.pluginMarketplaceInstaller = null
     const pluginHostShutdown = state.pluginService?.dispose() ?? Promise.resolve()
     const codexBackfillRecoveryShutdown = stopCodexStateDbBackfillRecoveries()
+    // Why before the stop: teardown stamps each working session's resume marker with why the app
+    // went away, and an update install is a restart the user never chose.
+    setStructuredAgentSessionTeardownTrigger(updateQuitInProgress ? 'update' : 'quit')
     const structuredAgentSessionShutdown = stopStructuredAgentSessionRuntime()
     state.pluginService = null
     setUnreadDockBadgeCount(0)

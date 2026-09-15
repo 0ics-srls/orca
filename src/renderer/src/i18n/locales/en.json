@@ -1919,6 +1919,22 @@
       "SelectedTextCopyMenu": {
         "9b40d7b018": "Copy"
       },
+      "NativeChatResumeOnRestartModal": {
+        "title": "Resume interrupted chats?",
+        "body": "These chats were mid-turn when Orca closed. Resuming continues each agent where it left off, without re-sending your prompt.",
+        "updateBody": "These chats were mid-turn when Orca installed an update. Resuming continues each agent where it left off, without re-sending your prompt.",
+        "resume": "Resume",
+        "resumeAll": "Resume all",
+        "resuming": "Resuming…",
+        "notNow": "Not now",
+        "untitled": "Untitled chat",
+        "listLabel": "Chats that would resume",
+        "notNowHint": "Not now keeps everything — opening a chat later still picks it up where it left off.",
+        "dontAskAgain": "Don't ask again — resume automatically next time",
+        "dontAskAgainHint": "Qualifying chats will resume on their own after a restart, and Orca will tell you when it happens. You can turn this off in Settings → Experimental → Chat UI.",
+        "resumedOne": "Resumed 1 chat",
+        "resumedMany": "Resumed {{value0}} chats"
+      },
       "StarNagCard": {
         "92b0f9d921": "is authenticated and try again.",
         "cd8c34aac1": "gh",
@@ -7041,7 +7057,10 @@
             "structuredTitle": "Use updated structured native chat",
             "structuredCopy": "Opt in to the host-owned structured chat runtime for Codex and Claude. Off keeps the existing terminal-backed chat path.",
             "structuredScope": "Local sessions only for now. WSL and remote execution hosts (including SSH) continue to use terminal chat, and Windows falls back to it unless Orca can read process start times.",
-            "structuredToggleLabel": "Toggle updated structured native chat"
+            "structuredToggleLabel": "Toggle updated structured native chat",
+            "resumeTitle": "Resume working chats automatically after a restart",
+            "resumeCopy": "When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. On, they resume without asking and Orca tells you afterwards — the same thing as ticking \"Don't ask again\" in that prompt. Off, you choose from the list each time.",
+            "resumeToggleLabel": "Toggle automatic resume after a restart"
           },
           "agentDashboard": {
             "title": "Agent Dashboard",

@@ -1176,6 +1176,10 @@
           "a05bcdaf57": "Agents View",
           "f63ea281e3": "Threaded left-sidebar feed for agent completions and blocking states.",
           "fb82ea1d7a": "Automatically materialize configured files or folders into newly created worktrees.",
+          "nativeChat": {
+            "resumeCopy": "When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. On, they resume without asking and Orca tells you afterwards — the same thing as ticking \"Don't ask again\" in that prompt. Off, you choose from the list each time.",
+            "resumeTitle": "Resume working chats automatically after a restart"
+          },
           "newWorktreeCardStyle": {
             "copy": "Preview updated worktree-card layout, metadata placement, card-display menu options, and status presentation."
           }
@@ -2618,9 +2622,6 @@
   },
   "components": {
     "native-chat": {
-      "approval": {
-        "cancel": "Cancel"
-      },
       "composer": {
         "effort": "Effort"
       },

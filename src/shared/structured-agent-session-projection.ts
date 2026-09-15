@@ -20,7 +20,8 @@ import { sha256 } from './sha256'
 // Re-exported so the live-turn readers' existing consumers keep one import site.
 export {
   activeStructuredAgentSessionToolCall,
-  activeStructuredAgentSessionTurnId
+  activeStructuredAgentSessionTurnId,
+  newestStructuredAgentSessionTurnId
 } from './structured-agent-session-live-turn'
 
 function boundedText(payload: { head: string; truncated: boolean; byteLength: number }): string {

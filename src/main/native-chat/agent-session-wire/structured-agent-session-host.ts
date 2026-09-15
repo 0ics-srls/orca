@@ -52,6 +52,11 @@ import type { StructuredAgentSessionStatusSubscriber } from './structured-agent-
 import { StructuredAgentSessionEventRecovery } from './structured-agent-session-event-recovery'
 import { StructuredAgentSessionBackgroundTaskChannel } from './structured-agent-session-background-task-channel'
 import { StructuredAgentSessionClientDelivery } from './structured-agent-session-client-delivery'
+import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
+import {
+  createStructuredAgentSessionRestartResume,
+  type StructuredAgentSessionRestartResume
+} from './structured-agent-session-restart-resume-host'
 export type { StructuredAgentSessionHostDeps } from './structured-agent-session-host-types'
 
 export class StructuredAgentSessionHost {
@@ -76,6 +81,8 @@ export class StructuredAgentSessionHost {
   private readonly holds: StructuredAgentSessionHolds
   private readonly eventRecovery: StructuredAgentSessionEventRecovery
   private readonly backgroundTasks: StructuredAgentSessionBackgroundTaskChannel
+  /** Public because the RPC surface addresses it directly; see the restart-resume collaborator. */
+  readonly restartResume: StructuredAgentSessionRestartResume
 
   constructor(readonly deps: StructuredAgentSessionHostDeps) {
     this.backgroundTasks = new StructuredAgentSessionBackgroundTaskChannel(
@@ -144,6 +151,11 @@ export class StructuredAgentSessionHost {
       now: () => this.now(),
       attachContext: () => this.attachContext(),
       onBarrierError: (sessionId, error) => deps.onEventSinkError?.({ sessionId, error })
+    })
+    this.restartResume = createStructuredAgentSessionRestartResume(deps, this.sessions, {
+      revealSession: this.revealSession,
+      hold: this.hold,
+      now: this.now
     })
     this.runtimeState.startLeaseRenewal()
   }
@@ -244,7 +256,7 @@ export class StructuredAgentSessionHost {
   flushStreamedEvents = (sessionId: string): Promise<void> =>
     this.runtimeState.flushEventSink(sessionId)
 
-  async flushAllStreamedEvents(): Promise<void> {
+  async flushAllStreamedEvents(options?: { trigger?: AgentSessionResumeTrigger }): Promise<void> {
     const retainSessionIds = new Set<string>()
     await tearDownStructuredAgentSessionHost({
       phases: structuredAgentSessionHostTeardownPhases({
@@ -253,7 +265,8 @@ export class StructuredAgentSessionHost {
         handoffs: this.handoffs,
         tasks: this.tasks,
         evictOwnedSessions: () =>
-          evictOwnedStructuredAgentSessions(this.lifetimeContext(), retainSessionIds)
+          evictOwnedStructuredAgentSessions(this.lifetimeContext(), retainSessionIds),
+        recordResumeMarkers: () => this.restartResume.recordMarkers(options?.trigger ?? 'quit')
       }),
       sessions: this.sessions,
       retainSessionIds,

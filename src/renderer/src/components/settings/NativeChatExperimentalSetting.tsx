@@ -20,6 +20,7 @@ export function NativeChatExperimentalSetting({
 }: NativeChatExperimentalSettingProps): React.JSX.Element {
   const nativeChatEnabled = settings.experimentalNativeChat === true
   const structuredNativeChatEnabled = settings.experimentalStructuredNativeChat === true
+  const resumeOnRestartEnabled = settings.nativeChatResumeWorkOnRestart === true
   const defaultView: NativeChatDefaultView =
     settings.openAgentTabsInChatByDefault === true ? 'native-chat' : 'terminal-chat'
 
@@ -146,6 +147,36 @@ export function NativeChatExperimentalSetting({
                   updateSettings({
                     experimentalStructuredNativeChat: !structuredNativeChatEnabled
                   })
+                }
+              />
+            </div>
+          ) : null}
+
+          {/* Only structured sessions have a resume cursor to continue from. */}
+          {defaultView === 'native-chat' && structuredNativeChatEnabled ? (
+            <div className="flex items-start justify-between gap-4">
+              <div className="min-w-0 shrink space-y-0.5">
+                <Label>
+                  {translate(
+                    'auto.components.settings.ExperimentalPane.nativeChat.resumeTitle',
+                    'Resume working chats after a restart'
+                  )}
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {translate(
+                    'auto.components.settings.ExperimentalPane.nativeChat.resumeCopy',
+                    'When Orca quits or installs an update, chats that were mid-turn are offered again on the next launch. Turn this on to resume them automatically instead of choosing from the list.'
+                  )}
+                </p>
+              </div>
+              <SettingsSwitch
+                checked={resumeOnRestartEnabled}
+                ariaLabel={translate(
+                  'auto.components.settings.ExperimentalPane.nativeChat.resumeToggleLabel',
+                  'Toggle automatic resume after a restart'
+                )}
+                onChange={() =>
+                  updateSettings({ nativeChatResumeWorkOnRestart: !resumeOnRestartEnabled })
                 }
               />
             </div>

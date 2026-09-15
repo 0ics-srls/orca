@@ -18,6 +18,11 @@ export type StructuredAgentSessionTeardownPhase = {
 /** Quit must not wait indefinitely on an in-flight handoff; see `drain-handoffs` below. */
 const HANDOFF_DRAIN_TIMEOUT_MS = 5_000
 
+/** The marker write goes through the store's transaction queue, which an operation wedged at quit
+ *  can still be occupying. Giving up costs the user one click on the next launch; waiting costs
+ *  them a quit that never finishes, so this bookkeeping never gets to gate the shutdown. */
+const RESUME_MARKER_RECORD_TIMEOUT_MS = 2_000
+
 /** Eight steps at ten seconds each would outlast the global quit deadline, and a quit that dies
  *  mid-eviction leaves the lease unreleased — the exact state restart has to clean up. Bounded
  *  well below that deadline so the phases after this one still get to run. */
@@ -55,8 +60,23 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
   handoffs: { stopTuiHistoryCatchup: () => void; drain: () => Promise<void> }
   tasks: { drainAttaches: () => Promise<void> }
   evictOwnedSessions: () => Promise<void>
+  recordResumeMarkers: () => Promise<void>
 }): StructuredAgentSessionTeardownPhase[] {
   return [
+    // FIRST, because `evict-owned-sessions` settles every running turn to `interrupted` — after it
+    // the live signal this reads is gone. Its failure is swallowed rather than collected: losing a
+    // resume offer is a nuisance, and bookkeeping must never be what stops a quit.
+    {
+      name: 'record-resume-markers',
+      run: () =>
+        withTimeout(
+          collaborators.recordResumeMarkers().catch((error: unknown) => {
+            console.warn('[structured-agent-session] recording resume markers failed', error)
+          }),
+          RESUME_MARKER_RECORD_TIMEOUT_MS,
+          undefined
+        )
+    },
     { name: 'dispose-holds', run: () => collaborators.holds.dispose() },
     { name: 'stop-lease-renewal', run: () => collaborators.runtimeState.stopLeaseRenewal() },
     { name: 'stop-tui-catchup', run: () => collaborators.handoffs.stopTuiHistoryCatchup() },

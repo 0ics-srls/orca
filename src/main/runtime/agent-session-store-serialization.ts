@@ -16,5 +16,9 @@ export function serializeAgentSessionStoreState(state: AgentSessionStoreState): 
   if (state.visibleSessionIdsIndexPresent) {
     serialized.visibleSessionIds = [...state.visibleSessionIds]
   }
+  // Emitted only when present, so a profile that never recorded one keeps its existing bytes.
+  if (state.resumeMarkers.size > 0) {
+    serialized.resumeMarkers = Object.fromEntries(state.resumeMarkers)
+  }
   return JSON.stringify(serialized)
 }
