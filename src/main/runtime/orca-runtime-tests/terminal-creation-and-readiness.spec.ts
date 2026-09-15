@@ -93,7 +93,38 @@ describe('OrcaRuntimeService', () => {
   })
 
   it('spawns a requested shell AS the pty instead of typing it into the host default', async () => {
-    const spawn = vi.fn().mockResolvedValue({ id: 'pty-shell' })
+    const hostPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' })
+    try {
+      const spawn = vi.fn().mockResolvedValue({ id: 'pty-shell' })
+      const runtime = new OrcaRuntimeService(store)
+      runtime.setPtyController({
+        spawn,
+        write: () => true,
+        kill: () => true,
+        getForegroundProcess: async () => null
+      })
+      runtime.attachWindow(1)
+      runtime.syncWindowGraph(1, { tabs: [], leaves: [] })
+
+      await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+        shellOverride: 'cmd.exe',
+        title: 'win shell'
+      })
+
+      // The defect this pins: a caller asking for cmd could only pass it as `command`, which the
+      // provider types into whatever shell it spawned — so the pty stayed the default shell and
+      // leaving cmd dropped the handle back onto a prompt the caller never asked for.
+      expect(spawn).toHaveBeenCalledWith(
+        expect.objectContaining({ shellOverride: 'cmd.exe', command: undefined })
+      )
+    } finally {
+      Object.defineProperty(process, 'platform', hostPlatform)
+    }
+  })
+
+  it('refuses a requested shell the execution host cannot apply instead of spawning its default', async () => {
+    const spawn = vi.fn().mockResolvedValue({ id: 'pty-unreachable-shell' })
     const runtime = new OrcaRuntimeService(store)
     runtime.setPtyController({
       spawn,
@@ -104,17 +135,11 @@ describe('OrcaRuntimeService', () => {
     runtime.attachWindow(1)
     runtime.syncWindowGraph(1, { tabs: [], leaves: [] })
 
-    await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
-      shellOverride: 'cmd.exe',
-      title: 'win shell'
-    })
-
-    // The defect this pins: a caller asking for cmd could only pass it as `command`, which the
-    // provider types into whatever shell it spawned — so the pty stayed the default shell and
-    // leaving cmd dropped the handle back onto a prompt the caller never asked for.
-    expect(spawn).toHaveBeenCalledWith(
-      expect.objectContaining({ shellOverride: 'cmd.exe', command: undefined })
-    )
+    // Host platform here is POSIX, which has no Windows shell to pick.
+    await expect(
+      runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, { shellOverride: 'cmd.exe' })
+    ).rejects.toThrow(/--shell cmd\.exe names a Windows shell/)
+    expect(spawn).not.toHaveBeenCalled()
   })
 
   it('retires inherited launch authority when the agent command exits', async () => {

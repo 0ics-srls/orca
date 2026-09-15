@@ -39,8 +39,11 @@ so a runtime-created terminal could only ever be the host's default shell. `orca
   unknown keys) and answers with a healthy terminal running its default shell — a reply that reads
   as success. So the CLI gates on `TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY` and refuses
   before creating anything, rather than creating the wrong shell quietly.
-- `--shell` is Windows-only. macOS and Linux hosts spawn the login shell and ignore it; the relay
-  drops the value off `win32` rather than honouring it half-way.
+- `--shell` is Windows-only, and a host that cannot apply it REFUSES the create
+  (`terminalShellOverrideRefusal`). macOS and Linux execution hosts spawn the login shell, and a
+  terminal routed over SSH resolves its shell on the SSH host, whose platform and installed shells
+  this runtime cannot see. Refusing is the point: spawning the default shell and reporting success
+  is the failure `--shell` exists to remove.
 - A WSL project runtime still wins over `--shell` (`resolveLocalWindowsTerminalRuntimeOptions`).
   That is deliberate: the project's runtime decides which machine the shell runs on, and a
   per-terminal pick may not override that.

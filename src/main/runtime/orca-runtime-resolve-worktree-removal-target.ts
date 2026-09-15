@@ -16,6 +16,7 @@ import type { TerminalWorkspaceLaunchScope } from './runtime-legacy-worker-termi
 import type { TerminalCreateOptions } from './runtime-terminal-contracts'
 import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
+import { terminalShellOverrideRefusal } from './terminal-shell-override-host-support'
 import { resolveBareAgentLaunchCommand } from './runtime-agent-launch-resolution'
 import { buildAgentStartupPlan } from '../../shared/tui-agent-startup'
 import {
@@ -152,6 +153,16 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
     workspace: TerminalWorkspaceLaunchScope,
     opts: TerminalCreateOptions
   ): Promise<TerminalCreateOptions> {
+    // Before any early return: every create lane funnels through here, and a host that cannot
+    // apply the requested shell must refuse rather than spawn its default one.
+    const shellRefusal = terminalShellOverrideRefusal({
+      shellOverride: opts.shellOverride,
+      connectionId: workspace.connectionId,
+      platform: process.platform
+    })
+    if (shellRefusal) {
+      throw shellRefusal
+    }
     // Why: raw shell commands like `codex exec` must remain user-authored shell.
     // Only unmanaged, repo-backed, bare agent launches get Settings defaults.
     const callerSuppliedLaunch =

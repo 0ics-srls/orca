@@ -18,6 +18,13 @@ export async function createDesktopTerminal(
   const launchOpts = workspace
     ? await runtime.resolveAgentTerminalCreateOptions(workspace, opts)
     : opts
+  // `resolveAgentTerminalCreateOptions` refuses an unapplicable shell, and it only runs with a
+  // workspace; a worktree-less create has no execution host to apply one to either.
+  if (!workspace && opts.shellOverride) {
+    throw new Error(
+      `--shell ${opts.shellOverride} needs a workspace, because the shell is resolved on the workspace's execution host. No terminal was created.`
+    )
+  }
   const worktreeId = workspace?.id
   const cwd = workspace
     ? runtime.resolveWorkspaceTerminalStartupCwd(workspace, launchOpts.cwd)
