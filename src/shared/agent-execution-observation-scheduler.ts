@@ -1,16 +1,21 @@
 import type { ExecutionHostId } from './execution-host'
-import type { AgentStatusRunVerdict } from './agent-status-run'
 import type {
   AgentExecutionAttachment,
   AgentExecutionHostInventory,
   AgentExecutionObservation,
   AgentExecutionObservationSchedulerOptions
 } from './agent-execution-observation'
+import {
+  buildUnverifiableExecutionObservation,
+  cancelObsoleteHostScan,
+  hasCurrentHostAttachment,
+  resolveHostFailure,
+  resolveHostInventory,
+  type ObservationHostScan
+} from './agent-execution-observation-scheduler-resolution'
 
 type ActiveAttachment = AgentExecutionAttachment & { generation: number }
 type PendingRequest = { resolve: (observation: AgentExecutionObservation) => void }
-type HostScan = { controller: AbortController; promise: Promise<void> }
-
 const DEFAULT_COALESCE_MS = 25
 const DEFAULT_MAX_CONCURRENT_SCANS = 2
 const DEFAULT_RETRY_BASE_MS = 250
@@ -20,7 +25,7 @@ const DEFAULT_RETRY_MAX_MS = 5_000
 export class AgentExecutionObservationScheduler {
   private readonly attachments = new Map<string, ActiveAttachment>()
   private readonly pending = new Map<string, PendingRequest[]>()
-  private readonly scans = new Map<ExecutionHostId, HostScan>()
+  private readonly scans = new Map<ExecutionHostId, ObservationHostScan>()
   private readonly retryCountByHost = new Map<ExecutionHostId, number>()
   private readonly captureRevisionByHost = new Map<ExecutionHostId, number>()
   private readonly published = new Map<string, AgentExecutionObservation>()
@@ -78,7 +83,12 @@ export class AgentExecutionObservationScheduler {
     }
     const requests = this.pending.get(attachment.executionId)
     if (requests && previous) {
-      const superseded = this.buildUnverifiable(attachment.executionId, previous)
+      const superseded = buildUnverifiableExecutionObservation(
+        this.captureRevisionByHost,
+        this.now,
+        attachment.executionId,
+        previous
+      )
       for (const request of requests) {
         request.resolve(superseded)
       }
@@ -99,20 +109,32 @@ export class AgentExecutionObservationScheduler {
     this.attachments.delete(executionId)
     const requests = this.pending.get(executionId)
     if (requests) {
-      const observation = this.buildUnverifiable(executionId, attachment)
+      const observation = buildUnverifiableExecutionObservation(
+        this.captureRevisionByHost,
+        this.now,
+        executionId,
+        attachment
+      )
       for (const request of requests) {
         request.resolve(observation)
       }
       this.pending.delete(executionId)
     }
     this.published.delete(executionId)
-    this.cancelObsoleteHostScan(attachment.hostId)
+    cancelObsoleteHostScan(this.pending, this.attachments, this.scans, attachment.hostId)
   }
 
   request(executionId: string): Promise<AgentExecutionObservation> {
     const attachment = this.attachments.get(executionId)
     if (!attachment || this.stopped) {
-      return Promise.resolve(this.buildUnverifiable(executionId, attachment))
+      return Promise.resolve(
+        buildUnverifiableExecutionObservation(
+          this.captureRevisionByHost,
+          this.now,
+          executionId,
+          attachment
+        )
+      )
     }
     const request = new Promise<AgentExecutionObservation>((resolve) => {
       const requests = this.pending.get(executionId)
@@ -144,7 +166,12 @@ export class AgentExecutionObservationScheduler {
     }
     this.scans.clear()
     for (const [executionId, requests] of this.pending) {
-      const observation = this.buildUnverifiable(executionId, this.attachments.get(executionId))
+      const observation = buildUnverifiableExecutionObservation(
+        this.captureRevisionByHost,
+        this.now,
+        executionId,
+        this.attachments.get(executionId)
+      )
       for (const request of requests) {
         request.resolve(observation)
       }
@@ -201,11 +228,25 @@ export class AgentExecutionObservationScheduler {
           throw new Error('execution_observation_host_mismatch')
         }
         this.retryCountByHost.delete(hostId)
-        this.resolveHostScan(hostId, attachments, inventory)
+        resolveHostInventory(
+          hostId,
+          attachments,
+          inventory,
+          this.attachments,
+          this.captureRevisionByHost,
+          (attachment, observation) => this.resolveAttachment(attachment, observation)
+        )
       })
       .catch(() => {
-        this.resolveHostFailure(hostId, attachments)
-        if (!this.stopped && this.hasCurrentHostAttachment(hostId)) {
+        resolveHostFailure(
+          hostId,
+          attachments,
+          this.attachments,
+          this.captureRevisionByHost,
+          this.now,
+          (attachment, observation) => this.resolveAttachment(attachment, observation)
+        )
+        if (!this.stopped && hasCurrentHostAttachment(this.attachments, hostId)) {
           const retry = (this.retryCountByHost.get(hostId) ?? 0) + 1
           this.retryCountByHost.set(hostId, retry)
           const delay = Math.min(this.retryMaxMs, this.retryBaseMs * 2 ** (retry - 1))
@@ -233,56 +274,6 @@ export class AgentExecutionObservationScheduler {
     this.scans.set(hostId, { controller, promise })
   }
 
-  private resolveHostScan(
-    hostId: ExecutionHostId,
-    requested: ActiveAttachment[],
-    inventory: AgentExecutionHostInventory
-  ): void {
-    const revision = (this.captureRevisionByHost.get(hostId) ?? 0) + 1
-    this.captureRevisionByHost.set(hostId, revision)
-    for (const requestedAttachment of requested) {
-      const current = this.attachments.get(requestedAttachment.executionId)
-      if (!current || current.generation !== requestedAttachment.generation) {
-        continue
-      }
-      this.resolveAttachment(current, {
-        executionId: current.executionId,
-        ...(current.runId !== undefined ? { runId: current.runId } : {}),
-        ...(current.role !== undefined ? { role: current.role } : {}),
-        ...(current.continuityOf !== undefined ? { continuityOf: current.continuityOf } : {}),
-        hostId,
-        hostEpoch: inventory.hostEpoch,
-        captureRevision: revision,
-        observedAt: inventory.capturedAt,
-        inventoryCoverage: inventory.inventoryCoverage,
-        verdict: this.resolveVerdict(current, inventory)
-      })
-    }
-  }
-
-  private resolveHostFailure(hostId: ExecutionHostId, requested: ActiveAttachment[]): void {
-    const revision = (this.captureRevisionByHost.get(hostId) ?? 0) + 1
-    this.captureRevisionByHost.set(hostId, revision)
-    for (const requestedAttachment of requested) {
-      const current = this.attachments.get(requestedAttachment.executionId)
-      if (!current || current.generation !== requestedAttachment.generation) {
-        continue
-      }
-      this.resolveAttachment(current, {
-        executionId: current.executionId,
-        ...(current.runId !== undefined ? { runId: current.runId } : {}),
-        ...(current.role !== undefined ? { role: current.role } : {}),
-        ...(current.continuityOf !== undefined ? { continuityOf: current.continuityOf } : {}),
-        hostId,
-        hostEpoch: current.hostEpoch,
-        captureRevision: revision,
-        observedAt: this.now(),
-        inventoryCoverage: 'partial',
-        verdict: 'unverifiable'
-      })
-    }
-  }
-
   private resolveAttachment(
     attachment: ActiveAttachment,
     observation: AgentExecutionObservation
@@ -293,59 +284,6 @@ export class AgentExecutionObservationScheduler {
     this.publish(observation)
     for (const request of requests) {
       request.resolve(observation)
-    }
-  }
-
-  private resolveVerdict(
-    attachment: AgentExecutionAttachment,
-    inventory: AgentExecutionHostInventory
-  ): AgentStatusRunVerdict {
-    if (inventory.inventoryCoverage !== 'complete') {
-      return 'unverifiable'
-    }
-    const observed = inventory.verdictByProcessIncarnation?.get(attachment.processIncarnation ?? '')
-    if (observed) {
-      return observed
-    }
-    if (attachment.processIncarnation) {
-      return inventory.processIncarnations.has(attachment.processIncarnation) ? 'live' : 'exited'
-    }
-    if (attachment.providerInvocation) {
-      return inventory.providerInvocations?.has(attachment.providerInvocation) ? 'live' : 'exited'
-    }
-    return 'unverifiable'
-  }
-
-  private buildUnverifiable(
-    executionId: string,
-    attachment: ActiveAttachment | undefined
-  ): AgentExecutionObservation {
-    const hostId = attachment?.hostId ?? 'local'
-    const revision = (this.captureRevisionByHost.get(hostId) ?? 0) + 1
-    this.captureRevisionByHost.set(hostId, revision)
-    return {
-      executionId,
-      ...(attachment?.runId !== undefined ? { runId: attachment.runId } : {}),
-      ...(attachment?.role !== undefined ? { role: attachment.role } : {}),
-      ...(attachment?.continuityOf !== undefined ? { continuityOf: attachment.continuityOf } : {}),
-      hostId,
-      hostEpoch: attachment?.hostEpoch ?? 'unknown',
-      captureRevision: revision,
-      observedAt: this.now(),
-      inventoryCoverage: 'partial',
-      verdict: 'unverifiable'
-    }
-  }
-
-  private hasCurrentHostAttachment(hostId: ExecutionHostId): boolean {
-    return [...this.attachments.values()].some((attachment) => attachment.hostId === hostId)
-  }
-  private cancelObsoleteHostScan(hostId: ExecutionHostId): void {
-    const hasPending = [...this.pending.keys()].some(
-      (executionId) => this.attachments.get(executionId)?.hostId === hostId
-    )
-    if (!hasPending) {
-      this.scans.get(hostId)?.controller.abort()
     }
   }
 }
