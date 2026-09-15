@@ -103,6 +103,10 @@ export function writeClaudeBackgroundTaskRow(
   row.lastSerialized = serialized
   beforeAppend?.()
   const identity = claudeBackgroundTaskIdentity(id, row.generation)
+  // Generation is translator-local and resets when a provider stream is
+  // recreated. Keep unresolved writes from distinct provider runs queued side
+  // by using the provider's parent tool identity as the coalescing discriminator.
+  const coalescingKey = JSON.stringify(['claude-background-task', id, row.toolUseId ?? null])
   const resolveIdentity = sink.tryAppendResolvedItem
   if (resolveIdentity) {
     // Reserve enough space for any safe generation suffix; the actual identity
@@ -113,16 +117,14 @@ export function writeClaudeBackgroundTaskRow(
       body,
       (journal) => resolveClaudeBackgroundTaskIdentity(journal, id, row.toolUseId),
       {
-        // Keyed per RUN, not per task: sharing one key across generations would
-        // let a restart's queued append evict the finished run's final revision.
-        coalescingKey: identity.provider === 'orca' ? identity.clientMessageId : `task:${id}`
+        coalescingKey
       }
     )
     sink.publish()
     return
   }
   sink.appendItem(identity, body, {
-    coalescingKey: identity.provider === 'orca' ? identity.clientMessageId : `task:${id}`
+    coalescingKey
   })
   sink.publish()
 }

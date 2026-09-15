@@ -118,33 +118,34 @@ function playFailedBackgroundCommand(translator: ReturnType<typeof harness>['tra
   )
 }
 
+function persistedTarget(
+  persisted: Map<string, AgentJournalItemBody>
+): StructuredAgentSessionEventTarget {
+  const journal =
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this test double implements the journal methods exercised by the deferred sink.
+    {
+      appendItem: async (identity: AgentJournalItemIdentity, body: AgentJournalItemBody) => {
+        persisted.set(agentJournalItemKey(identity), body)
+        return { cursor: { epoch: 'test', sequence: persisted.size }, itemId: '', revision: 1 }
+      },
+      appendTombstone: vi.fn(),
+      visitItems: (
+        visit: (itemId: string, sequence: number, body: AgentJournalItemBody) => void
+      ) => {
+        for (const [itemId, body] of persisted) {
+          visit(itemId, 0, body)
+        }
+      },
+      epoch: 'test'
+    } as unknown as AgentSessionJournal
+  return { journal, fence: 1, publish: vi.fn() }
+}
+
 describe('claude journal translation — background task rows', () => {
   it('resolves a queued restart identity after the sink rebinds', async () => {
     const persisted = new Map<string, AgentJournalItemBody>()
-    const journal = (): AgentSessionJournal =>
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this test double implements the journal methods exercised by the deferred sink.
-      ({
-        appendItem: async (identity: AgentJournalItemIdentity, body: AgentJournalItemBody) => {
-          persisted.set(agentJournalItemKey(identity), body)
-          return { cursor: { epoch: 'test', sequence: persisted.size }, itemId: '', revision: 1 }
-        },
-        appendTombstone: vi.fn(),
-        visitItems: (
-          visit: (itemId: string, sequence: number, body: AgentJournalItemBody) => void
-        ) => {
-          for (const [itemId, body] of persisted) {
-            visit(itemId, 0, body)
-          }
-        },
-        epoch: 'test'
-      }) as unknown as AgentSessionJournal
-    const target = (): StructuredAgentSessionEventTarget => ({
-      journal: journal(),
-      fence: 1,
-      publish: vi.fn()
-    })
     const deferred = createDeferredStructuredAgentSessionEventSink()
-    deferred.bind(target())
+    deferred.bind(persistedTarget(persisted))
 
     const first = createClaudeJournalTranslator({ sink: deferred.sink, fallbackIdPrefix: 'first' })
     spawnToolCall(first, 'toolu-first')
@@ -176,12 +177,53 @@ describe('claude journal translation — background task rows', () => {
         is_backgrounded: true
       })
     )
-    restarted.bind(target())
+    restarted.bind(persistedTarget(persisted))
     await restarted.drained()
 
     expect([...persisted.keys()].filter((key) => key.includes('queued-restart'))).toEqual([
       'orca:claude-background-task%3Aqueued-restart',
       'orca:claude-background-task%3Aqueued-restart%232'
+    ])
+  })
+
+  it('keeps pending writes from distinct runs when a translator is recreated', async () => {
+    const persisted = new Map<string, AgentJournalItemBody>()
+    const deferred = createDeferredStructuredAgentSessionEventSink()
+
+    const first = createClaudeJournalTranslator({ sink: deferred.sink, fallbackIdPrefix: 'first' })
+    spawnToolCall(first, 'toolu-first')
+    first.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'queued-overlap',
+        tool_use_id: 'toolu-first',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    first.dispose()
+
+    const second = createClaudeJournalTranslator({
+      sink: deferred.sink,
+      fallbackIdPrefix: 'second'
+    })
+    spawnToolCall(second, 'toolu-second')
+    second.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'queued-overlap',
+        tool_use_id: 'toolu-second',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+
+    deferred.bind(persistedTarget(persisted))
+    await deferred.drained()
+
+    expect([...persisted.keys()].filter((key) => key.includes('queued-overlap'))).toEqual([
+      'orca:claude-background-task%3Aqueued-overlap',
+      'orca:claude-background-task%3Aqueued-overlap%232'
     ])
   })
 
