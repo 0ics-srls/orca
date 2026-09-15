@@ -1,4 +1,4 @@
-import { mkdtemp, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -14,7 +14,10 @@ import {
   AGENT_SESSION_CLAIM_KEY_RETENTION_MS,
   AgentSessionRecordStore
 } from './agent-session-record-store'
-import { agentSessionStorePath } from './agent-session-record-store-file'
+import {
+  AGENT_SESSION_STORE_FILE_NAME,
+  agentSessionStorePath
+} from './agent-session-record-store-file'
 import type { AgentSessionReserveRequest } from './agent-session-reservation-admission'
 
 const BAD_OP_STORE = '{"schemaVersion":0,"hostId":"","records":{},"operations":{"x":0}}'
