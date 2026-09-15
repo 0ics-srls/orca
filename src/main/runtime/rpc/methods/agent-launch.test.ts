@@ -42,14 +42,32 @@ function runtimeStub(
     }
   } = {}
 ) {
-  const waitForSetupTerminalCompletion = vi.fn(async () => ({ exitCode: 0 }))
+  const worktreeCreateResults = new Map<string, Promise<unknown>>()
+  const waitForSetupTerminalCompletion = vi.fn(
+    async (_handle: string, _signal?: AbortSignal): Promise<{ exitCode: number | null }> => ({
+      exitCode: 0
+    })
+  )
   return {
     getClientSettings: vi.fn(() => options.settings ?? STRUCTURED_PREFERENCE),
     getStructuredAgentSessionCreateSupport: vi.fn(
       async () => options.createSupport ?? { supported: true }
     ),
     dedupeWorktreeCreate: vi.fn(
-      <T>(_repo: string, _key: string | undefined, run: () => Promise<T>) => run()
+      (repo: string, key: string | undefined, run: () => Promise<unknown>) => {
+        if (!key) {
+          return run()
+        }
+        const compositeKey = `${repo}\0${key}`
+        const existing = worktreeCreateResults.get(compositeKey)
+        if (existing) {
+          return existing
+        }
+        const result = run()
+        worktreeCreateResults.set(compositeKey, result)
+        void result.catch(() => worktreeCreateResults.delete(compositeKey))
+        return result
+      }
     ),
     showRepo: vi.fn(async () => ({ id: 'repo-1' })),
     createManagedWorktree: vi.fn(async (args: Record<string, unknown>) => ({
@@ -124,6 +142,14 @@ async function launch(
 const CREATE_LAUNCH = {
   agent: 'claude',
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
+}
+
+const IDEMPOTENT_CREATE_LAUNCH = {
+  agent: 'claude',
+  target: {
+    kind: 'create-worktree' as const,
+    create: { repo: 'id:repo-1', name: 'task', clientMutationId: 'launch-1' }
+  }
 }
 
 beforeEach(() => {
@@ -247,6 +273,67 @@ describe('the worktree factory', () => {
     expect(result.outcome.kind).toBe('structured')
   })
 
+  it('deduplicates concurrent launches through surface creation', async () => {
+    const runtime = runtimeStub()
+
+    const results = await Promise.all([
+      launch(IDEMPOTENT_CREATE_LAUNCH, runtime),
+      launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
+    ])
+
+    expect(results[0]).toEqual(results[1])
+    expect(runtime.dedupeWorktreeCreate).toHaveBeenCalledTimes(2)
+    expect(runtime.dedupeWorktreeCreate.mock.calls).toEqual([
+      ['id:repo-1', 'agent.launch:launch-1', expect.any(Function)],
+      ['id:repo-1', 'agent.launch:launch-1', expect.any(Function)]
+    ])
+    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
+    expect(createStructuredSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('reuses a completed launch result for a sequential retry', async () => {
+    const runtime = runtimeStub()
+
+    const first = await launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
+    const retried = await launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
+
+    expect(retried).toEqual(first)
+    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
+    expect(createStructuredSession).toHaveBeenCalledTimes(1)
+  })
+
+  it('aborts the setup wait when its bounded timeout expires', async () => {
+    vi.useFakeTimers()
+    try {
+      const runtime = runtimeStub({
+        setupReceipt: {
+          startupPolicy: 'wait-for-setup',
+          state: 'running',
+          terminalHandle: 'setup-1'
+        }
+      })
+      let setupSignal: AbortSignal | undefined
+      runtime.waitForSetupTerminalCompletion.mockImplementation(
+        (_handle, signal) =>
+          new Promise<{ exitCode: number | null }>((_resolve, reject) => {
+            setupSignal = signal
+            signal?.addEventListener('abort', () => reject(signal.reason), { once: true })
+          })
+      )
+
+      const result = await (async () => {
+        const pending = launch(CREATE_LAUNCH, runtime)
+        await vi.runAllTimersAsync()
+        return pending
+      })()
+
+      expect(result.outcome.kind).toBe('structured')
+      expect(setupSignal?.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('waits for a setup-gated structured workspace before creating its session', async () => {
     const runtime = runtimeStub({
       setupReceipt: {
@@ -268,7 +355,10 @@ describe('the worktree factory', () => {
     await launch(CREATE_LAUNCH, runtime)
 
     expect(order).toEqual(['setup-complete', 'structured-create'])
-    expect(runtime.waitForSetupTerminalCompletion).toHaveBeenCalledWith('setup-1')
+    expect(runtime.waitForSetupTerminalCompletion).toHaveBeenCalledWith(
+      'setup-1',
+      expect.any(AbortSignal)
+    )
   })
 
   it('keeps agent-first creation for a launch the user wants as a terminal', async () => {
