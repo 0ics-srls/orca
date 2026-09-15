@@ -104,12 +104,13 @@ export function createStructuredAgentSessionHostHandoff(
     acquireNative: (input) => acquireNativeHandoffOwner(deps, host, input),
     acquireNativeStop: async (sessionId, turnId, fence) => {
       const session = host.session(sessionId)
+      const dispatchStatus = latestJournalDispatchObservation(session.journal, fence)
       return (
         await deps.adapter.cancelTurn({
           sessionId,
           turnId,
           fence,
-          dispatchStatus: latestJournalDispatchObservation(session.journal, fence)
+          ...(dispatchStatus ? { dispatchStatus } : {})
         })
       ).cancelled
     },

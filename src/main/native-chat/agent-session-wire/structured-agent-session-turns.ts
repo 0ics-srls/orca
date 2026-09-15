@@ -202,6 +202,7 @@ export async function performCancel(
   let cancelled = false
   let note = 'Cancellation requested.'
   try {
+    const dispatchStatus = latestJournalDispatchObservation(ctx.journal, ctx.fence)
     cancelled = input.scope
       ? (
           await ctx.adapter.stopBackgroundTasks?.({
@@ -215,7 +216,7 @@ export async function performCancel(
             sessionId: ctx.sessionId,
             turnId: input.turnId,
             fence: ctx.fence,
-            dispatchStatus: latestJournalDispatchObservation(ctx.journal, ctx.fence),
+            ...(dispatchStatus ? { dispatchStatus } : {}),
             ...(input.prompt ? { prompt: { itemId: input.prompt.itemId } } : {})
           })
         ).cancelled
