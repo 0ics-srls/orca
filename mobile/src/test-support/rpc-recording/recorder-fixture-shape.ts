@@ -4,9 +4,11 @@
  * type. That is what a mount fixture actually is — deliberately partial, because it carries only
  * what the mounted hook reads, yet still a subset of the real thing.
  *
- * Type-only and deliberately outside `rpc-recording/`, which every golden pins: a type cannot
- * change a recording, and the mount helper that uses it is copied per adapter module, so keeping
- * the type here is what stops eleven copies of it from existing.
+ * Type-only, and here rather than outside the recorder because `mobile/scripts/rpc-recording.mts`
+ * fences every path under `mobile/src` except this directory, so a file outside it fails recording
+ * as an unpinned product source. It sits in the engine rather than under `adapters/` because the
+ * mount helper that uses it is copied per module and the seam forbids one module importing another,
+ * so this is what stops eleven copies of a recursive conditional type from existing.
  *
  * Functions pass through whole: a fixture stub like `async () => 0` stands in for a callback, and
  * making its parameters optional would accept a stub the hook cannot call.

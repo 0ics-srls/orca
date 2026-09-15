@@ -2,7 +2,7 @@ import { hookMount, performHookAction } from '../hook-mount'
 import { observableModel, projectObservable } from '../observable-model'
 import type { MountAdapter, MountContext, MountedOperation } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
-import type { PartialRecorderFixture } from '../../recorder-fixture-shape'
+import type { PartialRecorderFixture } from '../recorder-fixture-shape'
 
 const REPO_ID = 'repo-1'
 
