@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -129,5 +129,49 @@ describe('browser identity mode store', () => {
       identity: { state: 'corrupt', configuredMode: null, appliedMode: 'clean' }
     })
     expect(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8')).toBe('{bad json')
+  })
+
+  it.each([
+    { label: 'corrupt', bytes: '{bad json' },
+    {
+      label: 'future',
+      bytes: JSON.stringify({
+        version: BROWSER_IDENTITY_MODE_VERSION + 1,
+        mode: 'native',
+        explicitSelection: true,
+        migrationNoticePending: false
+      })
+    }
+  ])('backs $label bytes up verbatim before publishing a fresh record', async ({ bytes }) => {
+    const userDataPath = mkdtempSync(join(tmpdir(), 'orca-browser-identity-store-'))
+    writeFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), bytes, 'utf8')
+    initializeBrowserIdentityModeStore(userDataPath)
+
+    await expect(setBrowserIdentityMode('native', { reset: true })).resolves.toMatchObject({
+      ok: true,
+      identity: { state: 'valid', configuredMode: 'native', explicitSelection: true }
+    })
+
+    const backups = readdirSync(userDataPath).filter((name) => name.endsWith('.bak'))
+    expect(backups).toHaveLength(1)
+    expect(readFileSync(join(userDataPath, backups[0]), 'utf8')).toBe(bytes)
+    expect(
+      JSON.parse(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8'))
+    ).toMatchObject({ version: BROWSER_IDENTITY_MODE_VERSION, mode: 'native' })
+  })
+
+  it('leaves the unhealthy bytes in place when the backup cannot be written', async () => {
+    const userDataPath = mkdtempSync(join(tmpdir(), 'orca-browser-identity-store-'))
+    writeFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), '{bad json', 'utf8')
+    initializeBrowserIdentityModeStore(userDataPath)
+    mocks.failWrite = true
+
+    await expect(setBrowserIdentityMode('native', { reset: true })).resolves.toMatchObject({
+      ok: false,
+      error: { code: 'browser_identity_backup_failed' }
+    })
+    // Never overwrite what could not be preserved.
+    expect(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8')).toBe('{bad json')
+    expect(readdirSync(userDataPath)).toEqual([BROWSER_IDENTITY_MODE_FILE])
   })
 })

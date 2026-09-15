@@ -37,6 +37,14 @@ describe('browser identity RPC', () => {
   it('commits a host-local identity selection', async () => {
     await identityDispatcher().dispatch(request('browser.identity.set', { mode: 'native' }))
 
-    expect(mocks.set).toHaveBeenCalledWith('native')
+    expect(mocks.set).toHaveBeenCalledWith('native', { reset: undefined })
+  })
+
+  it('forwards an explicit reset request to the single writer', async () => {
+    await identityDispatcher().dispatch(
+      request('browser.identity.set', { mode: 'clean', reset: true })
+    )
+
+    expect(mocks.set).toHaveBeenCalledWith('clean', { reset: true })
   })
 })

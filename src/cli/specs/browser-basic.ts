@@ -6,13 +6,14 @@ export const BROWSER_BASIC_COMMAND_SPECS: CommandSpec[] = [
     path: ['browser', 'identity', 'get'],
     summary: 'Show the browser identity configured on this Orca host',
     usage: 'orca browser identity get [--json]',
+    aliases: [['browser', 'identity', 'show']],
     allowedFlags: [...GLOBAL_FLAGS]
   },
   {
     path: ['browser', 'identity', 'set'],
     summary: 'Choose the browser identity for every page on this Orca host',
-    usage: 'orca browser identity set --mode <clean|native> [--json]',
-    allowedFlags: [...GLOBAL_FLAGS, 'mode']
+    usage: 'orca browser identity set --mode <clean|native> [--reset] [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'mode', 'reset']
   },
   {
     path: ['open-url'],

@@ -1,7 +1,6 @@
 // Why: browser schemas stay separate from handler registration so both sides
 // remain under the line cap and dispatch wiring stays scannable.
 export {
-  BrowserIdentitySet,
   Check,
   ClipboardWrite,
   CookieDelete,
@@ -27,7 +26,6 @@ export {
   MouseButton,
   MouseWheel,
   MouseXY,
-  ProfileCreate,
   ProfileDelete,
   ProfileImportFromBrowser,
   Screencast,
@@ -54,3 +52,7 @@ export {
   Viewport,
   Wait
 } from '../../../../shared/rpc-contract/browser-params'
+export {
+  BrowserIdentitySet,
+  ProfileCreate
+} from '../../../../shared/rpc-contract/browser-identity-params'

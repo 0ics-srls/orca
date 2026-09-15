@@ -16,6 +16,6 @@ export const BROWSER_IDENTITY_METHODS = [
   defineMethod({
     name: 'browser.identity.set',
     params: BrowserIdentitySet,
-    handler: async ({ mode }) => setBrowserIdentityMode(mode)
+    handler: async ({ mode, reset }) => setBrowserIdentityMode(mode, { reset })
   })
 ] as const

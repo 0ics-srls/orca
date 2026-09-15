@@ -28,7 +28,10 @@ export type BrowserIdentityModeSetResult =
   | {
       ok: false
       error: {
-        code: 'browser_identity_reset_required' | 'browser_identity_write_failed'
+        code:
+          | 'browser_identity_reset_required'
+          | 'browser_identity_write_failed'
+          | 'browser_identity_backup_failed'
         message: string
       }
       identity: BrowserIdentityModeSnapshot

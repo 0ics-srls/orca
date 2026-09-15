@@ -44,9 +44,12 @@ export const BROWSER_IDENTITY_HANDLERS: Record<string, CommandHandler> = {
   },
   'browser identity set': async (context) => {
     const mode = parseMode(context.flags)
+    // Opt-in only: without it the host refuses to overwrite corrupt or newer-version data.
+    const reset = context.flags.get('reset') === true
     await assertBrowserIdentitySupported(context)
     const result = await context.client.call<BrowserIdentityModeSetResult>('browser.identity.set', {
-      mode
+      mode,
+      ...(reset ? { reset: true } : {})
     })
     if (!result.result.ok) {
       throw new RuntimeClientError(result.result.error.code, result.result.error.message)

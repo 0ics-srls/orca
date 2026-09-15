@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import { existsSync, readFileSync } from 'node:fs'
 import { durableWriteTempPath, writeFileDurableSync } from '../durable-file-write'
 import type {
   BrowserIdentityModeSetResult,
@@ -49,6 +51,26 @@ function writeRecord(userDataPath: string, record: BrowserIdentityModeRecord): v
     filePath,
     `${JSON.stringify(record, null, 2)}\n`
   )
+}
+
+/**
+ * Copies unhealthy bytes to a fresh path before anything overwrites them. Byte-for-byte, and
+ * never onto a name that already exists, so an explicit reset cannot be what loses the data.
+ */
+function backupUnhealthyRecord(userDataPath: string): string {
+  const filePath = browserIdentityModeRecordPath(userDataPath)
+  const bytes = readFileSync(filePath)
+  const backupPath = `${filePath}.${Date.now()}.${randomUUID().slice(0, 8)}.bak`
+  if (existsSync(backupPath)) {
+    throw new Error(`Browser identity backup ${backupPath} already exists`)
+  }
+  writeFileDurableSync(durableWriteTempPath(backupPath), backupPath, bytes)
+  return backupPath
+}
+
+/** Whether this host actually owns a browser identity, which is what the capability advertises. */
+export function isBrowserIdentityModeStoreInitialized(): boolean {
+  return modeStore !== null
 }
 
 export function initializeBrowserIdentityModeStore(
@@ -116,19 +138,39 @@ function enqueueWrite<T>(operation: () => T): Promise<T> {
 
 /** Commits an explicit choice. The record lands durably before this resolves. */
 export function setBrowserIdentityMode(
-  mode: BrowserUserAgentMode
+  mode: BrowserUserAgentMode,
+  options: { reset?: boolean } = {}
 ): Promise<BrowserIdentityModeSetResult> {
   return enqueueWrite(() => {
     const store = requireModeStore()
     const current = store.snapshot
     if (current.configuredMode === null) {
-      return {
-        ok: false,
-        error: {
-          code: 'browser_identity_reset_required',
-          message: `Browser identity data is ${current.state}; reset it before choosing a mode.`
-        },
-        identity: current
+      // Why never automatic: the data may belong to a newer Orca, and overwriting it silently
+      // would destroy the only copy. The caller has to ask, and the old bytes survive the ask.
+      if (!options.reset) {
+        return {
+          ok: false,
+          error: {
+            code: 'browser_identity_reset_required',
+            message:
+              current.state === 'future'
+                ? 'Browser identity data was written by a newer Orca; update Orca, or reset it explicitly to overwrite it.'
+                : `Browser identity data is ${current.state}; reset it explicitly to overwrite it.`
+          },
+          identity: current
+        }
+      }
+      try {
+        backupUnhealthyRecord(store.userDataPath)
+      } catch (error) {
+        return {
+          ok: false,
+          error: {
+            code: 'browser_identity_backup_failed',
+            message: error instanceof Error ? error.message : String(error)
+          },
+          identity: current
+        }
       }
     }
     const record: BrowserIdentityModeRecord = {

@@ -49,8 +49,8 @@ import {
 } from './automation-params'
 import { CertificateProceed } from './browser-core-params'
 import { MouseClick } from './browser-extras-params'
+import { BrowserIdentitySet, ProfileCreate } from './browser-identity-params'
 import {
-  BrowserIdentitySet,
   Check,
   ClipboardWrite,
   CookieDelete,
@@ -76,7 +76,6 @@ import {
   MouseButton,
   MouseWheel,
   MouseXY,
-  ProfileCreate,
   ProfileDelete,
   ProfileImportFromBrowser,
   Screencast,
