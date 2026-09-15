@@ -162,6 +162,20 @@ describe('resolution receipts', () => {
     expect(screen.getByText('TypeScript')).toBeInTheDocument()
   })
 
+  it('names the actual question while a single grouped prompt is pending', () => {
+    const body: AgentJournalQuestionItem = {
+      kind: 'question',
+      question: '1 grouped question from Claude',
+      options: [],
+      questions: [{ id: 'q1', question: 'Libraries?', multiSelect: true, options: [] }],
+      resolution: { ...approval.resolution, state: 'pending', selectedOptionId: null }
+    }
+
+    render(<NativeChatResolutionReceipt body={body} />)
+    expect(screen.getByText('Libraries?')).toBeInTheDocument()
+    expect(screen.queryByText('1 grouped question from Claude')).toBeNull()
+  })
+
   it('decodes single free-text answers only for the declared question', () => {
     const body: AgentJournalQuestionItem = {
       kind: 'question',

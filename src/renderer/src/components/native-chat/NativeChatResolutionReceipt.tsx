@@ -20,10 +20,12 @@ export function NativeChatResolutionReceipt({
         : {
             kind: 'question',
             // Claude keeps a generic grouped label for a single multi-select
-            // question. Keep that label in the receipt so the answer's question
-            // line is not repeated in the heading.
+            // question. Use it after resolution so the answer's question line
+            // is not repeated in the heading.
             text:
-              body.questions?.length === 1 && body.questions[0]?.question !== body.question
+              body.resolution.state !== 'pending' &&
+              body.questions?.length === 1 &&
+              body.questions[0]?.question !== body.question
                 ? body.question
                 : (body.questions?.[0]?.question ?? body.question)
           }
