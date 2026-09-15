@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef } from 'react'
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import Editor, { type OnMount } from '@monaco-editor/react'
 import Markdown from 'react-markdown'
 import rehypeRaw from 'rehype-raw'
@@ -16,14 +16,26 @@ import MonacoCodeExcerpt from './MonacoCodeExcerpt'
 
 export function IpynbMarkdownCell({ source }: { source: string }): React.JSX.Element {
   const settings = useAppStore((s) => s.settings)
-  const isDark = resolveDocumentTheme(settings?.theme ?? 'system')
+  const theme = settings?.theme ?? 'system'
+  const [systemDark, setSystemDark] = useState(() => resolveDocumentTheme('system'))
+  useEffect(() => {
+    if (theme !== 'system' || typeof window.matchMedia !== 'function') {
+      return
+    }
+    const media = window.matchMedia('(prefers-color-scheme: dark)')
+    const onChange = () => setSystemDark(media.matches)
+    onChange()
+    media.addEventListener('change', onChange)
+    return () => media.removeEventListener('change', onChange)
+  }, [theme])
+  const isDark = theme === 'system' ? systemDark : resolveDocumentTheme(theme)
   return (
-    <div
-      className={cn('markdown-body px-4 py-3 text-sm', isDark ? 'markdown-dark' : 'markdown-light')}
-    >
-      <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
-        {source || '\u00a0'}
-      </Markdown>
+    <div className={cn('px-4 py-3 text-sm', isDark ? 'markdown-dark' : 'markdown-light')}>
+      <div className="markdown-body">
+        <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw, rehypeSanitize]}>
+          {source || '\u00a0'}
+        </Markdown>
+      </div>
     </div>
   )
 }

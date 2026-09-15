@@ -312,29 +312,3 @@ If you have a UI question this doc doesn't answer:
 2. Check `src/renderer/src/components/ui/` for a primitive that already encodes the pattern.
 3. If it's a token question, `main.css` is canonical — use what's there, or add a new one in both light and dark.
 4. If none of those resolve it, ask the user before inventing.
-
-## Enforcement
-
-Most of this guide is checked by [`@shadcn/lint`](https://github.com/shadcn-ui/lint), an Oxlint JS plugin that reads `components.json` and `main.css` and knows which Tailwind classes each primitive already owns. Its diagnostics name the fix — the variant, size, or token to use instead — rather than only the violation.
-
-| Command                               | Scope                          | What it does                                                                   |
-| ------------------------------------- | ------------------------------ | ------------------------------------------------------------------------------ |
-| `pnpm run check:dead-classes`         | Whole renderer, in `pnpm lint` | Fails on any class Tailwind can't generate. Currently at zero — keep it there. |
-| `pnpm run check:code-quality:changed` | Lines a PR adds                | Fails on new restyles, raw palette colors, and computed `className` strings.   |
-| `pnpm run lint:design-system`         | Whole renderer, report only    | The full picture, including the pre-existing backlog. Not a gate.              |
-
-Rules live in `config/oxlint-design-system.json` (the PR gate) and `config/oxlint-dead-classes.json` (the repo-wide one). Both are scoped to `src/renderer/**/*.tsx`.
-
-**What's enforced on new code:**
-
-- `no-restyle` — don't reach into a primitive's own spacing, typography, color, shape, or motion through `className`. Layout classes (flex, grid, position, sizing) are allowed, because layout belongs to the parent. If a primitive genuinely lacks the treatment you need, add a variant or size to the file in `components/ui/` rather than patching it at one call site.
-- `no-raw-colors` — no `bg-pink-500`. Use a token from the tables above, or add one to `main.css` in both `:root` and `.dark`.
-- `require-static-classes` — a `className` built at runtime can't be checked by anything, including this linter. Enumerate the variants instead.
-- `no-unknown-classes` — a Tailwind-shaped name that Tailwind doesn't generate is dead text. Plain CSS hook classes (`ravs-*`, `agent-map-*`, `comment-md-*`, …) are allow-listed by namespace in `config/oxlint-dead-classes.json`; adding a new namespace means adding it there. A name that _looks_ like a utility should be a real `@utility` in `main.css`.
-
-**What's deliberately off:**
-
-- `no-inline-styles` — the renderer computes real geometry inline (virtualized row offsets, terminal metrics, graph lane positions) and the rule can't distinguish that from a hardcoded color. Inline styles still owe you a reason; `main.css` is still canonical for anything static.
-- `no-arbitrary-values` — `main.css` defines no `--text-*` scale, so the 11px and 13px sizes this guide documents have no token to point at. Turning this on means adding that scale first.
-
-Neither gate rewrites existing code: the PR gate only looks at lines a change adds, so the renderer's pre-existing findings stay put until someone touches them.
