@@ -17,7 +17,7 @@ import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-ver
 import type { AgentLaunchIntent, AgentLaunchTarget } from '../../../../shared/agent-launch-intent'
 import { executeAgentLaunch } from '../../../agent-launch/agent-launch-executor'
 import type { OrcaRuntimeService } from '../../orca-runtime'
-import { defineMethod, type RpcContext, type RpcMethod } from '../core'
+import { defineMethod, type RpcContext } from '../core'
 import { AgentLaunch, type AgentLaunchParams } from './agent-launch-schemas'
 import { agentLaunchSurfaceFactory } from './agent-launch-surfaces'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
@@ -67,7 +67,7 @@ async function agentLaunchIntent(
   }
 }
 
-export const AGENT_LAUNCH_METHODS: RpcMethod[] = [
+export const AGENT_LAUNCH_METHODS = [
   defineMethod({
     name: 'agent.launch',
     params: AgentLaunch,

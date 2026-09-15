@@ -19,6 +19,7 @@ const LaunchAgent = z
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Unknown TUI agent' })
     }
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the superRefine above rejects anything isTuiAgent refuses, so the transform only ever runs on a TuiAgent.
   .transform((value): TuiAgent => value as TuiAgent)
 
 export const AgentLaunch = z.object({
