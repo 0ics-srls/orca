@@ -44,6 +44,7 @@ export function inspectLocalPtyChildProcesses(id: string): PtyChildProcessVerdic
     }
     return foreground === shell ? 'no-children' : 'children'
   } catch {
+    // An unreadable PTY is not evidence that its children exited.
     return 'unverifiable'
   }
 }

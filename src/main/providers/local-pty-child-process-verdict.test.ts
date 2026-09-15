@@ -77,6 +77,17 @@ afterEach(() => {
 const describeOnPosix = process.platform === 'win32' ? describe.skip : describe
 
 describe('inspectLocalPtyChildProcesses', () => {
+  it('reports unverifiable when the pty fd cannot be read', () => {
+    registerPane(
+      'pty-closed',
+      () => {
+        throw new Error('EBADF: bad file descriptor')
+      },
+      '/bin/zsh'
+    )
+    expect(inspectLocalPtyChildProcesses('pty-closed')).toBe('unverifiable')
+  })
+
   it('still answers no-children when the shell itself is in the foreground', () => {
     registerPane('pty-idle', '/bin/zsh', '/bin/zsh')
     expect(inspectLocalPtyChildProcesses('pty-idle')).toBe('no-children')
@@ -89,6 +100,17 @@ describe('inspectLocalPtyChildProcesses', () => {
 
   it('treats a pane this provider does not hold as a real negative', () => {
     expect(inspectLocalPtyChildProcesses('pty-absent')).toBe('no-children')
+  })
+
+  it('collapses uncertainty to false only in the boolean adapter', async () => {
+    registerPane(
+      'pty-closed',
+      () => {
+        throw new Error('EBADF: bad file descriptor')
+      },
+      '/bin/zsh'
+    )
+    await expect(hasLocalPtyChildProcesses('pty-closed')).resolves.toBe(false)
   })
 })
 
@@ -112,6 +134,26 @@ describeOnPosix('inspectLocalPtyChildProcesses on a retired master', () => {
 
 describe('inspectPtyProviderProcess child-process evidence', () => {
   const provider = new LocalPtyProvider()
+
+  it('carries unverifiable evidence when the child read fails after foreground inspection', async () => {
+    let reads = 0
+    registerPane(
+      'pty-closing',
+      () => {
+        reads += 1
+        if (reads > 1) {
+          throw new Error('EBADF: bad file descriptor')
+        }
+        return '/bin/zsh'
+      },
+      '/bin/zsh'
+    )
+    await expect(inspectPtyProviderProcess(provider, 'pty-closing')).resolves.toEqual({
+      foregroundProcess: '/bin/zsh',
+      hasChildProcesses: false,
+      childProcessEvidence: 'unverifiable'
+    })
+  })
 
   it('samples child evidence after foreground inspection', async () => {
     let reads = 0
