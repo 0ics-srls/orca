@@ -2,10 +2,7 @@ import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-o
 import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import { rpcReadUnchecked, rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 import { isTerminalSendResultAccepted } from './terminal-send-rpc-response'
-import {
-  readTerminalUpdateViewportOutcome,
-  type TerminalViewportUpdateOutcome
-} from './terminal-viewport-refit-state'
+import type { TerminalViewportUpdateOutcome } from './terminal-viewport-refit-state'
 
 // Terminal input and the in-place viewport update. The `subscribe` and `sendUnsubscribe` ports
 // these files also reach are a separate boundary and are untouched.
@@ -40,7 +37,11 @@ const terminalViewportUpdateReader: RpcCompatibleReader<
   Record<string, unknown>,
   'terminal-viewport-updated',
   TerminalViewportUpdateOutcome
-> = (raw) => rpcReadUnchecked('terminal-viewport-updated', readTerminalUpdateViewportOutcome(raw))
+> = (raw) =>
+  rpcReadUnchecked('terminal-viewport-updated', {
+    updated: raw.updated === true,
+    applied: raw.applied === true
+  })
 
 /**
  * The refit's in-place viewport update. Its capability verdict still comes off the raw reply: the

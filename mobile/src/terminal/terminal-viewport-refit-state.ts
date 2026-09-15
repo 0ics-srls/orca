@@ -17,12 +17,6 @@ export type TerminalViewportRefitTargetState = {
 /** What the runtime did with the viewport: recorded it, and whether it re-fitted the PTY too. */
 export type TerminalViewportUpdateOutcome = { updated: boolean; applied: boolean }
 
-export function readTerminalUpdateViewportOutcome(
-  result: Record<string, unknown>
-): TerminalViewportUpdateOutcome {
-  return { updated: result.updated === true, applied: result.applied === true }
-}
-
 export function resolveTerminalUpdateViewportCapability(
   response: RpcResponse
 ): TerminalUpdateViewportCapability {
