@@ -5,7 +5,7 @@ import {
   installModuleMocks,
   META_PATH,
   seedMeta
-} from './browser-session-registry-persistence-fixture'
+} from './__mocks__/browser-session-registry-persistence-fixture'
 
 describe('BrowserSessionRegistry persistence', () => {
   beforeEach(() => {

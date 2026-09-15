@@ -47,6 +47,13 @@ type UnhealthyBrowserIdentityModeReadResult = {
   migrationNoticePending: null
 }
 
+type BrowserIdentityModeFileInput = {
+  readonly version?: unknown
+  readonly mode?: unknown
+  readonly explicitSelection?: unknown
+  readonly migrationNoticePending?: unknown
+}
+
 /** In-memory health of one read. Never persisted: the file holds a choice, not a state machine. */
 export type BrowserIdentityModeReadResult =
   | HealthyBrowserIdentityModeReadResult
@@ -75,17 +82,14 @@ function parseRecord(raw: string): BrowserIdentityModeReadResult {
   } catch {
     return unhealthyResult('corrupt')
   }
-  if (!parsed || typeof parsed !== 'object') {
+  if (!isBrowserIdentityModeFileInput(parsed)) {
     return unhealthyResult('corrupt')
   }
-  const version = Reflect.get(parsed, 'version')
+  const { version, mode, explicitSelection, migrationNoticePending } = parsed
   // Why before the shape check: newer data means "update Orca", never "your data is broken".
   if (typeof version === 'number' && version > BROWSER_IDENTITY_MODE_VERSION) {
     return unhealthyResult('future')
   }
-  const mode = Reflect.get(parsed, 'mode')
-  const explicitSelection = Reflect.get(parsed, 'explicitSelection')
-  const migrationNoticePending = Reflect.get(parsed, 'migrationNoticePending')
   if (
     version !== BROWSER_IDENTITY_MODE_VERSION ||
     (mode !== 'clean' && mode !== 'native') ||
@@ -108,7 +112,7 @@ export function readBrowserIdentityModeRecord(userDataPath: string): BrowserIden
   try {
     return parseRecord(readFileSync(browserIdentityModeRecordPath(userDataPath), 'utf-8'))
   } catch (error) {
-    if (error instanceof Error && Reflect.get(error, 'code') === 'ENOENT') {
+    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
       return {
         state: 'missing',
         appliedMode: 'clean',
@@ -119,4 +123,8 @@ export function readBrowserIdentityModeRecord(userDataPath: string): BrowserIden
     }
     return unhealthyResult('unreadable')
   }
+}
+
+function isBrowserIdentityModeFileInput(value: unknown): value is BrowserIdentityModeFileInput {
+  return typeof value === 'object' && value !== null
 }

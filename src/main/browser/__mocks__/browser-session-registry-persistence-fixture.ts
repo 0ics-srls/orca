@@ -133,7 +133,7 @@ export function installModuleMocks(
     })
   }))
 
-  vi.doMock('./browser-manager', () => ({
+  vi.doMock('../browser-manager', () => ({
     browserManager: {
       notifyPermissionDenied: browserManagerNotifyPermissionDeniedMock,
       handleGuestWillDownload: browserManagerHandleGuestWillDownloadMock,
@@ -141,34 +141,34 @@ export function installModuleMocks(
       removeCertificateRequestGuard: vi.fn()
     }
   }))
-  vi.doMock('./browser-media-access', () => ({
+  vi.doMock('../browser-media-access', () => ({
     hasSystemMediaAccess: vi.fn(() => true),
     requestSystemMediaAccess: requestSystemMediaAccessMock
   }))
-  vi.doMock('./browser-session-ua', () => ({
+  vi.doMock('../browser-session-ua', () => ({
     installBrowserSessionUserAgentPolicy: installBrowserSessionUserAgentPolicyMock
   }))
-  vi.doMock('./browser-process-user-agent', () => ({
+  vi.doMock('../browser-process-user-agent', () => ({
     getBrowserProcessUserAgentIdentity: () => ({
       mode: 'clean',
       userAgent: CLEAN_USER_AGENT
     })
   }))
-  vi.doMock('../persistence', () => ({
+  vi.doMock('../../persistence', () => ({
     getCanonicalUserDataPath: () => USER_DATA
   }))
-  vi.doMock('../persistence/loading-store/user-data-path', () => ({
+  vi.doMock('../../persistence/loading-store/user-data-path', () => ({
     getCanonicalUserDataPath: () => USER_DATA
   }))
   // These suites model replay with an in-memory filesystem. The real file-backed SQLite merge has
   // dedicated coverage; these fixtures are legacy unmarked images and keep the copy path.
-  vi.doMock('./browser-cookie-staged-import', () => ({
+  vi.doMock('../browser-cookie-staged-import', () => ({
     SCOPED_COOKIE_IMPORT_FORMAT: 'scoped-v1',
     applyScopedStagedCookieImport: vi.fn(() => false),
     isScopedStagedCookieImport: vi.fn(() => false),
     removeCookieImportScopeMarker: vi.fn()
   }))
-  vi.doMock('../codex-accounts/fs-utils', () => ({
+  vi.doMock('../../codex-accounts/fs-utils', () => ({
     renameFileWithWindowsRetry: vi.fn((source: string, target: string) => {
       const sourceKey = fsKey(source)
       const targetKey = fsKey(target)

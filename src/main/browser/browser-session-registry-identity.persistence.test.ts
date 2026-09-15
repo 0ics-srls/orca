@@ -6,7 +6,7 @@ import {
   installModuleMocks,
   META_PATH,
   seedMeta
-} from './browser-session-registry-persistence-fixture'
+} from './__mocks__/browser-session-registry-persistence-fixture'
 
 describe('BrowserSessionRegistry retired identity data', () => {
   beforeEach(() => {
@@ -210,7 +210,7 @@ describe('BrowserSessionRegistry retired identity data', () => {
     ).toBe(true)
     expect(
       installBrowserSessionUserAgentPolicyMock.mock.calls.some(
-        ([sess]) => Reflect.get(sess, 'partition') === importedPartition
+        ([sess]) => sess.partition === importedPartition
       )
     ).toBe(true)
   })
