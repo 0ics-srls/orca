@@ -50,7 +50,7 @@ function harness(options: {
   })
   const runtime = {
     getClientSettings: () =>
-      (options.settings === undefined ? STRUCTURED_PREFERENCE : options.settings) as never,
+      options.settings === undefined ? STRUCTURED_PREFERENCE : options.settings,
     getStructuredAgentSessionCreateSupport
   }
   return {
@@ -60,6 +60,7 @@ function harness(options: {
     createTerminalAgent,
     run: (intent: AgentLaunchIntent) =>
       executeAgentLaunch({
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements only the two runtime methods the executor reaches, and each test asserts the calls made, so an omitted method throws rather than reading a wrong value.
         runtime: runtime as unknown as AgentLaunchExecution['runtime'],
         intent,
         surfaces: { createStructuredSession, createTerminalAgent },

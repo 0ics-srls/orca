@@ -10,6 +10,7 @@ import type { WorkspaceAgentChoice } from './workspace-agent-selection'
 import {
   startupAgentCreateFields,
   buildTaskWorkspaceCreateParams,
+  type WorkspaceCreateParams,
   type WorkspaceCreateSetupDecision,
   type WorkspaceCreateTaskItem
 } from './workspace-create-params'
@@ -183,7 +184,7 @@ async function createBranchWorkspace(args: {
   const agentLaunch = resolveComposerAgentLaunch(createdWithAgentId, args.agentLaunchSupported)
   const comment = note?.trim()
   const manualDisplayName = nameIsAutoManaged === true ? undefined : workspaceName?.trim()
-  const applyCommon = (params: Record<string, unknown>): Record<string, unknown> => {
+  const applyCommon = (params: WorkspaceCreateParams): WorkspaceCreateParams => {
     Object.assign(params, startupAgentCreateFields(createdWithAgentId))
     if (comment) {
       params.comment = comment
@@ -231,7 +232,7 @@ async function createBranchWorkspace(args: {
     worktreeCreateIdempotency: args.worktreeCreateIdempotency,
     ...(agentLaunch ? { agentLaunch } : {}),
     buildParams: (candidate) => {
-      const params: Record<string, unknown> = {
+      const params: WorkspaceCreateParams = {
         repo: `id:${targetRepoId}`,
         name: candidate,
         setupDecision,
@@ -284,7 +285,7 @@ async function createNewBranchWorkspace(args: {
     worktreeCreateIdempotency: args.worktreeCreateIdempotency,
     ...(agentLaunch ? { agentLaunch } : {}),
     buildParams: (candidate) => {
-      const params: Record<string, unknown> = {
+      const params: WorkspaceCreateParams = {
         repo: `id:${targetRepoId}`,
         name: candidate,
         setupDecision,

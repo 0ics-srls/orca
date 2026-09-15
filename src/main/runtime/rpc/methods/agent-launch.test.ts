@@ -10,7 +10,6 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
-import type { OrcaRuntimeService } from '../../orca-runtime'
 import type { RpcContext } from '../core'
 
 const createStructuredSession = vi.fn(async (_args: Record<string, unknown>) => ({
@@ -47,7 +46,7 @@ function runtimeStub(
       <T>(_repo: string, _key: string | undefined, run: () => Promise<T>) => run()
     ),
     showRepo: vi.fn(async () => ({ id: 'repo-1' })),
-    createManagedWorktree: vi.fn(async (args: { startupAgent?: string }) => ({
+    createManagedWorktree: vi.fn(async (args: Record<string, unknown>) => ({
       worktree: { id: 'wt-new' },
       startupTerminal: args.startupAgent ? { handle: 'term_agent_first' } : undefined
     })),
@@ -61,22 +60,37 @@ function runtimeStub(
 
 type RuntimeStub = ReturnType<typeof runtimeStub>
 
-function methodNamed(methods: readonly { name: string }[], name: string) {
-  const found = methods.find((entry) => entry.name === name)
+function methodNamed<TMethod extends { name: string }, TName extends string>(
+  methods: readonly TMethod[],
+  name: TName
+): Extract<TMethod, { name: TName }> {
+  const found = methods.find(
+    (entry): entry is Extract<TMethod, { name: TName }> => entry.name === name
+  )
   if (!found) {
     throw new Error(`missing method ${name}`)
   }
-  return found as { name: string; params: { safeParse: (v: unknown) => unknown } | null } & {
-    handler: (params: unknown, ctx: RpcContext) => unknown
-  }
+  return found
 }
 
 const AGENT_LAUNCH = methodNamed(AGENT_LAUNCH_METHODS, 'agent.launch')
 
 function parseLaunch(params: unknown) {
-  return AGENT_LAUNCH.params?.safeParse(params) as
-    | { success: true; data: unknown }
-    | { success: false; error: { issues: { message: string }[] } }
+  return AGENT_LAUNCH.params.safeParse(params)
+}
+
+// The one call the stub cannot satisfy structurally; every method it does implement is asserted.
+function rpcContext(runtime: RuntimeStub, context: Partial<RpcContext>): RpcContext {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements only the runtime surface these methods reach, so a method it omits throws on call rather than reading a wrong value.
+  return { runtime, ...context } as unknown as RpcContext
+}
+
+function createArgs(runtime: RuntimeStub): Record<string, unknown> {
+  const [args] = runtime.createManagedWorktree.mock.calls[0] ?? []
+  if (!args) {
+    throw new Error('createManagedWorktree was not called')
+  }
+  return args
 }
 
 const CAPABLE_CLIENT: Partial<RpcContext> = {
@@ -94,10 +108,7 @@ async function launch(
   if (!parsed.success) {
     throw new Error(parsed.error.issues[0]?.message ?? 'invalid')
   }
-  return AGENT_LAUNCH.handler(parsed.data, {
-    runtime: runtime as unknown as OrcaRuntimeService,
-    ...context
-  } as RpcContext)
+  return AGENT_LAUNCH.handler(parsed.data, rpcContext(runtime, context))
 }
 
 const CREATE_LAUNCH = {
@@ -173,9 +184,9 @@ describe('what agent.launch accepts', () => {
 describe('the worktree factory', () => {
   it('creates a structured launch’s worktree with no startup agent', async () => {
     const runtime = runtimeStub()
-    const result = (await launch(CREATE_LAUNCH, runtime)) as { outcome: { kind: string } }
+    const result = await launch(CREATE_LAUNCH, runtime)
 
-    const args = runtime.createManagedWorktree.mock.calls[0]?.[0] as Record<string, unknown>
+    const args = createArgs(runtime)
     expect(args.startupAgent).toBeUndefined()
     // Still recorded on the workspace: the launch owns the agent whichever surface it settles on.
     expect(args.createdWithAgent).toBe('claude')
@@ -184,11 +195,9 @@ describe('the worktree factory', () => {
 
   it('keeps agent-first creation for a launch the user wants as a terminal', async () => {
     const runtime = runtimeStub({ settings: {} })
-    const result = (await launch(CREATE_LAUNCH, runtime)) as {
-      outcome: { kind: string; handle: string }
-    }
+    const result = await launch(CREATE_LAUNCH, runtime)
 
-    const args = runtime.createManagedWorktree.mock.calls[0]?.[0] as Record<string, unknown>
+    const args = createArgs(runtime)
     expect(args.startupAgent).toBe('claude')
     expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_agent_first' })
     expect(runtime.getStructuredAgentSessionCreateSupport).not.toHaveBeenCalled()
@@ -211,7 +220,7 @@ describe('the worktree factory', () => {
       },
       runtime
     )
-    const args = runtime.createManagedWorktree.mock.calls[0]?.[0] as Record<string, unknown>
+    const args = createArgs(runtime)
     expect(args.startupAgent).toBeUndefined()
     expect(args.startup).toBeUndefined()
   })
@@ -220,10 +229,7 @@ describe('the worktree factory', () => {
 describe('the structured session factory', () => {
   it('creates the session for the worktree the launch just made, and activates it', async () => {
     const runtime = runtimeStub()
-    const result = (await launch(CREATE_LAUNCH, runtime)) as {
-      outcome: { kind: string; sessionId: string; handle: string }
-      worktreeId: string
-    }
+    const result = await launch(CREATE_LAUNCH, runtime)
 
     expect(createStructuredSession).toHaveBeenCalledTimes(1)
     expect(createStructuredSession.mock.calls[0]?.[0]).toMatchObject({
@@ -257,10 +263,7 @@ describe('the structured session factory', () => {
 describe('the terminal factory', () => {
   it('starts the agent through the runtime launcher when the host refuses a session', async () => {
     const runtime = runtimeStub({ createSupport: { supported: false, reason: 'wsl' } })
-    const result = (await launch(CREATE_LAUNCH, runtime)) as {
-      outcome: { kind: string; handle: string }
-      receipt: { mode: string; reason: string }
-    }
+    const result = await launch(CREATE_LAUNCH, runtime)
 
     expect(runtime.createTerminal).toHaveBeenCalledWith('id:wt-new', { startupAgent: 'claude' })
     expect(createStructuredSession).not.toHaveBeenCalled()
@@ -271,10 +274,10 @@ describe('the terminal factory', () => {
 
   it('takes an existing workspace without creating one', async () => {
     const runtime = runtimeStub()
-    const result = (await launch(
+    const result = await launch(
       { agent: 'grok', target: { kind: 'existing', worktree: 'id:wt-7' } },
       runtime
-    )) as { worktreeId: string }
+    )
 
     expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
     expect(runtime.showManagedTerminalWorkspace).toHaveBeenCalledWith('id:wt-7')
@@ -289,18 +292,18 @@ describe('worktree.create is untouched by any of this', () => {
   it('still answers a startupAgent create with a PTY agent and its handle', async () => {
     const runtime = runtimeStub()
     const create = methodNamed(WORKTREE_METHODS, 'worktree.create')
-    const parsed = create.params?.safeParse({
+    const parsed = create.params.safeParse({
       repo: 'id:repo-1',
       name: 'task',
       startupAgent: 'claude'
-    }) as { success: true; data: unknown }
-    expect(parsed.success).toBe(true)
+    })
+    if (!parsed.success) {
+      throw new Error(parsed.error.issues[0]?.message ?? 'invalid')
+    }
 
-    const result = (await create.handler(parsed.data, {
-      runtime: runtime as unknown as OrcaRuntimeService
-    } as RpcContext)) as { agentTerminalHandle?: string }
+    const result = await create.handler(parsed.data, rpcContext(runtime, {}))
 
-    expect(result.agentTerminalHandle).toBe('term_agent_first')
+    expect(result).toMatchObject({ agentTerminalHandle: 'term_agent_first' })
     expect(runtime.createManagedWorktree.mock.calls[0]?.[0]).toMatchObject({
       startupAgent: 'claude'
     })

@@ -104,7 +104,6 @@ const BLOCKER_REASON: Record<
 > = {
   'reused-terminal': 'reused_terminal',
   'agent-without-structured-session': 'agent_without_structured_session',
-  'draft-prompt': 'structured_unsupported_on_host',
   'floating-workspace': 'structured_unsupported_on_host',
   'tui-launch-customization': 'tui_launch_customization',
   'remote-execution-host': 'remote_execution_host',
@@ -142,6 +141,7 @@ export function decideAgentLaunchMode(args: {
       detail: `Started ${vocabulary.terminal}, the default for new agent tabs in your settings.`
     }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an unrecognized agent name is handled rather than trusted; isAgentSessionHandleProvider rejects it and the launch downgrades to a terminal.
   const agent = placement.agent as TuiAgent
   const support = resolveStructuredNativeChatSupport({
     agent,

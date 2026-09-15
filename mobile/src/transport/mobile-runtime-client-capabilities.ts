@@ -1,5 +1,7 @@
 import {
   AGENT_LAUNCH_RUNTIME_CAPABILITY,
+  AGENT_SESSION_PENDING_SEND_RESULT_RUNTIME_CAPABILITY,
+  AGENT_SESSION_TURN_ITEM_CAPABILITY,
   CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
   STRUCTURED_AGENT_SESSION_HOLD_RUNTIME_CAPABILITY,
   STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY
@@ -8,8 +10,11 @@ import { remoteRuntimeClientCapabilities } from '../../../src/shared/remote-runt
 
 export const MOBILE_RUNTIME_CLIENT_CAPABILITIES = remoteRuntimeClientCapabilities([
   STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
+  AGENT_SESSION_PENDING_SEND_RESULT_RUNTIME_CAPABILITY,
   STRUCTURED_AGENT_SESSION_HOLD_RUNTIME_CAPABILITY,
   CLAUDE_STRUCTURED_AGENT_SESSION_RUNTIME_CAPABILITY,
+  // Opts into the typed turn record; without it the host sends the legacy status carrier.
+  AGENT_SESSION_TURN_ITEM_CAPABILITY,
   // Mobile renders either launch outcome — a structured chat or a terminal agent — so it may ask
   // the host to pick. Without this the host refuses `agent.launch` and every mobile create with an
   // agent stays a PTY.

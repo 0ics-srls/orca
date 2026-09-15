@@ -122,12 +122,13 @@ export const AGENT_LAUNCH_RESERVED_CREATE_FIELDS = [
 /** Strips the reserved agent fields from a create payload. Callers migrating from
  *  `worktree.create` pass their existing params; this keeps a stale `startupAgent` from
  *  re-creating the agent-first path the router exists to replace. */
-export function withoutReservedAgentCreateFields(
-  create: Readonly<Record<string, unknown>>
-): Record<string, unknown> {
+export function withoutReservedAgentCreateFields<Create extends Readonly<Record<string, unknown>>>(
+  create: Create
+): Create {
   const stripped: Record<string, unknown> = { ...create }
   for (const field of AGENT_LAUNCH_RESERVED_CREATE_FIELDS) {
     delete stripped[field]
   }
-  return stripped
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every reserved field is optional on a create payload, so dropping them leaves the caller's own shape.
+  return stripped as Create
 }

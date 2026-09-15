@@ -27,6 +27,8 @@ function pointerDeps(db: OrchestrationDb, writePty: () => WriteSettlement) {
     getLeaf: () => LEAF,
     getLeafKey: () => 'tab-1:leaf-1',
     getLiveLeafForHandle: () => LEAF,
+    // These cases exercise staging and Enter phases, not the idle gate; the pane is settled.
+    isAgentSettledForDelivery: () => true,
     getMessageWaiters: () => undefined,
     getTabTitle: () => null,
     getCliCommand: () => 'orca' as const,
@@ -198,5 +200,74 @@ describe('mailbox pointer staging watermark', () => {
 
     expect(writePty.mock.calls.length).toBeGreaterThan(0)
     db.close()
+  })
+})
+
+describe('retiring a pty mid-delivery', () => {
+  // Why: an Enter that was already written may have landed. Releasing it would send the same
+  // mail a second time, so only phases that provably never submitted become redeliverable.
+  it('leaves an attempted Enter at its phase instead of making it redeliverable', async () => {
+    vi.useFakeTimers()
+    const db = new OrchestrationDb(':memory:')
+    const settlements: ((settlement: WriteSettlement) => void)[] = []
+    const writePty = vi.fn(
+      () =>
+        new Promise<WriteSettlement>((resolve) => {
+          settlements.push(resolve)
+        }) as unknown as WriteSettlement
+    )
+    try {
+      const message = db.insertMessage({ from: 'a', to: 'run:run-1', subject: 'mail' })
+      const delivery = new OrchestrationMailboxPointerDelivery(pointerDeps(db, writePty) as never)
+      delivery.deliver(LEAF, { mailboxHandle: 'run:run-1' })
+
+      // Settle the pointer write, so the pane reaches WRITE_ATTEMPTED and arms the Enter.
+      settlements[0]?.(WRITE_ACCEPTED)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(db.getMessageById(message.id)?.pointer_enter_pending).toBe(2)
+
+      // Fire the Enter but never settle it: this is the ambiguous state.
+      await vi.advanceTimersByTimeAsync(600)
+      expect(db.getMessageById(message.id)?.pointer_enter_pending).toBe(3)
+
+      delivery.retirePty('pty-1')
+      expect(db.getMessageById(message.id)).toMatchObject({
+        pointer_enter_pending: 3,
+        read: 0
+      })
+    } finally {
+      db.close()
+      vi.useRealTimers()
+    }
+  })
+
+  it('releases a pointer whose Enter never fired', async () => {
+    vi.useFakeTimers()
+    const db = new OrchestrationDb(':memory:')
+    const settlements: ((settlement: WriteSettlement) => void)[] = []
+    const writePty = vi.fn(
+      () =>
+        new Promise<WriteSettlement>((resolve) => {
+          settlements.push(resolve)
+        }) as unknown as WriteSettlement
+    )
+    try {
+      const message = db.insertMessage({ from: 'a', to: 'run:run-1', subject: 'mail' })
+      const delivery = new OrchestrationMailboxPointerDelivery(pointerDeps(db, writePty) as never)
+      delivery.deliver(LEAF, { mailboxHandle: 'run:run-1' })
+      settlements[0]?.(WRITE_ACCEPTED)
+      await vi.advanceTimersByTimeAsync(0)
+      expect(db.getMessageById(message.id)?.pointer_enter_pending).toBe(2)
+
+      delivery.retirePty('pty-1')
+      expect(db.getMessageById(message.id)).toMatchObject({
+        pointer_enter_pending: 0,
+        read: 0,
+        delivered_at: null
+      })
+    } finally {
+      db.close()
+      vi.useRealTimers()
+    }
   })
 })

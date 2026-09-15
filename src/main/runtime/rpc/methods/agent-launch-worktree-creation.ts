@@ -33,7 +33,7 @@ export function agentLaunchWorkspaceFactory(
 ): AgentLaunchWorkspaceFactory {
   return {
     createWorktree: async ({ create, startupAgent }) => {
-      // Already validated by `AgentLaunch`; the executor only removed the reserved agent fields.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: already validated by `AgentLaunch`; the executor only removed the reserved agent fields, so the rest of the payload is the parsed shape.
       const params = create as WorktreeCreateParams
       const { runtime } = context
       return runtime.dedupeWorktreeCreate(params.repo, params.clientMutationId, async () => {

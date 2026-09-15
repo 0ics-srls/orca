@@ -17,8 +17,8 @@ import {
   type AgentLaunchResult
 } from '../../../src/shared/agent-launch-intent'
 import type { TuiAgent } from '../../../src/shared/tui-agent'
-
-export const AGENT_LAUNCH_METHOD = 'agent.launch' as const
+import type { RpcSendParams } from '../transport/rpc-params-contract'
+import type { WorkspaceCreateParams } from './workspace-create-params'
 
 export type WorktreeCreateAgentLaunch = {
   agent: TuiAgent
@@ -26,12 +26,12 @@ export type WorktreeCreateAgentLaunch = {
   supported: boolean | Promise<boolean>
 }
 
-export type AgentLaunchCreateOutcome = { worktreeId: string }
+export type AgentLaunchCreateOutcome = { worktreeId: string; warning?: string }
 
 export function agentLaunchCreateParams(
   agent: TuiAgent,
-  create: Record<string, unknown>
-): Record<string, unknown> {
+  create: WorkspaceCreateParams
+): RpcSendParams<'agent.launch'> {
   return {
     agent,
     target: { kind: 'create-worktree', create: withoutReservedAgentCreateFields(create) }
@@ -43,18 +43,23 @@ export function agentLaunchCreateParams(
  *
  * Deliberately mode-blind: whichever surface the host built, it published and activated that tab
  * before answering, so the create flow navigates to the workspace and the host's own active-tab
- * marking decides what opens. That is why nothing here branches on `outcome.kind` — a create-time
- * guess would just race the snapshot that already knows.
+ * marking decides what opens. That is why nothing here branches on `outcome.kind` to pick a
+ * destination — a create-time guess would just race the snapshot that already knows.
  */
 export function readAgentLaunchCreateOutcome(result: unknown): AgentLaunchCreateOutcome | null {
   if (!result || typeof result !== 'object') {
     return null
   }
-  const worktreeId = (result as Partial<AgentLaunchResult>).worktreeId
+  const receipt = result as Partial<AgentLaunchResult>
+  const worktreeId = receipt.worktreeId
   if (typeof worktreeId !== 'string' || !worktreeId.trim()) {
     return null
   }
-  return { worktreeId }
+  // Why: a launch can seat the workspace and still fail to start the terminal (pty exhaustion).
+  // Dropping the warning is what lands the phone on an unexplained empty session.
+  const outcome = receipt.outcome
+  const warning = outcome?.kind === 'terminal' ? (outcome.warning ?? '').trim() : ''
+  return { worktreeId, ...(warning ? { warning } : {}) }
 }
 
 /**

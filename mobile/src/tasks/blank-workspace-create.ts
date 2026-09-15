@@ -5,6 +5,7 @@ import type { WorktreeCreateAgentLaunch } from './agent-launch-worktree-create'
 import type { WorktreeCreateIdempotencyProbe } from './worktree-create-idempotency-policy'
 import {
   startupAgentCreateFields,
+  type WorkspaceCreateParams,
   type WorkspaceCreateSetupDecision
 } from './workspace-create-params'
 
@@ -35,7 +36,7 @@ export async function createBlankWorkspace(args: {
     worktreeCreateIdempotency: args.worktreeCreateIdempotency,
     ...(agentLaunch ? { agentLaunch } : {}),
     buildParams: (name) => {
-      const params: Record<string, unknown> = {
+      const params: WorkspaceCreateParams = {
         repo: `id:${args.repoId}`,
         setupDecision: args.setupDecision,
         name,
