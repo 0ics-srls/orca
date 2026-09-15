@@ -431,6 +431,49 @@ describe('revealing a diff from a turn rollup', () => {
     // Pinned, not paged to: the window is still a window.
     expect(windowState(container).indexes.length).toBeLessThanOrEqual(mountedBefore + 2)
   })
+
+  it('lets a rail jump supersede a previously revealed diff', () => {
+    const withPrompts = [
+      ...items.slice(0, 2),
+      journalItem(
+        'user-2',
+        { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'Second prompt' }] },
+        3
+      ),
+      journalItem(
+        'user-3',
+        { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'Third prompt' }] },
+        4
+      ),
+      ...items.slice(2)
+    ].map((item, index) => ({ ...item, sequence: index + 1 }))
+    const scrollTo = vi.fn()
+    vi.spyOn(HTMLElement.prototype, 'scrollTo').mockImplementation(scrollTo)
+    const { container } = render(
+      <NativeChatMessageList
+        session={session(projectStructuredItemsToNativeChat(withPrompts))}
+        journalItems={withPrompts}
+        isWorking={false}
+        expandSignal={false}
+        fontScale={1}
+      />
+    )
+    fireEvent.click(screen.getByRole('button', { name: /1 changed file/ }))
+    fireEvent.click(screen.getByRole('button', { name: /src\/a.ts/ }))
+    scrollTranscript(container, 6000)
+    expect(screen.getByText('Edited file')).toBeInTheDocument()
+    scrollTo.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: 'Your messages' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Second prompt' }))
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText('Edited file')).toBeNull()
+
+    scrollTranscript(container, 0)
+    scrollTo.mockClear()
+    fireEvent.click(screen.getByRole('button', { name: /1 changed file/ }))
+    fireEvent.click(screen.getByRole('button', { name: /src\/a.ts/ }))
+    expect(scrollTo).toHaveBeenCalledTimes(1)
+  })
 })
 
 // The rail borrows the reveal's pin to reach a row the window has left behind.

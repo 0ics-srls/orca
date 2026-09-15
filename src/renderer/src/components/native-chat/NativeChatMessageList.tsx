@@ -44,6 +44,10 @@ export { ProviderFrameRow } from './NativeChatTranscriptChrome'
 
 const MAX_EXPANDED_TURNS = 128
 
+type NativeChatNavigationRequest =
+  | { kind: 'diff'; target: NativeChatDiffReveal }
+  | { kind: 'rail'; messageId: string; requestId: number }
+
 export function NativeChatMessageList({
   session,
   journalItems,
@@ -77,11 +81,19 @@ export function NativeChatMessageList({
   turnActivity?: NativeChatTurnActivity | null
   runtimeContext?: RuntimeFileOperationArgs | null
 }): React.JSX.Element {
-  const [revealedDiff, setRevealedDiff] = useState<NativeChatDiffReveal | null>(null)
+  const [navigationRequest, setNavigationRequest] = useState<NativeChatNavigationRequest | null>(
+    null
+  )
+  const navigationSequence = useRef(0)
+  const revealedDiff = navigationRequest?.kind === 'diff' ? navigationRequest.target : null
+  const railJump = navigationRequest?.kind === 'rail' ? navigationRequest : null
   const revealDiff = useCallback((target: NativeChatDiffTarget) => {
-    setRevealedDiff((current) => ({ ...target, requestId: (current?.requestId ?? 0) + 1 }))
+    navigationSequence.current += 1
+    setNavigationRequest({
+      kind: 'diff',
+      target: { ...target, requestId: navigationSequence.current }
+    })
   }, [])
-  const [railJump, setRailJump] = useState<{ messageId: string; requestId: number } | null>(null)
   const receipts = useMemo(
     () =>
       new Map(
@@ -219,13 +231,14 @@ export function NativeChatMessageList({
     slots,
     virtualItems: transcriptWindow.virtualItems
   })
-  // Monotonic, so releasing the request below cannot hand out a number this
-  // effect has already serviced.
-  const railJumpSeqRef = useRef(0)
   const servicedRailJumpRef = useRef(0)
   const selectRailItem = useCallback((item: NativeChatRailItem) => {
-    railJumpSeqRef.current += 1
-    setRailJump({ messageId: item.id, requestId: railJumpSeqRef.current })
+    navigationSequence.current += 1
+    setNavigationRequest({
+      kind: 'rail',
+      messageId: item.id,
+      requestId: navigationSequence.current
+    })
   }, [])
   // Pinning the target mounts it in the same commit, so the row exists by the time
   // layout runs. Routed through `scrollMessageToTop` rather than the virtualizer
@@ -246,7 +259,7 @@ export function NativeChatMessageList({
     if (row) {
       scrollMessageToTop(row)
     }
-    setRailJump(null)
+    setNavigationRequest(null)
   }, [railJump, scrollMessageToTop, slots])
 
   const rowContext = useMemo<NativeChatTranscriptRowContext>(
