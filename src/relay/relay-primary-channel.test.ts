@@ -20,6 +20,10 @@ describe('nullDevicePath', () => {
 
     expect(path).toBe('\\\\.\\NUL')
     expect(win32.toNamespacedPath(path)).toBe(path)
+    // Bare `NUL` never survives as a device name: it is resolved against cwd, and a
+    // drive-letter cwd then also takes the `\\?\` prefix. Spelled absolute because off
+    // Windows `resolve` finds no drive letter and stops before that second rewrite.
     expect(win32.toNamespacedPath('NUL')).not.toBe('NUL')
+    expect(win32.toNamespacedPath(String.raw`C:\relay\NUL`)).toBe(String.raw`\\?\C:\relay\NUL`)
   })
 })
