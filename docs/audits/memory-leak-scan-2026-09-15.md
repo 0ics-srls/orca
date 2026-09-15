@@ -15,8 +15,8 @@ all edits are made in this worktree and every area below is accounted for.
 | `cloud` | tracked TS/TSX/JS/JSX | root | complete; no valuable leaks found |
 | `tests` | tracked TS/TSX/JS/JSX | root + area owners | complete; fixtures classified |
 | `config` | tracked TS/TSX/JS/JSX | root | complete; build/test lifecycle only |
-| `native`, `src/cli`, `src/relay`, `src/types` | tracked source | root | reviewed by targeted search |
-| docs, skills, resources, examples, scripts, packaging | non-runtime/support files | root | reviewed; no production leak candidates |
+| `native`, `src/cli`, `src/relay`, `src/types` | tracked source | root | complete; targeted lifecycle search and manual review |
+| docs, skills, resources, examples, scripts, packaging | non-runtime/support files | root | complete; no production leak candidates |
 
 ## Search evidence
 
