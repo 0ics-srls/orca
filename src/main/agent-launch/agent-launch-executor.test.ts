@@ -9,7 +9,11 @@
  */
 
 import { describe, expect, it, vi } from 'vitest'
-import { executeAgentLaunch, type AgentLaunchExecution } from './agent-launch-executor'
+import {
+  AgentLaunchStructuredSessionRefusedError,
+  executeAgentLaunch,
+  type AgentLaunchExecution
+} from './agent-launch-executor'
 import type { AgentLaunchIntent } from '../../shared/agent-launch-intent'
 
 const STRUCTURED_PREFERENCE = {
@@ -22,6 +26,7 @@ function harness(options: {
   settings?: Record<string, unknown> | null
   createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
   createSupportThrows?: boolean
+  structuredCreateError?: Error
 }) {
   const calls: string[] = []
   const createWorktree = vi.fn(
@@ -42,6 +47,9 @@ function harness(options: {
   })
   const createStructuredSession = vi.fn(async () => {
     calls.push('createStructuredSession')
+    if (options.structuredCreateError) {
+      throw options.structuredCreateError
+    }
     return { sessionId: 'sess-1', handle: 'handle_structured' }
   })
   const createTerminalAgent = vi.fn(async () => {
@@ -122,6 +130,44 @@ describe('a structured launch that creates its own worktree', () => {
     const result = await h.run(CREATE_INTENT)
     expect(result.outcome.kind).toBe('terminal')
     expect(result.receipt).toMatchObject({ reason: 'structured_support_unknown' })
+  })
+
+  it('falls back only for a definitive structured refusal after the worktree exists', async () => {
+    const h = harness({
+      structuredCreateError: new AgentLaunchStructuredSessionRefusedError(
+        'structured_agent_session_unsupported',
+        'unsupported'
+      )
+    })
+    const result = await h.run(CREATE_INTENT)
+
+    expect(h.calls).toEqual([
+      'createWorktree(startupAgent=undefined)',
+      'createSupport',
+      'createStructuredSession',
+      'createTerminalAgent'
+    ])
+    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_1' })
+    expect(result.receipt).toMatchObject({
+      mode: 'terminal',
+      reason: 'structured_unsupported_on_host'
+    })
+  })
+
+  it('does not create a duplicate terminal when structured creation is unknown', async () => {
+    const h = harness({
+      structuredCreateError: new AgentLaunchStructuredSessionRefusedError(
+        'agent_session_operation_unknown',
+        'unknown'
+      )
+    })
+
+    await expect(h.run(CREATE_INTENT)).rejects.toThrow('unknown')
+    expect(h.calls).toEqual([
+      'createWorktree(startupAgent=undefined)',
+      'createSupport',
+      'createStructuredSession'
+    ])
   })
 
   it('strips a stale startupAgent out of a migrated create payload', async () => {

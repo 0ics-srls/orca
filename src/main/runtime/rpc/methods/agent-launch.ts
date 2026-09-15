@@ -67,6 +67,25 @@ async function agentLaunchIntent(
   }
 }
 
+async function validateReusedTerminal(
+  intent: AgentLaunchIntent,
+  runtime: Pick<OrcaRuntimeService, 'showTerminal' | 'isTerminalRunningAgent'>
+): Promise<void> {
+  if (!intent.reuseTerminal) {
+    return
+  }
+  if (intent.target.kind !== 'existing') {
+    throw new Error('agent_launch_reuse_requires_existing_workspace')
+  }
+  const terminal = await runtime.showTerminal(intent.reuseTerminal.handle)
+  if (terminal.worktreeId !== intent.target.worktree) {
+    throw new Error('agent_launch_terminal_worktree_mismatch')
+  }
+  if (!(await runtime.isTerminalRunningAgent(intent.reuseTerminal.handle))) {
+    throw new Error('agent_launch_terminal_not_running_agent')
+  }
+}
+
 export const AGENT_LAUNCH_METHODS = [
   defineMethod({
     name: 'agent.launch',
@@ -76,6 +95,7 @@ export const AGENT_LAUNCH_METHODS = [
         throw new Error('agent_launch_unsupported')
       }
       const intent = await agentLaunchIntent(params, context.runtime)
+      await validateReusedTerminal(intent, context.runtime)
       return executeAgentLaunch({
         runtime: context.runtime,
         intent,

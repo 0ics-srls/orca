@@ -11,6 +11,7 @@
 
 import { buildCliWorkspaceProvenance } from '../../../../shared/cli-workspace-provenance'
 import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { OrcaRuntimeService } from '../../orca-runtime'
 import {
   finishAutomationWorkspaceProvenanceRequest,
   releaseAutomationWorkspaceProvenanceRequest,
@@ -26,6 +27,8 @@ type WorktreeCreateParams = Extract<
   AgentLaunchParams['target'],
   { kind: 'create-worktree' }
 >['create']
+
+const STRUCTURED_SETUP_WAIT_TIMEOUT_MS = 60_000
 
 export function agentLaunchWorkspaceFactory(
   context: RpcContext,
@@ -61,8 +64,16 @@ export function agentLaunchWorkspaceFactory(
             ),
             // The launch owns the agent whichever surface it settles on, so the workspace records
             // it even when no startup terminal was created for it.
-            createdWithAgent: agent
+            createdWithAgent: agent,
+            // Structured sessions have no startup command to sequence behind setup. Provision the
+            // setup terminal synchronously and attach a completion token so the launch can wait
+            // before creating the chat surface.
+            awaitTerminalProvisioning: true,
+            observeSetupCompletion: true
           })
+          if (!startupAgent) {
+            await waitForStructuredSetup(runtime, result.setupReceipt)
+          }
           finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
           return {
             worktreeId: result.worktree.id,
@@ -74,5 +85,32 @@ export function agentLaunchWorkspaceFactory(
         }
       })
     }
+  }
+}
+
+async function waitForStructuredSetup(
+  runtime: Pick<OrcaRuntimeService, 'waitForSetupTerminalCompletion'>,
+  receipt: Awaited<ReturnType<OrcaRuntimeService['createManagedWorktree']>>['setupReceipt']
+): Promise<void> {
+  if (
+    !receipt ||
+    receipt.startupPolicy !== 'wait-for-setup' ||
+    receipt.state !== 'running' ||
+    !receipt.terminalHandle
+  ) {
+    return
+  }
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    await Promise.race([
+      runtime.waitForSetupTerminalCompletion(receipt.terminalHandle),
+      new Promise<void>((resolve) => {
+        timer = setTimeout(resolve, STRUCTURED_SETUP_WAIT_TIMEOUT_MS)
+      })
+    ])
+  } catch {
+    // Setup completion is evidence, not a reason to strand a launch when the PTY disappears.
+  } finally {
+    clearTimeout(timer)
   }
 }

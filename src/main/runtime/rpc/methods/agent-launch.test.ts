@@ -35,8 +35,14 @@ function runtimeStub(
   options: {
     settings?: Record<string, unknown>
     createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
+    setupReceipt?: {
+      startupPolicy: 'start-immediately' | 'wait-for-setup'
+      state: 'running' | 'skipped' | 'not_configured' | 'spawn_failed'
+      terminalHandle?: string
+    }
   } = {}
 ) {
+  const waitForSetupTerminalCompletion = vi.fn(async () => ({ exitCode: 0 }))
   return {
     getClientSettings: vi.fn(() => options.settings ?? STRUCTURED_PREFERENCE),
     getStructuredAgentSessionCreateSupport: vi.fn(
@@ -48,13 +54,17 @@ function runtimeStub(
     showRepo: vi.fn(async () => ({ id: 'repo-1' })),
     createManagedWorktree: vi.fn(async (args: Record<string, unknown>) => ({
       worktree: { id: 'wt-new' },
-      startupTerminal: args.startupAgent ? { handle: 'term_agent_first' } : undefined
+      startupTerminal: args.startupAgent ? { handle: 'term_agent_first' } : undefined,
+      ...(options.setupReceipt ? { setupReceipt: options.setupReceipt } : {})
     })),
     createTerminal: vi.fn(async () => ({ handle: 'term_1' })),
+    showTerminal: vi.fn(async (handle: string) => ({ handle, worktreeId: 'wt-7' })),
+    isTerminalRunningAgent: vi.fn(async () => true),
     showManagedTerminalWorkspace: vi.fn(async (selector: string) => ({
       id: selector.replace(/^id:/, '')
     })),
-    ensureStructuredAgentSessionHost: vi.fn(async () => {})
+    ensureStructuredAgentSessionHost: vi.fn(async () => {}),
+    waitForSetupTerminalCompletion
   }
 }
 
@@ -179,6 +189,48 @@ describe('what agent.launch accepts', () => {
       }).success
     ).toBe(true)
   })
+
+  it('validates a reused terminal against the addressed workspace', async () => {
+    const runtime = runtimeStub()
+    const result = await launch(
+      {
+        agent: 'claude',
+        target: { kind: 'existing', worktree: 'id:wt-7' },
+        reuseTerminal: { handle: 'term_live' }
+      },
+      runtime
+    )
+
+    expect(runtime.showTerminal).toHaveBeenCalledWith('term_live')
+    expect(runtime.isTerminalRunningAgent).toHaveBeenCalledWith('term_live')
+    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_live' })
+  })
+
+  it('rejects a reused terminal from a different workspace before launching', async () => {
+    const runtime = runtimeStub()
+    runtime.showTerminal.mockResolvedValue({ handle: 'term_live', worktreeId: 'wt-other' })
+
+    await expect(
+      launch(
+        {
+          agent: 'claude',
+          target: { kind: 'existing', worktree: 'id:wt-7' },
+          reuseTerminal: { handle: 'term_live' }
+        },
+        runtime
+      )
+    ).rejects.toThrow('agent_launch_terminal_worktree_mismatch')
+    expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
+  })
+
+  it('rejects reusing a terminal while creating a new workspace', async () => {
+    const runtime = runtimeStub()
+    await expect(
+      launch({ ...CREATE_LAUNCH, reuseTerminal: { handle: 'term_live' } }, runtime)
+    ).rejects.toThrow('agent_launch_reuse_requires_existing_workspace')
+    expect(runtime.showTerminal).not.toHaveBeenCalled()
+    expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
+  })
 })
 
 describe('the worktree factory', () => {
@@ -188,9 +240,35 @@ describe('the worktree factory', () => {
 
     const args = createArgs(runtime)
     expect(args.startupAgent).toBeUndefined()
+    expect(args.awaitTerminalProvisioning).toBe(true)
+    expect(args.observeSetupCompletion).toBe(true)
     // Still recorded on the workspace: the launch owns the agent whichever surface it settles on.
     expect(args.createdWithAgent).toBe('claude')
     expect(result.outcome.kind).toBe('structured')
+  })
+
+  it('waits for a setup-gated structured workspace before creating its session', async () => {
+    const runtime = runtimeStub({
+      setupReceipt: {
+        startupPolicy: 'wait-for-setup',
+        state: 'running',
+        terminalHandle: 'setup-1'
+      }
+    })
+    const order: string[] = []
+    runtime.waitForSetupTerminalCompletion.mockImplementation(async () => {
+      order.push('setup-complete')
+      return { exitCode: 0 }
+    })
+    createStructuredSession.mockImplementationOnce(async () => {
+      order.push('structured-create')
+      return { ok: true as const, value: { sessionId: 'sess-1' } }
+    })
+
+    await launch(CREATE_LAUNCH, runtime)
+
+    expect(order).toEqual(['setup-complete', 'structured-create'])
+    expect(runtime.waitForSetupTerminalCompletion).toHaveBeenCalledWith('setup-1')
   })
 
   it('keeps agent-first creation for a launch the user wants as a terminal', async () => {
