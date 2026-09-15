@@ -3,9 +3,9 @@
   "family": "session.markdown-save",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "42334358b5e5966001639653b553f15033f6e201d785107871fe056536f0a5e2",
   "scenarioSha256": "a2b5b73b2455f9efc48361e4b96ab1d3ecc3d136459403c9c3678104604cd774",
   "platform": "darwin",
@@ -13,12 +13,6 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "077739f81b42": {
-      "name": "toast",
-      "value": {
-        "message": "Saved"
-      }
-    },
     "36de5fd645a3": {
       "markdown": {
         "tab-md": {
@@ -30,6 +24,13 @@
           "status": "ready"
         }
       }
+    },
+    "976e04874a1e": {
+      "name": "toast",
+      "value": {
+        "message": "Saved"
+      },
+      "sent": 1
     },
     "a06e17cbe383": {
       "name": "markdown.saveTab#1",
@@ -94,7 +95,7 @@
             "save": "eb79a9b3682a"
           },
           "state": "36de5fd645a3",
-          "effects": ["077739f81b42"]
+          "effects": ["976e04874a1e"]
         }
       }
     ]

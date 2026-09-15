@@ -3,9 +3,9 @@
   "family": "clipboard.image-attachment",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "16779b663f4faec8cbccdb42efd7b568a2912845b161f8a4827754687eb4235c",
   "scenarioSha256": "ea04d03c15d3cb94be7fe111a8a6219c4e0304095679bbae62af623f5b36c9f4",
   "platform": "darwin",
@@ -13,13 +13,21 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "2e7cddb5ee93": {
-      "name": "upload-start",
-      "value": {}
+    "1c2f6fe81321": {
+      "name": "before-terminal-send",
+      "value": {
+        "terminal": "terminal-1"
+      },
+      "sent": 3
     },
     "520b3fe0fb07": {
       "name": "clipboard.startImageUpload#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"clipboard.startImageUpload\",\"params\":{\"expectedBase64Length\":32,\"connectionId\":\"connection-1\"}}"
+    },
+    "5f71b4d3d25c": {
+      "name": "upload-start",
+      "value": {},
+      "sent": 0
     },
     "7e48c58139e5": {
       "name": "clipboard.startImageUpload#1",
@@ -65,12 +73,6 @@
       "attached": false,
       "failure": {
         "$rpc": "null"
-      }
-    },
-    "900c2f395681": {
-      "name": "before-terminal-send",
-      "value": {
-        "terminal": "terminal-1"
       }
     },
     "972fbf8b960e": {
@@ -160,7 +162,7 @@
             "blocked": "7ed3d39f0607"
           },
           "state": "8aa742456efd",
-          "effects": ["2e7cddb5ee93", "900c2f395681"]
+          "effects": ["5f71b4d3d25c", "1c2f6fe81321"]
         }
       }
     ]

@@ -3,9 +3,9 @@
   "family": "session.content-create",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "562c2f4ab669e774dd7045ecd9518e483845433fef6034688090f3b056df2815",
   "scenarioSha256": "4118eea1175cba0f15174072f5715f9054ded09a4cb0c359fc4ee41ad00e9440",
   "platform": "darwin",
@@ -13,6 +13,11 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
+    "085ee12ac483": {
+      "name": "fetch-session-tabs",
+      "value": {},
+      "sent": 4
+    },
     "1e5b32902af7": {
       "name": "status.get#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"status.get\"}"
@@ -128,10 +133,6 @@
         }
       }
     },
-    "c170173a73b9": {
-      "name": "fetch-session-tabs",
-      "value": {}
-    },
     "d38c135a5752": {
       "name": "files.open#1",
       "args": [
@@ -199,7 +200,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["c170173a73b9"]
+          "effects": ["085ee12ac483"]
         }
       }
     ]

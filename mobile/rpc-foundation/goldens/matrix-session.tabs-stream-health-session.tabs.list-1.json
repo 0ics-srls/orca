@@ -3,9 +3,9 @@
   "family": "session.tabs-stream-health",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "4a1e81ab3229c8fd10b3ad435568efec11a944e0f02a183f94e4b1f44a7e5de0",
   "scenarioSha256": "fab12524a09049d976da752cbe1b837a0aee04ce6e1eef75cbf517c862cb0d4a",
   "platform": "darwin",
@@ -13,9 +13,10 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "064484b0841a": {
-      "name": "fetch-started",
-      "value": {}
+    "13a8f05b6027": {
+      "name": "fetch-errored",
+      "value": "transport failure",
+      "sent": 1
     },
     "17e92af0f44e": {
       "name": "session.tabs.list#1",
@@ -53,12 +54,10 @@
         }
       }
     },
-    "26c15ff3b3cd": {
-      "name": "fetch-succeeded",
-      "value": {
-        "error": "inner refused",
-        "ok": false
-      }
+    "2eae38db7631": {
+      "name": "fetch-errored",
+      "value": "",
+      "sent": 1
     },
     "30425281a407": {
       "name": "session.tabs.list#1",
@@ -97,13 +96,6 @@
         }
       }
     },
-    "34d8947c9bfc": {
-      "name": "fetch-failed",
-      "value": {
-        "code": "refused",
-        "message": ""
-      }
-    },
     "42599e959a49": {
       "name": "session.tabs.list#1",
       "args": [
@@ -137,23 +129,29 @@
         }
       }
     },
-    "48d41a14c8ae": {
+    "442e980f817f": {
       "name": "fetch-failed",
       "value": {
-        "code": "method_not_found",
-        "message": "Unknown method"
-      }
+        "code": "refused",
+        "message": "outer refused"
+      },
+      "sent": 1
     },
     "49a2260ea0e7": {
       "accepted": "unapplied",
       "applicationRevision": 0
     },
-    "5a548c842fa0": {
-      "name": "fetch-failed",
+    "4fb2d760b54b": {
+      "name": "fetch-succeeded",
       "value": {
-        "code": "refused",
-        "message": "outer refused"
-      }
+        "$rpc": "undefined"
+      },
+      "sent": 1
+    },
+    "5a7cc7a45078": {
+      "name": "fetch-started",
+      "value": {},
+      "sent": 0
     },
     "5a9d6a1160e9": {
       "name": "session.tabs.list#1",
@@ -223,25 +221,45 @@
         }
       }
     },
-    "713389ebbabb": {
-      "name": "fetch-errored",
-      "value": "Cannot read properties of undefined (reading 'tabs')"
-    },
-    "76bac62879a4": {
-      "name": "fetch-succeeded",
-      "value": {
-        "$rpc": "undefined"
-      }
-    },
     "84e5ca07cb7a": {
       "status": "fulfilled",
       "startedAt": 0,
       "settledAt": 0,
       "value": true
     },
-    "89b0c540236c": {
-      "name": "fetch-errored",
-      "value": ""
+    "95ecf909b622": {
+      "name": "fetch-failed",
+      "value": {
+        "code": "refused",
+        "message": ""
+      },
+      "sent": 1
+    },
+    "96129665cfbc": {
+      "name": "fetch-succeeded",
+      "value": {
+        "error": "inner refused",
+        "ok": false
+      },
+      "sent": 1
+    },
+    "9653864fb896": {
+      "name": "fetch-succeeded",
+      "value": {
+        "tabs": [
+          {
+            "id": "tab-1"
+          }
+        ]
+      },
+      "sent": 1
+    },
+    "a9ecd3aba46a": {
+      "name": "fetch-succeeded",
+      "value": {
+        "error": "refused"
+      },
+      "sent": 1
     },
     "b6ed47ca5ea3": {
       "accepted": {
@@ -250,25 +268,23 @@
       },
       "applicationRevision": 0
     },
-    "b943bbc2b022": {
-      "name": "fetch-errored",
-      "value": "Cannot read properties of null (reading 'tabs')"
+    "b77d683ee6ee": {
+      "name": "fetch-failed",
+      "value": {
+        "code": "method_not_found",
+        "message": "Unknown method"
+      },
+      "sent": 1
     },
-    "c0629f615364": {
+    "c5969ebad6b7": {
       "name": "fetch-succeeded",
       "value": {
-        "tabs": [
-          {
-            "id": "tab-1"
-          }
-        ]
-      }
-    },
-    "c5f6fd51422a": {
-      "name": "fetch-succeeded",
-      "value": {
-        "error": "refused"
-      }
+        "error": {
+          "message": "inner refused"
+        },
+        "ok": false
+      },
+      "sent": 1
     },
     "d46815b7ac09": {
       "name": "session.tabs.list#1",
@@ -307,9 +323,22 @@
         }
       }
     },
-    "e0f5c7f42151": {
+    "d65a3b8025b0": {
       "name": "fetch-errored",
-      "value": "transport failure"
+      "value": "Cannot read properties of null (reading 'tabs')",
+      "sent": 1
+    },
+    "dea35a8e61e3": {
+      "name": "fetch-succeeded",
+      "value": {
+        "$rpc": "null"
+      },
+      "sent": 1
+    },
+    "df60619a0815": {
+      "name": "fetch-errored",
+      "value": "Cannot read properties of undefined (reading 'tabs')",
+      "sent": 1
     },
     "e29309cc10af": {
       "accepted": {
@@ -386,15 +415,6 @@
         }
       }
     },
-    "e984367799ff": {
-      "name": "fetch-succeeded",
-      "value": {
-        "error": {
-          "message": "inner refused"
-        },
-        "ok": false
-      }
-    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -468,12 +488,6 @@
         }
       }
     },
-    "f92597d9639b": {
-      "name": "fetch-succeeded",
-      "value": {
-        "$rpc": "null"
-      }
-    },
     "fafc7ede7ef6": {
       "name": "session.tabs.list#1",
       "args": [
@@ -519,7 +533,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "e29309cc10af",
-          "effects": ["064484b0841a", "c0629f615364"]
+          "effects": ["5a7cc7a45078", "9653864fb896"]
         }
       },
       {
@@ -532,7 +546,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "76bac62879a4", "713389ebbabb"]
+          "effects": ["5a7cc7a45078", "4fb2d760b54b", "df60619a0815"]
         }
       },
       {
@@ -545,7 +559,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "f92597d9639b", "b943bbc2b022"]
+          "effects": ["5a7cc7a45078", "dea35a8e61e3", "d65a3b8025b0"]
         }
       },
       {
@@ -558,7 +572,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "b6ed47ca5ea3",
-          "effects": ["064484b0841a", "c5f6fd51422a"]
+          "effects": ["5a7cc7a45078", "a9ecd3aba46a"]
         }
       },
       {
@@ -571,7 +585,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "b6ed47ca5ea3",
-          "effects": ["064484b0841a", "26c15ff3b3cd"]
+          "effects": ["5a7cc7a45078", "96129665cfbc"]
         }
       },
       {
@@ -584,7 +598,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "b6ed47ca5ea3",
-          "effects": ["064484b0841a", "e984367799ff"]
+          "effects": ["5a7cc7a45078", "c5969ebad6b7"]
         }
       },
       {
@@ -597,7 +611,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "5a548c842fa0"]
+          "effects": ["5a7cc7a45078", "442e980f817f"]
         }
       },
       {
@@ -610,7 +624,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "34d8947c9bfc"]
+          "effects": ["5a7cc7a45078", "95ecf909b622"]
         }
       },
       {
@@ -623,7 +637,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "48d41a14c8ae"]
+          "effects": ["5a7cc7a45078", "b77d683ee6ee"]
         }
       },
       {
@@ -636,7 +650,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "e0f5c7f42151"]
+          "effects": ["5a7cc7a45078", "13a8f05b6027"]
         }
       },
       {
@@ -649,7 +663,7 @@
             "reconcile": "eb79a9b3682a"
           },
           "state": "49a2260ea0e7",
-          "effects": ["064484b0841a", "89b0c540236c"]
+          "effects": ["5a7cc7a45078", "2eae38db7631"]
         }
       }
     ]

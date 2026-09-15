@@ -3,9 +3,9 @@
   "family": "session.content-create",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "562c2f4ab669e774dd7045ecd9518e483845433fef6034688090f3b056df2815",
   "scenarioSha256": "5100bd674509d1d83b1e2594eee036af21ea14b12226185b44070555d1d43060",
   "platform": "darwin",
@@ -13,11 +13,10 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "05889e5c0170": {
-      "name": "toast",
-      "value": {
-        "message": "transport failure"
-      }
+    "085ee12ac483": {
+      "name": "fetch-session-tabs",
+      "value": {},
+      "sent": 4
     },
     "0b7588536afb": {
       "name": "status.get#1",
@@ -51,12 +50,6 @@
           "id": "frame-1",
           "ok": false
         }
-      }
-    },
-    "0c47fc91ad6a": {
-      "name": "toast",
-      "value": {
-        "message": "outer refused"
       }
     },
     "0d163aa89099": {
@@ -115,6 +108,13 @@
     "37cca55d53d5": {
       "name": "files.open#1",
       "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"files.open\",\"params\":{\"worktree\":\"id:workspace-1\",\"relativePath\":\"untitled.md\"}}"
+    },
+    "39cfe991f857": {
+      "name": "toast",
+      "value": {
+        "message": "Cannot read properties of null (reading 'capabilities')"
+      },
+      "sent": 1
     },
     "4267c22fd1f9": {
       "name": "files.createFile#1",
@@ -215,11 +215,19 @@
         }
       }
     },
-    "4e3d6ec28db5": {
+    "5216935e6a30": {
       "name": "toast",
       "value": {
-        "message": ""
-      }
+        "message": "Cannot read properties of undefined (reading 'capabilities')"
+      },
+      "sent": 1
+    },
+    "573973431b35": {
+      "name": "toast",
+      "value": {
+        "message": "outer refused"
+      },
+      "sent": 1
     },
     "6371ca02b18e": {
       "createError": "outer refused",
@@ -228,6 +236,13 @@
       "pendingBrowserFocusPageId": {
         "$rpc": "null"
       }
+    },
+    "67e91d4ad9ea": {
+      "name": "toast",
+      "value": {
+        "message": ""
+      },
+      "sent": 1
     },
     "74a9cdb3c227": {
       "name": "status.get#1",
@@ -404,6 +419,13 @@
         }
       }
     },
+    "a7bdf95d4886": {
+      "name": "toast",
+      "value": {
+        "message": "Remote file changes require a newer Orca server. Update the HUB and try again."
+      },
+      "sent": 1
+    },
     "a8d9f204690e": {
       "name": "status.get#1",
       "args": [
@@ -438,21 +460,12 @@
         }
       }
     },
-    "b07002772711": {
-      "name": "toast",
-      "value": {
-        "message": "Remote file changes require a newer Orca server. Update the HUB and try again."
-      }
-    },
-    "c170173a73b9": {
-      "name": "fetch-session-tabs",
-      "value": {}
-    },
-    "d07700c32b7b": {
+    "c09254b8373a": {
       "name": "toast",
       "value": {
         "message": "Unknown method"
-      }
+      },
+      "sent": 1
     },
     "d38c135a5752": {
       "name": "files.open#1",
@@ -524,17 +537,12 @@
         "$rpc": "undefined"
       }
     },
-    "ebf104eb220a": {
+    "ef64e4eaa635": {
       "name": "toast",
       "value": {
-        "message": "Cannot read properties of null (reading 'capabilities')"
-      }
-    },
-    "f2441ac304bd": {
-      "name": "toast",
-      "value": {
-        "message": "Cannot read properties of undefined (reading 'capabilities')"
-      }
+        "message": "transport failure"
+      },
+      "sent": 1
     },
     "f2a2b92aa73c": {
       "name": "status.get#1",
@@ -619,7 +627,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["c170173a73b9"]
+          "effects": ["085ee12ac483"]
         }
       },
       {
@@ -631,7 +639,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "1fe9fbe7d375",
-          "effects": ["f2441ac304bd"]
+          "effects": ["5216935e6a30"]
         }
       },
       {
@@ -643,7 +651,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "e1f916d49745",
-          "effects": ["ebf104eb220a"]
+          "effects": ["39cfe991f857"]
         }
       },
       {
@@ -655,7 +663,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "7799ca596f0c",
-          "effects": ["b07002772711"]
+          "effects": ["a7bdf95d4886"]
         }
       },
       {
@@ -667,7 +675,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "7799ca596f0c",
-          "effects": ["b07002772711"]
+          "effects": ["a7bdf95d4886"]
         }
       },
       {
@@ -679,7 +687,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "7799ca596f0c",
-          "effects": ["b07002772711"]
+          "effects": ["a7bdf95d4886"]
         }
       },
       {
@@ -691,7 +699,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "6371ca02b18e",
-          "effects": ["0c47fc91ad6a"]
+          "effects": ["573973431b35"]
         }
       },
       {
@@ -703,7 +711,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["4e3d6ec28db5"]
+          "effects": ["67e91d4ad9ea"]
         }
       },
       {
@@ -715,7 +723,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "e6b6cf30c6ee",
-          "effects": ["d07700c32b7b"]
+          "effects": ["c09254b8373a"]
         }
       },
       {
@@ -727,7 +735,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "134e6545bfe5",
-          "effects": ["05889e5c0170"]
+          "effects": ["ef64e4eaa635"]
         }
       },
       {
@@ -739,7 +747,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["4e3d6ec28db5"]
+          "effects": ["67e91d4ad9ea"]
         }
       }
     ]

@@ -3,9 +3,9 @@
   "family": "files.terminal-path-tap",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "e20a76ecd5e820dc4797fb25307810af68b5ced996dba2b9599464a21b5cbe1b",
   "scenarioSha256": "73dbbb8b96662af57240194be4af5726697d402b624a807d003ab56fea04dbd7",
   "platform": "darwin",
@@ -57,6 +57,11 @@
           }
         }
       }
+    },
+    "1d18c66a85d5": {
+      "name": "open-feedback",
+      "value": {},
+      "sent": 1
     },
     "230cba644911": {
       "name": "files.open#1",
@@ -127,6 +132,11 @@
         }
       }
     },
+    "4301fd620304": {
+      "name": "fetch-session-tabs",
+      "value": {},
+      "sent": 2
+    },
     "650c13434960": {
       "name": "files.open#1",
       "args": [
@@ -158,10 +168,6 @@
           "isRpcDeliveryUnknown": true
         }
       }
-    },
-    "6d0be987cecc": {
-      "name": "open-feedback",
-      "value": {}
     },
     "8d3bc4f0f067": {
       "name": "files.open#1",
@@ -279,10 +285,6 @@
           }
         }
       }
-    },
-    "c170173a73b9": {
-      "name": "fetch-session-tabs",
-      "value": {}
     },
     "c7ce9c8dc60e": {
       "activeSessionTabId": "tab-source",
@@ -496,7 +498,7 @@
             "list": "b765beef262e"
           },
           "state": "f8a009b4a36e",
-          "effects": ["6d0be987cecc", "c170173a73b9"]
+          "effects": ["1d18c66a85d5", "4301fd620304"]
         }
       },
       {
@@ -509,7 +511,7 @@
             "list": "b765beef262e"
           },
           "state": "f8a009b4a36e",
-          "effects": ["6d0be987cecc", "c170173a73b9"]
+          "effects": ["1d18c66a85d5", "4301fd620304"]
         }
       },
       {
@@ -522,7 +524,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -535,7 +537,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -548,7 +550,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -561,7 +563,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -574,7 +576,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -587,7 +589,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -600,7 +602,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -613,7 +615,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -626,7 +628,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -639,7 +641,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -652,7 +654,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -665,7 +667,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -678,7 +680,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -691,7 +693,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -704,7 +706,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -717,7 +719,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -730,7 +732,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -743,7 +745,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -756,7 +758,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       },
       {
@@ -769,7 +771,7 @@
             "list": "b765beef262e"
           },
           "state": "c7ce9c8dc60e",
-          "effects": ["6d0be987cecc"]
+          "effects": ["1d18c66a85d5"]
         }
       }
     ]

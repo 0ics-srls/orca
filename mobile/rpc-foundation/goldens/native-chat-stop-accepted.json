@@ -3,9 +3,9 @@
   "family": "session.native-chat-stop",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "a3daf9a05d05424959baf77feb45cb0c076d77d8c49e877941ed612cc1e5ce95",
   "scenarioSha256": "a72f08c12c244912912be34deb3ec12bada6b74f1bc29c0034b347dcba9ddb10",
   "platform": "darwin",
@@ -65,6 +65,11 @@
     "538133eba781": {
       "name": "terminal.send#2",
       "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.send\",\"params\":{\"terminal\":\"terminal-1\",\"text\":\"\\u001b\",\"client\":{\"id\":\"device-token-1\",\"type\":\"mobile\"}}}"
+    },
+    "60fbbfd9bd11": {
+      "name": "cancel-pending",
+      "value": {},
+      "sent": 0
     },
     "86ab67d60a77": {
       "name": "terminal.send#2",
@@ -152,10 +157,6 @@
       "value": {
         "$rpc": "undefined"
       }
-    },
-    "ee7bd5fe480b": {
-      "name": "cancel-pending",
-      "value": {}
     }
   },
   "recording": {
@@ -170,7 +171,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "debf84af8d66",
-          "effects": ["ee7bd5fe480b"]
+          "effects": ["60fbbfd9bd11"]
         }
       },
       {
@@ -182,7 +183,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "debf84af8d66",
-          "effects": ["ee7bd5fe480b"]
+          "effects": ["60fbbfd9bd11"]
         }
       }
     ]

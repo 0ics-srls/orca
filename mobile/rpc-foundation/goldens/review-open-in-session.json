@@ -3,9 +3,9 @@
   "family": "session.diff-review-actions",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "fd443c85a6d2b0c1355e29f6f366e35d330a2033c7ddb90ab6713584ddda2f6f",
   "scenarioSha256": "2f0a6aa8ce100edbce9ccf64c81efe64356fccbdcd2e16f561360e2b11b5700f",
   "platform": "darwin",
@@ -87,10 +87,6 @@
         }
       }
     },
-    "bddb07a1143a": {
-      "name": "open-session",
-      "value": {}
-    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -98,6 +94,11 @@
       "value": {
         "$rpc": "undefined"
       }
+    },
+    "f08ae8feb9a9": {
+      "name": "open-session",
+      "value": {},
+      "sent": 1
     }
   },
   "recording": {
@@ -112,7 +113,7 @@
             "open-in-session": "eb79a9b3682a"
           },
           "state": "2fc890e4b748",
-          "effects": ["bddb07a1143a"]
+          "effects": ["f08ae8feb9a9"]
         }
       }
     ]

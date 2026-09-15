@@ -3,9 +3,9 @@
   "family": "session.diff-notes",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "42334358b5e5966001639653b553f15033f6e201d785107871fe056536f0a5e2",
   "scenarioSha256": "e54684bad13aa8b8b4794e06351c709053b1c4c6d87776ecdbb1dd1b4406a694",
   "platform": "darwin",
@@ -50,21 +50,14 @@
         }
       }
     },
-    "2093488e794a": {
-      "name": "unhandled-rejection",
-      "value": {
-        "category": "Error",
-        "isRpcDeliveryUnknown": true,
-        "message": "transport failure"
-      }
-    },
-    "333981adcd89": {
+    "2aee81f6fe31": {
       "name": "unhandled-rejection",
       "value": {
         "category": "TypeError",
         "isRpcDeliveryUnknown": false,
         "message": "Cannot read properties of undefined (reading 'worktree')"
-      }
+      },
+      "sent": 1
     },
     "39356bf6300e": {
       "name": "worktree.show#1",
@@ -168,13 +161,14 @@
         }
       }
     },
-    "4fbb7e404fba": {
+    "787e19388f6a": {
       "name": "unhandled-rejection",
       "value": {
         "category": "Error",
         "isRpcDeliveryUnknown": true,
         "message": ""
-      }
+      },
+      "sent": 1
     },
     "789b682a36a9": {
       "name": "worktree.show#1",
@@ -287,6 +281,15 @@
         }
       }
     },
+    "b80f8c3fa354": {
+      "name": "unhandled-rejection",
+      "value": {
+        "category": "Error",
+        "isRpcDeliveryUnknown": true,
+        "message": "transport failure"
+      },
+      "sent": 1
+    },
     "bcfad643c288": {
       "name": "worktree.show#1",
       "args": [
@@ -323,13 +326,14 @@
         }
       }
     },
-    "ced2b37c7366": {
+    "ccfb4b1d3cd2": {
       "name": "unhandled-rejection",
       "value": {
         "category": "TypeError",
         "isRpcDeliveryUnknown": false,
         "message": "Cannot read properties of null (reading 'worktree')"
-      }
+      },
+      "sent": 1
     },
     "d122d6f393f0": {
       "name": "worktree.show#1",
@@ -502,7 +506,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "432aeb4f1709",
-          "effects": ["333981adcd89"]
+          "effects": ["2aee81f6fe31"]
         }
       },
       {
@@ -514,7 +518,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "432aeb4f1709",
-          "effects": ["ced2b37c7366"]
+          "effects": ["ccfb4b1d3cd2"]
         }
       },
       {
@@ -598,7 +602,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "432aeb4f1709",
-          "effects": ["2093488e794a"]
+          "effects": ["b80f8c3fa354"]
         }
       },
       {
@@ -610,7 +614,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "432aeb4f1709",
-          "effects": ["4fbb7e404fba"]
+          "effects": ["787e19388f6a"]
         }
       }
     ]

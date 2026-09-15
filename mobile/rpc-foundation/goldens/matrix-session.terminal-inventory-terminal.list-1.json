@@ -3,9 +3,9 @@
   "family": "session.terminal-inventory",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "a3daf9a05d05424959baf77feb45cb0c076d77d8c49e877941ed612cc1e5ce95",
   "scenarioSha256": "12f1006d704e362552317a3afcb4db4366146da3a863a1c55b524c6fc1b9757a",
   "platform": "darwin",
@@ -115,6 +115,11 @@
         }
       }
     },
+    "5cd2b97372d8": {
+      "name": "prune-live-input",
+      "value": ["terminal-1", "terminal-2"],
+      "sent": 1
+    },
     "5eea50c700fd": {
       "name": "terminal.list#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.list\",\"params\":{\"worktree\":\"id:workspace-1\",\"includeVisualLayouts\":false}}"
@@ -222,10 +227,6 @@
           "title": "two"
         }
       ]
-    },
-    "7376b6b3ca7b": {
-      "name": "prune-live-input",
-      "value": ["terminal-1", "terminal-2"]
     },
     "7ed3d39f0607": {
       "status": "fulfilled",
@@ -342,10 +343,6 @@
         }
       }
     },
-    "c0c0e77abe1b": {
-      "name": "default-live-input",
-      "value": ["terminal-1", "terminal-2"]
-    },
     "c2ee5279a532": {
       "name": "terminal.list#1",
       "args": [
@@ -388,6 +385,11 @@
           }
         }
       }
+    },
+    "ce7002e0ac64": {
+      "name": "default-live-input",
+      "value": ["terminal-1", "terminal-2"],
+      "sent": 1
     },
     "d717363e37dc": {
       "name": "terminal.list#1",
@@ -471,7 +473,7 @@
             "fetch": "84e5ca07cb7a"
           },
           "state": "727166f3bc25",
-          "effects": ["7376b6b3ca7b", "c0c0e77abe1b"]
+          "effects": ["5cd2b97372d8", "ce7002e0ac64"]
         }
       },
       {

@@ -3,9 +3,9 @@
   "family": "session.content-create",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "562c2f4ab669e774dd7045ecd9518e483845433fef6034688090f3b056df2815",
   "scenarioSha256": "b9ca49e401df8710924f200f92a071bac2e120ed43df7be2cfb8a325ab1cd9cb",
   "platform": "darwin",
@@ -13,11 +13,12 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "05889e5c0170": {
+    "04daff40433c": {
       "name": "toast",
       "value": {
-        "message": "transport failure"
-      }
+        "message": "Cannot read properties of undefined (reading 'worktree')"
+      },
+      "sent": 2
     },
     "06cbb9a1b167": {
       "name": "worktree.show#1",
@@ -51,6 +52,11 @@
           }
         }
       }
+    },
+    "085ee12ac483": {
+      "name": "fetch-session-tabs",
+      "value": {},
+      "sent": 4
     },
     "0b4d42954d52": {
       "name": "worktree.show#1",
@@ -86,12 +92,6 @@
         }
       }
     },
-    "0c47fc91ad6a": {
-      "name": "toast",
-      "value": {
-        "message": "outer refused"
-      }
-    },
     "0f19e340663d": {
       "createError": "Couldn't verify the SSH connection. Reconnect the host and try again.",
       "creatingBrowser": false,
@@ -107,6 +107,13 @@
       "pendingBrowserFocusPageId": {
         "$rpc": "null"
       }
+    },
+    "18c7d85a52ed": {
+      "name": "toast",
+      "value": {
+        "message": "outer refused"
+      },
+      "sent": 2
     },
     "1e5b32902af7": {
       "name": "status.get#1",
@@ -220,11 +227,12 @@
         }
       }
     },
-    "4e3d6ec28db5": {
+    "478f94a2bcc8": {
       "name": "toast",
       "value": {
         "message": ""
-      }
+      },
+      "sent": 2
     },
     "533d020d6123": {
       "name": "worktree.show#1",
@@ -256,6 +264,13 @@
         }
       }
     },
+    "5ba3f7c5f6d9": {
+      "name": "toast",
+      "value": {
+        "message": "transport failure"
+      },
+      "sent": 2
+    },
     "6371ca02b18e": {
       "createError": "outer refused",
       "creatingBrowser": false,
@@ -270,12 +285,6 @@
       "creatingMarkdown": false,
       "pendingBrowserFocusPageId": {
         "$rpc": "null"
-      }
-    },
-    "7e0e37e19bb2": {
-      "name": "toast",
-      "value": {
-        "message": "Couldn't verify the SSH connection. Reconnect the host and try again."
       }
     },
     "8845bcbdc51b": {
@@ -310,12 +319,6 @@
             "ok": false
           }
         }
-      }
-    },
-    "89c4e3e8c19e": {
-      "name": "toast",
-      "value": {
-        "message": "Cannot read properties of undefined (reading 'worktree')"
       }
     },
     "8bdc2aec524d": {
@@ -357,11 +360,19 @@
       "name": "worktree.show#1",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"worktree.show\",\"params\":{\"worktree\":\"id:workspace-1\"}}"
     },
-    "a3b36d2901dc": {
+    "a139e9a165cd": {
       "name": "toast",
       "value": {
         "message": "Cannot read properties of null (reading 'worktree')"
-      }
+      },
+      "sent": 2
+    },
+    "a232b2091bac": {
+      "name": "toast",
+      "value": {
+        "message": "Couldn't verify the SSH connection. Reconnect the host and try again."
+      },
+      "sent": 2
     },
     "a56852d6836b": {
       "name": "status.get#1",
@@ -396,9 +407,12 @@
         }
       }
     },
-    "c170173a73b9": {
-      "name": "fetch-session-tabs",
-      "value": {}
+    "abce4dddd0aa": {
+      "name": "toast",
+      "value": {
+        "message": "Unknown method"
+      },
+      "sent": 2
     },
     "c6aa5c0a7bd1": {
       "name": "worktree.show#1",
@@ -466,12 +480,6 @@
           "id": "frame-2",
           "ok": false
         }
-      }
-    },
-    "d07700c32b7b": {
-      "name": "toast",
-      "value": {
-        "message": "Unknown method"
       }
     },
     "d38c135a5752": {
@@ -619,7 +627,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["c170173a73b9"]
+          "effects": ["085ee12ac483"]
         }
       },
       {
@@ -631,7 +639,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "7822fc8c989d",
-          "effects": ["89c4e3e8c19e"]
+          "effects": ["04daff40433c"]
         }
       },
       {
@@ -643,7 +651,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d7217a17cb5c",
-          "effects": ["a3b36d2901dc"]
+          "effects": ["a139e9a165cd"]
         }
       },
       {
@@ -655,7 +663,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "0f19e340663d",
-          "effects": ["7e0e37e19bb2"]
+          "effects": ["a232b2091bac"]
         }
       },
       {
@@ -667,7 +675,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "0f19e340663d",
-          "effects": ["7e0e37e19bb2"]
+          "effects": ["a232b2091bac"]
         }
       },
       {
@@ -679,7 +687,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "0f19e340663d",
-          "effects": ["7e0e37e19bb2"]
+          "effects": ["a232b2091bac"]
         }
       },
       {
@@ -691,7 +699,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "6371ca02b18e",
-          "effects": ["0c47fc91ad6a"]
+          "effects": ["18c7d85a52ed"]
         }
       },
       {
@@ -703,7 +711,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["4e3d6ec28db5"]
+          "effects": ["478f94a2bcc8"]
         }
       },
       {
@@ -715,7 +723,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "e6b6cf30c6ee",
-          "effects": ["d07700c32b7b"]
+          "effects": ["abce4dddd0aa"]
         }
       },
       {
@@ -727,7 +735,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "134e6545bfe5",
-          "effects": ["05889e5c0170"]
+          "effects": ["5ba3f7c5f6d9"]
         }
       },
       {
@@ -739,7 +747,7 @@
             "markdown": "eb79a9b3682a"
           },
           "state": "d574cdcd4bef",
-          "effects": ["4e3d6ec28db5"]
+          "effects": ["478f94a2bcc8"]
         }
       }
     ]
