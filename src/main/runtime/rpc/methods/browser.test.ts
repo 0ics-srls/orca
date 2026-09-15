@@ -68,10 +68,10 @@ describe('browser RPC methods', () => {
     })
   })
 
-  it('ignores the retired profile user-agent field from older clients', () => {
-    expect(
+  it('rejects the retired profile user-agent field with changed-semantics guidance', () => {
+    expect(() =>
       ProfileCreate.parse({ label: 'Google', scope: 'isolated', userAgentMode: 'native' })
-    ).toEqual({ label: 'Google', scope: 'isolated' })
+    ).toThrow('browser_profile_user_agent_mode_is_now_app_wide')
   })
 
   it('routes core browser automation commands to the runtime server', async () => {

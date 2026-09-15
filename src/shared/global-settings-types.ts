@@ -41,7 +41,6 @@ import type {
   ExternalWorktreeVisibility,
   WorktreeVisibilitySourcePreferences
 } from './repo-types'
-import type { BrowserUserAgentMode } from './browser-user-agent-mode'
 
 /** MiniMax account region used to select the quota endpoint. */
 export type MiniMaxEndpoint = 'overseas' | 'cn'
@@ -261,7 +260,6 @@ export type GlobalSettings = {
   /** Main-side new-page kill switch for paired Electron client-hosted browser placement. */
   browserClientHostedRemoteEnabled?: boolean
   /** Process-wide browser identity selected for the next app launch. */
-  browserUserAgentMode: BrowserUserAgentMode
   /** Routes SSH-workspace browser pages through the workspace's SSH host; off = plain local browsing. */
   browserSshWorkspaceRoutingEnabled?: boolean
   /** Per-target opt-outs recorded from the routing error card's "Browse from this device instead". */

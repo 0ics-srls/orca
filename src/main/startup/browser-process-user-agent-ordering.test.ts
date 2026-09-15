@@ -144,9 +144,15 @@ vi.mock('./gpu-lifecycle')
 vi.mock('./main-process-state', () => ({ mainProcessState: {} }))
 vi.mock('./synthetic-title-runtime')
 vi.mock('../browser/browser-identity-mode-record', () => ({
-  readBrowserIdentityModeRecord: (path: string) => {
+  initializeBrowserIdentityModeStore: (path: string) => {
     mocks.events.push(`read-mode:${path}`)
-    return { version: 1, mode: 'clean' }
+    return {
+      state: 'valid',
+      appliedMode: 'clean',
+      configuredMode: 'clean',
+      explicitSelection: true,
+      migrationNoticePending: false
+    }
   }
 }))
 

@@ -49,7 +49,6 @@ import { updateGpuAccelerationAboutPanel } from './gpu-lifecycle'
 import { reconcileManagedWslCliRegistrations } from '../cli/wsl-cli-registration-reconciliation'
 import { createWslCliReconciliationStartupBarrier } from './wsl-cli-reconciliation-startup-barrier'
 import { isAgentStatusHooksEnabled } from '../agent-hooks/managed-agent-hook-controls'
-import { updateBrowserIdentityMode } from '../browser/browser-identity-mode-record'
 
 export async function initializeReadyFoundation(): Promise<void> {
   logStartupMilestone('app-ready')
@@ -200,8 +199,6 @@ export async function initializeReadyFoundation(): Promise<void> {
     canonicalUserDataPath,
     store.getSettings().electronHttp1CompatibilityMode === true
   )
-  // Why: the tiny pre-ready record mirrors this normal app setting for the next launch.
-  updateBrowserIdentityMode(canonicalUserDataPath, store.getSettings().browserUserAgentMode)
   // Why: apply initial fallback WSL distro from store settings for global git/CLI calls.
   setDefaultWslDistroOverride(store.getSettings().terminalWindowsWslDistro ?? null)
   store.onSettingsChanged((updates, settings) => {
@@ -210,9 +207,6 @@ export async function initializeReadyFoundation(): Promise<void> {
         canonicalUserDataPath,
         settings.electronHttp1CompatibilityMode === true
       )
-    }
-    if ('browserUserAgentMode' in updates) {
-      updateBrowserIdentityMode(canonicalUserDataPath, settings.browserUserAgentMode)
     }
     if ('terminalWindowsWslDistro' in updates) {
       // Why: synchronize fallback WSL distro updates to runner.

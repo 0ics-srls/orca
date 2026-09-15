@@ -28,7 +28,7 @@ import {
 } from './browser-session-partition-policies'
 import {
   isValidPersistedBrowserSessionProfile,
-  migrateRetiredBrowserSessionProfileUserAgentModes
+  inspectRetiredBrowserSessionProfileUserAgentModes
 } from './browser-session-persisted-profile-validation'
 import {
   clearBrowserRoutePartitionPolicies,
@@ -39,7 +39,7 @@ import { invalidateBrowserSessionProxyApplication } from './browser-session-prox
 import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
 import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
 import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
-import { recordRetiredNativeBrowserProfiles } from './browser-identity-mode-record'
+import { markBrowserIdentityMigrationNoticePending } from './browser-identity-mode-record'
 
 export type BrowserSessionRegistryProfileOptions = {
   orcaProfileId: string
@@ -110,17 +110,16 @@ class BrowserSessionRegistry {
   // Why re-read defaultSource: the constructor may run before app.isReady() (userData path unavailable), so loadPersistedSource() returned null.
   initializeBrowserSessionsFromPersistedState(): void {
     const meta = this.loadPersistedMeta()
-    const migration = migrateRetiredBrowserSessionProfileUserAgentModes(
+    const migration = inspectRetiredBrowserSessionProfileUserAgentModes(
       meta.profiles,
       this.activeOrcaProfileId
     )
-    // Record the notice first so a metadata-write failure cannot erase the user's retired choice.
-    const noticePersisted = recordRetiredNativeBrowserProfiles(
-      getCanonicalUserDataPath(),
-      migration.nativeProfileIds
-    )
-    if (migration.changed && noticePersisted) {
-      this.persistMeta({ profiles: migration.profiles })
+    if (migration.noticePending) {
+      // Why scoped: identity persistence must never reject browser-session startup.
+      void markBrowserIdentityMigrationNoticePending(
+        getCanonicalUserDataPath(),
+        migration.degraded
+      ).catch((error) => console.error('[browser-identity] Migration notice failed:', error))
     }
     if (meta.defaultSource) {
       const current = this.profiles.get('default')
@@ -128,8 +127,8 @@ class BrowserSessionRegistry {
         this.profiles.set('default', { ...current, source: meta.defaultSource })
       }
     }
-    if (migration.profiles.length > 0) {
-      this.hydrateFromPersisted(migration.profiles)
+    if (meta.profiles.length > 0) {
+      this.hydrateFromPersisted(meta.profiles)
     }
 
     // Why: nothing else installs policies on the default partition (hydrate skips it), so without this its guest permissions would be denied.

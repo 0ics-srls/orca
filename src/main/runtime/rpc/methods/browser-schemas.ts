@@ -1,6 +1,7 @@
 // Why: browser schemas stay separate from handler registration so both sides
 // remain under the line cap and dispatch wiring stays scannable.
 export {
+  BrowserIdentitySet,
   Check,
   ClipboardWrite,
   CookieDelete,

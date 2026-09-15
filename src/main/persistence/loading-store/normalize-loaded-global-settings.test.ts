@@ -35,3 +35,11 @@ describe('retired Agents sidebar setting', () => {
     expect(normalized.agentsSidebarMigratedFromExperimental).toBe(true)
   })
 })
+
+describe('retired browser identity setting', () => {
+  it('retains the unknown value byte-for-byte instead of normalizing it into live settings', () => {
+    const normalized = normalizeLegacyProfile({ browserUserAgentMode: 'future-choice' })
+
+    expect(Reflect.get(normalized, 'browserUserAgentMode')).toBe('future-choice')
+  })
+})

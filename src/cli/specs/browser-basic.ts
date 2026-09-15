@@ -3,6 +3,18 @@ import { GLOBAL_FLAGS } from '../args'
 
 export const BROWSER_BASIC_COMMAND_SPECS: CommandSpec[] = [
   {
+    path: ['browser', 'identity', 'get'],
+    summary: 'Show the browser identity configured on this Orca host',
+    usage: 'orca browser identity get [--json]',
+    allowedFlags: [...GLOBAL_FLAGS]
+  },
+  {
+    path: ['browser', 'identity', 'set'],
+    summary: 'Choose the browser identity for every page on this Orca host',
+    usage: 'orca browser identity set --mode <clean|native> [--json]',
+    allowedFlags: [...GLOBAL_FLAGS, 'mode']
+  },
+  {
     path: ['open-url'],
     summary: 'Open a URL on the paired client that hosts this terminal',
     usage: 'orca open-url --url <url> [--worktree <selector>] [--json]',

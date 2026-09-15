@@ -314,6 +314,76 @@ describe('orca cli browser page targeting', () => {
   })
 })
 
+describe('orca cli browser identity', () => {
+  beforeEach(() => {
+    callMock.mockReset()
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  it('gets the host identity only after capability negotiation', async () => {
+    queueFixtures(
+      callMock,
+      okFixture('status', { capabilities: ['browser.identity.v1'] }),
+      okFixture('identity', {
+        identity: {
+          state: 'valid',
+          appliedMode: 'clean',
+          configuredMode: 'native',
+          explicitSelection: true,
+          migrationNoticePending: false,
+          restartRequired: true
+        },
+        migrationNotice: null
+      })
+    )
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(['browser', 'identity', 'get', '--json'], '/tmp/not-an-orca-worktree')
+
+    expect(callMock).toHaveBeenNthCalledWith(1, 'status.get')
+    expect(callMock).toHaveBeenNthCalledWith(2, 'browser.identity.get')
+  })
+
+  it('sets the host identity through the runtime writer', async () => {
+    queueFixtures(
+      callMock,
+      okFixture('status', { capabilities: ['browser.identity.v1'] }),
+      okFixture('identity', {
+        ok: true,
+        identity: {
+          state: 'valid',
+          appliedMode: 'clean',
+          configuredMode: 'native',
+          explicitSelection: true,
+          migrationNoticePending: false,
+          restartRequired: true
+        }
+      })
+    )
+    vi.spyOn(console, 'log').mockImplementation(() => {})
+
+    await main(
+      ['browser', 'identity', 'set', '--mode', 'native', '--json'],
+      '/tmp/not-an-orca-worktree'
+    )
+
+    expect(callMock).toHaveBeenNthCalledWith(2, 'browser.identity.set', { mode: 'native' })
+  })
+
+  it('refuses an older runtime instead of guessing at identity support', async () => {
+    queueFixtures(callMock, okFixture('status', { capabilities: [] }))
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await main(['browser', 'identity', 'get'], '/tmp/not-an-orca-worktree')
+
+    expect(callMock).toHaveBeenCalledTimes(1)
+    expect(error).toHaveBeenCalledWith(expect.stringContaining('Update or restart Orca'))
+  })
+})
+
 describe('orca cli browser profile management', () => {
   beforeEach(() => {
     callMock.mockReset()

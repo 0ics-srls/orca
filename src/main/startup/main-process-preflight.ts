@@ -87,7 +87,7 @@ import { maybeApplyGpuFallbackForThisLaunch, registerGpuLifecycleHandlers } from
 import { mainProcessState as state } from './main-process-state'
 import { initializeSyntheticTitleRuntime } from './synthetic-title-runtime'
 import { initializeBrowserProcessUserAgent } from '../browser/browser-process-user-agent'
-import { readBrowserIdentityModeRecord } from '../browser/browser-identity-mode-record'
+import { initializeBrowserIdentityModeStore } from '../browser/browser-identity-mode-record'
 
 export type MainProcessPreflightOptions = {
   focusExistingWindow: () => void
@@ -186,7 +186,9 @@ export function runMainProcessPreflight(options: MainProcessPreflightOptions): b
     app.setName(state.devInstanceIdentity.appName)
   }
   // Why: renderer and worker defaults are process-global and must be fixed before any session exists.
-  initializeBrowserProcessUserAgent(readBrowserIdentityModeRecord(getCanonicalUserDataPath()).mode)
+  initializeBrowserProcessUserAgent(
+    initializeBrowserIdentityModeStore(getCanonicalUserDataPath()).appliedMode
+  )
   state.startupDiagnosticsEnabled = isStartupDiagnosticsEnabled()
   if (state.startupDiagnosticsEnabled) {
     logStartupDiagnostic('before-single-instance-lock', {

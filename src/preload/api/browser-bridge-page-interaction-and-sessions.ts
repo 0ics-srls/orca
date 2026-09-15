@@ -1,5 +1,6 @@
 import { ipcRenderer } from 'electron'
 import type { PreloadApi } from '../api-types'
+import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 export const browserPageInteractionAndSessionsApi = {
   onContextMenuRequested: (
@@ -119,10 +120,8 @@ export const browserPageInteractionAndSessionsApi = {
     ipcRenderer.invoke('browser:prepareSshWorkspacePartition', args),
   sessionCreateProfile: (args: { scope: 'default' | 'isolated' | 'imported'; label: string }) =>
     ipcRenderer.invoke('browser:session:createProfile', args),
-  sessionReadUserAgentMigrationNotice: (): Promise<string[] | null> =>
-    ipcRenderer.invoke('browser:session:readUserAgentMigrationNotice'),
-  sessionClearUserAgentMigrationNotice: (): Promise<boolean> =>
-    ipcRenderer.invoke('browser:session:clearUserAgentMigrationNotice'),
+  identityGet: () => ipcRenderer.invoke('browser:identity:get'),
+  identitySet: (mode: BrowserUserAgentMode) => ipcRenderer.invoke('browser:identity:set', mode),
   sessionDeleteProfile: (args: { profileId: string }): Promise<boolean> =>
     ipcRenderer.invoke('browser:session:deleteProfile', args),
   sessionImportCookies: (args: { profileId: string }) =>

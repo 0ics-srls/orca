@@ -17,17 +17,17 @@ import type {
   BrowserSessionProfileScope
 } from '../../shared/browser-workspace-types'
 import {
-  clearBrowserIdentityMigrationNotice,
-  readPendingBrowserIdentityMigrationNotice
+  getBrowserIdentityModeStatus,
+  setBrowserIdentityMode
 } from '../browser/browser-identity-mode-record'
-import { getCanonicalUserDataPath } from '../persistence'
+import { normalizeBrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 export function registerBrowserSessionProfileHandlers(): void {
   ipcMain.removeHandler('browser:session:listProfiles')
   ipcMain.removeHandler('browser:session:createProfile')
   ipcMain.removeHandler('browser:session:deleteProfile')
-  ipcMain.removeHandler('browser:session:readUserAgentMigrationNotice')
-  ipcMain.removeHandler('browser:session:clearUserAgentMigrationNotice')
+  ipcMain.removeHandler('browser:identity:get')
+  ipcMain.removeHandler('browser:identity:set')
   ipcMain.removeHandler('browser:session:importCookies')
   ipcMain.removeHandler('browser:session:resolvePartition')
 
@@ -51,18 +51,18 @@ export function registerBrowserSessionProfileHandlers(): void {
     }
   )
 
-  ipcMain.handle('browser:session:readUserAgentMigrationNotice', (event): string[] | null => {
+  ipcMain.handle('browser:identity:get', (event) => {
     if (!isTrustedBrowserRenderer(event.sender)) {
       return null
     }
-    return readPendingBrowserIdentityMigrationNotice(getCanonicalUserDataPath())
+    return getBrowserIdentityModeStatus()
   })
 
-  ipcMain.handle('browser:session:clearUserAgentMigrationNotice', (event): boolean => {
+  ipcMain.handle('browser:identity:set', async (event, mode: unknown) => {
     if (!isTrustedBrowserRenderer(event.sender)) {
-      return false
+      return null
     }
-    return clearBrowserIdentityMigrationNotice(getCanonicalUserDataPath())
+    return setBrowserIdentityMode(normalizeBrowserUserAgentMode(mode))
   })
 
   ipcMain.handle(

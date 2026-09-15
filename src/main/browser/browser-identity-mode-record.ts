@@ -1,7 +1,12 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { writeFileAtomically } from '../codex-accounts/fs-utils'
-import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
+import { durableWriteTempPath, writeFileDurableSync } from '../durable-file-write'
+import type {
+  BrowserIdentityModeStatus,
+  BrowserIdentityModeSetResult,
+  BrowserIdentityModeSnapshot,
+  BrowserUserAgentMode
+} from '../../shared/browser-user-agent-mode'
 
 /**
  * The browser's identity is one process-wide decision, not a per-profile one.
@@ -22,129 +27,289 @@ import type { BrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 export const BROWSER_IDENTITY_MODE_FILE = 'browser-identity-mode.json'
 export const BROWSER_IDENTITY_MODE_VERSION = 1
 
-let browserIdentityPersistenceFailure: string | null = null
-
-export function getBrowserIdentityPersistenceFailure(): string | null {
-  return browserIdentityPersistenceFailure
-}
-
 export type BrowserIdentityModeRecord = {
   version: typeof BROWSER_IDENTITY_MODE_VERSION
   mode: BrowserUserAgentMode
-  /** Profiles that carried the retired per-profile `native` mode, so the browser can say so once. */
-  migratedNativeProfileIds?: string[]
-  /** Cleared after the renderer confirms it displayed the migration notice. */
-  migrationNoticePending?: boolean
+  explicitSelection: boolean
+  migrationNoticePending: boolean
 }
+
+type HealthyBrowserIdentityModeReadResult = {
+  state: 'missing' | 'valid'
+  appliedMode: BrowserUserAgentMode
+  configuredMode: BrowserUserAgentMode
+  explicitSelection: boolean
+  migrationNoticePending: boolean
+}
+
+type UnhealthyBrowserIdentityModeReadResult = {
+  state: 'corrupt' | 'future' | 'unreadable'
+  appliedMode: 'clean'
+  configuredMode: null
+  explicitSelection: null
+  migrationNoticePending: null
+}
+
+export type BrowserIdentityModeReadResult =
+  | HealthyBrowserIdentityModeReadResult
+  | UnhealthyBrowserIdentityModeReadResult
+
+type BrowserIdentityModeStore = {
+  userDataPath: string
+  snapshot: BrowserIdentityModeSnapshot
+}
+
+let modeStore: BrowserIdentityModeStore | null = null
+let writeQueue: Promise<void> = Promise.resolve()
+const snapshotListeners = new Set<(snapshot: BrowserIdentityModeSnapshot) => void>()
+let migrationNoticeDegraded = false
+let launchMigrationNoticePending = false
 
 export function browserIdentityModeRecordPath(userDataPath: string): string {
   return join(userDataPath, BROWSER_IDENTITY_MODE_FILE)
 }
 
-function parseRecord(raw: string): BrowserIdentityModeRecord | null {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON.parse is untyped; every member is checked below and an unrecognised shape returns null.
-  const parsed = JSON.parse(raw) as Partial<BrowserIdentityModeRecord>
-  if (parsed.version !== BROWSER_IDENTITY_MODE_VERSION) {
-    return null
+function parseRecord(raw: string): BrowserIdentityModeReadResult {
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return unhealthyResult('corrupt')
   }
-  if (parsed.mode !== 'clean' && parsed.mode !== 'native') {
-    return null
+  if (!parsed || typeof parsed !== 'object') {
+    return unhealthyResult('corrupt')
+  }
+  const version = Reflect.get(parsed, 'version')
+  if (typeof version === 'number' && version > BROWSER_IDENTITY_MODE_VERSION) {
+    return unhealthyResult('future')
+  }
+  const mode = Reflect.get(parsed, 'mode')
+  const explicitSelection = Reflect.get(parsed, 'explicitSelection')
+  const migrationNoticePending = Reflect.get(parsed, 'migrationNoticePending')
+  if (
+    version !== BROWSER_IDENTITY_MODE_VERSION ||
+    (mode !== 'clean' && mode !== 'native') ||
+    typeof explicitSelection !== 'boolean' ||
+    typeof migrationNoticePending !== 'boolean'
+  ) {
+    return unhealthyResult('corrupt')
   }
   return {
-    version: BROWSER_IDENTITY_MODE_VERSION,
-    mode: parsed.mode,
-    migratedNativeProfileIds: Array.isArray(parsed.migratedNativeProfileIds)
-      ? parsed.migratedNativeProfileIds.filter((id): id is string => typeof id === 'string')
-      : undefined,
-    migrationNoticePending: parsed.migrationNoticePending === true ? true : undefined
+    state: 'valid',
+    appliedMode: mode,
+    configuredMode: mode,
+    explicitSelection,
+    migrationNoticePending
   }
 }
 
-/** Absent, unreadable, or unrecognised all mean `clean` — the default that keeps imported cookies alive. */
-export function readBrowserIdentityModeRecord(userDataPath: string): BrowserIdentityModeRecord {
+function unhealthyResult(
+  state: UnhealthyBrowserIdentityModeReadResult['state']
+): UnhealthyBrowserIdentityModeReadResult {
+  return {
+    state,
+    appliedMode: 'clean',
+    configuredMode: null,
+    explicitSelection: null,
+    migrationNoticePending: null
+  }
+}
+
+/** Reads the process identity synchronously before Electron readiness. */
+export function readBrowserIdentityModeRecord(
+  userDataPath: string
+): BrowserIdentityModeReadResult {
   try {
-    const parsed = parseRecord(readFileSync(browserIdentityModeRecordPath(userDataPath), 'utf-8'))
-    return parsed ?? { version: BROWSER_IDENTITY_MODE_VERSION, mode: 'clean' }
-  } catch {
-    return { version: BROWSER_IDENTITY_MODE_VERSION, mode: 'clean' }
+    return parseRecord(readFileSync(browserIdentityModeRecordPath(userDataPath), 'utf-8'))
+  } catch (error) {
+    if (error instanceof Error && Reflect.get(error, 'code') === 'ENOENT') {
+      return {
+        state: 'missing',
+        appliedMode: 'clean',
+        configuredMode: 'clean',
+        explicitSelection: false,
+        migrationNoticePending: false
+      }
+    }
+    return unhealthyResult('unreadable')
   }
 }
 
-export function writeBrowserIdentityModeRecord(
+function writeBrowserIdentityModeRecord(
   userDataPath: string,
   record: BrowserIdentityModeRecord
 ): void {
-  writeFileAtomically(
-    browserIdentityModeRecordPath(userDataPath),
+  const filePath = browserIdentityModeRecordPath(userDataPath)
+  writeFileDurableSync(
+    durableWriteTempPath(filePath),
+    filePath,
     `${JSON.stringify(record, null, 2)}\n`
   )
 }
 
-function persistBrowserIdentityOperation(
-  userDataPath: string,
-  record: BrowserIdentityModeRecord,
-  operation: string
-): boolean {
-  try {
-    writeBrowserIdentityModeRecord(userDataPath, record)
-    browserIdentityPersistenceFailure = null
-    return true
-  } catch (error) {
-    browserIdentityPersistenceFailure = error instanceof Error ? error.message : String(error)
-    console.error(
-      `[browser-identity] Could not persist ${operation}:`,
-      browserIdentityPersistenceFailure
-    )
-    return false
+function snapshotForRead(result: BrowserIdentityModeReadResult): BrowserIdentityModeSnapshot {
+  return { ...result, restartRequired: false }
+}
+
+export function initializeBrowserIdentityModeStore(
+  userDataPath: string
+): BrowserIdentityModeSnapshot {
+  if (modeStore) {
+    throw new Error('Browser identity mode store was already initialized')
+  }
+  const snapshot = snapshotForRead(readBrowserIdentityModeRecord(userDataPath))
+  modeStore = { userDataPath, snapshot }
+  return snapshot
+}
+
+function requireModeStore(): BrowserIdentityModeStore {
+  if (!modeStore) {
+    throw new Error('Browser identity mode store is not initialized')
+  }
+  return modeStore
+}
+
+export function getBrowserIdentityModeSnapshot(): BrowserIdentityModeSnapshot {
+  return requireModeStore().snapshot
+}
+
+export function getBrowserIdentityMigrationNotice(): { degraded: boolean } | null {
+  const snapshot = requireModeStore().snapshot
+  return launchMigrationNoticePending || snapshot.migrationNoticePending === true
+    ? { degraded: migrationNoticeDegraded }
+    : null
+}
+
+export function getBrowserIdentityModeStatus(): BrowserIdentityModeStatus {
+  return {
+    identity: getBrowserIdentityModeSnapshot(),
+    migrationNotice: getBrowserIdentityMigrationNotice()
   }
 }
 
-export function updateBrowserIdentityMode(userDataPath: string, mode: BrowserUserAgentMode): void {
-  const current = readBrowserIdentityModeRecord(userDataPath)
-  if (current.mode === mode) {
-    return
+function notifySnapshotListeners(snapshot: BrowserIdentityModeSnapshot): void {
+  for (const listener of snapshotListeners) {
+    try {
+      listener(snapshot)
+    } catch (error) {
+      console.error('[browser-identity] Snapshot listener failed:', error)
+    }
   }
-  persistBrowserIdentityOperation(userDataPath, { ...current, mode }, 'process identity mode')
 }
 
-export function recordRetiredNativeBrowserProfiles(
-  userDataPath: string,
-  profileIds: readonly string[]
-): boolean {
-  if (profileIds.length === 0) {
-    return true
-  }
-  const current = readBrowserIdentityModeRecord(userDataPath)
-  const migratedNativeProfileIds = [
-    ...new Set([...(current.migratedNativeProfileIds ?? []), ...profileIds])
-  ]
-  return persistBrowserIdentityOperation(
-    userDataPath,
-    {
-      ...current,
-      migratedNativeProfileIds,
-      migrationNoticePending: true
-    },
-    'retired profile notice'
+export function onBrowserIdentityModeSnapshotChanged(
+  listener: (snapshot: BrowserIdentityModeSnapshot) => void
+): () => void {
+  snapshotListeners.add(listener)
+  return () => snapshotListeners.delete(listener)
+}
+
+function enqueueWrite<T>(operation: () => T): Promise<T> {
+  const pending = writeQueue.then(operation, operation)
+  writeQueue = pending.then(
+    () => undefined,
+    () => undefined
   )
+  return pending
 }
 
-export function readPendingBrowserIdentityMigrationNotice(userDataPath: string): string[] | null {
-  const current = readBrowserIdentityModeRecord(userDataPath)
-  if (current.migrationNoticePending !== true) {
-    return null
-  }
-  return current.migratedNativeProfileIds ?? []
-}
-
-export function clearBrowserIdentityMigrationNotice(userDataPath: string): boolean {
-  const current = readBrowserIdentityModeRecord(userDataPath)
-  if (current.migrationNoticePending !== true) {
-    return false
-  }
-  writeBrowserIdentityModeRecord(userDataPath, {
-    ...current,
-    migrationNoticePending: undefined
+export function setBrowserIdentityMode(
+  mode: BrowserUserAgentMode
+): Promise<BrowserIdentityModeSetResult> {
+  return enqueueWrite(() => {
+    const store = requireModeStore()
+    const current = store.snapshot
+    if (current.configuredMode === null) {
+      return {
+        ok: false,
+        error: {
+          code: 'browser_identity_reset_required',
+          message: `Browser identity data is ${current.state}; reset it before choosing a mode.`
+        },
+        identity: current
+      }
+    }
+    const record: BrowserIdentityModeRecord = {
+      version: BROWSER_IDENTITY_MODE_VERSION,
+      mode,
+      explicitSelection: true,
+      migrationNoticePending: false
+    }
+    try {
+      writeBrowserIdentityModeRecord(store.userDataPath, record)
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          code: 'browser_identity_write_failed',
+          message: error instanceof Error ? error.message : String(error)
+        },
+        identity: current
+      }
+    }
+    const identity: BrowserIdentityModeSnapshot = {
+      state: 'valid',
+      appliedMode: current.appliedMode,
+      configuredMode: mode,
+      explicitSelection: true,
+      migrationNoticePending: false,
+      restartRequired: mode !== current.appliedMode
+    }
+    store.snapshot = identity
+    launchMigrationNoticePending = false
+    migrationNoticeDegraded = false
+    notifySnapshotListeners(identity)
+    return { ok: true, identity }
   })
-  return true
+}
+
+export function markBrowserIdentityMigrationNoticePending(
+  userDataPath: string,
+  degraded: boolean
+): Promise<boolean> {
+  return enqueueWrite(() => {
+    if (!modeStore) {
+      initializeBrowserIdentityModeStore(userDataPath)
+    }
+    const store = requireModeStore()
+    if (store.userDataPath !== userDataPath) {
+      throw new Error('Browser identity mode store userData path changed')
+    }
+    const current = store.snapshot
+    launchMigrationNoticePending = true
+    migrationNoticeDegraded ||= degraded
+    if (current.configuredMode === null) {
+      return false
+    }
+    const record: BrowserIdentityModeRecord = {
+      version: BROWSER_IDENTITY_MODE_VERSION,
+      mode: current.configuredMode,
+      explicitSelection: current.explicitSelection,
+      migrationNoticePending: true
+    }
+    try {
+      writeBrowserIdentityModeRecord(userDataPath, record)
+    } catch (error) {
+      console.error('[browser-identity] Could not persist retired profile notice:', error)
+      return false
+    }
+    store.snapshot = {
+      state: 'valid',
+      appliedMode: current.appliedMode,
+      configuredMode: current.configuredMode,
+      explicitSelection: current.explicitSelection,
+      migrationNoticePending: true,
+      restartRequired: current.restartRequired
+    }
+    notifySnapshotListeners(store.snapshot)
+    return true
+  })
+}
+
+export function resetBrowserIdentityModeStoreForTests(): void {
+  modeStore = null
+  writeQueue = Promise.resolve()
+  snapshotListeners.clear()
+  migrationNoticeDegraded = false
+  launchMigrationNoticePending = false
 }

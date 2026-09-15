@@ -144,43 +144,21 @@ vi.mock('./main-process-runtime-launch', () => ({
 }))
 
 import { initializeMainProcessReady } from './main-process-ready'
-import { getBrowserIdentityPersistenceFailure } from '../browser/browser-identity-mode-record'
-
-describe('ready-phase identity write failure', () => {
+describe('ready-phase browser identity authority', () => {
   beforeEach(() => {
     mocks.openMainWindow.mockClear()
     mocks.runtimeRpcStart.mockClear()
+    mocks.writeFileAtomically.mockClear()
     mocks.state.isServeMode = false
   })
 
-  it('still reaches the desktop window when the identity sidecar write fails', async () => {
-    await expect(
-      initializeMainProcessReady({
-        openMainWindow: mocks.openMainWindow,
-        handleMacAppActivation: vi.fn()
-      })
-    ).resolves.toBeUndefined()
-    expect(mocks.openMainWindow).toHaveBeenCalledTimes(1)
-    expect(getBrowserIdentityPersistenceFailure()).toContain('read-only userData')
+  it('does not mirror the active Orca profile identity over the process-wide sidecar', async () => {
+    await initializeMainProcessReady({
+      openMainWindow: mocks.openMainWindow,
+      handleMacAppActivation: vi.fn()
+    })
+
+    expect(mocks.writeFileAtomically).not.toHaveBeenCalled()
   })
 
-  it('still reaches serve RPC startup and reports the write failure on stderr', async () => {
-    mocks.state.isServeMode = true
-    const stderr = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      await expect(
-        initializeMainProcessReady({
-          openMainWindow: mocks.openMainWindow,
-          handleMacAppActivation: vi.fn()
-        })
-      ).resolves.toBeUndefined()
-      expect(mocks.runtimeRpcStart).toHaveBeenCalledTimes(1)
-      expect(stderr).toHaveBeenCalledWith(
-        expect.stringContaining('[browser-identity]'),
-        expect.stringContaining('read-only userData')
-      )
-    } finally {
-      stderr.mockRestore()
-    }
-  })
 })
