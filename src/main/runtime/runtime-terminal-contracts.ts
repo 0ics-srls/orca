@@ -104,7 +104,12 @@ export type RuntimeTerminalAgentStatusEvent = {
 
 export type HookLiveAgentRow = Pick<
   RuntimeAgentRowSnapshot,
-  'payload' | 'updatedAt' | 'evidenceObservedAt' | 'stateStartedAt' | 'worktreeId'
+  | 'payload'
+  | 'updatedAt'
+  | 'evidenceObservedAt'
+  | 'stateStartedAt'
+  | 'worktreeId'
+  | 'executionObservation'
 >
 
 export type RuntimePtyDataAdmission = Readonly<{
