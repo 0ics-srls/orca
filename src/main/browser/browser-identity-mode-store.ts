@@ -217,6 +217,12 @@ export async function markBrowserIdentityMigrationNoticePending(
     throw new Error('Browser identity mode store userData path changed')
   }
   const current = store.snapshot
+  // The retired per-profile bytes are retained on disk forever by design, so every launch
+  // rediscovers them. An explicit choice is what retires the notice — without this gate the
+  // notice re-arms on the launch after the user answers it, and on every launch after that.
+  if (current.explicitSelection === true) {
+    return false
+  }
   // Why the in-memory flag regardless: the user still needs the notice even when the record
   // cannot be written, and unhealthy data has no mode to write it beside.
   launchMigrationNoticePending = true
