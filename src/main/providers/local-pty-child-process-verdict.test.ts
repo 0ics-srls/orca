@@ -108,14 +108,18 @@ describe('inspectLocalPtyChildProcesses', () => {
   })
 
   it('collapses uncertainty to false only in the boolean adapter', async () => {
+    let reads = 0
     registerPane(
       'pty-closed',
       () => {
+        reads += 1
         throw new Error('EBADF: bad file descriptor')
       },
       '/bin/zsh'
     )
     await expect(hasLocalPtyChildProcesses('pty-closed')).resolves.toBe(false)
+    // The `false` has to come from the failed read, not from an earlier short-circuit.
+    expect(reads).toBe(1)
   })
 })
 
