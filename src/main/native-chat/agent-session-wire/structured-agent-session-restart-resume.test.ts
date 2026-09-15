@@ -13,6 +13,7 @@ import {
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
 import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
+import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
@@ -152,6 +153,9 @@ function resumableSet(input: {
     getRecord: () => record(input.chain === undefined ? {} : { chain: input.chain }),
     supportsRecord: () => true,
     journalTurn: () => newestStructuredAgentSessionTurn(items),
+    // Derived from the same items the real host reads, so adding a pending prompt to a fixture
+    // exercises this exactly as production would.
+    awaitsUser: () => projectStructuredAgentSessionStatus(items) === 'attention',
     latestPrompt: () => 'fix the auth bug',
     now: input.now ?? NOW
   })
@@ -331,6 +335,7 @@ describe('the resumable set', () => {
       getRecord: () => claudeRecord('5aed93d6-advanced-leaf'),
       supportsRecord: () => true,
       journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+      awaitsUser: () => false,
       latestPrompt: () => '',
       now: NOW
     })
@@ -345,6 +350,7 @@ describe('the resumable set', () => {
         getRecord: () => claudeRecord(null, 'prov-session-2'),
         supportsRecord: () => true,
         journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+        awaitsUser: () => false,
         latestPrompt: () => '',
         now: NOW
       })
@@ -363,6 +369,18 @@ describe('the resumable set', () => {
     expect(resumableSet({ markers: [marker()], items: [turnItem('turn-1', 'running')] })).toEqual(
       []
     )
+  })
+
+  // Teardown already refuses to MINT a marker for this, but the set predicate needs the same clause
+  // or a marker that exists by any other route is offered. The projection still says `attention`
+  // here because it tests for a pending prompt before it looks at turn state.
+  it('refuses a marker for a chat that is blocked on the user', () => {
+    expect(
+      resumableSet({
+        markers: [marker()],
+        items: [turnItem('turn-1', 'interrupted'), pendingApproval()]
+      })
+    ).toEqual([])
   })
 
   it('offers a turn whose end the host could not verify', () => {
@@ -468,6 +486,28 @@ describe('the restart-resume surface', () => {
     ])
     // Spent, so the prompt cannot offer it again, and no second hold was taken.
     expect(live.size).toBe(0)
+    expect(held).toEqual([])
+  })
+
+  // Relaxing the lease clause must not relax the whole predicate. "Resume all" targets every
+  // marker, so a held-but-ineligible session would otherwise be consumed and counted as resumed.
+  it('refuses to settle an already-live session the predicate rejects', async () => {
+    const liveRecord = {
+      ...record(),
+      lease: { ...record().lease, claimStatus: 'live' }
+    } as AgentSessionRecord
+    const { restartResume, live, held } = surface({
+      record: liveRecord,
+      sessions: new Map([
+        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), hasProviderChild: true }]
+      ])
+    })
+
+    const outcomes = await restartResume.resume(undefined, 'modal')
+
+    expect(outcomes).toEqual([])
+    // The marker survives: nothing was resumed, so nothing may be spent.
+    expect(live.size).toBe(1)
     expect(held).toEqual([])
   })
 

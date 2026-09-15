@@ -9,8 +9,10 @@ import type { AgentSessionRecordStore } from '../../runtime/agent-session-record
 import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
 import {
   latestStructuredAgentSessionPrompt,
-  newestStructuredAgentSessionTurn
+  newestStructuredAgentSessionTurn,
+  projectStructuredAgentSessionStatus
 } from '../../../shared/structured-agent-session-projection'
+import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { adapterSupportsRecord } from './structured-agent-session-provider-support'
@@ -54,25 +56,39 @@ export function createStructuredAgentSessionRestartResume(
   const admission = new StructuredAgentSessionResumeAdmission()
   const itemsFor = (sessionId: string) => sessions.get(sessionId)?.journal.snapshot().items ?? []
 
-  const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> => {
-    const now = surfaces.now()
-    const markers = deps.store.resumeMarkers.list(now)
-    // A marked session this launch has not opened yet cannot answer for its own turn, and an
-    // unreadable journal leaves the predicate with one record instead of two — which refuses.
+  /** Opens any marked session this launch has not, so its journal can answer for itself. An
+   *  unreadable journal leaves the predicate with one record instead of two, which refuses. */
+  const revealMarked = async (): Promise<AgentSessionResumeMarker[]> => {
+    const markers = deps.store.resumeMarkers.list(surfaces.now())
     for (const marker of markers) {
       if (!sessions.has(marker.sessionId)) {
         await surfaces.revealSession(marker.sessionId).catch(() => null)
       }
     }
-    return structuredAgentSessionResumableSet({
+    return markers
+  }
+
+  const derive = (
+    markers: readonly AgentSessionResumeMarker[],
+    leaseState: 'must-be-released' | 'may-be-held'
+  ): StructuredAgentSessionResumeCandidate[] =>
+    structuredAgentSessionResumableSet({
       markers,
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
       journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
+      // The projection tests for a pending approval or question BEFORE it looks at turn state, so
+      // it still reports `attention` after eviction has rewritten the turn to `interrupted`. That
+      // makes it the durable signal, and the same one teardown gates on.
+      awaitsUser: (sessionId) =>
+        projectStructuredAgentSessionStatus(itemsFor(sessionId)) === 'attention',
       latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
-      now
+      now: surfaces.now(),
+      leaseState
     })
-  }
+
+  const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> =>
+    derive(await revealMarked(), 'must-be-released')
 
   return {
     recordMarkers: (trigger) =>
@@ -102,12 +118,13 @@ export function createStructuredAgentSessionRestartResume(
       return markers.length
     },
     resume: async (sessionIds, owner) => {
-      const offered = deps.store.resumeMarkers.list(surfaces.now()).map((entry) => entry.sessionId)
-      const targets = sessionIds ? [...new Set(sessionIds)] : offered
-      const requested = new Set(targets)
+      const markers = await revealMarked()
+      const requested = new Set(sessionIds ?? markers.map((entry) => entry.sessionId))
       // Re-derived at CLICK time, never taken from the caller: a client may name any session id,
       // and only the predicate decides which of them is allowed a provider child.
-      const candidates = (await list()).filter((candidate) => requested.has(candidate.sessionId))
+      const candidates = derive(markers, 'must-be-released').filter((candidate) =>
+        requested.has(candidate.sessionId)
+      )
       const outcomes = await resumeStructuredAgentSessionsFromRestart(
         {
           admission,
@@ -117,12 +134,20 @@ export function createStructuredAgentSessionRestartResume(
         candidates,
         owner
       )
-      // A session whose own chat pane bound between the offer and the click is ALREADY resumed: its
-      // lease went live, so the predicate drops it. Reporting that as nothing-happened leaves the
-      // user pressing a button that does nothing, so settle it as the success it actually is.
+      // A session whose own chat pane bound between the offer and the click is ALREADY resumed: the
+      // released-lease clause drops it, and reporting nothing-happened would leave the user pressing
+      // a dead button. It may be settled as the success it is — but ONLY if it satisfies every OTHER
+      // clause. Gating on the live child alone would let "Resume all", which targets every marker,
+      // spend markers the predicate rejected and count chats that were never eligible.
+      const eligibleIfHeld = new Set(
+        derive(markers, 'may-be-held').map((candidate) => candidate.sessionId)
+      )
       const settled = new Set(outcomes.map((outcome) => outcome.sessionId))
-      for (const sessionId of targets) {
-        if (settled.has(sessionId) || sessions.get(sessionId)?.hasProviderChild !== true) {
+      for (const sessionId of requested) {
+        if (settled.has(sessionId) || !eligibleIfHeld.has(sessionId)) {
+          continue
+        }
+        if (sessions.get(sessionId)?.hasProviderChild !== true) {
           continue
         }
         await deps.store.resumeMarkers.consume(sessionId)

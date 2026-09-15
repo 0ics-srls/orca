@@ -39,8 +39,18 @@ export type StructuredAgentSessionResumeSetInput = {
    *  not be read. Deliberately not the live-turn reader: eviction has already rewritten that turn
    *  to `interrupted` by the time this runs. */
   journalTurn: (sessionId: string) => AgentJournalTurnLifecycle | null
+  /** Whether the chat is blocked on the USER — a pending approval or question. */
+  awaitsUser: (sessionId: string) => boolean
   latestPrompt: (sessionId: string) => string
   now: number
+  /**
+   * Whether the lease must be free.
+   *
+   * `may-be-held` is used for ONE thing: deciding whether a session whose own pane already
+   * re-acquired it may be settled as resumed. Every other clause still applies — relaxing this one
+   * must never become a way to act on a marker the rest of the predicate rejected.
+   */
+  leaseState?: 'must-be-released' | 'may-be-held'
 }
 
 export function structuredAgentSessionResumableSet(
@@ -57,7 +67,7 @@ export function structuredAgentSessionResumableSet(
     }
     // The lease must be free and adjudicated. A contested or still-reconciling record is somebody
     // else's to resolve, and resuming into it is how a session gets two writers.
-    if (!isResumableStructuredAgentSessionRecord(record)) {
+    if (input.leaseState !== 'may-be-held' && !isResumableStructuredAgentSessionRecord(record)) {
       continue
     }
     // A conversation that FORKED since teardown is not the one we marked. Compared by identity
@@ -74,6 +84,12 @@ export function structuredAgentSessionResumableSet(
     // `completed`, so a completed turn is finished work and a turn still marked `running` was never
     // settled by anyone. Offering either is the exact failure this feature exists to prevent.
     if (turn.state !== 'interrupted' && turn.state !== 'unverifiable') {
+      continue
+    }
+    // Symmetric with teardown, which already refuses to MINT a marker for a chat awaiting the user.
+    // Without the same clause here an injected or pre-existing marker would still be offered — the
+    // exact asymmetry the completed-turn case had.
+    if (input.awaitsUser(marker.sessionId)) {
       continue
     }
     candidates.push({
