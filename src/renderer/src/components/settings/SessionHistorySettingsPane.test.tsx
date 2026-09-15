@@ -7,7 +7,6 @@ import { unavailableSessionSearchStatus } from '../../../../shared/ai-vault-sear
 import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-types'
 import { ConfirmationDialogContext } from '@/components/confirmation-dialog-context'
 import { SessionHistorySettingsPane } from './SessionHistorySettingsPane'
-import { SessionHistoryIndexStatus } from './SessionHistoryIndexStatus'
 
 const mocks = vi.hoisted(() => ({ web: false, visible: true, status: vi.fn(), clear: vi.fn() }))
 vi.mock('@/lib/web-client-location', () => ({ isWebClientLocation: () => mocks.web }))
@@ -23,25 +22,32 @@ vi.mock('sonner', () => ({ toast: { success: vi.fn() } }))
 function pane(
   enabled = false,
   confirm = vi.fn().mockResolvedValue(true),
-  save = vi.fn().mockResolvedValue(undefined)
+  save = vi.fn().mockResolvedValue(undefined),
+  historyDays: number | null = null
 ) {
   return render(
     <ConfirmationDialogContext.Provider value={confirm}>
       <SessionHistorySettingsPane
         settings={{
           ...getDefaultSettings('/synthetic'),
-          aiVaultSearch: { enabled, historyDays: null }
+          aiVaultSearch: { enabled, historyDays }
         }}
         updateSettings={save}
       />
     </ConfirmationDialogContext.Provider>
   )
 }
+async function openAdvanced(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
+  })
+}
 const current: AiVaultSearchStatus = {
   ...unavailableSessionSearchStatus(),
   enabled: true,
   phase: 'current',
-  filesIndexed: 12
+  filesIndexed: 12,
+  lastSweepCompletedAt: 1
 }
 beforeEach(() => {
   vi.useFakeTimers()
@@ -63,7 +69,8 @@ afterEach(() => {
 
 it('requires opt-in and saves the existing policy without touching transcripts or polling while off', async () => {
   const save = vi.fn().mockResolvedValue(undefined)
-  pane(false, undefined, save)
+  const confirm = vi.fn().mockResolvedValue(true)
+  pane(false, confirm, save)
   expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false')
   expect(screen.getByText(/Content is not redacted/)).toBeInTheDocument()
   await act(async () => {
@@ -73,7 +80,46 @@ it('requires opt-in and saves the existing policy without touching transcripts o
   await act(async () => {
     fireEvent.click(screen.getByRole('switch'))
   })
+  expect(confirm).toHaveBeenCalledWith(
+    expect.objectContaining({
+      title: 'Start indexing agent sessions?',
+      description: expect.stringContaining('content is not redacted'),
+      confirmLabel: 'Start indexing'
+    })
+  )
   expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
+})
+
+it('leaves search off when the indexing consent is declined', async () => {
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(false, vi.fn().mockResolvedValue(false), save)
+  await act(async () => {
+    fireEvent.click(screen.getByRole('switch'))
+  })
+  expect(save).not.toHaveBeenCalled()
+  expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false')
+})
+
+it('turns search off without asking again', async () => {
+  const confirm = vi.fn().mockResolvedValue(true)
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(true, confirm, save)
+  await act(async () => {
+    fireEvent.click(screen.getByRole('switch'))
+  })
+  expect(confirm).not.toHaveBeenCalled()
+  expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: false, historyDays: null } })
+})
+
+it('keeps the stored retention window without offering a control for it', async () => {
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(false, undefined, save, 30)
+  expect(screen.queryByRole('combobox')).not.toBeInTheDocument()
+  expect(screen.queryByText(/Searchable history/)).not.toBeInTheDocument()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('switch'))
+  })
+  expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: 30 } })
 })
 
 it('shows failed saves inline and unlocks controls', async () => {
@@ -85,20 +131,33 @@ it('shows failed saves inline and unlocks controls', async () => {
   expect(screen.getByRole('switch')).toBeEnabled()
 })
 
-it('clears only after confirmation, supports clearing while disabled, and reports failures', async () => {
+it('hides the delete control behind Advanced', async () => {
+  pane(false)
+  expect(screen.queryByRole('button', { name: 'Delete index' })).not.toBeInTheDocument()
+  await openAdvanced()
+  expect(screen.getByRole('button', { name: 'Delete index' })).toBeInTheDocument()
+  expect(screen.getByText(/Search stays off/)).toBeInTheDocument()
+})
+
+it('deletes only after confirmation, supports deleting while disabled, and reports failures', async () => {
   const confirm = vi.fn().mockResolvedValue(false)
   pane(false, confirm)
+  await openAdvanced()
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Clear index' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
   })
   expect(mocks.clear).not.toHaveBeenCalled()
   expect(confirm).toHaveBeenCalledWith(
-    expect.objectContaining({ description: expect.stringContaining('Search will stay off') })
+    expect.objectContaining({
+      title: 'Delete this computer’s search index?',
+      description: expect.stringContaining('Search stays off'),
+      confirmLabel: 'Delete index'
+    })
   )
   confirm.mockResolvedValue(true)
   mocks.clear.mockRejectedValue(new Error('service unavailable'))
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Clear index' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
   })
   expect(mocks.clear).toHaveBeenCalledOnce()
   expect(screen.getByRole('alert')).toHaveTextContent('Could not clear')
@@ -110,7 +169,8 @@ it('does not execute a confirmation after navigating away', async () => {
     accept = resolve
   })
   const view = pane(false, vi.fn().mockReturnValue(confirmation))
-  fireEvent.click(screen.getByRole('button', { name: 'Clear index' }))
+  await openAdvanced()
+  fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
   view.unmount()
   await act(async () => {
     accept(true)
@@ -122,109 +182,29 @@ it('leaves paired-client controls unsupported without local calls', async () => 
   mocks.web = true
   pane(true)
   expect(screen.getByRole('switch')).toBeDisabled()
-  expect(screen.getByRole('combobox')).toBeDisabled()
-  expect(screen.getByRole('button', { name: 'Clear index' })).toBeDisabled()
+  await openAdvanced()
+  expect(screen.getByRole('button', { name: 'Delete index' })).toBeDisabled()
   await act(async () => {
     await vi.advanceTimersByTimeAsync(60_000)
   })
   expect(mocks.status).not.toHaveBeenCalled()
 })
 
-it('polls only observed indexing and stops at current, with explicit local ownership', async () => {
-  mocks.status.mockResolvedValueOnce({ ...current, phase: 'indexing', filesDue: 4 })
-  render(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  await act(async () => {})
-  expect(screen.getByRole('status')).toHaveTextContent('Due: 4')
-  expect(mocks.status).toHaveBeenCalledWith('local')
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(5_000)
-  })
-  expect(screen.getByRole('status')).toHaveTextContent('up to date with the last scan')
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(60_000)
-  })
-  expect(mocks.status).toHaveBeenCalledTimes(2)
-})
-
-it('fences pending responses across disable, hiding and clear operations', async () => {
-  let answer: (value: AiVaultSearchStatus) => void = () => undefined
-  mocks.status.mockReturnValue(
-    new Promise<AiVaultSearchStatus>((resolve) => {
-      answer = resolve
+it('keeps the last index status visible while a save is in flight', async () => {
+  let finishSave: () => void = () => undefined
+  const save = vi.fn().mockReturnValue(
+    new Promise<void>((resolve) => {
+      finishSave = resolve
     })
   )
-  const view = render(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  view.rerender(<SessionHistoryIndexStatus enabled={false} refresh={0} busy={false} />)
-  await act(async () => {
-    answer(current)
-  })
-  expect(screen.getByRole('status')).toHaveTextContent('Search is off')
-  expect(screen.queryByText(/Indexed files/)).not.toBeInTheDocument()
-  mocks.visible = false
-  view.rerender(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(60_000)
-  })
-  expect(mocks.status).toHaveBeenCalledTimes(1)
-  mocks.visible = true
-  mocks.status.mockResolvedValue(current)
-  view.rerender(<SessionHistoryIndexStatus enabled refresh={0} busy />)
-  expect(mocks.status).toHaveBeenCalledTimes(1)
-  view.rerender(<SessionHistoryIndexStatus enabled refresh={1} busy={false} />)
+  pane(true, vi.fn().mockResolvedValue(true), save)
   await act(async () => {})
-  expect(mocks.status).toHaveBeenCalledTimes(2)
-})
-
-it('does not describe an absent service as an empty current index and allows retry', async () => {
-  mocks.status.mockResolvedValueOnce(unavailableSessionSearchStatus())
-  render(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  await act(async () => {})
-  expect(screen.getByRole('status')).toHaveTextContent(
-    'not ready or the search service is unavailable'
-  )
-  expect(screen.queryByText(/Indexed files/)).not.toBeInTheDocument()
-  mocks.status.mockRejectedValueOnce(new Error('offline'))
+  expect(screen.getByRole('status')).toHaveTextContent('Up to date · 12 files indexed')
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    fireEvent.click(screen.getByRole('switch'))
   })
-  expect(screen.getByRole('status')).toHaveTextContent('Could not read index status')
+  expect(screen.getByRole('status')).toHaveTextContent('Up to date · 12 files indexed')
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }))
+    finishSave()
   })
-  expect(screen.getByRole('status')).toHaveTextContent('Indexed files: 12')
-})
-
-it('does not overlap slow status requests and cancels indexing refreshes on unmount', async () => {
-  let answer: (value: AiVaultSearchStatus) => void = () => undefined
-  mocks.status.mockReturnValue(
-    new Promise<AiVaultSearchStatus>((resolve) => {
-      answer = resolve
-    })
-  )
-  const view = render(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(20_000)
-  })
-  expect(mocks.status).toHaveBeenCalledTimes(1)
-  await act(async () => {
-    answer({ ...current, phase: 'indexing' })
-  })
-  view.unmount()
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(60_000)
-  })
-  expect(mocks.status).toHaveBeenCalledTimes(1)
-})
-
-it('handles synchronous unavailable-bridge errors without leaving a refresh loop', async () => {
-  mocks.status.mockImplementation(() => {
-    throw new Error('bridge unavailable')
-  })
-  render(<SessionHistoryIndexStatus enabled refresh={0} busy={false} />)
-  await act(async () => {})
-  expect(screen.getByRole('status')).toHaveTextContent('Could not read index status')
-  await act(async () => {
-    await vi.advanceTimersByTimeAsync(60_000)
-  })
-  expect(mocks.status).toHaveBeenCalledTimes(1)
 })

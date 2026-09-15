@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { ChevronDown } from 'lucide-react'
 import { toast } from 'sonner'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import {
@@ -6,15 +7,10 @@ import {
   resolveAiVaultSearchSettings
 } from '../../../../shared/ai-vault-search-settings'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
 import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { isWebClientLocation } from '@/lib/web-client-location'
+import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import { SettingsRow, SettingsSwitchRow } from './SettingsFormControls'
 import { SessionHistoryIndexStatus } from './SessionHistoryIndexStatus'
@@ -32,6 +28,7 @@ export function SessionHistorySettingsPane({
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   const mounted = useRef(true)
   useEffect(() => {
     mounted.current = true
@@ -63,25 +60,52 @@ export function SessionHistorySettingsPane({
     }
   }
 
-  async function clearIndex(): Promise<void> {
+  async function toggleEnabled(): Promise<void> {
+    if (policy.enabled) {
+      await save({ enabled: false })
+      return
+    }
+    setBusy(true)
+    let accepted = false
+    try {
+      accepted = await confirm({
+        title: translate('sessionHistory.settings.enableTitle', 'Start indexing agent sessions?'),
+        description: translate(
+          'sessionHistory.settings.enableConsent',
+          'Orca will build a local search index on this computer. It copies conversation text and tool output from agent transcripts as written; content is not redacted. Indexing starts now, runs in the background, and the first scan can take several minutes. You can turn it off at any time; progress is kept.'
+        ),
+        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Start indexing')
+      })
+    } finally {
+      if (mounted.current) {
+        setBusy(false)
+      }
+    }
+    if (!accepted || !mounted.current) {
+      return
+    }
+    await save({ enabled: true })
+  }
+
+  async function deleteIndex(): Promise<void> {
     setBusy(true)
     setError(null)
     try {
       const accepted = await confirm({
         title: translate(
-          'sessionHistory.settings.clearTitle',
-          'Clear this computer’s search index?'
+          'sessionHistory.settings.deleteTitle',
+          'Delete this computer’s search index?'
         ),
         description: policy.enabled
           ? translate(
-              'sessionHistory.settings.clearEnabled',
-              'The index copy will be deleted and rebuilt because search is enabled. Original transcripts will not be deleted.'
+              'sessionHistory.settings.deleteEnabled',
+              'Remove the search index from this computer. Original transcripts are not touched. Search is on, so Orca scans them again from scratch afterward.'
             )
           : translate(
-              'sessionHistory.settings.clearDisabled',
-              'The index copy will be deleted. Original transcripts will not be deleted. Search will stay off.'
+              'sessionHistory.settings.deleteDisabled',
+              'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
             ),
-        confirmLabel: translate('sessionHistory.settings.clear', 'Clear index'),
+        confirmLabel: translate('sessionHistory.settings.delete', 'Delete index'),
         confirmVariant: 'destructive'
       })
       if (!accepted || !mounted.current) {
@@ -110,7 +134,6 @@ export function SessionHistorySettingsPane({
     }
   }
 
-  const retentionLabel = translate('sessionHistory.settings.retention', 'Searchable history')
   return (
     <div className="divide-y divide-border">
       <SettingsSwitchRow
@@ -128,68 +151,47 @@ export function SessionHistorySettingsPane({
         }
         checked={policy.enabled}
         disabled={busy || isWebClient}
-        onChange={() => void save({ enabled: !policy.enabled })}
-      />
-      <SettingsRow
-        label={retentionLabel}
-        description={translate(
-          'sessionHistory.settings.retentionDescription',
-          'Include transcripts modified within this period. Older content is removed from the index on the next sweep; original transcripts are never deleted.'
-        )}
-        control={
-          <Select
-            value={String(policy.historyDays ?? 'all')}
-            disabled={busy || isWebClient}
-            onValueChange={(value) =>
-              void save({ historyDays: value === 'all' ? null : Number(value) })
-            }
-          >
-            <SelectTrigger aria-label={retentionLabel} className="w-36">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">
-                {translate('sessionHistory.settings.all', 'All history')}
-              </SelectItem>
-              <SelectItem value="90">
-                {translate('sessionHistory.settings.days90', '90 days')}
-              </SelectItem>
-              <SelectItem value="30">
-                {translate('sessionHistory.settings.days30', '30 days')}
-              </SelectItem>
-              {policy.historyDays !== null &&
-              policy.historyDays !== 90 &&
-              policy.historyDays !== 30 ? (
-                <SelectItem value={String(policy.historyDays)}>
-                  {translate('sessionHistory.settings.customDays', '{{days}} days', {
-                    days: policy.historyDays
-                  })}
-                </SelectItem>
-              ) : null}
-            </SelectContent>
-          </Select>
-        }
+        onChange={() => void toggleEnabled()}
       />
       {!isWebClient ? (
-        <SessionHistoryIndexStatus enabled={policy.enabled} refresh={refresh} busy={busy} />
+        <SessionHistoryIndexStatus enabled={policy.enabled} refresh={refresh} />
       ) : null}
-      <SettingsRow
-        label={translate('sessionHistory.settings.indexCopy', 'Index copy')}
-        description={translate(
-          'sessionHistory.settings.clearDescription',
-          'Clear only the search index on this computer. If search is enabled, Orca builds it again.'
-        )}
-        control={
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={busy || isWebClient}
-            onClick={() => void clearIndex()}
-          >
-            {translate('sessionHistory.settings.clear', 'Clear index')}
+      <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="pt-2">
+        <CollapsibleTrigger asChild>
+          <Button type="button" variant="ghost" size="sm" className="-ml-2 text-xs">
+            {translate('sessionHistory.settings.advanced', 'Advanced')}
+            <ChevronDown
+              className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')}
+            />
           </Button>
-        }
-      />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="collapsible-height-content">
+          <SettingsRow
+            label={translate('sessionHistory.settings.deleteIndexCopy', 'Delete index copy')}
+            description={
+              policy.enabled
+                ? translate(
+                    'sessionHistory.settings.deleteEnabled',
+                    'Remove the search index from this computer. Original transcripts are not touched. Search is on, so Orca scans them again from scratch afterward.'
+                  )
+                : translate(
+                    'sessionHistory.settings.deleteDisabled',
+                    'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
+                  )
+            }
+            control={
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={busy || isWebClient}
+                onClick={() => void deleteIndex()}
+              >
+                {translate('sessionHistory.settings.delete', 'Delete index')}
+              </Button>
+            }
+          />
+        </CollapsibleContent>
+      </Collapsible>
       {error ? (
         <p role="alert" className="pt-3 text-xs text-destructive">
           {error}
