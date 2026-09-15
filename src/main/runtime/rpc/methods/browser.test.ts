@@ -74,6 +74,25 @@ describe('browser RPC methods', () => {
     ).toThrow('browser_profile_user_agent_mode_is_now_app_wide')
   })
 
+  // The schema check above proves the shape; this proves an older client actually gets the
+  // rejection over the wire instead of a success with the field quietly dropped.
+  it('rejects the retired profile user-agent field through the dispatcher', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: params parsing fails before any runtime member is read.
+    const runtime = { getRuntimeId: () => 'test-runtime' } as unknown as OrcaRuntimeService
+    const dispatcher = new RpcDispatcher({ runtime, methods: BROWSER_CORE_METHODS })
+
+    const response = await dispatcher.dispatch(
+      makeRequest('browser.profileCreate', {
+        label: 'Google',
+        scope: 'isolated',
+        userAgentMode: 'native'
+      })
+    )
+
+    expect(response).toMatchObject({ ok: false })
+    expect(JSON.stringify(response)).toContain('browser_profile_user_agent_mode_is_now_app_wide')
+  })
+
   it('routes core browser automation commands to the runtime server', async () => {
     const runtime = {
       getRuntimeId: () => 'test-runtime',
