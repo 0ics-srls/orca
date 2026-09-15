@@ -146,7 +146,12 @@ async function uploadMobileClipboardImageTransaction(
     throw new Error(startResponse.error.message)
   }
 
-  const { uploadId } = clipboardImageUploadStart.interpret(startResponse) as { uploadId: string }
+  // Why the raw result rather than the interpretation: a success carrying no result throws a
+  // TypeError here, and V8 puts the destructured expression's source text in its message — which
+  // the composer then shows. Reading the slot off the accepted payload would rewrite that sentence
+  // for every user who hits a malformed reply, which is the one change this migration must not make.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the same cast main made, kept so the thrown message is the same one.
+  const { uploadId } = startResponse.result as { uploadId: string }
   try {
     for (
       let offset = 0;
