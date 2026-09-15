@@ -92,10 +92,10 @@ function resolveGuardHomePath(home: WorktreeRemovalHomeAuthority, pathOps: PathO
 }
 
 function isLikelyPosixHomeDirectory(resolvedWorktreePath: string, pathOps: PathOps): boolean {
-  return pathOps === posix && isPosixHomeShape(resolvedWorktreePath)
+  return pathOps === posix && isPosixHomeRoot(resolvedWorktreePath)
 }
 
-function isPosixHomeShape(linuxPath: string): boolean {
+function isPosixHomeRoot(linuxPath: string): boolean {
   return (
     linuxPath === '/home' ||
     linuxPath === '/root' ||
@@ -138,7 +138,7 @@ function isLikelyWslDistroHomeDirectory(resolvedWorktreePath: string, pathOps: P
     return false
   }
   const wsl = parseWslUncPath(resolvedWorktreePath)
-  return !!wsl && (wsl.linuxPath === '/' || isPosixHomeShape(trimTrailingSlash(wsl.linuxPath)))
+  return !!wsl && (wsl.linuxPath === '/' || isPosixHomeRoot(trimTrailingSlash(wsl.linuxPath)))
 }
 
 function isWslUncRemovalPath(resolvedWorktreePath: string): boolean {
