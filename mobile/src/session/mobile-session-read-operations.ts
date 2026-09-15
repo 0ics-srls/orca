@@ -55,6 +55,10 @@ export const nativeChatRepoListRead = bindDeferredRpcOperation(
 /**
  * The agents a host reports for a workspace. Both the local and the remote probe read the payload
  * as the list it is, and the loader raises the host's message when either refuses.
+ *
+ * Separate from the task drawer's readers on the same two methods, which skip: there detection is
+ * advisory and an empty set is a fine answer, where this loader gates a tab the user is opening and
+ * has to say why no agent came back. Different acceptance, so two operations.
  */
 export const preflightDetectAgentsRead = bindDeferredRpcOperation(
   defineRpcOperation({

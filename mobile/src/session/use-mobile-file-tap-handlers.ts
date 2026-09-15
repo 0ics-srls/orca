@@ -2,11 +2,11 @@ import { useCallback, useLayoutEffect, useRef, type MutableRefObject } from 'rea
 import { useRouter } from 'expo-router'
 import { triggerSelection } from '../platform/haptics'
 import { openMobileFileTap, type FileTapSessionTab } from './mobile-file-tap-open'
-import { fileTapPathResolve } from './mobile-session-launch-operations'
 import { openMobileNativeChatFileTap } from './mobile-native-chat-open-file'
+import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 
 type MobileFileTapHandlerOptions<T extends FileTapSessionTab> = {
-  client: Parameters<typeof fileTapPathResolve.request>[0] | null
+  client: RpcOperationSender | null
   hostId: string
   worktreeId: string
   worktreeName?: string

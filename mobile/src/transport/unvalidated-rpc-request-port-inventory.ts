@@ -107,8 +107,9 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // mobile-session-{read,write,launch}-operations.ts, mobile-clipboard-image-operations.ts and
   // mobile-diff-review-git-operations.ts.
   // Holdout: the method is a parameter. `callAgentSession` takes a method string and a generic
-  // result type, and seven callers across five files pass their own; an operation fixes the method
-  // at definition time, so migrating it is a restructure of those callers rather than of this send.
+  // result type, and five call sites across two hooks pass their own, plus one inside this module's
+  // own mutation wrapper; an operation fixes the method at definition time, so migrating it is a
+  // restructure of those callers rather than of this send.
   { file: 'src/session/mobile-structured-agent-session-rpc.ts', references: 1 },
   // Holdout: unrecorded site, record-first rule. `worktree.show` here sits inside the same focus
   // effect as a `runtime.clientEvents` subscription, and the request-only recording runner refuses

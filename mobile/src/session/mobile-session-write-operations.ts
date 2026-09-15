@@ -97,6 +97,11 @@ export const sessionTabActivate = bindDeferredRpcOperation(
  * Writing the review notes and the per-file review state onto the worktree record. Both call sites
  * raise the host's message on a refusal and roll their optimistic list back, so the message has to
  * survive; the reply body is never read.
+ *
+ * Kept separate from source-control's `worktree.set-review-link` even though the two configs match
+ * today: `worktree.set` is a partial update, and these two sites write disjoint members. Sharing one
+ * operation would let a change to the link save's acceptance or params reach the review screen's
+ * rollback path, and the host list's pin write already proves this method carries no single policy.
  */
 export const sessionWorktreeNotesWrite = bindDeferredRpcOperation(
   defineRpcOperation({

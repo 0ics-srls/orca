@@ -8,6 +8,7 @@ import { createMobileFilePreviewHref } from '../files/mobile-file-preview-route'
 import { classifyMobileArtifact } from './mobile-artifact-kind'
 import { fileTapOpenRun, fileTapPathResolve } from './mobile-session-launch-operations'
 import { shouldActivateOpenedMobileSessionTab } from './opened-mobile-session-tab'
+import type { RpcOperationSender } from '../transport/rpc-operation-sender'
 
 export type FileTapSessionTab = {
   id: string
@@ -15,7 +16,7 @@ export type FileTapSessionTab = {
 }
 
 export type OpenMobileFileTapOptions<T extends FileTapSessionTab> = {
-  client: Parameters<typeof fileTapPathResolve.request>[0]
+  client: RpcOperationSender
   hostId: string
   worktreeId: string
   worktreeName?: string
