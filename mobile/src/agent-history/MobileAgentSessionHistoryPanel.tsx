@@ -16,7 +16,7 @@ import { ChevronLeft, RefreshCw } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
 import { useHostClient } from '../transport/client-context'
 import type { RpcSuccess } from '../transport/types'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
 import { readMobileRuntimeHostPlatform } from '../transport/mobile-runtime-host-platform'
 import { getWorktreeLabel } from '../session/worktree-label'
 import {

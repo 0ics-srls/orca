@@ -13,7 +13,7 @@ import type {
   MobilePushRegisterResult
 } from '../../../src/shared/mobile-push-contract'
 import { NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
 import { startRuntimeCapabilityProbe } from '../transport/runtime-capability-probe'
 import { pushRouteRegister, pushRouteUnregister } from './mobile-push-registration-operations'
 import {

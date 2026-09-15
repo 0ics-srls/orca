@@ -1,5 +1,5 @@
 import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
 import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'

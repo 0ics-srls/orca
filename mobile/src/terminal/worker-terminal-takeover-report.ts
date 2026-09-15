@@ -1,4 +1,4 @@
-import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
+import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
 import { workerTerminalTakeoverReport } from './mobile-terminal-operations'
 
 type ReportClient = UnvalidatedRpcRequestPort

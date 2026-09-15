@@ -6,6 +6,9 @@ import type { UnvalidatedRpcRequestPort } from './unvalidated-rpc-request-port'
 // Re-export shim: the options type moved to the port module with the sender it belongs to,
 // and re-exporting is what keeps that move from touching every importer.
 export type { SendRequestOptions } from './unvalidated-rpc-request-port'
+// Re-exported so a caller that only sends can say so without naming the port module, which the
+// boundary ratchet counts as reach. Holding a client already carries the same ability.
+export type { UnvalidatedRpcRequestPort }
 
 type SubscribeOptions = {
   onBinaryFrame?: (frame: BrowserScreencastFrame) => void
