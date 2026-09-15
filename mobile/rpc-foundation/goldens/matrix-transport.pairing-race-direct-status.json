@@ -3,14 +3,15 @@
   "family": "transport.pairing-race",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "fc525c355d741ea5478dd1b106526b5b8205de1b",
+  "baseline": "6a11a0b8e621458486952d5c53169889ad59f8db",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "b302020ef5f957af30e16a50ec4629c8cef5d41f8f69973bd52531dc07be0e8a",
+  "recorderSha256": "19080c2f38b76272bfa82bb7549e02c06333eb1e500852f7582532b29a10d139",
+  "adapterSha256": "faae51ab8f3e0c78be41f6c7d53aee186742e82fb7dd38d832957b5839dcf67d",
   "scenarioSha256": "3d39ad40183f9d115afcf6d8117daeaf897bcc692ee6ed76dfdd8bd9441dde12",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 5,
   "values": {
     "16cd464bf664": {
       "name": "status.get#1",
