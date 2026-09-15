@@ -588,6 +588,21 @@ describe('claude background task rows', () => {
 
   it('bounds generation history without reusing an evicted durable identity', () => {
     const { rows, keys, latest } = harness([FORWARDED_TOOL, 'toolu_second'])
+    rows.observe({ ...START_BASH, task_id: 'generation-reused' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'generation-reused',
+      status: 'completed'
+    })
+    rows.observe({ ...START_BASH, task_id: 'generation-reused', tool_use_id: 'toolu_second' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'generation-reused',
+      tool_use_id: 'toolu_second',
+      status: 'completed'
+    })
     for (let index = 0; index < 513; index += 1) {
       const taskId = `generation-${index}`
       rows.observe({ ...START_BASH, task_id: taskId })
@@ -599,6 +614,7 @@ describe('claude background task rows', () => {
       })
     }
 
+    rows.observe({ ...START_BASH, task_id: 'generation-reused' })
     rows.observe({
       ...START_BASH,
       task_id: 'generation-0',
@@ -607,8 +623,10 @@ describe('claude background task rows', () => {
     })
 
     const identities = new Set(keys())
+    expect(identities).toContain('claude-background-task:generation-reused#2')
+    expect(identities).toContain('claude-background-task:generation-reused#4')
     expect(identities).toContain('claude-background-task:generation-0')
-    expect(identities).toContain('claude-background-task:generation-0#2')
+    expect(identities).toContain('claude-background-task:generation-0#5')
     expect(latest()).toMatchObject({
       taskId: 'generation-0',
       state: 'working',
