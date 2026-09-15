@@ -1,5 +1,6 @@
 import type { AgentHookInstallStatus } from '../../shared/agent-hook-types'
 import type { HookInstallAgent } from '../../shared/telemetry-events'
+import type { SFTPWrapper } from 'ssh2'
 import { ampHookService } from '../amp/hook-service'
 import { antigravityHookService } from '../antigravity/hook-service'
 import { claudeHookService } from '../claude/hook-service'
@@ -18,7 +19,27 @@ import { openClaudeHookService } from '../openclaude/hook-service'
 // Why (#16441): Codex's installer awaits a codex app-server trust-grant session
 // instead of blocking the main thread on spawnSync. Widening the tuple keeps the
 // other thirteen agent services synchronous — the shared loop already awaits.
-export type ManagedAgentHookInstallOptions = { userInitiated?: boolean; cliVersion?: string }
+export type ManagedAgentHookScope = {
+  env?: NodeJS.ProcessEnv
+  launchCommand?: string
+}
+export type ManagedAgentHookInstallOptions = ManagedAgentHookScope & {
+  userInitiated?: boolean
+  cliVersion?: string
+}
+export type ManagedAgentRemoteInstallOptions = {
+  codexHomeDir?: string
+  deferTrustUntilConfigToml?: boolean
+  grokHomeDir?: string
+  claudeVersion?: string
+  hermesProfile?: string
+  signal?: AbortSignal
+}
+export type ManagedAgentRemoteInstaller = (
+  sftp: SFTPWrapper,
+  remoteHome: string,
+  options?: ManagedAgentRemoteInstallOptions
+) => Promise<AgentHookInstallStatus>
 export type ManagedAgentHookInstaller = readonly [
   HookInstallAgent,
   (
@@ -47,16 +68,23 @@ export type ManagedAgentIntegration = {
   readonly install: (
     options?: ManagedAgentHookInstallOptions
   ) => AgentHookInstallStatus | Promise<AgentHookInstallStatus>
+  readonly installRemote?: ManagedAgentRemoteInstaller
   readonly refreshManagedScripts?: () => Promise<void>
-  readonly remove: () => AgentHookInstallStatus | Promise<AgentHookInstallStatus>
+  readonly remove: (
+    scope?: ManagedAgentHookScope
+  ) => AgentHookInstallStatus | Promise<AgentHookInstallStatus>
   readonly removeAsync?: () => Promise<AgentHookInstallStatus>
-  readonly getStatus: () => AgentHookInstallStatus
+  readonly getStatus: (scope?: ManagedAgentHookScope) => AgentHookInstallStatus
 }
 
 export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'claude',
     install: (options) => claudeHookService.install({ claudeVersion: options?.cliVersion }),
+    installRemote: (sftp, remoteHome, options) =>
+      claudeHookService.installRemote(sftp, remoteHome, {
+        claudeVersion: options?.claudeVersion
+      }),
     refreshManagedScripts: () => claudeHookService.refreshManagedScripts(),
     remove: () => claudeHookService.remove(),
     getStatus: () => claudeHookService.getStatus()
@@ -64,6 +92,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'openclaude',
     install: () => openClaudeHookService.install(),
+    installRemote: (sftp, remoteHome) => openClaudeHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => openClaudeHookService.refreshManagedScripts(),
     remove: () => openClaudeHookService.remove(),
     getStatus: () => openClaudeHookService.getStatus()
@@ -71,6 +100,11 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'codex',
     install: () => codexHookService.install(),
+    installRemote: (sftp, remoteHome, options) =>
+      codexHookService.installRemote(sftp, remoteHome, {
+        codexHomeDir: options?.codexHomeDir,
+        deferTrustUntilConfigToml: options?.deferTrustUntilConfigToml
+      }),
     refreshManagedScripts: () => codexHookService.refreshManagedScripts(),
     remove: () => codexHookService.remove(),
     getStatus: () => codexHookService.getStatus()
@@ -78,6 +112,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'gemini',
     install: () => geminiHookService.install(),
+    installRemote: (sftp, remoteHome) => geminiHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => geminiHookService.refreshManagedScripts(),
     remove: () => geminiHookService.remove(),
     getStatus: () => geminiHookService.getStatus()
@@ -85,6 +120,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'antigravity',
     install: () => antigravityHookService.install(),
+    installRemote: (sftp, remoteHome) => antigravityHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => antigravityHookService.refreshManagedScripts(),
     remove: () => antigravityHookService.remove(),
     getStatus: () => antigravityHookService.getStatus()
@@ -92,12 +128,14 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'amp',
     install: () => ampHookService.install(),
+    installRemote: (sftp, remoteHome) => ampHookService.installRemote(sftp, remoteHome),
     remove: () => ampHookService.remove(),
     getStatus: () => ampHookService.getStatus()
   },
   {
     agent: 'cursor',
     install: () => cursorHookService.install(),
+    installRemote: (sftp, remoteHome) => cursorHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => cursorHookService.refreshManagedScripts(),
     remove: () => cursorHookService.remove(),
     getStatus: () => cursorHookService.getStatus()
@@ -105,6 +143,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'droid',
     install: () => droidHookService.install(),
+    installRemote: (sftp, remoteHome) => droidHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => droidHookService.refreshManagedScripts(),
     remove: () => droidHookService.remove(),
     getStatus: () => droidHookService.getStatus()
@@ -112,6 +151,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'command-code',
     install: () => commandCodeHookService.install(),
+    installRemote: (sftp, remoteHome) => commandCodeHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => commandCodeHookService.refreshManagedScripts(),
     remove: () => commandCodeHookService.remove(),
     getStatus: () => commandCodeHookService.getStatus()
@@ -119,6 +159,8 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'grok',
     install: (options) => grokHookService.install(options),
+    installRemote: (sftp, remoteHome, options) =>
+      grokHookService.installRemote(sftp, remoteHome, options?.grokHomeDir),
     refreshManagedScripts: () => grokHookService.refreshManagedScripts(),
     remove: () => grokHookService.remove(),
     removeAsync: () => grokHookService.removeAsync(),
@@ -127,19 +169,26 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'copilot',
     install: () => copilotHookService.install(),
+    installRemote: (sftp, remoteHome) => copilotHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => copilotHookService.refreshManagedScripts(),
     remove: () => copilotHookService.remove(),
     getStatus: () => copilotHookService.getStatus()
   },
   {
     agent: 'hermes',
-    install: () => hermesHookService.install(),
-    remove: () => hermesHookService.remove(),
-    getStatus: () => hermesHookService.getStatus()
+    install: (options) =>
+      hermesHookService.install({ env: options?.env, launchCommand: options?.launchCommand }),
+    installRemote: (sftp, remoteHome, options) =>
+      hermesHookService.installRemote(sftp, remoteHome, {
+        profile: options?.hermesProfile
+      }),
+    remove: (scope) => hermesHookService.remove(scope),
+    getStatus: (scope) => hermesHookService.getStatus(scope)
   },
   {
     agent: 'devin',
     install: () => devinHookService.install(),
+    installRemote: (sftp, remoteHome) => devinHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => devinHookService.refreshManagedScripts(),
     remove: () => devinHookService.remove(),
     getStatus: () => devinHookService.getStatus()
@@ -147,6 +196,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
   {
     agent: 'kimi',
     install: () => kimiHookService.install(),
+    installRemote: (sftp, remoteHome) => kimiHookService.installRemote(sftp, remoteHome),
     refreshManagedScripts: () => kimiHookService.refreshManagedScripts(),
     remove: () => kimiHookService.remove(),
     getStatus: () => kimiHookService.getStatus()

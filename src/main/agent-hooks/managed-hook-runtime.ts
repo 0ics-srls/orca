@@ -1,5 +1,7 @@
 import { execFile } from 'node:child_process'
+import { readFileSync, statSync } from 'node:fs'
 import { basename } from 'node:path'
+import { join } from 'node:path'
 import { homedir, userInfo } from 'node:os'
 import { promisify } from 'node:util'
 import { installRemoteManagedAgentHooks } from './remote-managed-hook-installers'
@@ -14,6 +16,7 @@ import {
 const execFileAsync = promisify(execFile)
 const GROK_HOME_MAX_LENGTH = 4096
 const GROK_HOME_PROBE_TIMEOUT_MS = 8_000
+const HERMES_PROFILE_FILE_MAX_BYTES = 512
 
 export type ManagedHookInstallSummary = {
   installers: number
@@ -73,6 +76,19 @@ export async function resolveRelayGrokHome(home: string, signal?: AbortSignal): 
   }
 }
 
+export function resolveRelayHermesProfile(home: string): string | undefined {
+  const path = join(home, '.hermes', 'active_profile')
+  try {
+    if (statSync(path).size > HERMES_PROFILE_FILE_MAX_BYTES) {
+      return undefined
+    }
+    const profile = readFileSync(path, 'utf8').trim()
+    return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(profile) ? profile : undefined
+  } catch {
+    return undefined
+  }
+}
+
 export async function installManagedHooks(options?: {
   signal?: AbortSignal
   hostKeyFingerprint?: string
@@ -87,6 +103,7 @@ export async function installManagedHooks(options?: {
   }
   const home = homedir()
   const grokHomeDir = await resolveRelayGrokHome(home, options?.signal)
+  const hermesProfile = agents.includes('hermes') ? resolveRelayHermesProfile(home) : undefined
   options?.signal?.throwIfAborted()
   const hostIdentity = scopeManagedHookHostIdentity(
     await readManagedHookHostIdentity(),
@@ -101,6 +118,7 @@ export async function installManagedHooks(options?: {
         home,
         {
           grokHomeDir,
+          ...(hermesProfile ? { hermesProfile } : {}),
           signal: options?.signal,
           agents,
           ...(options?.claudeVersion ? { claudeVersion: options.claudeVersion } : {})

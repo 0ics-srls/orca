@@ -12,7 +12,8 @@ import { assertPluginSourceUnderByteCap } from './plugin-source-limit'
 import {
   inheritOmpXdgEnvironment,
   resolveOpenCodeSourceConfigDir,
-  resolvePiSourceAgentDir
+  resolvePiSourceAgentDir,
+  type PiSourceAgentDirResolution
 } from './plugin-overlay-env'
 import {
   detectExplicitPiAgentKindFromCommand,
@@ -119,6 +120,12 @@ export class RelayAgentHookRuntime {
         kind === 'omp'
           ? resolvePiSourceAgentDir(context.env, context.shell, 'omp', launchCommandHint)
           : context.env.ORCA_OMP_SOURCE_AGENT_DIR
+            ? ({
+                path: context.env.ORCA_OMP_SOURCE_AGENT_DIR,
+                origin: 'source-override',
+                createIfMissing: false
+              } satisfies PiSourceAgentDirResolution)
+            : undefined
       const result = this.pluginOverlay.materializePi(overlayId, sourceDir, 'omp', {
         materializeDefaultHome: explicitKind === 'omp'
       })

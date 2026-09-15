@@ -196,6 +196,24 @@ describe('managed agent hook controls', () => {
     expect(mocks.installClaude).toHaveBeenCalledWith({ cliVersion: '2.1.261' })
   })
 
+  it('forwards launch scope to profile-aware integrations', async () => {
+    mocks.detect.mockResolvedValue({ claude: { state: 'found' } })
+
+    await installManagedAgentHooks(
+      { agentCmdOverrides: {} },
+      {
+        agents: ['claude'],
+        env: { HERMES_HOME: '/tmp/hermes' },
+        launchCommand: 'hermes --profile review-team'
+      }
+    )
+
+    expect(mocks.installClaude).toHaveBeenCalledWith({
+      env: { HERMES_HOME: '/tmp/hermes' },
+      launchCommand: 'hermes --profile review-team'
+    })
+  })
+
   it('only refreshes scripts for the selected agents', async () => {
     mocks.detect.mockResolvedValue({ codex: { state: 'found' } })
 

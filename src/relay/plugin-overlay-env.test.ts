@@ -44,7 +44,10 @@ describe('plugin overlay env source resolution', () => {
       expect(resolveOpenCodeSourceConfigDir(env, '/bin/zsh')).toBe(
         join(homeDir, 'company-opencode')
       )
-      expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'pi')).toBe(join(homeDir, 'company-pi'))
+      expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'pi')).toMatchObject({
+        path: join(homeDir, 'company-pi'),
+        createIfMissing: false
+      })
     }
   )
 
@@ -63,8 +66,12 @@ describe('plugin overlay env source resolution', () => {
       )
 
       const env: Record<string, string> = { HOME: homeDir, SHELL: '/bin/zsh' }
-      expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'omp', 'omp --profile review')).toBe(
-        join(configDir, 'profiles', 'review', 'agent')
+      expect(resolvePiSourceAgentDir(env, '/bin/zsh', 'omp', 'omp --profile review')).toMatchObject(
+        {
+          path: join(configDir, 'profiles', 'review', 'agent'),
+          origin: 'explicit-profile',
+          createIfMissing: true
+        }
       )
       expect(inheritOmpXdgEnvironment(env, '/bin/zsh')).toEqual({ XDG_DATA_HOME: dataDir })
     }
@@ -117,7 +124,7 @@ describe('plugin overlay env source resolution', () => {
         '/bin/zsh',
         'prime-agent'
       )
-    ).toBe(join(homeDir, 'company-prime'))
+    ).toMatchObject({ path: join(homeDir, 'company-prime'), createIfMissing: false })
     expect(
       resolvePiSourceAgentDir(
         {
@@ -128,7 +135,7 @@ describe('plugin overlay env source resolution', () => {
         '/bin/zsh',
         'prime-agent'
       )
-    ).toBe('/remote/original-prime')
+    ).toMatchObject({ path: '/remote/original-prime', createIfMissing: false })
   })
 
   // Why: the session env is the only place a fish user's XDG_CONFIG_HOME shows up

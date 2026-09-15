@@ -1,4 +1,5 @@
-import { rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
 import type { SFTPWrapper } from 'ssh2'
 
 import type { AgentHookInstallState, AgentHookInstallStatus } from '../../shared/agent-hook-types'
@@ -24,6 +25,7 @@ import {
   writePluginFiles
 } from './hermes-home-filesystem'
 import { resolveHermesHomeForLaunch } from './hermes-home-filesystem'
+import type { ManagedAgentHookScope } from '../agent-hooks/managed-agent-hook-registry'
 import {
   HERMES_EVENTS,
   HERMES_PLUGIN_NAME,
@@ -72,8 +74,86 @@ function stripTrailingSlash(path: string): string {
   return path.replace(/\/+$/, '')
 }
 
+function remoteProfileHome(remoteHome: string, profile: string | undefined): string | null {
+  const root = `${stripTrailingSlash(remoteHome)}/.hermes`
+  if (!profile || profile === 'default') {
+    return root
+  }
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(profile) ? `${root}/profiles/${profile}` : null
+}
+
+function isSafeProfileName(value: string): boolean {
+  return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
+}
+
+function discoverHermesHomes(root: string): string[] {
+  const homes = [root]
+  const profilesDir = join(root, 'profiles')
+  try {
+    for (const entry of readdirSync(profilesDir, { withFileTypes: true })) {
+      if (entry.isDirectory() && isSafeProfileName(entry.name)) {
+        homes.push(join(profilesDir, entry.name))
+      }
+    }
+  } catch {
+    // A missing or unreadable profiles directory does not block root cleanup.
+  }
+  return homes
+}
+
+const knownHermesRoots = new Set<string>()
+const HERMES_ROOT_INDEX = '.orca-managed-roots'
+const HERMES_ROOT_MAX_LENGTH = 4096
+const HERMES_ROOT_INDEX_MAX_BYTES = 16 * 1024
+
+function rootIndexPath(): string {
+  return join(getHermesHome(), HERMES_ROOT_INDEX)
+}
+
+function isSafeHermesRoot(root: string): boolean {
+  return (
+    root.length > 0 &&
+    root.length <= HERMES_ROOT_MAX_LENGTH &&
+    root.startsWith('/') &&
+    Array.from(root).every((character) => {
+      const code = character.charCodeAt(0)
+      return code > 0x1f && code !== 0x7f
+    })
+  )
+}
+
+function readPersistedHermesRoots(): string[] {
+  try {
+    const source = readFileSync(rootIndexPath(), 'utf8')
+    if (Buffer.byteLength(source, 'utf8') > HERMES_ROOT_INDEX_MAX_BYTES) {
+      return []
+    }
+    return source.split(/\r?\n/).filter(isSafeHermesRoot)
+  } catch {
+    return []
+  }
+}
+
+function rememberHermesRoot(root: string): void {
+  if (!isSafeHermesRoot(root)) {
+    return
+  }
+  knownHermesRoots.add(root)
+  const defaultRoot = getHermesHome()
+  if (root === defaultRoot) {
+    return
+  }
+  const roots = [...new Set([...readPersistedHermesRoots(), root])].slice(0, 32)
+  try {
+    mkdirSync(defaultRoot, { recursive: true })
+    writeFileSync(rootIndexPath(), `${roots.join('\n')}\n`, 'utf8')
+  } catch {
+    // Lifecycle bookkeeping must not block a launch or a settings action.
+  }
+}
+
 export class HermesHookService {
-  getStatus(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
+  getStatus(options?: ManagedAgentHookScope): AgentHookInstallStatus {
     const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
     const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
@@ -89,8 +169,9 @@ export class HermesHookService {
     return buildStatus(configPath, parsed.config, home)
   }
 
-  install(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
+  install(options?: ManagedAgentHookScope): AgentHookInstallStatus {
     const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
+    rememberHermesRoot(getHermesHome(options?.env))
     const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
     if (!parsed.ok) {
@@ -108,10 +189,23 @@ export class HermesHookService {
     return this.getStatus(options)
   }
 
-  async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AgentHookInstallStatus> {
-    const remoteRoot = stripTrailingSlash(remoteHome)
-    const remoteConfigPath = `${remoteRoot}/.hermes/config.yaml`
-    const remotePluginDir = `${remoteRoot}/.hermes/plugins/${HERMES_PLUGIN_NAME}`
+  async installRemote(
+    sftp: SFTPWrapper,
+    remoteHome: string,
+    options?: { profile?: string }
+  ): Promise<AgentHookInstallStatus> {
+    const remoteHermesHome = remoteProfileHome(remoteHome, options?.profile)
+    const remoteConfigPath = `${remoteHermesHome ?? `${stripTrailingSlash(remoteHome)}/.hermes`}/config.yaml`
+    if (!remoteHermesHome) {
+      return {
+        agent: 'hermes',
+        state: 'error',
+        configPath: remoteConfigPath,
+        managedHooksPresent: false,
+        detail: 'Invalid Hermes profile name'
+      }
+    }
+    const remotePluginDir = `${remoteHermesHome}/plugins/${HERMES_PLUGIN_NAME}`
     try {
       const existing = await readTextFileRemote(sftp, remoteConfigPath)
       const next = updateConfigContent(existing, enablePlugin)
@@ -145,8 +239,38 @@ export class HermesHookService {
     }
   }
 
-  remove(options?: { env?: NodeJS.ProcessEnv; launchCommand?: string }): AgentHookInstallStatus {
-    const home = resolveHermesHomeForLaunch(options?.env, options?.launchCommand)
+  remove(options?: ManagedAgentHookScope): AgentHookInstallStatus {
+    const hasScope = Boolean(options?.env || options?.launchCommand)
+    const root = getHermesHome(options?.env)
+    if (hasScope) {
+      rememberHermesRoot(root)
+    }
+    const homes = hasScope
+      ? [resolveHermesHomeForLaunch(options?.env, options?.launchCommand)]
+      : [...new Set([...knownHermesRoots, ...readPersistedHermesRoots(), root])].flatMap(
+          discoverHermesHomes
+        )
+    let firstError: AgentHookInstallStatus | undefined
+    let lastStatus: AgentHookInstallStatus | undefined
+    for (const home of homes) {
+      const status = this.removeHome(home)
+      lastStatus = status
+      if (status.state === 'error' && !firstError) {
+        firstError = status
+      }
+    }
+    if (!hasScope && !firstError) {
+      knownHermesRoots.clear()
+      try {
+        rmSync(rootIndexPath(), { force: true })
+      } catch {
+        // Best-effort cleanup of the scope index.
+      }
+    }
+    return firstError ?? lastStatus ?? this.getStatus(options)
+  }
+
+  private removeHome(home: string): AgentHookInstallStatus {
     const configPath = getConfigPath(home)
     const parsed = readConfigFile(configPath)
     if (!parsed.ok) {
@@ -162,8 +286,10 @@ export class HermesHookService {
     if (getPluginFilesState(pluginDir).managed) {
       rmSync(pluginDir, { recursive: true, force: true })
     }
-    writeConfigFile(configPath, disablePlugin(parsed.config), parsed.source)
-    return this.getStatus(options)
+    if (existsSync(configPath)) {
+      writeConfigFile(configPath, disablePlugin(parsed.config), parsed.source)
+    }
+    return this.getStatus({ env: { HERMES_HOME: home } })
   }
 }
 

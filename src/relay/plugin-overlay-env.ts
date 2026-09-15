@@ -7,6 +7,12 @@ import {
   type PiAgentKind
 } from '../shared/pi-agent-kind'
 
+export type PiSourceAgentDirResolution = {
+  path: string
+  origin: 'explicit-profile' | 'source-override' | 'startup-env' | 'launch-default'
+  createIfMissing: boolean
+}
+
 function firstNonEmpty(...values: (string | undefined)[]): string | undefined {
   return values.find((value) => typeof value === 'string' && value.length > 0)
 }
@@ -37,7 +43,7 @@ export function resolvePiSourceAgentDir(
   shell: string | undefined,
   kind: PiAgentKind,
   launchCommand?: string
-): string | undefined {
+): PiSourceAgentDirResolution | undefined {
   const sourceKey = SOURCE_AGENT_DIR_ENV_BY_KIND[kind]
   const primaryKey = PRIMARY_AGENT_DIR_ENV_BY_KIND[kind]
 
@@ -54,21 +60,28 @@ export function resolvePiSourceAgentDir(
       readStartupEnv('PI_CONFIG_DIR', env, shell)
     )
     const configDir = configuredRoot ?? join(env.HOME ?? process.env.HOME ?? homedir(), '.omp')
-    return join(configDir, 'profiles', ompProfile, 'agent')
+    return {
+      path: join(configDir, 'profiles', ompProfile, 'agent'),
+      origin: 'explicit-profile',
+      createIfMissing: true
+    }
   }
 
   const sourceDir = firstNonEmpty(env[sourceKey])
   if (sourceDir) {
-    return sourceDir
+    return { path: sourceDir, origin: 'source-override', createIfMissing: false }
   }
 
   const startupDir = readStartupEnv(primaryKey, env, shell)
   if (startupDir) {
-    return startupDir
+    return { path: startupDir, origin: 'startup-env', createIfMissing: false }
   }
 
   if (kind === 'prime-agent') {
-    return firstNonEmpty(env[primaryKey])
+    const primeDir = firstNonEmpty(env[primaryKey])
+    return primeDir
+      ? { path: primeDir, origin: 'source-override', createIfMissing: false }
+      : undefined
   }
 
   const overlayKey = kind === 'omp' ? 'ORCA_OMP_CODING_AGENT_DIR' : 'ORCA_PI_CODING_AGENT_DIR'
@@ -82,7 +95,11 @@ export function resolvePiSourceAgentDir(
     env[primaryKey] !== env[overlayKey] &&
     env[primaryKey] !== env[otherOverlayKey]
   ) {
-    return env[primaryKey]
+    return {
+      path: env[primaryKey],
+      origin: 'source-override',
+      createIfMissing: false
+    }
   }
 
   // OMP resolves its agent directory from PI_CONFIG_DIR before it populates
@@ -94,10 +111,18 @@ export function resolvePiSourceAgentDir(
       readStartupEnv('PI_CONFIG_DIR', env, shell)
     )
     if (configuredRoot) {
-      return join(configuredRoot, 'agent')
+      return {
+        path: join(configuredRoot, 'agent'),
+        origin: 'explicit-profile',
+        createIfMissing: true
+      }
     }
     if (launchCommand?.trim()) {
-      return join(env.HOME ?? process.env.HOME ?? homedir(), '.omp', 'agent')
+      return {
+        path: join(env.HOME ?? process.env.HOME ?? homedir(), '.omp', 'agent'),
+        origin: 'launch-default',
+        createIfMissing: true
+      }
     }
   }
   return undefined

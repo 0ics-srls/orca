@@ -72,6 +72,26 @@ describe('HermesHookService', () => {
     expect(existsSync(join(homeDir, 'config.yaml'))).toBe(false)
   })
 
+  it('keeps scoped lifecycle status and removal isolated across profiles', () => {
+    const service = new HermesHookService()
+    const coderScope = { env: { HERMES_HOME: homeDir }, launchCommand: 'hermes --profile coder' }
+    const reviewScope = {
+      env: { HERMES_HOME: homeDir },
+      launchCommand: 'hermes --profile review'
+    }
+
+    expect(service.install(coderScope).state).toBe('installed')
+    expect(service.install(reviewScope).state).toBe('installed')
+    expect(service.getStatus(coderScope).state).toBe('installed')
+    expect(service.getStatus(reviewScope).state).toBe('installed')
+
+    expect(service.remove(coderScope).state).toBe('not_installed')
+    expect(service.getStatus(reviewScope).state).toBe('installed')
+
+    service.remove()
+    expect(service.getStatus(reviewScope).state).toBe('not_installed')
+  })
+
   it('installs the managed Hermes plugin and enables it in config.yaml', () => {
     const status = new HermesHookService().install()
 

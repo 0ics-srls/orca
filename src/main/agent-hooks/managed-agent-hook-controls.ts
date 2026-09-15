@@ -15,7 +15,8 @@ import {
   MANAGED_AGENT_HOOK_STATUS_READERS,
   MANAGED_AGENT_INTEGRATIONS,
   type ManagedAgentIntegration,
-  type ManagedAgentHookInstallOptions
+  type ManagedAgentHookInstallOptions,
+  type ManagedAgentHookScope
 } from './managed-agent-hook-registry'
 
 export { MANAGED_AGENT_HOOK_INSTALLERS } from './managed-agent-hook-registry'
@@ -25,7 +26,7 @@ type ManagedHookSettings = Partial<
   Pick<GlobalSettings, 'agentCmdOverrides' | 'agentStatusHooksEnabled' | 'disabledTuiAgents'>
 > | null
 
-type InstallOptions = {
+type InstallOptions = ManagedAgentHookScope & {
   /** Set only for an explicit user action, never for startup reconciliation. */
   userInitiated?: boolean
   shouldHydrateShellPath?: boolean
@@ -36,6 +37,7 @@ type InstallOptions = {
 
 type RemoveOptions = {
   agents?: readonly AgentHookTarget[]
+  scope?: ManagedAgentHookScope
 }
 
 export function isAgentStatusHooksEnabled(
@@ -232,6 +234,8 @@ export async function installManagedAgentHooks(
     results.push(
       await runInstaller(entry, options.onInstallError, {
         ...(options.userInitiated !== undefined ? { userInitiated: options.userInitiated } : {}),
+        ...(options.env ? { env: options.env } : {}),
+        ...(options.launchCommand ? { launchCommand: options.launchCommand } : {}),
         ...(cliVersion ? { cliVersion } : {})
       })
     )
@@ -249,7 +253,7 @@ export async function removeManagedAgentHooks(
       continue
     }
     try {
-      results.push(await remove())
+      results.push(await remove(options.scope))
     } catch (error) {
       results.push(errorStatus(agent, error))
     }
@@ -280,10 +284,12 @@ export async function removeManagedAgentHooksAsync(
   )
 }
 
-export function getManagedAgentHookStatuses(): AgentHookInstallStatus[] {
+export function getManagedAgentHookStatuses(
+  scope?: ManagedAgentHookScope
+): AgentHookInstallStatus[] {
   return managedIntegrations().map(({ agent, getStatus }) => {
     try {
-      return getStatus()
+      return getStatus(scope)
     } catch (error) {
       return errorStatus(agent, error)
     }
@@ -296,7 +302,7 @@ export async function applyAgentStatusHooksEnabled(
   options: InstallOptions = {}
 ): Promise<AgentHookInstallStatus[]> {
   if (!enabled) {
-    return await removeManagedAgentHooks()
+    return await removeManagedAgentHooks({ scope: options })
   }
   const disabled = normalizeDisabledTuiAgents(settings?.disabledTuiAgents).filter(
     isManagedAgentHookTarget
@@ -309,7 +315,7 @@ export async function applyAgentStatusHooksEnabled(
     return installed
   }
   const removed = new Map(
-    (await removeManagedAgentHooks({ agents: disabledToRemove })).map((status) => [
+    (await removeManagedAgentHooks({ agents: disabledToRemove, scope: options })).map((status) => [
       status.agent,
       status
     ])

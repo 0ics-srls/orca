@@ -9,6 +9,7 @@ import { mimoCodeHookService } from '../../../mimo/hook-service'
 import { agentHookServer } from '../../../agent-hooks/server'
 import { wslHookRelayManager } from '../../../agent-hooks/wsl-hook-relay-manager'
 import { piTitlebarExtensionService } from '../../../pi/titlebar-extension-service'
+import { hermesHookService } from '../../../hermes/hook-service'
 import { prependOrcaCliDirToChildPath } from '../../../cli/orca-cli-child-path'
 import { stripLegacyTerminalShimEnv } from '../../../pty/legacy-terminal-shim-dir'
 import { mergePersistedWindowsPath } from '../../../pty/windows-environment-path'
@@ -83,6 +84,21 @@ export function buildPtyHostEnv(
       : resolveScopedPiAgentSourceDir(baseEnv, 'prime-agent')
 
   if (opts.agentStatusHooksEnabled) {
+    if (opts.launchAgent === 'hermes' && !opts.isWsl) {
+      try {
+        const status = hermesHookService.install({
+          env: { ...baseEnv },
+          launchCommand: launchCommandHint
+        })
+        if (status.state === 'error') {
+          console.warn(`[agent-hooks] Hermes launch-scoped install failed: ${status.detail}`)
+        }
+      } catch (error) {
+        console.warn(
+          `[agent-hooks] Hermes launch-scoped install threw: ${error instanceof Error ? error.message : String(error)}`
+        )
+      }
+    }
     // Why: OPENCODE_CONFIG_DIR is a single path, not a colon-list; mirror the user's value into an overlay so their plugins and Orca's status plugin coexist. See docs/opencode-config-dir-collision.md.
     Object.assign(baseEnv, openCodeHookService.buildPtyEnv(id, preexistingOpenCodeConfigDir))
     if (baseEnv.OPENCODE_CONFIG_DIR) {
