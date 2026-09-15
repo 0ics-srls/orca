@@ -91,8 +91,10 @@ function freezeRecursively(value: unknown, seen: WeakSet<object>): void {
     return
   }
   seen.add(value)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the typeof switch and null check above leave only a non-null object here; Reflect.ownKeys enumerates only that object's own keys, so this assertion only restores the indexable shape TypeScript's `object` type erases.
+  const ownProperties = value as Record<PropertyKey, unknown>
   for (const key of Reflect.ownKeys(value)) {
-    freezeRecursively(Reflect.get(value, key), seen)
+    freezeRecursively(ownProperties[key], seen)
   }
   Object.freeze(value)
 }
