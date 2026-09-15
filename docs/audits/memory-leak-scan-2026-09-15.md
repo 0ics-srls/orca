@@ -56,3 +56,16 @@ No Chrome DevTools heap snapshot or memory-debugging MCP tools were available
 in this session. This pass therefore used source retaining-path analysis and
 listener/timer lifecycle regression tests; it does not claim a measured heap
 slope or a heap-snapshot comparison. No raw heap snapshots were read.
+
+## Pull requests
+
+- [#20903 — terminal editor close timers](https://github.com/stablyai/orca/pull/20903)
+- [#20904 — deferred diff model disposal](https://github.com/stablyai/orca/pull/20904)
+- [#20905 — signout auth retry](https://github.com/stablyai/orca/pull/20905)
+- [#20906 — copied prompt reset](https://github.com/stablyai/orca/pull/20906)
+- [#20908 — renderer HMR listener teardown](https://github.com/stablyai/orca/pull/20908)
+- [#20909 — renderer relay/preload listener cleanup](https://github.com/stablyai/orca/pull/20909)
+- [#20910 — hang watchdog quit listener](https://github.com/stablyai/orca/pull/20910)
+
+Validation on the combined audit branch: 26 focused tests passed, `pnpm tc`
+passed, and `pnpm run check:code-quality:changed` passed.
