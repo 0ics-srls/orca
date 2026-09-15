@@ -1,9 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
+import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
 import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity
 } from '../../shared/agent-session-journal-types'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import {
+  createDeferredStructuredAgentSessionEventSink,
+  type StructuredAgentSessionEventSink,
+  type StructuredAgentSessionEventTarget,
+  type StructuredAgentSessionLifecycleJournal
+} from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import type { AgentSessionJournal } from '../native-chat/agent-session-journal/journal-store'
 import { createClaudeJournalTranslator } from './claude-structured-journal-translation'
 
 // The frames below are the ones the reported session actually carried: two real
@@ -112,6 +119,151 @@ function playFailedBackgroundCommand(translator: ReturnType<typeof harness>['tra
 }
 
 describe('claude journal translation — background task rows', () => {
+  it('resolves a queued restart identity after the sink rebinds', async () => {
+    const persisted = new Map<string, AgentJournalItemBody>()
+    const journal = (): AgentSessionJournal =>
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this test double implements the journal methods exercised by the deferred sink.
+      ({
+        appendItem: async (identity: AgentJournalItemIdentity, body: AgentJournalItemBody) => {
+          persisted.set(agentJournalItemKey(identity), body)
+          return { cursor: { epoch: 'test', sequence: persisted.size }, itemId: '', revision: 1 }
+        },
+        appendTombstone: vi.fn(),
+        visitItems: (
+          visit: (itemId: string, sequence: number, body: AgentJournalItemBody) => void
+        ) => {
+          for (const [itemId, body] of persisted) {
+            visit(itemId, 0, body)
+          }
+        },
+        epoch: 'test'
+      }) as unknown as AgentSessionJournal
+    const target = (): StructuredAgentSessionEventTarget => ({
+      journal: journal(),
+      fence: 1,
+      publish: vi.fn()
+    })
+    const deferred = createDeferredStructuredAgentSessionEventSink()
+    deferred.bind(target())
+
+    const first = createClaudeJournalTranslator({ sink: deferred.sink, fallbackIdPrefix: 'first' })
+    spawnToolCall(first, 'toolu-first')
+    first.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'queued-restart',
+        tool_use_id: 'toolu-first',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    await deferred.drained()
+    first.dispose()
+    await deferred.drained()
+
+    const restarted = createDeferredStructuredAgentSessionEventSink()
+    const second = createClaudeJournalTranslator({
+      sink: restarted.sink,
+      fallbackIdPrefix: 'second'
+    })
+    spawnToolCall(second, 'toolu-second')
+    second.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'queued-restart',
+        tool_use_id: 'toolu-second',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    restarted.bind(target())
+    await restarted.drained()
+
+    expect([...persisted.keys()].filter((key) => key.includes('queued-restart'))).toEqual([
+      'orca:claude-background-task%3Aqueued-restart',
+      'orca:claude-background-task%3Aqueued-restart%232'
+    ])
+  })
+
+  it('does not overwrite a prior run when a new translator sees a reused task id', () => {
+    const persisted = new Map<string, AgentJournalItemBody>()
+    const journal: StructuredAgentSessionLifecycleJournal = {
+      epoch: '',
+      visitItems: (visit) => {
+        for (const [itemId, body] of persisted) {
+          visit(itemId, 0, body)
+        }
+      }
+    }
+    const sink: StructuredAgentSessionEventSink = {
+      appendItem: (identity, body) => persisted.set(agentJournalItemKey(identity), body),
+      appendTombstone: vi.fn(),
+      publish: vi.fn(),
+      tryAppendResolvedItem: (_identitySizeBound, body, resolveIdentity) => {
+        const identity = resolveIdentity(journal)
+        if (identity) {
+          persisted.set(agentJournalItemKey(identity), body)
+        }
+        return { accepted: true }
+      }
+    }
+    const first = createClaudeJournalTranslator({ sink, fallbackIdPrefix: 'first' })
+    spawnToolCall(first, 'toolu-first')
+    first.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'reused-after-reconnect',
+        tool_use_id: 'toolu-first',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    first.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'reused-after-reconnect',
+        tool_use_id: 'toolu-first',
+        status: 'failed',
+        summary: 'first run failed'
+      })
+    )
+    first.dispose()
+
+    const resumed = createClaudeJournalTranslator({ sink, fallbackIdPrefix: 'resumed' })
+    spawnToolCall(resumed, 'toolu-first')
+    resumed.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'reused-after-reconnect',
+        tool_use_id: 'toolu-first',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    expect([...persisted.keys()].filter((key) => key.includes('reused-after-reconnect'))).toEqual([
+      'orca:claude-background-task%3Areused-after-reconnect'
+    ])
+    resumed.dispose()
+
+    const second = createClaudeJournalTranslator({ sink, fallbackIdPrefix: 'second' })
+    spawnToolCall(second, 'toolu-second')
+    second.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'reused-after-reconnect',
+        tool_use_id: 'toolu-second',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+
+    const rows = [...persisted.entries()].filter(([key]) => key.includes('reused-after-reconnect'))
+    expect(rows.map(([key]) => key)).toEqual([
+      'orca:claude-background-task%3Areused-after-reconnect',
+      'orca:claude-background-task%3Areused-after-reconnect%232'
+    ])
+  })
+
   it('prints the provider sentence once instead of the opcode twice', () => {
     const { translator, fallbackRows, taskRowIds, taskRowTexts } = harness()
     playFailedBackgroundCommand(translator)

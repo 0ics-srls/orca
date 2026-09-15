@@ -3,9 +3,16 @@ import type {
   AgentJournalItemIdentity
 } from '../../shared/agent-session-journal-types'
 import { backgroundTaskFallbackText } from '../../shared/native-chat-background-task-row'
-import type { NativeChatBackgroundTaskBlock } from '../../shared/native-chat-types'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import {
+  isBackgroundTaskBlock,
+  type NativeChatBackgroundTaskBlock
+} from '../../shared/native-chat-types'
+import type {
+  StructuredAgentSessionEventSink,
+  StructuredAgentSessionLifecycleJournal
+} from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeBackgroundTaskRow } from './claude-background-task-row-lifecycle'
+import { parseAgentJournalItemKey } from '../../shared/agent-session-journal-item-key'
 
 /** Durable identity for one RUN of a task.
  *
@@ -35,6 +42,51 @@ export function claudeBackgroundTaskBody(
   }
 }
 
+/** Reconcile one queued row against the durable run identity after a rebind. */
+export function resolveClaudeBackgroundTaskIdentity(
+  journal: StructuredAgentSessionLifecycleJournal,
+  id: string,
+  toolUseId: string | undefined
+): AgentJournalItemIdentity {
+  let maxGeneration = 0
+  let matchingGeneration: number | undefined
+  journal.visitItems((itemId, _sequence, body) => {
+    const identity = parseAgentJournalItemKey(itemId)
+    if (!identity || identity.provider !== 'orca') {
+      return
+    }
+    const taskBlock = body.kind === 'message' ? body.blocks.find(isBackgroundTaskBlock) : undefined
+    if (!taskBlock || taskBlock.taskId !== id) {
+      return
+    }
+    const generation = persistedTaskGeneration(identity.clientMessageId, id)
+    if (generation === null) {
+      return
+    }
+    maxGeneration = Math.max(maxGeneration, generation)
+    if (taskBlock.parentToolUseId === toolUseId) {
+      matchingGeneration = Math.max(matchingGeneration ?? 0, generation)
+    }
+  })
+  return claudeBackgroundTaskIdentity(
+    id,
+    matchingGeneration ?? (maxGeneration === 0 ? 1 : maxGeneration + 1)
+  )
+}
+
+function persistedTaskGeneration(clientMessageId: string, taskId: string): number | null {
+  const base = `claude-background-task:${taskId}`
+  if (clientMessageId === base) {
+    return 1
+  }
+  const prefix = `${base}#`
+  if (!clientMessageId.startsWith(prefix)) {
+    return null
+  }
+  const generation = Number(clientMessageId.slice(prefix.length))
+  return Number.isSafeInteger(generation) && generation > 1 ? generation : null
+}
+
 export function writeClaudeBackgroundTaskRow(
   sink: StructuredAgentSessionEventSink,
   id: string,
@@ -51,9 +103,25 @@ export function writeClaudeBackgroundTaskRow(
   row.lastSerialized = serialized
   beforeAppend?.()
   const identity = claudeBackgroundTaskIdentity(id, row.generation)
+  const resolveIdentity = sink.tryAppendResolvedItem
+  if (resolveIdentity) {
+    // Reserve enough space for any safe generation suffix; the actual identity
+    // is selected once the deferred sink is bound to the durable journal.
+    const identitySizeBound = claudeBackgroundTaskIdentity(id, Number.MAX_SAFE_INTEGER)
+    resolveIdentity(
+      identitySizeBound,
+      body,
+      (journal) => resolveClaudeBackgroundTaskIdentity(journal, id, row.toolUseId),
+      {
+        // Keyed per RUN, not per task: sharing one key across generations would
+        // let a restart's queued append evict the finished run's final revision.
+        coalescingKey: identity.provider === 'orca' ? identity.clientMessageId : `task:${id}`
+      }
+    )
+    sink.publish()
+    return
+  }
   sink.appendItem(identity, body, {
-    // Keyed per RUN, not per task: sharing one key across generations would let
-    // a restart's queued append evict the finished run's final revision.
     coalescingKey: identity.provider === 'orca' ? identity.clientMessageId : `task:${id}`
   })
   sink.publish()
