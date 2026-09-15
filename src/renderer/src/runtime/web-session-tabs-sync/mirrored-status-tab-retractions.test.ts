@@ -29,6 +29,7 @@ it('indexes statuses once per batch instead of once per workspace', () => {
       paneKey,
       tabId,
       worktreeId,
+      connectionId: 'host',
       agentType: 'omp',
       state: 'done',
       prompt: 'Finished',
@@ -58,4 +59,15 @@ it('indexes statuses once per batch instead of once per workspace', () => {
     ])
   }
   expect(enumerations).toBe(1)
+})
+
+it('does not retract a colliding tab id owned by another host', () => {
+  const state = makeState()
+  const tabId = toWebTerminalSurfaceTabId('same-tab')
+  const paneKey = makePaneKey(tabId, LEAF_ID)
+  state.agentStatusByPaneKey[paneKey] = {
+    paneKey, tabId, worktreeId: 'folder:1', connectionId: 'host-b', agentType: 'omp', state: 'done', prompt: '', updatedAt: NOW, stateStartedAt: NOW, stateHistory: []
+  }
+  setHostSessionTabIdMapping({ environmentId: 'host-a', worktreeId: 'folder:1', tabId }, 'same-tab')
+  expect(collectUnhydratedMirroredTabRetractions({ state, environmentId: 'host-a', worktreeId: 'folder:1', nextHostTerminalTabIds: new Set(), currentTerminalIds: new Set() })).toEqual([])
 })
