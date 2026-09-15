@@ -22,6 +22,18 @@ Findings:
 - Browser grab overlays remove listeners in `freezeHighlight`/`cleanup`; repeated arming tears down the prior overlay.
 - Module-level listeners (input quiet scheduler, crash diagnostics, activity pagehide, keyboard-layout cache) are intentional process/renderer singletons and are installed at most once.
 
-The inventory contained 25,363 tracked TypeScript/JavaScript source files at the final pass. The remaining timer candidates were inspected and classified as process-scoped diagnostics, explicitly owned intervals, or bounded one-shot callbacks.
+The reproducible tracked-file inventory is [memory-leak-file-inventory-2026-09-15.tsv](./memory-leak-file-inventory-2026-09-15.tsv). It was generated from `git ls-files`, reads and SHA-256 hashes every path, and classifies every file as `source`, `config`, `documentation`, or `asset-or-other`:
+
+| Category | Files |
+| --- | ---: |
+| Source | 25,459 |
+| Config | 770 |
+| Documentation | 240 |
+| Asset/other | 200 |
+| **Total** | **26,669** |
+
+All 26,669 files were readable. Inventory SHA-256: `c652399e666ae2682fc05af5751ebf38c8613eb409f24b06099705ac6ff4ecf0`.
+
+The source pass then inspected all 25,459 source files with the listener, timer, subscription, disposable, and lifecycle searches described above. The remaining timer candidates were inspected and classified as process-scoped diagnostics, explicitly owned intervals, or bounded one-shot callbacks.
 
 This report is evidence of the full-codebase scan; rerun the command above after changes to refresh the inventory.
