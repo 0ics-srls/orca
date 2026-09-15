@@ -6,8 +6,7 @@ import {
   INSTALL_REQ_ID,
   PENDING_RESUME_TOKEN,
   credentialBundle,
-  directHost,
-  recordingRandomBytes
+  directHost
 } from '../relay-pairing-fixtures'
 
 /**
@@ -49,8 +48,7 @@ export function relayCredentialMountAdapters(
                 pending: next.pending !== undefined,
                 grace: next.grace?.expiresAt ?? null
               })
-            },
-            randomBytes: recordingRandomBytes
+            }
           })
           started.then(
             (result) => {
@@ -94,7 +92,7 @@ export function relayCredentialMountAdapters(
           const started = upgrade({
             client,
             host: directHost(),
-            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the adapter supplies each injected dependency the upgrade calls.
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: each mock stands in for the dependency it names; the upgrade defaults the rest.
             dependencies: {
               readJournal: async () => journal,
               writeJournal: async (next: unknown) => {
@@ -113,8 +111,7 @@ export function relayCredentialMountAdapters(
               },
               deleteBundle: async () => {
                 effect('bundle-deleted', HOST_ID)
-              },
-              randomBytes: recordingRandomBytes
+              }
             } as Parameters<typeof upgrade>[0]['dependencies']
           })
           started.then(

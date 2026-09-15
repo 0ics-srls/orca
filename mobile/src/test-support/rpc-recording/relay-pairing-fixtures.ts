@@ -19,16 +19,11 @@ const DIRECTOR_URL = 'https://director.example'
 const CELL_URL = 'https://cell.example'
 const INVITE_LIFETIME_MS = 5 * 60 * 1000
 
-/** Deterministic through the Web Crypto the recording scheduler pins. */
 /** The product's own credential hash, loaded from source: a stand-in would record a fiction. */
 export function credentialHash(modules: ReturnType<typeof operationModuleLoader>) {
   return modules.load<typeof import('../../transport/mobile-relay-credential-hash')>(
     'mobile/src/transport/mobile-relay-credential-hash.ts'
   ).hashMobileRelayCredential
-}
-
-export function recordingRandomBytes(length: number): Uint8Array {
-  return globalThis.crypto.getRandomValues(new Uint8Array(length))
 }
 
 function relayEndpoint() {
