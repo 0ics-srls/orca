@@ -653,10 +653,10 @@ describe('AgentHookServer ingestRemote', () => {
         paneKey: PANE,
         tabId: 'tab-1',
         worktreeId: 'wt-1',
+        advertisedAgentStatusCapabilities: [],
         payload: { state: 'working', prompt: 'unsupported peer', agentType: 'claude' }
       },
-      'conn-1',
-      []
+      'conn-1'
     )
     const olderPeerRow = server.getStatusSnapshot()[0]
 
@@ -665,10 +665,10 @@ describe('AgentHookServer ingestRemote', () => {
         paneKey: PANE,
         tabId: 'tab-1',
         worktreeId: 'wt-1',
+        advertisedAgentStatusCapabilities: [AGENT_STATUS_RUNS_RUNTIME_CAPABILITY],
         payload: { state: 'done', prompt: 'capable peer', agentType: 'claude' }
       },
-      'conn-1',
-      [AGENT_STATUS_RUNS_RUNTIME_CAPABILITY]
+      'conn-1'
     )
 
     expect(server.getStatusSnapshot()).toEqual([olderPeerRow])

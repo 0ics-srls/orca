@@ -52,15 +52,19 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       /** Payload fields the relay dropped to fit an oversized frame; validated below. */
       shedFields?: unknown
       claudeRunningNonAgentTask?: unknown
+      /** The producing peer's advertised run-capability set — a property of the peer/connection that built this envelope, not an orthogonal call parameter. Absent (older relay/HTTP paths) defaults to the unadvertised-legacy-peer set. */
+      advertisedAgentStatusCapabilities?: readonly string[]
       payload: unknown
     },
-    connectionId: string | null,
-    advertisedAgentStatusCapabilities: readonly string[] = AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
+    connectionId: string | null
   ): void {
     if (
       !canAdmitLegacyAgentStatus(
         'main-status-update',
-        olderPeerAgentStatusLegacyMode(advertisedAgentStatusCapabilities)
+        olderPeerAgentStatusLegacyMode(
+          envelope?.advertisedAgentStatusCapabilities ??
+            AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
+        )
       )
     ) {
       return

@@ -116,8 +116,12 @@ describe('legacy agent-status ingress ratchet', () => {
       'main/agent-hooks/wsl-hook-relay-deps.ts',
       'main/ssh/ssh-relay-session.ts'
     ])
+    // Why: a bare import of the constant (unused elsewhere) would pass a substring check
+    // without ever stamping it onto the envelope — require the actual key:value binding.
     for (const caller of callers) {
-      expect(caller.source).toContain('AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES')
+      expect(stripComments(caller.source)).toMatch(
+        /advertisedAgentStatusCapabilities\s*:\s*AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES\b/
+      )
     }
   })
 

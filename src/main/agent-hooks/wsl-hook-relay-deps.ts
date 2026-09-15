@@ -100,12 +100,17 @@ export const defaultWslHookRelayDeps: WslHookRelayManagerDeps = {
   spawnRelay: spawnWslRelayProcess,
   runInstall: runWslInstallProcess,
   waitForSentinel: waitForWslRelaySentinel,
-  ingest: (envelope, connectionId) =>
-    agentHookServer.ingestRemote(
-      envelope as Parameters<typeof agentHookServer.ingestRemote>[0],
-      connectionId,
-      AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
-    ),
+  // Why: the WSL relay protocol advertises no run-serving capability; stamped onto a copy so the
+  // wire-deserialized notification object itself is never mutated.
+  ingest: (envelope, connectionId) => {
+    const capped = {
+      ...envelope,
+      advertisedAgentStatusCapabilities: AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES
+    }
+    type IngestEnvelope = Parameters<typeof agentHookServer.ingestRemote>[0]
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: envelope is the wire-deserialized notification; ingestRemote independently re-validates paneKey's type before trusting anything here.
+    return agentHookServer.ingestRemote(capped as IngestEnvelope, connectionId)
+  },
   installHooks: installRemoteManagedAgentHooks,
   installCodex: (runtimeHomePath, distro) =>
     codexHookService.installForRuntimeHomeSerialized(runtimeHomePath, {

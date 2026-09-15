@@ -33,7 +33,7 @@ export const AGENT_STATUS_PERSISTED_HYDRATION_MODE: AgentStatusLegacyAdmissionMo
   kind: 'persisted-hydration'
 })
 
-/** Existing relay protocols advertise no run-serving capability. Production call sites pass this explicitly. */
+/** Existing relay protocols advertise no run-serving capability. Production ingress call sites stamp this onto the envelope explicitly. */
 export const AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES: readonly string[] = Object.freeze(
   []
 )
