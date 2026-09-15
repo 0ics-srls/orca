@@ -112,7 +112,7 @@ export function WorkspaceActivationRecoverySurface({
         <CircleAlert className="size-8 text-destructive" aria-hidden="true" />
         <h2 className="mt-4 text-base font-medium text-foreground">{copy.title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{copy.description}</p>
-        <Button type="button" className="mt-5 gap-2" onClick={presentation.retry}>
+        <Button type="button" className="mt-5" onClick={presentation.retry}>
           <RefreshCw className="size-4" aria-hidden="true" />
           {translate('auto.components.workspace.activation.recovery.retry', 'Retry')}
         </Button>
