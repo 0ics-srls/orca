@@ -29,11 +29,11 @@ The reproducible tracked-file inventory is [memory-leak-file-inventory-2026-09-1
 | Source | 25,459 |
 | Config | 770 |
 | Documentation | 240 |
-| Asset/other | 200 |
-| **Total** | **26,669** |
+| Asset/other | 201 |
+| **Total** | **26,670** |
 
-All 26,669 files were readable. Inventory SHA-256: `c652399e666ae2682fc05af5751ebf38c8613eb409f24b06099705ac6ff4ecf0`.
+The inventory was generated before committing itself, so it contains one row for each of the 26,669 pre-existing tracked files. The only current tracked path absent from its rows is the inventory file itself; its SHA-256 is `c652399e666ae2682fc05af5751ebf38c8613eb409f24b06099705ac6ff4ecf0`. Thus the current checkout is fully accounted for: 26,669 inventoried files plus the evidence file.
 
-The source pass then inspected all 25,459 source files with the listener, timer, subscription, disposable, and lifecycle searches described above. The remaining timer candidates were inspected and classified as process-scoped diagnostics, explicitly owned intervals, or bounded one-shot callbacks.
+The source pass inspected all 25,459 source files with the listener, timer, subscription, disposable, and lifecycle searches described above. The final pattern totals were: `addEventListener` 1,553 / `removeEventListener` 1,197; `setTimeout` 3,932 / `clearTimeout` 1,846; `setInterval` 382 / `clearInterval` 217; `subscribe(` 1,312 / `unsubscribe` 3,282. The remaining timer candidates were inspected and classified as process-scoped diagnostics, explicitly owned intervals, or bounded one-shot callbacks.
 
 This report is evidence of the full-codebase scan; rerun the command above after changes to refresh the inventory.
