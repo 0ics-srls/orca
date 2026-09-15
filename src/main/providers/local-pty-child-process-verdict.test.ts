@@ -7,6 +7,7 @@ vi.mock('./agent-foreground-process', () => ({
   resolveAgentForegroundProcessWithAvailability: resolveForegroundMock,
   confirmShellForegroundProcess: vi.fn()
 }))
+import { isRetiredPtyMaster } from '../pty/node-pty-master-fd-retirement'
 import {
   hasLocalPtyChildProcesses,
   inspectLocalPtyChildProcesses
@@ -57,7 +58,11 @@ async function registerRetiredPane(id: string): Promise<pty.IPty> {
   await new Promise<void>((resolve) => {
     term.onExit(() => resolve())
   })
-  await new Promise<void>((resolve) => setTimeout(resolve, 400))
+  // `onExit` runs before node-pty's `_close()`, which is where the patch retires `_fd`.
+  await vi.waitFor(() => expect(isRetiredPtyMaster(term)).toBe(true), {
+    timeout: 10000,
+    interval: 10
+  })
   ptyProcesses.set(id, term)
   ptyShellName.set(id, POSIX_SHELL)
   return term
