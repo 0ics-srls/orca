@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { formatDiffComments } from '@/lib/diff-comments-format'
-import { readIpcErrorMessage } from '@/lib/ipc-error'
+import { describeClipboardWriteFailure } from '@/lib/clipboard-write-failure'
 import { useAppStore } from '@/store'
 import { selectWorktreeDiffCommentsOrEmpty } from '@/store/worktree-diff-comments-selector'
 import {
@@ -70,7 +70,7 @@ export function useSourceControlDiffCommentNotes({
           'auto.components.right.sidebar.SourceControl.diffCommentNotesCopyFailed',
           'Failed to copy notes'
         ),
-        { description: readIpcErrorMessage(error) }
+        { description: describeClipboardWriteFailure(error) }
       )
     }
   }, [diffCommentsForActive, diffCommentsPrompt, showDiffCommentsCopied])

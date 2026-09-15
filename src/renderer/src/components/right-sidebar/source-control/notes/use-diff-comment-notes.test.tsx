@@ -2,6 +2,7 @@
 
 import { act, renderHook } from '@testing-library/react'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { CLIPBOARD_TEXT_WRITE_TOO_LARGE_ERROR } from '../../../../../../shared/clipboard-text'
 import type { DiffComment } from '../../../../../../shared/diff-comment-types'
 
 const mocks = vi.hoisted(() => ({
@@ -45,9 +46,20 @@ describe('diff-comment notes copy failures', () => {
     Object.assign(window, { api: { ui: { writeClipboardText: mocks.writeClipboardText } } })
   })
 
+  function readErrorToast(): [string, { description?: string }] {
+    expect(mocks.toastError).toHaveBeenCalledTimes(1)
+    const firstCall = mocks.toastError.mock.calls[0]
+    if (!firstCall) {
+      throw new Error('Expected an error toast')
+    }
+    return firstCall
+  }
+
   it('never shows "Copied" for a clipboard write that rejected', async () => {
     mocks.writeClipboardText.mockRejectedValue(
-      new Error("Error invoking remote method 'ui:writeClipboardText': Error: payload too large")
+      new Error(
+        "Error invoking remote method 'ui:writeClipboardText': Error: NSPasteboard failed at /Users/someone/Library/Caches/orca"
+      )
     )
     const { result } = renderNotes()
 
@@ -56,14 +68,26 @@ describe('diff-comment notes copy failures', () => {
     })
 
     expect(result.current.diffCommentsCopied).toBe(false)
-    expect(mocks.toastError).toHaveBeenCalledTimes(1)
-    const firstCall = mocks.toastError.mock.calls[0]
-    if (!firstCall) {
-      throw new Error('Expected an error toast')
-    }
-    const [title, options] = firstCall
+    const [title, options] = readErrorToast()
     expect(title).toBe('Failed to copy notes')
-    expect(options.description).toBe('payload too large')
+    // An unrecognized native failure must not reach the toast (CWE-209).
+    expect(options.description).toBeUndefined()
+  })
+
+  it('describes only the recognized size failure', async () => {
+    mocks.writeClipboardText.mockRejectedValue(
+      new Error(
+        `Error invoking remote method 'ui:writeClipboardText': Error: ${CLIPBOARD_TEXT_WRITE_TOO_LARGE_ERROR}`
+      )
+    )
+    const { result } = renderNotes()
+
+    await act(async () => {
+      await result.current.handleCopyDiffComments()
+    })
+
+    expect(result.current.diffCommentsCopied).toBe(false)
+    expect(readErrorToast()[1].description).toBe('The text is too large to copy.')
   })
 
   it('stays silent when the write resolves', async () => {

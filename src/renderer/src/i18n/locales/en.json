@@ -977,6 +977,9 @@
         "preview": {
           "pairedOutsideWorktree": "Files outside the workspace can't be previewed on a paired server yet."
         }
+      },
+      "clipboardWriteFailure": {
+        "tooLarge": "The text is too large to copy."
       }
     },
     "hooks": {
