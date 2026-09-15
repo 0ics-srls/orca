@@ -239,10 +239,7 @@ describe('useMobileStructuredAgentSession', () => {
     listener = onData
     return unsubscribe
   })
-  const client = {
-    sendRequest,
-    subscribe
-  } as unknown as RpcClient
+  const client = { sendRequest, subscribe } as unknown as RpcClient
 
   it('ignores old-owner prompts and running turns while retaining the transcript', async () => {
     act(() => {
