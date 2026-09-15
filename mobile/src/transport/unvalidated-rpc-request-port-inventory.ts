@@ -12,6 +12,11 @@
  * step-4 migration backlog and shares one reason, stated once here instead of 144 times:
  * the call site predates the typed contract and still picks its own method string, its own
  * acceptance rule and its own decoding. Replacing one with an RpcOperation deletes its line.
+ *
+ * Where a group below names a blocker, it is a recording blocker, not a migration blocker.
+ * Pointing a site at an operation is mechanical; the golden recorded against the old code before
+ * the refactor is the only parity proof this migration has. So a site the recorder cannot mount
+ * cannot be recorded, and unrecorded sites do not migrate.
  */
 export type UnvalidatedRpcRequestPortEntry = {
   readonly file: string
@@ -52,36 +57,44 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // app/ — Expo route screens
   { file: 'app/terminal-settings.tsx', references: 3 },
 
-  // src/agent-history/ — agent history loads
+  // src/agent-history/ — agent history loads. The history scan and its resume metadata migrated in
+  // step 4; see mobile-agent-history-operations.ts.
   // Holdout: the last reach is a worktree.ps inside the screen component's own effect, which no
   // recording can mount without a fabricated react-native view tree.
   { file: 'src/agent-history/MobileAgentSessionHistoryPanel.tsx', references: 1 },
 
-  // src/components/ — shared widgets that fetch their own data
-  { file: 'src/components/codex-reset-credit-capability.ts', references: 2 },
+  // src/components/ — shared widgets that fetch their own data. The New Workspace drawer's
+  // execution target, setup hook, runtime context and Codex capability probe migrated in step 4:
+  // see new-workspace-operations.ts, codex-reset-credit-capability-operations.ts, and the SSH and
+  // agent-detection operations in tasks/mobile-workspace-source-operations.ts. Two remain, neither
+  // recordable. codex-reset-credit.ts loads under the module loader; its attempt-journal access
+  // throws on async-storage at call time, before the send, and nothing guards it away. The repo
+  // list fails one module further out: it renders use-last-visited-worktree-repo.ts, whose default
+  // import of async-storage is a property read the loader's proxy refuses.
   { file: 'src/components/codex-reset-credit.ts', references: 3 },
-  { file: 'src/components/use-new-workspace-execution-target.ts', references: 4 },
   { file: 'src/components/use-new-workspace-repositories.ts', references: 1 },
-  { file: 'src/components/use-new-workspace-runtime-context.ts', references: 3 },
-  { file: 'src/components/use-new-workspace-setup-script.ts', references: 1 },
 
-  // src/files/ — file read, write and preview
-  { file: 'src/files/mobile-file-mutation-ownership.ts', references: 3 },
-  { file: 'src/files/mobile-file-preview-request.ts', references: 6 },
-  { file: 'src/files/mobile-file-tab-doc.ts', references: 4 },
-  { file: 'src/files/mobile-terminal-artifact-grant-refresh.ts', references: 2 },
+  // src/files/ — file read, write and preview. The preview loader, the terminal-artifact grant
+  // refresh and save, the session file tab and the mutation-ownership capture migrated in step 4:
+  // see mobile-file-preview-operations.ts, mobile-file-tab-doc-operations.ts and
+  // mobile-file-ownership-operations.ts. The explorer panel's two sends sit inline in a React
+  // Native screen, which the recorder cannot mount and so cannot record.
   { file: 'src/files/MobileFileExplorerPanel.tsx', references: 2 },
 
-  // src/home/ — home screen host reads
-  { file: 'src/home/mobile-home-host-requests.ts', references: 5 },
+  // src/home/ — home screen host reads. The stats card and both task-provider probes migrated in
+  // step 4 (mobile-home-host-operations.ts, plus the shared task-tooling reads in
+  // tasks/mobile-task-runtime-operations.ts). The accounts read stays: its decoder is re-exported
+  // through a React Native screen module, which no recording can load.
+  { file: 'src/home/mobile-home-host-requests.ts', references: 2 },
 
-  // src/host-screen/ — host screen catalog and actions
+  // src/host-screen/ — host screen catalog and actions. The repo and label metadata reads, the
+  // desktop view-settings mirror and the list's pin, remove and activate mutations migrated in
+  // step 4; see host-screen-operations.ts. What is left sends from inside a React Native screen,
+  // which the recorder cannot mount.
   { file: 'src/host-screen/host-screen-overlays.tsx', references: 1 },
-  { file: 'src/host-screen/use-host-repo-metadata.ts', references: 1 },
-  { file: 'src/host-screen/use-host-view-settings.ts', references: 2 },
-  { file: 'src/host-screen/use-host-worktree-actions.ts', references: 3 },
 
-  // src/notifications/ — push registration and delivery
+  // src/notifications/ — push registration and delivery. Registration and unregistration migrated
+  // in step 4; see mobile-push-registration-operations.ts.
   // Holdout: the unsubscribe is a closure inside a `subscribe` callback, and subscriptions are a
   // later step; the request-only recording runner refuses to open one.
   { file: 'src/notifications/mobile-notifications.ts', references: 1 },
@@ -92,10 +105,7 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   // src/session/ — session screen: chat, diff review, PR actions, tabs
   { file: 'src/session/ai-vault-resume-launch.ts', references: 3 },
   { file: 'src/session/ai-vault-resume-preparation.ts', references: 2 },
-  { file: 'src/session/github-pr-mutations.ts', references: 16 },
-  { file: 'src/session/github-pr-rpc.ts', references: 9 },
   { file: 'src/session/mobile-clipboard-image.ts', references: 7 },
-  { file: 'src/session/mobile-diff-review-loaders.ts', references: 5 },
   { file: 'src/session/mobile-file-tap-open.ts', references: 3 },
   { file: 'src/session/mobile-image-attachment.ts', references: 2 },
   { file: 'src/session/mobile-native-chat-image-attachment.ts', references: 1 },
@@ -108,7 +118,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/session/mobile-session-tabs-stream-health.ts', references: 1 },
   { file: 'src/session/mobile-structured-agent-session-launch.ts', references: 3 },
   { file: 'src/session/mobile-structured-agent-session-rpc.ts', references: 1 },
-  { file: 'src/session/pr-ai-triage-launch.ts', references: 3 },
   { file: 'src/session/use-live-worktree-name.ts', references: 1 },
   { file: 'src/session/use-mobile-diff-review-comment-actions.ts', references: 1 },
   { file: 'src/session/use-mobile-diff-review-git-actions.ts', references: 2 },
@@ -119,10 +128,6 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/session/use-mobile-native-chat-readability.ts', references: 1 },
   { file: 'src/session/use-mobile-native-chat-session.ts', references: 1 },
   { file: 'src/session/use-mobile-native-chat-stop.ts', references: 1 },
-  { file: 'src/session/use-mobile-pr-actions.ts', references: 1 },
-  { file: 'src/session/use-mobile-pr-branch-context.ts', references: 2 },
-  { file: 'src/session/use-mobile-pr-comment-actions.ts', references: 1 },
-  { file: 'src/session/use-mobile-pr-title-action.ts', references: 1 },
   { file: 'src/session/use-mobile-session-accessory-selection.ts', references: 1 },
   { file: 'src/session/use-mobile-session-close-actions.ts', references: 3 },
   { file: 'src/session/use-mobile-session-content-create-actions.ts', references: 4 },
@@ -184,19 +189,22 @@ export const UNVALIDATED_RPC_REQUEST_PORT_PENDING: readonly UnvalidatedRpcReques
   { file: 'src/tasks/use-mobile-tasks-task-list-loading.tsx', references: 4 },
   { file: 'src/tasks/use-mobile-tasks-task-pagination-actions.tsx', references: 1 },
 
-  // src/transport/ — pairing, endpoint probing and capability reads
-  { file: 'src/transport/host-status-gates.ts', references: 1 },
-  { file: 'src/transport/mobile-relay-credential-rotation.ts', references: 2 },
-  { file: 'src/transport/mobile-relay-direct-upgrade.ts', references: 2 },
-  { file: 'src/transport/mobile-relay-pairing-recovery.ts', references: 2 },
-  { file: 'src/transport/mobile-runtime-capability-negotiation.ts', references: 2 },
-  { file: 'src/transport/pairing-candidate-race.ts', references: 1 },
+  // src/transport/ — what is left of pairing, probing and capability reads after step 4. The
+  // protocol gate, the retrying capability probe, the candidate race, credential rotation, the
+  // direct-to-relay upgrade, startup pairing recovery and first pairing all send through
+  // host-status-probe-operations.ts and mobile-relay-pairing-operations.ts now. Neither file below
+  // shares the pending list's stated reason, so each carries its own:
+  //
+  // Decorates one PairingCandidateClient with director recovery, forwarding whatever method it is
+  // handed. It IS the port for the candidate it wraps, so it cannot send through an operation; the
+  // one method string it did choose now comes from hostStatusProbe.
   { file: 'src/transport/pairing-relay-candidate.ts', references: 4 },
-  { file: 'src/transport/pre-profile-pairing-coordinator.ts', references: 2 },
-  { file: 'src/transport/runtime-capability-probe.ts', references: 2 },
-
-  // src/worktree/ — worktree activation and resume
-  { file: 'src/worktree/home-host-worktree-fetch.ts', references: 2 },
-  { file: 'src/worktree/use-retired-worktree-names.ts', references: 1 },
-  { file: 'src/worktree/worktree-catalog-snapshot-client.ts', references: 1 }
+  // Its sender is the two physical clients' authenticated-but-not-yet-`connected` path, which is
+  // not an RpcClient and is unreachable from the recording oracle, so a migration here could not
+  // be shown to preserve behaviour. Its method and params are already shared constants.
+  { file: 'src/transport/mobile-runtime-capability-negotiation.ts', references: 2 },
+  // Sends through hostStatusProbe; the one reference left is its parameter type. Its callers do
+  // not share a client type — push-registration.ts holds only the sender — so the parameter names
+  // the port itself. It reaches zero when the last such caller migrates.
+  { file: 'src/transport/runtime-capability-probe.ts', references: 1 }
 ]

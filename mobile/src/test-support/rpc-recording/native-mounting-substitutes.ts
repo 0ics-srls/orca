@@ -1,4 +1,3 @@
-import { Buffer } from 'node:buffer'
 import * as React from 'react'
 import { sha256 } from '@noble/hashes/sha256'
 import * as zod from 'zod'
@@ -13,80 +12,67 @@ import * as zod from 'zod'
  *
  * So the table separates reference from use. `react` and `zod` are the real libraries — pure, and
  * React additionally has to be the one instance the test renderer drives, and `@noble/hashes` is
- * the same pure-JS digest the product would run on a device. `expo-crypto` is routed
- * through the Web Crypto the recording scheduler already pins, which is both deterministic and
- * what the library itself does off-device. The two secret stores resolve to members that throw when
- * *called*: a default-dependency object may name them, and a recording that actually reaches native
- * storage still fails loudly rather than recording a fiction.
+ * the same pure-JS digest the product would run on a device. `expo-crypto` is routed through the
+ * Web Crypto the recording scheduler already pins, which is both deterministic and what the library
+ * itself does off-device.
  *
- * `react-native`'s `AppState` and `useWindowDimensions`, the two-way audio module and
- * `expo-keep-awake` are the same kind of boundary as the scripted socket: a screen-lock tag, a
- * window size and a microphone are inputs the recording pins rather than reads. Each is inert —
- * no listener is ever fired and no audio is produced — because every send these hooks make is
- * driven through the operation's own API instead. A recording that needed a native event would
- * have to say so by adding an emitter here, which is visible in `adapterSha256`'s sibling digest.
+ * Every substitute that stands in for part of a module keeps the default's shape: a member nobody
+ * listed throws on the read rather than resolving to `undefined`, because an undefined native
+ * member is not a recording of anything — the product would call it. Async storage inverts that,
+ * reading every member back as a function that throws when called: a default-dependency object may
+ * name them, and a recording that reaches it fails at the call instead. Whether that failure is
+ * visible depends on the caller. `host-app-version-store.ts` catches and degrades to its unread
+ * state, which is what it does on a device too.
+ *
+ * Both traps leave `__esModule` undefined. It is the module system's interop marker rather than a
+ * native API, and answering it truthfully binds a transpiled `import X from` to the trap's own
+ * answer instead of the module object, leaving every consumer holding a member-less stand-in.
  */
-const NATIVE_STORAGE_MODULES = ['@react-native-async-storage/async-storage', 'expo-secure-store']
-
-/** A device event source with no events: registration succeeds, nothing is ever delivered. */
-function silentNativeSubscription(): { remove: () => void } {
-  return { remove: () => {} }
+function partialNativeModule(module: string, members: Record<string, unknown>): unknown {
+  return new Proxy(members, {
+    get: (target, key) => {
+      if (typeof key === 'string' && key !== '__esModule' && !(key in target)) {
+        throw new Error(`Unsubstituted native member: ${module}.${key}`)
+      }
+      return Reflect.get(target, key)
+    }
+  })
 }
 
 function unusableNativeStore(module: string): unknown {
   return new Proxy(
     {},
     {
-      get:
-        (_target, key) =>
-        (...args: unknown[]) => {
+      get: (_target, key) => {
+        if (key === '__esModule') {
+          return undefined
+        }
+        return (...args: unknown[]) => {
           void args
           throw new Error(`Native store reached during recording: ${module}.${String(key)}`)
         }
+      }
     }
   )
 }
 
 export function nativeMountingSubstitutes(): Map<string, unknown> {
-  const substitutes = new Map<string, unknown>([
+  return new Map<string, unknown>([
     ['react', React],
     ['zod', zod],
-    ['@noble/hashes/sha256', { sha256 }],
-    // The RN polyfill mobile bundles is this same pure implementation of the same encoding.
-    ['buffer', { Buffer }],
+    ['@noble/hashes/sha256', partialNativeModule('@noble/hashes/sha256', { sha256 })],
     [
       'expo-crypto',
-      {
+      partialNativeModule('expo-crypto', {
         getRandomBytes: (length: number) =>
           globalThis.crypto.getRandomValues(new Uint8Array(length))
-      }
+      })
     ],
     // One pinned platform per recording; `platform` is golden provenance, not a compared field.
+    ['react-native', partialNativeModule('react-native', { Platform: { OS: 'ios' } })],
     [
-      'react-native',
-      {
-        Platform: { OS: 'ios' },
-        AppState: { currentState: 'active', addEventListener: silentNativeSubscription },
-        useWindowDimensions: () => ({ width: 390, height: 844 })
-      }
-    ],
-    [
-      '@orca/expo-two-way-audio',
-      {
-        addExpoTwoWayAudioEventListener: silentNativeSubscription,
-        initialize: () => Promise.resolve(true),
-        requestMicrophonePermissionsAsync: () => Promise.resolve({ granted: true }),
-        tearDown: () => Promise.resolve(),
-        toggleRecording: () => true
-      }
-    ],
-    [
-      'expo-keep-awake',
-      { activateKeepAwakeAsync: () => Promise.resolve(), deactivateKeepAwake: () => {} }
+      '@react-native-async-storage/async-storage',
+      unusableNativeStore('@react-native-async-storage/async-storage')
     ]
   ])
-  for (const module of NATIVE_STORAGE_MODULES) {
-    substitutes.set(module, unusableNativeStore(module))
-  }
-  return substitutes
 }
