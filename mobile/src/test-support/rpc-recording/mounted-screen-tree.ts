@@ -1,5 +1,6 @@
 import { Component, createElement, type ReactElement, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
+import type { MountContext } from './recording-scenario'
 
 type CrashProps = { onCrash: (message: string) => void; children?: ReactNode }
 
@@ -25,8 +26,13 @@ class MountedScreenCrash extends Component<CrashProps, { crash: string | null }>
 /**
  * A mounted screen, rather than a mounted hook. The element is rebuilt on every mount and update so
  * an adapter can change a prop between steps the way a parent screen would.
+ *
+ * The crash goes to the effect sink as well as to `crash()`, because an adapter that projects no
+ * crash — every hook mount, whose state is the hook's own value — would otherwise record a screen
+ * that quietly stopped rendering. An effect is not optional in the same way: it forces a cleanup
+ * checkpoint, so the crash reaches the golden without the adapter cooperating.
  */
-export function screenMount(element: () => ReactElement) {
+export function screenMount(element: () => ReactElement, effect: MountContext['effect']) {
   let renderer: ReactTestRenderer | undefined
   let crashed: string | null = null
   const wrapped = () =>
@@ -35,6 +41,7 @@ export function screenMount(element: () => ReactElement) {
       {
         onCrash: (message: string) => {
           crashed = message
+          effect('screen.crash', { message })
         }
       },
       element()
@@ -63,12 +70,15 @@ export function screenMount(element: () => ReactElement) {
 }
 
 /** The hook form of `screenMount`: the same crash boundary, over a harness that draws nothing. */
-export function hookScreenMount(render: () => void): ReturnType<typeof screenMount> {
+export function hookScreenMount(
+  render: () => void,
+  effect: MountContext['effect']
+): ReturnType<typeof screenMount> {
   function Harness(): null {
     render()
     return null
   }
-  return screenMount(() => createElement(Harness))
+  return screenMount(() => createElement(Harness), effect)
 }
 
 type RenderedNode = { type: string; props: Record<string, unknown>; children: unknown[] | null }
@@ -80,25 +90,33 @@ type RenderedNode = { type: string; props: Record<string, unknown>; children: un
  */
 export function renderedElementProps(tree: unknown, tag: string): Record<string, unknown>[] {
   const found: Record<string, unknown>[] = []
-  const walk = (node: unknown): void => {
-    if (Array.isArray(node)) {
-      for (const child of node) {
-        walk(child)
-      }
-      return
+  walk(tree, (node) => {
+    if (typeof node !== 'string' && node.type === tag) {
+      found.push(node.props)
     }
-    if (!node || typeof node !== 'object' || !('type' in node)) {
-      return
-    }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: react-test-renderer's JSON nodes carry exactly these three fields.
-    const rendered = node as RenderedNode
-    if (rendered.type === tag) {
-      found.push(rendered.props)
-    }
-    walk(rendered.children)
-  }
-  walk(tree)
+  })
   return found
+}
+
+/** One depth-first pass in render order, over the host nodes and the text between them. */
+function walk(node: unknown, visit: (node: RenderedNode | string) => void): void {
+  if (typeof node === 'string') {
+    visit(node)
+    return
+  }
+  if (Array.isArray(node)) {
+    for (const child of node) {
+      walk(child, visit)
+    }
+    return
+  }
+  if (!node || typeof node !== 'object' || !('type' in node)) {
+    return
+  }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: react-test-renderer's JSON nodes carry exactly these three fields.
+  const rendered = node as RenderedNode
+  visit(rendered)
+  walk(rendered.children, visit)
 }
 
 /** What a mounted screen rendered, and the crash instead if a reply took it down. */
@@ -128,29 +146,16 @@ function projectScreenTree(tree: unknown): {
   const elements: Record<string, number> = {}
   const text: string[] = []
   const labels: string[] = []
-  const walk = (node: unknown): void => {
+  walk(tree, (node) => {
     if (typeof node === 'string') {
       text.push(node)
       return
     }
-    if (Array.isArray(node)) {
-      for (const child of node) {
-        walk(child)
-      }
-      return
-    }
-    if (!node || typeof node !== 'object' || !('type' in node)) {
-      return
-    }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: react-test-renderer's JSON nodes carry exactly these three fields.
-    const rendered = node as RenderedNode
-    elements[rendered.type] = (elements[rendered.type] ?? 0) + 1
-    const label = rendered.props.accessibilityLabel
+    elements[node.type] = (elements[node.type] ?? 0) + 1
+    const label = node.props.accessibilityLabel
     if (typeof label === 'string') {
       labels.push(label)
     }
-    walk(rendered.children)
-  }
-  walk(tree)
+  })
   return { elements, text, labels }
 }

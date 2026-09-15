@@ -16,7 +16,7 @@ export function newWorkspaceRepositoryMountAdapters(
   modules: ReturnType<typeof operationModuleLoader>
 ): Record<string, MountAdapter> {
   return {
-    'workspace.repositories': ({ client }) => {
+    'workspace.repositories': ({ client, effect }) => {
       const useRepositories = modules.load<
         typeof import('../../../components/use-new-workspace-repositories')
       >('mobile/src/components/use-new-workspace-repositories.ts').useNewWorkspaceRepositories
@@ -24,7 +24,7 @@ export function newWorkspaceRepositoryMountAdapters(
       let visible = true
       const screen = hookScreenMount(() => {
         state = useRepositories({ client, hostId: HOST, visible })
-      })
+      }, effect)
       return {
         action(name) {
           if (name === 'mount' || name === 'remount') {

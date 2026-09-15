@@ -1,7 +1,12 @@
 import { resolve } from 'node:path'
 import { createElement } from 'react'
 import { describe, expect, it } from 'vitest'
-import { projectMountedScreen, renderedElementProps, screenMount } from './mounted-screen-tree'
+import {
+  hookScreenMount,
+  projectMountedScreen,
+  renderedElementProps,
+  screenMount
+} from './mounted-screen-tree'
 import { pilotMountAdapters } from './pilot-mount-adapters'
 import { runRecording } from './run-recording'
 import { readScenarios } from './scenario-input'
@@ -17,9 +22,18 @@ function Broken(): never {
   throw new Error('a reply took the screen down')
 }
 
+/** Collects what an adapter would have handed the recorder, so a crash effect is observable here. */
+function effectSink(): {
+  calls: { name: string; value: unknown }[]
+  effect: (name: string, value: unknown) => void
+} {
+  const calls: { name: string; value: unknown }[] = []
+  return { calls, effect: (name, value) => calls.push({ name, value }) }
+}
+
 describe('a mounted screen', () => {
   it('records a crash as state instead of failing the run', () => {
-    const screen = screenMount(() => createElement(Broken))
+    const screen = screenMount(() => createElement(Broken), effectSink().effect)
     screen.mount()
     expect(projectMountedScreen(screen)).toEqual({
       elements: {},
@@ -30,13 +44,15 @@ describe('a mounted screen', () => {
   })
 
   it('projects the elements, copy and labels of what rendered', () => {
-    const screen = screenMount(() =>
-      createElement(
-        'View',
-        null,
-        createElement('Text', { accessibilityLabel: 'title' }, 'Files'),
-        createElement('Text', null, 'orca-files')
-      )
+    const screen = screenMount(
+      () =>
+        createElement(
+          'View',
+          null,
+          createElement('Text', { accessibilityLabel: 'title' }, 'Files'),
+          createElement('Text', null, 'orca-files')
+        ),
+      effectSink().effect
     )
     screen.mount()
     expect(projectMountedScreen(screen)).toEqual({
@@ -48,12 +64,36 @@ describe('a mounted screen', () => {
   })
 
   it('reads the props an inert element was handed, which is all a list ever renders', () => {
-    const screen = screenMount(() =>
-      createElement('View', null, createElement('FlatList', { data: [{ id: 'row-1' }] }))
+    const screen = screenMount(
+      () => createElement('View', null, createElement('FlatList', { data: [{ id: 'row-1' }] })),
+      effectSink().effect
     )
     screen.mount()
     expect(renderedElementProps(screen.tree(), 'FlatList')).toEqual([{ data: [{ id: 'row-1' }] }])
     expect(renderedElementProps(screen.tree(), 'SectionList')).toEqual([])
+  })
+
+  /**
+   * A hook mount projects the hook's own value, never a crash, so the boundary reporting through the
+   * effect sink is the only thing that puts a crash the adapter ignores into a golden.
+   */
+  it('reports a crash through the effect sink with no adapter cooperation', () => {
+    const sink = effectSink()
+    let renders = 0
+    const screen = hookScreenMount(() => {
+      renders++
+      // From the second render on, not only on it: React retries a failed concurrent render
+      // synchronously, and a hook that recovers on the retry never reaches the boundary.
+      if (renders >= 2) {
+        throw new Error('the second render threw')
+      }
+    }, sink.effect)
+    screen.mount()
+    expect(sink.calls).toEqual([])
+    screen.update()
+    expect(sink.calls).toEqual([
+      { name: 'screen.crash', value: { message: 'the second render threw' } }
+    ])
   })
 
   /**

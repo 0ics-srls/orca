@@ -43,12 +43,14 @@ export function fileExplorerScreenMountAdapters(
           return Promise.resolve()
         }
       })
-      const screen = screenMount(() =>
-        createElement(
-          recorderHostClientContext.Provider,
-          { value: context },
-          createElement(Panel, { hostId: HOST, worktreeId: WORKTREE, name: 'orca-files' })
-        )
+      const screen = screenMount(
+        () =>
+          createElement(
+            recorderHostClientContext.Provider,
+            { value: context },
+            createElement(Panel, { hostId: HOST, worktreeId: WORKTREE, name: 'orca-files' })
+          ),
+        effect
       )
       return {
         action(name) {
