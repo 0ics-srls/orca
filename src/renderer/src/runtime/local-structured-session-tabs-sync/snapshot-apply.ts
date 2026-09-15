@@ -34,9 +34,13 @@ import {
   markStructuredAgentSessionLaunchPublished,
   retireAbsentStructuredAgentSessionLaunchCancellationTombstones
 } from '../../lib/structured-agent-session-launch-registry'
-import { beginStructuredAgentSessionAuthoritativeInventory } from '../../lib/structured-agent-session-launch-cancellation'
+import {
+  beginStructuredAgentSessionAuthoritativeInventory,
+  startStructuredAgentLaunchCancellationCleanup
+} from '../../lib/structured-agent-session-launch-cancellation'
 import { suppressCancelledStructuredSessionTabs } from '../structured-agent-session-tab-retirement'
 import { LOCAL_STRUCTURED_SESSION_OWNER } from '../local-structured-session-owner'
+import { closeStructuredAgentSession } from '../structured-agent-session-close'
 
 /** The host saying it no longer publishes this worktree at all, rather than publishing an empty one. */
 function isWorktreeRetraction(
@@ -85,6 +89,9 @@ export function applyStructuredSessionTabSnapshots(
     }
   }
   if (options.authoritative) {
+    startStructuredAgentLaunchCancellationCleanup((sessionId) =>
+      closeStructuredAgentSession({ kind: 'local' }, sessionId)
+    )
     retireAbsentStructuredAgentSessionLaunchCancellationTombstones(
       new Set(
         snapshots.flatMap((snapshot) =>

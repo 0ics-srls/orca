@@ -70,6 +70,20 @@ export function settleStructuredAgentLaunchCancellationCleanup(
   retirement.retireAfterInventory = authoritativeInventorySequence + 1
 }
 
+export function startStructuredAgentLaunchCancellationCleanup(
+  cleanup: (sessionId: string) => Promise<unknown>
+): void {
+  for (const sessionId of claimStructuredAgentLaunchCancellationCleanups()) {
+    void cleanup(sessionId).then(
+      () => settleStructuredAgentLaunchCancellationCleanup(sessionId, true),
+      (error: unknown) => {
+        settleStructuredAgentLaunchCancellationCleanup(sessionId, false)
+        console.warn('[structured-agent-launch] restored cancellation cleanup failed', error)
+      }
+    )
+  }
+}
+
 export function markStructuredAgentLaunchCancellation(
   sessionId: string,
   alreadyCancelled: boolean,
