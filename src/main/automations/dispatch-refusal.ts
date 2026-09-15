@@ -121,20 +121,29 @@ export function sendRendererDispatch(
 }
 
 /**
- * A run that came due while the scheduler was down, outside its catch-up budget.
- * Why this is not "late": grace covers downtime, not the scheduler's own tick latency, so an
- * occurrence that came due while we were running is merely waiting for the next tick (#11299).
+ * Grace is a downtime catch-up budget. It must not also absorb the scheduler's own tick latency:
+ * evaluation runs on a fixed interval never aligned to an occurrence, so with zero grace every
+ * tick arrived "late" and skipped the run, blaming downtime that never happened (#11299).
+ *
+ * Why a latency tolerance and not process liveness: a suspended process (system sleep) keeps its
+ * start time, so a liveness flag would wave through an occurrence that came due during a
+ * multi-hour sleep -- exactly the downtime grace exists for. Elapsed lateness cannot be faked
+ * that way, and it needs no restart bookkeeping.
  */
+export function schedulerLatencyToleranceMs(tickMs: number): number {
+  // Two intervals: one for the tick that should have caught it, one for ordinary jitter.
+  return tickMs * 2
+}
+
 export function missedDuringDowntime(input: {
   automation: Automation
   scheduledFor: number
   now: number
-  availableSince: number | null
+  tickMs: number
 }): boolean {
-  const { automation, scheduledFor, now, availableSince } = input
-  const cameDueWhileAvailable = availableSince !== null && scheduledFor >= availableSince
-  const graceMs = automation.missedRunGraceMinutes * 60 * 1000
-  return !cameDueWhileAvailable && now - scheduledFor > graceMs
+  const graceMs = input.automation.missedRunGraceMinutes * 60 * 1000
+  const budget = graceMs + schedulerLatencyToleranceMs(input.tickMs)
+  return input.now - input.scheduledFor > budget
 }
 
 export function recordMissedRun(input: {

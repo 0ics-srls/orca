@@ -49,8 +49,6 @@ export class AutomationService {
   private webContents: AutomationRendererChannel | null = null
   private rendererReady = false
   private evaluating = false
-  // Why: grace is a downtime catch-up budget, not a tolerance for our own tick latency (#11299).
-  private availableSince: number | null = null
   private readonly claudeUsage: ClaudeUsageStore | null
   private readonly codexUsage: CodexUsageStore | null
   private readonly allowRemoteHostScheduling: boolean
@@ -116,7 +114,6 @@ export class AutomationService {
     if (this.timer) {
       return
     }
-    this.availableSince = Date.now()
     this.timer = setInterval(() => {
       void this.evaluateDueRuns()
     }, this.tickMs)
@@ -139,7 +136,6 @@ export class AutomationService {
     }
     clearInterval(this.timer)
     this.timer = null
-    this.availableSince = null
   }
 
   async runNow(automationId: string): Promise<AutomationRun> {
@@ -257,8 +253,7 @@ export class AutomationService {
       this.store.advanceAutomationNextRun(automation.id, now)
       return
     }
-    const availableSince = this.availableSince
-    if (missedDuringDowntime({ automation, scheduledFor, now, availableSince })) {
+    if (missedDuringDowntime({ automation, scheduledFor, now, tickMs: this.tickMs })) {
       recordMissedRun({ runs: this.runs, automation, scheduledFor })
       this.store.advanceAutomationNextRun(automation.id, now)
       return
