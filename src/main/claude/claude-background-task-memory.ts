@@ -2,10 +2,13 @@ import { isSettledBackgroundTaskState } from '../../shared/native-chat-backgroun
 import type { ClaudeBackgroundTaskRow } from './claude-background-task-row-lifecycle'
 
 const MAX_GENERATION_ENTRIES = 512
+const MAX_FOREIGN_TASK_ROWS = 512
+const MAX_TERMINAL_TASK_IDS = 512
+const MAX_FALLBACK_TASK_IDS = 512
 
 /** Bounded run identity ledger. Once old ids fall out, a monotonic sequence
  * keeps a reused id from colliding with a durable row already in the journal. */
-export class ClaudeBackgroundTaskGenerationLedger {
+class ClaudeBackgroundTaskGenerationLedger {
   private readonly entries = new Map<string, number>()
   private nextUniqueGeneration = 1
   private evicted = false
@@ -39,7 +42,7 @@ export class ClaudeBackgroundTaskGenerationLedger {
   }
 }
 
-export function rememberBoundedClaudeTaskSet(ids: Set<string>, id: string, maxSize: number): void {
+function rememberBoundedClaudeTaskSet(ids: Set<string>, id: string, maxSize: number): void {
   ids.delete(id)
   ids.add(id)
   while (ids.size > maxSize) {
@@ -51,7 +54,7 @@ export function rememberBoundedClaudeTaskSet(ids: Set<string>, id: string, maxSi
   }
 }
 
-export function rememberBoundedClaudeTaskMap<T>(
+function rememberBoundedClaudeTaskMap<T>(
   entries: Map<string, T>,
   id: string,
   value: T,
@@ -84,7 +87,7 @@ export function ensureClaudeBackgroundTaskRowSlot(
   return false
 }
 
-export function rememberClaudeBackgroundTaskTerminal(
+function rememberClaudeBackgroundTaskTerminal(
   terminalIds: Set<string>,
   terminalToolUseIds: Map<string, string | undefined>,
   rows: Map<string, ClaudeBackgroundTaskRow>,
@@ -102,5 +105,74 @@ export function rememberClaudeBackgroundTaskTerminal(
     }
     terminalToolUseIds.delete(oldest.value)
     terminalIds.delete(oldest.value)
+  }
+}
+
+export type ForeignOwner = 'roster' | 'ambient' | 'foreground'
+
+/** How much each ledger is holding. Named and readonly so a caller can prove
+ *  eviction still bounds them without reaching into the collections. */
+export type ClaudeBackgroundTaskLedgerSizes = {
+  readonly generations: number
+  readonly foreign: number
+  readonly fallbackTaskIds: number
+  readonly terminalTaskIds: number
+}
+
+/** Every bounded ledger a session keeps beside its rows, with the caps that
+ *  bound them. One owner, so a sweep clears them together and no cap is
+ *  applied at only some of the call sites that write to a ledger. */
+export class ClaudeBackgroundTaskLedgers {
+  /** Runs seen per task id, so a reused id opens a new row instead of
+   *  overwriting the finished one. Survives the row being evicted. */
+  readonly generations = new ClaudeBackgroundTaskGenerationLedger()
+  readonly foreign = new Map<string, ForeignOwner>()
+  /** Tasks that were declined because every typed row slot was live. Their
+   *  later frames must remain visible through the generic fallback. */
+  readonly fallbackTaskIds = new Set<string>()
+  readonly terminalTaskIds = new Set<string>()
+  /** The parent alias for the terminal run, when one was reported. Keeping it
+   *  lets an evicted row distinguish a late duplicate start from a genuine
+   *  restart under a fresh tool invocation. */
+  readonly terminalToolUseIds = new Map<string, string | undefined>()
+
+  rememberForeign(id: string, owner: ForeignOwner): void {
+    rememberBoundedClaudeTaskMap(this.foreign, id, owner, MAX_FOREIGN_TASK_ROWS)
+  }
+
+  rememberFallback(id: string): void {
+    rememberBoundedClaudeTaskSet(this.fallbackTaskIds, id, MAX_FALLBACK_TASK_IDS)
+  }
+
+  rememberTerminal(
+    rows: Map<string, ClaudeBackgroundTaskRow>,
+    id: string,
+    toolUseId: string | undefined
+  ): void {
+    rememberClaudeBackgroundTaskTerminal(
+      this.terminalTaskIds,
+      this.terminalToolUseIds,
+      rows,
+      id,
+      toolUseId,
+      MAX_TERMINAL_TASK_IDS
+    )
+  }
+
+  get sizes(): ClaudeBackgroundTaskLedgerSizes {
+    return {
+      generations: this.generations.size,
+      foreign: this.foreign.size,
+      fallbackTaskIds: this.fallbackTaskIds.size,
+      terminalTaskIds: this.terminalTaskIds.size
+    }
+  }
+
+  clear(): void {
+    this.generations.clear()
+    this.foreign.clear()
+    this.fallbackTaskIds.clear()
+    this.terminalTaskIds.clear()
+    this.terminalToolUseIds.clear()
   }
 }

@@ -633,8 +633,7 @@ describe('claude background task rows', () => {
       label: 'reused after ledger eviction'
     })
 
-    const generations = Reflect.get(rows, 'generations')
-    expect(generations.size).toBeLessThanOrEqual(512)
+    expect(rows.ledgerSizes.generations).toBeLessThanOrEqual(512)
   })
 
   it('declines coverage so the fallback still reports when every row slot is live', () => {
@@ -752,9 +751,7 @@ describe('claude background task rows', () => {
       })
     }
 
-    const foreign = Reflect.get(rows, 'foreign')
-    expect(foreign).toBeInstanceOf(Map)
-    expect(foreign.size).toBeLessThanOrEqual(512)
+    expect(rows.ledgerSizes.foreign).toBeLessThanOrEqual(512)
   })
 
   it('bounds fallback ownership memory for capacity-refused tasks', () => {
@@ -766,9 +763,7 @@ describe('claude background task rows', () => {
       rows.observe({ ...START_BASH, task_id: `overflow-${index}` })
     }
 
-    const fallback = Reflect.get(rows, 'fallbackTaskIds')
-    expect(fallback).toBeInstanceOf(Set)
-    expect(fallback.size).toBeLessThanOrEqual(512)
+    expect(rows.ledgerSizes.fallbackTaskIds).toBeLessThanOrEqual(512)
   })
 
   it('loses contact rather than claiming an outcome when the provider goes away', () => {

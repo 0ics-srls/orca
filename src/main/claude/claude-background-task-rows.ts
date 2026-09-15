@@ -23,20 +23,15 @@ import {
   type ClaudeBackgroundTaskRow
 } from './claude-background-task-row-lifecycle'
 import {
-  ClaudeBackgroundTaskGenerationLedger,
+  ClaudeBackgroundTaskLedgers,
   ensureClaudeBackgroundTaskRowSlot,
-  rememberBoundedClaudeTaskMap,
-  rememberBoundedClaudeTaskSet,
-  rememberClaudeBackgroundTaskTerminal
+  type ClaudeBackgroundTaskLedgerSizes
 } from './claude-background-task-memory'
 import { writeClaudeBackgroundTaskRow } from './claude-background-task-row-journal'
 import { ClaudeSubagentIds } from './claude-subagent-id-aliases'
 import { isClaudeSubagentTask } from './claude-subagent-task-frames'
 
 const MAX_TASK_ROWS = 64
-const MAX_FOREIGN_TASK_ROWS = 512
-const MAX_TERMINAL_TASK_IDS = 512
-const MAX_FALLBACK_TASK_IDS = 512
 
 const TASK_SUBTYPES: ReadonlySet<string> = new Set([
   'task_started',
@@ -44,8 +39,6 @@ const TASK_SUBTYPES: ReadonlySet<string> = new Set([
   'task_progress',
   'task_notification'
 ])
-
-type ForeignOwner = 'roster' | 'ambient' | 'foreground'
 
 export type ClaudeBackgroundTaskRowsDeps = {
   sink: StructuredAgentSessionEventSink
@@ -63,23 +56,18 @@ export type ClaudeBackgroundTaskRowsDeps = {
 
 export class ClaudeBackgroundTaskRows {
   private readonly rows = new Map<string, ClaudeBackgroundTaskRow>()
-  /** Runs seen per task id, so a reused id opens a new row instead of
-   *  overwriting the finished one. Survives the row being evicted. */
-  private readonly generations = new ClaudeBackgroundTaskGenerationLedger()
-  private readonly foreign = new Map<string, ForeignOwner>()
-  /** Tasks that were declined because every typed row slot was live. Their
-   *  later frames must remain visible through the generic fallback. */
-  private readonly fallbackTaskIds = new Set<string>()
-  private readonly terminalTaskIds = new Set<string>()
-  /** The parent alias for the terminal run, when one was reported. Keeping it
-   *  lets an evicted row distinguish a late duplicate start from a genuine
-   *  restart under a fresh tool invocation. */
-  private readonly terminalToolUseIds = new Map<string, string | undefined>()
+  private readonly ledgers = new ClaudeBackgroundTaskLedgers()
   private readonly ids = new ClaudeSubagentIds()
   private readonly now: () => number
 
   constructor(private readonly deps: ClaudeBackgroundTaskRowsDeps) {
     this.now = deps.now ?? (() => Date.now())
+  }
+
+  /** @internal - exposed for tests only: what the bounded ledgers are holding,
+   *  so eviction can be proved without reaching into the collections. */
+  get ledgerSizes(): ClaudeBackgroundTaskLedgerSizes {
+    return this.ledgers.sizes
   }
 
   /** The frame being journaled right now, so a write can open its turn. Null
@@ -116,7 +104,7 @@ export class ClaudeBackgroundTaskRows {
     if (message.subtype === 'task_started') {
       return this.observeStart(id, message)
     }
-    if (this.foreign.has(id)) {
+    if (this.ledgers.foreign.has(id)) {
       return true
     }
     if (message.subtype === 'task_notification') {
@@ -136,25 +124,21 @@ export class ClaudeBackgroundTaskRows {
   dispose(): void {
     this.settleSession()
     this.rows.clear()
-    this.generations.clear()
-    this.foreign.clear()
-    this.fallbackTaskIds.clear()
-    this.terminalTaskIds.clear()
-    this.terminalToolUseIds.clear()
+    this.ledgers.clear()
     this.ids.clear()
   }
 
   private observeStart(id: string, message: Record<string, unknown>): boolean {
-    if (this.fallbackTaskIds.has(id)) {
-      if (this.terminalTaskIds.has(id)) {
-        const previousToolUseId = this.terminalToolUseIds.get(id)
+    if (this.ledgers.fallbackTaskIds.has(id)) {
+      if (this.ledgers.terminalTaskIds.has(id)) {
+        const previousToolUseId = this.ledgers.terminalToolUseIds.get(id)
         const currentToolUseId = claudeBackgroundTaskToolUseId(message)
         if (
           previousToolUseId !== undefined &&
           currentToolUseId !== undefined &&
           previousToolUseId !== currentToolUseId
         ) {
-          this.fallbackTaskIds.delete(id)
+          this.ledgers.fallbackTaskIds.delete(id)
         } else {
           return false
         }
@@ -163,19 +147,19 @@ export class ClaudeBackgroundTaskRows {
       }
     }
     if (message.ambient === true || message.skip_transcript === true) {
-      this.rememberForeign(id, 'ambient')
+      this.ledgers.rememberForeign(id, 'ambient')
       return true
     }
     if (isClaudeSubagentTask(message)) {
-      this.rememberForeign(id, 'roster')
+      this.ledgers.rememberForeign(id, 'roster')
       return true
     }
     const kind = classifyClaudeBackgroundTaskKind(message.task_type)
     if (!isClaudeBackgroundTranscriptTask(message, kind)) {
-      this.rememberForeign(id, 'foreground')
+      this.ledgers.rememberForeign(id, 'foreground')
       return true
     }
-    this.foreign.delete(id)
+    this.ledgers.foreign.delete(id)
     const existing = this.rows.get(id)
     if (existing) {
       // A task that already exists and has not finished is not re-opened: a
@@ -190,8 +174,8 @@ export class ClaudeBackgroundTaskRows {
       return true
     }
     let restartedTerminal = false
-    if (this.terminalTaskIds.has(id)) {
-      const previousToolUseId = this.terminalToolUseIds.get(id)
+    if (this.ledgers.terminalTaskIds.has(id)) {
+      const previousToolUseId = this.ledgers.terminalToolUseIds.get(id)
       const currentToolUseId = claudeBackgroundTaskToolUseId(message)
       // A terminal edge that had no usable tool id cannot prove a later start
       // is a new run, so keep the conservative orphan guard. When both runs
@@ -209,12 +193,12 @@ export class ClaudeBackgroundTaskRows {
       return true
     }
     if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
-      rememberBoundedClaudeTaskSet(this.fallbackTaskIds, id, MAX_FALLBACK_TASK_IDS)
+      this.ledgers.rememberFallback(id)
       return false
     }
     if (restartedTerminal) {
-      this.terminalTaskIds.delete(id)
-      this.terminalToolUseIds.delete(id)
+      this.ledgers.terminalTaskIds.delete(id)
+      this.ledgers.terminalToolUseIds.delete(id)
     }
     this.openRow(id, message)
     return true
@@ -234,15 +218,15 @@ export class ClaudeBackgroundTaskRows {
   }
 
   private openRow(id: string, message: Record<string, unknown>): void {
-    const generation = this.generations.next(id)
+    const generation = this.ledgers.generations.next(id)
     this.rows.set(id, newClaudeBackgroundTaskRow(id, message, this.now(), generation))
     this.write(id)
   }
 
   private observeNotification(id: string, message: Record<string, unknown>): boolean {
-    if (this.fallbackTaskIds.has(id)) {
-      this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
-      this.fallbackTaskIds.delete(id)
+    if (this.ledgers.fallbackTaskIds.has(id)) {
+      this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
+      this.ledgers.fallbackTaskIds.delete(id)
       return false
     }
     const row = this.rows.get(id)
@@ -252,7 +236,7 @@ export class ClaudeBackgroundTaskRows {
     // Remembered even for a task never admitted: Orca is deliberately stricter
     // than the reference here, which keeps no trace of one. It stops a late
     // announcement from opening a row for work already reported finished.
-    this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+    this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
     if (!row) {
       // Matched on `task_id` alone. A terminal frame for a task that was never
       // admitted names nothing this transcript is tracking, so it yields no
@@ -266,10 +250,10 @@ export class ClaudeBackgroundTaskRows {
   }
 
   private observePatch(id: string, message: Record<string, unknown>): boolean {
-    if (this.fallbackTaskIds.has(id)) {
+    if (this.ledgers.fallbackTaskIds.has(id)) {
       const change = claudeBackgroundTaskPatchChange(message)
       if (change.state && isSettledBackgroundTaskState(change.state)) {
-        this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+        this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
       }
       return false
     }
@@ -282,12 +266,12 @@ export class ClaudeBackgroundTaskRows {
     // reports foreground execution; its terminal notification still revises
     // the durable row. Only an untracked task belongs to the foreground owner.
     if (patch?.is_backgrounded === false && !this.rows.has(id)) {
-      this.rememberForeign(id, 'foreground')
+      this.ledgers.rememberForeign(id, 'foreground')
       return true
     }
     const change = claudeBackgroundTaskPatchChange(message)
     if (change.state && isSettledBackgroundTaskState(change.state)) {
-      this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+      this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
     }
     // A patch is folded into the row it names and is never a row of its own, so
     // an untracked task takes no row from it.
@@ -344,21 +328,6 @@ export class ClaudeBackgroundTaskRows {
     const wasLive = !isSettledBackgroundTaskState(row.block.state)
     reviseClaudeBackgroundTaskRow(row, change, this.now())
     this.write(id, wasLive)
-  }
-
-  private rememberForeign(id: string, owner: ForeignOwner): void {
-    rememberBoundedClaudeTaskMap(this.foreign, id, owner, MAX_FOREIGN_TASK_ROWS)
-  }
-
-  private rememberTerminal(id: string, toolUseId?: string): void {
-    rememberClaudeBackgroundTaskTerminal(
-      this.terminalTaskIds,
-      this.terminalToolUseIds,
-      this.rows,
-      id,
-      toolUseId,
-      MAX_TERMINAL_TASK_IDS
-    )
   }
 
   private write(id: string, openOutputTurn = true): void {
