@@ -5,7 +5,7 @@
 // every result is discarded unless the runtime fence it was issued against is
 // still the current one.
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import * as conversationCommands from './structured-conversation-command-send'
 import type { AgentSessionMutationResult } from '../../../../shared/agent-session-wire'
 import { agentSessionRefusalOperationState } from '../../../../shared/agent-session-refusal-retry'
@@ -33,7 +33,10 @@ export function useStructuredAgentSessionMutate(args: {
   const [writeError, setWriteError] = useState<string | null>(null)
   const operationIds = useRef(new Map<string, string>())
   const enabledRef = useRef(enabled)
-  enabledRef.current = enabled
+  useEffect(() => {
+    // Why: update the gate after commit so render stays free of ref mutations.
+    enabledRef.current = enabled
+  }, [enabled])
 
   const mutate = useCallback(
     async <T>(
@@ -42,7 +45,7 @@ export function useStructuredAgentSessionMutate(args: {
       fields: Record<string, unknown>,
       operationIdOverride?: string | null
     ): Promise<T | null> => {
-      if (!enabledRef.current || stateRef.current.fence === null) {
+      if (!enabled || !enabledRef.current || stateRef.current.fence === null) {
         return null
       }
       const targetFence = stateRef.current.fence
@@ -92,7 +95,7 @@ export function useStructuredAgentSessionMutate(args: {
       setWriteError(null)
       return result.value
     },
-    [sessionId, stateRef, target]
+    [enabled, sessionId, stateRef, target]
   )
 
   return { mutate, writeError }
