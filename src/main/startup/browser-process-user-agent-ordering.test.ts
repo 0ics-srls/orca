@@ -2,7 +2,11 @@ import { describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
   const events: string[] = []
-  let userAgent = 'Mozilla/5.0 (Test) Package/0.0.0 Chrome/150.0.0.0 Electron/43.0.0 Safari/537.36'
+  // Why a two-word app token: this file sets the dev app name to "Orca Development", and Electron
+  // builds the app token from that name. A single-token fixture could not exhibit the multi-word
+  // leak the cleaner exists to handle, so it disagreed with the scenario it set up.
+  let userAgent =
+    'Mozilla/5.0 (Test) Orca Development/0.0.0 Chrome/150.0.0.0 Electron/43.0.0 Safari/537.36'
   const app = {
     isPackaged: false,
     exit: vi.fn(),
@@ -181,6 +185,8 @@ describe('browser process user-agent startup ordering', () => {
       mode: 'clean',
       userAgent: mocks.userAgent()
     })
-    expect(mocks.userAgent()).not.toMatch(/Electron|Package/)
+    // Both app-name words must be gone, not just the last: a single \S+ would have left "Orca".
+    expect(mocks.userAgent()).not.toMatch(/Electron/)
+    expect(mocks.userAgent()).not.toMatch(/Orca|Development/)
   })
 })
