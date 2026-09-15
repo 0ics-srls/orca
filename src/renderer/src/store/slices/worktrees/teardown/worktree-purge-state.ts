@@ -9,6 +9,7 @@ import { removeDeleteStatesForWorktreeIds } from './worktree-delete-state'
 import { removeWorktreeVisitEntriesForTargets } from '@/lib/worktree-visit-recency'
 import { forgetAmbiguousOwnerWarnings } from '../listing/worktree-owner-settings'
 import { forgetWorktreeSleepIntent } from '@/lib/worktree-sleep-intent'
+import { releaseBrowserPageMount } from '@/components/browser-pane/host-guest/browser-page-mount-admission'
 
 export function buildWorktreePurgeState(
   s: AppState,
@@ -28,6 +29,11 @@ export function buildWorktreePurgeState(
   forgetAmbiguousOwnerWarnings(worktreeIdSet)
 
   const doomed = collectWorktreePurgeDoomedIds(s, worktreeIdSet)
+  // Purge can replace browser maps without running closeBrowserTab; release the corresponding
+  // module-level admissions while the doomed ids are still available.
+  for (const pageId of doomed.doomedPageIds) {
+    releaseBrowserPageMount(pageId)
+  }
   const {
     omitByWorktree,
     omitWorkspaceLineageByWorktree,

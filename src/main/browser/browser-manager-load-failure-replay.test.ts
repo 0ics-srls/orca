@@ -137,15 +137,9 @@ describe('browserManager', () => {
       setUserAgent: vi.fn()
     })
     const handlers = (guest: ReturnType<typeof mk>) => ({
-      fail: guest.on.mock.calls.find(([e]) => e === 'did-fail-load')?.[1] as (
-        ...a: unknown[]
-      ) => void,
-      start: guest.on.mock.calls.find(([e]) => e === 'did-start-navigation')?.[1] as (
-        ...a: unknown[]
-      ) => void,
-      inPage: guest.on.mock.calls.find(([e]) => e === 'did-navigate-in-page')?.[1] as (
-        ...a: unknown[]
-      ) => void
+      fail: guest.on.mock.calls.find(([e]) => e === 'did-fail-load')?.[1],
+      start: guest.on.mock.calls.find(([e]) => e === 'did-start-navigation')?.[1],
+      inPage: guest.on.mock.calls.find(([e]) => e === 'did-navigate-in-page')?.[1]
     })
 
     // Standalone: the surviving document routes in place, so its own stale failure must go —
