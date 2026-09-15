@@ -13,7 +13,6 @@ import {
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
 import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
-import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
@@ -137,6 +136,7 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     recordedAt: NOW,
     trigger: 'quit',
     providerHandleRoot: HANDLE_ROOT,
+    awaitsUser: false,
     ...overrides
   }
 }
@@ -153,9 +153,6 @@ function resumableSet(input: {
     getRecord: () => record(input.chain === undefined ? {} : { chain: input.chain }),
     supportsRecord: () => true,
     journalTurn: () => newestStructuredAgentSessionTurn(items),
-    // Derived from the same items the real host reads, so adding a pending prompt to a fixture
-    // exercises this exactly as production would.
-    awaitsUser: () => projectStructuredAgentSessionStatus(items) === 'attention',
     latestPrompt: () => 'fix the auth bug',
     now: input.now ?? NOW
   })
@@ -178,6 +175,7 @@ describe('deriving what was working at teardown', () => {
         turnId: 'turn-1',
         recordedAt: NOW,
         trigger: 'quit',
+        awaitsUser: false,
         providerHandleRoot: HANDLE_ROOT
       }
     ])
@@ -335,7 +333,6 @@ describe('the resumable set', () => {
       getRecord: () => claudeRecord('5aed93d6-advanced-leaf'),
       supportsRecord: () => true,
       journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
-      awaitsUser: () => false,
       latestPrompt: () => '',
       now: NOW
     })
@@ -350,7 +347,6 @@ describe('the resumable set', () => {
         getRecord: () => claudeRecord(null, 'prov-session-2'),
         supportsRecord: () => true,
         journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
-        awaitsUser: () => false,
         latestPrompt: () => '',
         now: NOW
       })
@@ -371,16 +367,11 @@ describe('the resumable set', () => {
     )
   })
 
-  // Teardown already refuses to MINT a marker for this, but the set predicate needs the same clause
-  // or a marker that exists by any other route is offered. The projection still says `attention`
-  // here because it tests for a pending prompt before it looks at turn state.
-  it('refuses a marker for a chat that is blocked on the user', () => {
-    expect(
-      resumableSet({
-        markers: [marker()],
-        items: [turnItem('turn-1', 'interrupted'), pendingApproval()]
-      })
-    ).toEqual([])
+  // The flag is CAPTURED at teardown because teardown then cancels the prompt: by the time this
+  // predicate runs, the live journal no longer reports `attention`, so only the recorded value can
+  // still refuse. Re-deriving it here was inert for exactly the sessions it was written for.
+  it('refuses a marker recorded while the chat was blocked on the user', () => {
+    expect(resumableSet({ markers: [marker({ awaitsUser: true })] })).toEqual([])
   })
 
   it('offers a turn whose end the host could not verify', () => {
@@ -548,6 +539,7 @@ describe('the restart-resume surface', () => {
         turnId: 'turn-2',
         recordedAt: NOW,
         trigger: 'update',
+        awaitsUser: false,
         providerHandleRoot: HANDLE_ROOT
       }
     ])

@@ -9,8 +9,7 @@ import type { AgentSessionRecordStore } from '../../runtime/agent-session-record
 import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
 import {
   latestStructuredAgentSessionPrompt,
-  newestStructuredAgentSessionTurn,
-  projectStructuredAgentSessionStatus
+  newestStructuredAgentSessionTurn
 } from '../../../shared/structured-agent-session-projection'
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
@@ -77,11 +76,6 @@ export function createStructuredAgentSessionRestartResume(
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
       journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
-      // The projection tests for a pending approval or question BEFORE it looks at turn state, so
-      // it still reports `attention` after eviction has rewritten the turn to `interrupted`. That
-      // makes it the durable signal, and the same one teardown gates on.
-      awaitsUser: (sessionId) =>
-        projectStructuredAgentSessionStatus(itemsFor(sessionId)) === 'attention',
       latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
       now: surfaces.now(),
       leaseState

@@ -39,8 +39,6 @@ export type StructuredAgentSessionResumeSetInput = {
    *  not be read. Deliberately not the live-turn reader: eviction has already rewritten that turn
    *  to `interrupted` by the time this runs. */
   journalTurn: (sessionId: string) => AgentJournalTurnLifecycle | null
-  /** Whether the chat is blocked on the USER — a pending approval or question. */
-  awaitsUser: (sessionId: string) => boolean
   latestPrompt: (sessionId: string) => string
   now: number
   /**
@@ -86,10 +84,10 @@ export function structuredAgentSessionResumableSet(
     if (turn.state !== 'interrupted' && turn.state !== 'unverifiable') {
       continue
     }
-    // Symmetric with teardown, which already refuses to MINT a marker for a chat awaiting the user.
-    // Without the same clause here an injected or pre-existing marker would still be offered — the
-    // exact asymmetry the completed-turn case had.
-    if (input.awaitsUser(marker.sessionId)) {
+    // Read off the MARKER, never re-derived. Teardown cancels the pending prompt a few phases after
+    // it writes the marker, so by now the live journal no longer reports `attention` for exactly the
+    // sessions this refuses — which is what made the re-derived version inert.
+    if (marker.awaitsUser) {
       continue
     }
     candidates.push({

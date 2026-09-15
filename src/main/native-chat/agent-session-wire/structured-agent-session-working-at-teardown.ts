@@ -43,10 +43,14 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
       continue
     }
     const snapshot = session.journal.snapshot()
+    const status = projectStructuredAgentSessionStatus(snapshot.items, snapshot.submissions)
+    // Captured HERE, while it is still true. A later teardown phase cancels the pending prompt, so
+    // nothing downstream can re-derive this fact — the marker has to carry it.
+    const awaitsUser = status === 'attention'
     // The product's own classification, so the marker rule cannot disagree with what the UI calls
     // working. A turn blocked on an approval or a question projects as `attention`: the agent is
     // waiting on the USER, and that is not interrupted work to hand back.
-    if (projectStructuredAgentSessionStatus(snapshot.items, snapshot.submissions) !== 'working') {
+    if (status !== 'working') {
       continue
     }
     const turnId = activeStructuredAgentSessionTurnId(snapshot.items)
@@ -64,6 +68,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
       turnId,
       recordedAt: input.now,
       trigger: input.trigger,
+      awaitsUser,
       // Root, not key: the close path advances Claude's leaf moments after this runs, and a key
       // comparison would then refuse the session forever.
       providerHandleRoot: agentSessionProviderHandleRoot(head.handle)
