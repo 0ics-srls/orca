@@ -20,7 +20,6 @@ import {
   getBrowserIdentityModeStatus,
   setBrowserIdentityMode
 } from '../browser/browser-identity-mode-store'
-import { normalizeBrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 export function registerBrowserSessionProfileHandlers(): void {
   ipcMain.removeHandler('browser:session:listProfiles')
@@ -62,7 +61,14 @@ export function registerBrowserSessionProfileHandlers(): void {
     if (!isTrustedBrowserRenderer(event.sender)) {
       return null
     }
-    return setBrowserIdentityMode(normalizeBrowserUserAgentMode(mode))
+    // Why reject rather than coerce: the RPC door validates against z.enum(['clean', 'native'])
+    // and rejects. Coercing an unrecognized value to 'clean' made one concept answer an unknown
+    // value two different ways, and reported success for a mode that was quietly replaced —
+    // silently downgrading a future mode name the caller believed was honoured.
+    if (mode !== 'clean' && mode !== 'native') {
+      throw new Error(`Unsupported browser identity mode: ${String(mode)}`)
+    }
+    return setBrowserIdentityMode(mode)
   })
 
   ipcMain.handle(
