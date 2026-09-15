@@ -1,12 +1,16 @@
 /**
  * The exact sentences `orchestration.workerStart` puts in its mode receipt.
  *
- * These were unpinned when the decision moved to `main/agent-launch/agent-launch-mode`: the
- * existing suites assert `toContain` fragments ('terminal agent', 'cannot create'), and the CLI
- * suite asserts a receipt handed to it by a mock rather than one this code produced. Every one of
- * them stayed green against a deliberately corrupted vocabulary, so nothing was actually holding
- * the wording. A dispatch receipt is the only place a structured→terminal downgrade explains
- * itself, so the whole sentence is the contract, not a fragment of it.
+ * These were never pinned: the existing suites assert `toContain` fragments ('terminal agent',
+ * 'cannot create'), and the CLI suite asserts a receipt handed to it by a mock rather than one
+ * this code produced. Every one of them stayed green against a deliberately corrupted vocabulary,
+ * so nothing was actually holding the wording. A dispatch receipt is the only place a
+ * structured→terminal downgrade explains itself, so the whole sentence is the contract, not a
+ * fragment of it.
+ *
+ * This pins orchestration's own module, which this PR leaves in place. The neutral
+ * `agent-launch/agent-launch-mode` it introduces is a second copy of the same policy; nothing yet
+ * enforces that the two agree.
  */
 
 import { describe, expect, it } from 'vitest'
