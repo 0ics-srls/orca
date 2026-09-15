@@ -7,8 +7,15 @@ import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-co
 import { quickCommandsRead, quickCommandsWrite } from './mobile-session-read-operations'
 import {
   applyTerminalQuickCommandMutation,
+  parseNormalizedTerminalQuickCommands,
   type TerminalQuickCommandMutation
 } from '../terminal/quick-commands'
+
+function readQuickCommands(result: unknown): TerminalQuickCommand[] | null {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  const list = (result as { terminalQuickCommands?: unknown } | null)?.terminalQuickCommands
+  return parseNormalizedTerminalQuickCommands(list)
+}
 
 type Args = {
   client: RpcClient | null
@@ -127,7 +134,7 @@ export function useQuickCommands({ client, enabled }: Args): QuickCommandsState 
         }
         let next
         try {
-          next = quickCommandsRead.interpret(response)
+          next = readQuickCommands(quickCommandsRead.interpret(response))
         } catch (err) {
           setError(refusedRpcMessageOrFallback(err, 'Failed to load quick commands'))
           return
@@ -192,7 +199,7 @@ export function useQuickCommands({ client, enabled }: Args): QuickCommandsState 
           })
           let confirmed
           try {
-            confirmed = quickCommandsWrite.interpret(response)
+            confirmed = readQuickCommands(quickCommandsWrite.interpret(response))
           } catch (error) {
             throw new Error(refusedRpcMessageOrFallback(error, 'Failed to save quick command'))
           }

@@ -1,4 +1,8 @@
-import type { RuntimeNativeChatFileContext } from '../../../src/shared/runtime-types'
+import type {
+  RuntimeFileOpenResult,
+  RuntimeNativeChatFileContext,
+  RuntimeTerminalPathResolution
+} from '../../../src/shared/runtime-types'
 import { filesystemPathToFileUri } from '../../../src/shared/file-uri-path'
 import { createMobileFilePreviewHref } from '../files/mobile-file-preview-route'
 import { classifyMobileArtifact } from './mobile-artifact-kind'
@@ -89,7 +93,8 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
     reportOpenFailure(options)
     return
   }
-  const resolved = accepted.value
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  const resolved = accepted.value as RuntimeTerminalPathResolution
   if (!resolved.exists || resolved.isDirectory) {
     reportOpenFailure(options)
     return
@@ -178,7 +183,8 @@ async function openMobileFileTapAsync<T extends FileTapSessionTab>(
     reportOpenFailure(options)
     return
   }
-  if (!opened.value.opened) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  if (!(opened.value as RuntimeFileOpenResult).opened) {
     reportOpenFailure(options)
     return
   }

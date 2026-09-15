@@ -1,9 +1,8 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
-import { rpcReadUnchecked, rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
-import { parseNormalizedTerminalQuickCommands } from '../terminal/quick-commands'
-import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-command-types'
-import type { Terminal } from './mobile-session-route-types'
+import {
+  rpcUncheckedMemberReader,
+  rpcUncheckedPayloadReader
+} from '../transport/rpc-reader-payload'
 
 // What the session screen reads: the terminal inventory, the repo list two screens resolve a
 // workspace's connection through, the session tab snapshot, and the quick-command list.
@@ -19,24 +18,13 @@ export const sessionTerminalListRead = bindDeferredRpcOperation(
     method: 'terminal.list',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: (raw) =>
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-      rpcReadUnchecked('terminal-inventory', raw as { terminals: Terminal[] })
+    read: rpcUncheckedPayloadReader('terminal-inventory')
   })
 )
 
 export type MobileRuntimeRepoSummary = { id: string; connectionId?: string | null }
 
-const repoListReader: RpcCompatibleReader<
-  unknown,
-  'runtime-repo-list',
-  MobileRuntimeRepoSummary[]
-> = (raw) =>
-  rpcReadUnchecked(
-    'runtime-repo-list',
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-    (raw as { repos?: MobileRuntimeRepoSummary[] }).repos ?? []
-  )
+const repoListReader = rpcUncheckedMemberReader('runtime-repo-list', 'repos')
 
 /**
  * The repo list, read for one workspace's connection id. Two call sites want it and disagree about
@@ -103,14 +91,6 @@ export const sessionTabsListRead = bindDeferredRpcOperation(
   })
 )
 
-function fileInventoryPaths(raw: unknown): string[] {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-  const files = (raw as { files?: { relativePath?: string }[] }).files ?? []
-  return files
-    .map((file) => file.relativePath ?? '')
-    .filter((path): path is string => path.length > 0)
-}
-
 /**
  * The two ways native chat gets workspace paths. Both project the same `files[].relativePath` list,
  * and both refuse by leaving the suggestion list alone — the search's `method_not_found` is read
@@ -122,7 +102,7 @@ export const nativeChatFileSearchRead = bindDeferredRpcOperation(
     method: 'files.searchPaths',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: (raw) => rpcReadUnchecked('workspace-file-paths', fileInventoryPaths(raw))
+    read: rpcUncheckedMemberReader('workspace-files', 'files')
   })
 )
 
@@ -132,21 +112,11 @@ export const nativeChatFileInventoryRead = bindDeferredRpcOperation(
     method: 'files.list',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: (raw) => rpcReadUnchecked('workspace-file-paths', fileInventoryPaths(raw))
+    read: rpcUncheckedMemberReader('workspace-files', 'files')
   })
 )
 
-const quickCommandsReader: RpcCompatibleReader<
-  unknown,
-  'terminal-quick-commands',
-  TerminalQuickCommand[] | null
-> = (raw) =>
-  rpcReadUnchecked(
-    'terminal-quick-commands',
-    parseNormalizedTerminalQuickCommands(
-      (raw as { terminalQuickCommands?: unknown } | null)?.terminalQuickCommands
-    )
-  )
+const quickCommandsReader = rpcUncheckedPayloadReader('terminal-quick-commands')
 
 /**
  * The quick-command list, read the same way on load and on save: the host re-normalizes and returns

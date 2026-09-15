@@ -139,9 +139,10 @@ async function uploadMobileClipboardImageTransaction(
       startResponse.error.code === 'method_not_found' &&
       contentBase64.length <= MOBILE_CLIPBOARD_IMAGE_SINGLE_FRAME_FALLBACK_BASE64_CHARS
     ) {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
       return clipboardImageSaveAsTempFile.interpret(
         await clipboardImageSaveAsTempFile.request(client, { contentBase64, connectionId })
-      )
+      ) as string
     }
     throw new Error(startResponse.error.message)
   }
@@ -169,9 +170,10 @@ async function uploadMobileClipboardImageTransaction(
         })
       )
     }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
     return clipboardImageUploadCommit.interpret(
       await clipboardImageUploadCommit.request(client, { uploadId })
-    )
+    ) as string
   } catch (error) {
     // Why: failed mobile image sends create server-side upload state; abort so
     // the bounded upload slot is released immediately instead of waiting for TTL.

@@ -24,7 +24,14 @@ export function useMobileSessionDocumentReaders(scope: MobileSessionTabApplicati
           tabId: tab.id
         })
         if (response.ok) {
-          const result = markdownTabRead.interpret(response)
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          const result = markdownTabRead.interpret(response) as {
+            content: string
+            version: string
+            isDirty: boolean
+            editable?: boolean
+            readOnlyReason?: string
+          }
           setMarkdownDocs((prev) =>
             new Map(prev).set(tab.id, {
               status: 'ready',

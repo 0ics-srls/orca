@@ -1,5 +1,5 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import { rpcReadUnchecked, rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
+import { rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 
 // The chunked clipboard image upload: open a slot, append the base64 in chunks, commit, and abort
 // what a failure left behind. Every leg raises the host's own message, because the composer shows
@@ -31,17 +31,13 @@ export const clipboardImageUploadAppend = bindDeferredRpcOperation(
 )
 
 /** The commit and the legacy single-frame write both answer the host path as a bare string. */
-const uploadedPathReader = (raw: unknown) =>
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that.
-  rpcReadUnchecked('clipboard-image-path', raw as string)
-
 export const clipboardImageUploadCommit = bindDeferredRpcOperation(
   defineRpcOperation({
     name: 'clipboard.commit-image-upload',
     method: 'clipboard.commitImageUpload',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: uploadedPathReader
+    read: rpcUncheckedPayloadReader('clipboard-image-path')
   })
 )
 
@@ -51,7 +47,7 @@ export const clipboardImageSaveAsTempFile = bindDeferredRpcOperation(
     method: 'clipboard.saveImageAsTempFile',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: uploadedPathReader
+    read: rpcUncheckedPayloadReader('clipboard-image-path')
   })
 )
 

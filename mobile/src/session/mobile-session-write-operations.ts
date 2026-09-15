@@ -1,5 +1,4 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
 import {
   rpcReadUnchecked,
   rpcUncheckedMemberReader,
@@ -126,20 +125,6 @@ export const sessionWorktreeNotesRead = bindDeferredRpcOperation(
   })
 )
 
-export type MobileMarkdownTabDoc = {
-  content: string
-  version: string
-  isDirty: boolean
-  editable?: boolean
-  readOnlyReason?: string
-}
-
-const markdownTabReader: RpcCompatibleReader<unknown, 'markdown-tab-doc', MobileMarkdownTabDoc> = (
-  raw
-) =>
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-  rpcReadUnchecked('markdown-tab-doc', raw as MobileMarkdownTabDoc)
-
 /**
  * A markdown tab's document. The refusal is read raw before interpretation, because a headless host
  * answers `renderer_unavailable` and the screen falls back to the file on disk — a code no
@@ -151,7 +136,7 @@ export const markdownTabRead = bindDeferredRpcOperation(
     method: 'markdown.readTab',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: markdownTabReader
+    read: rpcUncheckedPayloadReader('markdown-tab-doc')
   })
 )
 
@@ -162,6 +147,6 @@ export const markdownTabSave = bindDeferredRpcOperation(
     method: 'markdown.saveTab',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: markdownTabReader
+    read: rpcUncheckedPayloadReader('markdown-tab-doc')
   })
 )

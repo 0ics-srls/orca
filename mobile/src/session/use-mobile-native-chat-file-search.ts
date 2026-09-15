@@ -6,6 +6,13 @@ import {
 } from './mobile-session-read-operations'
 import { rankSuggestions } from './mobile-native-chat-autocomplete'
 
+function extractPaths(files: unknown): string[] {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  return ((files as { relativePath?: string }[] | undefined) ?? [])
+    .map((file) => file.relativePath ?? '')
+    .filter((path): path is string => path.length > 0)
+}
+
 const FILE_SEARCH_DEBOUNCE_MS = 120
 const FILE_SEARCH_RESULT_LIMIT = 16
 const FILE_SEARCH_QUERY_CACHE_LIMIT = 20
@@ -92,8 +99,9 @@ export function useMobileNativeChatFileSearch(args: {
                   if (!accepted.accepted || generationRef.current !== generation) {
                     return null
                   }
-                  legacyPathsRef.current = accepted.value
-                  return accepted.value
+                  const paths = extractPaths(accepted.value)
+                  legacyPathsRef.current = paths
+                  return paths
                 })
                 .finally(() => {
                   if (legacyLoadRef.current === request && !legacyPathsRef.current) {
@@ -127,7 +135,7 @@ export function useMobileNativeChatFileSearch(args: {
           const accepted = nativeChatFileSearchRead.interpret(response)
           if (accepted.accepted) {
             searchSupportedRef.current = true
-            applyPaths(accepted.value)
+            applyPaths(extractPaths(accepted.value))
             return
           }
           // Why the raw refusal: `method_not_found` is what makes the composer fall back to the

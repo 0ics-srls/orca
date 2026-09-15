@@ -1,21 +1,8 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import type { RpcCompatibleReader } from '../transport/rpc-operation-contract'
-import { rpcReadUnchecked, rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
-import type {
-  RuntimeFileOpenResult,
-  RuntimeTerminalPathResolution
-} from '../../../src/shared/runtime-types'
+import { rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 
 // Opening things from the session screen: a tapped terminal path, a new markdown note or browser
 // tab, the legacy-Codex resume repin, and the structured agent chat.
-
-const terminalPathResolutionReader: RpcCompatibleReader<
-  unknown,
-  'terminal-path-resolution',
-  RuntimeTerminalPathResolution
-> = (raw) =>
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-  rpcReadUnchecked('terminal-path-resolution', raw as RuntimeTerminalPathResolution)
 
 /**
  * A path a terminal printed, resolved to something openable.
@@ -34,7 +21,7 @@ export const fileTapPathResolve = bindDeferredRpcOperation(
     method: 'files.resolveTerminalPath',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: terminalPathResolutionReader
+    read: rpcUncheckedPayloadReader('tapped-path-resolution')
   })
 )
 
@@ -50,9 +37,7 @@ export const fileTapOpenRun = bindDeferredRpcOperation(
     method: 'files.open',
     acceptance: 'success-result-or-skip',
     barrier: 'after-caller-barrier',
-    read: (raw) =>
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader preserves that, including the property-read throw on a null result.
-      rpcReadUnchecked('file-open-result', raw as RuntimeFileOpenResult)
+    read: rpcUncheckedPayloadReader('tapped-file-opened')
   })
 )
 

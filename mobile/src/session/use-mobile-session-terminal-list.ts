@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect, useMemo } from 'react'
 import { sessionTerminalListRead } from './mobile-session-read-operations'
+import type { Terminal } from './mobile-session-route-types'
 import { mergeTerminalListWithKnownRecords, terminalRecordsEqual } from './mobile-terminal-records'
 import {
   createTerminalPrunePredicate,
@@ -62,7 +63,8 @@ export function useMobileSessionTerminalList(scope: MobileSessionTerminalStreamD
             if (!isCurrent() || !response.accepted) {
               return false
             }
-            const result = response.value
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+            const result = response.value as { terminals: Terminal[] }
             if (result.terminals.length === 0 && !allowsEmpty()) {
               return true
             }

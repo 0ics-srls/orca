@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import { nativeChatRepoListRead } from './mobile-session-read-operations'
+
+type RepoSummary = { id: string; connectionId?: string | null }
 import { isFloatingWorkspaceWorktreeId } from './floating-workspace'
 import { isMobileNativeChatTranscriptReadable } from './mobile-native-chat-eligibility'
 import { getRepoIdFromMobileWorktreeId } from './mobile-session-route-helpers'
@@ -34,7 +36,8 @@ export function useMobileNativeChatReadability(
           return
         }
         const accepted = nativeChatRepoListRead.interpret(response)
-        const repos = accepted.accepted ? accepted.value : []
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+        const repos = accepted.accepted ? ((accepted.value as RepoSummary[]) ?? []) : []
         const repoId = getRepoIdFromMobileWorktreeId(worktreeId)
         const repo = repos.find((candidate) => candidate.id === repoId)
         setState({

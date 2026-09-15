@@ -1,5 +1,6 @@
 import { newTabSettingsRead } from '../transport/settings-read-operations'
 import {
+  type MobileRuntimeRepoSummary,
   newTabRepoListRead,
   preflightDetectAgentsRead,
   preflightDetectRemoteAgentsRead
@@ -56,7 +57,8 @@ async function loadDetectedAgents(
     }
   }
   const repoResponse = await newTabRepoListRead.request(client)
-  const repos = newTabRepoListRead.interpret(repoResponse)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+  const repos = (newTabRepoListRead.interpret(repoResponse) as MobileRuntimeRepoSummary[]) ?? []
   const repoId = getRepoIdFromMobileWorktreeId(worktreeId)
   const repo = repos.find((candidate) => candidate.id === repoId)
   if (!repo) {
