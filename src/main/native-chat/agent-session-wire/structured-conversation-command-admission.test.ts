@@ -1,23 +1,47 @@
 import { describe, expect, it } from 'vitest'
+import type { AgentJournalSubmission } from '../../../shared/agent-session-journal-types'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionBackgroundTaskState } from '../../../shared/agent-session-wire'
+import { DISPATCH_DOUBT_HOST_RESTARTED } from '../agent-session-journal/journal-dispatch-doubt-reasons'
 import { conversationCommandBlocked } from './structured-conversation-command-admission'
 import type { AgentSessionTurnContext } from './structured-agent-session-turns'
 
+const CURRENT_FENCE = 4
+
 function contextWith(
-  backgroundTasks: AgentSessionBackgroundTaskState | null
+  backgroundTasks: AgentSessionBackgroundTaskState | null,
+  submissions: readonly AgentJournalSubmission[] = []
 ): AgentSessionTurnContext {
   return {
     sessionId: 'session-1',
+    fence: CURRENT_FENCE,
     journal: {
       snapshot: () => ({ items: [] }),
-      submissions: () => []
+      submissions: () => submissions
     },
     adapter: { backgroundTaskState: () => backgroundTasks }
   } as unknown as AgentSessionTurnContext
 }
 
+function submission(
+  dispatchState: AgentJournalSubmission['dispatchState'],
+  overrides: Partial<AgentJournalSubmission> = {}
+): AgentJournalSubmission {
+  return {
+    clientMessageId: 'm1',
+    fence: CURRENT_FENCE,
+    payloadFingerprint: 'm1',
+    dispatchState,
+    providerItemId: null,
+    reason: null,
+    submittedAt: 1,
+    resolvedAt: dispatchState === 'pending' ? null : 2,
+    ...overrides
+  }
+}
+
 const RECORD = { lease: {} } as unknown as AgentSessionRecord
+const UNSETTLED_REFUSAL = 'Resolve pending or unconfirmed messages before using this command.'
 
 describe('conversationCommandBlocked background tasks', () => {
   it('admits the command when nothing is being monitored', () => {
@@ -66,5 +90,44 @@ describe('conversationCommandBlocked background tasks', () => {
     expect(conversationCommandBlocked(ctx, RECORD)).toBe(
       'Wait for the current turn to finish before using this command.'
     )
+  })
+})
+
+describe('conversationCommandBlocked unsettled submissions', () => {
+  it('admits the command on a recovered unknown nothing can ever settle', () => {
+    // Crash recovery skips rows it already marked, the restart reconciler only
+    // narrows accepted outcomes, and Retry drops the outbox entry without
+    // touching the journal. Refusing here asks for a step that does not exist.
+    const ctx = contextWith(null, [submission('unknown', { recovered: true })])
+    expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
+  })
+
+  it('admits the command on a legacy host that publishes the reason without the marker', () => {
+    const ctx = contextWith(null, [
+      submission('unknown', { reason: DISPATCH_DOUBT_HOST_RESTARTED })
+    ])
+    expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
+  })
+
+  it('admits the command on a dead generation the current fence has passed', () => {
+    const ctx = contextWith(null, [submission('pending', { fence: CURRENT_FENCE - 1 })])
+    expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
+  })
+
+  it('still refuses while this generation owes an answer', () => {
+    expect(conversationCommandBlocked(contextWith(null, [submission('pending')]), RECORD)).toBe(
+      UNSETTLED_REFUSAL
+    )
+    expect(conversationCommandBlocked(contextWith(null, [submission('unknown')]), RECORD)).toBe(
+      UNSETTLED_REFUSAL
+    )
+  })
+
+  it('admits the command once every submission is terminally settled', () => {
+    const ctx = contextWith(null, [
+      submission('accepted', { clientMessageId: 'm1' }),
+      submission('rejected', { clientMessageId: 'm2' })
+    ])
+    expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
   })
 })
