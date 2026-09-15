@@ -111,6 +111,40 @@ describe('turn history presentation', () => {
     expect(screen.getByText('main')).toBeInTheDocument()
   })
 
+  it('renders one resolved row when Claude journals both the call and receipt', () => {
+    const call = item(
+      'ask-call',
+      {
+        kind: 'tool-call',
+        name: 'AskUserQuestion',
+        input: { questions: [{ question: 'Which branch?' }] },
+        state: 'completed',
+        output: { head: 'main', byteLength: 4, truncated: false, digest: 'answer' }
+      },
+      3
+    )
+    const question = item(
+      'question-receipt',
+      {
+        kind: 'question',
+        question: 'Which branch?',
+        options: [{ id: 'main', label: 'main' }],
+        resolution: {
+          state: 'resolved',
+          selectedOptionId: 'main',
+          resolvedBy: 'desktop',
+          resolvedAt: 4000
+        }
+      },
+      4
+    )
+
+    render(view([user, call, question]))
+
+    expect(screen.getAllByText('Asked:')).toHaveLength(1)
+    expect(screen.queryByText(/AskUserQuestion/)).toBeNull()
+  })
+
   it('groups pending Codex questions then narrows the awaiting count after one answer', () => {
     const first = item(
       'q1',
