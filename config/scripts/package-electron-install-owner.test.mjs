@@ -9,17 +9,27 @@ const packageJson = JSON.parse(readProject('package.json'))
 const pnpmWorkspace = parse(readProject('pnpm-workspace.yaml'))
 
 const OWNED_ELECTRON_REBUILD = 'node config/scripts/rebuild-native-deps.mjs'
-// Why exact commands and not /electron/i: the owner's own path has no "electron" in it, so a
-// keyword check waves a duplicated rebuild through -- the case this contract is named for --
-// while rejecting any later step that merely mentions Electron (#20787).
+// Why exact tokens and not /electron/i or a substring: the owner's own path has no "electron"
+// in it, so a keyword check waves a duplicated rebuild through -- the case this contract is
+// named for (#20787). Substring matching has the opposite fault: `install-app-deps` would also
+// reject a `check-install-app-deps-version.mjs` that installs nothing. `rebuild:electron` is
+// package.json's alias for the owned script, so running it is the same takeover.
 const ELECTRON_INSTALL_COMMANDS = [
   OWNED_ELECTRON_REBUILD,
+  'config/scripts/rebuild-native-deps.mjs',
+  'rebuild:electron',
   'electron-rebuild',
-  'electron-builder install-app-deps',
+  'electron-builder',
   'install-app-deps'
 ]
-const takesOverElectronInstall = (step) =>
-  ELECTRON_INSTALL_COMMANDS.some((command) => step.includes(command))
+const tokenize = (step) => step.split(/[\s]+/).flatMap((word) => [word, ...word.split(/[@]/)])
+const takesOverElectronInstall = (step) => {
+  if (step.includes(OWNED_ELECTRON_REBUILD)) {
+    return true
+  }
+  const tokens = new Set(tokenize(step))
+  return ELECTRON_INSTALL_COMMANDS.some((command) => tokens.has(command))
+}
 
 describe('Electron binary install ownership', () => {
   it('keeps root postinstall as the single Electron binary install owner', () => {
@@ -42,5 +52,9 @@ describe('Electron binary install ownership', () => {
     expect(takesOverElectronInstall('npx electron-builder install-app-deps')).toBe(true)
     expect(takesOverElectronInstall('node config/scripts/sync-anti-slop-plugin.mjs')).toBe(false)
     expect(takesOverElectronInstall('node config/scripts/check-electron-version.mjs')).toBe(false)
+    expect(takesOverElectronInstall('pnpm run rebuild:electron')).toBe(true)
+    expect(takesOverElectronInstall('node config/scripts/check-install-app-deps-version.mjs')).toBe(
+      false
+    )
   })
 })
