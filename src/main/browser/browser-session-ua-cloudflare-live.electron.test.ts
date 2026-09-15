@@ -231,6 +231,7 @@ const { installBrowserSessionUserAgentPolicy } = require(${JSON.stringify(option
 const arm = ${JSON.stringify(options.arm)}
 const site = ${JSON.stringify(options.site)}
 app.setName('OrcaCloudflareLiveProbe')
+const nativeUserAgent = app.userAgentFallback
 const clean = userAgent => userAgent.replace(/\s+Electron\/\S+/, '').replace(/(\)\s+)\S+\s+(Chrome\/)/, '$1$2')
 let identity
 if (arm === 'branch') identity = processIdentity.initializeBrowserProcessUserAgent('clean')
@@ -245,7 +246,6 @@ async function run() {
   await app.whenReady()
   await waitForBarrier()
   const sess = session.fromPartition('persist:cloudflare-live-probe')
-  const nativeUserAgent = sess.getUserAgent()
   const cleanUserAgent = identity?.userAgent ?? clean(nativeUserAgent)
   const firefoxUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0'
   if (arm === 'origin-main') sess.setUserAgent(cleanUserAgent)
