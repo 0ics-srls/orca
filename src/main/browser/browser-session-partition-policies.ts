@@ -96,7 +96,11 @@ function resolvePermissionNoticeUrl(
 export type BrowserPartitionDownloadPolicy = 'route' | 'deny'
 export type BrowserPartitionPermissionPolicy = 'browser' | 'deny'
 
-export function installBrowserSessionPartitionPolicies(
+// Why async despite no await: the user agent policy is configured before the first suspension, and
+// getBrowserProcessUserAgentIdentity throws when the process identity was never initialized. Callers
+// report failure through the promise (`void install(...).catch(...)`), so a synchronous throw would
+// escape every one of them and gate browser-session startup on bookkeeping that is allowed to fail.
+export async function installBrowserSessionPartitionPolicies(
   profile: BrowserSessionProfile,
   options: {
     downloads?: BrowserPartitionDownloadPolicy
