@@ -12,6 +12,9 @@ import {
 import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
 
+/** Keep an unresolved delivery fence long enough for the provider input pump to settle. */
+export const CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS = 3_000
+
 type CancelInput = Parameters<StructuredAgentSessionAdapter['cancelTurn']>[0]
 type AnswerInput = Parameters<StructuredAgentSessionAdapter['answerPrompt']>[0]
 
@@ -45,6 +48,15 @@ function requireSession(sessions: Map<string, ClaudeSession>, sessionId: string)
     throw new Error(`no live claude stream-json session for ${sessionId}`)
   }
   return session
+}
+
+function waitForClaudeDispatchAdmission(
+  timeoutMs = CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS
+): Promise<void> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(resolve, timeoutMs)
+    timer.unref?.()
+  })
 }
 
 export async function cancelClaudeStructuredTurn(input: {
@@ -94,9 +106,17 @@ export async function cancelClaudeStructuredTurn(input: {
         ![...session.dispatchWaiters, ...session.retiredDispatchWaiters].some(
           (waiter) => waiter.dispatchSequence === session.dispatchSequence
         )
+  // Prompt cancellation has a separate callback-settlement contract, so only a provider with
+  // cancelQueued can release its uncertain queued send. Ordinary Stop gets a bounded escape below.
   const dispatchAdmissionAllowsCancellation = (): boolean =>
     dispatchAdmissionIsCurrent() ||
     (Boolean(prompt) && supportsClaudeQueuedInterruptCancellation(session))
+  const compactionOwnsTurn = (): boolean => compactions.ownsTurn(request.sessionId, request.turnId)
+  let dispatchAdmissionExpired = false
+  if (!prompt && !compactionOwnsTurn() && !dispatchAdmissionAllowsCancellation()) {
+    await waitForClaudeDispatchAdmission()
+    dispatchAdmissionExpired = true
+  }
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
     session.fence === request.fence &&
@@ -104,9 +124,10 @@ export async function cancelClaudeStructuredTurn(input: {
     (claim && prompt
       ? ownsRequestedTurn() &&
         session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId) &&
-        dispatchAdmissionAllowsCancellation()
-      : compactions.ownsTurn(request.sessionId, request.turnId) ||
-        (ownsRequestedTurn() && dispatchAdmissionAllowsCancellation()))
+        (dispatchAdmissionAllowsCancellation() || dispatchAdmissionExpired)
+      : compactionOwnsTurn() ||
+        (ownsRequestedTurn() &&
+          (dispatchAdmissionAllowsCancellation() || dispatchAdmissionExpired)))
   let interruptConfirmed = false
   try {
     const result = await cancelClaudeTurn(

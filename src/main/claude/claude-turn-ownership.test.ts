@@ -6,6 +6,7 @@ import type { AgentJournalItemBody } from '../../shared/agent-session-journal-ty
 import { readAgentJournalTurn } from '../../shared/agent-session-turn-record'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
+import { CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS } from './claude-structured-prompt-ownership'
 import {
   PROVIDER_SESSION_ID,
   USER_MESSAGE,
@@ -130,40 +131,51 @@ describe('Claude turn ownership', () => {
   })
 
   it('keeps the prior dispatch fence after an unknown later send', async () => {
-    const claude = fakeClaude({ replayUuid: 'echo-turn' })
-    const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+    vi.useFakeTimers()
+    try {
+      const claude = fakeClaude({ replayUuid: 'echo-turn' })
+      const { adapter, bodies, connection } = await acquiredWithJournal(claude)
 
-    await adapter.dispatch({
-      sessionId: 'session-1',
-      clientMessageId: 'client-1',
-      body: USER_MESSAGE,
-      fence: 7
-    })
-    expect(runningTurnId(bodies)).toBe('echo-turn')
-    const sendFirst = connection.send
-    connection.send = async (message) => {
-      if (connection.sent.length > 0) {
-        throw new Error('input pump stopped')
-      }
-      await sendFirst(message)
-    }
-
-    await expect(
-      adapter.dispatch({
+      await adapter.dispatch({
         sessionId: 'session-1',
-        clientMessageId: 'client-2',
+        clientMessageId: 'client-1',
         body: USER_MESSAGE,
         fence: 7
       })
-    ).resolves.toMatchObject({ state: 'unknown' })
+      expect(runningTurnId(bodies)).toBe('echo-turn')
+      const sendFirst = connection.send
+      connection.send = async (message) => {
+        if (connection.sent.length > 0) {
+          throw new Error('input pump stopped')
+        }
+        await sendFirst(message)
+      }
 
-    await expect(
-      adapter.cancelTurn({ sessionId: 'session-1', turnId: 'echo-turn', fence: 7 })
-    ).resolves.toEqual({ cancelled: false })
-    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+      await expect(
+        adapter.dispatch({
+          sessionId: 'session-1',
+          clientMessageId: 'client-2',
+          body: USER_MESSAGE,
+          fence: 7
+        })
+      ).resolves.toMatchObject({ state: 'unknown' })
+
+      const cancellation = adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'echo-turn',
+        fence: 7
+      })
+      await vi.advanceTimersByTimeAsync(CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS - 1)
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(cancellation).resolves.toEqual({ cancelled: true })
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
-  it('keeps ordinary Stop fenced when the latest journal submission is unresolved', async () => {
+  it('lets a queued-cancel provider release an unresolved ordinary Stop', async () => {
     const claude = fakeClaude({
       replayUuid: 'echo-turn',
       capabilities: ['interrupt_cancel_queued_v1']
@@ -185,25 +197,63 @@ describe('Claude turn ownership', () => {
         fence: 7,
         dispatchStatus: { state: 'unknown', recovered: false }
       })
-    ).resolves.toEqual({ cancelled: false })
-    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+    ).resolves.toEqual({ cancelled: true })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
+  })
+
+  it('lets ordinary Stop proceed after the unresolved delivery fence expires', async () => {
+    vi.useFakeTimers()
+    try {
+      const claude = fakeClaude({ replayUuid: 'echo-turn' })
+      const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+
+      await adapter.dispatch({
+        sessionId: 'session-1',
+        clientMessageId: 'client-1',
+        body: USER_MESSAGE,
+        fence: 7
+      })
+      expect(runningTurnId(bodies)).toBe('echo-turn')
+
+      const cancellation = adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'echo-turn',
+        fence: 7,
+        dispatchStatus: { state: 'unknown', recovered: false }
+      })
+      await vi.advanceTimersByTimeAsync(CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS - 1)
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(cancellation).resolves.toEqual({ cancelled: true })
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('honors an unresolved journal submission before the first in-memory dispatch', async () => {
-    const claude = fakeClaude({ replayUuid: null })
-    const { adapter, bodies, connection } = await acquiredWithJournal(claude)
-    providerOutput(connection, 'provider-turn')
-    expect(runningTurnId(bodies)).toBe('provider-turn')
+    vi.useFakeTimers()
+    try {
+      const claude = fakeClaude({ replayUuid: null })
+      const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+      providerOutput(connection, 'provider-turn')
+      expect(runningTurnId(bodies)).toBe('provider-turn')
 
-    await expect(
-      adapter.cancelTurn({
+      const cancellation = adapter.cancelTurn({
         sessionId: 'session-1',
         turnId: 'provider-turn',
         fence: 7,
         dispatchStatus: { state: 'pending', recovered: false }
       })
-    ).resolves.toEqual({ cancelled: false })
-    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+      await vi.advanceTimersByTimeAsync(CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS - 1)
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+      await vi.advanceTimersByTimeAsync(1)
+      await expect(cancellation).resolves.toEqual({ cancelled: true })
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('still stops an echo-opened turn', async () => {
