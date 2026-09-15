@@ -12,10 +12,18 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
 import type { RpcContext } from '../core'
 
-const createStructuredSession = vi.fn(async (_args: Record<string, unknown>) => ({
-  ok: true as const,
-  value: { sessionId: 'sess-1' }
-}))
+/** The real `createStructuredAgentSessionForWorktree` answers ok-or-refusal. The stub used to
+ *  declare only the ok arm, which made the refusal-downgrade path unmodellable. */
+type StructuredCreateReply =
+  | { ok: true; value: { sessionId: string } }
+  | { ok: false; refusal: { code: string; message: string } }
+
+const createStructuredSession = vi.fn(
+  async (_args: Record<string, unknown>): Promise<StructuredCreateReply> => ({
+    ok: true,
+    value: { sessionId: 'sess-1' }
+  })
+)
 
 vi.mock('./structured-agent-session-create', () => ({
   createStructuredAgentSessionForWorktree: (args: Record<string, unknown>) =>
@@ -42,6 +50,8 @@ function runtimeStub(
     }
     /** What `createManagedWorktree` reports when the workspace exists but is incomplete. */
     createWarning?: string
+    /** What `createTerminal` reports when the surface itself came up degraded. */
+    terminalWarning?: string
   } = {}
 ) {
   const worktreeCreateResults = new Map<string, Promise<unknown>>()
@@ -78,7 +88,10 @@ function runtimeStub(
       ...(options.setupReceipt ? { setupReceipt: options.setupReceipt } : {}),
       ...(options.createWarning ? { warning: options.createWarning } : {})
     })),
-    createTerminal: vi.fn(async () => ({ handle: 'term_1' })),
+    createTerminal: vi.fn(async () => ({
+      handle: 'term_1',
+      ...(options.terminalWarning ? { warning: options.terminalWarning } : {})
+    })),
     showTerminal: vi.fn(async (handle: string) => ({ handle, worktreeId: 'wt-7' })),
     isTerminalRunningAgent: vi.fn(async () => true),
     showManagedTerminalWorkspace: vi.fn(async (selector: string) => ({
@@ -450,15 +463,39 @@ describe('a create that succeeded but is incomplete', () => {
   it('carries a create warning onto an agent-first terminal launch', async () => {
     // settings: {} leaves the structured preference off, so the launch is agent-first and returns
     // on the cached startup handle - the early path that also had to learn to carry a warning.
+    // Wording matters: the producer cannot emit "startup terminal failed" ALONGSIDE a handle —
+    // `orca-runtime-create-managed-worktree.ts:283` gates startupTerminal on the spawn having
+    // succeeded. An untracked-copy warning is the one that genuinely co-occurs with a handle.
     const runtime = runtimeStub({
       settings: {},
-      createWarning: 'Failed to create the startup terminal: no pty'
+      createWarning: 'Could not copy untracked files into the new workspace.'
     })
 
     const result = await launch(CREATE_LAUNCH, runtime)
 
     expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_agent_first' })
-    expect(result.warning).toBe('Failed to create the startup terminal: no pty')
+    expect(result.warning).toBe('Could not copy untracked files into the new workspace.')
+  })
+
+  it('combines a create warning with a surface warning instead of dropping one', async () => {
+    // Both are reachable together: the create warns about the untracked copy, the structured
+    // create is then definitively refused, and the terminal it downgrades to warns as well.
+    // `??` kept the first and lost the second with nothing saying so.
+    const runtime = runtimeStub({
+      createWarning: 'Could not copy untracked files into the new workspace.',
+      terminalWarning: 'No pty was available for the agent.'
+    })
+    createStructuredSession.mockResolvedValueOnce({
+      ok: false,
+      refusal: { code: 'structured_agent_session_unsupported', message: 'no structured host' }
+    })
+
+    const result = await launch(CREATE_LAUNCH, runtime)
+
+    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_1' })
+    expect(result.warning).toBe(
+      'Could not copy untracked files into the new workspace. Also no pty was available for the agent.'
+    )
   })
 
   it('reports no warning when the create had none', async () => {

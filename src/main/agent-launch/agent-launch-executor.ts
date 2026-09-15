@@ -172,9 +172,17 @@ export async function executeAgentLaunch(
         ...(terminal.warning ? { warning: terminal.warning } : {})
       }))
   }
-  // A create warning outranks a surface one: it is about the workspace itself. The two do not
-  // co-occur today — an agent-first create that warned already returned above.
-  const warning = placed.warning ?? created.warning
+  // Both CAN be set, so neither may be dropped. The create warns precisely when it produced no
+  // startup terminal — `didSpawnStartup` stays false when that spawn throws — and that is the same
+  // condition which skips the early return above, so the launch goes on to build a second surface,
+  // and that one can warn too. The other path is an untracked-copy warning followed by a structured
+  // refusal downgrading to a terminal that warns. `??` kept the first and lost the second silently.
+  //
+  // KNOWN GAP, deliberately not fixed here: a create warning about a FAILED startup terminal is
+  // stale once the launch recovers by building a working one, so the user can be told the agent did
+  // not start while looking at it. Telling those apart needs `createManagedWorktree` to stop
+  // multiplexing "couldn't copy untracked files" and "startup terminal failed" into one string.
+  const warning = combineLaunchWarnings(placed.warning, created.warning)
   return {
     outcome: created.outcome,
     worktreeId: placed.worktreeId,
@@ -245,6 +253,23 @@ async function createSurface(
     outcome: { kind: 'terminal', handle: terminal.handle },
     ...(terminal.warning ? { warning: terminal.warning } : {})
   }
+}
+
+/**
+ * Two warnings, both true, neither droppable.
+ *
+ * Mirrors how the create combines its own failures — `appendFailure` in
+ * runtime-local-worktree-terminal-startup.ts, and the startup-terminal catch in
+ * runtime-remote-managed-worktree-create.ts — which append rather than replace.
+ */
+function combineLaunchWarnings(
+  create: string | undefined,
+  surface: string | undefined
+): string | undefined {
+  if (!create || !surface) {
+    return create ?? surface
+  }
+  return `${create} Also ${surface[0].toLowerCase()}${surface.slice(1)}`
 }
 
 function isStructuredProvider(agent: TuiAgent): agent is 'claude' | 'codex' {
