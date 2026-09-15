@@ -977,6 +977,9 @@
         "preview": {
           "pairedOutsideWorktree": "Files outside the workspace can't be previewed on a paired server yet."
         }
+      },
+      "clipboardWriteFailure": {
+        "tooLarge": "The text is too large to copy."
       }
     },
     "hooks": {
@@ -5799,6 +5802,11 @@
               "unstoppedPtyLive": "This workspace still has running terminals, so Orca stopped before deleting any files. Force Delete will kill them and discard any uncommitted work they hold.",
               "runningAgentSession": "Orca could not confirm every agent session in this workspace has closed, so it stopped before deleting any files. Use Force Delete to remove it anyway.",
               "runningAgentSessionLive": "This workspace still has running agent sessions that Orca could not close, so it stopped before deleting any files. Force Delete will discard any work they hold."
+            },
+            "failure": {
+              "archive": {
+                "waiver": "Delete Anyway"
+              }
             }
           }
         },
@@ -10950,7 +10958,8 @@
           "orcaCloudSignOut": "Sign out",
           "orcaCloudConnect": "Connect profile",
           "orcaCloudRefresh": "Refresh status",
-          "orcaCloudNotConfigured": "Set ORCA_CLOUD_API_URL and ORCA_CLOUD_CLIENT_ID to preview Orca Cloud sign-in in this dev build."
+          "orcaCloudNotConfigured": "Set ORCA_CLOUD_API_URL and ORCA_CLOUD_CLIENT_ID to preview Orca Cloud sign-in in this dev build.",
+          "deleteAnywayClicked": "Delete Anyway clicked"
         },
         "EphemeralVmRecipeRow": {
           "useInWorkspace": "Use in workspace"
@@ -11622,7 +11631,12 @@
           "label": "Microphone",
           "description": "Input device used for voice dictation. System default follows the OS microphone setting.",
           "accessHint": "Allow microphone access to list input devices.",
-          "allowAccess": "Allow access"
+          "allowAccess": "Allow access",
+          "noMicrophoneFound": "No microphone was found. Connect one, then try again.",
+          "openFailedDetail": "Could not open the microphone. {{value0}}",
+          "openFailed": "Could not open the microphone.",
+          "openedSystemSettings": "Opened macOS Privacy & Security. Grant microphone access, then try again.",
+          "permissionDenied": "Microphone access is blocked. Grant it in your system settings, then try again."
         },
         "TerminalTccAttributionNotice": {
           "body": "The terminal daemon was started by an Orca install that no longer exists, so macOS can’t attribute its commands to Orca — Accessibility and Automation grants are silently ignored (osascript fails with error -25211). Restarting the daemon fixes this; running terminal sessions will close.",
@@ -12385,7 +12399,8 @@
             "entryUnstageFailed": "Failed to unstage “{{value0}}”",
             "entryDiscardFailed": "Failed to discard “{{value0}}”",
             "entryDeleteFailed": "Failed to delete “{{value0}}”",
-            "entryFailedInWorkspace": "{{value0}} in {{value1}}"
+            "entryFailedInWorkspace": "{{value0}} in {{value1}}",
+            "diffCommentNotesCopyFailed": "Failed to copy notes"
           },
           "SourceControlAgentActionDialog": {
             "8e856842d1": "Could not start the selected agent.",
