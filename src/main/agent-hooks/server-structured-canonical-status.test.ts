@@ -147,9 +147,11 @@ describe('structured canonical production slice', () => {
 
   it('rejects missing or mismatched structured scope without fabricating a parent', () => {
     const server = new AgentHookServer()
-    expect(() => Reflect.apply(server.ingestStructuredStatus, server, [summary()])).toThrow(
-      'trusted owner subject'
-    )
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: models a caller at an untyped boundary (e.g. IPC) invoking with fewer arguments than the method declares; no typed call expresses a missing required parameter.
+    const ingestMissingSubject = server.ingestStructuredStatus.bind(server) as unknown as (
+      summary: AgentSessionStatusSummary
+    ) => void
+    expect(() => ingestMissingSubject(summary())).toThrow('trusted owner subject')
     expect(() =>
       server.ingestStructuredStatus({ ...summary(), workspaceId: 'other' }, SUBJECT)
     ).toThrow('trusted owner subject')

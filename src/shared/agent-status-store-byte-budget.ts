@@ -1,13 +1,28 @@
+import type { AgentChildWorkAliasRecord } from './agent-status-child-work-alias'
+import type { AgentChildWorkRecord } from './agent-status-child-work'
 import {
   AGENT_STATUS_STORE_LIMITS,
-  AGENT_STATUS_STORE_SNAPSHOT_VERSION
+  AGENT_STATUS_STORE_SNAPSHOT_VERSION,
+  type AgentStatusFactRecord,
+  type AgentStatusStoreSnapshot,
+  type AgentStatusTombstoneRecord
 } from './agent-status-store-contract'
+import type { AgentStatusParentRecord } from './agent-status-store-parent'
 import type { AgentStatusStoreState } from './agent-status-store-state'
 import { measureUtf8ByteLength } from './utf8-byte-limits'
 
-const recordBytes = new WeakMap<object, number>()
+/** Either the snapshot header or a single owner/record measured while accumulating the budget. */
+type AgentStatusStoreByteBudgetRecord =
+  | AgentStatusStoreSnapshot
+  | AgentStatusParentRecord
+  | AgentChildWorkRecord
+  | AgentChildWorkAliasRecord
+  | AgentStatusFactRecord
+  | AgentStatusTombstoneRecord
 
-function serializedBytes(record: object): number {
+const recordBytes = new WeakMap<AgentStatusStoreByteBudgetRecord, number>()
+
+function serializedBytes(record: AgentStatusStoreByteBudgetRecord): number {
   const cached = recordBytes.get(record)
   if (cached !== undefined) {
     return cached
