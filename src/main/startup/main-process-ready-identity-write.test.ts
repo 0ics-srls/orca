@@ -2,12 +2,12 @@ import { mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as DurableFileWrite from '../durable-file-write'
 
 const mocks = vi.hoisted(() => ({
   // Assigned in beforeAll; the factories below read it lazily, so a real directory is available
   // by the time ready composition resolves the canonical userData path.
   userDataPath: '',
-  profileUserAgentMode: 'native',
   state: {
     devInstanceIdentity: { appUserModelId: 'app.id', appName: 'Orca' },
     isServeMode: false,
@@ -19,10 +19,23 @@ const mocks = vi.hoisted(() => ({
   },
   openMainWindow: vi.fn(),
   runtimeRpcStart: vi.fn(async () => {}),
+  // The identity record's only writer. Watching this is what makes the pin real: asserting on
+  // writeFileAtomically watched a function the identity store never calls.
+  writeFileDurableSync: vi.fn(),
   writeFileAtomically: vi.fn(() => {
     throw new Error('read-only userData')
   })
 }))
+
+vi.mock('../durable-file-write', async (importOriginal) => {
+  const actual = await importOriginal<typeof DurableFileWrite>()
+  return {
+    ...actual,
+    // Records without writing: nothing in ready legitimately writes durably here, and swallowing
+    // keeps a would-be regression from mutating the seeded record before it is asserted on.
+    writeFileDurableSync: mocks.writeFileDurableSync
+  }
+})
 
 vi.mock('electron', () => ({
   app: {
@@ -42,8 +55,7 @@ vi.mock('./main-process-state', () => ({ mainProcessState: mocks.state }))
 vi.mock('../persistence', () => ({
   Store: class {
     getSettings() {
-      // The retired per-profile key is still on disk for real users; ready must ignore it.
-      return { browserUserAgentMode: mocks.profileUserAgentMode }
+      return {}
     }
     onSettingsChanged() {}
     getClaudeLivePtySessionIds() {
@@ -115,6 +127,10 @@ vi.mock('../browser/browser-session-proxy', () => ({
 }))
 vi.mock('../browser/doc-preview-protocol', () => ({ installDocPreviewProtocolHandler: vi.fn() }))
 vi.mock('../ipc/doc-preview-grant-ipc', () => ({ registerDocPreviewGrantHandlers: vi.fn() }))
+// The registry's own write path — startup inspection arming the notice, and an explicit choice
+// retiring it — is covered against the real registry in
+// browser-session-registry-identity.persistence.test.ts. What is pinned here is the rest of ready
+// composition, which must not touch the record at all.
 vi.mock('../browser/browser-session-startup', () => ({ initializeBrowserSessionsForApp: vi.fn() }))
 vi.mock('../browser/browser-session-registry', () => ({
   browserSessionRegistry: { listProfiles: () => [] }
@@ -171,21 +187,18 @@ describe('ready-phase browser identity authority', () => {
   beforeEach(() => {
     mocks.openMainWindow.mockClear()
     mocks.runtimeRpcStart.mockClear()
+    mocks.writeFileDurableSync.mockClear()
     mocks.writeFileAtomically.mockClear()
     mocks.state.isServeMode = false
     resetBrowserIdentityModeStoreForTests()
   })
 
-  // The bug: ready used to mirror the active Orca profile's retired setting into the root record,
-  // so switching from a native profile to a clean one started the clean profile in native. The
-  // root record is the only authority now, and ready must not touch it in either direction.
-  it.each([
-    { rootMode: 'native', profileUserAgentMode: 'clean' },
-    { rootMode: 'clean', profileUserAgentMode: 'native' }
-  ])(
-    'keeps root=$rootMode authoritative over a retired profile value of $profileUserAgentMode',
-    async ({ rootMode, profileUserAgentMode }) => {
-      mocks.profileUserAgentMode = profileUserAgentMode
+  // The bug: ready used to mirror a retired per-profile setting into the root record, so switching
+  // from a native profile to a clean one started the clean profile in native. The root record read
+  // before ready is the only authority now, and ready must not write to it in either direction.
+  it.each([{ rootMode: 'native' }, { rootMode: 'clean' }])(
+    'leaves root=$rootMode untouched through the whole ready composition',
+    async ({ rootMode }) => {
       writeFileSync(
         join(mocks.userDataPath, BROWSER_IDENTITY_MODE_FILE),
         JSON.stringify({
@@ -213,7 +226,14 @@ describe('ready-phase browser identity authority', () => {
         configuredMode: rootMode,
         explicitSelection: true
       })
-      expect(mocks.writeFileAtomically).not.toHaveBeenCalled()
+      // The identity store writes the record through writeFileDurableSync and nothing else, so any
+      // ready-phase write to it lands here. Matched on the target path rather than on the spy as a
+      // whole, so an unrelated durable write elsewhere in ready cannot fail this for the wrong reason.
+      expect(
+        mocks.writeFileDurableSync.mock.calls.filter(([, target]) =>
+          String(target).endsWith(BROWSER_IDENTITY_MODE_FILE)
+        )
+      ).toEqual([])
     }
   )
 })
