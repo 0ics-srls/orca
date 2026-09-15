@@ -164,10 +164,9 @@ function installModuleMocks(
         fsState.files.set(targetKey, value)
       }
     }),
+    // Nothing on this path calls writeFileAtomically; it is here only to keep the module shape
+    // complete. The identity write goes through node:fs above, which is where failure is injected.
     writeFileAtomically: vi.fn((pathValue: string, data: string) => {
-      if (failIdentityWrite && pathValue.endsWith('browser-identity-mode.json')) {
-        throw new Error('read-only userData')
-      }
       const key = fsKey(pathValue)
       fsState.files.set(key, data)
       fsState.present.add(key)
