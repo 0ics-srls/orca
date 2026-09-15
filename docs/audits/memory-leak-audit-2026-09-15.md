@@ -12,11 +12,14 @@ The audit then reviewed every production `.addEventListener`, `Event` subscripti
 
 Findings:
 
-- Four low-risk lifecycle leaks were fixed during the audit:
+- Seven low-risk lifecycle leaks were fixed during the audit:
   - terminal editor close debounce timers are cleared on unmount (`7b527daf07`);
   - deferred Monaco diff-model disposal is coalesced and cancelled on unmount (`8613e91878`);
   - unexpected-signout auth retries are cancelled on unmount (`3ae769decd`);
-  - the ephemeral-VM copied-prompt reset is coalesced and cancelled on unmount (`fd7ac01585`).
+  - the ephemeral-VM copied-prompt reset is coalesced and cancelled on unmount (`fd7ac01585`);
+  - preload native-file-drop and browser-find installers are idempotent (`9e21318f86`);
+  - mobile-markdown and terminal-tab-close IPC relays settle and remove listeners on renderer teardown (`9e21318f86`);
+  - the combined-diff external-file-change listener is disposed during Vite HMR (`b43e985388`).
 - Repeated renderer listeners have effect cleanup (including terminal sessions, visibility hooks, resize/drag hooks, audio tracks, and primary-selection handling).
 - Main/relay abort listeners are one-shot or explicitly removed on settlement.
 - Browser grab overlays remove listeners in `freezeHighlight`/`cleanup`; repeated arming tears down the prior overlay.
