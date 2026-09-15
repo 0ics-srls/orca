@@ -692,17 +692,23 @@ describe('terminal send CLI', () => {
 describe('terminal create --shell', () => {
   const WORKTREE = 'path:C:/src/app'
 
-  const shellClient = (call: ReturnType<typeof vi.fn>, supported: boolean): RuntimeClient => {
+  const shellClient = (
+    call: ReturnType<typeof vi.fn>,
+    supported: boolean,
+    reachable = true
+  ): RuntimeClient => {
     const client = {
       call,
       isRemote: false,
       getCliStatus: vi.fn().mockResolvedValue({
         result: {
-          runtime: {
-            reachable: true,
-            runtimeId: 'runtime-current',
-            capabilities: supported ? [TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY] : []
-          }
+          runtime: reachable
+            ? {
+                reachable: true,
+                runtimeId: 'runtime-current',
+                capabilities: supported ? [TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY] : []
+              }
+            : { reachable: false, runtimeId: null }
         }
       })
     }
@@ -758,6 +764,17 @@ describe('terminal create --shell', () => {
     await expect(createTerminal(shellClient(call, false), 'cmd.exe')).rejects.toThrow(
       /does not support --shell/
     )
+    expect(call).not.toHaveBeenCalled()
+  })
+
+  // A status probe that fails or times out reports no capabilities either; blaming the host
+  // version would send the caller to update a host that may already be current.
+  it('reports an unreachable host as unavailable rather than incompatible', async () => {
+    const call = vi.fn()
+
+    await expect(createTerminal(shellClient(call, false, false), 'cmd.exe')).rejects.toMatchObject({
+      code: 'runtime_unavailable'
+    })
     expect(call).not.toHaveBeenCalled()
   })
 })

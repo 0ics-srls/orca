@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { OptionalFiniteNumber, OptionalString, requiredString } from './rpc-param-primitives'
 import { isTuiAgent } from '../tui-agent-config'
 import {
+  canonicalizeWindowsShellOverride,
   isSupportedWindowsShellOverride,
   listSupportedWindowsShellOverrides
 } from '../windows-terminal-shell'
@@ -192,6 +193,9 @@ export const TerminalCreateParams = z.object({
     .refine(isSupportedWindowsShellOverride, {
       message: `shell must be one of: ${listSupportedWindowsShellOverrides().join(', ')}`
     })
+    // Why here: the host is authoritative, so it canonicalizes even when a client did not; the
+    // spawn path exact-matches `.exe` spellings and must never see `cmd` or `Git-Bash`.
+    .transform((shell) => canonicalizeWindowsShellOverride(shell) ?? shell)
     .optional()
 })
 

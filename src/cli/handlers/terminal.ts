@@ -170,6 +170,13 @@ export const TERMINAL_HANDLERS: Record<string, CommandHandler> = {
       // back a healthy terminal running its DEFAULT shell. Nothing in that reply says the shell
       // was ignored, so a caller that wanted cmd would drive a PowerShell session believing it won.
       const status = await client.getCliStatus()
+      // An unreachable host reports no capabilities at all; that is not evidence it lacks --shell.
+      if (!status.result.runtime.reachable) {
+        throw new RuntimeClientError(
+          'runtime_unavailable',
+          'Orca could not verify --shell support on the execution host, so no terminal was created. Wait for the execution host to become reachable and retry.'
+        )
+      }
       if (
         status.result.runtime.capabilities?.includes(
           TERMINAL_CREATE_SHELL_SELECTION_RUNTIME_CAPABILITY

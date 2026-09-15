@@ -17,6 +17,7 @@ import type { TerminalCreateOptions } from './runtime-terminal-contracts'
 import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
 import { terminalShellOverrideRefusal } from './terminal-shell-override-host-support'
+import { resolveTerminalStartupCwd } from '../../shared/terminal-startup-cwd'
 import { resolveLocalProjectRuntimeForWorktreeId } from '../local-project-runtime-resolution'
 import { resolveBareAgentLaunchCommand } from './runtime-agent-launch-resolution'
 import { buildAgentStartupPlan } from '../../shared/tui-agent-startup'
@@ -163,7 +164,10 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
       projectRuntime:
         opts.shellOverride && this.store
           ? resolveLocalProjectRuntimeForWorktreeId(this.store, workspace.id)
-          : undefined
+          : undefined,
+      // Same resolution as the spawn lanes below, so the refusal judges the cwd the PTY gets.
+      cwd: resolveTerminalStartupCwd(workspace.path, opts.cwd) ?? workspace.path,
+      workspacePath: workspace.path
     })
     if (shellRefusal) {
       throw shellRefusal

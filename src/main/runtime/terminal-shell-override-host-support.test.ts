@@ -3,6 +3,9 @@ import { terminalShellOverrideRefusal } from './terminal-shell-override-host-sup
 import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
 
 const NO_PROJECT_RUNTIME = undefined
+const WINDOWS_WORKSPACE = 'C:\\Users\\u\\app'
+const WSL_WORKSPACE = '\\\\wsl$\\Ubuntu\\home\\u\\app'
+const ON_WINDOWS_HOST = { cwd: WINDOWS_WORKSPACE, workspacePath: WINDOWS_WORKSPACE }
 
 function resolvedRuntime(kind: 'windows-host' | 'wsl'): ProjectExecutionRuntimeResolution {
   return kind === 'wsl'
@@ -36,7 +39,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'cmd.exe',
         connectionId: null,
         platform: 'win32',
-        projectRuntime: NO_PROJECT_RUNTIME
+        projectRuntime: NO_PROJECT_RUNTIME,
+        ...ON_WINDOWS_HOST
       })
     ).toBeNull()
   })
@@ -48,7 +52,8 @@ describe('terminalShellOverrideRefusal', () => {
           shellOverride: undefined,
           connectionId: 'ssh-1',
           platform,
-          projectRuntime: resolvedRuntime('wsl')
+          projectRuntime: resolvedRuntime('wsl'),
+          ...ON_WINDOWS_HOST
         })
       ).toBeNull()
     }
@@ -61,7 +66,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'cmd.exe',
         connectionId: 'ssh-1',
         platform: 'win32',
-        projectRuntime: NO_PROJECT_RUNTIME
+        projectRuntime: NO_PROJECT_RUNTIME,
+        ...ON_WINDOWS_HOST
       })?.message
     ).toContain('over SSH')
   })
@@ -72,7 +78,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'cmd.exe',
         connectionId: null,
         platform: 'darwin',
-        projectRuntime: NO_PROJECT_RUNTIME
+        projectRuntime: NO_PROJECT_RUNTIME,
+        ...ON_WINDOWS_HOST
       })?.message
     ).toContain('darwin')
   })
@@ -86,7 +93,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'wsl.exe',
         connectionId: null,
         platform: 'win32',
-        projectRuntime: resolvedRuntime('windows-host')
+        projectRuntime: resolvedRuntime('windows-host'),
+        ...ON_WINDOWS_HOST
       })?.message
     ).toContain('on the Windows host')
   })
@@ -97,7 +105,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'cmd.exe',
         connectionId: null,
         platform: 'win32',
-        projectRuntime: resolvedRuntime('wsl')
+        projectRuntime: resolvedRuntime('wsl'),
+        ...ON_WINDOWS_HOST
       })?.message
     ).toContain('in WSL')
   })
@@ -108,7 +117,8 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'wsl.exe',
         connectionId: null,
         platform: 'win32',
-        projectRuntime: resolvedRuntime('wsl')
+        projectRuntime: resolvedRuntime('wsl'),
+        ...ON_WINDOWS_HOST
       })
     ).toBeNull()
     expect(
@@ -116,8 +126,79 @@ describe('terminalShellOverrideRefusal', () => {
         shellOverride: 'powershell.exe',
         connectionId: null,
         platform: 'win32',
-        projectRuntime: resolvedRuntime('windows-host')
+        projectRuntime: resolvedRuntime('windows-host'),
+        ...ON_WINDOWS_HOST
       })
     ).toBeNull()
+  })
+
+  // `resolveWslSessionContext` forces wsl.exe for any `\\wsl$` cwd or workspace path, which is
+  // the one rewrite the project-runtime check cannot see: a folder workspace has no project.
+  describe('WSL UNC paths', () => {
+    it('refuses a Windows shell for a folder workspace inside a WSL distro with no project runtime', () => {
+      const message = terminalShellOverrideRefusal({
+        shellOverride: 'cmd.exe',
+        connectionId: null,
+        platform: 'win32',
+        projectRuntime: NO_PROJECT_RUNTIME,
+        cwd: WSL_WORKSPACE,
+        workspacePath: WSL_WORKSPACE
+      })?.message
+      expect(message).toContain('inside WSL')
+      expect(message).toContain('No terminal was created')
+      expect(message).toContain('--shell wsl.exe')
+    })
+
+    it('refuses when only the workspace root is in WSL, since the session path forces wsl.exe too', () => {
+      expect(
+        terminalShellOverrideRefusal({
+          shellOverride: 'powershell.exe',
+          connectionId: null,
+          platform: 'win32',
+          projectRuntime: NO_PROJECT_RUNTIME,
+          cwd: WINDOWS_WORKSPACE,
+          workspacePath: WSL_WORKSPACE
+        })?.message
+      ).toContain(WSL_WORKSPACE)
+    })
+
+    it('accepts the forward-slash wsl.localhost spelling as a WSL path', () => {
+      expect(
+        terminalShellOverrideRefusal({
+          shellOverride: 'cmd.exe',
+          connectionId: null,
+          platform: 'win32',
+          projectRuntime: NO_PROJECT_RUNTIME,
+          cwd: '//wsl.localhost/Ubuntu/home/u/app/src',
+          workspacePath: '//wsl.localhost/Ubuntu/home/u/app'
+        })
+      ).not.toBeNull()
+    })
+
+    it('allows wsl.exe for a WSL path', () => {
+      expect(
+        terminalShellOverrideRefusal({
+          shellOverride: 'wsl.exe',
+          connectionId: null,
+          platform: 'win32',
+          projectRuntime: NO_PROJECT_RUNTIME,
+          cwd: WSL_WORKSPACE,
+          workspacePath: WSL_WORKSPACE
+        })
+      ).toBeNull()
+    })
+
+    it('still allows a Windows shell for a plain Windows path', () => {
+      expect(
+        terminalShellOverrideRefusal({
+          shellOverride: 'cmd.exe',
+          connectionId: null,
+          platform: 'win32',
+          projectRuntime: NO_PROJECT_RUNTIME,
+          cwd: 'C:\\Users\\u\\app\\src',
+          workspacePath: WINDOWS_WORKSPACE
+        })
+      ).toBeNull()
+    })
   })
 })
