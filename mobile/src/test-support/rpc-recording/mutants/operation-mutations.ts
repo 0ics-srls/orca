@@ -21,23 +21,38 @@ export const OPERATION_MUTATIONS = {
     after: `if (result?.ok === false) {
           throw new Error(result.error?.message ?? 'Failed to update GitHub item')`
   },
-  // Rejects the barrier early, so the sibling comment request is abandoned out of order.
+  // Interprets inside the request chain instead of at the declared barrier, so the issue leg
+  // rejects the group early and the sibling comment request is abandoned out of order. Re-anchored
+  // where the operation migration moved the send; the defect it injects is unchanged.
   order: {
     file: 'use-mobile-tasks-item-detail-loading.tsx',
-    before: `{ timeoutMs: 30_000 }
-        ),
-        client.sendRequest(
-          'linear.issueComments'`,
-    after: `{ timeoutMs: 30_000 }
-        ).then((response) => { if (!isSuccess(response)) throw new Error(response.error.message); return response }),
-        client.sendRequest(
-          'linear.issueComments'`
+    before: `        linearIssueRead.request(
+          client,
+          {
+            id: actionItem.source.id,
+            workspaceId: actionItem.source.workspaceId
+          },
+          { timeoutMs: 30_000 }
+        ),`,
+    after: `        linearIssueRead
+          .request(
+            client,
+            {
+              id: actionItem.source.id,
+              workspaceId: actionItem.source.workspaceId
+            },
+            { timeoutMs: 30_000 }
+          )
+          .then((response) => {
+            linearIssueRead.interpret(response)
+            return response
+          }),`
   },
   // Reads the overrides one level above the settings envelope.
   'bot-overrides-envelope': {
     file: 'settings-read-operations.ts',
-    before: "settings == null ? undefined : Reflect.get(Object(settings), 'prBotAuthorOverrides')",
-    after: "raw == null ? undefined : Reflect.get(Object(raw), 'prBotAuthorOverrides')"
+    before: "settings == null ? undefined : settingsField(settings, 'prBotAuthorOverrides')",
+    after: "raw == null ? undefined : settingsField(raw, 'prBotAuthorOverrides')"
   },
   // Publishes the settings envelope instead of the accepted operation value.
   'workspace-context-envelope': {

@@ -2629,6 +2629,11 @@
   },
   "components": {
     "native-chat": {
+      "ask": {
+        "asked": "Asked:",
+        "awaiting": "Awaiting user input:",
+        "questionCount": "{{value0}} questions"
+      },
       "composer": {
         "effort": "Effort"
       },

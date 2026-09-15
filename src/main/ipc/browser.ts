@@ -23,7 +23,7 @@ import type { BrowserWebAuthnAccountResponse } from '../../shared/browser-webaut
 
 let agentBrowserBridgeRef: AgentBrowserBridge | null = null
 
-type BrowserGuestRegistrationArgs = {
+export type BrowserGuestArgs = {
   browserPageId: string
   workspaceId: string
   worktreeId: string
@@ -47,7 +47,7 @@ export function registerBrowserHandlers(): void {
 
   const registerGuest = (
     event: Electron.IpcMainInvokeEvent,
-    args: BrowserGuestRegistrationArgs,
+    args: BrowserGuestArgs,
     repairPolicies: boolean
   ): boolean => {
     if (!isTrustedBrowserRenderer(event.sender)) {
@@ -93,7 +93,7 @@ export function registerBrowserHandlers(): void {
     return true
   }
 
-  ipcMain.handle('browser:registerGuest', (event, args: BrowserGuestRegistrationArgs) =>
+  ipcMain.handle('browser:registerGuest', (event, args: BrowserGuestArgs) =>
     registerGuest(event, args, false)
   )
 
@@ -133,7 +133,7 @@ export function registerBrowserHandlers(): void {
     }
   )
 
-  ipcMain.handle('browser:repairGuestRegistration', (event, args: BrowserGuestRegistrationArgs) =>
+  ipcMain.handle('browser:repairGuestRegistration', (event, args: BrowserGuestArgs) =>
     registerGuest(event, args, true)
   )
 
