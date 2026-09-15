@@ -17,7 +17,16 @@ export function NativeChatResolutionReceipt({
       ? null
       : body.questions && body.questions.length > 1
         ? { kind: 'count', count: body.questions.length }
-        : { kind: 'question', text: body.questions?.[0]?.question ?? body.question }
+        : {
+            kind: 'question',
+            // Claude keeps a generic grouped label for a single multi-select
+            // question. Keep that label in the receipt so the answer's question
+            // line is not repeated in the heading.
+            text:
+              body.questions?.length === 1 && body.questions[0]?.question !== body.question
+                ? body.question
+                : (body.questions?.[0]?.question ?? body.question)
+          }
   if (body.resolution.state === 'pending') {
     return body.kind === 'question' ? (
       <NativeChatAwaitingInputRow subject={subject} pending />
