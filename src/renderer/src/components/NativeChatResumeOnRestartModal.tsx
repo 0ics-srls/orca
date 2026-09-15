@@ -128,7 +128,9 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         const remaining = candidates.filter((candidate) => !settled.has(candidate.sessionId))
         announceResumed(result.results.filter((entry) => entry.outcome === 'resumed').length)
         setCandidates(remaining)
-        if (remaining.length === 0) {
+        // An empty result means the host settled none of them — never leave the dialog sitting open
+        // behind a button that did nothing.
+        if (remaining.length === 0 || result.results.length === 0) {
           setResolved(true)
         }
       } finally {

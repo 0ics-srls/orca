@@ -9,7 +9,7 @@ import type { AgentSessionRecordStore } from '../../runtime/agent-session-record
 import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
 import {
   latestStructuredAgentSessionPrompt,
-  newestStructuredAgentSessionTurnId
+  newestStructuredAgentSessionTurn
 } from '../../../shared/structured-agent-session-projection'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
@@ -68,7 +68,7 @@ export function createStructuredAgentSessionRestartResume(
       markers,
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
-      journalTurnId: (sessionId) => newestStructuredAgentSessionTurnId(itemsFor(sessionId)),
+      journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
       latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
       now
     })
@@ -102,13 +102,13 @@ export function createStructuredAgentSessionRestartResume(
       return markers.length
     },
     resume: async (sessionIds, owner) => {
-      const requested = sessionIds ? new Set(sessionIds) : null
-      // Re-derived, never taken from the caller: a client may name any session id, and only the
-      // predicate decides which of them is allowed a provider child.
-      const candidates = (await list()).filter(
-        (candidate) => !requested || requested.has(candidate.sessionId)
-      )
-      return resumeStructuredAgentSessionsFromRestart(
+      const offered = deps.store.resumeMarkers.list(surfaces.now()).map((entry) => entry.sessionId)
+      const targets = sessionIds ? [...new Set(sessionIds)] : offered
+      const requested = new Set(targets)
+      // Re-derived at CLICK time, never taken from the caller: a client may name any session id,
+      // and only the predicate decides which of them is allowed a provider child.
+      const candidates = (await list()).filter((candidate) => requested.has(candidate.sessionId))
+      const outcomes = await resumeStructuredAgentSessionsFromRestart(
         {
           admission,
           consumeMarker: (sessionId) => deps.store.resumeMarkers.consume(sessionId),
@@ -117,6 +117,22 @@ export function createStructuredAgentSessionRestartResume(
         candidates,
         owner
       )
+      // A session whose own chat pane bound between the offer and the click is ALREADY resumed: its
+      // lease went live, so the predicate drops it. Reporting that as nothing-happened leaves the
+      // user pressing a button that does nothing, so settle it as the success it actually is.
+      const settled = new Set(outcomes.map((outcome) => outcome.sessionId))
+      for (const sessionId of targets) {
+        if (settled.has(sessionId) || sessions.get(sessionId)?.hasProviderChild !== true) {
+          continue
+        }
+        await deps.store.resumeMarkers.consume(sessionId)
+        outcomes.push({
+          sessionId,
+          outcome: 'resumed',
+          reason: 'agent_session_resume_already_live'
+        })
+      }
+      return outcomes
     }
   }
 }

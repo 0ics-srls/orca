@@ -12,7 +12,7 @@ import {
   AGENT_SESSION_RESUME_MARKER_TTL_MS,
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
-import { newestStructuredAgentSessionTurnId } from '../../../shared/structured-agent-session-live-turn'
+import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
@@ -25,12 +25,12 @@ import { createStructuredAgentSessionRestartResume } from './structured-agent-se
 
 const SESSION = 'session-working-1'
 const THREAD = 'thread-1'
-const HANDLE_KEY = `codex:${JSON.stringify(THREAD)}`
+const HANDLE_ROOT = `codex:${JSON.stringify(THREAD)}`
 const NOW = 1_700_000_000_000
 
 function turnItem(
   turnId: string,
-  state: 'running' | 'completed' | 'interrupted'
+  state: 'running' | 'completed' | 'interrupted' | 'unverifiable'
 ): AgentJournalRenderItem {
   return {
     itemId: `turn:${turnId}`,
@@ -84,6 +84,47 @@ function record(overrides: { chain?: AgentSessionRecord['providerHandleChain'] }
   } as unknown as AgentSessionRecord
 }
 
+/** A prompt the agent is blocked on. The chat is waiting on the USER, not on itself. */
+function pendingApproval(): AgentJournalRenderItem {
+  return {
+    itemId: 'approval:1',
+    revision: 1,
+    body: {
+      kind: 'approval',
+      title: 'Run the command?',
+      detail: null,
+      options: [{ id: 'allow', label: 'Allow' }],
+      resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
+    },
+    sequence: 2,
+    observedAt: NOW
+  }
+}
+
+const CLAUDE_PROVIDER_SESSION = 'prov-session-1'
+const CLAUDE_ROOT = `claude:${JSON.stringify(CLAUDE_PROVIDER_SESSION)}`
+
+/** Claude's handle carries a leaf uuid, and the adapter's close path advances it. */
+function claudeRecord(
+  leafUuid: string | null,
+  providerSessionId = CLAUDE_PROVIDER_SESSION
+): AgentSessionRecord {
+  return {
+    ...record(),
+    provider: 'claude',
+    accountHome: { variable: 'CLAUDE_CONFIG_DIR', path: '/home/claude' },
+    providerHandleChain: [
+      {
+        linkId: 'link-1',
+        handle: { provider: 'claude', sessionId: providerSessionId, leafUuid },
+        origin: 'created',
+        mintedAtFence: 1,
+        observedAt: NOW
+      }
+    ]
+  } as unknown as AgentSessionRecord
+}
+
 function journal(items: AgentJournalRenderItem[], isReadOnly = false) {
   return { isReadOnly, snapshot: () => ({ items, submissions: [] }) } as never
 }
@@ -94,7 +135,7 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     turnId: 'turn-1',
     recordedAt: NOW,
     trigger: 'quit',
-    providerHandleKey: HANDLE_KEY,
+    providerHandleRoot: HANDLE_ROOT,
     ...overrides
   }
 }
@@ -110,7 +151,7 @@ function resumableSet(input: {
     markers: input.markers,
     getRecord: () => record(input.chain === undefined ? {} : { chain: input.chain }),
     supportsRecord: () => true,
-    journalTurnId: () => newestStructuredAgentSessionTurnId(items),
+    journalTurn: () => newestStructuredAgentSessionTurn(items),
     latestPrompt: () => 'fix the auth bug',
     now: input.now ?? NOW
   })
@@ -133,7 +174,7 @@ describe('deriving what was working at teardown', () => {
         turnId: 'turn-1',
         recordedAt: NOW,
         trigger: 'quit',
-        providerHandleKey: HANDLE_KEY
+        providerHandleRoot: HANDLE_ROOT
       }
     ])
   })
@@ -190,6 +231,41 @@ describe('deriving what was working at teardown', () => {
     ).toEqual([])
   })
 
+  // The product calls this state `attention`, not `working`. A chat blocked on the user is not
+  // interrupted work, and handing it a provider child resumes nothing it was actually doing.
+  it('marks nothing for a turn that is waiting on the user', () => {
+    expect(
+      structuredAgentSessionsWorkingAtTeardown({
+        sessions: new Map([
+          [
+            SESSION,
+            {
+              journal: journal([turnItem('turn-1', 'running'), pendingApproval()]),
+              hasProviderChild: true
+            }
+          ]
+        ]),
+        getRecord: () => record(),
+        trigger: 'quit',
+        now: NOW
+      })
+    ).toEqual([])
+  })
+
+  // Root, not key: a key would embed Claude's leaf, which the close path advances moments later.
+  it('records the identity root so an advancing Claude leaf cannot invalidate the marker', () => {
+    const [recorded] = structuredAgentSessionsWorkingAtTeardown({
+      sessions: new Map([
+        [SESSION, { journal: journal([turnItem('turn-1', 'running')]), hasProviderChild: true }]
+      ]),
+      getRecord: () => claudeRecord(null),
+      trigger: 'quit',
+      now: NOW
+    })
+
+    expect(recorded?.providerHandleRoot).toBe(CLAUDE_ROOT)
+  })
+
   it('marks nothing for a session that never proved a provider cursor', () => {
     expect(
       structuredAgentSessionsWorkingAtTeardown({
@@ -242,8 +318,57 @@ describe('the resumable set', () => {
   // A cursor that moved since teardown is a different conversation than the one we marked.
   it('refuses when the resume cursor drifted after the marker was written', () => {
     expect(
-      resumableSet({ markers: [marker({ providerHandleKey: 'codex:"other-thread"' })] })
+      resumableSet({ markers: [marker({ providerHandleRoot: 'codex:"other-thread"' })] })
     ).toEqual([])
+  })
+
+  // The defect QA found: the SAME teardown's close path appends a `resumed` link with an advanced
+  // leaf, so a key comparison goes stale ~1.4s after the marker is written and Claude is refused
+  // forever. A resume that advances the leaf is continuity, not a fork.
+  it('still offers a Claude session whose leaf advanced after the marker was written', () => {
+    const candidates = structuredAgentSessionResumableSet({
+      markers: [marker({ providerHandleRoot: CLAUDE_ROOT })],
+      getRecord: () => claudeRecord('5aed93d6-advanced-leaf'),
+      supportsRecord: () => true,
+      journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+      latestPrompt: () => '',
+      now: NOW
+    })
+
+    expect(candidates).toHaveLength(1)
+  })
+
+  it('refuses a Claude session that forked to a different identity root', () => {
+    expect(
+      structuredAgentSessionResumableSet({
+        markers: [marker({ providerHandleRoot: CLAUDE_ROOT })],
+        getRecord: () => claudeRecord(null, 'prov-session-2'),
+        supportsRecord: () => true,
+        journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+        latestPrompt: () => '',
+        now: NOW
+      })
+    ).toEqual([])
+  })
+
+  // Eviction rewrites `running` -> `interrupted` and never -> `completed`, so the state is what
+  // separates work that was cut off from work that finished.
+  it('refuses a turn that completed before the quit', () => {
+    expect(resumableSet({ markers: [marker()], items: [turnItem('turn-1', 'completed')] })).toEqual(
+      []
+    )
+  })
+
+  it('refuses a turn still marked running, which nothing ever settled', () => {
+    expect(resumableSet({ markers: [marker()], items: [turnItem('turn-1', 'running')] })).toEqual(
+      []
+    )
+  })
+
+  it('offers a turn whose end the host could not verify', () => {
+    expect(
+      resumableSet({ markers: [marker()], items: [turnItem('turn-1', 'unverifiable')] })
+    ).toHaveLength(1)
   })
 
   it('refuses a marker that has outlived its expiry', () => {
@@ -257,12 +382,13 @@ describe('the restart-resume surface', () => {
   function surface(input: {
     markers?: AgentSessionResumeMarker[]
     sessions?: Map<string, { journal: unknown; hasProviderChild: boolean }>
+    record?: AgentSessionRecord
   }) {
     const live = new Map((input.markers ?? [marker()]).map((entry) => [entry.sessionId, entry]))
     const recorded: AgentSessionResumeMarker[][] = []
     const held: string[] = []
     const store = {
-      getRecord: () => record(),
+      getRecord: () => input.record ?? record(),
       resumeMarkers: {
         list: () => [...live.values()],
         record: async (markers: readonly AgentSessionResumeMarker[]) => {
@@ -320,6 +446,31 @@ describe('the restart-resume surface', () => {
     expect(await restartResume.list()).toEqual([])
   })
 
+  // TOCTOU: the chat's own pane binds between the offer and the click, the lease goes live, and the
+  // predicate drops the session. Reporting "nothing happened" would leave the user pressing a dead
+  // button for a session that IS running.
+  it('reports a session the chat pane already re-acquired as resumed, not as nothing', async () => {
+    const liveRecord = {
+      ...record(),
+      lease: { ...record().lease, claimStatus: 'live' }
+    } as AgentSessionRecord
+    const { restartResume, live, held } = surface({
+      record: liveRecord,
+      sessions: new Map([
+        [SESSION, { journal: journal([turnItem('turn-1', 'interrupted')]), hasProviderChild: true }]
+      ])
+    })
+
+    const outcomes = await restartResume.resume([SESSION], 'modal')
+
+    expect(outcomes).toEqual([
+      { sessionId: SESSION, outcome: 'resumed', reason: 'agent_session_resume_already_live' }
+    ])
+    // Spent, so the prompt cannot offer it again, and no second hold was taken.
+    expect(live.size).toBe(0)
+    expect(held).toEqual([])
+  })
+
   // The client names ids; only the host decides which of them may have a provider child.
   it('resumes nothing for a session id the caller invented', async () => {
     const { restartResume, held } = surface({})
@@ -357,7 +508,7 @@ describe('the restart-resume surface', () => {
         turnId: 'turn-2',
         recordedAt: NOW,
         trigger: 'update',
-        providerHandleKey: HANDLE_KEY
+        providerHandleRoot: HANDLE_ROOT
       }
     ])
   })

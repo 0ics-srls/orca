@@ -11,7 +11,8 @@
 // cursor to resume onto (not a conversation that never proved a thread).
 
 import { agentSessionProviderHandleChainHead } from '../../../shared/agent-session-provider-handle'
-import { agentSessionProviderHandleKey } from '../../../shared/agent-session-provider-handle'
+import { agentSessionProviderHandleRoot } from '../../../shared/agent-session-provider-handle'
+import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type {
   AgentSessionResumeMarker,
@@ -41,7 +42,14 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
     if (session.journal.isReadOnly) {
       continue
     }
-    const turnId = activeStructuredAgentSessionTurnId(session.journal.snapshot().items)
+    const snapshot = session.journal.snapshot()
+    // The product's own classification, so the marker rule cannot disagree with what the UI calls
+    // working. A turn blocked on an approval or a question projects as `attention`: the agent is
+    // waiting on the USER, and that is not interrupted work to hand back.
+    if (projectStructuredAgentSessionStatus(snapshot.items, snapshot.submissions) !== 'working') {
+      continue
+    }
+    const turnId = activeStructuredAgentSessionTurnId(snapshot.items)
     if (!turnId) {
       continue
     }
@@ -56,7 +64,9 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
       turnId,
       recordedAt: input.now,
       trigger: input.trigger,
-      providerHandleKey: agentSessionProviderHandleKey(head.handle)
+      // Root, not key: the close path advances Claude's leaf moments after this runs, and a key
+      // comparison would then refuse the session forever.
+      providerHandleRoot: agentSessionProviderHandleRoot(head.handle)
     })
   }
   return markers

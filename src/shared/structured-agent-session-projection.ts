@@ -21,7 +21,7 @@ import { sha256 } from './sha256'
 export {
   activeStructuredAgentSessionToolCall,
   activeStructuredAgentSessionTurnId,
-  newestStructuredAgentSessionTurnId
+  newestStructuredAgentSessionTurn
 } from './structured-agent-session-live-turn'
 
 function boundedText(payload: { head: string; truncated: boolean; byteLength: number }): string {

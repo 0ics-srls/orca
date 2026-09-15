@@ -10,8 +10,9 @@
 // stale-`running`-row case this whole mechanism exists to refuse.
 
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
+import type { AgentJournalTurnLifecycle } from '../../../shared/agent-session-journal-types'
 import { agentSessionProviderHandleChainHead } from '../../../shared/agent-session-provider-handle'
-import { agentSessionProviderHandleKey } from '../../../shared/agent-session-provider-handle'
+import { agentSessionProviderHandleRoot } from '../../../shared/agent-session-provider-handle'
 import {
   isExpiredAgentSessionResumeMarker,
   type AgentSessionResumeMarker,
@@ -34,10 +35,10 @@ export type StructuredAgentSessionResumeSetInput = {
   markers: readonly AgentSessionResumeMarker[]
   getRecord: (sessionId: string) => AgentSessionRecord | null
   supportsRecord: (record: AgentSessionRecord) => boolean
-  /** The newest turn id in that session's journal, whatever state it settled in; null when the
-   *  journal could not be read. Deliberately not the live-turn reader: eviction has already
-   *  rewritten that turn to `interrupted` by the time this runs. */
-  journalTurnId: (sessionId: string) => string | null
+  /** The newest turn record in that session's journal, state included; null when the journal could
+   *  not be read. Deliberately not the live-turn reader: eviction has already rewritten that turn
+   *  to `interrupted` by the time this runs. */
+  journalTurn: (sessionId: string) => AgentJournalTurnLifecycle | null
   latestPrompt: (sessionId: string) => string
   now: number
 }
@@ -59,12 +60,20 @@ export function structuredAgentSessionResumableSet(
     if (!isResumableStructuredAgentSessionRecord(record)) {
       continue
     }
-    // A cursor that changed since teardown is a different conversation than the one we marked.
+    // A conversation that FORKED since teardown is not the one we marked. Compared by identity
+    // root, because a resume legitimately advances Claude's leaf and that is not a fork.
     const head = agentSessionProviderHandleChainHead(record.providerHandleChain)
-    if (!head || agentSessionProviderHandleKey(head.handle) !== marker.providerHandleKey) {
+    if (!head || agentSessionProviderHandleRoot(head.handle) !== marker.providerHandleRoot) {
       continue
     }
-    if (input.journalTurnId(marker.sessionId) !== marker.turnId) {
+    const turn = input.journalTurn(marker.sessionId)
+    if (!turn || turn.turnId !== marker.turnId) {
+      continue
+    }
+    // State, not just identity. Eviction rewrites `running` -> `interrupted` and never ->
+    // `completed`, so a completed turn is finished work and a turn still marked `running` was never
+    // settled by anyone. Offering either is the exact failure this feature exists to prevent.
+    if (turn.state !== 'interrupted' && turn.state !== 'unverifiable') {
       continue
     }
     candidates.push({

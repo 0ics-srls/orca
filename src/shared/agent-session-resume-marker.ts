@@ -24,10 +24,16 @@ export type AgentSessionResumeMarker = {
   /** Execution host's clock at teardown. */
   recordedAt: number
   trigger: AgentSessionResumeTrigger
-  /** Key of the provider handle this session had proved at teardown. The launch resolver reads its
-   *  own copy off the record, so this is the CONCURRING record — it proves the cursor has not
-   *  drifted since, never the cursor a spawn is aimed at. */
-  providerHandleKey: string
+  /**
+   * IDENTITY ROOT of the provider handle this session had proved at teardown — deliberately not the
+   * full handle key.
+   *
+   * The key embeds Claude's leaf uuid, which is a branch cursor, and the adapter's own close path
+   * appends a `resumed` link with an advanced leaf seconds after the marker is written. Comparing
+   * keys therefore refuses every Claude session forever. The root is the part a resume must
+   * preserve — a resume that changes it forked — which is exactly what this guard is for.
+   */
+  providerHandleRoot: string
 }
 
 const MAX_FIELD_LENGTH = 512
@@ -44,7 +50,7 @@ export function isAgentSessionResumeMarker(value: unknown): value is AgentSessio
   return (
     isMarkerField(marker.sessionId) &&
     isMarkerField(marker.turnId) &&
-    isMarkerField(marker.providerHandleKey) &&
+    isMarkerField(marker.providerHandleRoot) &&
     Number.isSafeInteger(marker.recordedAt) &&
     (marker.recordedAt as number) >= 0 &&
     (marker.trigger === 'quit' || marker.trigger === 'update')

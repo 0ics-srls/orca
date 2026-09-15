@@ -5,7 +5,8 @@
 
 import type {
   AgentJournalRenderItem,
-  AgentJournalToolCallItem
+  AgentJournalToolCallItem,
+  AgentJournalTurnLifecycle
 } from './agent-session-journal-types'
 import { readAgentJournalTurn } from './agent-session-turn-record'
 
@@ -21,16 +22,18 @@ export function activeStructuredAgentSessionTurnId(
   return null
 }
 
-/** The newest turn's id whatever state it ended in. Restart resume compares this against the
- *  teardown marker, and by then eviction has already settled that turn to `interrupted` — so the
- *  running-only reader above would answer null for exactly the sessions this has to identify. */
-export function newestStructuredAgentSessionTurnId(
+/** The newest turn record whatever state it ended in, STATE INCLUDED. Restart resume compares both
+ *  halves against the teardown marker: the id alone cannot tell a turn that was interrupted from
+ *  one that finished, and offering a finished chat is the failure this feature exists to avoid.
+ *  The running-only reader above would answer null for exactly the sessions this has to identify,
+ *  because eviction settles them to `interrupted`. */
+export function newestStructuredAgentSessionTurn(
   items: readonly AgentJournalRenderItem[]
-): string | null {
+): AgentJournalTurnLifecycle | null {
   for (let index = items.length - 1; index >= 0; index -= 1) {
     const turn = readAgentJournalTurn(items[index]?.body)
     if (turn) {
-      return turn.turnId
+      return turn
     }
   }
   return null

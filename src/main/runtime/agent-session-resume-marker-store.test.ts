@@ -21,7 +21,7 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     turnId: 'turn-1',
     recordedAt: NOW,
     trigger: 'quit',
-    providerHandleKey: 'codex:"thread-1"',
+    providerHandleRoot: 'codex:"thread-1"',
     ...overrides
   }
 }
