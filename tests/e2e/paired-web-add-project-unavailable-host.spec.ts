@@ -55,8 +55,9 @@ async function setOnlyRuntimeHostHealth(page: Page, health: HostHealth): Promise
         : {
             status: null,
             verification: 'unavailable' as const,
-            // Why 'unknown' and not 'disconnected': a dropped transport is unverifiable and
-            // renders as Connecting; only a never-reached host renders Disconnected.
+            // Why 'unknown' and not 'disconnected': an unavailable/unknown snapshot falls
+            // through to disconnected health; explicit disconnected transport is treated as
+            // reconnecting and renders Connecting.
             transport: 'unknown' as const
           })
     }
@@ -64,6 +65,7 @@ async function setOnlyRuntimeHostHealth(page: Page, health: HostHealth): Promise
       runtimeStatusByEnvironmentId: new Map(state.runtimeStatusByEnvironmentId).set(
         environment.id,
         {
+          ...current,
           snapshot,
           checkedAt: snapshot.checkedAt,
           status: snapshot.verification === 'verified' ? snapshot.status : null,
