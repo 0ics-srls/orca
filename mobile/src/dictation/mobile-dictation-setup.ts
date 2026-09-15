@@ -1,5 +1,5 @@
 import type { RuntimeSpeechSetupState } from '../../../src/shared/runtime-types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
 import type { RpcResponse } from '../transport/types'
 import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { LogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
@@ -40,7 +40,9 @@ export function isDictationSetupRequiredError(message: string): boolean {
   return SETUP_REQUIRED_CODES.has(message) || message.startsWith('voice_model_not_ready:')
 }
 
-export async function fetchDictationSetup(client: RpcClient): Promise<MobileSpeechSetup> {
+export async function fetchDictationSetup(
+  client: UnvalidatedRpcRequestPort
+): Promise<MobileSpeechSetup> {
   const reply = await requestDictationSetupReply(client)
   if (isLegacyDesktopSpeechSetupReply(reply)) {
     throw new Error(LEGACY_DESKTOP_SPEECH_SETUP_MESSAGE)
@@ -52,7 +54,7 @@ export async function fetchDictationSetup(client: RpcClient): Promise<MobileSpee
   ) as MobileSpeechSetup
 }
 
-async function requestDictationSetupReply(client: RpcClient): Promise<RpcResponse> {
+async function requestDictationSetupReply(client: UnvalidatedRpcRequestPort): Promise<RpcResponse> {
   try {
     return await dictationSetupRead.request(client, null)
   } catch (error) {
@@ -65,7 +67,10 @@ async function requestDictationSetupReply(client: RpcClient): Promise<RpcRespons
   }
 }
 
-export async function downloadDictationModel(client: RpcClient, modelId: string): Promise<void> {
+export async function downloadDictationModel(
+  client: UnvalidatedRpcRequestPort,
+  modelId: string
+): Promise<void> {
   const reply = await dictationModelDownload.request(client, { modelId })
   interpretOrThrowRefusalMessage(
     () => dictationModelDownload.interpret(reply),
@@ -74,7 +79,7 @@ export async function downloadDictationModel(client: RpcClient, modelId: string)
 }
 
 export async function deleteDictationModel(
-  client: RpcClient,
+  client: UnvalidatedRpcRequestPort,
   modelId: string
 ): Promise<MobileSpeechSetup> {
   const reply = await dictationModelDelete.request(client, { modelId })
@@ -86,7 +91,7 @@ export async function deleteDictationModel(
 }
 
 export async function setDictationConfig(
-  client: RpcClient,
+  client: UnvalidatedRpcRequestPort,
   params: { enabled?: boolean; modelId?: string; dictationMode?: 'toggle' | 'hold' }
 ): Promise<MobileSpeechSetup> {
   const reply = await dictationConfigWrite.request(client, params)

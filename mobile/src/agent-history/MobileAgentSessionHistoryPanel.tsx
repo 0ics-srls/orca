@@ -16,7 +16,7 @@ import { ChevronLeft, RefreshCw } from 'lucide-react-native'
 import { colors } from '../theme/mobile-theme'
 import { useHostClient } from '../transport/client-context'
 import type { RpcSuccess } from '../transport/types'
-import type { RpcClient } from '../transport/rpc-client'
+import type { UnvalidatedRpcRequestPort } from '../transport/unvalidated-rpc-request-port'
 import { readMobileRuntimeHostPlatform } from '../transport/mobile-runtime-host-platform'
 import { getWorktreeLabel } from '../session/worktree-label'
 import {
@@ -369,7 +369,7 @@ export function MobileAgentSessionHistoryPanel({
 const EMPTY_SESSIONS: AiVaultSession[] = []
 const EMPTY_ISSUES: { agent: AiVaultSession['agent']; path: string; message: string }[] = []
 
-async function loadMobileResumeMetadata(client: RpcClient): Promise<{
+async function loadMobileResumeMetadata(client: UnvalidatedRpcRequestPort): Promise<{
   repos: MobileAiVaultResumeRepo[]
   folderWorkspaces: MobileAiVaultResumeFolderWorkspace[]
   projectGroups: MobileAiVaultResumeProjectGroup[]
