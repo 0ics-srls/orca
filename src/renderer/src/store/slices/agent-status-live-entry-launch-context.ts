@@ -11,6 +11,7 @@ import type { AgentStatusMetadata, AgentStatusRouting } from './agent-status-con
 import type { resolveAgentStatusIdentity } from '../../../../shared/agent-status-identity'
 import { registryEntryMatchesStatus } from './agent-status-launch-config'
 import { getTabIdFromPaneKey } from './agent-status-pane-key-tab-binding'
+import { isAgentStatusTurnComplete } from '../../../../shared/agent-completion-time'
 
 export type AgentStatusLiveEntryLaunchContext = {
   statusTabId: string | undefined
@@ -46,7 +47,7 @@ export function deriveAgentStatusLiveEntryLaunchContext(args: {
   const registryEntry = state.agentLaunchConfigByPaneKey[paneKey]
   const canReuseExistingProviderSession =
     existing?.agentType === identity.agentType &&
-    (existing.state !== 'done' || payload.state === 'done')
+    (existing === undefined || !isAgentStatusTurnComplete(existing) || payload.state === 'done')
   const providerSession =
     metadata?.providerSession ??
     (canReuseExistingProviderSession ? existing.providerSession : undefined)
@@ -74,12 +75,12 @@ export function deriveAgentStatusLiveEntryLaunchContext(args: {
   const matchedRegistryLaunchConfig = registryMatched ? registryEntry?.launchConfig : undefined
   const existingSleepingRecord = state.sleepingAgentSessionsByPaneKey[paneKey]
   const retainsResumableRecoveryIdentity =
-    payload.state === 'done' &&
+    isAgentStatusTurnComplete(payload) &&
     isResumableTuiAgent(identity.agentType) &&
     providerSession !== undefined &&
     getAgentResumeArgv(identity.agentType, providerSession) !== null
   const matchedSleepingLaunchConfig =
-    (payload.state !== 'done' || retainsResumableRecoveryIdentity) &&
+    (!isAgentStatusTurnComplete(payload) || retainsResumableRecoveryIdentity) &&
     existingSleepingRecord?.launchConfig &&
     existingSleepingRecord.agent === identity.agentType &&
     providerSession &&
@@ -91,7 +92,7 @@ export function deriveAgentStatusLiveEntryLaunchContext(args: {
       ? existingSleepingRecord.launchConfig
       : undefined
   const launchConfigSource =
-    (payload.state !== 'done' && !providerSessionChanged && metadata?.launchToken
+    (!isAgentStatusTurnComplete(payload) && !providerSessionChanged && metadata?.launchToken
       ? metadata?.launchConfig
       : undefined) ??
     matchedRegistryLaunchConfig ??

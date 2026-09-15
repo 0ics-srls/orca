@@ -132,6 +132,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
         ? {
             agentType: previous.payload.agentType,
             state: previous.payload.state,
+            sessionBoundary: previous.payload.sessionBoundary,
             updatedAt: previous.receivedAt,
             restoredUnconfirmed: previous.restoredUnconfirmed
           }

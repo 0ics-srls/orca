@@ -108,6 +108,7 @@ export function buildAgentStatusLiveEntry(
       ? {
           agentType: existing.agentType,
           state: existing.state,
+          sessionBoundary: existing.sessionBoundary,
           updatedAt: existing.updatedAt,
           restoredUnconfirmed: existing.restoredUnconfirmed
         }

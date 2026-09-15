@@ -17,6 +17,7 @@ import { isStructuredAgentSyntheticSleepingRecord } from './structured-agent-syn
 import { findUnhydratedHostMirrorForPane } from './host-mirrored-pane-liveness'
 import { resolveWorkspaceTerminalHostAuthority } from './workspace-terminal-host-authority'
 import { parkUntilHostSessionMirrorHydrates } from '@/runtime/host-session-mirror-hydration'
+import { isAgentStatusTurnComplete } from '../../../shared/agent-completion-time'
 
 export type { ResumeSleepingAgentSessionsOptions } from './sleeping-agent-session-launch'
 
@@ -100,7 +101,7 @@ function activeOrQueuedResumeClaimsProviderSession(
       worktreeTabIds.has(getAgentStatusTabId(entry) ?? '') &&
       entry.worktreeId === record.worktreeId &&
       entry.agentType === record.agent &&
-      entry.state !== 'done' &&
+      !isAgentStatusTurnComplete(entry) &&
       agentProviderSessionsEqual(record.agent, entry.providerSession, record.providerSession)
     ) {
       return true

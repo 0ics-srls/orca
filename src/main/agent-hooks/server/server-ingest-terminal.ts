@@ -5,6 +5,7 @@ import { terminalStatusPayloadMatchesHook } from '../../../shared/agent-terminal
 import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import { AgentHookServerIngestNormalization } from './server-ingest-normalization'
+import { isAgentStatusTurnComplete } from '../../../shared/agent-completion-time'
 
 export abstract class AgentHookServerIngestTerminal extends AgentHookServerIngestNormalization {
   ingestTerminalStatus(event: {
@@ -127,7 +128,11 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
     const preservedProviderSession =
       previous?.providerSession &&
       (claimedAgentType === undefined || claimedAgentType === previous.payload.agentType) &&
-      (previous.payload.state !== 'done' || event.payload.state === 'done')
+      (!isAgentStatusTurnComplete({
+        state: previous.payload.state,
+        sessionBoundary: previous.payload.sessionBoundary
+      }) ||
+        event.payload.state === 'done')
         ? previous.providerSession
         : undefined
     // Why: OSC status is a runtime observation, not a prompt boundary; keep prompt-sent telemetry tied to native hooks.
