@@ -300,6 +300,20 @@ describe('BrowserSessionRegistry', () => {
     expect(removeCertificateRequestGuardMock).not.toHaveBeenCalled()
   })
 
+  // Why: the Electron Session outlives its partition, so a deleted profile must not keep a header hook.
+  it('retires the user agent policy when deleting a profile', async () => {
+    const profile = await browserSessionRegistry.createProfile('isolated', 'UA Delete Test')
+    const mockSession = sessionFromPartitionMock.mock.results[0]?.value
+    expect(mockSession.webRequest.onBeforeSendHeaders).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.any(Function)
+    )
+
+    await expect(browserSessionRegistry.deleteProfile(profile!.id)).resolves.toBe(true)
+
+    expect(mockSession.webRequest.onBeforeSendHeaders).toHaveBeenLastCalledWith(null)
+  })
+
   it('keeps the request guard installed while deleted-profile guests remain', async () => {
     setBrowserNetworkProxySettingsResolver(() => ({
       httpProxyUrl: 'http://proxy.example:8080',

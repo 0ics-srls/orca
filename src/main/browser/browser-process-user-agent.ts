@@ -9,13 +9,19 @@ export type BrowserProcessUserAgentIdentity = Readonly<{
 
 let identity: BrowserProcessUserAgentIdentity | null = null
 
+const CHROMIUM_ENGINE_COMMENT = '(KHTML, like Gecko)'
+
 // Why: Electron's default includes its runtime and app tokens, which invalidate Chrome-imported sessions.
-// Why anchored on the nearest ")" before Chrome/ and never crossing another ")": app.setName decides
-// the app token, and dev uses a name containing a space ("Orca Dev"), which a single \S+ cannot span
-// — it left the app name on the wire. Consuming only non-")" tokens keeps the match inside the gap
-// between the last comment and Chrome/, so any number of app tokens go and nothing else does. A user
-// agent with no such gap is returned unchanged, because over-stripping is worse than under-stripping.
+// Why gated on the engine comment: the app-token strip anchors on the nearest ")" before Chrome/, so a
+// user agent without one would anchor on the OS comment and eat a real engine token. Only
+// Chromium-shaped identities are cleaned; anything else is returned byte-identical.
+// Why that anchor never crosses another ")": app.setName decides the app token, and dev uses a name
+// containing a space ("Orca Dev"), which a single \S+ cannot span — it left the app name on the wire.
+// Consuming only non-")" tokens keeps the match inside the gap between the engine comment and Chrome/.
 export function cleanElectronUserAgent(userAgent: string): string {
+  if (!userAgent.includes(CHROMIUM_ENGINE_COMMENT)) {
+    return userAgent
+  }
   return userAgent
     .replace(/\s+Electron\/\S+/, '')
     .replace(/(\)\s+)(?:[^)\s]+\s+)*?(Chrome\/)/, '$1$2')

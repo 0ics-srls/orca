@@ -35,9 +35,9 @@ describe('cleanElectronUserAgent', () => {
       MAC_CLEAN
     ],
     [
-      'a platform comment that is not the engine comment',
-      `Mozilla/5.0 (Test) Package/0.0.0 Chrome/150.0.0.0 Electron/43.7.0 Safari/537.36`,
-      'Mozilla/5.0 (Test) Chrome/150.0.0.0 Safari/537.36'
+      'an app name after the engine comment on a platform with a short OS comment',
+      `Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Package/0.0.0 Chrome/150.0.0.0 Electron/43.7.0 Safari/537.36`,
+      'Mozilla/5.0 (Test) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
     ]
   ])('strips the Electron and app tokens for %s', (_label, raw, expected) => {
     expect(cleanElectronUserAgent(raw)).toBe(expected)
@@ -47,9 +47,19 @@ describe('cleanElectronUserAgent', () => {
     expect(cleanElectronUserAgent(MAC_CLEAN)).toBe(MAC_CLEAN)
   })
 
-  // Why: over-stripping is worse than under-stripping — it would corrupt a UA we do not recognise.
-  it('leaves a user agent with no engine comment unchanged', () => {
-    const foreign = 'SomeOtherAgent/2.0 Chrome/150.0.0.0 Safari/537.36'
-    expect(cleanElectronUserAgent(foreign)).toBe(foreign)
+  // Why: over-stripping is worse than under-stripping — without the engine comment the app-token
+  // anchor lands on the OS comment and destroys a real engine token, so these are left alone.
+  it.each([
+    [
+      'an OS comment but no engine comment',
+      'Mozilla/5.0 (X11; Linux x86_64) SomeEngine/1.0 MyApp/2.0 Chrome/150.0.0.0 Electron/43.7.0 Safari/537.36'
+    ],
+    ['no comment at all', 'SomeOtherAgent/2.0 Chrome/150.0.0.0 Safari/537.36'],
+    [
+      'a non-Chromium user agent',
+      'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0'
+    ]
+  ])('leaves a user agent unchanged for %s', (_label, raw) => {
+    expect(cleanElectronUserAgent(raw)).toBe(raw)
   })
 })

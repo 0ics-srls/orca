@@ -200,7 +200,8 @@
         "optionCleanTooltip": "Removes Orca and Electron tokens to match imported Chrome sessions.",
         "optionNative": "Native",
         "optionNativeTooltip": "Keeps Electron's built-in identity for sites that reject the cleaned identity. Google sign-in is unavailable in Native mode.",
-        "restartRequired": "Restart required"
+        "restartRequired": "Restart required",
+        "unavailable": "Browser identity is unavailable."
       }
     }
   },

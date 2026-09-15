@@ -57,7 +57,9 @@ export function BrowserUserAgentSetting({
       .identitySet(mode)
       .then((result) => {
         if (!result) {
-          setError('Browser identity is unavailable.')
+          setError(
+            translate('settings.browser.userAgent.unavailable', 'Browser identity is unavailable.')
+          )
         } else if (!result.ok) {
           setError(result.error.message)
         } else {
