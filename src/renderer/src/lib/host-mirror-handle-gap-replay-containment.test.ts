@@ -21,6 +21,7 @@ const ENV_ID = 'env-gap-containment'
 function seedTwoMirroredPanes(): void {
   useAppStore.setState({
     tabsByWorktree: {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
       wt: [
         { id: 'tab-a', title: 'a', ptyId: null },
         { id: 'tab-b', title: 'b', ptyId: null }

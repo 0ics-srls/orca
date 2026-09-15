@@ -42,6 +42,7 @@ let subscribeCalls: number
 function publishPaneAndPark(environmentId: string, tabId: string): void {
   const state = useAppStore.getState()
   const published = state.tabsByWorktree[WORKTREE_ID] ?? []
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     ptyIdsByTabId: {},
     tabsByWorktree: {
@@ -62,6 +63,7 @@ function publishPaneAndPark(environmentId: string, tabId: string): void {
 
 /** Lands the pane's handle, which is what both releases a waiter and retires a verdict. */
 function landHandle(tabId: string): void {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     ptyIdsByTabId: { ...useAppStore.getState().ptyIdsByTabId, [tabId]: [`pty-${tabId}`] }
   } as never)
@@ -75,6 +77,7 @@ describe('host-mirror handle-gap store subscription lifetime', () => {
     unsubscribeCalls = 0
     subscribeCalls = 0
     const realSubscribe = useAppStore.subscribe.bind(useAppStore)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the subscriber is invoked with the store state pair; the narrowed listener type is what this suite asserts on.
     vi.spyOn(useAppStore, 'subscribe').mockImplementation(((listener: never) => {
       subscribeCalls += 1
       const unsubscribe = realSubscribe(listener)

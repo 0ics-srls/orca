@@ -39,6 +39,7 @@ const initialAppStoreState = useAppStore.getState()
 
 /** Publishes the row AND the layout binding that makes the pane unverifiable rather than dead. */
 function publishRow(options: { handleLanded: boolean }): void {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     tabsByWorktree: { [WORKTREE]: [{ id: TAB_ID, title: 't', ptyId: null }] },
     terminalLayoutsByTabId: {
@@ -101,6 +102,7 @@ describe('handle-gap verdict, landed-handle eviction', () => {
     // Adopting an orphaned terminal re-keys `tabsByWorktree` without re-keying the record, so the
     // re-park hands the live wait a new worktree. Retraction evidence about the OLD one says
     // nothing about the wait that is actually running.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       tabsByWorktree: {
         'wt-old': [{ id: TAB_ID, title: 't', ptyId: null }],
@@ -112,12 +114,14 @@ describe('handle-gap verdict, landed-handle eviction', () => {
     const replayAfterAdoption = vi.fn()
     parkUntilHostMirrorHandleLands(ENV_ID, 'wt-new', TAB_ID, replayAfterAdoption)
 
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       tabsByWorktree: { 'wt-new': [{ id: TAB_ID, title: 't', ptyId: null }] }
     } as unknown as AppState)
     expect(replayAfterAdoption).not.toHaveBeenCalled()
     expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(1)
 
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({ tabsByWorktree: {} } as unknown as AppState)
     expect(replayAfterAdoption).toHaveBeenCalledTimes(1)
   })

@@ -64,9 +64,11 @@ function seedMirroredWorkspace(worktree: ReturnType<typeof makeCreatedAgentWorkt
     activeWorktreeId: worktree.id,
     activeView: 'terminal',
     tabsByWorktree: {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
       [worktree.id]: [{ id: WEB_TAB_ID, title: 'Claude', ptyId: null } as never]
     },
     terminalLayoutsByTabId: {
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
       [WEB_TAB_ID]: {
         root: { type: 'leaf', leafId: LEAF_ID },
         activeLeafId: LEAF_ID,
@@ -81,21 +83,25 @@ function seedMirroredWorkspace(worktree: ReturnType<typeof makeCreatedAgentWorkt
     automaticAgentResumeClaimsByTabId: {},
     agentStatusByPaneKey: {}
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState(state as AppState)
 }
 
 /** A second published mirrored row in the same environment, with its own leaf binding. */
 function seedSecondMirroredPane(worktreeId: string): void {
   const before = useAppStore.getState()
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     tabsByWorktree: {
       [worktreeId]: [
         ...(before.tabsByWorktree[worktreeId] ?? []),
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal names every field this suite reads; the cast only supplies the rest of the declared shape.
         { id: SECOND_TAB_ID, title: 'Claude 2', ptyId: null } as never
       ]
     },
     terminalLayoutsByTabId: {
       ...before.terminalLayoutsByTabId,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
       [SECOND_TAB_ID]: {
         root: { type: 'leaf', leafId: SECOND_LEAF_ID },
         activeLeafId: SECOND_LEAF_ID,
@@ -114,6 +120,7 @@ function seedActiveSleepingRecordFor(
   sessionId: string
 ): string {
   const paneKey = makePaneKey(tabId, leafId)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     sleepingAgentSessionsByPaneKey: {
       ...useAppStore.getState().sleepingAgentSessionsByPaneKey,
@@ -391,6 +398,7 @@ describe('resume across the mirror handle gap', () => {
     expect(resumeSleepingAgentSessionsForWorktree(worktree.id)).toBe(0)
 
     // Teardown drops every row the environment owned.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({ tabsByWorktree: {}, terminalLayoutsByTabId: {} } as never)
 
     expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(0)

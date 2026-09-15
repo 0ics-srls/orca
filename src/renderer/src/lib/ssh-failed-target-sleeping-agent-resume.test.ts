@@ -49,6 +49,7 @@ function seedFailedSshTarget(phase?: 'offline' | 'error' | 'pulling'): void {
     origin: 'worktree-sleep'
   }
   useAppStore.setState({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
     repos: [
       {
         id: 'repoSsh',
@@ -61,6 +62,7 @@ function seedFailedSshTarget(phase?: 'offline' | 'error' | 'pulling'): void {
     ] as never,
     worktreesByRepo: {
       repoSsh: [
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
         makeWorktree({
           id: WORKTREE_ID,
           repoId: 'repoSsh',

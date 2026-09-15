@@ -31,6 +31,7 @@ function parkAndExpire(environmentId: string, tabId: string): void {
   // suite is about a class no recording-driven prune can reach, so every pane here stays live.
   const state = useAppStore.getState()
   const published = state.tabsByWorktree[WORKTREE_ID] ?? []
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     ptyIdsByTabId: {},
     tabsByWorktree: {
@@ -86,6 +87,7 @@ describe('host-mirror handle-gap verdicts across environment teardown', () => {
   // silently drop a parked resume sweep that nothing else will replay.
   it('leaves a parked waiter alone, cancelling only the verdicts', () => {
     const replay = vi.fn()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       ptyIdsByTabId: {},
       tabsByWorktree: { [WORKTREE_ID]: [{ id: 'web-terminal-host-tab-9', title: 'nine' }] }

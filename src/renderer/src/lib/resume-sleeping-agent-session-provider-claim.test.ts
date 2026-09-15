@@ -153,6 +153,7 @@ describe('resume sleeping agent provider claims', () => {
     const paneKey = makePaneKey('tab-1', LEAF_ID)
     const peerPaneKey = makePaneKey('tab-peer', OTHER_LEAF_ID)
     const record = makeRecord(paneKey)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       activeWorktreeId: 'wt-1',
       activeTabType: 'terminal',
@@ -180,6 +181,7 @@ describe('resume sleeping agent provider claims', () => {
     const paneKey = makePaneKey('tab-1', LEAF_ID)
     const peerPaneKey = makePaneKey('tab-peer', OTHER_LEAF_ID)
     const record = makeRecord(paneKey)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       activeWorktreeId: 'wt-1',
       activeTabType: 'terminal',
@@ -216,6 +218,7 @@ describe('resume sleeping agent provider claims', () => {
     const paneKey = makePaneKey('tab-1', LEAF_ID)
     const peerPaneKey = makePaneKey('tab-peer', OTHER_LEAF_ID)
     const record = makeRecord(paneKey)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       activeWorktreeId: 'wt-1',
       activeTabType: 'terminal',

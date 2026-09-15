@@ -27,6 +27,7 @@ function seedRows(): void {
   // Layout bindings are seeded because a verdict names the PANE by the environment-minted PTY it
   // held at park time. A pane with no binding never reaches the park path in production, and its
   // verdict deliberately refuses to answer, so a fixture without one models nothing real.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     ptyIdsByTabId: {},
     tabsByWorktree: {
@@ -54,6 +55,7 @@ function seedRows(): void {
 
 /** The host publishes both panes' PTY handles on one frame: both waiters come due together. */
 function publishBothHandles(): void {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     ptyIdsByTabId: { [FIRST_TAB_ID]: ['pty-1'], [SECOND_TAB_ID]: ['pty-2'] }
   } as never)

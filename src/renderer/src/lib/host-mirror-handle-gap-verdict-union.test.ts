@@ -62,6 +62,7 @@ function setLiveTabs(tabIds: string[], ptyByTabId: Record<string, string> = {}):
       ptyIdsByLeafId: { [`leaf-${id}`]: ptyId }
     }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
     tabsByWorktree: { [WORKTREE]: tabIds.map((id) => ({ id, title: id, ptyId: null })) },
     terminalLayoutsByTabId: layouts,
