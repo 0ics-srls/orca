@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "55971752f963202d30160851197a301089b0f3ebd0c46725af1a461d8310d658",
   "scenarioSha256": "eb2294c30af70ebc2bac092dc5105249ae8cf1941f750406622f7ff6dd70cc1b",
   "platform": "darwin",
@@ -20,6 +20,13 @@
     "37ef5fe93769": {
       "name": "browser.keyboardInsertText#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"browser.keyboardInsertText\",\"params\":{\"worktree\":\"id:worktree-1\",\"page\":\"page-1\",\"text\":\"hello\"}}"
+    },
+    "5fe64ef6c1f3": {
+      "name": "toast",
+      "value": {
+        "message": "Sent"
+      },
+      "sent": 1
     },
     "770254847b6a": {
       "name": "browser.keyboardInsertText#1",
@@ -66,12 +73,6 @@
       },
       "keyboardValue": "",
       "pointerModifiers": []
-    },
-    "c20546e0857f": {
-      "name": "toast",
-      "value": {
-        "message": "Sent"
-      }
     },
     "c532c7fdcc69": {
       "name": "browser.keypress#1",
@@ -131,7 +132,7 @@
             "keypress": "eb79a9b3682a"
           },
           "state": "8160e8872519",
-          "effects": ["c20546e0857f"]
+          "effects": ["5fe64ef6c1f3"]
         }
       }
     ]

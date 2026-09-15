@@ -5,8 +5,8 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
-  "adapterSha256": "4d12023747f436c92231653f52f85569f1fc690883c554d82bf7a1e6fe2f4150",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
+  "adapterSha256": "160421b989563424531fc893a115b95b399d1524ebaf1c91caa8b2862b52eb07",
   "scenarioSha256": "8c1fa604104c5551b8418af225c9420b1292f0c55b392f847985947c66749959",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -280,6 +280,13 @@
           "isRpcDeliveryUnknown": true
         }
       }
+    },
+    "55062daf394e": {
+      "name": "screen.crash",
+      "value": {
+        "message": "entries.filter is not a function"
+      },
+      "sent": 1
     },
     "6660284d98a2": {
       "name": "files.readDir#1",
@@ -658,7 +665,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "ea2c96b08e6b",
-          "effects": []
+          "effects": ["55062daf394e"]
         }
       },
       {
@@ -670,7 +677,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "ea2c96b08e6b",
-          "effects": []
+          "effects": ["55062daf394e"]
         }
       },
       {
@@ -682,7 +689,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "ea2c96b08e6b",
-          "effects": []
+          "effects": ["55062daf394e"]
         }
       },
       {

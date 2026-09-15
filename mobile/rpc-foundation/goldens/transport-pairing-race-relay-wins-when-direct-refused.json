@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "34b382b13fe75e8ef4002325287c95b3c4db62eeaaf3762af7fbaf6f836c2fa1",
   "scenarioSha256": "a34ffec446f9bbc465bd3f7d0a43166c9bc221a6ece8714e0b5717169625cf43",
   "platform": "darwin",
@@ -93,13 +93,14 @@
     "a7d5becc0aed": {
       "outcome": "relay"
     },
+    "b2a8517fe750": {
+      "name": "candidate-closed",
+      "value": "direct",
+      "sent": 2
+    },
     "c0c86e67c300": {
       "name": "status.get#2",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"status.get\"}"
-    },
-    "f203320e31e9": {
-      "name": "candidate-closed",
-      "value": "direct"
     }
   },
   "recording": {
@@ -114,7 +115,7 @@
             "race": "416024b9c436"
           },
           "state": "a7d5becc0aed",
-          "effects": ["f203320e31e9"]
+          "effects": ["b2a8517fe750"]
         }
       }
     ]

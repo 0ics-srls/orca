@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "76b53dea504a688493843e23e8e7d052fc196f559bb1e2579d0fd38bf3156d0e",
   "scenarioSha256": "d85a4031b701e563941afcdd7375cf78a1ee1487a0dab722f8516c2bc8d3dcee",
   "platform": "darwin",
@@ -203,12 +203,6 @@
         }
       }
     },
-    "7ded5dc86080": {
-      "name": "device-store.removeItem",
-      "value": {
-        "key": "orca:codex-reset-credit-attempt:v1:0832055c2fa90e8e145c588ad4db656a2fc2840ed2e851a28494eae769db9b3e"
-      }
-    },
     "9270aeb7d9c6": {
       "status": "pending",
       "startedAt": 0
@@ -252,6 +246,13 @@
         "status": "pending",
         "startedAt": 0
       }
+    },
+    "c55ed0a410f8": {
+      "name": "device-store.removeItem",
+      "value": {
+        "key": "orca:codex-reset-credit-attempt:v1:0832055c2fa90e8e145c588ad4db656a2fc2840ed2e851a28494eae769db9b3e"
+      },
+      "sent": 1
     }
   },
   "recording": {
@@ -278,7 +279,7 @@
             "confirm": "074c5080c062"
           },
           "state": "0e5764df4bfd",
-          "effects": ["7ded5dc86080"]
+          "effects": ["c55ed0a410f8"]
         }
       }
     ]

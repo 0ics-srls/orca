@@ -5,8 +5,8 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
-  "adapterSha256": "6abaa10f7eb5a9f0fcc678c9b33c632dc9c12a1f6fd2889a8b89365a8e6e7363",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
+  "adapterSha256": "64c1772f0f95a3c43fbb14398a8804b2b4784f7f18874e4fd79767ae634c7faa",
   "scenarioSha256": "95f7dbb11bca7203d29bd13230d4a286f49ff20596535163094e1bff73e7f3cb",
   "platform": "darwin",
   "scenarioVersion": 1,
@@ -412,6 +412,13 @@
         }
       }
     },
+    "e3855d3cb5ae": {
+      "name": "screen.crash",
+      "value": {
+        "message": "Cannot read properties of undefined (reading 'length')"
+      },
+      "sent": 1
+    },
     "eac6e56c2d2c": {
       "crash": {
         "$rpc": "null"
@@ -523,7 +530,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "2f24355c470f",
-          "effects": []
+          "effects": ["e3855d3cb5ae"]
         }
       },
       {
@@ -535,7 +542,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "2f24355c470f",
-          "effects": []
+          "effects": ["e3855d3cb5ae"]
         }
       },
       {
@@ -547,7 +554,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "2f24355c470f",
-          "effects": []
+          "effects": ["e3855d3cb5ae"]
         }
       },
       {

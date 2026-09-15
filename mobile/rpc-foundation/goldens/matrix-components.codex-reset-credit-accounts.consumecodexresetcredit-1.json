@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "76b53dea504a688493843e23e8e7d052fc196f559bb1e2579d0fd38bf3156d0e",
   "scenarioSha256": "cc6de73be00be072f9a3b7fd63459fd1a529c45d0916a67d5fe6d90dbee61e91",
   "platform": "darwin",
@@ -302,13 +302,6 @@
         }
       }
     },
-    "81b2445d178a": {
-      "name": "device-store.setItem",
-      "value": {
-        "key": "orca:codex-reset-credit-attempt:v1:0832055c2fa90e8e145c588ad4db656a2fc2840ed2e851a28494eae769db9b3e",
-        "value": "{\"v\":1,\"hostId\":\"host-1\",\"expectedScope\":{\"target\":{\"runtime\":\"host\",\"wslDistro\":null},\"accountId\":\"codex-1\",\"accountRevision\":1700000000000,\"offerRevision\":\"v1:[1,null,null,[],null,null,1700000000000]\"},\"idempotencyKey\":\"00000000-0000-4000-8000-000000000001\"}"
-      }
-    },
     "90f55bfe00c2": {
       "name": "accounts.consumeCodexResetCredit#1",
       "args": [
@@ -404,6 +397,14 @@
         "message": "transport failure",
         "isRpcDeliveryUnknown": true
       }
+    },
+    "ab755576c214": {
+      "name": "device-store.setItem",
+      "value": {
+        "key": "orca:codex-reset-credit-attempt:v1:0832055c2fa90e8e145c588ad4db656a2fc2840ed2e851a28494eae769db9b3e",
+        "value": "{\"v\":1,\"hostId\":\"host-1\",\"expectedScope\":{\"target\":{\"runtime\":\"host\",\"wslDistro\":null},\"accountId\":\"codex-1\",\"accountRevision\":1700000000000,\"offerRevision\":\"v1:[1,null,null,[],null,null,1700000000000]\"},\"idempotencyKey\":\"00000000-0000-4000-8000-000000000001\"}"
+      },
+      "sent": 0
     },
     "b0762ae2d280": {
       "name": "accounts.consumeCodexResetCredit#1",
@@ -767,7 +768,7 @@
             "confirm": "9270aeb7d9c6"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -779,7 +780,7 @@
             "confirm": "fed9e1669a83"
           },
           "state": "60304d1e19bb",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -791,7 +792,7 @@
             "confirm": "e1ee0a1ae721"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -803,7 +804,7 @@
             "confirm": "e1ee0a1ae721"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -815,7 +816,7 @@
             "confirm": "e1ee0a1ae721"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -827,7 +828,7 @@
             "confirm": "e1ee0a1ae721"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -839,7 +840,7 @@
             "confirm": "e1ee0a1ae721"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -851,7 +852,7 @@
             "confirm": "32a7c0ae7918"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -863,7 +864,7 @@
             "confirm": "f3b516f62081"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -875,7 +876,7 @@
             "confirm": "b948e8307e81"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -887,7 +888,7 @@
             "confirm": "a947768bc0ed"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       },
       {
@@ -899,7 +900,7 @@
             "confirm": "c7584e82c72f"
           },
           "state": "0a07efb53f1e",
-          "effects": ["81b2445d178a"]
+          "effects": ["ab755576c214"]
         }
       }
     ]

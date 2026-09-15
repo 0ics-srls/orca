@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "c4272385ed3b0de4feab38de9e4f6363ecd6317fdd4de47f76a98eb18abaf371",
   "scenarioSha256": "a83d5768892764af2dd6866f03d51c09aef63d1c5d3e0645bd5e1c16454b201f",
   "platform": "darwin",
@@ -52,7 +52,7 @@
       "name": "github.repoSlug#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.repoSlug\",\"params\":{\"repo\":\"id:repo-1\"}}"
     },
-    "a21757eb73fd": {
+    "a357afc033aa": {
       "name": "githubRepoSlugCache",
       "value": {
         "repo-1": {
@@ -63,7 +63,8 @@
             "repo": "repo"
           }
         }
-      }
+      },
+      "sent": 1
     },
     "bdec8bbb3c04": {
       "cache": {
@@ -98,7 +99,7 @@
             "mount": "eb79a9b3682a"
           },
           "state": "bdec8bbb3c04",
-          "effects": ["a21757eb73fd"]
+          "effects": ["a357afc033aa"]
         }
       }
     ]

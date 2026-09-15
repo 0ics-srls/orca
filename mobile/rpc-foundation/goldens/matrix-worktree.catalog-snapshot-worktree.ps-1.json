@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "4df43aef41ad368f77b98c106412fa412547878e2a2591106fc34e988b958ded",
+  "recorderSha256": "8ca81bc6727a585fce90e2fc8be8c50c2ccfac5567c6ceb42440b29008761732",
   "adapterSha256": "6119d409e1958877e4a04b3901f94a3609ac0420f5ca02af20eb8dae5cbf3408",
   "scenarioSha256": "95ca47f382997c412da974e564a46b1ae0c20d6e0f3ca14258d33c8d8b51a160",
   "platform": "darwin",
@@ -111,14 +111,6 @@
     "253b98015b8d": {
       "admitted": "unadmitted",
       "fetched": "unfetched"
-    },
-    "2d40d1d38104": {
-      "name": "unhandled-rejection",
-      "value": {
-        "category": "Error",
-        "isRpcDeliveryUnknown": false,
-        "message": "Unsupported observation: function"
-      }
     },
     "4262ba495b1b": {
       "name": "worktree.ps#1",
@@ -244,6 +236,15 @@
           "ok": false
         }
       }
+    },
+    "69f112b863c9": {
+      "name": "unhandled-rejection",
+      "value": {
+        "category": "Error",
+        "isRpcDeliveryUnknown": false,
+        "message": "Unsupported observation: function"
+      },
+      "sent": 1
     },
     "8e2c2fbe7e94": {
       "status": "fulfilled",
@@ -587,7 +588,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "ab1a9ba6301c",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
@@ -599,7 +600,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "50c4271e912d",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
@@ -611,7 +612,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "50c4271e912d",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
@@ -623,7 +624,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "50c4271e912d",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
@@ -635,7 +636,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "50c4271e912d",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
@@ -647,7 +648,7 @@
             "fetch": "9270aeb7d9c6"
           },
           "state": "50c4271e912d",
-          "effects": ["2d40d1d38104"]
+          "effects": ["69f112b863c9"]
         }
       },
       {
