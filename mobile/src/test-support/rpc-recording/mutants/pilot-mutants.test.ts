@@ -28,7 +28,8 @@ const mutants: Record<string, Mutation> = {
   'settings-task-hydration-fulfilled': 'task-hydration-envelope',
   'settings-task-write': 'task-preferences-optimistic',
   'settings-workspace-submit-fulfilled': 'workspace-submit-envelope',
-  'settings-task-workspace-fulfilled': 'task-workspace-envelope'
+  'settings-task-workspace-fulfilled': 'task-workspace-envelope',
+  'native-chat-write-delivery-unknown': 'native-chat-send-delivery-unknown'
 }
 /**
  * The archived tree's visible state, pinned per seed: b1 serves the poisoned empty inventory, b2
@@ -74,6 +75,7 @@ describe('RPC main recording mutants', () => {
   for (const { id, scenario, mutation } of mutantPilots) {
     it(`${id}: kills ${mutation}`, async () => {
       const { adapters, assertMutationApplied } = pilotMountAdapters(root, {
+        device: scenario,
         mutation: operationMutation(mutation)
       })
       const result = await runRecordingMutant(
@@ -90,6 +92,7 @@ describe('RPC main recording mutants', () => {
   for (const { id, scenario, reference } of referencePilots) {
     it.skipIf(!process.env.RPC_FOUNDATION_REFERENCE_ROOT)(`${id}: rejects bcba08b3e4`, async () => {
       const { adapters } = pilotMountAdapters(process.env.RPC_FOUNDATION_REFERENCE_ROOT!, {
+        device: scenario,
         reference: true
       })
       const result = await runRecording(

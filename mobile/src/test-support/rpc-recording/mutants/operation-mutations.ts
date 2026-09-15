@@ -6,11 +6,21 @@ import type { OperationMutation } from '../operation-module-loader'
  * is what proves that family's `state()` projection observes the operation's actual output.
  */
 export const OPERATION_MUTATIONS = {
-  // Loses the generation comparison, so a stale workspace response poisons the search cache.
+  // Drops the delivery-unknown arm of a native-chat send, so an ack lost after the frame was
+  // written reads as a definite rejection and invites the user to send the same message twice.
+  'native-chat-send-delivery-unknown': {
+    file: 'mobile-native-chat-send.ts',
+    before: `    return isRpcDeliveryUnknown(error) || isLogicalClientCutoverError(error)
+      ? 'unknown'
+      : 'rejected'`,
+    after: `    return isLogicalClientCutoverError(error) ? 'unknown' : 'rejected'`
+  },
+  // Re-anchored where the operation migration moved the acceptance read; the defect it injects —
+  // a stale workspace response poisoning the search cache — is unchanged.
   race: {
     file: 'use-mobile-native-chat-file-search.ts',
-    before: '!response.ok || generationRef.current !== generation',
-    after: '!response.ok'
+    before: '!accepted.accepted || generationRef.current !== generation',
+    after: '!accepted.accepted'
   },
   // Accepts a null result envelope instead of rejecting it. The guard is repeated for three
   // mutations in this file; the anchor carries the message so only the recorded one is edited.
@@ -21,23 +31,38 @@ export const OPERATION_MUTATIONS = {
     after: `if (result?.ok === false) {
           throw new Error(result.error?.message ?? 'Failed to update GitHub item')`
   },
-  // Rejects the barrier early, so the sibling comment request is abandoned out of order.
+  // Interprets inside the request chain instead of at the declared barrier, so the issue leg
+  // rejects the group early and the sibling comment request is abandoned out of order. Re-anchored
+  // where the operation migration moved the send; the defect it injects is unchanged.
   order: {
     file: 'use-mobile-tasks-item-detail-loading.tsx',
-    before: `{ timeoutMs: 30_000 }
-        ),
-        client.sendRequest(
-          'linear.issueComments'`,
-    after: `{ timeoutMs: 30_000 }
-        ).then((response) => { if (!isSuccess(response)) throw new Error(response.error.message); return response }),
-        client.sendRequest(
-          'linear.issueComments'`
+    before: `        linearIssueRead.request(
+          client,
+          {
+            id: actionItem.source.id,
+            workspaceId: actionItem.source.workspaceId
+          },
+          { timeoutMs: 30_000 }
+        ),`,
+    after: `        linearIssueRead
+          .request(
+            client,
+            {
+              id: actionItem.source.id,
+              workspaceId: actionItem.source.workspaceId
+            },
+            { timeoutMs: 30_000 }
+          )
+          .then((response) => {
+            linearIssueRead.interpret(response)
+            return response
+          }),`
   },
   // Reads the overrides one level above the settings envelope.
   'bot-overrides-envelope': {
     file: 'settings-read-operations.ts',
-    before: "settings == null ? undefined : Reflect.get(Object(settings), 'prBotAuthorOverrides')",
-    after: "raw == null ? undefined : Reflect.get(Object(raw), 'prBotAuthorOverrides')"
+    before: "settings == null ? undefined : settingsField(settings, 'prBotAuthorOverrides')",
+    after: "raw == null ? undefined : settingsField(raw, 'prBotAuthorOverrides')"
   },
   // Publishes the settings envelope instead of the accepted operation value.
   'workspace-context-envelope': {
@@ -93,15 +118,13 @@ export const OPERATION_MUTATIONS = {
   },
   // Checks the sibling's refusal before the operation's own, so a correlated refusal reports the
   // sibling. Invisible to every scenario whose sibling succeeds or rejects at the transport.
+  // Re-anchored where the operation migration moved both reads; the reorder it injects — the
+  // detection refusal deciding the error before the settings read is interpreted — is unchanged.
   'new-tab-refusal-order': {
     file: 'mobile-new-tab-agent-loader.ts',
-    before: `  const readSettings = newTabSettingsRead.interpret(settingsResponse)
-  if (!detectedResponse.ok) {
-    throw new Error((detectedResponse as RpcFailure).error.message)
-  }`,
-    after: `  if (!detectedResponse.ok) {
-    throw new Error((detectedResponse as RpcFailure).error.message)
-  }
+    before: `  const readSettings = newTabSettingsRead.interpret(settingsResponse)`,
+    after: `  const detected0 = detectedAgents.interpret(detectedAgents.reply)
+  void detected0
   const readSettings = newTabSettingsRead.interpret(settingsResponse)`
   },
   // Publishes an unaccepted read, blanking settings a refusal should have left alone. Invisible
