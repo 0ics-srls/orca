@@ -23,6 +23,7 @@ import {
   type ClaudeBackgroundTaskRow
 } from './claude-background-task-row-lifecycle'
 import {
+  ClaudeBackgroundTaskGenerationLedger,
   ensureClaudeBackgroundTaskRowSlot,
   rememberBoundedClaudeTaskMap,
   rememberBoundedClaudeTaskSet,
@@ -64,7 +65,7 @@ export class ClaudeBackgroundTaskRows {
   private readonly rows = new Map<string, ClaudeBackgroundTaskRow>()
   /** Runs seen per task id, so a reused id opens a new row instead of
    *  overwriting the finished one. Survives the row being evicted. */
-  private readonly generations = new Map<string, number>()
+  private readonly generations = new ClaudeBackgroundTaskGenerationLedger()
   private readonly foreign = new Map<string, ForeignOwner>()
   /** Tasks that were declined because every typed row slot was live. Their
    *  later frames must remain visible through the generic fallback. */
@@ -184,7 +185,7 @@ export class ClaudeBackgroundTaskRows {
         return true
       }
       if (shouldRestartClaudeBackgroundTaskRow(existing, message)) {
-        this.openRow(id, message, existing.generation + 1)
+        this.openRow(id, message)
       }
       return true
     }
@@ -208,14 +209,14 @@ export class ClaudeBackgroundTaskRows {
       return true
     }
     if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
-      this.rememberFallbackTaskId(id)
+      rememberBoundedClaudeTaskSet(this.fallbackTaskIds, id, MAX_FALLBACK_TASK_IDS)
       return false
     }
     if (restartedTerminal) {
       this.terminalTaskIds.delete(id)
       this.terminalToolUseIds.delete(id)
     }
-    this.openRow(id, message, (this.generations.get(id) ?? 0) + 1)
+    this.openRow(id, message)
     return true
   }
 
@@ -232,8 +233,8 @@ export class ClaudeBackgroundTaskRows {
     return toolUseId === undefined || this.deps.isForwardedParentTool(toolUseId)
   }
 
-  private openRow(id: string, message: Record<string, unknown>, generation: number): void {
-    this.generations.set(id, generation)
+  private openRow(id: string, message: Record<string, unknown>): void {
+    const generation = this.generations.next(id)
     this.rows.set(id, newClaudeBackgroundTaskRow(id, message, this.now(), generation))
     this.write(id)
   }
@@ -347,10 +348,6 @@ export class ClaudeBackgroundTaskRows {
 
   private rememberForeign(id: string, owner: ForeignOwner): void {
     rememberBoundedClaudeTaskMap(this.foreign, id, owner, MAX_FOREIGN_TASK_ROWS)
-  }
-
-  private rememberFallbackTaskId(id: string): void {
-    rememberBoundedClaudeTaskSet(this.fallbackTaskIds, id, MAX_FALLBACK_TASK_IDS)
   }
 
   private rememberTerminal(id: string, toolUseId?: string): void {

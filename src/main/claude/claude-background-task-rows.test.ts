@@ -586,6 +586,39 @@ describe('claude background task rows', () => {
     })
   })
 
+  it('bounds generation history without reusing an evicted durable identity', () => {
+    const { rows, keys, latest } = harness([FORWARDED_TOOL, 'toolu_second'])
+    for (let index = 0; index < 513; index += 1) {
+      const taskId = `generation-${index}`
+      rows.observe({ ...START_BASH, task_id: taskId })
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: taskId,
+        status: 'completed'
+      })
+    }
+
+    rows.observe({
+      ...START_BASH,
+      task_id: 'generation-0',
+      tool_use_id: 'toolu_second',
+      description: 'reused after ledger eviction'
+    })
+
+    const identities = new Set(keys())
+    expect(identities).toContain('claude-background-task:generation-0')
+    expect(identities).toContain('claude-background-task:generation-0#2')
+    expect(latest()).toMatchObject({
+      taskId: 'generation-0',
+      state: 'working',
+      label: 'reused after ledger eviction'
+    })
+
+    const generations = Reflect.get(rows, 'generations')
+    expect(generations.size).toBeLessThanOrEqual(512)
+  })
+
   it('declines coverage so the fallback still reports when every row slot is live', () => {
     // The row map is bounded. A task that cannot be admitted for lack of a slot
     // is not silently swallowed: coverage is declined so the generic fallback
