@@ -1,0 +1,190 @@
+{
+  "operation": "session.native-chat-stop",
+  "family": "session.native-chat-stop",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "8d8429ff6d0cdbee2c865902db1a8e91dd975754d5d3c903ce56ff1f3e05fe0c",
+  "scenarioSha256": "a72f08c12c244912912be34deb3ec12bada6b74f1bc29c0034b347dcba9ddb10",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "191580ba859d": {
+      "name": "orchestration.workerTerminalUserInput#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"orchestration.workerTerminalUserInput\",\"params\":{\"terminal\":\"terminal-1\"}}"
+    },
+    "1a91fe5e4856": {
+      "name": "terminal.send#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.send\",\"params\":{\"terminal\":\"terminal-1\",\"text\":\"\\u001b\",\"client\":{\"id\":\"device-token-1\",\"type\":\"mobile\"}}}"
+    },
+    "1d3e6369460d": {
+      "name": "terminal.send#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "terminal.send"
+        },
+        {
+          "name": "params",
+          "value": {
+            "client": {
+              "id": "device-token-1",
+              "type": "mobile"
+            },
+            "terminal": "terminal-1",
+            "text": "\u001b"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "budgetSpansConnect": true,
+            "timeoutMs": 15000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "send": {
+              "accepted": true
+            }
+          }
+        }
+      }
+    },
+    "538133eba781": {
+      "name": "terminal.send#2",
+      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.send\",\"params\":{\"terminal\":\"terminal-1\",\"text\":\"\\u001b\",\"client\":{\"id\":\"device-token-1\",\"type\":\"mobile\"}}}"
+    },
+    "86ab67d60a77": {
+      "name": "terminal.send#2",
+      "args": [
+        {
+          "name": "method",
+          "value": "terminal.send"
+        },
+        {
+          "name": "params",
+          "value": {
+            "client": {
+              "id": "device-token-1",
+              "type": "mobile"
+            },
+            "terminal": "terminal-1",
+            "text": "\u001b"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "budgetSpansConnect": true,
+            "timeoutMs": 14920
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 80,
+        "settledAt": 120,
+        "value": {
+          "id": "frame-3",
+          "ok": true,
+          "result": {
+            "send": {
+              "accepted": true
+            }
+          }
+        }
+      }
+    },
+    "960f67ee14e2": {
+      "name": "orchestration.workerTerminalUserInput#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "orchestration.workerTerminalUserInput"
+        },
+        {
+          "name": "params",
+          "value": {
+            "terminal": "terminal-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "budgetSpansConnect": true,
+            "failWhenDisconnected": true,
+            "timeoutMs": 5000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "reported": true
+          }
+        }
+      }
+    },
+    "debf84af8d66": {
+      "errors": []
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    },
+    "ee7bd5fe480b": {
+      "name": "cancel-pending",
+      "value": {}
+    }
+  },
+  "recording": {
+    "scenario": "native-chat-stop-accepted",
+    "checkpoints": [
+      {
+        "id": "first-accepted",
+        "observation": {
+          "sender": ["1d3e6369460d", "960f67ee14e2"],
+          "payloads": ["1a91fe5e4856", "191580ba859d"],
+          "settlements": {
+            "stop": "eb79a9b3682a"
+          },
+          "state": "debf84af8d66",
+          "effects": ["ee7bd5fe480b"]
+        }
+      },
+      {
+        "id": "settled",
+        "observation": {
+          "sender": ["1d3e6369460d", "960f67ee14e2", "86ab67d60a77"],
+          "payloads": ["1a91fe5e4856", "191580ba859d", "538133eba781"],
+          "settlements": {
+            "stop": "eb79a9b3682a"
+          },
+          "state": "debf84af8d66",
+          "effects": ["ee7bd5fe480b"]
+        }
+      }
+    ]
+  }
+}

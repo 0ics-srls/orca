@@ -1,0 +1,87 @@
+{
+  "operation": "settings.quick-commands",
+  "family": "settings.quick-commands",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "354f43740a459c895e39bb9816dfc25ec1b93d0578452735b1e211d1c64bcc26",
+  "scenarioSha256": "42573387533f75122f626ce6ec81c1e61fe54cde5df416154bb7cba132f53309",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "990fb5428d1f": {
+      "commands": [],
+      "error": "Unknown method",
+      "loading": false,
+      "persisted": [],
+      "ready": false
+    },
+    "ae75d9a09c8f": {
+      "name": "settings.getTerminalQuickCommands#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "settings.getTerminalQuickCommands"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "method_not_found",
+            "message": "Unknown method"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "e1663c7c38e3": {
+      "name": "settings.getTerminalQuickCommands#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.getTerminalQuickCommands\"}"
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "quick-commands-load-refused",
+    "checkpoints": [
+      {
+        "id": "errored",
+        "observation": {
+          "sender": ["ae75d9a09c8f"],
+          "payloads": ["e1663c7c38e3"],
+          "settlements": {
+            "mount": "eb79a9b3682a"
+          },
+          "state": "990fb5428d1f",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

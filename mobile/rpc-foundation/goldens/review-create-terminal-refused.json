@@ -1,0 +1,122 @@
+{
+  "operation": "session.diff-review-actions",
+  "family": "session.diff-review-actions",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "a7d69102e30b486dd475741bc47190e0d4fddf3f1ff5e6583cc0d64f86e80824",
+  "scenarioSha256": "af837de2e273c5f03130b51d6e1a9bff9ff99a4e8d1c9554a53134acb5924c72",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "58d16e8809a2": {
+      "name": "session.tabs.createTerminal#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.createTerminal\",\"params\":{\"worktree\":\"id:workspace-1\",\"activate\":false,\"select\":true,\"navigation\":\"caller\"}}"
+    },
+    "6e913cd7b306": {
+      "status": "rejected",
+      "startedAt": 0,
+      "settledAt": 0,
+      "error": {
+        "category": "Error",
+        "message": "Workspace is busy",
+        "isRpcDeliveryUnknown": false
+      }
+    },
+    "80f030a6d6a9": {
+      "name": "session.tabs.createTerminal#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "session.tabs.createTerminal"
+        },
+        {
+          "name": "params",
+          "value": {
+            "activate": false,
+            "navigation": "caller",
+            "select": true,
+            "worktree": "id:workspace-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "worktree_busy",
+            "message": "Workspace is busy"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "b567ccd139ba": {
+      "actionError": {
+        "$rpc": "null"
+      },
+      "busyAction": {
+        "$rpc": "null"
+      },
+      "screenState": {
+        "branchCompare": {
+          "$rpc": "null"
+        },
+        "comments": [
+          {
+            "body": "needs a test",
+            "createdAt": 0,
+            "filePath": "src/app.ts",
+            "id": "note-1",
+            "lineNumber": 4,
+            "worktreeId": "workspace-1"
+          }
+        ],
+        "kind": "ready",
+        "reviewState": {
+          "files": {},
+          "version": 1
+        },
+        "status": {
+          "entries": [],
+          "staged": [],
+          "unstaged": [],
+          "untracked": []
+        }
+      },
+      "sendSheet": {
+        "$rpc": "null"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "review-create-terminal-refused",
+    "checkpoints": [
+      {
+        "id": "refused",
+        "observation": {
+          "sender": ["80f030a6d6a9"],
+          "payloads": ["58d16e8809a2"],
+          "settlements": {
+            "create-and-send": "6e913cd7b306"
+          },
+          "state": "b567ccd139ba",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

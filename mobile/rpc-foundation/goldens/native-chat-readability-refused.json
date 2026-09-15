@@ -1,0 +1,84 @@
+{
+  "operation": "session.native-chat-readability",
+  "family": "session.native-chat-readability",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "8d8429ff6d0cdbee2c865902db1a8e91dd975754d5d3c903ce56ff1f3e05fe0c",
+  "scenarioSha256": "08a9ab4f180f2d6bb44d2a23f87be0443e8dfdde15f966458270a1bb6f131e0b",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "0b8777edb86c": {
+      "readable": false,
+      "worktreeId": "repo-1::/w"
+    },
+    "67f6f11ff64a": {
+      "name": "repo.list#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "repo.list"
+        },
+        {
+          "name": "params",
+          "value": {
+            "$rpc": "absent"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "internal",
+            "message": "Scan failed"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "6bdbf70bafa2": {
+      "name": "repo.list#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"repo.list\"}"
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "native-chat-readability-refused",
+    "checkpoints": [
+      {
+        "id": "unreadable",
+        "observation": {
+          "sender": ["67f6f11ff64a"],
+          "payloads": ["6bdbf70bafa2"],
+          "settlements": {
+            "mount": "eb79a9b3682a"
+          },
+          "state": "0b8777edb86c",
+          "effects": []
+        }
+      }
+    ]
+  }
+}

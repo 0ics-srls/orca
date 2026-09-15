@@ -1,0 +1,104 @@
+{
+  "operation": "session.tab-close",
+  "family": "session.tab-close",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "fb75fcbd959cc76e8302f3cb2e893e5e472216d4b7acd8d320a753fc96e7c521",
+  "scenarioSha256": "194b010d00fdeca85418870fd053ac500c38cae02e98c4bfc544b8fea78bbcb8",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "29140c529cd0": {
+      "activeHandle": {
+        "$rpc": "null"
+      },
+      "sessionTabs": [
+        {
+          "id": "tab-1",
+          "terminal": "terminal-1",
+          "type": "terminal"
+        }
+      ],
+      "terminals": []
+    },
+    "2d697fe0c9bf": {
+      "name": "terminal.close#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.close\",\"params\":{\"terminal\":\"terminal-1\"}}"
+    },
+    "5fde1571425b": {
+      "name": "unsubscribe-terminal",
+      "value": {
+        "handle": "terminal-1"
+      }
+    },
+    "66725af7058c": {
+      "name": "clear-live-input",
+      "value": {
+        "handle": "terminal-1"
+      }
+    },
+    "7e31b0a0202e": {
+      "name": "terminal.close#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "terminal.close"
+        },
+        {
+          "name": "params",
+          "value": {
+            "terminal": "terminal-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "closed": true
+          }
+        }
+      }
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "session-tab-close-terminal",
+    "checkpoints": [
+      {
+        "id": "closed",
+        "observation": {
+          "sender": ["7e31b0a0202e"],
+          "payloads": ["2d697fe0c9bf"],
+          "settlements": {
+            "close-terminal": "eb79a9b3682a"
+          },
+          "state": "29140c529cd0",
+          "effects": ["5fde1571425b", "66725af7058c"]
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "operation": "session.markdown-save",
+  "family": "session.markdown-save",
+  "namedDeltas": [],
+  "runnerVersion": 1,
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
+  "recorderSha256": "ab41fb987b5517bca9543322bd9637d5084acfe50f9b49742954f50b811728ff",
+  "adapterSha256": "354f43740a459c895e39bb9816dfc25ec1b93d0578452735b1e211d1c64bcc26",
+  "scenarioSha256": "76bccdabb78dc3f16b36987f6b7cefbe41e08167fe39612620e27ad476089f93",
+  "platform": "darwin",
+  "scenarioVersion": 1,
+  "projectionVersion": 2,
+  "goldenFormatVersion": 5,
+  "values": {
+    "0d00673cd931": {
+      "name": "markdown.saveTab#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "markdown.saveTab"
+        },
+        {
+          "name": "params",
+          "value": {
+            "baseVersion": "v1",
+            "content": "# b",
+            "tabId": "tab-md",
+            "worktree": "id:workspace-1"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "error": {
+            "code": "version_conflict",
+            "message": "Document changed on disk"
+          },
+          "id": "frame-1",
+          "ok": false
+        }
+      }
+    },
+    "aa5c91b36a35": {
+      "markdown": {
+        "tab-md": {
+          "baseVersion": "v1",
+          "content": "# a",
+          "editable": true,
+          "isDirty": true,
+          "localContent": "# b",
+          "saveError": "Document changed on disk",
+          "saving": false,
+          "status": "ready"
+        }
+      }
+    },
+    "be35c536a20e": {
+      "name": "markdown.saveTab#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"markdown.saveTab\",\"params\":{\"worktree\":\"id:workspace-1\",\"tabId\":\"tab-md\",\"baseVersion\":\"v1\",\"content\":\"# b\"}}"
+    },
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    }
+  },
+  "recording": {
+    "scenario": "session-markdown-save-conflict",
+    "checkpoints": [
+      {
+        "id": "conflicted",
+        "observation": {
+          "sender": ["0d00673cd931"],
+          "payloads": ["be35c536a20e"],
+          "settlements": {
+            "save": "eb79a9b3682a"
+          },
+          "state": "aa5c91b36a35",
+          "effects": []
+        }
+      }
+    ]
+  }
+}
