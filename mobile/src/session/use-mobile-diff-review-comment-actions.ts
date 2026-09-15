@@ -3,7 +3,7 @@ import type { DiffComment, MobileDiffReviewState } from '../../../src/shared/dif
 import { triggerError, triggerSuccess } from '../platform/haptics'
 import type { ConnectionState } from '../transport/types'
 import type { RpcClient } from '../transport/rpc-client'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { sessionWorktreeNotesWrite } from './mobile-session-write-operations'
 import { addMobileDiffComment, removeMobileDiffComments } from './mobile-diff-comments'
 import { updateMobileDiffComment } from './mobile-diff-comment-edit'
@@ -73,11 +73,10 @@ export function useMobileDiffReviewCommentActions(input: CommentActionsInput) {
         diffComments: [...comments],
         mobileDiffReview: reviewState
       })
-      try {
-        sessionWorktreeNotesWrite.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to save review state'))
-      }
+      interpretOrThrowRefusalMessage(
+        () => sessionWorktreeNotesWrite.interpret(response),
+        'Failed to save review state'
+      )
     },
     [client, connState, worktreeId]
   )

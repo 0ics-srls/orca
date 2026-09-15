@@ -6,7 +6,6 @@ import type { OperationMutation } from '../operation-module-loader'
  * is what proves that family's `state()` projection observes the operation's actual output.
  */
 export const OPERATION_MUTATIONS = {
-  // Loses the generation comparison, so a stale workspace response poisons the search cache.
   // Drops the delivery-unknown arm of a native-chat send, so an ack lost after the frame was
   // written reads as a definite rejection and invites the user to send the same message twice.
   'native-chat-send-delivery-unknown': {

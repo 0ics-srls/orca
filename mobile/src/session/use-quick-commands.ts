@@ -1,10 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
 import { isLogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import {
+  interpretOrThrowRefusalMessage,
+  refusedRpcMessageOrFallback
+} from '../transport/rpc-refusal-message'
 import type { RpcResponse } from '../transport/types'
 import type { TerminalQuickCommand } from '../../../src/shared/terminal-quick-command-types'
-import { quickCommandsRead, quickCommandsWrite } from './mobile-session-read-operations'
+import { quickCommandsRead } from './mobile-session-read-operations'
+import { quickCommandsWrite } from './mobile-session-write-operations'
 import {
   applyTerminalQuickCommandMutation,
   parseNormalizedTerminalQuickCommands,
@@ -198,11 +202,10 @@ export function useQuickCommands({ client, enabled }: Args): QuickCommandsState 
             mutation: commandMutation
           })
           let confirmed
-          try {
-            confirmed = readQuickCommands(quickCommandsWrite.interpret(response))
-          } catch (error) {
-            throw new Error(refusedRpcMessageOrFallback(error, 'Failed to save quick command'))
-          }
+          confirmed = interpretOrThrowRefusalMessage(
+            () => readQuickCommands(quickCommandsWrite.interpret(response)),
+            'Failed to save quick command'
+          )
           if (!confirmed) {
             // Why: treating an invalid success payload as [] would let the next
             // full-list mutation erase commands that still exist on the host.

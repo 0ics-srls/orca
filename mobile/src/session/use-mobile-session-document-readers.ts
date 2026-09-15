@@ -2,7 +2,7 @@ import { useCallback } from 'react'
 import type { RpcFailure } from '../transport/types'
 import { resolveMobileFileTabDoc } from '../files/mobile-file-tab-doc'
 import { filePreviewTextRead } from '../files/mobile-file-preview-operations'
-import { markdownTabRead } from './mobile-session-write-operations'
+import { markdownTabRead } from './mobile-session-read-operations'
 import {
   buildMarkdownDiskFallbackDoc,
   shouldReadMarkdownFromDiskAfterReadTabFailure

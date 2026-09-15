@@ -1,7 +1,7 @@
 import { useCallback, type Dispatch, type SetStateAction } from 'react'
 import type { ConnectionState } from '../transport/types'
 import type { RpcClient } from '../transport/rpc-client'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import {
   MOBILE_DIFF_REVIEW_GIT_MUTATIONS,
   reviewGitStageRun
@@ -39,11 +39,10 @@ export function useMobileDiffReviewGitActions(input: GitActionsInput) {
           worktree: `id:${worktreeId}`,
           filePath: item.filePath
         })
-        try {
-          mutation.interpret(response)
-        } catch (error) {
-          throw new Error(refusedRpcMessageOrFallback(error, 'Source control action failed'))
-        }
+        interpretOrThrowRefusalMessage(
+          () => mutation.interpret(response),
+          'Source control action failed'
+        )
         triggerSuccess()
         await loadReviewData()
       } catch (err) {

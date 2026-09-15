@@ -1,13 +1,10 @@
 import { bindDeferredRpcOperation, defineRpcOperation } from '../transport/rpc-operation'
-import {
-  rpcReadUnchecked,
-  rpcUncheckedMemberReader,
-  rpcUncheckedPayloadReader
-} from '../transport/rpc-reader-payload'
+import { rpcReadUnchecked, rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 import { isTerminalSendResultAccepted } from '../terminal/terminal-send-rpc-response'
+import { quickCommandsReader } from './mobile-session-read-operations'
 
 // The session screen's writes: terminal input from native chat and the image surfaces, the tab
-// strip's rename/close/activate, the worktree-stored review notes, and the markdown tab save.
+// strip's rename/close/activate, the markdown tab save and the quick-command save.
 // The `subscribe` and `sendUnsubscribe` ports these files sit next to are a separate boundary and
 // are untouched here.
 
@@ -113,38 +110,6 @@ export const sessionWorktreeNotesWrite = bindDeferredRpcOperation(
   })
 )
 
-/**
- * The review notes as they sit on the worktree record. `worktree.show` already has two readers —
- * the summary's `{ baseRef, linkedPR }` and the review screen's `{ diffComments, mobileDiffReview }`
- * — and this is a third, because the session screen reads the raw `worktree` member and normalizes
- * `diffComments` against the worktree id it is showing. The review screen's reader drops that
- * member's siblings, and the summary reader drops the notes entirely.
- */
-export const sessionWorktreeNotesRead = bindDeferredRpcOperation(
-  defineRpcOperation({
-    name: 'worktree.show-review-notes',
-    method: 'worktree.show',
-    acceptance: 'success-result-or-skip',
-    barrier: 'after-caller-barrier',
-    read: rpcUncheckedMemberReader('worktree-review-notes', 'worktree')
-  })
-)
-
-/**
- * A markdown tab's document. The refusal is read raw before interpretation, because a headless host
- * answers `renderer_unavailable` and the screen falls back to the file on disk — a code no
- * acceptance policy carries.
- */
-export const markdownTabRead = bindDeferredRpcOperation(
-  defineRpcOperation({
-    name: 'markdown.read-tab',
-    method: 'markdown.readTab',
-    acceptance: 'require-result-or-throw-message',
-    barrier: 'after-caller-barrier',
-    read: rpcUncheckedPayloadReader('markdown-tab-doc')
-  })
-)
-
 /** The save leg. Its reply is the canonical document, and a refusal is shown on the tab. */
 export const markdownTabSave = bindDeferredRpcOperation(
   defineRpcOperation({
@@ -153,5 +118,16 @@ export const markdownTabSave = bindDeferredRpcOperation(
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
     read: rpcUncheckedPayloadReader('markdown-tab-doc')
+  })
+)
+
+/** The save leg's reply is the canonical list, read exactly as the load leg reads it. */
+export const quickCommandsWrite = bindDeferredRpcOperation(
+  defineRpcOperation({
+    name: 'settings.quick-commands-write',
+    method: 'settings.updateTerminalQuickCommands',
+    acceptance: 'require-result-or-throw-message',
+    barrier: 'after-caller-barrier',
+    read: quickCommandsReader
   })
 )

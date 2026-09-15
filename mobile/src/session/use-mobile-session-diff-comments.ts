@@ -1,10 +1,8 @@
 import { useEffect, useCallback } from 'react'
 import * as Clipboard from 'expo-clipboard'
 import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
-import {
-  sessionWorktreeNotesRead,
-  sessionWorktreeNotesWrite
-} from './mobile-session-write-operations'
+import { sessionWorktreeNotesRead } from './mobile-session-read-operations'
+import { sessionWorktreeNotesWrite } from './mobile-session-write-operations'
 import { triggerSelection, triggerSuccess, triggerError } from '../platform/haptics'
 import {
   addMobileDiffComment,

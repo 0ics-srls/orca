@@ -5,7 +5,8 @@ import {
 } from '../transport/rpc-reader-payload'
 
 // What the session screen reads: the terminal inventory, the repo list two screens resolve a
-// workspace's connection through, the session tab snapshot, and the quick-command list.
+// workspace's connection through, the session tab snapshot, the quick-command list, the
+// worktree-stored review notes and a markdown tab's document.
 
 /**
  * The terminal inventory. A refused list leaves the strip exactly as it was — the screen treats it
@@ -120,7 +121,8 @@ export const nativeChatFileInventoryRead = bindDeferredRpcOperation(
   })
 )
 
-const quickCommandsReader = rpcUncheckedPayloadReader('terminal-quick-commands')
+/** Shared with the save leg in the write module: one list read, so neither leg can adopt `[]`. */
+export const quickCommandsReader = rpcUncheckedPayloadReader('terminal-quick-commands')
 
 /**
  * The quick-command list, read the same way on load and on save: the host re-normalizes and returns
@@ -137,12 +139,36 @@ export const quickCommandsRead = bindDeferredRpcOperation(
   })
 )
 
-export const quickCommandsWrite = bindDeferredRpcOperation(
+/**
+ * The review notes as they sit on the worktree record, and the fourth reader on `worktree.show`.
+ * Two of the other three project a narrower value and would answer this screen with no notes: the
+ * summary keeps `{ baseRef, linkedPR }`, the review screen keeps `{ diffComments, mobileDiffReview }`.
+ * The third, `fileOwnershipWorktreeRead`, reads the same `worktree` member whole with the same
+ * reader shape, so acceptance is the only thing separating them: a file mutation throws the host's
+ * message rather than write to the wrong host, where a session screen missing its notes just shows
+ * none and keeps working.
+ */
+export const sessionWorktreeNotesRead = bindDeferredRpcOperation(
   defineRpcOperation({
-    name: 'settings.quick-commands-write',
-    method: 'settings.updateTerminalQuickCommands',
+    name: 'worktree.show-review-notes',
+    method: 'worktree.show',
+    acceptance: 'success-result-or-skip',
+    barrier: 'after-caller-barrier',
+    read: rpcUncheckedMemberReader('worktree-review-notes', 'worktree')
+  })
+)
+
+/**
+ * A markdown tab's document. The refusal is read raw before interpretation, because a headless host
+ * answers `renderer_unavailable` and the screen falls back to the file on disk — a code no
+ * acceptance policy carries.
+ */
+export const markdownTabRead = bindDeferredRpcOperation(
+  defineRpcOperation({
+    name: 'markdown.read-tab',
+    method: 'markdown.readTab',
     acceptance: 'require-result-or-throw-message',
     barrier: 'after-caller-barrier',
-    read: quickCommandsReader
+    read: rpcUncheckedPayloadReader('markdown-tab-doc')
   })
 )

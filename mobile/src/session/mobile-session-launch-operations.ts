@@ -4,26 +4,11 @@ import { rpcUncheckedPayloadReader } from '../transport/rpc-reader-payload'
 // Opening things from the session screen: a tapped terminal path, a new markdown note or browser
 // tab, the legacy-Codex resume repin, and the structured agent chat.
 
-/**
- * A path a terminal printed, resolved to something openable.
- *
- * Second reader on `files.resolveTerminalPath`. The first, `terminalArtifactPathResolve`, exists to
- * mint a fresh grant for an artifact the preview screen already has open and hands its caller the
- * payload whole, because that caller re-derives a preview source from it. The tap is not resolving
- * a known artifact: it reads `exists`, `isDirectory`, `openTarget`, `worktree` and `relativePath`
- * as one resolution and branches on all five. Giving it the whole payload would move that read back
- * to the call site, which is the cast this migration removes. Both skip on a refusal — a tap that
- * cannot resolve leaves terminal focus and input untouched.
- */
-export const fileTapPathResolve = bindDeferredRpcOperation(
-  defineRpcOperation({
-    name: 'files.resolve-tapped-path-or-skip',
-    method: 'files.resolveTerminalPath',
-    acceptance: 'success-result-or-skip',
-    barrier: 'after-caller-barrier',
-    read: rpcUncheckedPayloadReader('tapped-path-resolution')
-  })
-)
+// The tap resolves the same path on the same method, with the same skip on refusal and the same
+// whole-payload read, as the preview screen's grant refresh, so a second operation would only be a
+// second name for one wire. Same reason `fileOwnershipRuntimeStatusRead` re-exports the Tasks
+// screen's status read.
+export { terminalArtifactPathResolve as fileTapPathResolve } from '../files/mobile-file-preview-operations'
 
 /**
  * The worktree open a tap leads to. Its own skip: the tap is best-effort and a refusal is the same

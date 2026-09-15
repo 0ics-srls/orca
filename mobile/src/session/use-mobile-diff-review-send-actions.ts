@@ -11,7 +11,7 @@ import {
   reviewTerminalListRead,
   reviewTerminalSendRun
 } from './mobile-review-terminal-operations'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { healMobileNativeChatStaleInput } from './mobile-native-chat-stale-input'
 import type { ReviewScreenState, SendSheetState } from './mobile-diff-review-screen-model'
 
@@ -87,11 +87,10 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
         enter: true
       })
       let accepted
-      try {
-        accepted = reviewTerminalSendRun.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to send notes'))
-      }
+      accepted = interpretOrThrowRefusalMessage(
+        () => reviewTerminalSendRun.interpret(response),
+        'Failed to send notes'
+      )
       if (!accepted) {
         throw new Error('Terminal input is locked')
       }
@@ -115,11 +114,10 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
         navigation: 'caller'
       })
       let created
-      try {
-        created = reviewTerminalCreateRun.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to create terminal'))
-      }
+      created = interpretOrThrowRefusalMessage(
+        () => reviewTerminalCreateRun.interpret(response),
+        'Failed to create terminal'
+      )
       if (!created) {
         throw new Error('Created terminal response was invalid')
       }
@@ -139,11 +137,10 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
         worktree: `id:${worktreeId}`
       })
       let terminals
-      try {
-        terminals = reviewTerminalListRead.interpret(response)
-      } catch (error) {
-        throw new Error(refusedRpcMessageOrFallback(error, 'Unable to load agent sessions'))
-      }
+      terminals = interpretOrThrowRefusalMessage(
+        () => reviewTerminalListRead.interpret(response),
+        'Unable to load agent sessions'
+      )
       setSendSheet({ kind: 'ready', terminals })
     } catch (err) {
       setSendSheet({

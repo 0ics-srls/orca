@@ -17,7 +17,7 @@ import type { TuiAgent } from '../../../src/shared/tui-agent'
 import { parseWslUncPath } from '../../../src/shared/wsl-paths'
 import { resolveWindowsShellStartupFamily } from '../../../src/shared/windows-terminal-shell'
 import type { RpcOperationSender } from '../transport/rpc-operation-sender'
-import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import { reviewTerminalCreateRun, reviewTerminalSendRun } from './mobile-review-terminal-operations'
 import type { MobileReviewTerminalTab } from './mobile-diff-review-rpc'
 import type { MobileAiVaultResumeTargetStatus } from '../agent-history/agent-history-resume-target'
@@ -171,11 +171,10 @@ export async function resumeAiVaultSessionInTerminal(
     { timeoutMs: RESUME_RPC_TIMEOUT_MS }
   )
   let terminalTab
-  try {
-    terminalTab = reviewTerminalCreateRun.interpret(created)
-  } catch (error) {
-    throw new Error(refusedRpcMessageOrFallback(error, 'Failed to create terminal'))
-  }
+  terminalTab = interpretOrThrowRefusalMessage(
+    () => reviewTerminalCreateRun.interpret(created),
+    'Failed to create terminal'
+  )
   if (!terminalTab) {
     throw new Error('Created terminal response was invalid')
   }
@@ -189,11 +188,10 @@ export async function resumeAiVaultSessionInTerminal(
     { timeoutMs: RESUME_RPC_TIMEOUT_MS }
   )
   let accepted
-  try {
-    accepted = reviewTerminalSendRun.interpret(sent)
-  } catch (error) {
-    throw new Error(refusedRpcMessageOrFallback(error, 'Failed to send resume command'))
-  }
+  accepted = interpretOrThrowRefusalMessage(
+    () => reviewTerminalSendRun.interpret(sent),
+    'Failed to send resume command'
+  )
   if (!accepted) {
     throw new Error('Terminal input is locked')
   }
