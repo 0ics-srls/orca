@@ -85,13 +85,24 @@ export function BrowserUserAgentSetting({
       </span>
     )
   } else if (status.identity.configuredMode === null) {
+    // Why the command is named here: this state deliberately exposes no reset control, because the
+    // reset overwrites data that may belong to a newer Orca. Without naming the escape the message
+    // tells the user their data must be reset and then offers no way to do it.
     control = (
-      <span className="text-xs text-destructive">
-        {translate(
-          'settings.browser.userAgent.resetRequired',
-          'Identity data must be reset explicitly before it can be changed.'
-        )}
-      </span>
+      <div className="space-y-1 text-right">
+        <div className="text-xs text-destructive">
+          {translate(
+            'settings.browser.userAgent.resetRequired',
+            'Identity data must be reset explicitly before it can be changed.'
+          )}
+        </div>
+        <div className="text-[11px] text-muted-foreground">
+          {translate(
+            'settings.browser.userAgent.resetRequiredCommand',
+            'Reset it from the command line: orca browser identity set --mode <mode> --reset'
+          )}
+        </div>
+      </div>
     )
   } else {
     control = (

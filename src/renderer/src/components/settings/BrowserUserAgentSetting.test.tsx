@@ -124,5 +124,8 @@ describe('BrowserUserAgentSetting', () => {
 
     expect(await screen.findByText(/must be reset explicitly/i)).toBeTruthy()
     expect(screen.queryByRole('radiogroup')).toBeNull()
+    // Naming the escape is the whole point: the UI exposes no reset control, so without the
+    // command this state tells the user to do something with no way to do it.
+    expect(screen.getByText(/orca browser identity set --mode <mode> --reset/i)).toBeTruthy()
   })
 })
