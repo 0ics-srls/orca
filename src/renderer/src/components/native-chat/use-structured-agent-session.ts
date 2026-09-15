@@ -1,40 +1,26 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as conversationCommands from './structured-conversation-command-send'
-import type {
-  AgentSessionOptionResult,
-  AgentSessionOptionsResult,
-  AgentSessionPromptResult
-} from '../../../../shared/agent-session-wire'
+import { useRef } from 'react'
+import * as structuredConversationCommands from './structured-conversation-command-send'
+import type { AgentSessionPromptResult } from '../../../../shared/agent-session-wire'
 import { useStructuredAgentSessionOutbox } from './use-structured-agent-session-outbox'
 import type {
   AgentSessionConversationCommand,
   AgentSessionConversationCommandResult
 } from '../../../../shared/agent-session-conversation-command'
 import type { AgentType } from '../../../../shared/agent-status-types'
-import { getAgentSessionOptionCatalog } from '../../../../shared/agent-session-option-catalog'
-import type { SessionOptionsSurface } from '../../../../shared/native-chat-session-options'
-import {
-  applyStructuredAgentSessionOptions,
-  canSetStructuredAgentSessionOption,
-  commitStructuredAgentSessionOptionValues,
-  createStructuredAgentSessionOptionState,
-  structuredAgentSessionOptionPicks,
-  structuredAgentSessionOptionSnapshot,
-  type StructuredAgentSessionOptionState
-} from '../../../../shared/structured-agent-session-options'
 import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
-import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
+import { supportsStructuredAgentSessionPromptCancel } from '@/runtime/structured-agent-session-client'
 import {
   pendingStructuredSessionPrompts,
   type StructuredPromptItem
 } from './structured-agent-session-message-projection'
 import { useStructuredAgentSessionMessages } from './use-structured-agent-session-messages'
-import { enqueueSessionOptionSettingsWrite } from './native-chat-session-option-settings-write'
-import { encodeStructuredAgentSessionOptionValue } from '../../../../shared/structured-agent-session-option-codec'
 import { useStructuredAgentSessionTransportState } from './use-structured-agent-session-transport-state'
 import { useStructuredAgentSessionTransport } from './use-structured-agent-session-transport'
+import { useStructuredAgentSessionOptions } from './use-structured-agent-session-options'
 
 export type { StructuredPromptItem } from './structured-agent-session-message-projection'
+
+type StructuredPromptCancelTarget = { itemId: string; expectedRevision: number }
 
 export function useStructuredAgentSession(args: {
   sessionId: string
@@ -51,185 +37,25 @@ export function useStructuredAgentSession(args: {
       isVisible,
       enabled: transportEnabled
     })
-  const [conversationSupport, setConversationSupport] = useState<{
-    sessionId: string
-    commands: readonly AgentSessionConversationCommand[]
-  } | null>(null)
   const commandPending = useRef(false)
-  const [optionState, setOptionState] = useState(() =>
-    createStructuredAgentSessionOptionState(agent)
-  )
-  const optionStateRef = useRef(optionState)
-  const activeOptionRecordRef = useRef(optionState.record)
-  const pendingOptionRef = useRef<string | null>(null)
-  const optionMutationGeneration = useRef(0)
-  const updateOptionState = useCallback(
-    (update: (current: StructuredAgentSessionOptionState) => StructuredAgentSessionOptionState) => {
-      const next = update(optionStateRef.current)
-      optionStateRef.current = next
-      setOptionState(next)
-    },
-    []
-  )
-  const optionCatalog = useMemo(() => getAgentSessionOptionCatalog(agent), [agent])
   const transportState = useStructuredAgentSessionTransportState(state, transportEnabled)
+  const { conversationCommands, optionSnapshot, optionSurface, setStructuredOption } =
+    useStructuredAgentSessionOptions({
+      agent,
+      sessionId,
+      target,
+      transportEnabled,
+      providerVisible,
+      fence: state.fence,
+      turnId: transportState.turnId,
+      mutate
+    })
   const outboxController = useStructuredAgentSessionOutbox({
     sessionId,
     target,
     fence: transportState.fence,
     submissions: transportState.submissions
   })
-
-  useEffect(() => {
-    const next = createStructuredAgentSessionOptionState(agent)
-    optionMutationGeneration.current += 1
-    pendingOptionRef.current = null
-    optionStateRef.current = next
-    activeOptionRecordRef.current = next.record
-    setOptionState(next)
-  }, [agent, sessionId, state.fence, transportEnabled])
-
-  // Refresh options each turn to confirm which model the provider actually selected.
-  useEffect(() => {
-    if (!providerVisible || !optionCatalog) {
-      return
-    }
-    let stale = false
-    const readGeneration = optionMutationGeneration.current
-    void callStructuredAgentSession<AgentSessionOptionsResult>(target, 'agentSession.options', {
-      sessionId
-    })
-      .then((result) => {
-        if (!stale && optionMutationGeneration.current === readGeneration) {
-          setConversationSupport({ sessionId, commands: result.conversationCommands ?? [] })
-          updateOptionState((current) =>
-            current.record === activeOptionRecordRef.current
-              ? applyStructuredAgentSessionOptions(current, optionCatalog, result)
-              : current
-          )
-        }
-      })
-      .catch(() => {})
-    return () => {
-      stale = true
-    }
-  }, [
-    optionCatalog,
-    providerVisible,
-    sessionId,
-    state.fence,
-    target,
-    transportState.turnId,
-    updateOptionState
-  ])
-
-  const optionSnapshot = useMemo(
-    () => structuredAgentSessionOptionSnapshot(optionState),
-    [optionState]
-  )
-  const visibleOptionSnapshot = useMemo(
-    () => (transportEnabled ? optionSnapshot : []),
-    [optionSnapshot, transportEnabled]
-  )
-  const setStructuredOption = useCallback(
-    async (id: string, value: string | boolean): Promise<boolean> => {
-      const currentState = optionStateRef.current
-      const encoded = encodeStructuredAgentSessionOptionValue(id, value)
-      if (
-        !transportEnabled ||
-        pendingOptionRef.current !== null ||
-        !optionCatalog ||
-        encoded === null ||
-        !canSetStructuredAgentSessionOption(currentState, id, value)
-      ) {
-        return false
-      }
-      const targetRecord = currentState.record
-      const mutationGeneration = ++optionMutationGeneration.current
-      pendingOptionRef.current = id
-      updateOptionState((current) => ({ ...current, pendingId: id }))
-      try {
-        const result = await mutate<AgentSessionOptionResult>(
-          'agentSession.setOption',
-          'agentSession.setOption',
-          { key: id, value: encoded }
-        )
-        if (
-          result &&
-          activeOptionRecordRef.current === targetRecord &&
-          optionMutationGeneration.current === mutationGeneration
-        ) {
-          const committed = result.options ?? { [id]: encoded }
-          updateOptionState((current) =>
-            current.record === targetRecord
-              ? commitStructuredAgentSessionOptionValues(current, committed)
-              : current
-          )
-          const picks = structuredAgentSessionOptionPicks(currentState, committed)
-          if (picks.length > 0) {
-            void enqueueSessionOptionSettingsWrite(target, {
-              type: 'apply-picks',
-              agent,
-              picks
-            })
-          }
-          if (!transportEnabled) {
-            return false
-          }
-          void callStructuredAgentSession<AgentSessionOptionsResult>(
-            target,
-            'agentSession.options',
-            {
-              sessionId
-            }
-          )
-            .then((refreshed) => {
-              if (
-                activeOptionRecordRef.current === targetRecord &&
-                optionMutationGeneration.current === mutationGeneration
-              ) {
-                updateOptionState((latest) =>
-                  latest.record === targetRecord
-                    ? applyStructuredAgentSessionOptions(latest, optionCatalog, refreshed)
-                    : latest
-                )
-              }
-            })
-            .catch(() => {})
-        }
-        return Boolean(result)
-      } finally {
-        if (
-          activeOptionRecordRef.current === targetRecord &&
-          optionMutationGeneration.current === mutationGeneration
-        ) {
-          pendingOptionRef.current = null
-          updateOptionState((current) =>
-            current.record === targetRecord && current.pendingId === id
-              ? { ...current, pendingId: null }
-              : current
-          )
-        }
-      }
-    },
-    [agent, mutate, optionCatalog, sessionId, target, transportEnabled, updateOptionState]
-  )
-  const setOption = useCallback(
-    async (id: string, value: string | boolean) => {
-      await setStructuredOption(id, value)
-      return { snapshot: structuredAgentSessionOptionSnapshot(optionStateRef.current) }
-    },
-    [setStructuredOption]
-  )
-  const optionSurface = useMemo<SessionOptionsSurface>(
-    () => ({
-      getSnapshot: () => visibleOptionSnapshot,
-      setOption,
-      invokeAction: async () => ({ snapshot: visibleOptionSnapshot }),
-      subscribe: () => () => {}
-    }),
-    [setOption, visibleOptionSnapshot]
-  )
 
   const prompts = pendingStructuredSessionPrompts(transportState.journalItems)
   const { outbox } = outboxController
@@ -239,12 +65,9 @@ export function useStructuredAgentSession(args: {
     transportState.submissions
   )
   return {
-    conversationCommands:
-      transportEnabled && conversationSupport?.sessionId === sessionId
-        ? conversationSupport.commands
-        : [],
+    conversationCommands,
     runConversationCommand: (command: AgentSessionConversationCommand) =>
-      conversationCommands.sendStructuredConversationCommand({
+      structuredConversationCommands.sendStructuredConversationCommand({
         command,
         pending: commandPending,
         blocked: Boolean(
@@ -281,7 +104,16 @@ export function useStructuredAgentSession(args: {
     turnActivity: transportState.turnActivity,
     backgroundTasks: transportState.backgroundTasks,
     turnId: transportState.turnId,
-    cancel: (turnId: string) => mutate('agentSession.cancel', 'agentSession.cancel', { turnId }),
+    cancel: async (turnId: string, prompt?: StructuredPromptCancelTarget) => {
+      // Capability negotiation must complete before mutate constructs the payload
+      // fingerprint and operation id: older hosts reject the strict prompt field.
+      const promptSupported =
+        prompt !== undefined && (await supportsStructuredAgentSessionPromptCancel(target))
+      return mutate('agentSession.cancel', 'agentSession.cancel', {
+        turnId,
+        ...(promptSupported ? { prompt } : {})
+      })
+    },
     stopBackgroundTask: (taskId?: string) =>
       mutate('agentSession.cancel', 'agentSession.cancel', {
         turnId: 'background-tasks',
@@ -296,7 +128,7 @@ export function useStructuredAgentSession(args: {
         `agentSession.respondTo:${item.body.kind}`,
         { itemId: item.itemId, expectedRevision: item.revision, optionId }
       ),
-    optionSnapshot: visibleOptionSnapshot,
+    optionSnapshot,
     optionSurface,
     sessionCommands: transportEnabled ? (state.commands ?? undefined) : undefined,
     setStructuredOption

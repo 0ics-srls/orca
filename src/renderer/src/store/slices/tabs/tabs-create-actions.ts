@@ -121,7 +121,7 @@ export function createTabsCreateActions(
           target.sourceGroupId
         )
         if (!sourceGroup) {
-          return {}
+          return state
         }
         const existingTabs = state.unifiedTabsByWorktree[worktreeId] ?? []
         const currentGroups = state.groupsByWorktree[worktreeId] ?? []

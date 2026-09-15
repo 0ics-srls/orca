@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   callStructuredAgentSession: vi.fn(),
   createIntent: vi.fn(),
   retryIntent: vi.fn(),
+  restoreIntent: vi.fn(),
   launch: vi.fn(),
   seedDraft: vi.fn(),
   clearDraft: vi.fn(),

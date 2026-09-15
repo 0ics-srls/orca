@@ -122,6 +122,14 @@ export function NativeChatStructuredSession(
   const activeStoppingBackgroundTasks =
     stoppingBackgroundTasks?.sessionId === props.sessionId ? stoppingBackgroundTasks : null
   const prompt = controller.prompts[0] ?? null
+  const cancelPrompt = () => {
+    if (controller.turnId && prompt) {
+      void controller.cancel(controller.turnId, {
+        itemId: prompt.itemId,
+        expectedRevision: prompt.revision
+      })
+    }
+  }
   useNativeChatComposerRevealFocus({
     rootRef,
     composerRef,
@@ -223,6 +231,7 @@ export function NativeChatStructuredSession(
             workingStartedAt={controller.workingStartedAt}
             settledTurns={controller.settledTurns}
             showTurnStatus
+            showLiveTurnActivity={prompt === null}
             turnActivity={controller.turnActivity}
             onLinkClick={onLinkClick}
             allowFileUriLinks={onLinkClick !== undefined}
@@ -241,6 +250,7 @@ export function NativeChatStructuredSession(
             }))
           }}
           onChoose={(optionId) => void controller.respond(prompt, optionId)}
+          onCancel={cancelPrompt}
         />
       ) : null}
       {prompt && questionBody ? (
@@ -290,11 +300,7 @@ export function NativeChatStructuredSession(
               void controller.respond(prompt, optionId)
             }
           }}
-          onCancel={() => {
-            if (controller.turnId) {
-              void controller.cancel(controller.turnId)
-            }
-          }}
+          onCancel={cancelPrompt}
         />
       ) : null}
       <NativeChatDeliveryRetry
