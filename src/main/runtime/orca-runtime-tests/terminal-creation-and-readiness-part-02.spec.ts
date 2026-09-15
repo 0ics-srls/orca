@@ -242,7 +242,36 @@ describe('OrcaRuntimeService', () => {
     expect(internals.ptysById.has('pty-exited-during-start')).toBe(false)
   })
 
+  it('does not publish launch membership from a bare create-operation spawn result', async () => {
+    const onAgentSessionCommitted = vi.fn()
+    const operationId = `${Date.now()}-${'ab'.repeat(16)}`
+    const runtime = new OrcaRuntimeService(store, undefined, { onAgentSessionCommitted })
+    const spawn = vi.fn().mockResolvedValue({
+      id: 'pty-bare-operation-replay',
+      incarnationId: 'incarnation-bare-operation-replay'
+    })
+    runtime.setPtyController({
+      spawn,
+      write: () => true,
+      kill: () => true,
+      getForegroundProcess: async () => null
+    })
+
+    await runtime.createTerminal(`path:${TEST_WORKTREE_PATH}`, {
+      command: 'codex',
+      launchAgent: 'codex',
+      presentation: 'background',
+      agentSessionCreateOperationId: operationId
+    })
+
+    expect(spawn).toHaveBeenCalledWith(
+      expect.objectContaining({ agentSessionCreateOperationId: operationId })
+    )
+    expect(onAgentSessionCommitted).not.toHaveBeenCalled()
+  })
+
   it('adopts repeated structured OMP resumes while preserving the exact file locator', async () => {
+    const onAgentSessionCommitted = vi.fn()
     let canonicalOwner:
       | {
           claim: AgentSessionExecutionClaim
@@ -276,7 +305,7 @@ describe('OrcaRuntimeService', () => {
         }
       }
     })
-    const runtime = new OrcaRuntimeService(store)
+    const runtime = new OrcaRuntimeService(store, undefined, { onAgentSessionCommitted })
     runtime.setPtyController({
       spawn,
       write: () => true,
@@ -296,6 +325,13 @@ describe('OrcaRuntimeService', () => {
 
     expect(first.disposition).toBe('created')
     expect(second.disposition).toBe('adopted')
+    expect(onAgentSessionCommitted).toHaveBeenCalledTimes(2)
+    expect(onAgentSessionCommitted.mock.calls[0]?.[0]).toMatchObject({
+      result: { disposition: 'created', owner: { statusBinding: canonicalOwner?.statusBinding } }
+    })
+    expect(onAgentSessionCommitted.mock.calls[1]?.[0]).toMatchObject({
+      result: { disposition: 'adopted', owner: { statusBinding: canonicalOwner?.statusBinding } }
+    })
     expect(second.terminal).toMatchObject({
       handle: first.terminal.handle,
       tabId: first.terminal.tabId,

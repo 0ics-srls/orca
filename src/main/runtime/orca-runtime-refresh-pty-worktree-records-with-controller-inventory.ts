@@ -3,11 +3,7 @@ import { OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController } from './orca-r
 import type { ResolvedWorktree } from './runtime-worktree-path-identity'
 import type { PtyControllerInventory } from './runtime-pty-controller-contract'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../shared/constants'
-import {
-  LOCAL_EXECUTION_HOST_ID,
-  parseExecutionHostId,
-  toSshExecutionHostId
-} from '../../shared/execution-host'
+import { LOCAL_EXECUTION_HOST_ID, toSshExecutionHostId } from '../../shared/execution-host'
 import {
   PTY_CONTROLLER_LIST_PROVIDER_MARGIN_MS,
   PTY_CONTROLLER_LIST_TIMEOUT_MS
@@ -21,14 +17,15 @@ import {
   inferWorktreeIdFromPtyId,
   runtimeWorktreeIdsEqual
 } from './runtime-worktree-path-identity'
-import {
-  indexPersistedPtySurfaceBindings,
-  indexPersistedPtyWorktreeBindings
-} from './runtime-worktree-binding-index'
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
 import { NO_OBSERVING_PROVIDER_REASON } from '../../shared/pty-liveness-verdict'
 import { buildControllerTerminalIdentities } from './orca-runtime-build-controller-terminal-identities'
 import { retireOrchestrationAuthorityAbsentFromInventory } from './runtime-restored-orchestration-authority-sweep'
+import { reconcileRuntimeAgentSessionInventory } from './runtime-agent-session-inventory-reconciliation'
+import {
+  getPersistedPtyIndexes,
+  type RuntimePersistedPtyIndexes
+} from './runtime-persisted-pty-indexes'
 
 export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory extends OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController {
   protected async refreshPtyWorktreeRecordsWithControllerInventory(
@@ -117,36 +114,16 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
     }
     const sessions = sessionsResult.value.processes
     const queriedHostIds = new Set<ExecutionHostId>(sessionsResult.value.hostIds)
-    if (connectionId === undefined) {
-      for (const session of sessions) {
-        const hostId = getPtyExecutionHost(session.id)
-        if (hostId && hostId !== 'foreign' && parseExecutionHostId(hostId)?.kind === 'ssh') {
-          queriedHostIds.add(hostId)
-        }
-      }
-    }
+    reconcileRuntimeAgentSessionInventory({
+      sessions,
+      connectionId,
+      queriedHostIds,
+      knownHostIds: this.listKnownExecutionHostIds(),
+      onReconciled: this.onAgentSessionInventoryReconciled ?? undefined
+    })
     const { controllerIdentityByPtyId } = buildControllerTerminalIdentities(sessions)
     const findResolvedWorktree = createIncrementalResolvedWorktreeLookup(resolvedWorktrees)
-    const persistedIndexesByHostId = new Map<
-      ExecutionHostId,
-      {
-        worktreeIdByPtyId: ReadonlyMap<string, string>
-        surfaceByPtyId: ReturnType<typeof indexPersistedPtySurfaceBindings>
-      }
-    >()
-    const getPersistedIndexes = (hostId: ExecutionHostId) => {
-      const existing = persistedIndexesByHostId.get(hostId)
-      if (existing) {
-        return existing
-      }
-      const persistedSession = this.store?.getWorkspaceSession?.(hostId)
-      const indexes = {
-        worktreeIdByPtyId: indexPersistedPtyWorktreeBindings(persistedSession),
-        surfaceByPtyId: indexPersistedPtySurfaceBindings(persistedSession)
-      }
-      persistedIndexesByHostId.set(hostId, indexes)
-      return indexes
-    }
+    const persistedIndexesByHostId = new Map<ExecutionHostId, RuntimePersistedPtyIndexes>()
     const allLivePtyIds = new Set(sessions.map((session) => session.id))
     const selectedLivePtyIds = new Set<string>()
     for (const session of sessions) {
@@ -156,9 +133,14 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
       const sessionConnectionId =
         parseAppSshPtyId(session.id)?.connectionId ??
         (typeof connectionId === 'string' ? connectionId : null)
-      const persistedIndexes = getPersistedIndexes(
-        sessionConnectionId ? toSshExecutionHostId(sessionConnectionId) : LOCAL_EXECUTION_HOST_ID
-      )
+      const persistedHostId = sessionConnectionId
+        ? toSshExecutionHostId(sessionConnectionId)
+        : LOCAL_EXECUTION_HOST_ID
+      const persistedIndexes = getPersistedPtyIndexes({
+        cache: persistedIndexesByHostId,
+        store: this.store,
+        hostId: persistedHostId
+      })
       const controllerIdentity = controllerIdentityByPtyId.get(session.id)
       const persistedWorktreeId = persistedIndexes.worktreeIdByPtyId.get(session.id)
       const providerWorktree = session.worktreeId
@@ -303,7 +285,7 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
         }
       }
     }
-    // Why: runs after the hasPty rescue so a still-addressable pane keeps its receipt.
+    // Runs after the hasPty rescue so addressable panes keep their receipt.
     retireOrchestrationAuthorityAbsentFromInventory(this.restoredOrchestrationAuthorityByPtyId, {
       queriedHostIds,
       allLivePtyIds,

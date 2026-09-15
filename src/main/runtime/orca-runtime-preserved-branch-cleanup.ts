@@ -6,6 +6,8 @@ import type {
   AgentSessionCreateOperation,
   OrchestrationCompatibilitySshAttachmentAuthority,
   RestoredOrchestrationAuthorityReceipt,
+  RuntimeAgentSessionCommit,
+  RuntimeAgentSessionInventoryReconciliation,
   RuntimeTerminalAgentStatusEvent
 } from './runtime-terminal-contracts'
 import type { TerminalSideEffectBatch } from '../../shared/terminal-side-effect-facts'
@@ -57,6 +59,14 @@ export class OrcaRuntimeWithPreservedBranchCleanup extends OrcaRuntimeWithTermin
 
   protected readonly onTerminalAgentStatus:
     | ((event: RuntimeTerminalAgentStatusEvent) => void)
+    | null
+
+  /** C10 admission callback; bookkeeping failures never gate terminal creation. */
+  protected readonly onAgentSessionCommitted: ((commit: RuntimeAgentSessionCommit) => void) | null
+
+  /** Complete owner inventories are the only restart-retirement authority. */
+  protected readonly onAgentSessionInventoryReconciled:
+    | ((reconciliation: RuntimeAgentSessionInventoryReconciliation) => void)
     | null
 
   protected readonly onTerminalSideEffects: ((batch: TerminalSideEffectBatch) => void) | null

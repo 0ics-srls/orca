@@ -16,6 +16,7 @@ export type {
   AgentHookStatusFreshnessObservation,
   EnrichedAgentHookEventPayload
 } from './server/server-types'
+export type { AgentLaunchAdmission, AgentLaunchSettlement } from './server/server-launch-membership'
 export type { AgentHookSource }
 export {
   CLOSED_AGENT_STATUS_TAB_IDS_MAX,

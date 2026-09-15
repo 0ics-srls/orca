@@ -79,6 +79,27 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     getSshProvider: (connectionId) => getSshPtyProvider(connectionId),
     onPtyStopped: clearProviderPtyState,
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
+    onAgentSessionCommitted: (commit) => {
+      agentHookServer.admitAgentSessionOwner({
+        owner: commit.result.owner,
+        paneKey: commit.paneKey,
+        tabId: commit.tabId,
+        worktreeId: commit.worktreeId,
+        connectionId: commit.connectionId,
+        terminalHandle: commit.result.owner.surface.terminalHandle,
+        agentType: commit.agentType ?? commit.result.owner.claim.agent,
+        launchToken: commit.launchToken,
+        disposition: commit.result.disposition
+      })
+    },
+    onAgentSessionInventoryReconciled: (reconciliation) => {
+      agentHookServer.reconcileAgentLaunchMembership(reconciliation.owners, {
+        complete: reconciliation.complete,
+        ...(reconciliation.connectionId !== undefined
+          ? { connectionId: reconciliation.connectionId }
+          : {})
+      })
+    },
     // Why: serve can be promoted in place, so wire the listener from startup; runtime enables desktop-only scanners only for a ready renderer.
     onTerminalSideEffects: (batch: TerminalSideEffectBatch) => {
       if (state.mainWindow && !state.mainWindow.isDestroyed()) {

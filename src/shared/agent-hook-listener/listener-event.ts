@@ -1,6 +1,7 @@
 import type { ParsedAgentStatusPayload } from '../agent-status-types'
 import type { AgentHookSource } from '../agent-hook-relay'
 import type { AgentProviderSessionMetadata } from '../agent-session-resume'
+import type { AgentStatusLaunchMembership } from '../agent-status-launch-membership'
 
 export type AgentHookEventPayload = {
   paneKey: string
@@ -50,6 +51,8 @@ export type AgentHookEventPayload = {
    *  Lets a reader rejoin the row to its terminal after the pane key moved. Never persisted:
    *  a handle belongs to the runtime that issued it. */
   terminalHandle?: string
+  /** Host-internal launch admission facet. Provider transports cannot author this field. */
+  launchMembership?: AgentStatusLaunchMembership
   payload: ParsedAgentStatusPayload
 }
 

@@ -1,6 +1,7 @@
 import type { ParsedAgentStatusPayload } from '../../shared/agent-status-types'
 import type {
   AgentLaunchPreferences,
+  AgentSessionClaimedSpawnResult,
   AgentSessionExecutionClaim,
   RuntimeCreateAgentSessionResult
 } from '../../shared/agent-session-host-authority'
@@ -56,6 +57,25 @@ export type TerminalCreateOptions = {
   deferMobileSessionPublish?: boolean
 }
 
+/** Notification emitted after the execution host commits or adopts a claimed owner. */
+export type RuntimeAgentSessionCommit = {
+  result: AgentSessionClaimedSpawnResult
+  paneKey: string
+  tabId: string
+  leafId: string
+  worktreeId: string
+  connectionId: string | null
+  launchToken?: string
+  agentType?: TuiAgent
+}
+
+export type RuntimeAgentSessionInventoryReconciliation = {
+  owners: readonly unknown[]
+  complete: boolean
+  /** `undefined` is an aggregate census; null is the local host; a string is one SSH host. */
+  connectionId?: string | null
+}
+
 /** Identity a fenced spawn can be re-found by in the execution host's own inventory. */
 export type AgentSessionCreateReclaimIdentity = {
   worktreeId: string
@@ -104,7 +124,12 @@ export type RuntimeTerminalAgentStatusEvent = {
 
 export type HookLiveAgentRow = Pick<
   RuntimeAgentRowSnapshot,
-  'payload' | 'updatedAt' | 'evidenceObservedAt' | 'stateStartedAt' | 'worktreeId'
+  | 'payload'
+  | 'updatedAt'
+  | 'evidenceObservedAt'
+  | 'stateStartedAt'
+  | 'worktreeId'
+  | 'launchMembership'
 >
 
 export type RuntimePtyDataAdmission = Readonly<{

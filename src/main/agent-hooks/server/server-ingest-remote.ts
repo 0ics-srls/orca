@@ -18,9 +18,9 @@ import { launchTokenHash } from '../../../shared/agent-hook-spool'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
-import { AgentHookServerIngestStructured } from './server-ingest-structured'
+import { AgentHookServerLaunchMembership } from './server-launch-membership'
 
-export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
+export abstract class AgentHookServerIngestRemote extends AgentHookServerLaunchMembership {
   /** Ingest a payload from the relay JSON-RPC channel (not the local HTTP server); connectionId is stamped here. Main is still the SSH trust boundary, so re-run the canonical normalizer before caching. */
   ingestRemote(
     envelope: {

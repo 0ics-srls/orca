@@ -70,6 +70,7 @@ export function toAgentStatusIpcPayload(
     ...(entry.observation ? { observation: entry.observation } : {}),
     ...(entry.structuredHost ? { structuredHost: entry.structuredHost } : {}),
     ...(entry.terminalHandle ? { terminalHandle: entry.terminalHandle } : {}),
+    ...(entry.launchMembership ? { launchMembership: entry.launchMembership } : {}),
     ...entry.payload
   }
 }

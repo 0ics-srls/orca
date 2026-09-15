@@ -225,6 +225,27 @@ async function startOrcadRuntime(
     // PTY agent on this host, and the store is the only place `worktree.ps` and the mobile
     // projection read from — unwired, orcad lists no PTY agents at all.
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
+    onAgentSessionCommitted: (commit) => {
+      agentHookServer.admitAgentSessionOwner({
+        owner: commit.result.owner,
+        paneKey: commit.paneKey,
+        tabId: commit.tabId,
+        worktreeId: commit.worktreeId,
+        connectionId: commit.connectionId,
+        terminalHandle: commit.result.owner.surface.terminalHandle,
+        agentType: commit.agentType ?? commit.result.owner.claim.agent,
+        launchToken: commit.launchToken,
+        disposition: commit.result.disposition
+      })
+    },
+    onAgentSessionInventoryReconciled: (reconciliation) => {
+      agentHookServer.reconcileAgentLaunchMembership(reconciliation.owners, {
+        complete: reconciliation.complete,
+        ...(reconciliation.connectionId !== undefined
+          ? { connectionId: reconciliation.connectionId }
+          : {})
+      })
+    },
     // Why here too and not only on the desktop: orcad serves `worktree.ps` and `agentSession.*`,
     // so without these a headless host publishes its structured chats nowhere and lists no agents.
     getAgentStatusSnapshot: () =>

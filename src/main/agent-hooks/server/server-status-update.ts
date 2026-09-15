@@ -19,6 +19,7 @@ import {
 import { isStaleGrokTurnEnd } from './server-grok-status-rules'
 import { isToolProgressWorkingAfterInterrupt } from './server-status-identity'
 import { AgentHookServerStatusApplication } from './server-status-application'
+import { prepareLaunchMembershipPayload } from './server-launch-membership-payload'
 
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
   protected applyNormalizedStatus(
@@ -36,20 +37,19 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       | EnrichedAgentHookEventPayload
       | undefined
     const rowBefore = mutationBefore ?? previous
-    const terminalHandle =
-      payload.terminalHandle ??
-      (previous?.terminalHandle && this.sameTerminalOwner(previous, payload)
-        ? previous.terminalHandle
-        : undefined)
-    const terminalOwnedPayload =
-      terminalHandle === payload.terminalHandle ? payload : { ...payload, terminalHandle }
-    if (previous && isStaleGrokTurnEnd(previous, terminalOwnedPayload)) {
+    const membershipOwnedPayload = prepareLaunchMembershipPayload({
+      payload,
+      origin,
+      previous,
+      sameTerminalOwner: (existing, incoming) => this.sameTerminalOwner(existing, incoming)
+    })
+    if (previous && isStaleGrokTurnEnd(previous, membershipOwnedPayload)) {
       // Why: Grok turn-end hooks may arrive after the next prompt, including across relay restart.
       this.commitStatusRowMutation(rowBefore, previous)
       return previous
     }
-    const connectionClearWatermark = terminalOwnedPayload.connectionId
-      ? this.connectionTimestampWatermarkById.get(terminalOwnedPayload.connectionId)
+    const connectionClearWatermark = membershipOwnedPayload.connectionId
+      ? this.connectionTimestampWatermarkById.get(membershipOwnedPayload.connectionId)
       : undefined
     // Why: renderer ordering rejects older rows; live evidence must sort after reconnect clears and restored rows across clock rollback.
     const restoredStatusWatermark = previous?.restoredUnconfirmed ? previous.receivedAt : undefined
@@ -58,15 +58,15 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       (connectionClearWatermark ?? -1) + 1,
       (restoredStatusWatermark ?? -1) + 1
     )
-    if (terminalOwnedPayload.connectionId) {
-      this.connectionTimestampWatermarkById.set(terminalOwnedPayload.connectionId, now)
+    if (membershipOwnedPayload.connectionId) {
+      this.connectionTimestampWatermarkById.set(membershipOwnedPayload.connectionId, now)
     }
-    if (terminalOwnedPayload.providerSessionOnly) {
+    if (membershipOwnedPayload.providerSessionOnly) {
       // Why: identity-only rows survive replay but must not emit prompt telemetry or a fabricated status.
       onAccepted?.()
       const enriched = {
-        ...this.attachStatusTiming(terminalOwnedPayload, now),
-        observation: this.stampObservation(terminalOwnedPayload, origin, now)
+        ...this.attachStatusTiming(membershipOwnedPayload, now),
+        observation: this.stampObservation(membershipOwnedPayload, origin, now)
       }
       this.clearAssistantMessageRetry(enriched.paneKey)
       this.runtimeObservedStatusPaneKeys.delete(enriched.paneKey)
@@ -78,21 +78,21 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       return enriched
     }
     const stateReconciledPayload =
-      terminalOwnedPayload.connectionId &&
-      terminalOwnedPayload.payload.agentType === 'codex' &&
-      terminalOwnedPayload.hookEventName
+      membershipOwnedPayload.connectionId &&
+      membershipOwnedPayload.payload.agentType === 'codex' &&
+      membershipOwnedPayload.hookEventName
         ? {
-            ...terminalOwnedPayload,
+            ...membershipOwnedPayload,
             payload: reconcileRemoteCodexState(
               this.state,
-              terminalOwnedPayload.paneKey,
-              terminalOwnedPayload.hookEventName,
-              terminalOwnedPayload.toolAgentId,
-              terminalOwnedPayload.payload,
+              membershipOwnedPayload.paneKey,
+              membershipOwnedPayload.hookEventName,
+              membershipOwnedPayload.toolAgentId,
+              membershipOwnedPayload.payload,
               previous?.payload
             )
           }
-        : terminalOwnedPayload
+        : membershipOwnedPayload
     const previousCodexRoot =
       stateReconciledPayload.payload.agentType === 'codex' &&
       stateReconciledPayload.toolAgentId &&

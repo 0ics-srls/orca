@@ -13,6 +13,7 @@ import {
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookAuthorityEvidence, EnrichedAgentHookEventPayload } from './server-types'
 import { isValidPaneKey, isValidPiProviderSessionOnly } from './server-status-identity'
+import { parseAgentStatusLaunchMembership } from '../../../shared/agent-status-launch-membership'
 
 export function dropHydratedIdleClaudeSubagents(
   payload: ParsedAgentStatusPayload
@@ -91,6 +92,13 @@ export function sanitizeHydratedEntry(
   const providerSession = normalizeAgentProviderSession(record.providerSession) ?? undefined
   const providerSessionOnly = record.providerSessionOnly === true
   const retainedForLiveness = record.retainedForLiveness === true
+  const launchMembership =
+    record.launchMembership === undefined
+      ? undefined
+      : parseAgentStatusLaunchMembership(record.launchMembership)
+  if (record.launchMembership !== undefined && !launchMembership) {
+    return null
+  }
   const validRetainedIdentity = Boolean(
     retainedForLiveness && providerSession && payload.agentType && payload.agentType !== 'unknown'
   )
@@ -131,6 +139,7 @@ export function sanitizeHydratedEntry(
     providerSession,
     providerSessionOnly: providerSessionOnly ? true : undefined,
     retainedForLiveness: retainedForLiveness ? true : undefined,
+    ...(launchMembership ? { launchMembership } : {}),
     payload,
     receivedAt,
     stateStartedAt
