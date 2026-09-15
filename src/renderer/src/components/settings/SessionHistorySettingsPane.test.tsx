@@ -2,6 +2,7 @@
 import '@testing-library/jest-dom/vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+import { toast } from 'sonner'
 import { getDefaultSettings } from '../../../../shared/constants'
 import { unavailableSessionSearchStatus } from '../../../../shared/ai-vault-search-client'
 import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-types'
@@ -81,6 +82,7 @@ beforeEach(() => {
   mocks.status.mockReset().mockResolvedValue(current)
   mocks.clear.mockReset().mockResolvedValue(undefined)
   mocks.setEnabled.mockReset().mockResolvedValue(current)
+  vi.mocked(toast.success).mockClear()
   vi.stubGlobal('api', undefined)
   Object.defineProperty(window, 'api', {
     configurable: true,
@@ -193,6 +195,53 @@ it('deletes only after confirmation, supports deleting while disabled, and repor
   })
   expect(mocks.clear).toHaveBeenCalledOnce()
   expect(screen.getByRole('alert')).toHaveTextContent('Could not clear')
+})
+
+it('turns search off before deleting so the host does not rebuild the index', async () => {
+  const order: string[] = []
+  const save = vi.fn().mockImplementation(async () => {
+    order.push('save')
+  })
+  mocks.clear.mockImplementation(async () => {
+    order.push('clear')
+  })
+  pane(true, vi.fn().mockResolvedValue(true), save)
+  await openAdvanced()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
+  })
+  expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: false, historyDays: null } })
+  expect(order).toEqual(['save', 'clear'])
+  expect(screen.getAllByText(/Switch search back on to rebuild/).length).toBeGreaterThan(0)
+  expect(toast.success).toHaveBeenCalledWith(
+    'Search is off and the index was deleted. Original transcripts were kept.'
+  )
+})
+
+it('deletes without a settings write when search is already off', async () => {
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(false, vi.fn().mockResolvedValue(true), save)
+  await openAdvanced()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
+  })
+  expect(save).not.toHaveBeenCalled()
+  expect(mocks.clear).toHaveBeenCalledOnce()
+  expect(toast.success).toHaveBeenCalledWith(
+    'Search index cleared. Original transcripts were kept.'
+  )
+})
+
+it('keeps the index when turning search off fails', async () => {
+  const save = vi.fn().mockRejectedValue(new Error('write failed'))
+  pane(true, vi.fn().mockResolvedValue(true), save)
+  await openAdvanced()
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Delete index' }))
+  })
+  expect(mocks.clear).not.toHaveBeenCalled()
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not save')
+  expect(screen.getByRole('button', { name: 'Delete index' })).toBeEnabled()
 })
 
 it('does not execute a confirmation after navigating away', async () => {
