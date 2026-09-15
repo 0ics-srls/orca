@@ -1,14 +1,32 @@
 import {
   hasStructuredAgentLaunchCancellationTombstonePersisted,
   markStructuredAgentLaunchCancelledPersisted,
+  readStructuredAgentLaunchCancellationTombstoneSessionIds,
   retireAbsentStructuredAgentLaunchCancellationTombstonesPersisted,
   retireStructuredAgentLaunchCancellationTombstonePersisted
 } from './structured-agent-session-launch-persistence'
 
-type CancellationRetirement = { retireAfterInventory: number | null }
+type CancellationRetirement = {
+  retireAfterInventory: number | null
+  cleanupStarted: boolean
+  restored: boolean
+}
 
 const cancellationRetirementBySessionId = new Map<string, CancellationRetirement>()
 let authoritativeInventorySequence = 0
+
+function restoreCancellationRetirementFences(): void {
+  for (const sessionId of readStructuredAgentLaunchCancellationTombstoneSessionIds()) {
+    if (!cancellationRetirementBySessionId.has(sessionId)) {
+      cancellationRetirementBySessionId.set(sessionId, {
+        // A tombstone loaded after reload has no proof that an old create settled.
+        retireAfterInventory: null,
+        cleanupStarted: false,
+        restored: true
+      })
+    }
+  }
+}
 
 export function resetStructuredAgentLaunchCancellationForTests(): void {
   cancellationRetirementBySessionId.clear()
@@ -17,8 +35,39 @@ export function resetStructuredAgentLaunchCancellationForTests(): void {
 
 /** Captured when an inventory request starts so a cancellation can reject older replies. */
 export function beginStructuredAgentSessionAuthoritativeInventory(): number {
+  restoreCancellationRetirementFences()
   authoritativeInventorySequence += 1
   return authoritativeInventorySequence
+}
+
+/** Claims restored tombstones for best-effort host cleanup before an authoritative census. */
+export function claimStructuredAgentLaunchCancellationCleanups(): readonly string[] {
+  restoreCancellationRetirementFences()
+  const claimed: string[] = []
+  for (const [sessionId, retirement] of cancellationRetirementBySessionId) {
+    if (retirement.restored && !retirement.cleanupStarted) {
+      retirement.cleanupStarted = true
+      claimed.push(sessionId)
+    }
+  }
+  return claimed
+}
+
+export function settleStructuredAgentLaunchCancellationCleanup(
+  sessionId: string,
+  succeeded: boolean
+): void {
+  const retirement = cancellationRetirementBySessionId.get(sessionId)
+  if (!retirement) {
+    return
+  }
+  if (!succeeded) {
+    retirement.cleanupStarted = false
+    return
+  }
+  retirement.restored = false
+  // Inventories already in flight may have observed the pre-cleanup state.
+  retirement.retireAfterInventory = authoritativeInventorySequence + 1
 }
 
 export function markStructuredAgentLaunchCancellation(
@@ -28,7 +77,11 @@ export function markStructuredAgentLaunchCancellation(
 ): void {
   markStructuredAgentLaunchCancelledPersisted(sessionId)
   if (launchPromise) {
-    const retirement: CancellationRetirement = { retireAfterInventory: null }
+    const retirement: CancellationRetirement = {
+      retireAfterInventory: null,
+      cleanupStarted: false,
+      restored: false
+    }
     cancellationRetirementBySessionId.set(sessionId, retirement)
     const armRetirement = (): void => {
       if (cancellationRetirementBySessionId.get(sessionId) === retirement) {
@@ -38,9 +91,11 @@ export function markStructuredAgentLaunchCancellation(
     }
     void launchPromise.then(armRetirement, armRetirement)
   } else if (!alreadyCancelled) {
-    // A restored tombstone has no live create left to settle; the next inventory can retire it.
+    // No in-memory launch remains; the user close already issued best-effort host cleanup.
     cancellationRetirementBySessionId.set(sessionId, {
-      retireAfterInventory: authoritativeInventorySequence + 1
+      retireAfterInventory: authoritativeInventorySequence + 1,
+      cleanupStarted: false,
+      restored: false
     })
   }
 }
@@ -54,6 +109,7 @@ export function retireAbsentStructuredAgentLaunchCancellations(
   publishedSessionIds: ReadonlySet<string>,
   authoritativeInventory: number
 ): boolean {
+  restoreCancellationRetirementFences()
   const retainedSessionIds = new Set(publishedSessionIds)
   for (const [sessionId, retirement] of cancellationRetirementBySessionId) {
     if (

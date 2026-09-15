@@ -13,6 +13,7 @@ import {
 } from './structured-agent-session-launch-registry'
 import { beginStructuredAgentSessionAuthoritativeInventory } from './structured-agent-session-launch-cancellation'
 import { resetStructuredAgentLaunchPersistenceForTests } from './structured-agent-session-launch-persistence'
+import { refreshLocalStructuredSessionTabs } from '@/runtime/local-structured-session-tabs-sync'
 
 const WORKTREE_ID = 'repo-1::worktree-1'
 const SESSION_ID = 'session-close-race'
@@ -115,5 +116,44 @@ describe('structured launch cancellation retirement', () => {
     expect(hasStructuredAgentSessionLaunchCancellationTombstone(WORKTREE_ID, SESSION_ID)).toBe(
       false
     )
+  })
+
+  it('drains a restored cancellation before a newer inventory retires it', async () => {
+    markStructuredAgentSessionLaunchCancelled(WORKTREE_ID, SESSION_ID)
+    resetStructuredAgentLaunchRegistryForTests()
+    resetStructuredAgentLaunchPersistenceForTests()
+
+    const close = Promise.withResolvers<void>()
+    const call = vi.fn(({ method }: { method: string }) => {
+      if (method === 'agentSession.close') {
+        return close.promise.then(() => ({ ok: true, result: { ok: true } }))
+      }
+      return Promise.resolve({ ok: true, result: { snapshots: [], authoritative: true } })
+    })
+    Object.defineProperty(window, 'api', {
+      configurable: true,
+      value: { runtime: { call } }
+    })
+
+    await refreshLocalStructuredSessionTabs(undefined, { authoritative: true })
+
+    expect(call.mock.calls.map(([request]) => request.method)).toEqual([
+      'agentSession.close',
+      'session.tabs.listAll'
+    ])
+    expect(hasStructuredAgentSessionLaunchCancellationTombstone(WORKTREE_ID, SESSION_ID)).toBe(true)
+
+    // The close shares the host's session lane with create, so settlement drains a late attach.
+    close.resolve()
+    await close.promise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await refreshLocalStructuredSessionTabs()
+
+    expect(hasStructuredAgentSessionLaunchCancellationTombstone(WORKTREE_ID, SESSION_ID)).toBe(
+      false
+    )
+    expect(
+      call.mock.calls.filter(([request]) => request.method === 'agentSession.close')
+    ).toHaveLength(1)
   })
 })

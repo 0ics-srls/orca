@@ -6,7 +6,12 @@ import {
   localStructuredSessionGeneration
 } from './inventory-generation-fence'
 import { applyStructuredSessionTabSnapshots } from './snapshot-apply'
-import { beginStructuredAgentSessionAuthoritativeInventory } from '../../lib/structured-agent-session-launch-cancellation'
+import {
+  beginStructuredAgentSessionAuthoritativeInventory,
+  claimStructuredAgentLaunchCancellationCleanups,
+  settleStructuredAgentLaunchCancellationCleanup
+} from '../../lib/structured-agent-session-launch-cancellation'
+import { closeStructuredAgentSession } from '../structured-agent-session-close'
 
 type StructuredSessionInventoryResponse = {
   snapshots?: RuntimeMobileSessionTabsResult[]
@@ -23,6 +28,18 @@ function isStructuredSessionInventoryResponse(
     return true
   }
   return value.snapshots === undefined || Array.isArray(value.snapshots)
+}
+
+function startRestoredLaunchCancellationCleanup(): void {
+  for (const sessionId of claimStructuredAgentLaunchCancellationCleanups()) {
+    void closeStructuredAgentSession({ kind: 'local' }, sessionId).then(
+      () => settleStructuredAgentLaunchCancellationCleanup(sessionId, true),
+      (error: unknown) => {
+        settleStructuredAgentLaunchCancellationCleanup(sessionId, false)
+        console.warn('[structured-agent-launch] restored cancellation cleanup failed', error)
+      }
+    )
+  }
 }
 
 export function restoreLocalStructuredSessionTabsOnce(
@@ -49,6 +66,11 @@ export function refreshLocalStructuredSessionTabs(
 ): Promise<RuntimeMobileSessionTabsResult[]> {
   // Capture request order before IPC: a reply that began before a close cannot retire its fence.
   const authoritativeInventory = beginStructuredAgentSessionAuthoritativeInventory()
+  // An explicit authoritative request can start cleanup before IPC. Otherwise wait until the
+  // host labels the response authoritative so failed/retrying ordinary refreshes do not churn RPCs.
+  if (options.authoritative) {
+    startRestoredLaunchCancellationCleanup()
+  }
   return window.api.runtime
     .call({ method: 'session.tabs.listAll', params: {} })
     .then((response) => {
@@ -57,6 +79,9 @@ export function refreshLocalStructuredSessionTabs(
       }
       const result = isStructuredSessionInventoryResponse(response.result) ? response.result : {}
       const snapshots = result.snapshots ?? []
+      if (options.authoritative === true || result.authoritative === true) {
+        startRestoredLaunchCancellationCleanup()
+      }
       if (isCurrentLocalStructuredSessionGeneration(expectedGeneration)) {
         applyStructuredSessionTabSnapshots(snapshots, undefined, {
           ...options,

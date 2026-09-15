@@ -159,6 +159,11 @@ export function hasStructuredAgentLaunchCancellationTombstonePersisted(sessionId
   return tombstones.has(sessionId)
 }
 
+export function readStructuredAgentLaunchCancellationTombstoneSessionIds(): readonly string[] {
+  load()
+  return [...tombstones]
+}
+
 export function retireStructuredAgentLaunchCancellationTombstonePersisted(
   sessionId: string
 ): boolean {
