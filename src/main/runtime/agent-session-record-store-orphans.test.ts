@@ -9,7 +9,11 @@ import type {
   AgentSessionRecord
 } from '../../shared/agent-session-record'
 import type { AgentSessionProviderHandleLink } from '../../shared/agent-session-provider-handle'
-import { AgentSessionRecordStore } from './agent-session-record-store'
+import { setStoredAgentSessionHandoffStage } from './agent-session-handoff-record-transitions'
+import {
+  AGENT_SESSION_CLAIM_KEY_RETENTION_MS,
+  AgentSessionRecordStore
+} from './agent-session-record-store'
 import { agentSessionStorePath } from './agent-session-record-store-file'
 import type { AgentSessionReserveRequest } from './agent-session-reservation-admission'
 
