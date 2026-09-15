@@ -61,14 +61,15 @@ describe('readAgentLaunchCreateOutcome', () => {
     }
   )
 
-  it('carries a terminal launch warning, so a workspace whose agent never started says why', () => {
-    // The warning passthrough landed on worktree.create while this route was being written, so it
-    // has to be carried here too: a launch can seat the workspace and still fail to start the pty,
-    // and dropping the reason is what leaves the phone on an unexplained empty session.
+  it('carries the launch warning, so a workspace that is incomplete says why', () => {
+    // A launch can seat the workspace and still fail to finish it — an unspawned pty, untracked
+    // files left behind. Dropping the reason is what leaves the phone on a workspace that is
+    // quietly wrong. The host reports it at the top level, the same place worktree.create does.
     expect(
       readAgentLaunchCreateOutcome({
         worktreeId: 'wt-1',
-        outcome: { kind: 'terminal', handle: 'term-1', warning: 'No pty available' }
+        outcome: { kind: 'structured', sessionId: 's-1', handle: 'agent-session:s-1' },
+        warning: 'No pty available'
       })
     ).toEqual({ worktreeId: 'wt-1', warning: 'No pty available' })
   })
@@ -76,13 +77,25 @@ describe('readAgentLaunchCreateOutcome', () => {
   it.each([
     { label: 'blank', warning: '   ' },
     { label: 'absent', warning: undefined },
-    { label: 'non-string', warning: 7 },
-    { label: 'structured-surface', warning: 'ignored', kind: 'structured' }
-  ])('reports no warning when it is $label', ({ warning, kind }) => {
+    { label: 'non-string', warning: 7 }
+  ])('reports no warning when it is $label', ({ warning }) => {
     expect(
       readAgentLaunchCreateOutcome({
         worktreeId: 'wt-1',
-        outcome: { kind: kind ?? 'terminal', handle: 'term-1', warning }
+        outcome: { kind: 'terminal', handle: 'term-1' },
+        warning
+      })
+    ).toEqual({ worktreeId: 'wt-1' })
+  })
+
+  it('ignores a warning left on the outcome, which is no longer where one lives', () => {
+    // Pins the contract migration: the warning moved to the top level precisely so a reader never
+    // has to branch on `outcome.kind` to find it. A host still sending the old shape must not
+    // sneak one through the surface it happened to build.
+    expect(
+      readAgentLaunchCreateOutcome({
+        worktreeId: 'wt-1',
+        outcome: { kind: 'terminal', handle: 'term-1', warning: 'stale shape' }
       })
     ).toEqual({ worktreeId: 'wt-1' })
   })
