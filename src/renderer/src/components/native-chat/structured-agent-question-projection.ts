@@ -94,7 +94,10 @@ function projectQuestions(items: readonly AgentJournalRenderItem[]): {
   messages: NativeChatMessage[]
   receipts: ReadonlyMap<string, NativeChatResolvedPrompt>
 } {
-  const questionsByTurn = new Map<string, Set<string>>()
+  // Consume one question item for each matching tool call. A Set would hide every
+  // same-text call in a turn after the first question item, which can lose a real
+  // duplicate call when only one prompt was journalled.
+  const questionsByTurn = new Map<string, Map<string, number>>()
   const rows: { item: AgentJournalRenderItem; projection: Projection; turn: string }[] = []
   let turn = ''
   for (const item of items) {
@@ -110,9 +113,9 @@ function projectQuestions(items: readonly AgentJournalRenderItem[]): {
     if (turn && item.body.kind === 'question' && projection.questionKey) {
       let questions = questionsByTurn.get(turn)
       if (!questions) {
-        questionsByTurn.set(turn, (questions = new Set()))
+        questionsByTurn.set(turn, (questions = new Map()))
       }
-      questions.add(projection.questionKey)
+      questions.set(projection.questionKey, (questions.get(projection.questionKey) ?? 0) + 1)
     }
   }
   const messages: NativeChatMessage[] = []
@@ -129,8 +132,15 @@ function projectQuestions(items: readonly AgentJournalRenderItem[]): {
     if (
       item.body.kind === 'tool-call' &&
       projection.questionKey &&
-      questionsByTurn.get(rowTurn)?.has(projection.questionKey)
+      (questionsByTurn.get(rowTurn)?.get(projection.questionKey) ?? 0) > 0
     ) {
+      const questions = questionsByTurn.get(rowTurn)!
+      const remaining = questions.get(projection.questionKey)! - 1
+      if (remaining === 0) {
+        questions.delete(projection.questionKey)
+      } else {
+        questions.set(projection.questionKey, remaining)
+      }
       continue
     }
     if (item.body.kind === 'question' && item.body.resolution.state === 'pending') {

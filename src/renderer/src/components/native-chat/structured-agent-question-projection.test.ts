@@ -91,6 +91,33 @@ describe('structured agent session ask-row projection', () => {
     expect(projectStructuredQuestionMessages([turn, call, nextTurn, question])).toHaveLength(2)
   })
 
+  it('suppresses only as many duplicate calls as question items', () => {
+    const turn = item('turn', { kind: 'turn', turnId: 'turn', state: 'running' })
+    const firstCall = item('ask-1', {
+      kind: 'tool-call',
+      name: 'AskUserQuestion',
+      input: { questions: [{ question: 'Which branch?' }] },
+      state: 'running'
+    })
+    const secondCall = item('ask-2', {
+      kind: 'tool-call',
+      name: 'AskUserQuestion',
+      input: { questions: [{ question: 'Which branch?' }] },
+      state: 'running'
+    })
+    const question = item('q', {
+      kind: 'question',
+      question: 'Which branch?',
+      options: [],
+      resolution: { ...PENDING }
+    })
+
+    expect(projectStructuredQuestionMessages([turn, firstCall, secondCall, question])).toEqual([
+      expect.objectContaining({ id: 'ask-2' }),
+      expect.objectContaining({ id: 'q' })
+    ])
+  })
+
   it('counts adjacent pending questions and preserves each independently settled answer', () => {
     const first = item('q1', {
       kind: 'question',
