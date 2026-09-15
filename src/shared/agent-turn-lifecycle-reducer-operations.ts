@@ -6,7 +6,6 @@ import type {
   AgentTurnDispatchRecord,
   AgentTurnLifecycleState,
   AgentTurnRecord,
-  AgentTurnWorkKind,
   AgentTurnWorkRecord
 } from './agent-turn-lifecycle-contract'
 import {
@@ -24,6 +23,7 @@ export const eventEvidence = (event: AgentTurnLifecycleEvent): AgentTurnEvidence
 export function copyLifecycleState(state: AgentTurnLifecycleState): AgentTurnLifecycleState {
   return {
     ...state,
+    owner: { ...state.owner, attachment: { ...state.owner.attachment } },
     turns: state.turns.map((turn) => ({ ...turn, lastEvidence: { ...turn.lastEvidence } })),
     work: state.work.map((item) => ({ ...item, lastEvidence: { ...item.lastEvidence } })),
     dispatches: state.dispatches.map((dispatch) => ({
@@ -113,6 +113,12 @@ export function addTurn(state: AgentTurnLifecycleState, turn: AgentTurnRecord): 
     return false
   }
   if (removable !== -1 && state.turns.length >= AGENT_TURN_MAX_TURNS) {
+    const removed = state.turns[removable]
+    issue(state, {
+      kind: 'capacity-overflow',
+      turnId: removed.turnId,
+      observedAt: turn.lastEvidence.observedAt
+    })
     state.turns.splice(removable, 1)
   }
   state.turns.push(turn)
@@ -134,6 +140,12 @@ export function addWork(state: AgentTurnLifecycleState, work: AgentTurnWorkRecor
     return false
   }
   if (removable !== -1 && state.work.length >= AGENT_TURN_MAX_WORK_ITEMS) {
+    const removed = state.work[removable]
+    issue(state, {
+      kind: 'capacity-overflow',
+      turnId: removed.turnId,
+      observedAt: work.lastEvidence.observedAt
+    })
     state.work.splice(removable, 1)
   }
   state.work.push(work)
@@ -158,7 +170,12 @@ export function addDispatch(
   return true
 }
 
-export function unresolvedTurn(state: AgentTurnLifecycleState, turnId: string, at: number): void {
+export function unresolvedTurn(
+  state: AgentTurnLifecycleState,
+  turnId: string,
+  at: number,
+  options: { includeResidentBackground?: boolean } = {}
+): void {
   const turn = findTurn(state, turnId)
   if (turn && (turn.phase === 'active' || turn.phase === 'recovering')) {
     turn.phase = 'unresolved'
@@ -166,7 +183,11 @@ export function unresolvedTurn(state: AgentTurnLifecycleState, turnId: string, a
     turn.lastEvidence = { ...turn.lastEvidence, observedAt: at }
   }
   for (const item of state.work) {
-    if (item.turnId === turnId && item.phase === 'active') {
+    if (
+      item.turnId === turnId &&
+      item.phase === 'active' &&
+      (options.includeResidentBackground === true || item.kind === 'joined-child')
+    ) {
       item.phase = 'unresolved'
       item.settledAt = at
       item.lastEvidence = { ...item.lastEvidence, observedAt: at }
@@ -199,6 +220,7 @@ export function turnFromInventory(
       turnId: inventory.turnId,
       phase: 'active',
       outcome: null,
+      joinedChildrenKnowledge: 'unknown',
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: inventory.startedAt ?? event.evidence.observedAt,
@@ -210,88 +232,5 @@ export function turnFromInventory(
   }
   state.currentTurnId = inventory.turnId
   state.recoveries = state.recoveries.filter((entry) => entry.turnId !== inventory.turnId)
-  return true
-}
-
-function normaliseInventoryWork(
-  item: AgentCurrentTurnInventory['joinedChildren'][number]
-): Pick<AgentTurnWorkRecord, 'phase' | 'outcome'> {
-  if (item.phase === 'settled' && item.outcome === undefined) {
-    // A complete inventory without an outcome proves settlement, not success.
-    return { phase: 'unresolved', outcome: null }
-  }
-  return {
-    phase: item.phase,
-    outcome: item.phase === 'settled' ? (item.outcome ?? null) : null
-  }
-}
-
-export function applyInventoryWork(
-  state: AgentTurnLifecycleState,
-  turnId: string,
-  items: AgentCurrentTurnInventory['joinedChildren'],
-  kind: AgentTurnWorkKind,
-  event: AgentTurnLifecycleEvent
-): boolean {
-  const ids: string[] = []
-  for (const item of items) {
-    ids.push(item.workId)
-    const existing = findWork(state, turnId, item.workId)
-    const normalised = normaliseInventoryWork(item)
-    if (existing) {
-      if (existing.kind !== kind) {
-        issue(state, {
-          kind: 'conflicting-outcome',
-          turnId,
-          workId: item.workId,
-          observedAt: event.evidence.observedAt
-        })
-        continue
-      }
-      if (existing.phase !== 'settled' && existing.phase !== 'abandoned') {
-        existing.phase = normalised.phase
-        existing.outcome = normalised.outcome
-        existing.startedAt = existing.startedAt ?? item.startedAt ?? null
-        existing.settledAt =
-          normalised.phase === 'active' ? null : (item.settledAt ?? event.evidence.observedAt)
-        existing.lastEvidence = eventEvidence(event)
-      }
-      continue
-    }
-    if (
-      !addWork(state, {
-        turnId,
-        workId: item.workId,
-        kind,
-        phase: normalised.phase,
-        outcome: normalised.outcome,
-        startedAt: item.startedAt ?? null,
-        settledAt:
-          normalised.phase === 'active' ? null : (item.settledAt ?? event.evidence.observedAt),
-        lastEvidence: eventEvidence(event)
-      })
-    ) {
-      issue(state, {
-        kind: 'capacity-overflow',
-        turnId,
-        workId: item.workId,
-        observedAt: event.evidence.observedAt
-      })
-      return false
-    }
-  }
-  for (const existing of state.work) {
-    if (
-      existing.turnId === turnId &&
-      existing.kind === kind &&
-      existing.phase === 'active' &&
-      !ids.includes(existing.workId)
-    ) {
-      existing.phase = 'unresolved'
-      existing.outcome = null
-      existing.settledAt = event.evidence.observedAt
-      existing.lastEvidence = eventEvidence(event)
-    }
-  }
   return true
 }

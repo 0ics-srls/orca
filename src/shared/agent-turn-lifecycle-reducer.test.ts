@@ -87,6 +87,66 @@ describe('canonical agent turn lifecycle reducer', () => {
     )
   })
 
+  it('preserves resident background work when a newer root supersedes its turn', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-1' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-1',
+        workId: 'child-1',
+        workKind: 'joined-child'
+      })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-1',
+        workId: 'monitor-1',
+        workKind: 'resident-background'
+      })
+    ).state
+
+    const superseded = apply(current, event({ kind: 'turn-started', turnId: 'turn-2' }))
+
+    expect(superseded.state.turns).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ turnId: 'turn-1', phase: 'unresolved' }),
+        expect.objectContaining({ turnId: 'turn-2', phase: 'active' })
+      ])
+    )
+    expect(superseded.state.work).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          workId: 'child-1',
+          kind: 'joined-child',
+          phase: 'unresolved'
+        }),
+        expect.objectContaining({
+          workId: 'monitor-1',
+          kind: 'resident-background',
+          phase: 'active'
+        })
+      ])
+    )
+
+    const exited = apply(
+      superseded.state,
+      event({ kind: 'execution-verdict-observed', verdict: 'exited' })
+    )
+    expect(exited.state.work).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          workId: 'monitor-1',
+          kind: 'resident-background',
+          phase: 'unresolved'
+        })
+      ])
+    )
+  })
+
   it('does not gate root dispatch settlement on resident background work', () => {
     let current = state()
     current = apply(current, event({ kind: 'turn-started', turnId: 'turn-1' })).state
@@ -97,6 +157,18 @@ describe('canonical agent turn lifecycle reducer', () => {
         turnId: 'turn-1',
         workId: 'monitor-1',
         workKind: 'resident-background'
+      })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'current-turn-inventory',
+        complete: true,
+        currentTurn: {
+          turnId: 'turn-1',
+          joinedChildren: [],
+          residentBackground: [{ workId: 'monitor-1', phase: 'active' }]
+        }
       })
     ).state
     current = apply(
@@ -156,6 +228,14 @@ describe('canonical agent turn lifecycle reducer', () => {
     current = apply(current, event({ kind: 'turn-started', turnId: 'turn-1' })).state
     current = apply(
       current,
+      event({
+        kind: 'current-turn-inventory',
+        complete: true,
+        currentTurn: { turnId: 'turn-1', joinedChildren: [], residentBackground: [] }
+      })
+    ).state
+    current = apply(
+      current,
       event({ kind: 'dispatch-associated', dispatchId: 'dispatch-1', turnId: 'turn-1' })
     ).state
     current = apply(
@@ -177,9 +257,137 @@ describe('canonical agent turn lifecycle reducer', () => {
     ])
   })
 
+  it('settles completion as unresolved until authoritative inventory closes finite children', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-unknown' })).state
+    current = apply(
+      current,
+      event({ kind: 'dispatch-received', dispatchId: 'dispatch-unknown', turnId: 'turn-unknown' })
+    ).state
+    const settled = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-unknown',
+        outcome: 'completed',
+        recordKind: 'event'
+      })
+    )
+    expect(settled.committedDispatches).toEqual([
+      expect.objectContaining({ dispatchId: 'dispatch-unknown', outcome: 'unresolved' })
+    ])
+  })
+
+  it('does not trust a complete inventory after a late joined-child start', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-late-child' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'current-turn-inventory',
+        complete: true,
+        currentTurn: { turnId: 'turn-late-child', joinedChildren: [], residentBackground: [] }
+      })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-late-child',
+        outcome: 'completed',
+        recordKind: 'event'
+      })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-late-child',
+        workId: 'child-late',
+        workKind: 'joined-child'
+      })
+    ).state
+
+    const received = apply(
+      current,
+      event({
+        kind: 'dispatch-received',
+        dispatchId: 'dispatch-late-child',
+        turnId: 'turn-late-child'
+      })
+    )
+    expect(received.committedDispatches).toEqual([
+      expect.objectContaining({ dispatchId: 'dispatch-late-child', outcome: 'unresolved' })
+    ])
+  })
+
+  it('folds a failed joined child into dispatch settlement after complete inventory', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-child-failure' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'current-turn-inventory',
+        complete: true,
+        currentTurn: {
+          turnId: 'turn-child-failure',
+          joinedChildren: [{ workId: 'child-failure', phase: 'settled', outcome: 'failed' }],
+          residentBackground: []
+        }
+      })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'dispatch-received',
+        dispatchId: 'dispatch-child-failure',
+        turnId: 'turn-child-failure'
+      })
+    ).state
+    const settled = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-child-failure',
+        outcome: 'completed',
+        recordKind: 'event'
+      })
+    )
+    expect(settled.committedDispatches).toEqual([
+      expect.objectContaining({ dispatchId: 'dispatch-child-failure', outcome: 'failed' })
+    ])
+  })
+
+  it('abandons a dispatch without rewriting its observed receipt', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-abandon' })).state
+    current = apply(
+      current,
+      event({ kind: 'dispatch-received', dispatchId: 'dispatch-abandon', turnId: 'turn-abandon' })
+    ).state
+    const abandoned = apply(
+      current,
+      event({ kind: 'dispatch-abandoned', dispatchId: 'dispatch-abandon', turnId: 'turn-abandon' })
+    )
+    expect(abandoned.disposition).toBe('accepted')
+    expect(abandoned.state.dispatches[0]).toMatchObject({
+      receipt: 'received',
+      outcome: 'abandoned'
+    })
+  })
+
   it('keeps interrupt request separate from acknowledgement', () => {
     let current = state()
     current = apply(current, event({ kind: 'turn-started', turnId: 'turn-1' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-1',
+        workId: 'monitor-1',
+        workKind: 'resident-background'
+      })
+    ).state
     current = apply(current, event({ kind: 'turn-interrupt-requested', turnId: 'turn-1' })).state
     expect(current.turns[0]).toMatchObject({
       phase: 'active',
@@ -193,7 +401,7 @@ describe('canonical agent turn lifecycle reducer', () => {
     expect(current.turns[0]).toMatchObject({
       phase: 'active',
       outcome: null,
-      interruptInputWrittenAt: 3
+      interruptInputWrittenAt: 4
     })
     const acknowledged = apply(
       current,
@@ -206,15 +414,33 @@ describe('canonical agent turn lifecycle reducer', () => {
       phase: 'settled',
       interrupt: 'acknowledged'
     })
+    expect(acknowledged.state.work[0]).toMatchObject({
+      kind: 'resident-background',
+      phase: 'active'
+    })
   })
 
   it('marks active turns unresolved when execution exits without declaring success', () => {
     let current = state()
     current = apply(current, event({ kind: 'turn-started', turnId: 'turn-1' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-1',
+        workId: 'monitor-1',
+        workKind: 'resident-background'
+      })
+    ).state
     const exited = apply(current, event({ kind: 'execution-verdict-observed', verdict: 'exited' }))
     expect(exited.committedOutcomes).toEqual([])
     expect(exited.state.executionVerdict).toBe('exited')
     expect(exited.state.turns[0]).toMatchObject({ phase: 'unresolved', outcome: null })
+    expect(exited.state.work[0]).toMatchObject({
+      kind: 'resident-background',
+      phase: 'unresolved',
+      outcome: null
+    })
   })
 
   it('reconciles a complete current-turn inventory and preserves uncertainty', () => {
@@ -322,6 +548,26 @@ describe('canonical agent turn lifecycle reducer', () => {
     expect(replay.committedOutcomes).toEqual([])
   })
 
+  it('does not expose mutable reducer records through a snapshot', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-copy' })).state
+    const snapshot = readAgentTurnLifecycleSnapshot(current)
+    snapshot.turns[0].lastEvidence.eventId = 'mutated'
+    expect(current.turns[0].lastEvidence.eventId).not.toBe('mutated')
+    snapshot.owner.attachment.executionId = 'mutated'
+    expect(current.owner.attachment.executionId).toBe('execution-c1')
+  })
+
+  it('copies the owner identity when the lifecycle state is created', () => {
+    const mutableOwner: AgentTurnOwner = {
+      ...owner,
+      attachment: { executionId: 'execution-original' }
+    }
+    const current = createAgentTurnLifecycleState(mutableOwner)
+    mutableOwner.attachment.executionId = 'execution-mutated'
+    expect(current.owner.attachment.executionId).toBe('execution-original')
+  })
+
   it('rejects malformed anonymous lifecycle identity before reducing', () => {
     const malformed = {
       kind: 'turn-outcome-observed',
@@ -331,6 +577,19 @@ describe('canonical agent turn lifecycle reducer', () => {
       owner,
       evidence: { eventId: 'event-malformed', producerId: 'c1-test', observedAt: 1 }
     }
+    expect(isAgentTurnLifecycleEvent(malformed)).toBe(false)
+  })
+
+  it('rejects inventories that assign one child to two lifecycle kinds', () => {
+    const malformed = event({
+      kind: 'current-turn-inventory',
+      complete: true,
+      currentTurn: {
+        turnId: 'turn-duplicate-child',
+        joinedChildren: [{ workId: 'child-1', phase: 'active' }],
+        residentBackground: [{ workId: 'child-1', phase: 'active' }]
+      }
+    })
     expect(isAgentTurnLifecycleEvent(malformed)).toBe(false)
   })
 })

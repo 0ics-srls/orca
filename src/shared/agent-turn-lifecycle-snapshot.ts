@@ -24,17 +24,25 @@ export function readAgentTurnLifecycleSnapshot(
   const currentTurn = state.currentTurnId
     ? (state.turns.find((turn) => turn.turnId === state.currentTurnId) ?? null)
     : null
+  const copyEvidence = <T extends { lastEvidence: AgentTurnRecord['lastEvidence'] }>(
+    entry: T
+  ): T => ({ ...entry, lastEvidence: { ...entry.lastEvidence } })
   return {
-    owner: state.owner,
+    owner: {
+      ...state.owner,
+      attachment: { ...state.owner.attachment }
+    },
     currentTurnId: state.currentTurnId,
-    currentTurn,
-    turns: state.turns,
-    joinedChildren: state.work.filter((item) => item.kind === 'joined-child'),
-    residentBackground: state.work.filter((item) => item.kind === 'resident-background'),
-    dispatches: state.dispatches,
-    recoveries: state.recoveries,
+    currentTurn: currentTurn ? copyEvidence(currentTurn) : null,
+    turns: state.turns.map(copyEvidence),
+    joinedChildren: state.work.filter((item) => item.kind === 'joined-child').map(copyEvidence),
+    residentBackground: state.work
+      .filter((item) => item.kind === 'resident-background')
+      .map(copyEvidence),
+    dispatches: state.dispatches.map(copyEvidence),
+    recoveries: state.recoveries.map(copyEvidence),
     executionVerdict: state.executionVerdict,
-    integrityIssues: state.integrityIssues
+    integrityIssues: state.integrityIssues.map((issue) => ({ ...issue }))
   }
 }
 

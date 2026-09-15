@@ -93,7 +93,7 @@ export function createAgentTurnLifecycleState(owner: AgentTurnOwner): AgentTurnL
   }
   return {
     version: 1,
-    owner,
+    owner: { ...owner, attachment: { ...owner.attachment } },
     currentTurnId: null,
     turns: [],
     work: [],
@@ -181,9 +181,14 @@ function isInventory(value: unknown): value is AgentCurrentTurnInventory {
   ) {
     return false
   }
-  return (
-    value.joinedChildren.every(isInventoryWork) && value.residentBackground.every(isInventoryWork)
-  )
+  if (
+    !value.joinedChildren.every(isInventoryWork) ||
+    !value.residentBackground.every(isInventoryWork)
+  ) {
+    return false
+  }
+  const workIds = [...value.joinedChildren, ...value.residentBackground].map((item) => item.workId)
+  return new Set(workIds).size === workIds.length
 }
 
 function hasEventBase(value: unknown): value is Record<string, unknown> {

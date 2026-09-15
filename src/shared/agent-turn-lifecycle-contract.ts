@@ -34,6 +34,8 @@ export type AgentTurnRecord = {
   turnId: AgentTurnId
   phase: AgentTurnPhase
   outcome: AgentTurnOutcome | null
+  /** Whether authoritative inventory closed the finite-child set for this turn. */
+  joinedChildrenKnowledge: 'unknown' | 'complete'
   interrupt: AgentTurnInterruptState
   /** Writing Escape/Ctrl+C is delivery evidence, not an interrupt acknowledgement. */
   interruptInputWrittenAt: number | null

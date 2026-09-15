@@ -6,13 +6,13 @@ import type {
 import {
   addTurn,
   addWork,
-  applyInventoryWork,
   eventEvidence,
   findTurn,
   issue,
   turnFromInventory,
   unresolvedTurn
 } from './agent-turn-lifecycle-reducer-operations'
+import { applyInventoryWork } from './agent-turn-lifecycle-reducer-inventory'
 import {
   applyDispatch,
   applyInterruptAcknowledgement,
@@ -23,6 +23,8 @@ import {
   recoveryExpired,
   recoveryStarted
 } from './agent-turn-lifecycle-reducer-recovery'
+import { markJoinedChildKnowledgeUnknown } from './agent-turn-lifecycle-reducer-knowledge'
+import { observeExecutionVerdict } from './agent-turn-lifecycle-reducer-execution'
 
 type Reason = AgentTurnLifecycleReduction['reason'] | undefined
 
@@ -45,6 +47,7 @@ function turnStarted(
       turnId: event.turnId,
       phase: 'active',
       outcome: null,
+      joinedChildrenKnowledge: 'unknown',
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: event.startedAt ?? event.evidence.observedAt,
@@ -109,6 +112,7 @@ function inventory(
   ) {
     return 'capacity'
   }
+  turn.joinedChildrenKnowledge = 'complete'
   return undefined
 }
 
@@ -153,6 +157,9 @@ function workStarted(
       observedAt: event.evidence.observedAt
     })
     return 'capacity'
+  }
+  if (event.workKind === 'joined-child') {
+    markJoinedChildKnowledgeUnknown(state, event.turnId)
   }
   return undefined
 }
@@ -211,6 +218,9 @@ function workOutcome(
       observedAt: event.evidence.observedAt
     })
     return 'capacity'
+  }
+  if (event.workKind === 'joined-child') {
+    markJoinedChildKnowledgeUnknown(state, event.turnId)
   }
   return undefined
 }
@@ -273,16 +283,7 @@ export function reduceAgentTurnEvent(
     case 'turn-recovery-abandoned':
       return recoveryAbandoned(state, event)
     case 'execution-verdict-observed':
-      if (state.executionVerdict !== 'exited') {
-        state.executionVerdict = event.verdict
-      }
-      if (event.verdict === 'exited') {
-        for (const turn of state.turns) {
-          if (turn.phase === 'active' || turn.phase === 'recovering') {
-            unresolvedTurn(state, turn.turnId, event.evidence.observedAt)
-          }
-        }
-      }
+      observeExecutionVerdict(state, event)
       return undefined
     case 'dispatch-associated':
       return applyDispatch(state, event.dispatchId, event.turnId, 'unobserved', null, event)
@@ -297,7 +298,7 @@ export function reduceAgentTurnEvent(
         ? undefined
         : 'conflict'
     case 'dispatch-abandoned':
-      return applyDispatch(state, event.dispatchId, event.turnId, 'rejected', 'abandoned', event)
+      return applyDispatch(state, event.dispatchId, event.turnId, 'unobserved', 'abandoned', event)
         ? undefined
         : 'conflict'
   }

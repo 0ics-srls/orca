@@ -43,6 +43,8 @@ export function reduceAgentTurnLifecycle(
     return { state, disposition: 'duplicate', committedOutcomes: [], committedDispatches: [] }
   }
   const next = copyLifecycleState(state)
+  // Retain rejected evidence too: replaying the same stale fact forever must not
+  // turn a provider delivery race into an unbounded host workload.
   rememberEvent(next, event)
   const reason = reduceAgentTurnEvent(next, event)
   reconcileDispatches(next, event.evidence.observedAt)

@@ -52,6 +52,7 @@ export function applyOutcome(
       turnId,
       phase: 'settled',
       outcome,
+      joinedChildrenKnowledge: 'unknown',
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: null,
@@ -167,11 +168,10 @@ function deriveDispatchOutcome(
   if (turn.outcome !== 'completed') {
     return turn.outcome
   }
-  if (
-    state.integrityIssues.some(
-      (entry) => entry.kind === 'capacity-overflow' && entry.turnId === dispatch.turnId
-    )
-  ) {
+  if (turn.joinedChildrenKnowledge !== 'complete') {
+    return 'unresolved'
+  }
+  if (state.integrityIssues.some((entry) => entry.turnId === dispatch.turnId)) {
     return 'unresolved'
   }
   const joined = state.work.filter(

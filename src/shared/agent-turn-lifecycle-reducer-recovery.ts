@@ -41,6 +41,7 @@ export function recoveryStarted(
       turnId: event.turnId,
       phase: 'recovering',
       outcome: null,
+      joinedChildrenKnowledge: 'unknown',
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: null,
@@ -48,6 +49,9 @@ export function recoveryStarted(
       lastEvidence: eventEvidence(event)
     })
   ) {
+    // The custody marker and the turn are one bounded obligation. If the turn
+    // cannot be admitted, do not leave a recovery entry that can never settle.
+    state.recoveries = state.recoveries.filter((entry) => entry.custodyId !== event.custodyId)
     issue(state, {
       kind: 'capacity-overflow',
       turnId: event.turnId,
