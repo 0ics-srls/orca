@@ -97,6 +97,9 @@ export function workspaceSettingsMounts(
         runSetup: false,
         trustedOrcaHooks: {},
         getWorktreeCreateCutoverSupport: async () => false,
+        // False for the same reason as the cutover probe: an old host is the baseline the
+        // recordings pin, so the create stays on worktree.create rather than agent.launch.
+        getAgentLaunchSupport: async () => false,
         transitionDrawer: (view: unknown) => context.effect('drawer', view),
         onCreated: (id: unknown, name: unknown) => context.effect('created', { id, name }),
         onClose: () => context.effect('close', null)
