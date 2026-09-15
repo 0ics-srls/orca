@@ -17961,7 +17961,7 @@
       "advanced": "Advanced",
       "deleteIndexCopy": "Delete index copy",
       "deleteTitle": "Delete this computer’s search index?",
-      "deleteEnabled": "Remove the search index from this computer. Original transcripts are not touched. Search is on, so Orca scans them again from scratch afterward.",
+      "deleteEnabled": "Turn off search on this computer and remove its index. Original transcripts are not touched. Switch search back on to rebuild.",
       "deleteDisabled": "Remove the search index from this computer. Original transcripts are not touched. Search stays off.",
       "delete": "Delete index",
       "cleared": "Search index cleared. Original transcripts were kept.",
@@ -17981,7 +17981,8 @@
       "serverOff": "Off",
       "serverEnableTitle": "Start indexing agent sessions on {{host}}?",
       "serverEnableConsent": "Orca will build a search index on {{host}}. This client only receives search results. It copies conversation text and tool output from agent transcripts as written; content is not redacted. Indexing starts now, runs in the background, and the first scan can take several minutes. You can turn it off at any time; progress is kept.",
-      "serverToggleError": "Could not change session search on {{host}}. Try again."
+      "serverToggleError": "Could not change session search on {{host}}. Try again.",
+      "clearedAndTurnedOff": "Search is off and the index was deleted. Original transcripts were kept."
     }
   },
   "aiVault": {
