@@ -2,6 +2,7 @@ import type { MountAdapter, MountContext } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
 import {
   HOST_ID,
+  credentialHash,
   INSTALL_REQ_ID,
   PENDING_RESUME_TOKEN,
   credentialBundle,
@@ -18,16 +19,12 @@ import {
 export function relayCredentialMountAdapters(
   modules: ReturnType<typeof operationModuleLoader>
 ): Record<string, MountAdapter> {
-  const credentialHash = () =>
-    modules.load<typeof import('../../../transport/mobile-relay-credential-hash')>(
-      'mobile/src/transport/mobile-relay-credential-hash.ts'
-    ).hashMobileRelayCredential
   return {
     'relay.credential-rotation': ({ client, effect }: MountContext) => {
       const rotate = modules.load<
         typeof import('../../../transport/mobile-relay-credential-rotation')
       >('mobile/src/transport/mobile-relay-credential-rotation.ts').rotateMobileRelayCredential
-      const hash = credentialHash()
+      const hash = credentialHash(modules)
       let bundle = credentialBundle(hash)
       let outcome: unknown = 'unrotated'
       return {
@@ -80,7 +77,7 @@ export function relayCredentialMountAdapters(
       const upgrade = modules.load<typeof import('../../../transport/mobile-relay-direct-upgrade')>(
         'mobile/src/transport/mobile-relay-direct-upgrade.ts'
       ).upgradeDirectMobileRelay
-      const hash = credentialHash()
+      const hash = credentialHash(modules)
       let journal: unknown = null
       let outcome: unknown = 'unupgraded'
       return {

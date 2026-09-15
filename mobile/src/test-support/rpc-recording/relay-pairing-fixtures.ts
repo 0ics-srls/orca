@@ -1,29 +1,37 @@
 import type { MobileRelayCredentialBundle } from '../../transport/mobile-relay-credential-bundle'
 import type { MobileRelayPairingJournal } from '../../transport/mobile-relay-pairing-journal'
 import type { MountContext } from './recording-scenario'
+import type { operationModuleLoader } from './operation-module-loader'
 
 export const HOST_ID = 'host-1'
-export const DEVICE_TOKEN = 'device-token-1'
-export const PUBLIC_KEY_B64 = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8='
-export const ENDPOINT = 'ws://192.168.1.10:8765'
-export const RELAY_HOST_ID = 'relay-host-0001x'
-export const INVITE_TOKEN = 'invite000000000000000000000000000000000001x'
+const DEVICE_TOKEN = 'device-token-1'
+const PUBLIC_KEY_B64 = 'AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8='
+const ENDPOINT = 'ws://192.168.1.10:8765'
+const RELAY_HOST_ID = 'relay-host-0001x'
+const INVITE_TOKEN = 'invite000000000000000000000000000000000001x'
 export const PENDING_RESUME_TOKEN = 'pending00000000000000000000000000000000001x'
-export const CURRENT_RESUME_TOKEN = 'current00000000000000000000000000000000001x'
+const CURRENT_RESUME_TOKEN = 'current00000000000000000000000000000000001x'
 export const INSTALL_REQ_ID = 'install-fixture-1'
-export const RESUME_CONFIRM_REQ_ID = 'confirm-fixture-1'
+const RESUME_CONFIRM_REQ_ID = 'confirm-fixture-1'
 export const JOURNAL_ID = 'pair-fixture-1'
 const OFFER_FINGERPRINT = 'fingerprint0000000000000000000000000000001'
 const DIRECTOR_URL = 'https://director.example'
 const CELL_URL = 'https://cell.example'
-export const INVITE_LIFETIME_MS = 5 * 60 * 1000
+const INVITE_LIFETIME_MS = 5 * 60 * 1000
 
 /** Deterministic through the Web Crypto the recording scheduler pins. */
+/** The product's own credential hash, loaded from source: a stand-in would record a fiction. */
+export function credentialHash(modules: ReturnType<typeof operationModuleLoader>) {
+  return modules.load<typeof import('../../transport/mobile-relay-credential-hash')>(
+    'mobile/src/transport/mobile-relay-credential-hash.ts'
+  ).hashMobileRelayCredential
+}
+
 export function recordingRandomBytes(length: number): Uint8Array {
   return globalThis.crypto.getRandomValues(new Uint8Array(length))
 }
 
-export function relayEndpoint() {
+function relayEndpoint() {
   return {
     v: 1 as const,
     directorUrl: DIRECTOR_URL,

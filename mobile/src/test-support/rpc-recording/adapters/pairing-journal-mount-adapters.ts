@@ -3,6 +3,7 @@ import type { MountAdapter, MountContext } from '../recording-scenario'
 import type { operationModuleLoader } from '../operation-module-loader'
 import {
   HOST_ID,
+  credentialHash,
   JOURNAL_ID,
   candidateClient,
   pairingJournal,
@@ -18,16 +19,12 @@ import {
 export function pairingJournalMountAdapters(
   modules: ReturnType<typeof operationModuleLoader>
 ): Record<string, MountAdapter> {
-  const credentialHash = () =>
-    modules.load<typeof import('../../../transport/mobile-relay-credential-hash')>(
-      'mobile/src/transport/mobile-relay-credential-hash.ts'
-    ).hashMobileRelayCredential
   return {
     'relay.pairing-recovery': ({ client, effect }: MountContext) => {
       const recovery = modules.load<
         typeof import('../../../transport/mobile-relay-pairing-recovery')
       >('mobile/src/transport/mobile-relay-pairing-recovery.ts')
-      let journal: MobileRelayPairingJournal | null = pairingJournal(credentialHash())
+      let journal: MobileRelayPairingJournal | null = pairingJournal(credentialHash(modules))
       let outcome: unknown = 'unrecovered'
       return {
         action(_name, args) {
