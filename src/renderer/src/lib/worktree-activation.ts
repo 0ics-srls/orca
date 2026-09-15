@@ -123,7 +123,8 @@ export function activateAndRevealFolderWorkspace(
       identity,
       executionEvidence,
       owner: 'local',
-      createSurface: () => ensureFolderWorkspaceInitialTerminal(folderWorkspace, opts.startup)
+      createSurface: (hostAbsenceConfirmed) =>
+        ensureFolderWorkspaceInitialTerminal(folderWorkspace, opts.startup, hostAbsenceConfirmed)
     })
   }
   if (opts?.revealInSidebar !== false) {

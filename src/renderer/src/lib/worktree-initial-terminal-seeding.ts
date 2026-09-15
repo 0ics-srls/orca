@@ -76,7 +76,8 @@ export function ensureWorktreeHasInitialTerminal(
   const executionEvidence = resolveWorkspaceExecutionEvidence(
     ownerState,
     worktreeId,
-    getExecutionHostIdForWorktree(ownerState, worktreeId)
+    getExecutionHostIdForWorktree(ownerState, worktreeId),
+    opts?.hostAbsenceConfirmed === true
   )
   // Why: explicit spawn evidence survives the new-worktree ownership race; a host that owns terminal creation provides the same authority for later activations.
   if (backendStartupTerminalSpawned || hostAuthority === 'live') {

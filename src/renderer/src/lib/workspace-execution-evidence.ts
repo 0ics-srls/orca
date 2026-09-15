@@ -1,4 +1,5 @@
 import { parseExecutionHostId, type ExecutionHostId } from '../../../shared/execution-host'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import {
   resolveWorkspaceTerminalHostAuthority,
   type WorkspaceTerminalHostAuthorityState
@@ -9,7 +10,8 @@ export type WorkspaceExecutionEvidence = 'live' | 'unverifiable' | 'exited'
 export function resolveWorkspaceExecutionEvidence(
   state: WorkspaceTerminalHostAuthorityState,
   workspaceKey: string,
-  executionHostId: ExecutionHostId
+  executionHostId: ExecutionHostId,
+  hostAbsenceConfirmed = false
 ): WorkspaceExecutionEvidence {
   const authority = resolveWorkspaceTerminalHostAuthority(state, workspaceKey)
   if (authority !== 'none') {
@@ -21,6 +23,10 @@ export function resolveWorkspaceExecutionEvidence(
   }
   if (host.kind === 'runtime') {
     return 'unverifiable'
+  }
+  if (parseWorkspaceKey(workspaceKey)?.type === 'folder') {
+    // SSH snapshots replace git-worktree rows only; a folder needs its own host-scoped census.
+    return hostAbsenceConfirmed ? 'exited' : 'unverifiable'
   }
   const syncStatus = state.remoteWorkspaceSyncStatusByTargetId?.[host.targetId]
   return state.remoteWorkspaceHydratedTargetIds?.has(host.targetId) &&

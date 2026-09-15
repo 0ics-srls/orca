@@ -23,7 +23,8 @@ import { startWorkspaceActivationSurfaceProducer } from './workspace-activation-
 
 export function ensureFolderWorkspaceInitialTerminal(
   folderWorkspace: FolderWorkspace,
-  startup?: WorktreeStartupPayload
+  startup?: WorktreeStartupPayload,
+  hostAbsenceConfirmed = false
 ): string | null {
   return ensureWorktreeHasInitialTerminal(
     useAppStore.getState(),
@@ -32,7 +33,7 @@ export function ensureFolderWorkspaceInitialTerminal(
     undefined,
     undefined,
     undefined,
-    { reseedEmptiedWorkspace: true }
+    { reseedEmptiedWorkspace: true, hostAbsenceConfirmed }
   )
 }
 

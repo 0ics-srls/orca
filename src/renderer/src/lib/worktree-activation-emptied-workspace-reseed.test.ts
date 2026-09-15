@@ -208,7 +208,7 @@ describe('folder activation recovery', () => {
     expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
   })
 
-  it('seeds a connected SSH folder after its current inventory is synchronized', async () => {
+  it('does not treat a synced SSH target as absence evidence for a folder', async () => {
     seedEmptyFolderWorkspace(SSH_HOST_ID)
     useAppStore.setState({
       remoteWorkspaceHydratedTargetIds: new Set(['conn-1']),
@@ -216,8 +216,61 @@ describe('folder activation recovery', () => {
     })
 
     const result = activateAndRevealFolderWorkspace(FOLDER_ID, { executionHostId: SSH_HOST_ID })
+    await Promise.resolve()
 
-    expect(result).toEqual({ primaryTabId: expect.any(String) })
-    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toHaveLength(1)
+    expect(result).toEqual({ primaryTabId: null })
+    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
+  })
+
+  it('does not treat a synced SSH target as absence evidence for a folder startup', async () => {
+    seedEmptyFolderWorkspace(SSH_HOST_ID)
+    useAppStore.setState({
+      remoteWorkspaceHydratedTargetIds: new Set(['conn-1']),
+      remoteWorkspaceSyncStatusByTargetId: { 'conn-1': { phase: 'synced' } }
+    })
+    vi.spyOn(activationGate, 'gateWorktreeAgentActivation').mockReturnValue(
+      new Promise(() => undefined)
+    )
+
+    const result = activateAndRevealFolderWorkspace(FOLDER_ID, {
+      executionHostId: SSH_HOST_ID,
+      startup: { command: 'echo start' }
+    })
+
+    expect(result).toEqual({ primaryTabId: null })
+    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
+    expect(activationGate.gateWorktreeAgentActivation).toHaveBeenCalled()
+  })
+
+  it('starts a requested SSH folder startup only after the host census reports empty', async () => {
+    seedEmptyFolderWorkspace(SSH_HOST_ID)
+    useAppStore.setState({
+      remoteWorkspaceHydratedTargetIds: new Set(['conn-1']),
+      remoteWorkspaceSyncStatusByTargetId: { 'conn-1': { phase: 'synced' } }
+    })
+    vi.spyOn(activationGate, 'gateWorktreeAgentActivation').mockResolvedValue('empty')
+
+    const result = activateAndRevealFolderWorkspace(FOLDER_ID, {
+      executionHostId: SSH_HOST_ID,
+      startup: { command: 'echo start' }
+    })
+
+    expect(result).toEqual({ primaryTabId: null })
+    await vi.waitFor(() =>
+      expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toHaveLength(1)
+    )
+  })
+
+  it('does not launch an SSH folder startup when host inventory is incomplete', async () => {
+    seedEmptyFolderWorkspace(SSH_HOST_ID)
+    vi.spyOn(activationGate, 'gateWorktreeAgentActivation').mockResolvedValue('blocked')
+
+    activateAndRevealFolderWorkspace(FOLDER_ID, {
+      executionHostId: SSH_HOST_ID,
+      startup: { command: 'echo start' }
+    })
+
+    await vi.waitFor(() => expect(activationGate.gateWorktreeAgentActivation).toHaveBeenCalled())
+    expect(useAppStore.getState().tabsByWorktree[FOLDER_KEY]).toEqual([])
   })
 })

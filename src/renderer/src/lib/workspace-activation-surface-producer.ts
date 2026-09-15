@@ -19,14 +19,20 @@ import { workspaceHasSleepingAgentSessions } from './worktree-agent-activation-c
 import type { WorktreeAgentActivationRoute } from './worktree-agent-activation-route'
 import type { WorkspaceActivationIdentity } from './worktree-activation-recovery'
 import { getRuntimeEnvironmentRevision } from '@/runtime/runtime-environment-revision'
+import { clearActivationRecoveryFailureSnapshots } from './workspace-activation-recovery-failure-snapshots'
 
-type ActivationSurfaceProductionContext = { mode: 'explicit' | 'startup' }
+type ActivationSurfaceProductionContext = {
+  mode: 'explicit' | 'startup'
+  /** Retry only: abandon every settled attempt so a stranded verdict cannot gate the user. */
+  supersedeSettledOwnership?: boolean
+}
 
 function settleProducedSurface(
   producer: WorkspaceSurfaceProducer,
   identity: WorkspaceActivationIdentity & WorktreeAgentActivationRoute,
   context: ActivationSurfaceProductionContext,
-  maySeedEmptySurface: boolean
+  maySeedEmptySurface: boolean,
+  hostAbsenceConfirmed = false
 ): string | null {
   if (!isActivationExecutionRouteCurrent(identity)) {
     discardWorkspaceSurfaceProducerAttempt(producer.attempt.id)
@@ -45,7 +51,8 @@ function settleProducedSurface(
   const evidence = resolveWorkspaceExecutionEvidence(
     state,
     identity.workspaceKey,
-    identity.executionHostId
+    identity.executionHostId,
+    hostAbsenceConfirmed
   )
   if (evidence !== 'exited') {
     producer.unverifiable('Orca cannot verify the execution host for this workspace surface.')
@@ -64,7 +71,7 @@ function settleProducedSurface(
     undefined,
     undefined,
     undefined,
-    { reseedEmptiedWorkspace: context.mode === 'explicit' }
+    { reseedEmptiedWorkspace: context.mode === 'explicit', hostAbsenceConfirmed }
   )
   const materialized = primaryTabId ? readActivationRenderableSurface(identity) : null
   if (materialized) {
@@ -79,12 +86,24 @@ function settleProducedSurface(
   return null
 }
 
-function clearSettledActivationOwnership(identity: WorkspaceActivationIdentity): void {
+// An automatic activation only reclaims its own settled attempts: a concrete producer's verdict is
+// still the truthful report of that launch, and re-gating it can only replace it with a weaker one.
+// Retry is the explicit abandon path, so it supersedes every settled attempt.
+function clearSettledActivationOwnership(
+  identity: WorkspaceActivationIdentity,
+  supersedeAll: boolean
+): void {
+  const supersededAttemptIds: string[] = []
   for (const entry of readWorkspaceSurfaceProducerEntries(identity)) {
-    if (entry.attempt.purpose === 'activation-recovery' && entry.result !== null) {
+    if (
+      entry.result !== null &&
+      (supersedeAll || entry.attempt.purpose === 'activation-recovery')
+    ) {
       discardWorkspaceSurfaceProducerAttempt(entry.attempt.id)
+      supersededAttemptIds.push(entry.attempt.id)
     }
   }
+  clearActivationRecoveryFailureSnapshots(supersededAttemptIds)
 }
 
 export function startWorkspaceActivationSurfaceProducer(
@@ -97,6 +116,10 @@ export function startWorkspaceActivationSurfaceProducer(
       ? (getRuntimeEnvironmentRevision(identity.runtimeEnvironmentId) ?? null)
       : null
   }
+  if (!isActivationExecutionRouteCurrent(route)) {
+    return null
+  }
+  clearSettledActivationOwnership(identity, context.supersedeSettledOwnership === true)
   let visible: ReturnType<typeof readActivationRenderableSurface>
   try {
     visible = readActivationRenderableSurface(identity)
@@ -109,9 +132,6 @@ export function startWorkspaceActivationSurfaceProducer(
     producer.unexpected(error)
     return null
   }
-  if (!isActivationExecutionRouteCurrent(route)) {
-    return null
-  }
   const hasSleepingSessions = workspaceHasSleepingAgentSessions(
     useAppStore.getState(),
     identity.workspaceKey
@@ -119,7 +139,6 @@ export function startWorkspaceActivationSurfaceProducer(
   if (visible && !hasSleepingSessions) {
     return visible.id
   }
-  clearSettledActivationOwnership(identity)
   if (readWorkspaceSurfaceProducerEntries(identity).length > 0) {
     return null
   }
@@ -151,7 +170,7 @@ export function startWorkspaceActivationSurfaceProducer(
         return
       }
       try {
-        settleProducedSurface(producer, route, context, outcome === 'empty')
+        settleProducedSurface(producer, route, context, outcome === 'empty', outcome === 'empty')
       } catch (error) {
         producer.unexpected(error)
       }

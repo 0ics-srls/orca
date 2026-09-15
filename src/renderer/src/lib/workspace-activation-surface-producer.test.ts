@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { WorkspaceActivationIdentity } from './worktree-activation-recovery'
 import {
   readWorkspaceSurfaceProducerEntries,
+  registerWorkspaceSurfaceProducer,
   resetWorkspaceSurfaceProducersForTests
 } from './workspace-surface-production'
 import { startWorkspaceActivationSurfaceProducer } from './workspace-activation-surface-producer'
@@ -72,6 +73,23 @@ describe('workspace activation surface producer', () => {
     expect(() =>
       startWorkspaceActivationSurfaceProducer(IDENTITY, { mode: 'explicit' })
     ).not.toThrow()
+    expect(readWorkspaceSurfaceProducerEntries(IDENTITY)).toMatchObject([
+      { result: { kind: 'unexpected', reason: 'inventory unavailable' } }
+    ])
+  })
+
+  it('does not let an old failure mask a later inventory error on retry', () => {
+    const failedProducer = registerWorkspaceSurfaceProducer(IDENTITY)
+    failedProducer.failed('old launch failed')
+    mocks.readSurface.mockImplementation(() => {
+      throw new Error('inventory unavailable')
+    })
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit', supersedeSettledOwnership: true }
+    )
+
     expect(readWorkspaceSurfaceProducerEntries(IDENTITY)).toMatchObject([
       { result: { kind: 'unexpected', reason: 'inventory unavailable' } }
     ])
@@ -181,6 +199,65 @@ describe('workspace activation surface producer', () => {
       ])
     )
     expect(mocks.gate).toHaveBeenCalledTimes(2)
+  })
+
+  it('supersedes a settled generic create failure on retry and starts the next gate', async () => {
+    const failedProducer = registerWorkspaceSurfaceProducer(IDENTITY)
+    failedProducer.failed('launch failed')
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit', supersedeSettledOwnership: true }
+    )
+
+    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    expect(
+      readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)
+    ).not.toContain(failedProducer.attempt.id)
+  })
+
+  it('keeps a concrete producer verdict when activation is not a retry', () => {
+    const failedProducer = registerWorkspaceSurfaceProducer(IDENTITY)
+    failedProducer.failed('launch failed')
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit' }
+    )
+
+    expect(mocks.gate).not.toHaveBeenCalled()
+    expect(readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)).toEqual([
+      failedProducer.attempt.id
+    ])
+  })
+
+  it('supersedes a settled unverifiable attempt so Retry can run a new gate', async () => {
+    const strandedProducer = registerWorkspaceSurfaceProducer(IDENTITY)
+    strandedProducer.unverifiable('Orca cannot verify the execution host for this workspace.')
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit', supersedeSettledOwnership: true }
+    )
+
+    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    expect(
+      readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)
+    ).not.toContain(strandedProducer.attempt.id)
+  })
+
+  it('leaves an unsettled producer owning the workspace', () => {
+    const pendingProducer = registerWorkspaceSurfaceProducer(IDENTITY)
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit' }
+    )
+
+    expect(mocks.gate).not.toHaveBeenCalled()
+    expect(readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)).toEqual([
+      pendingProducer.attempt.id
+    ])
   })
 
   it('discards stale route ownership without starting a writer', async () => {

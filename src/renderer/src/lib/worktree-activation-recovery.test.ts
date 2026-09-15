@@ -10,12 +10,14 @@ import {
   resetWorkspaceActivationRecoveryPresentationsForTests
 } from './workspace-activation-recovery-presentation'
 import {
+  discardWorkspaceSurfaceProducerAttempt,
   readWorkspaceSurfaceProducerEntries,
   registerWorkspaceSurfaceProducer,
   resetWorkspaceSurfaceProducersForTests
 } from './workspace-surface-production'
 import { isActivationExecutionRouteCurrent } from './workspace-activation-recovery-state'
 import { replaceRuntimeEnvironmentRevisions } from '@/runtime/runtime-environment-revision'
+import * as activationProducer from './workspace-activation-surface-producer'
 
 type FakeUnifiedTab = {
   id: string
@@ -182,6 +184,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers()
+  vi.restoreAllMocks()
 })
 
 describe('activation recovery failures', () => {
@@ -336,7 +339,7 @@ describe('activation recovery failures', () => {
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })
 
-  it('presents a producer refusal reason without substituting a shell', async () => {
+  it('retries a declined producer through a new concrete attempt', async () => {
     const producer = registerWorkspaceSurfaceProducer({
       workspaceKey: WORKSPACE_KEY,
       executionHostId: 'local',
@@ -353,11 +356,23 @@ describe('activation recovery failures', () => {
     })
     expect(mocks.state().createTab).not.toHaveBeenCalled()
 
+    const start = vi
+      .spyOn(activationProducer, 'startWorkspaceActivationSurfaceProducer')
+      .mockImplementation((retryIdentity) => {
+        discardWorkspaceSurfaceProducerAttempt(producer.attempt.id)
+        const retried = registerWorkspaceSurfaceProducer(retryIdentity)
+        retried.failed('The retry reached the host and failed.')
+        return null
+      })
     readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')?.retry()
     await vi.waitFor(() =>
-      expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')?.kind).toBe(
-        'producer-failed'
+      expect(readWorkspaceActivationRecoveryPresentation(WORKSPACE_KEY, 'local')?.detail).toBe(
+        'The retry reached the host and failed.'
       )
+    )
+    expect(start).toHaveBeenCalledWith(
+      expect.objectContaining({ workspaceKey: WORKSPACE_KEY, executionHostId: 'local' }),
+      { mode: 'explicit', supersedeSettledOwnership: true }
     )
     expect(mocks.state().createTab).not.toHaveBeenCalled()
   })

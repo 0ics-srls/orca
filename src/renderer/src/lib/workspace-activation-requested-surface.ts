@@ -1,14 +1,21 @@
 import { getRuntimeEnvironmentRevision } from '@/runtime/runtime-environment-revision'
+import { parseExecutionHostId } from '../../../shared/execution-host'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 import { resumeSleepingAgentSessionsForWorktree } from './resume-sleeping-agent-session'
+import { gateWorktreeAgentActivation } from './worktree-agent-activation-gate'
 import type { WorkspaceActivationIdentity } from './worktree-activation-recovery'
 import {
   captureActivationRenderableSurfaceIds,
   settleActivationSeedProducer
 } from './worktree-activation-recovery-routing'
-import { isActivationExecutionRouteCurrent } from './workspace-activation-recovery-state'
+import {
+  isActivationExecutionRouteCurrent,
+  WORKSPACE_ACTIVATION_RECOVERY_DEADLINE_MS
+} from './workspace-activation-recovery-state'
 import type { WorkspaceExecutionEvidence } from './workspace-execution-evidence'
 import {
   consumeWorkspaceSurfaceProducerAttempt,
+  discardWorkspaceSurfaceProducerAttempt,
   registerWorkspaceSurfaceProducer
 } from './workspace-surface-production'
 
@@ -18,7 +25,7 @@ type RequestedSurfaceProduction = {
   identity: WorkspaceActivationIdentity
   executionEvidence: WorkspaceExecutionEvidence
   owner: RequestedSurfaceOwner
-  createSurface: () => string | null
+  createSurface: (hostAbsenceConfirmed: boolean) => string | null
 }
 
 export function produceRequestedWorkspaceSurface({
@@ -30,7 +37,7 @@ export function produceRequestedWorkspaceSurface({
   const producer = registerWorkspaceSurfaceProducer(identity)
   if (owner === 'runtime-transfer') {
     try {
-      createSurface()
+      createSurface(false)
       producer.declined('Surface production transferred to the paired execution host.')
       consumeWorkspaceSurfaceProducerAttempt(producer.attempt.id)
     } catch (error) {
@@ -40,7 +47,7 @@ export function produceRequestedWorkspaceSurface({
   }
   if (owner === 'backend-confirmed') {
     try {
-      const primaryTabId = createSurface()
+      const primaryTabId = createSurface(false)
       if (primaryTabId) {
         producer.materialized({ kind: 'tab', id: primaryTabId })
       } else {
@@ -54,34 +61,71 @@ export function produceRequestedWorkspaceSurface({
       return null
     }
   }
-  if (executionEvidence !== 'exited') {
-    producer.unverifiable('Orca cannot verify the execution host for this requested surface.')
-    return null
-  }
   const route = {
     ...identity,
     runtimeEnvironmentRevision: identity.runtimeEnvironmentId
       ? (getRuntimeEnvironmentRevision(identity.runtimeEnvironmentId) ?? null)
       : null
   }
-  try {
-    const existingSurfaceIds = captureActivationRenderableSurfaceIds(identity.workspaceKey)
-    resumeSleepingAgentSessionsForWorktree(identity.workspaceKey, {
-      expectedExecutionHostId: route.executionHostId,
-      expectedRuntimeEnvironmentId: route.runtimeEnvironmentId,
-      ...(route.runtimeEnvironmentRevision === null
-        ? {}
-        : { expectedRuntimeEnvironmentRevision: route.runtimeEnvironmentRevision })
-    })
-    if (!isActivationExecutionRouteCurrent(route)) {
-      producer.unverifiable('The workspace execution route changed before surface creation.')
+  const produce = (hostAbsenceConfirmed: boolean): string | null => {
+    try {
+      if (!isActivationExecutionRouteCurrent(route)) {
+        discardWorkspaceSurfaceProducerAttempt(producer.attempt.id)
+        return null
+      }
+      const existingSurfaceIds = captureActivationRenderableSurfaceIds(identity.workspaceKey)
+      if (!hostAbsenceConfirmed) {
+        resumeSleepingAgentSessionsForWorktree(identity.workspaceKey, {
+          expectedExecutionHostId: route.executionHostId,
+          expectedRuntimeEnvironmentId: route.runtimeEnvironmentId,
+          ...(route.runtimeEnvironmentRevision === null
+            ? {}
+            : { expectedRuntimeEnvironmentRevision: route.runtimeEnvironmentRevision })
+        })
+      }
+      if (!isActivationExecutionRouteCurrent(route)) {
+        discardWorkspaceSurfaceProducerAttempt(producer.attempt.id)
+        return null
+      }
+      const primaryTabId = createSurface(hostAbsenceConfirmed)
+      settleActivationSeedProducer(
+        producer,
+        identity.workspaceKey,
+        primaryTabId,
+        existingSurfaceIds
+      )
+      return primaryTabId
+    } catch (error) {
+      producer.failed(error)
       return null
     }
-    const primaryTabId = createSurface()
-    settleActivationSeedProducer(producer, identity.workspaceKey, primaryTabId, existingSurfaceIds)
-    return primaryTabId
-  } catch (error) {
-    producer.failed(error)
-    return null
   }
+  if (executionEvidence === 'exited') {
+    return produce(false)
+  }
+  if (
+    executionEvidence === 'unverifiable' &&
+    parseExecutionHostId(identity.executionHostId)?.kind === 'ssh' &&
+    parseWorkspaceKey(identity.workspaceKey)?.type === 'folder'
+  ) {
+    void gateWorktreeAgentActivation(route, {
+      timeoutMs: WORKSPACE_ACTIVATION_RECOVERY_DEADLINE_MS
+    }).then(
+      (outcome) => {
+        if (outcome === 'empty') {
+          produce(true)
+        } else if (outcome === 'stale') {
+          discardWorkspaceSurfaceProducerAttempt(producer.attempt.id)
+        } else if (outcome === 'blocked') {
+          producer.blocked('The execution host did not provide complete ownership evidence.')
+        } else {
+          producer.unverifiable('The execution host owns a surface that is not visible yet.')
+        }
+      },
+      (error: unknown) => producer.unexpected(error)
+    )
+  } else {
+    producer.unverifiable('Orca cannot verify the execution host for this requested surface.')
+  }
+  return null
 }

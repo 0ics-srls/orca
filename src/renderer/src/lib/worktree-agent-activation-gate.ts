@@ -253,8 +253,8 @@ export async function runWorktreeAgentActivationGate(
         }
       : {})
   })
-  // 'empty' is the caller's directive — "this gate produced no surface, seed one" — not a
-  // claim the host had nothing; the callers re-check their own seeding guards first.
+  // 'empty' is a caller directive, not a durable liveness verdict. The routed inventory above
+  // must have completed before an SSH folder may use it as current host-absence evidence.
   return launched > 0
     ? 'resumed'
     : liveSurfaceAdopted

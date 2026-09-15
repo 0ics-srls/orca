@@ -340,7 +340,7 @@ describe('worktree agent activation gate', () => {
       runWorktreeAgentActivationGate(WORKTREE_ID, { ...deps, hasStructuredSession })
     ).resolves.toBe('structured')
 
-    expect(hasStructuredSession).toHaveBeenCalledWith(WORKTREE_ID, undefined)
+    expect(hasStructuredSession).toHaveBeenCalledOnce()
     expect(createTab).not.toHaveBeenCalled()
     expect(resume).not.toHaveBeenCalled()
   })
