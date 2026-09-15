@@ -243,8 +243,8 @@ export class SessionSearchIndexer {
 
   /**
    * `current` is a claim, so it takes all of it: nothing owed a read by a row,
-   * nothing owed a read that has no row yet, no sweep owed, no row whose last
-   * read failed, and a whole sweep that finished. `idle` is the other end of it
+   * nothing owed a read that has no row yet, no row whose last read failed,
+   * and a whole sweep that finished. `idle` is the other end of it
    * — an indexer nobody started has not promised to index anything, and calling
    * that `current` would claim an index nobody built is up to date.
    */
@@ -260,9 +260,8 @@ export class SessionSearchIndexer {
     if (this.degradedRoots.length > 0 || counts.failed > 0) {
       return 'degraded'
     }
-    // Work the rows cannot show: a candidate the deadline cut off has no row,
-    // and an owed sweep has not looked at the machine yet.
-    if (this.left > 0 || this.sweepNext) {
+    // Work the rows cannot show: a candidate the deadline cut off has no row.
+    if (this.left > 0) {
       return 'indexing'
     }
     return counts.due === 0 && this.lastSweepCompletedAt !== null ? 'current' : 'indexing'
