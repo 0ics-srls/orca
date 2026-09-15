@@ -16,6 +16,7 @@ export function buildWebSessionTabsFinalPatch(
   const {
     state,
     snapshot,
+    environmentId,
     now,
     batchContext,
     currentTerminalTabs,
@@ -56,6 +57,7 @@ export function buildWebSessionTabsFinalPatch(
     currentTerminalTabs,
     terminalSurfaceTabs,
     mirroredTerminalTabs,
+    environmentId,
     now,
     batchContext
   )

@@ -87,7 +87,7 @@ describe('remote completed sidebar rows before tab hydration', () => {
       const initial = makeState({ activeWorktreeId: 'other-workspace' })
       const mirror = { ...initial, ...applyWebSessionTabsSnapshot(initial, hostSnapshot, ENV, NOW) }
       const paneKey = makePaneKey(toWebTerminalSurfaceTabId('host-tab'), LEAF_ID)
-      expect(mirror.agentStatusByPaneKey[paneKey].connectionId).toBeUndefined()
+      expect(mirror.agentStatusByPaneKey[paneKey].connectionId).toBe(ENV)
       // Exercise the reported join failure: status is present before this renderer has the tab.
       const beforeTabs = { ...mirror, tabsByWorktree: {}, unifiedTabsByWorktree: {} }
       expect(rows(beforeTabs, worktreeId)).toMatchObject([
