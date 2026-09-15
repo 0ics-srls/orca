@@ -249,6 +249,11 @@ test('two paired clients stay in step with the host across an emptied workspace'
           `phase1a: a client kept showing a terminal the host closed, with others still open (A=${partialA}, B=${partialB})`
         )
       }
+    } else {
+      // A one-terminal workspace would skip the control silently and let 1b/2 pass green on their own.
+      failures.push(
+        `phase1a: needs more than one host terminal to close one and keep another (host=${beforePartialClose.length})`
+      )
     }
 
     // ── Phase 1b: A empties the workspace by hand. ──
