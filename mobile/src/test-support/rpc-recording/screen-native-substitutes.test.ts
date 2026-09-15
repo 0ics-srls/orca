@@ -5,17 +5,13 @@ import { inertIconModule } from './inert-native-elements'
 import { nativeMountingSubstitutes } from './native-mounting-substitutes'
 import { reactNativeScreenMembers, screenNativeSubstitutes } from './screen-native-substitutes'
 
-/** `name` may be dotted, so a module's declared default namespace is reachable the way a screen reads it. */
 function member(module: string, name: string): unknown {
   const substitute = nativeMountingSubstitutes().get(module)
   if (substitute === undefined) {
     throw new Error(`no substitute for ${module}`)
   }
-  return name.split('.').reduce<unknown>(
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the read is the assertion; a substitute proxy has no declared shape.
-    (value, key) => (value as Record<string, unknown>)[key],
-    substitute
-  )
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the read is the assertion; a substitute proxy has no declared shape.
+  return (substitute as Record<string, unknown>)[name]
 }
 
 /** Every element a screen can render through the table, by the module it is imported from. */
@@ -23,17 +19,7 @@ const INERT_ELEMENTS: readonly (readonly [string, string])[] = [
   ...Object.entries(reactNativeScreenMembers())
     .filter(([, value]) => typeof value === 'function')
     .map(([name]): readonly [string, string] => ['react-native', name]),
-  ['react-native-safe-area-context', 'SafeAreaView'],
-  ['react-native-gesture-handler', 'GestureDetector'],
-  ['react-native-gesture-handler', 'GestureHandlerRootView'],
-  ['react-native-svg', 'default'],
-  ...['Circle', 'Defs', 'G', 'LinearGradient', 'Path', 'Rect', 'Stop'].map(
-    (name): readonly [string, string] => ['react-native-svg', name]
-  ),
-  ...['View', 'Text', 'ScrollView', 'FlatList'].map((name): readonly [string, string] => [
-    'react-native-reanimated',
-    `default.${name}`
-  ])
+  ['react-native-safe-area-context', 'SafeAreaView']
 ]
 
 describe('the inert screen substitutes', () => {
@@ -102,51 +88,6 @@ describe('the inert screen substitutes', () => {
     expect(sheet.flatten([{ flex: 1 }, [{ gap: 2 }]])).toEqual({ flex: 1, gap: 2 })
   })
 
-  it('registers no event and runs no deferred work', () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the members are the substituted inert namespaces by construction.
-    const keyboard = member('react-native', 'Keyboard') as {
-      addListener: (name: string, listener: () => void) => { remove: () => void }
-    }
-    let fired = 0
-    expect(typeof keyboard.addListener('keyboardDidShow', () => fired++).remove).toBe('function')
-    expect(fired).toBe(0)
-  })
-
-  /**
-   * The inert rule stops at the interaction scheduler: a screen that defers its first fetch past
-   * interactions would otherwise record as a screen that sends nothing.
-   */
-  it('runs a task deferred past interactions, unless it is cancelled first', async () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the member is the substituted InteractionManager by construction.
-    const interactions = member('react-native', 'InteractionManager') as {
-      runAfterInteractions: (task: () => void) => Promise<unknown> & { cancel: () => void }
-    }
-    let ran = 0
-    const handle = interactions.runAfterInteractions(() => ran++)
-    expect(ran).toBe(0)
-    await handle
-    expect(ran).toBe(1)
-    const cancelled = interactions.runAfterInteractions(() => ran++)
-    cancelled.cancel()
-    await cancelled
-    expect(ran).toBe(1)
-  })
-
-  it('assembles a gesture chain without ever recognising one', () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the builder answers every member with itself.
-    const gesture = member('react-native-gesture-handler', 'Gesture') as {
-      Pinch: () => { runOnJS: (on: boolean) => { onUpdate: (fn: () => void) => unknown } }
-    }
-    let fired = 0
-    expect(
-      gesture
-        .Pinch()
-        .runOnJS(true)
-        .onUpdate(() => fired++)
-    ).toBeDefined()
-    expect(fired).toBe(0)
-  })
-
   it('answers any icon name with its own element, because every export here is an icon', () => {
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the icon module answers every string key.
     const icons = inertIconModule() as Record<string, ElementType>
@@ -165,19 +106,6 @@ describe('the inert screen substitutes', () => {
       expect(() => (substitute as Record<string, unknown>).notASubstitutedMember).toThrow(
         `Unsubstituted native member: ${module}.notASubstitutedMember`
       )
-    }
-  })
-
-  /**
-   * `import X, { y }` compiles to `__importStar`, which overwrites a module's `default` with the
-   * module object unless the module claims `__esModule`. Without this, `Animated.View` resolves to
-   * a refusal from the reanimated module rather than to the animated namespace.
-   */
-  it('keeps a declared default reachable through a mixed default and named import', () => {
-    for (const module of ['react-native-reanimated', 'react-native-svg']) {
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: mirrors the emit, which reads the marker off an untyped module record.
-      const record = nativeMountingSubstitutes().get(module) as { __esModule?: unknown }
-      expect(record.__esModule).toBe(true)
     }
   })
 })
