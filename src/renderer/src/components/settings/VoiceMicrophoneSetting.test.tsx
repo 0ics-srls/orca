@@ -161,6 +161,17 @@ describe('VoiceMicrophoneSetting access failures', () => {
     expect(alertText()).toBe('Could not open the microphone. Could not start audio source')
   })
 
+  it('never renders a literal "undefined" when the error message is absent', async () => {
+    installMediaDevices(async () => {
+      throw { name: 'AbortError', message: undefined }
+    })
+
+    await renderSetting()
+    await clickAllowAccess()
+
+    expect(alertText()).toBe('Could not open the microphone.')
+  })
+
   it('shows the plain hint until something actually fails', async () => {
     installMediaDevices(async () => ({ getTracks: () => [] }))
 

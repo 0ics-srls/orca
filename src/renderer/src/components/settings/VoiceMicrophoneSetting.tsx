@@ -23,8 +23,10 @@ function readMediaDeviceError(error: unknown): { name: string; message?: string 
   if (!error || typeof error !== 'object') {
     return { name: '' }
   }
-  const name = 'name' in error ? String(error.name) : ''
-  const message = 'message' in error ? String(error.message).trim() || undefined : undefined
+  // Why: an own `name`/`message` key can hold undefined/null; String() would
+  // turn that into the literal "undefined" and render it to the user.
+  const name = 'name' in error ? String(error.name ?? '') : ''
+  const message = 'message' in error ? String(error.message ?? '').trim() || undefined : undefined
   return { name, message }
 }
 
