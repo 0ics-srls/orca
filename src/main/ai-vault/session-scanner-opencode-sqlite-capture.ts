@@ -5,7 +5,7 @@ import { extractPartText, readOpenCodeSqliteSession } from './session-scanner-op
 import { readOpenCodeDatabase } from './session-scanner-opencode-sqlite-open'
 import { canReadOpenCodeMessageParts } from './session-scanner-opencode-sqlite-schema'
 import type { TranscriptMessage, TranscriptMessageRole } from './session-transcript-consumers'
-import { boundedText } from './session-transcript-message-content'
+import { boundedText, toolCallText } from './session-transcript-message-content'
 import type SyncDatabase from '../sqlite/sync-database'
 
 // Why: the session list needs the newest few messages, and the search index
@@ -13,22 +13,38 @@ import type SyncDatabase from '../sqlite/sync-database'
 // `parseOpenCodeSqliteSession`, so the decoding is shared and only the query
 // that selects the rows differs.
 
+/** The part types that carry something a person would search for. */
+const OPENCODE_CAPTURE_PART_TYPES = "('text','reasoning','tool')"
+
 /**
- * How many text parts one session may hold before this read gives up.
+ * How many parts one session may hold before this read gives up.
  *
  * A safety valve on memory, not a policy: the rows are materialized and then
  * posted across the worker boundary, so an unbounded session would be held
  * twice. Exceeding it throws rather than returning a prefix, because a prefix
  * committed under a complete-read cursor would leave the tail unsearchable with
  * nothing on the row to say so. A failed read is retried and surfaces; a silent
- * truncation does neither. 20,000 text parts is roughly 10,000 conversation
- * turns, far past any real session.
+ * truncation does neither. Measured against a real 21 GB database: the busiest
+ * session there holds 1,427 of these parts.
  */
 const OPENCODE_CAPTURE_PART_LIMIT = 20_000
+
+/**
+ * How much decoded text one session may carry, for the same reason.
+ *
+ * Not a truncation policy and not a second cap on tool rows -- the index writer
+ * owns that, at 3 KB a row. This is the bound a non-streaming source needs and
+ * a streaming one does not: a JSONL provider publishes each message as it reads
+ * it, while this one holds the whole session before posting it. Measured on the
+ * same database, the largest session's parts total 9.5 MB, so this is ~7x the
+ * worst real one.
+ */
+const OPENCODE_CAPTURE_TEXT_LIMIT = 64 * 1024 * 1024
 
 type CaptureRow = {
   messageId: string
   role: string | null
+  partType: string
   partData: string
   messageTimeMs: number
 }
@@ -40,9 +56,16 @@ function toCaptureRow(value: unknown): CaptureRow | null {
   if (!record) {
     return null
   }
-  const { message_id: messageId, role, part_data: partData, message_time: messageTime } = record
+  const {
+    message_id: messageId,
+    role,
+    part_type: partType,
+    part_data: partData,
+    message_time: messageTime
+  } = record
   if (
     typeof messageId !== 'string' ||
+    typeof partType !== 'string' ||
     typeof partData !== 'string' ||
     typeof messageTime !== 'number'
   ) {
@@ -51,8 +74,59 @@ function toCaptureRow(value: unknown): CaptureRow | null {
   return {
     messageId,
     role: typeof role === 'string' ? role : null,
+    partType,
     partData,
     messageTimeMs: messageTime
+  }
+}
+
+/**
+ * One tool call as the text a consumer sees: what was run, then what came back.
+ *
+ * Both halves live on one `part` here, where a file provider writes a
+ * `tool_use` block and a matching `tool_result`, so this is one message where
+ * those are two. The wording of each half is the shared one on purpose: a
+ * search for a command should find it whichever agent ran it.
+ */
+function toolPartText(partData: string): string | null {
+  const part = asRecord(parseJson(partData))
+  if (!part) {
+    return null
+  }
+  const state = asRecord(part.state)
+  const lines = [toolCallText(part.tool, sharedToolInputSpelling(state?.input)), toolOutcome(state)]
+  const text = lines.filter((line) => line !== null).join('\n')
+  return text.trim() ? text : null
+}
+
+// `state.error` is set on a failed or cancelled call and `state.output` on a
+// completed one; a call still running has neither, and its command line alone is
+// worth indexing. Preferring the error matches what the session actually shows.
+function toolOutcome(state: Record<string, unknown> | null): string | null {
+  const error = state?.error
+  if (typeof error === 'string' && error.trim()) {
+    return error
+  }
+  const output = state?.output
+  return typeof output === 'string' && output.trim() ? output : null
+}
+
+// OpenCode spells its file argument `filePath`; every other provider, and so the
+// shared key list, spells it `file_path`. Renaming the one key here keeps a
+// single list rather than teaching it one provider's casing.
+function sharedToolInputSpelling(input: unknown): unknown {
+  const record = asRecord(input)
+  if (!record || typeof record.filePath !== 'string' || typeof record.file_path === 'string') {
+    return input
+  }
+  return { ...record, file_path: record.filePath }
+}
+
+function parseJson(value: string): unknown {
+  try {
+    return JSON.parse(value)
+  } catch {
+    return null
   }
 }
 
@@ -71,23 +145,28 @@ function buildCaptureQuery(): string {
   // read uses, run forwards and without the newest-N window.
   return `SELECT m.id AS message_id,
                  json_extract(m.data, '$.role') AS role,
+                 json_extract(p.data, '$.type') AS part_type,
                  p.data AS part_data,
                  m.time_created AS message_time
           FROM message m
           JOIN part p ON p.message_id = m.id
           WHERE m.session_id = ?
             AND json_extract(m.data, '$.role') IN ('user','assistant')
-            AND json_extract(p.data, '$.type') = 'text'
+            AND json_extract(p.data, '$.type') IN ${OPENCODE_CAPTURE_PART_TYPES}
           ORDER BY m.time_created ASC, m.id ASC, p.time_created ASC, p.rowid ASC
           LIMIT ?`
 }
 
 /**
- * Decode one session's whole transcript, one message per `message` row.
+ * Decode one session's whole transcript.
  *
- * Parts are joined rather than emitted separately because every other provider
- * hands a consumer one message per turn; a phrase that runs across two blocks of
- * the same turn is then still one indexable row.
+ * A turn's `text` and `reasoning` parts become one message, the way every other
+ * provider hands a consumer one message per turn, so a phrase that runs across
+ * two blocks of the same turn is still one indexable row. Reasoning folds into
+ * that text because the shared block list already treats a thinking block as the
+ * turn's own words. Each `tool` part is its own `tool` message, and they follow
+ * the turn's words in transcript order -- the ordering a content-block decode
+ * produces for every file provider.
  */
 export function readOpenCodeSessionMessages(
   db: SyncDatabase,
@@ -104,17 +183,35 @@ export function readOpenCodeSessionMessages(
   }
 
   const messages: TranscriptMessage[] = []
+  let captured = 0
   let openMessageId: string | null = null
-  let openParts: string[] = []
+  let openWords: string[] = []
+  let openTools: TranscriptMessage[] = []
   let openRole: TranscriptMessageRole | null = null
   let openTimestamp: string | null = null
 
-  const flush = (): void => {
-    const text = openRole && openParts.length > 0 ? boundedText(openParts.join('\n')) : null
-    if (openRole && text) {
-      messages.push({ role: openRole, text, timestamp: openTimestamp })
+  const keep = (message: TranscriptMessage): void => {
+    captured += message.text.length
+    if (captured > OPENCODE_CAPTURE_TEXT_LIMIT) {
+      throw new Error(
+        `OpenCode session ${sessionId} decodes to more than ${OPENCODE_CAPTURE_TEXT_LIMIT} characters; its transcript was not read.`
+      )
     }
-    openParts = []
+    messages.push(message)
+  }
+
+  // The turn's own words lead, its tool calls follow: the order
+  // `transcriptMessagesFromContent` produces for a file provider's blocks.
+  const flush = (): void => {
+    const text = openRole && openWords.length > 0 ? boundedText(openWords.join('\n')) : null
+    if (openRole && text) {
+      keep({ role: openRole, text, timestamp: openTimestamp })
+    }
+    for (const tool of openTools) {
+      keep(tool)
+    }
+    openWords = []
+    openTools = []
   }
 
   for (const value of rows) {
@@ -128,9 +225,16 @@ export function readOpenCodeSessionMessages(
       openRole = captureRole(row.role)
       openTimestamp = timestampIso(row.messageTimeMs)
     }
+    if (row.partType === 'tool') {
+      const text = boundedText(toolPartText(row.partData) ?? '')
+      if (text) {
+        openTools.push({ role: 'tool', text, timestamp: openTimestamp })
+      }
+      continue
+    }
     const text = extractPartText(row.partData)
     if (text) {
-      openParts.push(text)
+      openWords.push(text)
     }
   }
   flush()

@@ -69,7 +69,19 @@ async function readEveryAgentVault(): Promise<CapturedRead[]> {
       id: OPENCODE_SQLITE_SESSION,
       turns: [
         { role: 'user', parts: ['what does the sqlite reader publish'] },
-        { role: 'assistant', parts: ['Every part of every turn.'] }
+        {
+          role: 'assistant',
+          parts: [
+            { type: 'reasoning', text: 'Weighing which parts carry words.' },
+            'Every part of every turn.',
+            {
+              type: 'tool',
+              tool: 'bash',
+              input: { command: 'rg --count quokka' },
+              output: 'src/main/ai-vault: 3'
+            }
+          ]
+        }
       ]
     }
   ])
@@ -125,9 +137,29 @@ it('publishes an OpenCode SQLite session through the same channel as every file 
       timestamp: expect.any(String)
     },
     {
+      // Reasoning folds into the turn's own words, ahead of the text part it
+      // preceded, exactly as a thinking block does for a file provider.
       role: 'assistant',
-      text: 'Every part of every turn.',
+      text: 'Weighing which parts carry words.\nEvery part of every turn.',
+      timestamp: expect.any(String)
+    },
+    {
+      // The call line and what came back, in one message: OpenCode writes both
+      // on one part where a file provider writes a call block and a result.
+      role: 'tool',
+      text: 'bash: rg --count quokka\nsrc/main/ai-vault: 3',
       timestamp: expect.any(String)
     }
   ])
+})
+
+it('gives an OpenCode session the same three roles a file provider publishes', async () => {
+  const reads = await readEveryAgentVault()
+
+  const sqliteRead = reads.find(
+    (read) => splitOpenCodeSqliteCandidate(read.path)?.sessionId === OPENCODE_SQLITE_SESSION
+  )
+  expect(new Set(sqliteRead?.messages.map((message) => message.role))).toEqual(
+    new Set(['user', 'assistant', 'tool'])
+  )
 })

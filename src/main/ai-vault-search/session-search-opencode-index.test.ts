@@ -58,6 +58,9 @@ import {
 // remembered sentence takes, and only a literal query reaches it.
 const ANSWER = 'the quokkaTelemetry harness reindexes every shard'
 const OTHER = 'a completely unrelated conversation about typography'
+// Appears only in a tool part's output, so it separates the two scopes.
+const TOOL_ONLY = 'zarquonium'
+const TOOL_FILE = '/repo/app/src/telemetry/shard-reindex.ts'
 const SESSION = 'ses_capture'
 const SECOND_SESSION = 'ses_second'
 const CLAUDE_SESSION = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'
@@ -122,7 +125,28 @@ function writeVault(): void {
       directory: '/tmp/opencode',
       turns: [
         { role: 'user', parts: ['how do I reindex the shards'] },
-        { role: 'assistant', parts: ['Here is the plan.', ANSWER] }
+        {
+          role: 'assistant',
+          parts: [
+            { type: 'reasoning', text: 'Checking how the shard map is built.' },
+            'Here is the plan.',
+            ANSWER,
+            {
+              type: 'tool',
+              tool: 'read',
+              // The camelCase spelling OpenCode writes; the shared key list
+              // knows only `file_path`, so finding this proves the rename.
+              input: { filePath: TOOL_FILE },
+              output: `export const marker = '${TOOL_ONLY}'`
+            },
+            {
+              type: 'tool',
+              tool: 'bash',
+              input: { command: 'pnpm reindex --all' },
+              error: 'reindex exited with code 2'
+            }
+          ]
+        }
       ]
     },
     {
@@ -154,6 +178,40 @@ it('finds a sentence an OpenCode assistant wrote, through the real indexer', asy
   expect(openEngine().search({ query: 'reindex the shards' }).hits).toHaveLength(1)
   // And the sibling session is a session of its own, not folded into this one.
   expect(openEngine().search({ query: OTHER }).hits[0]?.sessionId).toBe(SECOND_SESSION)
+})
+
+it('searches tool output under the all scope and not under conversation', async () => {
+  writeVault()
+  await startIndexer()
+
+  const all = openEngine().search({ query: TOOL_ONLY, scope: 'all' })
+  expect(all.hits).toHaveLength(1)
+  expect(all.hits[0]).toMatchObject({ agent: 'opencode', sessionId: SESSION })
+  expect(all.hits[0]?.evidence?.role).toBe('tool')
+  // Conversation is user and assistant turns only, so a token that lives in a
+  // tool's output has nothing to match there.
+  expect(openEngine().search({ query: TOOL_ONLY, scope: 'conversation' }).hits).toEqual([])
+})
+
+it('indexes a tool call by its file argument and a failed one by its error', async () => {
+  writeVault()
+  await startIndexer()
+
+  // `filePath` renamed to the spelling the shared input-key list knows: without
+  // it the call line would be the bare tool name and this would find nothing.
+  expect(openEngine().search({ query: TOOL_FILE, scope: 'all' }).hits[0]?.sessionId).toBe(SESSION)
+  // A call that failed carries its error where a completed one carries output.
+  const failed = openEngine().search({ query: 'reindex exited with code', scope: 'all' })
+  expect(failed.hits[0]?.evidence?.role).toBe('tool')
+})
+
+it('folds a reasoning part into the assistant turn it belongs to', async () => {
+  writeVault()
+  await startIndexer()
+
+  const hit = openEngine().search({ query: 'checking how the shard map is built' }).hits[0]
+  expect(hit?.sessionId).toBe(SESSION)
+  expect(hit?.evidence?.role).toBe('assistant')
 })
 
 it('reads an OpenCode session once, not on every pass', async () => {

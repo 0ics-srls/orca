@@ -37,10 +37,27 @@ const OPENCODE_SCHEMA = `
 
 export const OPENCODE_FIXTURE_EPOCH_MS = 1_740_000_000_000
 
+/**
+ * One `part` row. A bare string is a text part, which is what most turns are.
+ *
+ * The tool shape mirrors what OpenCode actually writes: the call's name and id
+ * at the top level, and everything about the run nested under `state`.
+ */
+export type OpenCodeSqliteFixturePart =
+  | string
+  | { type: 'text' | 'reasoning'; text: string }
+  | {
+      type: 'tool'
+      tool: string
+      input?: Record<string, unknown>
+      output?: string
+      error?: string
+    }
+
 export type OpenCodeSqliteFixtureTurn = {
   role: 'user' | 'assistant'
-  /** One text part per string, in the order the session recorded them. */
-  parts: readonly string[]
+  /** One part row per entry, in the order the session recorded them. */
+  parts: readonly OpenCodeSqliteFixturePart[]
 }
 
 export type OpenCodeSqliteFixtureSession = {
@@ -132,17 +149,43 @@ export function appendTurns(
       at,
       JSON.stringify({ role: turn.role, time: { created: at } })
     )
-    turn.parts.forEach((text, partIndex) => {
+    turn.parts.forEach((part, partIndex) => {
       insertPart.run(
         `${messageId}-part-${partIndex}`,
         messageId,
         session.id,
         at + partIndex,
         at + partIndex,
-        JSON.stringify({ type: 'text', text })
+        JSON.stringify(partData(part, `${messageId}-call-${partIndex}`, at))
       )
     })
   })
+}
+
+function partData(
+  part: OpenCodeSqliteFixturePart,
+  callId: string,
+  atMs: number
+): Record<string, unknown> {
+  if (typeof part === 'string') {
+    return { type: 'text', text: part }
+  }
+  if (part.type !== 'tool') {
+    return { type: part.type, text: part.text }
+  }
+  const failed = typeof part.error === 'string'
+  return {
+    type: 'tool',
+    tool: part.tool,
+    callID: callId,
+    state: {
+      status: failed ? 'error' : 'completed',
+      input: part.input ?? {},
+      ...(failed ? { error: part.error } : { output: part.output ?? '' }),
+      title: part.tool,
+      time: { start: atMs, end: atMs + 1 }
+    }
+  }
 }
 
 /**
