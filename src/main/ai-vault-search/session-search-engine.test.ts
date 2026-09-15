@@ -184,8 +184,8 @@ describe('the conversation scope is a column filter, and it binds the whole quer
       (db.prepare('SELECT max(id) AS id FROM messages').get() as { id: number }).id
     )
     const plan = planSessionSearchQuery('harbor')
-    expect(sessionSearchSnippet(db, 'conversation', rowid, plan)).toEqual(EMPTY_SNIPPET)
-    expect(sessionSearchSnippet(db, 'all', rowid, plan).text).toContain('output')
+    expect(sessionSearchSnippet(db, 'conversation', rowid, plan, 'or')).toEqual(EMPTY_SNIPPET)
+    expect(sessionSearchSnippet(db, 'all', rowid, plan, 'or').text).toContain('output')
   })
 })
 
