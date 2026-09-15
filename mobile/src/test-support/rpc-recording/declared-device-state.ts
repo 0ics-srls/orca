@@ -77,8 +77,8 @@ function declaredNotificationTray(
   effect: DeviceEffect
 ): unknown {
   return partialNativeModule('expo-notifications', {
-    // `__esModule` so a namespace import keeps reading through the trap: flattened into a fresh
-    // object, an unlisted member would come back undefined instead of refusing.
+    // Namespace-imported by every consumer, so the marker keeps reads going through the trap; see
+    // the `__esModule` paragraph in `native-module-traps.ts`.
     __esModule: true,
     // Cloned per read, so a screen that mutates a notification cannot change what the next read of
     // the declaration returns.

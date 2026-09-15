@@ -9,12 +9,17 @@
  * call instead. Whether that failure is visible depends on the caller; `host-app-version-store.ts`
  * catches and degrades to its unread state, which is what it does on a device too.
  *
- * `__esModule` is exempt from both refusals, because it is the module system's interop marker
- * rather than a native API. A store leaves it undefined: the store *is* the default export, and
- * answering truthfully would bind `import X from` to the trap's own `default` instead of the trap,
- * leaving the consumer holding a member-less stand-in. A partial module answers it only when it
- * declares a `default` member, because `import X, { y }` compiles to `__importStar`, which
- * otherwise overwrites that default with the module object.
+ * `__esModule` is exempt from both refusals, because it is the module system's interop marker rather
+ * than a native API, and what a trap answers there is the whole of the interop rule for every
+ * substitute in this directory — the other sites point here rather than restating it. Both emitted
+ * helpers short-circuit on a truthy marker: `__importDefault` returns the module instead of wrapping
+ * it, and `__importStar` returns it instead of copying its own keys into a fresh object.
+ *
+ * So a trap answers `true` when it has to survive being imported: the loader's refusing proxy, and
+ * any partial whose consumer takes a default or a namespace, because a flattened copy has no trap
+ * left and would answer an unlisted member with `undefined` instead of the named refusal. A store
+ * answers `undefined`, because the store *is* the default export — a truthy marker would bind
+ * `import X from` to the trap's own `default`, a throwing stub, instead of to the trap.
  */
 export function partialNativeModule(module: string, members: Record<string, unknown>): unknown {
   return new Proxy(members, {

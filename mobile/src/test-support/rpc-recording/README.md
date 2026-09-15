@@ -22,23 +22,24 @@ follows `stable-logical-rpc-client.test.ts`. Neither test exported a reusable mo
 rendered: the inert primitives it chose, the copy it put on them, the labels it gave them, and the
 crash instead if a reply took it down. A screen that throws is a recording, not a suite failure —
 several reply partitions do exactly that, and refusing to record them would leave the shapes that
-break a screen the only ones this oracle cannot see.
+break a screen the only ones this oracle cannot see. The boundary also reports the crash to the
+effect sink, so a hook mount, whose projection is the hook's own value and never a crash, still
+carries it into a golden: an effect forces a cleanup checkpoint even when no adapter looks.
 
 The view packages a screen imports are in `screen-native-substitutes.ts`, under the table's usual
-rule: only what a screen reads is listed, the rest throws. Every element there is inert. It renders
-its children and keeps its props where a projection can read them, and does nothing else: no
-callback it is handed is ever invoked, nothing is measured, no gesture is recognised, no animation
-runs and no navigation happens. `renderedElementProps` is the consequence — an inert list never
-calls `renderItem`, so the data it was handed is the only record of what the screen would have
-drawn. `screen-native-substitutes.test.ts` is the census; it renders every element with a callback
-prop and a render callback as children and fails if either is called.
+rule: only what a recording is known to read is listed, the rest throws. Every element there is
+inert. It renders its children and keeps its props where a projection can read them, and does
+nothing else: no callback it is handed is ever invoked, nothing is measured and no navigation
+happens. `renderedElementProps` is the consequence — an inert list never calls `renderItem`, so the
+data it was handed is the only record of what the screen would have drawn.
+`screen-native-substitutes.test.ts` is the census; it renders every element with a callback prop and
+a render callback as children and fails if either is called.
 
-One member deserves naming because inertness costs something. `Alert.alert` never answers, so a
-flow gated on a confirmation stops there; a recording that needs one has to drive it through the
-operation's own API. `InteractionManager.runAfterInteractions` is the exception to the inert rule:
-it runs its task on a microtask and returns the real handle, because a scheduler that drops its
-task swallows the send the screen deferred, which is the one failure this oracle must not have.
-Cancelling the handle before the task runs still prevents it.
+Nothing is listed ahead of a reader, and that is a rule rather than an oversight. A member
+provisioned before any recording reads it converts a refusal that would have forced a decision into
+a silent stand-in, and a silent stand-in is how an inert `InteractionManager` or `Alert` swallows the
+send a screen deferred behind it. The table was cut back to the members a recording actually reads;
+whoever mounts the next screen adds what it needs together with the recording that reads it.
 
 ## What a scenario declares about its device
 
@@ -161,7 +162,15 @@ file rather than of a restatement of it; `golden-header-digest.test.ts` pins wha
 buy.
 
 Checkpoints contain ordered sender calls and serialized physical application payloads, action and
-request settlements, projected state, and ordered external effects. Sender args have three
+request settlements, projected state, and ordered external effects. Each effect also carries `sent`,
+the number of requests sent when it was recorded: sender and effects are two independent lists, so
+without it a send reordered ahead of a device write moves neither list and no golden notices.
+Scheduling the journal write in `codex-reset-attempt-journal.ts` on a timer instead of awaiting it
+moved none of the 520 goldens before `sent` existed and moves two now, `codex-reset-credit-consumed`
+and its reply matrix, where the write's `sent` goes from 0 to 1. What `sent` cannot see is a defer
+shorter than the product's own await chain: dropping that `await`, or deferring the write by one
+microtask, still lands it before the send, because resolving the journal's promise chain costs more
+microtask ticks than the defer saved. Sender args have three
 positional slots; absent, undefined and null are distinct `$rpc` tags. Literal objects containing
 `$rpc` are escaped. Only object keys are sorted; array/effect order, options, budgets, settlement
 times and errors stay observable. Errors contain category, message and `isRpcDeliveryUnknown`, never
