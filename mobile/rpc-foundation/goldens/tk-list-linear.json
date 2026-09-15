@@ -3,9 +3,9 @@
   "family": "tasks.task-list-linear",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "07a15e900363faa25bc364f5bc1c330f96798abfeaed35210428c2ac558586b8",
   "scenarioSha256": "216ddbf8cb71481d179563d8b033d7dc6cd71bface049e83073b977909776fc9",
   "platform": "darwin",
@@ -13,15 +13,9 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "0d5d9243a0de": {
+    "2e036e81354d": {
       "name": "loading",
-      "value": false,
-      "sent": 1
-    },
-    "113ccfa73078": {
-      "name": "refreshing",
-      "value": false,
-      "sent": 1
+      "value": true
     },
     "3edde845aed1": {
       "error": "",
@@ -118,12 +112,7 @@
       "name": "linear.listIssues#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"linear.listIssues\",\"params\":{\"filter\":\"all\",\"limit\":50,\"workspaceId\":\"linear-workspace\"}}"
     },
-    "6143a28f5226": {
-      "name": "loading",
-      "value": true,
-      "sent": 1
-    },
-    "6fafebd34f71": {
+    "8080efdd19df": {
       "name": "items",
       "value": [
         {
@@ -155,13 +144,11 @@
           "title": "A found issue",
           "updatedAt": "2020-01-01T00:00:00.000Z"
         }
-      ],
-      "sent": 2
+      ]
     },
-    "840a8ad61602": {
-      "name": "loading",
-      "value": true,
-      "sent": 0
+    "82cd71d524c8": {
+      "name": "error",
+      "value": ""
     },
     "86aeb72f48eb": {
       "name": "linear.listIssues#1",
@@ -224,11 +211,6 @@
       "name": "linear.searchIssues#1",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"linear.searchIssues\",\"params\":{\"query\":\"bug\",\"limit\":50,\"workspaceId\":\"linear-workspace\"}}"
     },
-    "92c28468d7be": {
-      "name": "refreshing",
-      "value": false,
-      "sent": 2
-    },
     "94f44b229d7d": {
       "error": "",
       "items": [
@@ -265,22 +247,11 @@
       "loading": false,
       "refreshing": false
     },
-    "9e263f5e91be": {
-      "name": "error",
-      "value": "",
-      "sent": 0
-    },
-    "c9db7514f5c5": {
+    "9fd1c1fdaba4": {
       "name": "loading",
-      "value": false,
-      "sent": 2
+      "value": false
     },
-    "d48d5c49486c": {
-      "name": "error",
-      "value": "",
-      "sent": 1
-    },
-    "e1bd9a521877": {
+    "a807b2cced19": {
       "name": "items",
       "value": [
         {
@@ -312,8 +283,11 @@
           "title": "A Linear issue",
           "updatedAt": "2020-01-01T00:00:00.000Z"
         }
-      ],
-      "sent": 1
+      ]
+    },
+    "b8cb056c2851": {
+      "name": "refreshing",
+      "value": false
     },
     "eb79a9b3682a": {
       "status": "fulfilled",
@@ -338,11 +312,11 @@
           },
           "state": "94f44b229d7d",
           "effects": [
-            "9e263f5e91be",
-            "840a8ad61602",
-            "e1bd9a521877",
-            "0d5d9243a0de",
-            "113ccfa73078"
+            "82cd71d524c8",
+            "2e036e81354d",
+            "a807b2cced19",
+            "9fd1c1fdaba4",
+            "b8cb056c2851"
           ]
         }
       },
@@ -358,11 +332,11 @@
           },
           "state": "94f44b229d7d",
           "effects": [
-            "9e263f5e91be",
-            "840a8ad61602",
-            "e1bd9a521877",
-            "0d5d9243a0de",
-            "113ccfa73078"
+            "82cd71d524c8",
+            "2e036e81354d",
+            "a807b2cced19",
+            "9fd1c1fdaba4",
+            "b8cb056c2851"
           ]
         }
       },
@@ -379,16 +353,16 @@
           },
           "state": "3edde845aed1",
           "effects": [
-            "9e263f5e91be",
-            "840a8ad61602",
-            "e1bd9a521877",
-            "0d5d9243a0de",
-            "113ccfa73078",
-            "d48d5c49486c",
-            "6143a28f5226",
-            "6fafebd34f71",
-            "c9db7514f5c5",
-            "92c28468d7be"
+            "82cd71d524c8",
+            "2e036e81354d",
+            "a807b2cced19",
+            "9fd1c1fdaba4",
+            "b8cb056c2851",
+            "82cd71d524c8",
+            "2e036e81354d",
+            "8080efdd19df",
+            "9fd1c1fdaba4",
+            "b8cb056c2851"
           ]
         }
       }

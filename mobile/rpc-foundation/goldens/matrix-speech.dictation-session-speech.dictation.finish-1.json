@@ -3,9 +3,9 @@
   "family": "speech.dictation-session",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "3ddb44511547ae2fc97340e5a49393233f6716f9704b7b994f43bc030788b25b",
   "scenarioSha256": "f3b57e7a3d46f7ee2761ecced03e74019758172fe0a040ef5df0612c8ac18358",
   "platform": "darwin",
@@ -18,24 +18,22 @@
       "status": "error",
       "transcripts": []
     },
-    "0c93805fbea9": {
-      "name": "dictation-error",
-      "value": {
-        "message": "Cannot read properties of null (reading 'text')"
-      },
-      "sent": 3
-    },
     "11c21b92d88c": {
       "error": "No speech detected.",
       "status": "error",
       "transcripts": []
     },
-    "1206006b26c1": {
+    "2b7284dee8d1": {
       "name": "dictation-error",
       "value": {
-        "message": "outer refused"
-      },
-      "sent": 3
+        "message": "Cannot read properties of null (reading 'text')"
+      }
+    },
+    "365f4ccecdd2": {
+      "name": "dictation-error",
+      "value": {
+        "message": "Unknown method"
+      }
     },
     "3c7368349e13": {
       "name": "speech.dictation.finish#1",
@@ -71,28 +69,26 @@
         }
       }
     },
-    "3d2304bd31a6": {
-      "name": "dictation-error",
-      "value": {
-        "message": "transport failure"
-      },
-      "sent": 3
-    },
     "3fe14b61ba9c": {
       "name": "speech.dictation.start#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"speech.dictation.start\",\"params\":{\"dictationId\":\"mobile-dictation-1767225600000-dakoxjr8wun\"}}"
     },
-    "4a8791bf23bb": {
+    "4315cd2cbdec": {
       "name": "dictation-error",
       "value": {
-        "message": "Unknown method"
-      },
-      "sent": 3
+        "message": "outer refused"
+      }
     },
     "4d21a93db98f": {
       "error": "",
       "status": "error",
       "transcripts": []
+    },
+    "55a69398fac0": {
+      "name": "dictation-error",
+      "value": {
+        "message": "No speech detected."
+      }
     },
     "5c21b9ecd037": {
       "name": "speech.dictation.cancel#1",
@@ -224,13 +220,6 @@
         }
       }
     },
-    "74834b7e4b3b": {
-      "name": "dictation-error",
-      "value": {
-        "message": ""
-      },
-      "sent": 3
-    },
     "7e57b271644a": {
       "name": "speech.dictation.finish#1",
       "args": [
@@ -292,20 +281,6 @@
         }
       }
     },
-    "8e2a70085ca7": {
-      "name": "dictation-error",
-      "value": {
-        "message": "No speech detected."
-      },
-      "sent": 2
-    },
-    "8e4d6eba76de": {
-      "name": "dictation-error",
-      "value": {
-        "message": "Cannot read properties of undefined (reading 'text')"
-      },
-      "sent": 3
-    },
     "93e894a59a4e": {
       "name": "speech.dictation.finish#1",
       "args": [
@@ -335,6 +310,18 @@
           "message": "transport failure",
           "isRpcDeliveryUnknown": true
         }
+      }
+    },
+    "94d135e55d53": {
+      "name": "dictation-error",
+      "value": {
+        "message": ""
+      }
+    },
+    "9f3fe89125d8": {
+      "name": "dictation-error",
+      "value": {
+        "message": "Cannot read properties of undefined (reading 'text')"
       }
     },
     "a19279fc9c65": {
@@ -544,6 +531,12 @@
       "value": {
         "$rpc": "undefined"
       }
+    },
+    "f1f80ac760bc": {
+      "name": "dictation-error",
+      "value": {
+        "message": "transport failure"
+      }
     }
   },
   "recording": {
@@ -574,7 +567,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "b432c878c8da",
-          "effects": ["8e4d6eba76de"]
+          "effects": ["9f3fe89125d8"]
         }
       },
       {
@@ -588,7 +581,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "073a32801a55",
-          "effects": ["0c93805fbea9"]
+          "effects": ["2b7284dee8d1"]
         }
       },
       {
@@ -602,7 +595,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "11c21b92d88c",
-          "effects": ["8e2a70085ca7"]
+          "effects": ["55a69398fac0"]
         }
       },
       {
@@ -616,7 +609,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "11c21b92d88c",
-          "effects": ["8e2a70085ca7"]
+          "effects": ["55a69398fac0"]
         }
       },
       {
@@ -630,7 +623,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "11c21b92d88c",
-          "effects": ["8e2a70085ca7"]
+          "effects": ["55a69398fac0"]
         }
       },
       {
@@ -644,7 +637,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "6bf21bf88103",
-          "effects": ["1206006b26c1"]
+          "effects": ["4315cd2cbdec"]
         }
       },
       {
@@ -658,7 +651,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "4d21a93db98f",
-          "effects": ["74834b7e4b3b"]
+          "effects": ["94d135e55d53"]
         }
       },
       {
@@ -672,7 +665,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "a1c4e9bebdd4",
-          "effects": ["4a8791bf23bb"]
+          "effects": ["365f4ccecdd2"]
         }
       },
       {
@@ -686,7 +679,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "dd2a6fe5923c",
-          "effects": ["3d2304bd31a6"]
+          "effects": ["f1f80ac760bc"]
         }
       },
       {
@@ -700,7 +693,7 @@
             "stop": "eb79a9b3682a"
           },
           "state": "4d21a93db98f",
-          "effects": ["74834b7e4b3b"]
+          "effects": ["94d135e55d53"]
         }
       }
     ]

@@ -3,9 +3,9 @@
   "family": "settings.home-providers",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "fc73116d95985606fe32f22d3f14f434a6d5cd49219416c9fa0f47f971fa6ff0",
   "scenarioSha256": "fbd311a377672a9335521c30734880eea1b04bab0aff367854c1deebcf66b105",
   "platform": "darwin",
@@ -73,6 +73,12 @@
           "message": "Connection lost",
           "isRpcDeliveryUnknown": true
         }
+      }
+    },
+    "24054d93a95f": {
+      "name": "providers",
+      "value": {
+        "host-1": ["github"]
       }
     },
     "27e92f99be15": {
@@ -281,13 +287,6 @@
     "7ddcb1852b39": {
       "name": "settings.get#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.get\"}"
-    },
-    "8f1426c2f53b": {
-      "name": "providers",
-      "value": {
-        "host-1": ["github"]
-      },
-      "sent": 3
     },
     "a3c30fa6fdda": {
       "name": "linear.status#1",
@@ -607,7 +606,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -631,7 +630,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -643,7 +642,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -655,7 +654,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -667,7 +666,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -679,7 +678,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -691,7 +690,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -703,7 +702,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -715,7 +714,7 @@
             "load": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -728,7 +727,7 @@
             "disconnect": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       },
       {
@@ -741,7 +740,7 @@
             "cutover": "eb79a9b3682a"
           },
           "state": "79b8c1b0d1d1",
-          "effects": ["8f1426c2f53b"]
+          "effects": ["24054d93a95f"]
         }
       }
     ]

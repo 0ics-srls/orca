@@ -3,9 +3,9 @@
   "family": "project-explicit-false",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "d3b7f33d810e1fa420ac41a628cde9fe4a9e65fd57f89fbca0a40fc7d74951ab",
   "scenarioSha256": "926f0d8c37a33d465bf3a04f056600cfc9f1669b1eca7e968aa1a1f797a74c61",
   "platform": "darwin",
@@ -13,10 +13,9 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "02839f22d2db": {
-      "name": "projectMutating",
-      "value": false,
-      "sent": 1
+    "057a0b5a420b": {
+      "name": "projectRowDetailError",
+      "value": ""
     },
     "064bc8399cbc": {
       "name": "github.project.updateIssueBySlug#1",
@@ -58,24 +57,9 @@
         }
       }
     },
-    "0b09506355e4": {
-      "name": "projectRowItem",
-      "value": {
-        "content": {
-          "assignees": [],
-          "labels": [
-            {
-              "color": "808080",
-              "name": "recorded"
-            }
-          ],
-          "number": 1,
-          "repository": "owner/repo"
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "sent": 1
+    "0924615699bf": {
+      "name": "projectRowDetailError",
+      "value": "transport failure"
     },
     "0c4dced3e005": {
       "error": "",
@@ -90,23 +74,6 @@
         "id": "item-1",
         "itemType": "ISSUE"
       }
-    },
-    "0ef970845cc7": {
-      "name": "projectRowDetailError",
-      "value": "outer refused",
-      "sent": 1
-    },
-    "152580ec9e5a": {
-      "name": "projectRowDetailError",
-      "value": "Unknown method",
-      "sent": 1
-    },
-    "1c2a67aac7e4": {
-      "name": "projectRowDetail",
-      "value": {
-        "$rpc": "null"
-      },
-      "sent": 1
     },
     "1ddee45b4bc3": {
       "name": "github.project.updateIssueBySlug#1",
@@ -172,6 +139,10 @@
         "itemType": "ISSUE"
       }
     },
+    "27f506c59cc7": {
+      "name": "projectRowDetailError",
+      "value": "outer refused"
+    },
     "29f9b15bed7a": {
       "error": "Cannot read properties of undefined (reading 'ok')",
       "mutating": false,
@@ -200,6 +171,14 @@
         "itemType": "ISSUE"
       }
     },
+    "2cd14f7121a5": {
+      "name": "projectMutating",
+      "value": false
+    },
+    "2e2da1bbd7ed": {
+      "name": "projectRowDetailError",
+      "value": "Cannot read properties of undefined (reading 'ok')"
+    },
     "32cc1f3ceec8": {
       "error": "inner refused",
       "mutating": false,
@@ -212,6 +191,12 @@
         },
         "id": "item-1",
         "itemType": "ISSUE"
+      }
+    },
+    "347cc433c473": {
+      "name": "projectRowDetail",
+      "value": {
+        "$rpc": "null"
       }
     },
     "37124163eb76": {
@@ -264,16 +249,6 @@
         "id": "item-1",
         "itemType": "ISSUE"
       }
-    },
-    "4c09a53c8150": {
-      "name": "projectRowDetailError",
-      "value": "Cannot read properties of undefined (reading 'ok')",
-      "sent": 1
-    },
-    "4c53511aa5f7": {
-      "name": "projectRowDetailError",
-      "value": "Connection closed",
-      "sent": 1
     },
     "52a7a7239fbb": {
       "name": "github.project.updateIssueBySlug#1",
@@ -412,6 +387,10 @@
         }
       }
     },
+    "6b6431f01d00": {
+      "name": "projectRowDetailError",
+      "value": "Unknown method"
+    },
     "6f0142de3930": {
       "name": "github.project.updateIssueBySlug#1",
       "args": [
@@ -450,6 +429,10 @@
           }
         }
       }
+    },
+    "6fe1c7d73e4d": {
+      "name": "projectRowDetailError",
+      "value": "inner refused"
     },
     "7a55b2ec205b": {
       "name": "github.project.updateIssueBySlug#1",
@@ -490,11 +473,6 @@
         }
       }
     },
-    "7b2465eedefe": {
-      "name": "projectMutating",
-      "value": true,
-      "sent": 0
-    },
     "7df10429e862": {
       "error": "",
       "mutating": false,
@@ -513,16 +491,6 @@
         "id": "item-1",
         "itemType": "ISSUE"
       }
-    },
-    "8237b3a567bf": {
-      "name": "projectRowDetailError",
-      "value": "transport failure",
-      "sent": 1
-    },
-    "85f150b2df81": {
-      "name": "projectRowDetailError",
-      "value": "",
-      "sent": 1
     },
     "90cf28d0b84a": {
       "name": "github.project.updateIssueBySlug#1",
@@ -568,11 +536,6 @@
       "status": "pending",
       "startedAt": 0
     },
-    "a7b76954b136": {
-      "name": "projectRowDetailError",
-      "value": "Cannot read properties of null (reading 'ok')",
-      "sent": 1
-    },
     "c1213bb55edc": {
       "name": "github.project.updateIssueBySlug#1",
       "args": [
@@ -610,28 +573,9 @@
         }
       }
     },
-    "c2cfc66d5157": {
-      "name": "githubProjectTable",
-      "value": {
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "labels": [
-                {
-                  "color": "808080",
-                  "name": "recorded"
-                }
-              ],
-              "number": 1,
-              "repository": "owner/repo"
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          }
-        ]
-      },
-      "sent": 1
+    "c2a271fc5d97": {
+      "name": "projectMutating",
+      "value": true
     },
     "c679565dc881": {
       "error": "Failed to update GitHub item",
@@ -647,10 +591,31 @@
         "itemType": "ISSUE"
       }
     },
-    "da0f06b573ab": {
+    "cb9738a42f12": {
+      "name": "projectRowItem",
+      "value": {
+        "content": {
+          "assignees": [],
+          "labels": [
+            {
+              "color": "808080",
+              "name": "recorded"
+            }
+          ],
+          "number": 1,
+          "repository": "owner/repo"
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      }
+    },
+    "cbdef49cc723": {
       "name": "projectRowDetailError",
-      "value": "Failed to update GitHub item",
-      "sent": 1
+      "value": "Failed to update GitHub item"
+    },
+    "d330309fabb3": {
+      "name": "projectRowDetailError",
+      "value": "Cannot read properties of null (reading 'ok')"
     },
     "e5673036d45e": {
       "name": "github.project.updateIssueBySlug#1",
@@ -690,11 +655,6 @@
       "value": {
         "$rpc": "undefined"
       }
-    },
-    "eff724250cc7": {
-      "name": "projectRowDetailError",
-      "value": "inner refused",
-      "sent": 1
     },
     "f12e58847110": {
       "name": "github.project.updateIssueBySlug#1",
@@ -774,6 +734,32 @@
           }
         }
       }
+    },
+    "f871d643501c": {
+      "name": "projectRowDetailError",
+      "value": "Connection closed"
+    },
+    "fa333bb6724e": {
+      "name": "githubProjectTable",
+      "value": {
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "labels": [
+                {
+                  "color": "808080",
+                  "name": "recorded"
+                }
+              ],
+              "number": 1,
+              "repository": "owner/repo"
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          }
+        ]
+      }
     }
   },
   "recording": {
@@ -789,7 +775,7 @@
             "submit": "9270aeb7d9c6"
           },
           "state": "0c4dced3e005",
-          "effects": ["7b2465eedefe"]
+          "effects": ["c2a271fc5d97"]
         }
       },
       {
@@ -802,7 +788,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "0c4dced3e005",
-          "effects": ["7b2465eedefe", "4c53511aa5f7", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "f871d643501c", "2cd14f7121a5"]
         }
       },
       {
@@ -816,11 +802,11 @@
           },
           "state": "7df10429e862",
           "effects": [
-            "7b2465eedefe",
-            "0b09506355e4",
-            "c2cfc66d5157",
-            "1c2a67aac7e4",
-            "02839f22d2db"
+            "c2a271fc5d97",
+            "cb9738a42f12",
+            "fa333bb6724e",
+            "347cc433c473",
+            "2cd14f7121a5"
           ]
         }
       },
@@ -834,7 +820,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "29f9b15bed7a",
-          "effects": ["7b2465eedefe", "4c09a53c8150", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "2e2da1bbd7ed", "2cd14f7121a5"]
         }
       },
       {
@@ -847,7 +833,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "204a5c5728c2",
-          "effects": ["7b2465eedefe", "a7b76954b136", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "d330309fabb3", "2cd14f7121a5"]
         }
       },
       {
@@ -861,11 +847,11 @@
           },
           "state": "7df10429e862",
           "effects": [
-            "7b2465eedefe",
-            "0b09506355e4",
-            "c2cfc66d5157",
-            "1c2a67aac7e4",
-            "02839f22d2db"
+            "c2a271fc5d97",
+            "cb9738a42f12",
+            "fa333bb6724e",
+            "347cc433c473",
+            "2cd14f7121a5"
           ]
         }
       },
@@ -879,7 +865,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "c679565dc881",
-          "effects": ["7b2465eedefe", "da0f06b573ab", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "cbdef49cc723", "2cd14f7121a5"]
         }
       },
       {
@@ -892,7 +878,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "32cc1f3ceec8",
-          "effects": ["7b2465eedefe", "eff724250cc7", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "6fe1c7d73e4d", "2cd14f7121a5"]
         }
       },
       {
@@ -905,7 +891,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "2b3c1b95331e",
-          "effects": ["7b2465eedefe", "0ef970845cc7", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "27f506c59cc7", "2cd14f7121a5"]
         }
       },
       {
@@ -918,7 +904,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "3f996c0d0403",
-          "effects": ["7b2465eedefe", "85f150b2df81", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "057a0b5a420b", "2cd14f7121a5"]
         }
       },
       {
@@ -931,7 +917,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "22021a77bba3",
-          "effects": ["7b2465eedefe", "152580ec9e5a", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "6b6431f01d00", "2cd14f7121a5"]
         }
       },
       {
@@ -944,7 +930,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "5ea692508d69",
-          "effects": ["7b2465eedefe", "8237b3a567bf", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "0924615699bf", "2cd14f7121a5"]
         }
       },
       {
@@ -957,7 +943,7 @@
             "submit": "eb79a9b3682a"
           },
           "state": "3f996c0d0403",
-          "effects": ["7b2465eedefe", "85f150b2df81", "02839f22d2db"]
+          "effects": ["c2a271fc5d97", "057a0b5a420b", "2cd14f7121a5"]
         }
       }
     ]

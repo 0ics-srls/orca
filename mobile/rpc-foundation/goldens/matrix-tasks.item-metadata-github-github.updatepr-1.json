@@ -3,9 +3,9 @@
   "family": "tasks.item-metadata-github",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "97cfbcd82778ed6517ca2d10b2f3ad5a8d366e380d7846c1e89d5a5baf17e739",
   "scenarioSha256": "27587bfb5745051e3cb27b01dc49b90b6f3c8ddbeb38f20772502fae2f562d91",
   "platform": "darwin",
@@ -13,6 +13,10 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
+    "066ce15717c8": {
+      "name": "mutatingStatus",
+      "value": true
+    },
     "0d64c21e1a57": {
       "error": "[object Object]",
       "item": {
@@ -221,10 +225,9 @@
         "reviewRequests": []
       }
     },
-    "198ac889ae28": {
+    "186f44bc465a": {
       "name": "error",
-      "value": "transport failure",
-      "sent": 1
+      "value": "Unknown method"
     },
     "1dd914c9108c": {
       "error": "Unknown method",
@@ -311,12 +314,59 @@
         "reviewRequests": []
       }
     },
-    "32a3635e06a4": {
-      "name": "mutatingStatus",
-      "value": false,
-      "sent": 1
+    "2449c436b115": {
+      "name": "detailPayload",
+      "value": {
+        "assignees": ["octocat"],
+        "baseSha": "base-sha",
+        "body": "new body",
+        "checks": [],
+        "comments": [
+          {
+            "author": "octocat",
+            "body": "please fix",
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "id": 501,
+            "isResolved": false,
+            "line": 12,
+            "path": "src/index.ts",
+            "threadId": "thread-1"
+          },
+          {
+            "author": "octocat",
+            "body": "a thought",
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "id": "comment-2"
+          }
+        ],
+        "files": [
+          {
+            "additions": 2,
+            "deletions": 1,
+            "oldPath": {
+              "$rpc": "undefined"
+            },
+            "path": "src/index.ts",
+            "status": "modified",
+            "viewerViewedState": "UNVIEWED"
+          }
+        ],
+        "headSha": "head-sha",
+        "labels": ["bug"],
+        "latestReviews": [],
+        "provider": "github",
+        "pullRequestId": "PR_kwDO",
+        "reviewDecision": {
+          "$rpc": "null"
+        },
+        "reviewRequests": []
+      }
     },
-    "48545870a5c1": {
+    "2d711d96f190": {
+      "name": "error",
+      "value": "Cannot read properties of null (reading 'ok')"
+    },
+    "3544ee07bd2a": {
       "name": "items",
       "value": [
         {
@@ -337,8 +387,28 @@
           },
           "title": "Renamed"
         }
-      ],
-      "sent": 1
+      ]
+    },
+    "51904fd2b002": {
+      "name": "actionItem",
+      "value": {
+        "provider": "github",
+        "source": {
+          "id": "github:pr:12",
+          "labels": ["bug"],
+          "latestReviews": [],
+          "number": 12,
+          "repoId": "repo-1",
+          "reviewDecision": {
+            "$rpc": "null"
+          },
+          "reviewRequests": [],
+          "state": "open",
+          "title": "Renamed",
+          "type": "pr"
+        },
+        "title": "Renamed"
+      }
     },
     "5b0b55895e09": {
       "name": "github.updatePR#1",
@@ -579,11 +649,6 @@
         }
       }
     },
-    "7d901d60a01a": {
-      "name": "error",
-      "value": "[object Object]",
-      "sent": 1
-    },
     "81d3548ec9e7": {
       "name": "github.updatePR#1",
       "args": [
@@ -622,6 +687,14 @@
           "ok": false
         }
       }
+    },
+    "82cd71d524c8": {
+      "name": "error",
+      "value": ""
+    },
+    "945ea389c1ef": {
+      "name": "error",
+      "value": "transport failure"
     },
     "98c47c47bf1c": {
       "error": "outer refused",
@@ -708,11 +781,6 @@
         "reviewRequests": []
       }
     },
-    "9e263f5e91be": {
-      "name": "error",
-      "value": "",
-      "sent": 0
-    },
     "a188da72de28": {
       "name": "github.updatePR#1",
       "args": [
@@ -752,41 +820,21 @@
         }
       }
     },
-    "a42cad5a2c3e": {
-      "name": "actionItem",
-      "value": {
-        "provider": "github",
-        "source": {
-          "id": "github:pr:12",
-          "labels": ["bug"],
-          "latestReviews": [],
-          "number": 12,
-          "repoId": "repo-1",
-          "reviewDecision": {
-            "$rpc": "null"
-          },
-          "reviewRequests": [],
-          "state": "open",
-          "title": "Renamed",
-          "type": "pr"
-        },
-        "title": "Renamed"
-      },
-      "sent": 1
+    "ae5be7de2632": {
+      "name": "error",
+      "value": "Cannot read properties of undefined (reading 'ok')"
     },
     "b092bbd7362d": {
       "name": "github.updatePR#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.updatePR\",\"params\":{\"repo\":\"id:repo-1\",\"prNumber\":12,\"updates\":{\"title\":\"Renamed\",\"body\":\"new body\"}}}"
     },
-    "b53c339a3854": {
+    "ba65a7abe43b": {
       "name": "error",
-      "value": "Unknown method",
-      "sent": 1
+      "value": "outer refused"
     },
-    "c4f585980acf": {
+    "c008e85e2d06": {
       "name": "error",
-      "value": "inner refused",
-      "sent": 1
+      "value": "inner refused"
     },
     "c709f5b6e08d": {
       "error": "Cannot read properties of null (reading 'ok')",
@@ -872,16 +920,6 @@
         },
         "reviewRequests": []
       }
-    },
-    "c939abf83c6c": {
-      "name": "error",
-      "value": "Cannot read properties of undefined (reading 'ok')",
-      "sent": 1
-    },
-    "cc96725d8f47": {
-      "name": "mutatingStatus",
-      "value": true,
-      "sent": 0
     },
     "cd3f120ad936": {
       "name": "github.updatePR#1",
@@ -995,11 +1033,6 @@
           "isRpcDeliveryUnknown": true
         }
       }
-    },
-    "d48d5c49486c": {
-      "name": "error",
-      "value": "",
-      "sent": 1
     },
     "d61c30994138": {
       "error": "inner refused",
@@ -1171,55 +1204,6 @@
         "reviewRequests": []
       }
     },
-    "dbb0d797e4ab": {
-      "name": "detailPayload",
-      "value": {
-        "assignees": ["octocat"],
-        "baseSha": "base-sha",
-        "body": "new body",
-        "checks": [],
-        "comments": [
-          {
-            "author": "octocat",
-            "body": "please fix",
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "id": 501,
-            "isResolved": false,
-            "line": 12,
-            "path": "src/index.ts",
-            "threadId": "thread-1"
-          },
-          {
-            "author": "octocat",
-            "body": "a thought",
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "id": "comment-2"
-          }
-        ],
-        "files": [
-          {
-            "additions": 2,
-            "deletions": 1,
-            "oldPath": {
-              "$rpc": "undefined"
-            },
-            "path": "src/index.ts",
-            "status": "modified",
-            "viewerViewedState": "UNVIEWED"
-          }
-        ],
-        "headSha": "head-sha",
-        "labels": ["bug"],
-        "latestReviews": [],
-        "provider": "github",
-        "pullRequestId": "PR_kwDO",
-        "reviewDecision": {
-          "$rpc": "null"
-        },
-        "reviewRequests": []
-      },
-      "sent": 1
-    },
     "e3fcde8cdbfe": {
       "error": "",
       "item": {
@@ -1350,15 +1334,13 @@
         "$rpc": "undefined"
       }
     },
-    "f791567b212f": {
+    "ecc1b4e0914f": {
       "name": "error",
-      "value": "outer refused",
-      "sent": 1
+      "value": "[object Object]"
     },
-    "faf0249fca3c": {
-      "name": "error",
-      "value": "Cannot read properties of null (reading 'ok')",
-      "sent": 1
+    "f02550278f6a": {
+      "name": "mutatingStatus",
+      "value": false
     }
   },
   "recording": {
@@ -1375,12 +1357,12 @@
           },
           "state": "e3fcde8cdbfe",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "a42cad5a2c3e",
-            "48545870a5c1",
-            "dbb0d797e4ab",
-            "32a3635e06a4"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "51904fd2b002",
+            "3544ee07bd2a",
+            "2449c436b115",
+            "f02550278f6a"
           ]
         }
       },
@@ -1394,7 +1376,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "d67cd3047e76",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "c939abf83c6c", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "ae5be7de2632", "f02550278f6a"]
         }
       },
       {
@@ -1407,7 +1389,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "c709f5b6e08d",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "faf0249fca3c", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "2d711d96f190", "f02550278f6a"]
         }
       },
       {
@@ -1421,12 +1403,12 @@
           },
           "state": "e3fcde8cdbfe",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "a42cad5a2c3e",
-            "48545870a5c1",
-            "dbb0d797e4ab",
-            "32a3635e06a4"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "51904fd2b002",
+            "3544ee07bd2a",
+            "2449c436b115",
+            "f02550278f6a"
           ]
         }
       },
@@ -1440,7 +1422,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "d61c30994138",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "c4f585980acf", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "c008e85e2d06", "f02550278f6a"]
         }
       },
       {
@@ -1453,7 +1435,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "0d64c21e1a57",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "7d901d60a01a", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "ecc1b4e0914f", "f02550278f6a"]
         }
       },
       {
@@ -1466,7 +1448,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "98c47c47bf1c",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "f791567b212f", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "ba65a7abe43b", "f02550278f6a"]
         }
       },
       {
@@ -1479,7 +1461,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "67576d01860e",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "d48d5c49486c", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "82cd71d524c8", "f02550278f6a"]
         }
       },
       {
@@ -1492,7 +1474,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "1dd914c9108c",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "b53c339a3854", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "186f44bc465a", "f02550278f6a"]
         }
       },
       {
@@ -1505,7 +1487,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "12d8c0993d32",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "198ac889ae28", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "945ea389c1ef", "f02550278f6a"]
         }
       },
       {
@@ -1518,7 +1500,7 @@
             "update-pr-0": "eb79a9b3682a"
           },
           "state": "67576d01860e",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "d48d5c49486c", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "82cd71d524c8", "f02550278f6a"]
         }
       }
     ]

@@ -3,9 +3,9 @@
   "family": "tasks.item-checks-files",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "8c4218bfb2af227da5386f29989cec438f2c6187f39ce1c06859e136ea920bfa",
   "scenarioSha256": "15de2c1dd80a591a5e27d50664ff21d4e71442c711fc3bbdf7d1f95f499cf04c",
   "platform": "darwin",
@@ -17,33 +17,17 @@
       "name": "github.setPRFileViewed#1",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"github.setPRFileViewed\",\"params\":{\"repo\":\"id:repo-1\",\"pullRequestId\":\"PR_kwDO\",\"path\":\"src/index.ts\",\"viewed\":true}}"
     },
-    "02b35324051f": {
+    "066ce15717c8": {
+      "name": "mutatingStatus",
+      "value": true
+    },
+    "0c85499cb425": {
       "name": "prFileLoadingPath",
       "value": {
         "$rpc": "null"
-      },
-      "sent": 4
+      }
     },
-    "02b52513bb0d": {
-      "name": "mutatingStatus",
-      "value": true,
-      "sent": 4
-    },
-    "0c0d6ea592d5": {
-      "name": "mutatingStatus",
-      "value": false,
-      "sent": 3
-    },
-    "169fba726515": {
-      "name": "github.addPRReviewComment#1",
-      "json": "{\"id\":\"frame-5\",\"deviceToken\":\"recording-device\",\"method\":\"github.addPRReviewComment\",\"params\":{\"repo\":\"id:repo-1\",\"prNumber\":12,\"commitId\":\"head-sha\",\"path\":\"src/index.ts\",\"line\":12,\"body\":\"a review comment\"}}"
-    },
-    "1e34370849ff": {
-      "name": "error",
-      "value": "",
-      "sent": 4
-    },
-    "2322bd630112": {
+    "1022542acd40": {
       "name": "detailPayload",
       "value": {
         "assignees": ["octocat"],
@@ -89,18 +73,11 @@
           "$rpc": "null"
         },
         "reviewRequests": []
-      },
-      "sent": 2
+      }
     },
-    "30196bc9a973": {
-      "name": "detailRefreshSeq",
-      "value": 1,
-      "sent": 1
-    },
-    "32a3635e06a4": {
-      "name": "mutatingStatus",
-      "value": false,
-      "sent": 1
+    "169fba726515": {
+      "name": "github.addPRReviewComment#1",
+      "json": "{\"id\":\"frame-5\",\"deviceToken\":\"recording-device\",\"method\":\"github.addPRReviewComment\",\"params\":{\"repo\":\"id:repo-1\",\"prNumber\":12,\"commitId\":\"head-sha\",\"path\":\"src/index.ts\",\"line\":12,\"body\":\"a review comment\"}}"
     },
     "38d90ed8a1ee": {
       "contents": {
@@ -168,17 +145,6 @@
       },
       "refreshSeq": 1
     },
-    "3d589c54ccdc": {
-      "name": "prFileContents",
-      "value": {
-        "src/index.ts": {
-          "newContent": "b",
-          "oldContent": "a",
-          "truncated": false
-        }
-      },
-      "sent": 4
-    },
     "4b4ca1abe880": {
       "contents": {},
       "drafts": {
@@ -233,11 +199,6 @@
       },
       "refreshSeq": 1
     },
-    "5467502970f1": {
-      "name": "mutatingStatus",
-      "value": false,
-      "sent": 5
-    },
     "56b95ef32926": {
       "name": "github.prFileContents#1",
       "args": [
@@ -280,11 +241,6 @@
           }
         }
       }
-    },
-    "583b546bd557": {
-      "name": "mutatingStatus",
-      "value": true,
-      "sent": 1
     },
     "58deaf3a6563": {
       "contents": {},
@@ -339,6 +295,76 @@
         "reviewRequests": []
       },
       "refreshSeq": 1
+    },
+    "5e884949c856": {
+      "name": "prFileCommentDrafts",
+      "value": {}
+    },
+    "679b3f3a0d12": {
+      "name": "prFileContents",
+      "value": {
+        "src/index.ts": {
+          "newContent": "b",
+          "oldContent": "a",
+          "truncated": false
+        }
+      }
+    },
+    "6c85e969cc9d": {
+      "name": "detailPayload",
+      "value": {
+        "assignees": ["octocat"],
+        "baseSha": "base-sha",
+        "body": "body",
+        "checks": [],
+        "comments": [
+          {
+            "author": "octocat",
+            "body": "please fix",
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "id": 501,
+            "isResolved": true,
+            "line": 12,
+            "path": "src/index.ts",
+            "threadId": "thread-1"
+          },
+          {
+            "author": "octocat",
+            "body": "a thought",
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "id": "comment-2"
+          },
+          {
+            "author": "You",
+            "body": "a review comment",
+            "createdAt": "2020-01-01T00:00:00.000Z",
+            "id": 901,
+            "line": 12,
+            "path": "src/index.ts"
+          }
+        ],
+        "files": [
+          {
+            "additions": 2,
+            "deletions": 1,
+            "oldPath": {
+              "$rpc": "undefined"
+            },
+            "path": "src/index.ts",
+            "status": "modified",
+            "viewerViewedState": "VIEWED"
+          }
+        ],
+        "headSha": "head-sha",
+        "labels": ["bug"],
+        "latestReviews": [],
+        "provider": "github",
+        "pullRequestId": "PR_kwDO",
+        "reviewDecision": {
+          "$rpc": "null"
+        },
+        "reviewRequests": []
+      }
     },
     "719c7f70fd21": {
       "name": "github.resolveReviewThread#1",
@@ -398,12 +424,15 @@
       },
       "refreshSeq": 1
     },
-    "82983d26b169": {
-      "name": "mutatingStatus",
-      "value": true,
-      "sent": 2
+    "82cd71d524c8": {
+      "name": "error",
+      "value": ""
     },
-    "8c3bfdbaf598": {
+    "8aa9021b397d": {
+      "name": "prFileLoadingPath",
+      "value": "src/index.ts"
+    },
+    "8fd2d4171773": {
       "name": "detailPayload",
       "value": {
         "assignees": ["octocat"],
@@ -426,14 +455,6 @@
             "body": "a thought",
             "createdAt": "2020-01-01T00:00:00.000Z",
             "id": "comment-2"
-          },
-          {
-            "author": "You",
-            "body": "a review comment",
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "id": 901,
-            "line": 12,
-            "path": "src/index.ts"
           }
         ],
         "files": [
@@ -457,18 +478,7 @@
           "$rpc": "null"
         },
         "reviewRequests": []
-      },
-      "sent": 5
-    },
-    "8cde53a56cdf": {
-      "name": "mutatingStatus",
-      "value": false,
-      "sent": 2
-    },
-    "9e263f5e91be": {
-      "name": "error",
-      "value": "",
-      "sent": 0
+      }
     },
     "a5b56b388d19": {
       "name": "github.addPRReviewComment#1",
@@ -516,11 +526,6 @@
         }
       }
     },
-    "a82a30c9d838": {
-      "name": "prFileLoadingPath",
-      "value": "src/index.ts",
-      "sent": 3
-    },
     "a94ae672d47d": {
       "name": "github.rerunPRChecks#1",
       "args": [
@@ -557,10 +562,9 @@
         }
       }
     },
-    "b57ded8a3ea3": {
-      "name": "error",
-      "value": "",
-      "sent": 2
+    "ab7ba6b82907": {
+      "name": "detailRefreshSeq",
+      "value": 1
     },
     "bcb382ff8ccc": {
       "name": "github.resolveReviewThread#1",
@@ -594,6 +598,10 @@
           "result": true
         }
       }
+    },
+    "c05d98f543b7": {
+      "name": "expandedPrFilePath",
+      "value": "src/index.ts"
     },
     "c3ea578fcb3f": {
       "contents": {
@@ -655,73 +663,9 @@
       },
       "refreshSeq": 1
     },
-    "cc96725d8f47": {
-      "name": "mutatingStatus",
-      "value": true,
-      "sent": 0
-    },
-    "d48d5c49486c": {
-      "name": "error",
-      "value": "",
-      "sent": 1
-    },
     "d530e4061382": {
       "name": "github.prFileContents#1",
       "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"github.prFileContents\",\"params\":{\"repo\":\"id:repo-1\",\"prNumber\":12,\"path\":\"src/index.ts\",\"status\":\"modified\",\"headSha\":\"head-sha\",\"baseSha\":\"base-sha\"}}"
-    },
-    "d6639f415773": {
-      "name": "detailPayload",
-      "value": {
-        "assignees": ["octocat"],
-        "baseSha": "base-sha",
-        "body": "body",
-        "checks": [],
-        "comments": [
-          {
-            "author": "octocat",
-            "body": "please fix",
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "id": 501,
-            "isResolved": true,
-            "line": 12,
-            "path": "src/index.ts",
-            "threadId": "thread-1"
-          },
-          {
-            "author": "octocat",
-            "body": "a thought",
-            "createdAt": "2020-01-01T00:00:00.000Z",
-            "id": "comment-2"
-          }
-        ],
-        "files": [
-          {
-            "additions": 2,
-            "deletions": 1,
-            "oldPath": {
-              "$rpc": "undefined"
-            },
-            "path": "src/index.ts",
-            "status": "modified",
-            "viewerViewedState": "VIEWED"
-          }
-        ],
-        "headSha": "head-sha",
-        "labels": ["bug"],
-        "latestReviews": [],
-        "provider": "github",
-        "pullRequestId": "PR_kwDO",
-        "reviewDecision": {
-          "$rpc": "null"
-        },
-        "reviewRequests": []
-      },
-      "sent": 3
-    },
-    "dbbebbd74a18": {
-      "name": "error",
-      "value": "",
-      "sent": 3
     },
     "e14b632f629a": {
       "name": "github.setPRFileViewed#1",
@@ -769,15 +713,9 @@
         "$rpc": "undefined"
       }
     },
-    "f1d782d012f9": {
-      "name": "expandedPrFilePath",
-      "value": "src/index.ts",
-      "sent": 3
-    },
-    "f28dd4f3c720": {
-      "name": "prFileCommentDrafts",
-      "value": {},
-      "sent": 5
+    "f02550278f6a": {
+      "name": "mutatingStatus",
+      "value": false
     }
   },
   "recording": {
@@ -793,7 +731,7 @@
             "rerun-0": "eb79a9b3682a"
           },
           "state": "58deaf3a6563",
-          "effects": ["cc96725d8f47", "9e263f5e91be", "30196bc9a973", "32a3635e06a4"]
+          "effects": ["066ce15717c8", "82cd71d524c8", "ab7ba6b82907", "f02550278f6a"]
         }
       },
       {
@@ -808,14 +746,14 @@
           },
           "state": "7418dba01b6e",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "30196bc9a973",
-            "32a3635e06a4",
-            "583b546bd557",
-            "d48d5c49486c",
-            "2322bd630112",
-            "8cde53a56cdf"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "ab7ba6b82907",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "1022542acd40",
+            "f02550278f6a"
           ]
         }
       },
@@ -832,18 +770,18 @@
           },
           "state": "4b4ca1abe880",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "30196bc9a973",
-            "32a3635e06a4",
-            "583b546bd557",
-            "d48d5c49486c",
-            "2322bd630112",
-            "8cde53a56cdf",
-            "82983d26b169",
-            "b57ded8a3ea3",
-            "d6639f415773",
-            "0c0d6ea592d5"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "ab7ba6b82907",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "1022542acd40",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "8fd2d4171773",
+            "f02550278f6a"
           ]
         }
       },
@@ -861,23 +799,23 @@
           },
           "state": "c3ea578fcb3f",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "30196bc9a973",
-            "32a3635e06a4",
-            "583b546bd557",
-            "d48d5c49486c",
-            "2322bd630112",
-            "8cde53a56cdf",
-            "82983d26b169",
-            "b57ded8a3ea3",
-            "d6639f415773",
-            "0c0d6ea592d5",
-            "f1d782d012f9",
-            "a82a30c9d838",
-            "dbbebbd74a18",
-            "3d589c54ccdc",
-            "02b35324051f"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "ab7ba6b82907",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "1022542acd40",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "8fd2d4171773",
+            "f02550278f6a",
+            "c05d98f543b7",
+            "8aa9021b397d",
+            "82cd71d524c8",
+            "679b3f3a0d12",
+            "0c85499cb425"
           ]
         }
       },
@@ -908,28 +846,28 @@
           },
           "state": "38d90ed8a1ee",
           "effects": [
-            "cc96725d8f47",
-            "9e263f5e91be",
-            "30196bc9a973",
-            "32a3635e06a4",
-            "583b546bd557",
-            "d48d5c49486c",
-            "2322bd630112",
-            "8cde53a56cdf",
-            "82983d26b169",
-            "b57ded8a3ea3",
-            "d6639f415773",
-            "0c0d6ea592d5",
-            "f1d782d012f9",
-            "a82a30c9d838",
-            "dbbebbd74a18",
-            "3d589c54ccdc",
-            "02b35324051f",
-            "02b52513bb0d",
-            "1e34370849ff",
-            "f28dd4f3c720",
-            "8c3bfdbaf598",
-            "5467502970f1"
+            "066ce15717c8",
+            "82cd71d524c8",
+            "ab7ba6b82907",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "1022542acd40",
+            "f02550278f6a",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "8fd2d4171773",
+            "f02550278f6a",
+            "c05d98f543b7",
+            "8aa9021b397d",
+            "82cd71d524c8",
+            "679b3f3a0d12",
+            "0c85499cb425",
+            "066ce15717c8",
+            "82cd71d524c8",
+            "5e884949c856",
+            "6c85e969cc9d",
+            "f02550278f6a"
           ]
         }
       }

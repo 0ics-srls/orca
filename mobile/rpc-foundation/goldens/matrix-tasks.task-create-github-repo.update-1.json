@@ -3,9 +3,9 @@
   "family": "tasks.task-create-github",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "07a15e900363faa25bc364f5bc1c330f96798abfeaed35210428c2ac558586b8",
   "scenarioSha256": "9efe74e5a1b0d92f674e6044edfd534693c15b0a153bcb2c0e283a6cd53fa61b",
   "platform": "darwin",
@@ -13,11 +13,6 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "000516aa083b": {
-      "name": "error",
-      "value": "outer refused",
-      "sent": 2
-    },
     "06e1643ed0af": {
       "name": "github.createIssue#1",
       "args": [
@@ -95,15 +90,17 @@
       "name": "github.createIssue#1",
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.createIssue\",\"params\":{\"repo\":\"id:repo-1\",\"title\":\"A new task\",\"body\":\"a body\"}}"
     },
-    "46bbfadb0481": {
-      "name": "creatingTask",
-      "value": true,
-      "sent": 0
-    },
-    "52d25e1f3035": {
+    "186f44bc465a": {
       "name": "error",
-      "value": "Connection closed",
-      "sent": 2
+      "value": "Unknown method"
+    },
+    "3e610f908f29": {
+      "name": "showCreateTask",
+      "value": false
+    },
+    "4a66cf72bc8f": {
+      "name": "creatingTask",
+      "value": false
     },
     "5ab5b62983be": {
       "composer": false,
@@ -133,15 +130,9 @@
         "updatedAt": "2026-01-01T00:00:00.000Z"
       }
     },
-    "5c2874ad80bc": {
-      "name": "error",
-      "value": "transport failure",
-      "sent": 2
-    },
-    "6652745ed1c6": {
+    "5b8e3a96030e": {
       "name": "createBody",
-      "value": "",
-      "sent": 1
+      "value": ""
     },
     "686238f6a684": {
       "name": "repo.update#1",
@@ -177,10 +168,9 @@
         }
       }
     },
-    "781721955405": {
-      "name": "showCreateTask",
-      "value": false,
-      "sent": 1
+    "791f05938c43": {
+      "name": "creatingTask",
+      "value": true
     },
     "7e23e14f7a3d": {
       "name": "repo.update#1",
@@ -253,6 +243,10 @@
         }
       }
     },
+    "82cd71d524c8": {
+      "name": "error",
+      "value": ""
+    },
     "8690f0cd8ed3": {
       "name": "repo.update#1",
       "args": [
@@ -289,32 +283,13 @@
         }
       }
     },
-    "873de7fc7ff8": {
-      "name": "actionItem",
-      "value": {
-        "key": "github:repo-1:issue:11",
-        "provider": "github",
-        "source": {
-          "author": {
-            "$rpc": "null"
-          },
-          "id": "issue:11",
-          "labels": [],
-          "number": 11,
-          "repoId": "repo-1",
-          "repoName": "Repo",
-          "state": "open",
-          "title": "A new task",
-          "type": "issue",
-          "updatedAt": "2026-01-01T00:00:00.000Z",
-          "url": "https://github.com/owner/repo/issues/11"
-        },
-        "status": "Open",
-        "subtitle": "Repo #11",
-        "title": "A new task",
-        "updatedAt": "2026-01-01T00:00:00.000Z"
-      },
-      "sent": 1
+    "871b62dd230b": {
+      "name": "createTitle",
+      "value": ""
+    },
+    "945ea389c1ef": {
+      "name": "error",
+      "value": "transport failure"
     },
     "9546ab40f414": {
       "name": "repo.update#1",
@@ -426,10 +401,35 @@
         }
       }
     },
-    "9e263f5e91be": {
+    "9f82f10075a3": {
       "name": "error",
-      "value": "",
-      "sent": 0
+      "value": "Connection closed"
+    },
+    "a10650cc438b": {
+      "name": "actionItem",
+      "value": {
+        "key": "github:repo-1:issue:11",
+        "provider": "github",
+        "source": {
+          "author": {
+            "$rpc": "null"
+          },
+          "id": "issue:11",
+          "labels": [],
+          "number": 11,
+          "repoId": "repo-1",
+          "repoName": "Repo",
+          "state": "open",
+          "title": "A new task",
+          "type": "issue",
+          "updatedAt": "2026-01-01T00:00:00.000Z",
+          "url": "https://github.com/owner/repo/issues/11"
+        },
+        "status": "Open",
+        "subtitle": "Repo #11",
+        "title": "A new task",
+        "updatedAt": "2026-01-01T00:00:00.000Z"
+      }
     },
     "a795619b2c90": {
       "name": "repo.update#1",
@@ -470,15 +470,9 @@
         }
       }
     },
-    "b57ded8a3ea3": {
+    "ba65a7abe43b": {
       "name": "error",
-      "value": "",
-      "sent": 2
-    },
-    "c0c0f9a6037e": {
-      "name": "createTitle",
-      "value": "",
-      "sent": 1
+      "value": "outer refused"
     },
     "c41296ee02f7": {
       "name": "repo.update#1",
@@ -544,11 +538,6 @@
           "ok": true
         }
       }
-    },
-    "d48d5c49486c": {
-      "name": "error",
-      "value": "",
-      "sent": 1
     },
     "d7dccc1f4a58": {
       "name": "repo.update#1",
@@ -684,16 +673,6 @@
       "value": {
         "$rpc": "undefined"
       }
-    },
-    "f1cfc2d1bcc1": {
-      "name": "error",
-      "value": "Unknown method",
-      "sent": 2
-    },
-    "fc7f792d6e89": {
-      "name": "creatingTask",
-      "value": false,
-      "sent": 1
     }
   },
   "recording": {
@@ -710,13 +689,13 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f"
           ]
         }
       },
@@ -732,15 +711,15 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "52d25e1f3035"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "9f82f10075a3"
           ]
         }
       },
@@ -756,14 +735,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -779,14 +758,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -802,14 +781,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -825,14 +804,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -848,14 +827,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -871,14 +850,14 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8"
           ]
         }
       },
@@ -894,15 +873,15 @@
           },
           "state": "c7d97f6f2602",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "000516aa083b"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "ba65a7abe43b"
           ]
         }
       },
@@ -918,15 +897,15 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "b57ded8a3ea3"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "82cd71d524c8"
           ]
         }
       },
@@ -942,15 +921,15 @@
           },
           "state": "e590ae2d0a40",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "f1cfc2d1bcc1"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "186f44bc465a"
           ]
         }
       },
@@ -966,15 +945,15 @@
           },
           "state": "d98907f962cc",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "5c2874ad80bc"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "945ea389c1ef"
           ]
         }
       },
@@ -990,15 +969,15 @@
           },
           "state": "5ab5b62983be",
           "effects": [
-            "46bbfadb0481",
-            "9e263f5e91be",
-            "873de7fc7ff8",
-            "781721955405",
-            "c0c0f9a6037e",
-            "6652745ed1c6",
-            "fc7f792d6e89",
-            "d48d5c49486c",
-            "b57ded8a3ea3"
+            "791f05938c43",
+            "82cd71d524c8",
+            "a10650cc438b",
+            "3e610f908f29",
+            "871b62dd230b",
+            "5b8e3a96030e",
+            "4a66cf72bc8f",
+            "82cd71d524c8",
+            "82cd71d524c8"
           ]
         }
       }

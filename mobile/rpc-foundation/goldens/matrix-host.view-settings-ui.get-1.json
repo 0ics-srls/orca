@@ -3,9 +3,9 @@
   "family": "host.view-settings",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "a9e0780298a1443664e7ae02056168aa34d67556c9c056d51a82c7b4a73ad35b",
   "scenarioSha256": "a9a3191e2e8c36870ce2769a7bb972813f435267fdc6ed9e42632a57a227bbd6",
   "platform": "darwin",
@@ -78,11 +78,6 @@
         }
       }
     },
-    "1207e1b06040": {
-      "name": "workspaceStatuses",
-      "value": [],
-      "sent": 1
-    },
     "1308c5012cf9": {
       "name": "ui.get#1",
       "args": [
@@ -151,14 +146,17 @@
         }
       }
     },
-    "217aeff07fa0": {
-      "name": "groupMode",
-      "value": "none",
-      "sent": 1
-    },
     "292b632037a0": {
       "name": "ui.set#1",
       "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"ui.set\",\"params\":{\"sortBy\":\"name\"}}"
+    },
+    "3059ce80d86a": {
+      "name": "collapsedGroups",
+      "value": []
+    },
+    "34925f64c9a6": {
+      "name": "sortMode",
+      "value": "name"
     },
     "3650379e5c37": {
       "name": "ui.get#1",
@@ -253,11 +251,6 @@
         }
       }
     },
-    "6816213c2ede": {
-      "name": "collapsedGroups",
-      "value": [],
-      "sent": 1
-    },
     "757d36f7d7c1": {
       "name": "ui.get#1",
       "args": [
@@ -322,6 +315,10 @@
         }
       }
     },
+    "7eaddd04bcdd": {
+      "name": "workspaceStatuses",
+      "value": []
+    },
     "8ab3467032ef": {
       "name": "ui.get#1",
       "args": [
@@ -361,6 +358,19 @@
     "9270aeb7d9c6": {
       "status": "pending",
       "startedAt": 0
+    },
+    "9527461faeb1": {
+      "name": "filters",
+      "value": {
+        "alwaysShowDefaultBranch": true,
+        "filterRepoIds": [],
+        "hideDefaultBranch": false,
+        "hideSleeping": true
+      }
+    },
+    "96e59623cbb8": {
+      "name": "groupMode",
+      "value": "none"
     },
     "993945d30ef2": {
       "name": "ui.get#1",
@@ -440,6 +450,15 @@
       "sortMode": "name",
       "statuses": []
     },
+    "a0a3277ca732": {
+      "name": "filters",
+      "value": {
+        "alwaysShowDefaultBranch": true,
+        "filterRepoIds": [],
+        "hideDefaultBranch": false,
+        "hideSleeping": false
+      }
+    },
     "a424515cabc9": {
       "name": "ui.get#1",
       "args": [
@@ -477,11 +496,6 @@
         }
       }
     },
-    "a8115697f295": {
-      "name": "sortMode",
-      "value": "name",
-      "sent": 1
-    },
     "ba2035345a68": {
       "collapsed": [],
       "filters": {
@@ -493,16 +507,6 @@
       "groupMode": "repo",
       "sortMode": "name",
       "statuses": []
-    },
-    "bb2162bb7903": {
-      "name": "filters",
-      "value": {
-        "alwaysShowDefaultBranch": true,
-        "filterRepoIds": [],
-        "hideDefaultBranch": false,
-        "hideSleeping": false
-      },
-      "sent": 1
     },
     "bbdab1a7d122": {
       "collapsed": [],
@@ -516,20 +520,9 @@
       "sortMode": "recent",
       "statuses": []
     },
-    "d88f3b1774b1": {
-      "name": "filters",
-      "value": {
-        "alwaysShowDefaultBranch": true,
-        "filterRepoIds": [],
-        "hideDefaultBranch": false,
-        "hideSleeping": true
-      },
-      "sent": 1
-    },
-    "e0a092c9ae88": {
+    "e9a3acf203c6": {
       "name": "groupMode",
-      "value": "repo",
-      "sent": 1
+      "value": "repo"
     },
     "eb79a9b3682a": {
       "status": "fulfilled",
@@ -568,16 +561,16 @@
           },
           "state": "ba2035345a68",
           "effects": [
-            "e0a092c9ae88",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "d88f3b1774b1",
-            "e0a092c9ae88",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "d88f3b1774b1"
+            "e9a3acf203c6",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "9527461faeb1",
+            "e9a3acf203c6",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "9527461faeb1"
           ]
         }
       },
@@ -593,11 +586,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -613,11 +606,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -633,11 +626,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -653,11 +646,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -673,11 +666,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -693,11 +686,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -713,11 +706,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -733,11 +726,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -753,11 +746,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       },
@@ -773,11 +766,11 @@
           },
           "state": "9d2d4e824476",
           "effects": [
-            "217aeff07fa0",
-            "a8115697f295",
-            "1207e1b06040",
-            "6816213c2ede",
-            "bb2162bb7903"
+            "96e59623cbb8",
+            "34925f64c9a6",
+            "7eaddd04bcdd",
+            "3059ce80d86a",
+            "a0a3277ca732"
           ]
         }
       }

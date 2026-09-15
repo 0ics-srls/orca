@@ -3,9 +3,9 @@
   "family": "tasks.item-detail-gitlab",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "0ddc0dc472e2efbe58004c6dfaf5360e368fed321e40dfe15c11a9ad1817dea4",
+  "recorderSha256": "e044443e01f282566a5e0eff110d0861d2a1047ca8d8696a2e7ff914f51957f3",
   "adapterSha256": "c0ef16b959002e4a3c5347114a0844b95670e274ef010d910b6671ac5f49e783",
   "scenarioSha256": "d163c6125fa180da7575642ee29f4bb18e3678079b7c30a42934550896d5b3c1",
   "platform": "darwin",
@@ -54,10 +54,37 @@
         }
       }
     },
-    "1867a9df681c": {
-      "name": "detailLoading",
-      "value": false,
-      "sent": 1
+    "0edfe9d32732": {
+      "name": "detailError",
+      "value": "Unknown method"
+    },
+    "14aea668686d": {
+      "name": "actionItem",
+      "value": {
+        "provider": "gitlab",
+        "source": {
+          "checksSummary": {
+            "failed": 0,
+            "neutral": 0,
+            "passed": 0,
+            "pending": 0,
+            "state": "none",
+            "total": 0
+          },
+          "id": "gitlab:issue:4",
+          "labels": ["bug"],
+          "number": 4,
+          "projectRef": "group/project",
+          "repoId": "repo-1",
+          "state": "opened",
+          "type": "issue"
+        },
+        "title": "A GitLab issue"
+      }
+    },
+    "1553e3419a3d": {
+      "name": "detailError",
+      "value": "outer refused"
     },
     "21e97f41ebab": {
       "name": "gitlab.workItemDetails#1",
@@ -143,17 +170,36 @@
         }
       }
     },
-    "3b439a0be8e6": {
-      "name": "detailPayload",
+    "3383a335299c": {
+      "name": "actionItem",
       "value": {
-        "assignees": [],
-        "body": "",
-        "comments": [],
-        "labels": ["bug"],
-        "pipelineJobs": [],
-        "provider": "gitlab"
-      },
-      "sent": 1
+        "provider": "gitlab",
+        "source": {
+          "checksSummary": {
+            "failed": 0,
+            "neutral": 0,
+            "passed": 0,
+            "pending": 0,
+            "state": "none",
+            "total": 0
+          },
+          "id": "gitlab:issue:4",
+          "labels": ["bug"],
+          "mergeable": "MERGEABLE",
+          "number": 4,
+          "projectRef": "group/project",
+          "repoId": "repo-1",
+          "reviewDecision": "approved",
+          "reviewerCount": 0,
+          "state": "opened",
+          "type": "issue"
+        },
+        "title": "A GitLab issue"
+      }
+    },
+    "3b01c25bcd45": {
+      "name": "detailError",
+      "value": ""
     },
     "407e67708c25": {
       "name": "gitlab.workItemDetails#1",
@@ -188,10 +234,9 @@
         }
       }
     },
-    "490069b5b08d": {
+    "468cc28b676c": {
       "name": "detailError",
-      "value": "Unknown method",
-      "sent": 1
+      "value": "transport failure"
     },
     "5672ba1c0594": {
       "error": "",
@@ -249,11 +294,6 @@
         "provider": "gitlab"
       }
     },
-    "56d172ecd2fe": {
-      "name": "detailLoading",
-      "value": true,
-      "sent": 0
-    },
     "58bc89f3db3d": {
       "name": "gitlab.workItemDetails#1",
       "args": [
@@ -290,10 +330,41 @@
         }
       }
     },
-    "6985c6cf3587": {
-      "name": "detailError",
-      "value": "outer refused",
-      "sent": 1
+    "5e427a730c1a": {
+      "name": "items",
+      "value": [
+        {
+          "provider": "gitlab",
+          "source": {
+            "checksSummary": {
+              "failed": 0,
+              "neutral": 0,
+              "passed": 0,
+              "pending": 0,
+              "state": "none",
+              "total": 0
+            },
+            "id": "gitlab:issue:4",
+            "labels": ["bug"],
+            "number": 4,
+            "projectRef": "group/project",
+            "repoId": "repo-1",
+            "state": "opened",
+            "type": "issue"
+          },
+          "title": "A GitLab issue"
+        }
+      ]
+    },
+    "7d21147e56c1": {
+      "name": "detailLoading",
+      "value": true
+    },
+    "7d341b2cb946": {
+      "name": "detailPayload",
+      "value": {
+        "$rpc": "null"
+      }
     },
     "7e6dc074a7c0": {
       "name": "gitlab.workItemDetails#1",
@@ -367,38 +438,6 @@
         "$rpc": "null"
       }
     },
-    "8832c17871d2": {
-      "name": "detailError",
-      "value": "",
-      "sent": 1
-    },
-    "8c13b62e947f": {
-      "name": "items",
-      "value": [
-        {
-          "provider": "gitlab",
-          "source": {
-            "checksSummary": {
-              "failed": 0,
-              "neutral": 0,
-              "passed": 0,
-              "pending": 0,
-              "state": "none",
-              "total": 0
-            },
-            "id": "gitlab:issue:4",
-            "labels": ["bug"],
-            "number": 4,
-            "projectRef": "group/project",
-            "repoId": "repo-1",
-            "state": "opened",
-            "type": "issue"
-          },
-          "title": "A GitLab issue"
-        }
-      ],
-      "sent": 1
-    },
     "8fe769a85d76": {
       "name": "gitlab.workItemDetails#1",
       "args": [
@@ -437,6 +476,10 @@
           }
         }
       }
+    },
+    "91a1c8142e23": {
+      "name": "detailLoading",
+      "value": false
     },
     "9777323a741d": {
       "name": "gitlab.workItemDetails#1",
@@ -507,29 +550,16 @@
         "$rpc": "null"
       }
     },
-    "9bd1de5d9753": {
-      "name": "detailPayload",
-      "value": {
-        "$rpc": "null"
-      },
-      "sent": 0
-    },
-    "9d6ce9f28401": {
-      "name": "detailError",
-      "value": "",
-      "sent": 0
-    },
-    "a11900db0941": {
+    "9cc074ee9e5f": {
       "name": "detailPayload",
       "value": {
         "assignees": [],
-        "body": "body",
+        "body": "",
         "comments": [],
         "labels": ["bug"],
         "pipelineJobs": [],
         "provider": "gitlab"
-      },
-      "sent": 1
+      }
     },
     "c305480d6e9b": {
       "name": "gitlab.workItemDetails#1",
@@ -602,39 +632,6 @@
         }
       }
     },
-    "d2190faefc97": {
-      "name": "detailError",
-      "value": "Details not found",
-      "sent": 1
-    },
-    "d6522427a24c": {
-      "name": "actionItem",
-      "value": {
-        "provider": "gitlab",
-        "source": {
-          "checksSummary": {
-            "failed": 0,
-            "neutral": 0,
-            "passed": 0,
-            "pending": 0,
-            "state": "none",
-            "total": 0
-          },
-          "id": "gitlab:issue:4",
-          "labels": ["bug"],
-          "mergeable": "MERGEABLE",
-          "number": 4,
-          "projectRef": "group/project",
-          "repoId": "repo-1",
-          "reviewDecision": "approved",
-          "reviewerCount": 0,
-          "state": "opened",
-          "type": "issue"
-        },
-        "title": "A GitLab issue"
-      },
-      "sent": 1
-    },
     "db0c674d34f9": {
       "error": "",
       "item": {
@@ -670,35 +667,9 @@
         "$rpc": "null"
       }
     },
-    "e8f33a90ab1d": {
-      "name": "items",
-      "value": [
-        {
-          "provider": "gitlab",
-          "source": {
-            "checksSummary": {
-              "failed": 0,
-              "neutral": 0,
-              "passed": 0,
-              "pending": 0,
-              "state": "none",
-              "total": 0
-            },
-            "id": "gitlab:issue:4",
-            "labels": ["bug"],
-            "mergeable": "MERGEABLE",
-            "number": 4,
-            "projectRef": "group/project",
-            "repoId": "repo-1",
-            "reviewDecision": "approved",
-            "reviewerCount": 0,
-            "state": "opened",
-            "type": "issue"
-          },
-          "title": "A GitLab issue"
-        }
-      ],
-      "sent": 1
+    "dc8cf3af41bf": {
+      "name": "detailError",
+      "value": "Details not found"
     },
     "eb79a9b3682a": {
       "status": "fulfilled",
@@ -742,31 +713,6 @@
       "payload": {
         "$rpc": "null"
       }
-    },
-    "ee64a84ffbd4": {
-      "name": "actionItem",
-      "value": {
-        "provider": "gitlab",
-        "source": {
-          "checksSummary": {
-            "failed": 0,
-            "neutral": 0,
-            "passed": 0,
-            "pending": 0,
-            "state": "none",
-            "total": 0
-          },
-          "id": "gitlab:issue:4",
-          "labels": ["bug"],
-          "number": 4,
-          "projectRef": "group/project",
-          "repoId": "repo-1",
-          "state": "opened",
-          "type": "issue"
-        },
-        "title": "A GitLab issue"
-      },
-      "sent": 1
     },
     "f09795d68134": {
       "name": "gitlab.workItemDetails#1",
@@ -902,10 +848,45 @@
         "provider": "gitlab"
       }
     },
-    "fd373ee8144d": {
-      "name": "detailError",
-      "value": "transport failure",
-      "sent": 1
+    "f461061bfc92": {
+      "name": "detailPayload",
+      "value": {
+        "assignees": [],
+        "body": "body",
+        "comments": [],
+        "labels": ["bug"],
+        "pipelineJobs": [],
+        "provider": "gitlab"
+      }
+    },
+    "f8c6ce51db00": {
+      "name": "items",
+      "value": [
+        {
+          "provider": "gitlab",
+          "source": {
+            "checksSummary": {
+              "failed": 0,
+              "neutral": 0,
+              "passed": 0,
+              "pending": 0,
+              "state": "none",
+              "total": 0
+            },
+            "id": "gitlab:issue:4",
+            "labels": ["bug"],
+            "mergeable": "MERGEABLE",
+            "number": 4,
+            "projectRef": "group/project",
+            "repoId": "repo-1",
+            "reviewDecision": "approved",
+            "reviewerCount": 0,
+            "state": "opened",
+            "type": "issue"
+          },
+          "title": "A GitLab issue"
+        }
+      ]
     }
   },
   "recording": {
@@ -921,13 +902,13 @@
           },
           "state": "f2d8814a60b2",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "a11900db0941",
-            "d6522427a24c",
-            "e8f33a90ab1d",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "f461061bfc92",
+            "3383a335299c",
+            "f8c6ce51db00",
+            "91a1c8142e23"
           ]
         }
       },
@@ -941,11 +922,11 @@
           },
           "state": "f24316a2872c",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "d2190faefc97",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "dc8cf3af41bf",
+            "91a1c8142e23"
           ]
         }
       },
@@ -959,11 +940,11 @@
           },
           "state": "f24316a2872c",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "d2190faefc97",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "dc8cf3af41bf",
+            "91a1c8142e23"
           ]
         }
       },
@@ -977,13 +958,13 @@
           },
           "state": "5672ba1c0594",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "3b439a0be8e6",
-            "ee64a84ffbd4",
-            "8c13b62e947f",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "9cc074ee9e5f",
+            "14aea668686d",
+            "5e427a730c1a",
+            "91a1c8142e23"
           ]
         }
       },
@@ -997,13 +978,13 @@
           },
           "state": "5672ba1c0594",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "3b439a0be8e6",
-            "ee64a84ffbd4",
-            "8c13b62e947f",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "9cc074ee9e5f",
+            "14aea668686d",
+            "5e427a730c1a",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1017,13 +998,13 @@
           },
           "state": "5672ba1c0594",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "3b439a0be8e6",
-            "ee64a84ffbd4",
-            "8c13b62e947f",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "9cc074ee9e5f",
+            "14aea668686d",
+            "5e427a730c1a",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1037,11 +1018,11 @@
           },
           "state": "9b89e6739339",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "6985c6cf3587",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "1553e3419a3d",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1055,11 +1036,11 @@
           },
           "state": "db0c674d34f9",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "8832c17871d2",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "3b01c25bcd45",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1073,11 +1054,11 @@
           },
           "state": "7ed24390e683",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "490069b5b08d",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "0edfe9d32732",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1091,11 +1072,11 @@
           },
           "state": "ed88b2b061f9",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "fd373ee8144d",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "468cc28b676c",
+            "91a1c8142e23"
           ]
         }
       },
@@ -1109,11 +1090,11 @@
           },
           "state": "db0c674d34f9",
           "effects": [
-            "9bd1de5d9753",
-            "9d6ce9f28401",
-            "56d172ecd2fe",
-            "8832c17871d2",
-            "1867a9df681c"
+            "7d341b2cb946",
+            "3b01c25bcd45",
+            "7d21147e56c1",
+            "3b01c25bcd45",
+            "91a1c8142e23"
           ]
         }
       }
