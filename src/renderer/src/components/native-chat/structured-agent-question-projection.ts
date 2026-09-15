@@ -110,12 +110,7 @@ function projectQuestions(items: readonly AgentJournalRenderItem[]): {
     }
     const projection = projectItem(item)
     rows.push({ item, projection, turn })
-    if (
-      turn &&
-      item.body.kind === 'question' &&
-      item.body.resolution.state === 'pending' &&
-      projection.questionKey
-    ) {
+    if (turn && item.body.kind === 'question' && projection.questionKey) {
       let questions = questionsByTurn.get(turn)
       if (!questions) {
         questionsByTurn.set(turn, (questions = new Map()))

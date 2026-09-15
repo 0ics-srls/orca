@@ -118,14 +118,21 @@ describe('structured agent session ask-row projection', () => {
     ])
   })
 
-  it('keeps a resolved question and its matching tool call visible', () => {
+  it('folds a settled matching tool call into its resolved question receipt', () => {
     const turn = item('turn', { kind: 'turn', turnId: 'turn', state: 'completed' })
-    const call = item('ask', {
+    const firstCall = item('ask-1', {
       kind: 'tool-call',
       name: 'AskUserQuestion',
       input: { questions: [{ question: 'Which branch?' }] },
       state: 'completed',
       output: { head: 'main', byteLength: 4, truncated: false, digest: 'a' }
+    })
+    const secondCall = item('ask-2', {
+      kind: 'tool-call',
+      name: 'AskUserQuestion',
+      input: { questions: [{ question: 'Which branch?' }] },
+      state: 'completed',
+      output: { head: 'main', byteLength: 4, truncated: false, digest: 'b' }
     })
     const question = item('q', {
       kind: 'question',
@@ -134,10 +141,11 @@ describe('structured agent session ask-row projection', () => {
       resolution: { ...PENDING, state: 'resolved', selectedOptionId: 'main' }
     })
 
-    expect(projectStructuredQuestionMessages([turn, call, question]).map((row) => row.id)).toEqual([
-      'ask',
-      'q'
-    ])
+    expect(
+      projectStructuredQuestionMessages([turn, firstCall, secondCall, question]).map(
+        (row) => row.id
+      )
+    ).toEqual(['ask-2', 'q'])
   })
 
   it('counts adjacent pending questions and preserves each independently settled answer', () => {
