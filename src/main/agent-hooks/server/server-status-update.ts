@@ -22,6 +22,8 @@ import { isStaleGrokTurnEnd } from './server-grok-status-rules'
 import { isToolProgressWorkingAfterInterrupt } from './server-status-identity'
 import { AgentHookServerStatusApplication } from './server-status-application'
 import { prepareLaunchMembershipPayload } from './server-launch-membership-payload'
+import { resolveAgentStatusBinding } from './server-status-binding'
+import { preserveCodexRootContext } from './server-status-context'
 
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
   protected applyNormalizedStatus(
@@ -31,6 +33,20 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
   ): EnrichedAgentHookEventPayload {
+    const binding = resolveAgentStatusBinding({
+      payload,
+      previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
+      resolver: this.executionBindingResolver
+    })
+    if (binding.suppress && binding.previous) {
+      return binding.previous
+    }
+    payload = binding.payload
+    const previousBeforeIdentity = binding.previous
+    if (binding.replacement) {
+      // A replacement run is a new subject even when the pane slot is reused.
+      this.state.lastStatusByPaneKey.delete(payload.paneKey)
+    }
     if (payload.hookEventName === 'UserPromptSubmit') {
       // Why: the prompt boundary is authoritative even when text is unchanged; its next OSC working row must not inherit the prior cron/background turn stamp.
       this.activeHookTurnCompletedAtByPaneKey.delete(payload.paneKey)
@@ -38,7 +54,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     let previous = this.state.lastStatusByPaneKey.get(payload.paneKey) as
       | EnrichedAgentHookEventPayload
       | undefined
-    const rowBefore = mutationBefore ?? previous
+    const rowBefore = mutationBefore ?? previousBeforeIdentity ?? previous
     const membershipOwnedPayload = prepareLaunchMembershipPayload({
       payload,
       origin,
@@ -95,29 +111,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
             )
           }
         : membershipOwnedPayload
-    const previousCodexRoot =
-      stateReconciledPayload.payload.agentType === 'codex' &&
-      stateReconciledPayload.toolAgentId &&
-      previous?.payload.agentType === 'codex'
-        ? previous
-        : undefined
-    const preservedProviderSession = !stateReconciledPayload.providerSession
-      ? previousCodexRoot?.providerSession
-      : undefined
-    const preservedRootModel = !stateReconciledPayload.payload.model
-      ? previousCodexRoot?.payload.model
-      : undefined
-    // Why: an SSH relay restart forgets root-only fields; child hooks must not erase durable resume/model identity.
-    const rootContextPreservingPayload =
-      preservedProviderSession || preservedRootModel
-        ? {
-            ...stateReconciledPayload,
-            ...(preservedProviderSession ? { providerSession: preservedProviderSession } : {}),
-            payload: preservedRootModel
-              ? { ...stateReconciledPayload.payload, model: preservedRootModel }
-              : stateReconciledPayload.payload
-          }
-        : stateReconciledPayload
+    const rootContextPreservingPayload = preserveCodexRootContext(stateReconciledPayload, previous)
     const boundaryReconciledPrevious = invalidateClaudeChildOnlyBoundary(
       previous,
       rootContextPreservingPayload

@@ -15,8 +15,13 @@ import type {
 } from './server-types'
 import { toAgentStatusIpcPayload } from './server-status-identity'
 import { AgentHookServerState } from './server-state'
+import type { AgentStatusExecutionBindingResolver } from '../agent-status-execution-binding-resolver'
 
 export abstract class AgentHookServerListeners extends AgentHookServerState {
+  setExecutionBindingResolver(resolver: AgentStatusExecutionBindingResolver | null): void {
+    this.executionBindingResolver = resolver
+  }
+
   /**
    * Notified once per process when repeated hook POSTs are cut off mid-body (#11217).
    * Why: the listener fails open on every request error, so without this the only symptom is

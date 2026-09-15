@@ -27,6 +27,58 @@ afterEach(() => {
 })
 
 describe('AgentHookServer ingestTerminalStatus', () => {
+  it('retains a verified subject while accepting a mixed-version event without a claim', () => {
+    const server = new AgentHookServer()
+    server.setExecutionBindingResolver((candidate) =>
+      candidate.reported.runId === 'run-a' && candidate.reported.executionId === 'execution-a'
+        ? { runId: 'run-a', attachment: { executionId: 'execution-a' }, role: 'root' }
+        : null
+    )
+
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'claude',
+        worktreeId: 'repo::/tmp/worktree',
+        reportedExecutionBinding: { runId: 'run-a', executionId: 'execution-a' },
+        payload: { state: 'working', prompt: 'mixed versions', agentType: 'claude' }
+      },
+      'conn-1'
+    )
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'claude',
+        worktreeId: 'repo::/tmp/worktree',
+        reportedExecutionBinding: { runId: 'run-old', executionId: 'execution-old' },
+        payload: { state: 'done', prompt: 'stale owner', agentType: 'claude' }
+      },
+      'conn-1'
+    )
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      runId: 'run-a',
+      executionId: 'execution-a',
+      state: 'working',
+      prompt: 'mixed versions'
+    })
+
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'claude',
+        worktreeId: 'repo::/tmp/worktree',
+        payload: { state: 'done', prompt: 'mixed versions', agentType: 'claude' }
+      },
+      'conn-1'
+    )
+
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      runId: 'run-a',
+      executionId: 'execution-a',
+      state: 'done'
+    })
+  })
+
   it('keeps hook monitoring mode across an equivalent OSC ping until a hook clears it', () => {
     const server = new AgentHookServer()
 
