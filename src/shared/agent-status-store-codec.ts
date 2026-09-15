@@ -50,7 +50,7 @@ function isRevision(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0
 }
 
-export function isAgentStatusStoreValueWithinSerializedLimit(value: unknown): boolean {
+function isWithinSerializedLimit(value: unknown): boolean {
   try {
     return !measureUtf8ByteLength(JSON.stringify(value), {
       stopAfterBytes: AGENT_STATUS_STORE_LIMITS.serializedBytes
@@ -153,7 +153,7 @@ export function parseAgentStatusStoreMutation(value: unknown): AgentStatusStoreM
     'tombstones'
   ]
   if (
-    !isAgentStatusStoreValueWithinSerializedLimit(value) ||
+    !isWithinSerializedLimit(value) ||
     !isRecord(value) ||
     !hasOnlyKeys(value, [], optionalKeys) ||
     Object.keys(value).length === 0
@@ -239,7 +239,7 @@ export function parseAgentStatusStoreSnapshot(value: unknown): AgentStatusStoreS
     'tombstones'
   ]
   if (
-    !isAgentStatusStoreValueWithinSerializedLimit(value) ||
+    !isWithinSerializedLimit(value) ||
     !isRecord(value) ||
     !hasOnlyKeys(value, keys) ||
     value.version !== AGENT_STATUS_STORE_SNAPSHOT_VERSION ||

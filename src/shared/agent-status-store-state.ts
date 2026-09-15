@@ -21,7 +21,6 @@ import {
   type AgentStatusTombstoneRecord
 } from './agent-status-store-contract'
 import {
-  isAgentStatusStoreValueWithinSerializedLimit,
   parseAgentStatusStoreSnapshot,
   parseAgentStatusTombstoneRecord
 } from './agent-status-store-codec'
@@ -34,6 +33,7 @@ import {
   parseAgentStatusParentRecord,
   type AgentStatusParentRecord
 } from './agent-status-store-parent'
+import { isAgentStatusStoreSnapshotWithinByteLimit } from './agent-status-store-snapshot-budget'
 import { deserializeAgentStatusSubject, serializeAgentStatusSubject } from './agent-status-subject'
 
 export type AgentStatusStoreState = {
@@ -182,9 +182,7 @@ export function validateAgentStatusStoreState(state: AgentStatusStoreState): boo
       return false
     }
   }
-  return isAgentStatusStoreValueWithinSerializedLimit(
-    snapshotCandidateFromAgentStatusStoreState(state)
-  )
+  return isAgentStatusStoreSnapshotWithinByteLimit(state)
 }
 
 export function snapshotFromAgentStatusStoreState(

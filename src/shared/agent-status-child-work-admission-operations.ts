@@ -2,8 +2,7 @@ import { serializeAgentChildWorkAliasKey } from './agent-status-child-work-alias
 import {
   AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX,
   agentChildWorkFencesEqual,
-  type AgentChildWorkId,
-  type AgentChildWorkRecord
+  type AgentChildWorkId
 } from './agent-status-child-work'
 import {
   agentChildWorkAliasesForChild,
@@ -21,8 +20,7 @@ import type {
   AgentChildWorkAdoptRequest,
   AgentChildWorkAnnounceRequest,
   AgentChildWorkReparentRequest,
-  AgentChildWorkResumeRequest,
-  AgentChildWorkStopRequest
+  AgentChildWorkResumeRequest
 } from './agent-status-child-work-admission'
 import {
   parseAgentChildWorkInput,
@@ -84,6 +82,9 @@ export function announceAgentChildWork(
     const child = findAgentChildWork(store, existingId)
     if (!child) {
       return rejectAgentChildWorkAdmission('ambiguous')
+    }
+    if (!agentChildWorkFencesEqual(child.invocation, fence)) {
+      return rejectAgentChildWorkAdmission('stale-invocation')
     }
     const aliases = buildAgentChildWorkAliases(
       parent,
@@ -219,11 +220,13 @@ export function resumeAgentChildWork(
     }
   ].slice(-AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX)
   const retainedFences = [nextFence, ...previousInvocations.map((entry) => entry.fence)]
+  const nextAliasKeys = new Set(aliases.map(serializeAgentChildWorkAliasKey))
   const removeAliases = agentChildWorkAliasesForChild(store, child.childWorkId)
     .filter(
       (alias) => !retainedFences.some((fence) => agentChildWorkFencesEqual(alias.fence, fence))
     )
     .map(serializeAgentChildWorkAliasKey)
+    .filter((key) => !nextAliasKeys.has(key))
   const resumed = buildAgentChildWork(
     request,
     child.childWorkId,
@@ -282,21 +285,4 @@ export function reparentAgentChildWork(
         oldAliases.map(serializeAgentChildWorkAliasKey)
       )
     : rejectAgentChildWorkAdmission('invalid')
-}
-
-export function authorizeAgentChildWorkStop(
-  store: AgentStatusStore,
-  request: AgentChildWorkStopRequest
-): AgentChildWorkRecord | null {
-  const child = findAgentChildWork(store, request.childWorkId)
-  if (
-    !child ||
-    !agentStatusSubjectsEqual(child.parent, request.parent) ||
-    !agentChildWorkFencesEqual(child.invocation, request.expectedFence) ||
-    child.membership !== 'live' ||
-    child.stoppable !== true
-  ) {
-    return null
-  }
-  return child
 }

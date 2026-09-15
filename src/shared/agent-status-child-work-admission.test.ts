@@ -189,14 +189,15 @@ describe('agent child-work admission', () => {
       generation <= AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 2;
       generation += 1
     ) {
+      const reusesOldestAlias = generation === AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 2
       expect(
         admission.resume({
           ...announce(parent, {
             aliases: [
               {
-                segmentId: `segment-${generation}`,
+                segmentId: reusesOldestAlias ? 'segment-1' : `segment-${generation}`,
                 aliasKind: 'task_id',
-                alias: `task-${generation}`
+                alias: reusesOldestAlias ? 'task-1' : `task-${generation}`
               }
             ],
             observedAt: 10 + generation
@@ -213,7 +214,40 @@ describe('agent child-work admission', () => {
 
     const aliases = store.getAliasesForChild('child-1')
     expect(aliases).toHaveLength(AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 1)
-    expect(aliases.some((entry) => entry.alias === 'task-1')).toBe(false)
+    expect(aliases.some((entry) => entry.fence.generation === 1)).toBe(false)
+    expect(aliases.find((entry) => entry.alias === 'task-1')?.fence.generation).toBe(
+      AGENT_CHILD_WORK_INVOCATION_HISTORY_MAX + 2
+    )
+  })
+
+  it('rejects delayed observations resolved through a previous invocation alias', () => {
+    const parent = subject()
+    const { admission, store } = setup([parent])
+    expect(admission.announce(announce(parent)).accepted).toBe(true)
+    expect(
+      admission.resume({
+        ...announce(parent, {
+          aliases: [{ segmentId: 'segment-2', aliasKind: 'task_id', alias: 'task-2' }],
+          observedAt: 20
+        }),
+        childWorkId: 'child-1',
+        expectedFence: { invocationId: 'invocation-1', generation: 1 },
+        nextFence: { invocationId: 'invocation-2', generation: 2 }
+      })
+    ).toMatchObject({ accepted: true, childWorkId: 'child-1' })
+    const before = store.getSnapshot()
+
+    expect(
+      admission.announce(
+        announce(parent, {
+          state: 'done',
+          membership: 'settled',
+          outcome: 'succeeded',
+          observedAt: 30
+        })
+      )
+    ).toEqual({ accepted: false, reason: 'stale-invocation' })
+    expect(store.getSnapshot()).toEqual(before)
   })
 
   it('mints a distinct id for proven reuse and rejects delayed predecessor updates and stops', () => {

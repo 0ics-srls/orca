@@ -63,11 +63,24 @@ function removeFact(state: AgentStatusStoreState, key: string, revision: number)
   addTombstone(state, 'fact', key, revision)
 }
 
-function removeChild(state: AgentStatusStoreState, childWorkId: string, revision: number): void {
+function removeChild(
+  state: AgentStatusStoreState,
+  childWorkId: string,
+  revision: number,
+  removedChildWorkIds: Set<string>
+): void {
   state.children.delete(childWorkId)
   addTombstone(state, 'child', childWorkId, revision)
+  removedChildWorkIds.add(childWorkId)
+}
+
+function removeAliasesForChildren(
+  state: AgentStatusStoreState,
+  removedChildWorkIds: ReadonlySet<string>,
+  revision: number
+): void {
   for (const [key, alias] of state.aliases) {
-    if (alias.childWorkId === childWorkId) {
+    if (removedChildWorkIds.has(alias.childWorkId)) {
       removeAlias(state, key, revision)
     }
   }
@@ -76,14 +89,15 @@ function removeChild(state: AgentStatusStoreState, childWorkId: string, revision
 function removeParent(
   state: AgentStatusStoreState,
   subject: AgentStatusSubject,
-  revision: number
+  revision: number,
+  removedChildWorkIds: Set<string>
 ): void {
   const key = serializeAgentStatusSubject(subject)
   state.parents.delete(key)
   addTombstone(state, 'parent', key, revision)
   for (const child of state.children.values()) {
     if (agentStatusSubjectsEqual(child.parent, subject)) {
-      removeChild(state, child.childWorkId, revision)
+      removeChild(state, child.childWorkId, revision, removedChildWorkIds)
     }
   }
   for (const [factMapKey, fact] of state.facts) {
@@ -96,18 +110,19 @@ function removeParent(
 function applyExplicitTombstone(
   state: AgentStatusStoreState,
   tombstone: { entity: AgentStatusTombstoneEntity; key: string },
-  revision: number
+  revision: number,
+  removedChildWorkIds: Set<string>
 ): boolean {
   if (tombstone.entity === 'parent') {
     const subject = deserializeAgentStatusSubject(tombstone.key)
     if (!subject) {
       return false
     }
-    removeParent(state, subject, revision)
+    removeParent(state, subject, revision, removedChildWorkIds)
     return true
   }
   if (tombstone.entity === 'child') {
-    removeChild(state, tombstone.key, revision)
+    removeChild(state, tombstone.key, revision, removedChildWorkIds)
   } else if (tombstone.entity === 'alias') {
     if (!deserializeAgentChildWorkAliasKey(tombstone.key)) {
       return false
@@ -209,11 +224,12 @@ export function applyAgentStatusStoreMutation(
 ): AgentStatusStoreState | null {
   const next = cloneAgentStatusStoreState(current)
   next.revision = revision
+  const removedChildWorkIds = new Set<string>()
   if (mutation.removeParent) {
-    removeParent(next, mutation.removeParent, revision)
+    removeParent(next, mutation.removeParent, revision, removedChildWorkIds)
   }
   for (const childWorkId of mutation.removeChildren ?? []) {
-    removeChild(next, childWorkId, revision)
+    removeChild(next, childWorkId, revision, removedChildWorkIds)
   }
   for (const key of mutation.removeAliases ?? []) {
     if (!deserializeAgentChildWorkAliasKey(key)) {
@@ -225,10 +241,11 @@ export function applyAgentStatusStoreMutation(
     removeFact(next, agentStatusFactMapKey(identity), revision)
   }
   for (const tombstone of mutation.tombstones ?? []) {
-    if (!applyExplicitTombstone(next, tombstone, revision)) {
+    if (!applyExplicitTombstone(next, tombstone, revision, removedChildWorkIds)) {
       return null
     }
   }
+  removeAliasesForChildren(next, removedChildWorkIds, revision)
   if (mutation.parent && !upsertParent(next, mutation.parent, revision)) {
     return null
   }

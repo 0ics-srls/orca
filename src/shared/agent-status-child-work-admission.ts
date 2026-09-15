@@ -13,10 +13,10 @@ import type {
 import {
   adoptAgentChildWork,
   announceAgentChildWork,
-  authorizeAgentChildWorkStop,
   reparentAgentChildWork,
   resumeAgentChildWork
 } from './agent-status-child-work-admission-operations'
+import { authorizeAgentChildWorkStop } from './agent-status-child-work-stop'
 import type { AgentStatusStore } from './agent-status-store'
 import type { AgentStatusSubject } from './agent-status-subject'
 
