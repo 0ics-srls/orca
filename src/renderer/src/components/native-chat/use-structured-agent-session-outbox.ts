@@ -83,11 +83,7 @@ export function useStructuredAgentSessionOutbox(args: {
     const next = current.map((entry) =>
       entry.state === 'dispatching' ? { ...entry, state: 'queued' as const } : entry
     )
-    if (
-      sessionChanged ||
-      next.some((entry, index) => entry !== current[index]) ||
-      next.length !== current.length
-    ) {
+    if (sessionChanged || next.some((entry, index) => entry !== current[index])) {
       outboxRef.current = next
       setOutbox(next)
       writeOutbox(sessionId, next)

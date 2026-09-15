@@ -228,9 +228,6 @@ export function evictAgentSessionOwner(args: {
 }): AgentSessionRecord {
   const { record } = args
   assertFence(record.lease, args.expectedFence)
-  if (record.lease.settlementRetryRequired) {
-    throw new Error('agent_session_ownership_unknown')
-  }
   const adjudication = adjudicateAgentSessionRestart({
     lease: record.lease,
     probe: args.probe,
@@ -251,6 +248,8 @@ export function evictAgentSessionOwner(args: {
     throw new Error('agent_session_ownership_unknown')
   }
   const settlementRequired = args.journalSettlement === 'required'
+  const priorSettlementRequired = record.lease.settlementRetryRequired === true
+  const preservePriorSettlement = priorSettlementRequired && !settlementRequired
   return withLease(record, {
     ...record.lease,
     runtimeFence: adjudication.nextFence,
@@ -261,12 +260,17 @@ export function evictAgentSessionOwner(args: {
     claimStatus: 'released',
     lastRenewedAt: args.now,
     handoffOperationId: null,
-    deathEvidence: adjudication.evidence,
-    settlementRetryRequired: settlementRequired ? true : undefined,
+    // A pending settlement belongs to an earlier generation. Keep its evidence when this
+    // eviction intentionally owes no new journal work; a required eviction supersedes it with a
+    // single retry covering both generations.
+    deathEvidence: preservePriorSettlement ? record.lease.deathEvidence : adjudication.evidence,
+    settlementRetryRequired: settlementRequired || priorSettlementRequired ? true : undefined,
     settlementRetryId: settlementRequired
       ? agentSessionRestartEvictionSettlementId(record.lease, adjudication)
-      : undefined,
-    settlementRetryFence: settlementRequired ? record.lease.runtimeFence : undefined
+      : record.lease.settlementRetryId,
+    settlementRetryFence: settlementRequired
+      ? record.lease.runtimeFence
+      : record.lease.settlementRetryFence
   })
 }
 

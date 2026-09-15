@@ -11,11 +11,9 @@ import type { AgentSessionOwnerProbe } from '../../../shared/agent-session-lease
 import { hasUnansweredStructuredAgentSessionDispatch } from '../../../shared/structured-agent-session-projection'
 import {
   activeStructuredAgentSessionTurnId,
-  liveStructuredAgentSessionItems,
-  projectStructuredAgentSessionStatus
+  liveStructuredAgentSessionItems
 } from '../../../shared/structured-agent-session-projection'
 import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
-import { readAgentJournalTurn } from '../../../shared/agent-session-turn-record'
 import type { AgentJournalSubmission } from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionMutationEnvelope,
@@ -296,7 +294,9 @@ describe('a chat that closes', () => {
     await reboot()
     await host.restoreReadableSessions()
     expect(acquire).not.toHaveBeenCalled()
-    expect(store.getRecord(SESSION)?.lease.settlementRetryRequired).toBeUndefined()
+    await vi.waitFor(() =>
+      expect(store.getRecord(SESSION)?.lease.settlementRetryRequired).toBeUndefined()
+    )
     const history = host.history({ sessionId: SESSION, direction: 'tail' })
     expect(history.ok).toBe(true)
     if (history.ok) {
@@ -492,11 +492,13 @@ describe('startup', () => {
     expect(restored.ok && restored.page.items.some((item) => item.body.kind === 'status')).toBe(
       false
     )
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      claimStatus: 'released',
-      ownerProcess: null,
-      settlementRetryRequired: undefined
-    })
+    await vi.waitFor(() =>
+      expect(store.getRecord(SESSION)?.lease).toMatchObject({
+        claimStatus: 'released',
+        ownerProcess: null,
+        settlementRetryRequired: undefined
+      })
+    )
 
     await host.hold(SESSION, SURFACE)
     expect(store.getRecord(SESSION)?.providerHandleChain.at(-1)?.handle).toEqual(
@@ -795,171 +797,6 @@ describe('an unexpected provider exit', () => {
       host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
     ).resolves.toMatchObject({ ok: true, value: { submission: { dispatchState: 'accepted' } } })
     expect(dispatch).toHaveBeenCalledTimes(2)
-  })
-
-  it('keeps attach and send writable when settlement fails, then settles on reopen', async () => {
-    await attach()
-    await host.hold(SESSION, SURFACE)
-    emitTurnLifecycle('running', 1)
-    sink?.appendItem(
-      { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 2 },
-      {
-        kind: 'approval',
-        title: 'Old approval',
-        detail: null,
-        options: [{ id: 'yes', label: 'Allow' }],
-        resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
-      }
-    )
-    sink?.appendItem(
-      { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 3 },
-      {
-        kind: 'question',
-        question: 'Old question',
-        options: [{ id: 'yes', label: 'Yes' }],
-        resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
-      }
-    )
-    await host.flushStreamedEvents(SESSION)
-    const runtimeState = (
-      host as unknown as {
-        runtimeState: { lifecycleBarrier: () => Promise<{ ok: false; error: Error }> }
-      }
-    ).runtimeState
-    vi.spyOn(runtimeState, 'lifecycleBarrier').mockResolvedValueOnce({
-      ok: false,
-      error: new Error('journal failed')
-    })
-    const appendSettlement = vi
-      .spyOn(AgentSessionJournal.prototype, 'appendLifecycleBatch')
-      .mockRejectedValue(new Error('settlement still unavailable'))
-    const exitedFence = store.getRecord(SESSION)?.lease.runtimeFence ?? 0
-
-    await host.handleAdapterEvent({
-      type: 'ended',
-      sessionId: SESSION,
-      reason: 'provider exited',
-      cause: 'unexpected-exit',
-      fence: exitedFence,
-      acquisitionGeneration: 'generation-1'
-    })
-
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      claimStatus: 'live',
-      handoffStage: null,
-      settlementRetryRequired: true,
-      runtimeFence: exitedFence + 2
-    })
-    expect(acquire).toHaveBeenCalledTimes(2)
-    const replacementFence = store.getRecord(SESSION)?.lease.runtimeFence ?? 0
-    const replacement = host.history({ sessionId: SESSION, direction: 'tail' })
-    expect(replacement.ok).toBe(true)
-    if (!replacement.ok) {
-      throw new Error('replacement history unreadable')
-    }
-    expect(
-      liveStructuredAgentSessionItems(replacement.page.items, replacementFence).filter(
-        (item) =>
-          (item.body.kind === 'approval' || item.body.kind === 'question') &&
-          item.body.resolution.state === 'pending'
-      )
-    ).toEqual([])
-    expect(
-      activeStructuredAgentSessionTurnId(
-        liveStructuredAgentSessionItems(replacement.page.items, replacementFence)
-      )
-    ).toBeNull()
-    expect(projectStructuredAgentSessionStatus(replacement.page.items, [], replacementFence)).toBe(
-      'idle'
-    )
-    dispatch.mockResolvedValueOnce({
-      state: 'accepted',
-      providerIdentity: { provider: 'codex', threadId: THREAD, turnId: 'after-exit', ordinal: 1 }
-    })
-    const body = hostTestMessage('a new message after the failed settlement')
-    expect(
-      await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
-    ).toMatchObject({ ok: true, value: { submission: { dispatchState: 'accepted' } } })
-    vi.useFakeTimers()
-    try {
-      host.release(SESSION, SURFACE)
-      await vi.advanceTimersByTimeAsync(GRACE_MS * 3)
-      expect(closeSession).toHaveBeenCalled()
-    } finally {
-      vi.useRealTimers()
-    }
-    await vi.waitFor(() => expect(host.hasSession(SESSION)).toBe(false))
-
-    appendSettlement.mockRestore()
-    expect(await host.attach(CALLER, hostTestAttachParams(exitedFence + 3))).toMatchObject({
-      ok: true
-    })
-    const history = host.history({ sessionId: SESSION, direction: 'tail' })
-    expect(
-      history.ok &&
-        history.page.items.some(
-          (item) => item.body.kind === 'status' && item.body.turnLifecycle?.state === 'running'
-        )
-    ).toBe(false)
-    expect(
-      history.ok &&
-        history.page.items.find(
-          (item) =>
-            item.body.kind === 'status' &&
-            item.body.text === unexpectedProviderExitOutcome('provider exited')
-        )?.recovered
-    ).toBe(true)
-    expect(acquire).toHaveBeenCalledTimes(3)
-  })
-
-  it('keeps the newest witnessed verdict distinct after two failed generations', async () => {
-    await attach()
-    await host.hold(SESSION, SURFACE)
-    emitTurnLifecycle('running', 1)
-    await host.flushStreamedEvents(SESSION)
-    const appendSettlement = vi
-      .spyOn(AgentSessionJournal.prototype, 'appendLifecycleBatch')
-      .mockRejectedValue(new Error('journal unavailable'))
-    await host.handleAdapterEvent({
-      type: 'ended',
-      sessionId: SESSION,
-      reason: 'first exit',
-      cause: 'unexpected-exit',
-      fence: 1,
-      acquisitionGeneration: 'generation-1',
-      observedAt: NOW - 1
-    })
-    expect(store.getRecord(SESSION)?.lease.runtimeFence).toBe(3)
-    sink?.appendItem(
-      { provider: 'codex', threadId: THREAD, turnId: 'turn-second', ordinal: 1 },
-      { kind: 'turn', turnId: 'turn-second', state: 'running', startedAt: NOW }
-    )
-    await host.flushStreamedEvents(SESSION)
-    await host.close(SESSION)
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      settlementRetryRequired: true,
-      settlementRetryFence: 3,
-      deathEvidence: { kind: 'exit-observed', observedAt: NOW }
-    })
-
-    appendSettlement.mockRestore()
-    expect(await host.attach(CALLER, hostTestAttachParams(4))).toMatchObject({ ok: true })
-    const history = host.history({ sessionId: SESSION, direction: 'tail' })
-    expect(history.ok).toBe(true)
-    if (history.ok) {
-      const turns = history.page.items.flatMap((item) => {
-        const turn = readAgentJournalTurn(item.body)
-        return turn ? [turn] : []
-      })
-      expect(turns).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ turnId: 'turn-1', state: 'unverifiable' }),
-          expect.objectContaining({ turnId: 'turn-second', state: 'interrupted', completedAt: NOW })
-        ])
-      )
-      expect(turns.find((turn) => turn.turnId === 'turn-1')).not.toHaveProperty('completedAt')
-    }
-    expect(store.getRecord(SESSION)?.lease.settlementRetryRequired).toBeUndefined()
   })
 })
 

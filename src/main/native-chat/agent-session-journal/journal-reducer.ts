@@ -21,8 +21,12 @@ import { structuredAgentSessionPayloadFingerprint } from '../../../shared/struct
 import { journalItemRevisionIsStale } from './journal-item-revision'
 import type { JournalRow } from './journal-row-schema'
 import { dispatchRejectionWasTransportWriteFailure } from '../../../shared/structured-agent-session-dispatch-rejection'
+import { rememberAppliedSettlementId } from './journal-applied-settlements'
 
-export const MAX_JOURNAL_APPLIED_SETTLEMENT_IDS = 4_096
+export {
+  MAX_JOURNAL_APPLIED_SETTLEMENT_IDS,
+  rememberAppliedSettlementId
+} from './journal-applied-settlements'
 
 export type JournalReducerState = {
   sessionId: string
@@ -120,20 +124,6 @@ export function applyJournalRow(state: JournalReducerState, row: JournalRow): vo
     return
   }
   applyDispatch(state, row)
-}
-
-export function rememberAppliedSettlementId(
-  state: JournalReducerState,
-  settlementId: string
-): void {
-  state.appliedSettlementIds.add(settlementId)
-  while (state.appliedSettlementIds.size > MAX_JOURNAL_APPLIED_SETTLEMENT_IDS) {
-    const oldest = state.appliedSettlementIds.values().next().value
-    if (oldest === undefined) {
-      return
-    }
-    state.appliedSettlementIds.delete(oldest)
-  }
 }
 
 export function resolveJournalItemId(

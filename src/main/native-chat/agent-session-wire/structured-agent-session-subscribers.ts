@@ -23,6 +23,11 @@ import {
   createAgentSessionCatchUpReader,
   readAgentSessionHydrationPage
 } from './agent-session-history-page'
+import {
+  publishAgentSessionBackgroundTasks,
+  publishAgentSessionHandoff,
+  type AgentSessionSubscriber
+} from './agent-session-subscriber-notifications'
 
 export type AgentSessionSubscriberEmit = (event: AgentSessionSubscribeEvent) => void
 export type AgentSessionSubscribeInput = {
@@ -30,15 +35,6 @@ export type AgentSessionSubscribeInput = {
   sessionId: string
   emit: AgentSessionSubscriberEmit
   cursor?: AgentJournalCursor
-}
-
-type Subscriber = {
-  id: string
-  sessionId: string
-  emit: AgentSessionSubscriberEmit
-  cursor: AgentJournalCursor
-  fence: number
-  commands?: AgentSessionSlashCommand[] | null
 }
 
 export type AgentSessionSubscribersHooks = {
@@ -54,7 +50,7 @@ export type AgentSessionSubscribersHooks = {
 }
 
 export class AgentSessionSubscribers {
-  private readonly bySession = new Map<string, Map<string, Subscriber>>()
+  private readonly bySession = new Map<string, Map<string, AgentSessionSubscriber>>()
   private readonly activityBySession = new Map<string, AgentSessionTurnActivity>()
 
   constructor(private readonly hooks: AgentSessionSubscribersHooks = {}) {}
@@ -72,14 +68,14 @@ export class AgentSessionSubscribers {
     backgroundTasks?: AgentSessionBackgroundTaskState | null
   }): () => void {
     const liveCursor = input.journal.cursor()
-    const subscriber: Subscriber = {
+    const subscriber: AgentSessionSubscriber = {
       id: input.id,
       sessionId: input.sessionId,
       emit: input.emit,
       cursor: input.cursor ?? { epoch: liveCursor.epoch, sequence: 0 },
       fence: input.fence
     }
-    const session = this.bySession.get(input.sessionId) ?? new Map<string, Subscriber>()
+    const session = this.bySession.get(input.sessionId) ?? new Map<string, AgentSessionSubscriber>()
     session.set(input.id, subscriber)
     this.bySession.set(input.sessionId, session)
 
@@ -189,29 +185,16 @@ export class AgentSessionSubscribers {
   }
 
   handoff(sessionId: string, fence: number, handoff: AgentSessionHandoffStatus): void {
-    const hostNow = this.now()
-    let projectedPage: AgentSessionHistoryPage | undefined
-    for (const subscriber of this.subscribers(sessionId)) {
-      const journal = subscriber.fence !== fence ? this.hooks.readJournal?.(sessionId) : undefined
-      if (journal) {
-        const page =
-          projectedPage ?? this.ownerPage(sessionId, readAgentSessionHydrationPage(journal, fence))
-        projectedPage = page
-        this.emit(subscriber, { type: 'snapshot', sessionId, page, fence, handoff, hostNow })
-        subscriber.cursor = page.liveCursor ?? page.window.nextCursor
-        subscriber.fence = fence
-        continue
-      }
-      this.emit(subscriber, {
-        type: 'batch',
-        sessionId,
-        batch: emptyAgentSessionBatch(subscriber.cursor),
-        fence,
-        handoff,
-        hostNow
-      })
-      subscriber.fence = fence
-    }
+    publishAgentSessionHandoff({
+      sessionId,
+      fence,
+      handoff,
+      hostNow: this.now(),
+      subscribers: this.subscribers(sessionId),
+      readJournal: (id) => this.hooks.readJournal?.(id),
+      projectPage: (id, page) => this.ownerPage(id, page),
+      emit: (subscriber, event) => this.emit(subscriber, event)
+    })
   }
 
   backgroundTasks(
@@ -219,26 +202,22 @@ export class AgentSessionSubscribers {
     state: AgentSessionBackgroundTaskState | null,
     fence: number
   ): void {
-    const hostNow = this.now()
-    for (const subscriber of this.subscribers(sessionId)) {
-      this.emit(subscriber, {
-        type: 'batch',
-        sessionId,
-        batch: emptyAgentSessionBatch(subscriber.cursor),
-        fence,
-        backgroundTasks: state,
-        hostNow
-      })
-      subscriber.fence = fence
-    }
+    publishAgentSessionBackgroundTasks({
+      sessionId,
+      fence,
+      state,
+      hostNow: this.now(),
+      subscribers: this.subscribers(sessionId),
+      emit: (subscriber, event) => this.emit(subscriber, event)
+    })
   }
 
-  private subscribers(sessionId: string): Subscriber[] {
+  private subscribers(sessionId: string): AgentSessionSubscriber[] {
     return [...(this.bySession.get(sessionId)?.values() ?? [])]
   }
 
   private deliver(
-    subscriber: Subscriber,
+    subscriber: AgentSessionSubscriber,
     journal: AgentSessionJournal,
     hostNow: number,
     handoff?: AgentSessionHandoffStatus,
@@ -325,12 +304,12 @@ export class AgentSessionSubscribers {
     return this.hooks.projectPage?.(sessionId, page) ?? page
   }
 
-  private isActive = (subscriber: Subscriber): boolean =>
+  private isActive = (subscriber: AgentSessionSubscriber): boolean =>
     this.bySession.get(subscriber.sessionId)?.get(subscriber.id) === subscriber
 
   /** A dead transport cannot be allowed to turn a durable mutation into an
    *  unknown outcome or poison every later publication. */
-  private emit(subscriber: Subscriber, event: AgentSessionSubscribeEvent): void {
+  private emit(subscriber: AgentSessionSubscriber, event: AgentSessionSubscribeEvent): void {
     try {
       const commands = this.hooks.readCommands?.(subscriber.sessionId) ?? null
       const includeCommands =
@@ -344,7 +323,7 @@ export class AgentSessionSubscribers {
     }
   }
 
-  private drop(subscriber: Subscriber): void {
+  private drop(subscriber: AgentSessionSubscriber): void {
     const session = this.bySession.get(subscriber.sessionId)
     session?.delete(subscriber.id)
     if (session?.size === 0) {

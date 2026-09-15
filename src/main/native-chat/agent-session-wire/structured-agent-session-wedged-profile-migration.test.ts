@@ -180,7 +180,7 @@ function isAcquirable(lease: NonNullable<ReturnType<typeof store.getRecord>>['le
   )
 }
 
-async function seedRunningTurn(provider: 'codex' | 'claude' = 'codex'): Promise<void> {
+async function seedRunningTurn(provider: 'codex' | 'claude' = 'codex', fence = 13): Promise<void> {
   const journal = await openAgentSessionJournal({
     identity: {
       sessionId: SESSION,
@@ -199,7 +199,7 @@ async function seedRunningTurn(provider: 'codex' | 'claude' = 'codex'): Promise<
       ? { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 0 }
       : { provider: 'claude', sessionId: 'provider-session-alpha-1', uuid: 'uuid-running' },
     { kind: 'turn', turnId: 'turn-1', state: 'running', startedAt: NOW - 5_000 },
-    { fence: 13 }
+    { fence }
   )
   await journal.close()
 }
@@ -300,12 +300,14 @@ describe('already-wedged profiles become usable on load', () => {
       startedAt: NOW - 5_000,
       recovered: true
     })
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      claimStatus: 'live',
-      handoffStage: null,
-      settlementRetryRequired: undefined,
-      settlementRetryId: undefined
-    })
+    await vi.waitFor(() =>
+      expect(store.getRecord(SESSION)?.lease).toMatchObject({
+        claimStatus: 'live',
+        handoffStage: null,
+        settlementRetryRequired: undefined,
+        settlementRetryId: undefined
+      })
+    )
   })
 
   it('settles an observed-exit latch through attach before the boot sweep', async () => {
@@ -333,12 +335,14 @@ describe('already-wedged profiles become usable on load', () => {
       completedAt: NOW - 1_000,
       recovered: true
     })
-    expect(store.getRecord(SESSION)?.lease).toMatchObject({
-      claimStatus: 'live',
-      handoffStage: null,
-      settlementRetryRequired: undefined,
-      settlementRetryId: undefined
-    })
+    await vi.waitFor(() =>
+      expect(store.getRecord(SESSION)?.lease).toMatchObject({
+        claimStatus: 'live',
+        handoffStage: null,
+        settlementRetryRequired: undefined,
+        settlementRetryId: undefined
+      })
+    )
   })
 
   it('admits a legacy settlement latch even while its journal batch keeps failing', async () => {
@@ -351,7 +355,7 @@ describe('already-wedged profiles become usable on load', () => {
       observedAt: NOW - 1_000
     }
     await seedStore(record)
-    await seedRunningTurn()
+    await seedRunningTurn('codex', 12)
     const failedBatch = vi
       .spyOn(AgentSessionJournal.prototype, 'appendLifecycleBatch')
       .mockRejectedValue(new Error('settlement unavailable'))
@@ -361,10 +365,28 @@ describe('already-wedged profiles become usable on load', () => {
     expect(store.getRecord(SESSION)?.lease).toMatchObject({
       claimStatus: 'live',
       handoffStage: null,
-      settlementRetryRequired: undefined
+      settlementRetryRequired: true,
+      settlementRetryId: `provider-exit:${SESSION}:12:generation-1`
     })
     expect(activeStructuredAgentSessionTurnId(restoredJournal().snapshot().items)).toBe('turn-1')
     failedBatch.mockRestore()
+
+    await host.flushAllStreamedEvents()
+    store = await AgentSessionRecordStore.open({ directory: join(root, 'store'), hostId: 'local' })
+    openHost()
+    await host.restoreReadableSessions()
+
+    expect(store.getRecord(SESSION)?.lease).toMatchObject({
+      settlementRetryRequired: undefined,
+      settlementRetryId: undefined
+    })
+    expect(turnLifecycle('turn-1')).toEqual({
+      turnId: 'turn-1',
+      state: 'interrupted',
+      startedAt: NOW - 5_000,
+      completedAt: NOW - 1_000,
+      recovered: true
+    })
   })
 
   it('marks a running turn left behind by a released lease unverifiable on a cold acquire', async () => {
