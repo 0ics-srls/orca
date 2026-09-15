@@ -9266,6 +9266,13 @@
               "tunnel": "tunnel",
               "routing": "routing",
               "network": "network"
+            },
+            "userAgent": {
+              "identity": "identity",
+              "userAgent": "user agent",
+              "native": "native",
+              "cleaned": "cleaned",
+              "restart": "restart"
             }
           },
           "use": {

@@ -2776,9 +2776,6 @@
         "probeAgain": "Check again",
         "probeSkippedHosts": "Hosts routed without the connection check (Try anyway):",
         "title": "Browse through SSH workspace hosts"
-      },
-      "userAgent": {
-        "description": "Choose the user agent for every browser profile and page. Native mode disables Google sign-in. Changes take effect after a restart."
       }
     }
   },

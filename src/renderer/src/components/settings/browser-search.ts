@@ -1,6 +1,7 @@
 import type { SettingsSearchEntry } from './settings-search'
 import { translate } from '@/i18n/i18n'
 import { translateSearchKeyword } from './settings-search-keywords'
+import { getBrowserUserAgentSearchEntry } from './browser-user-agent-search'
 import {
   getBrowserLinkRoutingDescription,
   getTerminalLinkActionsDescription,
@@ -288,20 +289,6 @@ export function getBrowserPaneSearchEntries(
         )
       ]
     },
-    {
-      title: translate('settings.browser.userAgent.title', 'Browser identity'),
-      description: translate(
-        'settings.browser.userAgent.description',
-        'Choose the user agent for every browser profile and page. Changes take effect after a restart.'
-      ),
-      keywords: [
-        ...translateSearchKeyword('auto.components.settings.browser.search.2d2d995c58', 'browser'),
-        'identity',
-        'user agent',
-        'native',
-        'cleaned',
-        'restart'
-      ]
-    }
+    getBrowserUserAgentSearchEntry()
   ]
 }
