@@ -4,11 +4,10 @@
  * type. That is what a mount fixture actually is — deliberately partial, because it carries only
  * what the mounted hook reads, yet still a subset of the real thing.
  *
- * Type-only, and here rather than outside the recorder because `mobile/scripts/rpc-recording.mts`
- * fences every path under `mobile/src` except this directory, so a file outside it fails recording
- * as an unpinned product source. It sits in the engine rather than under `adapters/` because the
- * mount helper that uses it is copied per module and the seam forbids one module importing another,
- * so this is what stops eleven copies of a recursive conditional type from existing.
+ * Here rather than outside the recorder because `mobile/scripts/rpc-recording.mts` fences every
+ * path under `mobile/src` except this directory, so a file outside it fails recording as an unpinned
+ * product source. In the engine rather than under `adapters/` because the seam forbids one adapter
+ * importing another, and every adapter may import the engine.
  *
  * Functions pass through whole: a fixture stub like `async () => 0` stands in for a callback, and
  * making its parameters optional would accept a stub the hook cannot call.
@@ -26,3 +25,14 @@ export type PartialRecorderFixture<T> = T extends (...args: never[]) => unknown
       : T extends object
         ? { readonly [Key in keyof T]?: PartialRecorderFixture<T[Key]> | null }
         : T
+
+/**
+ * The recorder supplies only the members the mounted action reads; completing the fixture into a
+ * full domain object would invent data no scenario observes. `NoInfer` makes the target the
+ * parameter's type rather than the fixture's, so a member the real type does not have is an error
+ * here instead of a silently wrong recording.
+ */
+export function mountFixture<T>(value: PartialRecorderFixture<NoInfer<T>>): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: checked as a deep subset of T above; the recorder supplies every member the action reads.
+  return value as T
+}
