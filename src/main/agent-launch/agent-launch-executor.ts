@@ -1,10 +1,13 @@
 /**
- * The one place an agent is actually started.
+ * The one place an agent is actually started — for the surfaces moved onto it, which today is
+ * `agent.launch` alone. Orchestration dispatch, mobile create, CLI create and the desktop agent
+ * tab each still start agents their own way; moving them here is later stack work.
  *
- * Every launch surface routes through here: an orchestration dispatch, a mobile create, a CLI
- * create, and (once the renderer stops deciding for itself) a desktop agent tab. What those
- * surfaces duplicated was never the decision — that already lived in `agent-launch-mode` — but the
- * *sequencing* around it, and the sequencing is where the bug was:
+ * The mode decision is duplicated rather than shared: `agent-launch-mode` is a surface-neutral
+ * second copy of orchestration's `orchestration-worker-start-mode`, which is unchanged and still
+ * the one orchestration uses, with nothing enforcing agreement between them. That cutover is later
+ * stack work too. What this module adds is the *sequencing*, and the sequencing is where the bug
+ * was:
  *
  *   create the worktree agent-first  ->  its startup terminal IS the agent
  *                                    ->  the structured branch below it is unreachable
@@ -31,6 +34,7 @@ import type {
 import { withoutReservedAgentCreateFields } from '../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
+import { isDefinitiveAgentSessionCreateRefusal } from '../../shared/agent-session-definitive-refusal'
 import {
   decideAgentLaunchMode,
   readAgentLaunchModeSettings,
@@ -54,6 +58,17 @@ export type AgentLaunchSurfaceFactory = {
     agent: TuiAgent
     options?: Readonly<Record<string, unknown>>
   }): Promise<{ handle: string; warning?: string }>
+}
+
+/** A structured create refusal that proves no session was committed, so the launch may downgrade. */
+export class AgentLaunchStructuredSessionRefusedError extends Error {
+  readonly code: string
+
+  constructor(code: string, message: string) {
+    super(message)
+    this.name = 'AgentLaunchStructuredSessionRefusedError'
+    this.code = code
+  }
 }
 
 /** Creating the workspace, when the intent asks for one. Injected so orchestration keeps recording
@@ -116,7 +131,7 @@ export async function executeAgentLaunch(
   }
 
   execution.onStage?.('mode_settle')
-  const settled = await resolveAgentLaunchModeOnHost(
+  let settled = await resolveAgentLaunchModeOnHost(
     runtime,
     preflight,
     placed.worktreeId,
@@ -125,12 +140,50 @@ export async function executeAgentLaunch(
   )
 
   execution.onStage?.('surface_create')
-  const outcome = await createSurface(execution, placed.worktreeId, settled)
+  let outcome: AgentLaunchResult['outcome']
+  try {
+    outcome = await createSurface(execution, placed.worktreeId, settled)
+  } catch (error) {
+    // The structured create path distinguishes a definitive pre-commit refusal from an unknown
+    // outcome. Only the former is safe to replace with a terminal in the same workspace; retrying
+    // after an unknown attach outcome could create two agents.
+    if (
+      settled.mode !== 'structured' ||
+      !(error instanceof AgentLaunchStructuredSessionRefusedError) ||
+      !isDefinitiveAgentSessionCreateRefusal(error.code)
+    ) {
+      throw error
+    }
+    settled = downgradeAgentLaunchModeForStructuredRefusal(settled, vocabulary)
+    outcome = await execution.surfaces
+      .createTerminalAgent({
+        worktreeId: placed.worktreeId,
+        agent: intent.agent,
+        ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
+      })
+      .then((terminal) => ({
+        kind: 'terminal' as const,
+        handle: terminal.handle,
+        ...(terminal.warning ? { warning: terminal.warning } : {})
+      }))
+  }
   return {
     outcome,
     worktreeId: placed.worktreeId,
     receipt: settled,
     ...promptReceipt(intent)
+  }
+}
+
+function downgradeAgentLaunchModeForStructuredRefusal(
+  receipt: AgentLaunchModeReceipt,
+  vocabulary: AgentLaunchModeVocabulary
+): AgentLaunchModeReceipt {
+  return {
+    mode: 'terminal',
+    preferred: receipt.preferred,
+    reason: 'structured_unsupported_on_host',
+    detail: `Your default is a structured chat session, but the host refused to create one here; started ${vocabulary.terminal} instead.`
   }
 }
 

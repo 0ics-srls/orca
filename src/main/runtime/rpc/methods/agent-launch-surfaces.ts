@@ -12,7 +12,10 @@ import { randomUUID } from 'node:crypto'
 import { narrowStructuredLaunchSeedOptions } from '../../../../shared/native-chat-session-option-defaults'
 import { createStructuredAgentSessionOperationId } from '../../../../shared/structured-agent-session-mutation'
 import { structuredAgentSessionTabId } from '../../../../shared/structured-agent-session-projection'
-import type { AgentLaunchSurfaceFactory } from '../../../agent-launch/agent-launch-executor'
+import {
+  AgentLaunchStructuredSessionRefusedError,
+  type AgentLaunchSurfaceFactory
+} from '../../../agent-launch/agent-launch-executor'
 import { getStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
 import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
 import type { RpcContext } from '../core'
@@ -47,7 +50,10 @@ export function agentLaunchSurfaceFactory(context: RpcContext): AgentLaunchSurfa
         activate: true
       })
       if (!created.ok) {
-        throw new Error(created.refusal.message)
+        throw new AgentLaunchStructuredSessionRefusedError(
+          created.refusal.code,
+          created.refusal.message
+        )
       }
       return {
         sessionId: created.value.sessionId,
