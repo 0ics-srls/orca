@@ -93,15 +93,18 @@ export function transportStatusMountAdapters(
                 : [candidate('direct'), candidate('relay')]
           // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the adapter supplies the two members racePairingCandidates reads.
           const settled = race(candidates as Parameters<typeof race>[0])
-          settled.then(
+          // The winner carries a live client, which the recorder cannot observe; the path it chose
+          // is the whole decision, so settle on that and let the rejection through unchanged.
+          return settled.then(
             (winner) => {
               outcome = winner.path
+              return winner.path
             },
             (error: unknown) => {
               outcome = `failed: ${error instanceof Error ? error.message : String(error)}`
+              throw error
             }
           )
-          return settled
         },
         state: () => ({ outcome }),
         dispose: () => {}

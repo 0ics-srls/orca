@@ -9749,7 +9749,7 @@
       ]
     },
     {
-      "id": "transport-pairing-race-direct-wins",
+      "id": "transport-pairing-race-relay-completes-first",
       "operation": "transport.pairing-race",
       "version": 1,
       "family": "transport.pairing-race",
@@ -9799,7 +9799,62 @@
           }
         },
         {
-          "checkpoint": "direct-wins-the-tie"
+          "checkpoint": "relay-wins-when-it-completes-first"
+        }
+      ]
+    },
+    {
+      "id": "transport-pairing-race-direct-completes-first",
+      "operation": "transport.pairing-race",
+      "version": 1,
+      "family": "transport.pairing-race",
+      "sites": ["mobile/src/transport/pairing-candidate-race.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "race",
+          "id": "race"
+        },
+        {
+          "bind": "direct-status",
+          "request": "status.get#1",
+          "params": {
+            "$undefined": true
+          }
+        },
+        {
+          "bind": "relay-status",
+          "request": "status.get#2",
+          "params": {
+            "$undefined": true
+          }
+        },
+        {
+          "complete": "direct-status",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "capabilities": []
+            }
+          }
+        },
+        {
+          "complete": "relay-status",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "capabilities": []
+            }
+          }
+        },
+        {
+          "checkpoint": "direct-wins-when-it-completes-first"
         }
       ]
     },
