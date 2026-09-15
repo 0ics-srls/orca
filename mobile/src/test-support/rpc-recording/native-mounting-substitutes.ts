@@ -12,13 +12,28 @@ import * as zod from 'zod'
  *
  * So the table separates reference from use. `react` and `zod` are the real libraries — pure, and
  * React additionally has to be the one instance the test renderer drives, and `@noble/hashes` is
- * the same pure-JS digest the product would run on a device. `expo-crypto` is routed
- * through the Web Crypto the recording scheduler already pins, which is both deterministic and
- * what the library itself does off-device. The two secret stores resolve to members that throw when
- * *called*: a default-dependency object may name them, and a recording that actually reaches native
- * storage still fails loudly rather than recording a fiction.
+ * the same pure-JS digest the product would run on a device. `expo-crypto` is routed through the
+ * Web Crypto the recording scheduler already pins, which is both deterministic and what the library
+ * itself does off-device.
+ *
+ * Every substitute that stands in for part of a module keeps the default's shape: a member nobody
+ * listed throws on the read rather than resolving to `undefined`, because an undefined native
+ * member is not a recording of anything — the product would call it. The secret store is the one
+ * module whose members exist but throw when *called*: a default-dependency object may name them,
+ * and a recording that reaches native storage fails there instead. Whether that failure is visible
+ * depends on the caller. `host-app-version-store.ts` catches and degrades to its unread state,
+ * which is what it does on a device too.
  */
-const NATIVE_STORAGE_MODULES = ['@react-native-async-storage/async-storage', 'expo-secure-store']
+function partialNativeModule(module: string, members: Record<string, unknown>): unknown {
+  return new Proxy(members, {
+    get: (target, key) => {
+      if (typeof key === 'string' && !(key in target)) {
+        throw new Error(`Unsubstituted native member: ${module}.${key}`)
+      }
+      return target[key as string]
+    }
+  })
+}
 
 function unusableNativeStore(module: string): unknown {
   return new Proxy(
@@ -35,22 +50,22 @@ function unusableNativeStore(module: string): unknown {
 }
 
 export function nativeMountingSubstitutes(): Map<string, unknown> {
-  const substitutes = new Map<string, unknown>([
+  return new Map<string, unknown>([
     ['react', React],
     ['zod', zod],
-    ['@noble/hashes/sha256', { sha256 }],
+    ['@noble/hashes/sha256', partialNativeModule('@noble/hashes/sha256', { sha256 })],
     [
       'expo-crypto',
-      {
+      partialNativeModule('expo-crypto', {
         getRandomBytes: (length: number) =>
           globalThis.crypto.getRandomValues(new Uint8Array(length))
-      }
+      })
     ],
     // One pinned platform per recording; `platform` is golden provenance, not a compared field.
-    ['react-native', { Platform: { OS: 'ios' } }]
+    ['react-native', partialNativeModule('react-native', { Platform: { OS: 'ios' } })],
+    [
+      '@react-native-async-storage/async-storage',
+      unusableNativeStore('@react-native-async-storage/async-storage')
+    ]
   ])
-  for (const module of NATIVE_STORAGE_MODULES) {
-    substitutes.set(module, unusableNativeStore(module))
-  }
-  return substitutes
 }
