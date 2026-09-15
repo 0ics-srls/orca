@@ -39,51 +39,53 @@ export function agentLaunchWorkspaceFactory(
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: already validated by `AgentLaunch`; the executor only removed the reserved agent fields, so the rest of the payload is the parsed shape.
       const params = create as WorktreeCreateParams
       const { runtime } = context
-      return runtime.dedupeWorktreeCreate(params.repo, params.clientMutationId, async () => {
-        const repo = await runtime.showRepo(params.repo)
-        const automationProvenance = resolveAutomationWorkspaceProvenance({
-          authority: runtime,
-          repoSelector: params.repo,
-          repo,
-          request: params.automationProvenanceRequest
-        })
-        // Reserved before creation so a retry can recover; a failed attempt has to release it.
-        try {
-          const result = await runtime.createManagedWorktree({
-            ...buildManagedWorktreeCreateArgs(
-              { ...params, ...(startupAgent ? { startupAgent } : {}) },
-              {
-                automationProvenance,
-                cliProvenance: buildCliWorkspaceProvenance(params.cliProvenanceRequest, {
-                  startupAgent: agent,
-                  createdAt: Date.now()
-                }),
-                creatorProvenance: resolveRpcWorkspaceCreatorProvenance(context)
-              },
-              context.clientKind ? { clientKind: context.clientKind } : {}
-            ),
-            // The launch owns the agent whichever surface it settles on, so the workspace records
-            // it even when no startup terminal was created for it.
-            createdWithAgent: agent,
-            // Structured sessions have no startup command to sequence behind setup. Provision the
-            // setup terminal synchronously and attach a completion token so the launch can wait
-            // before creating the chat surface.
-            awaitTerminalProvisioning: true,
-            observeSetupCompletion: true
-          })
-          if (!startupAgent) {
-            await waitForStructuredSetup(runtime, result.setupReceipt)
-          }
-          finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
-          return {
-            worktreeId: result.worktree.id,
-            startupTerminalHandle: result.startupTerminal?.handle
-          }
-        } catch (error) {
-          releaseAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
-          throw error
-        }
+      // Replay identity is held around the WHOLE launch, in `agent.launch`'s handler, not here:
+      // memoizing this half alone let a replay reuse the worktree and then build a second surface
+      // inside it. Wrapping both levels on the same key would deadlock — the inner call would be
+      // handed the outer's in-flight promise, which is waiting on it.
+      const repo = await runtime.showRepo(params.repo)
+      const automationProvenance = resolveAutomationWorkspaceProvenance({
+        authority: runtime,
+        repoSelector: params.repo,
+        repo,
+        request: params.automationProvenanceRequest
       })
+      // Reserved before creation so a retry can recover; a failed attempt has to release it.
+      try {
+        const result = await runtime.createManagedWorktree({
+          ...buildManagedWorktreeCreateArgs(
+            { ...params, ...(startupAgent ? { startupAgent } : {}) },
+            {
+              automationProvenance,
+              cliProvenance: buildCliWorkspaceProvenance(params.cliProvenanceRequest, {
+                startupAgent: agent,
+                createdAt: Date.now()
+              }),
+              creatorProvenance: resolveRpcWorkspaceCreatorProvenance(context)
+            },
+            context.clientKind ? { clientKind: context.clientKind } : {}
+          ),
+          // The launch owns the agent whichever surface it settles on, so the workspace records
+          // it even when no startup terminal was created for it.
+          createdWithAgent: agent,
+          // Structured sessions have no startup command to sequence behind setup. Provision the
+          // setup terminal synchronously and attach a completion token so the launch can wait
+          // before creating the chat surface.
+          awaitTerminalProvisioning: true,
+          observeSetupCompletion: true
+        })
+        if (!startupAgent) {
+          await waitForStructuredSetup(runtime, result.setupReceipt)
+        }
+        finishAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
+        return {
+          worktreeId: result.worktree.id,
+          startupTerminalHandle: result.startupTerminal?.handle
+        }
+      } catch (error) {
+        releaseAutomationWorkspaceProvenanceRequest(params.automationProvenanceRequest)
+        throw error
+      }
     }
   }
 }
