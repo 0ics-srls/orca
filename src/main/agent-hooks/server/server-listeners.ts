@@ -14,9 +14,10 @@ import type {
   StatusDropListener
 } from './server-types'
 import { toAgentStatusIpcPayload } from './server-status-identity'
-import { AgentHookServerState } from './server-state'
+import { AgentHookServerTurnLifecycle } from './server-turn-lifecycle'
 
-export abstract class AgentHookServerListeners extends AgentHookServerState {
+/** Status/listener fanout built on top of the host-local turn lifecycle adapter. */
+export abstract class AgentHookServerListeners extends AgentHookServerTurnLifecycle {
   /**
    * Notified once per process when repeated hook POSTs are cut off mid-body (#11217).
    * Why: the listener fails open on every request error, so without this the only symptom is
@@ -128,8 +129,8 @@ export abstract class AgentHookServerListeners extends AgentHookServerState {
   }
 
   /** Multi-subscriber tap on pane status clears. Unlike `setPaneStatusClearListener`
-   *  (a single slot the main window owns and drops on close) this survives window
-   *  teardown and exists at all under headless serve, which never opens one. */
+   * (a single slot the main window owns and drops on close) this survives window teardown
+   * and exists at all under headless serve, which never opens one. */
   subscribePaneStatusClear(listener: (clear: AgentStatusClearIpcPayload) => void): () => void {
     this.paneStatusClearListeners.add(listener)
     return () => {
@@ -151,7 +152,7 @@ export abstract class AgentHookServerListeners extends AgentHookServerState {
   }
 
   /** Snapshot of cached statuses in IPC shape. Used by `agentStatus:getSnapshot` after tabs hydrate so the
-   *  dashboard catches up on hook events that fired during startup. */
+   * dashboard catches up on hook events that fired during startup. */
   getStatusSnapshot(): AgentStatusIpcPayload[] {
     return Array.from(this.state.lastStatusByPaneKey.values(), (entry) =>
       toAgentStatusIpcPayload(entry as EnrichedAgentHookEventPayload)

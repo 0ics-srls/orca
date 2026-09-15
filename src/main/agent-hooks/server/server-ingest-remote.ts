@@ -18,6 +18,10 @@ import { launchTokenHash } from '../../../shared/agent-hook-spool'
 import { parsePaneKey } from '../../../shared/stable-pane-id'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import {
+  normalizeProviderTurnId,
+  readProviderTurnEvidence
+} from '../../../shared/agent-hook-listener/provider-turn-evidence'
+import {
   AGENT_STATUS_LEGACY_UNADVERTISED_PEER_CAPABILITIES,
   canAdmitLegacyAgentStatus,
   olderPeerAgentStatusLegacyMode
@@ -40,6 +44,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       hookEventName?: string
       source?: unknown
       providerPromptId?: unknown
+      providerTurnId?: unknown
+      providerTurnTerminal?: unknown
       grokPromptBoundary?: unknown
       compactTrigger?: unknown
       toolUseId?: string
@@ -129,6 +135,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
         : source === 'grok'
           ? normalizeGrokPromptId(envelope.providerPromptId)
           : undefined
+    const providerTurnId = normalizeProviderTurnId(envelope.providerTurnId)
+    const providerTurnTerminal = envelope.providerTurnTerminal === true
     const grokPromptBoundary =
       source === 'grok' && envelope.grokPromptBoundary === true ? true : undefined
     const compactTrigger =
@@ -266,7 +274,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       env: envelope.env,
       expectedEnv: this.env
     })
-    const event: AgentHookEventPayload = {
+    const eventWithoutEvidence: AgentHookEventPayload = {
       paneKey,
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
@@ -277,6 +285,8 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       promptInteractionKey,
       hookEventName,
       providerPromptId,
+      providerTurnId,
+      ...(providerTurnTerminal ? { providerTurnTerminal: true } : {}),
       grokPromptBoundary,
       compactTrigger,
       toolUseId,
@@ -292,6 +302,11 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
           : undefined,
       payload: normalizedPayload
     }
+    const providerEvidence = readProviderTurnEvidence({ event: eventWithoutEvidence }).evidence
+    const event: AgentHookEventPayload =
+      providerEvidence.length > 0
+        ? { ...eventWithoutEvidence, providerTurnEvidence: providerEvidence }
+        : eventWithoutEvidence
     this.recordCurrentAuthorityObservation(event)
     this.applyNormalizedStatus(
       event,

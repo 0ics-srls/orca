@@ -139,6 +139,9 @@ export abstract class AgentHookServerCleanup extends AgentHookServerAuthorityFen
       const previous = this.state.lastStatusByPaneKey.get(resolvedPaneKey) as
         | EnrichedAgentHookEventPayload
         | undefined
+      // A certified process exit is an execution verdict, not a successful turn completion. Feed
+      // it to the bound lifecycle before retiring the pane's legacy projection.
+      this.observeAgentExecutionVerdict(resolvedPaneKey, 'exited')
       this.clearPaneState(resolvedPaneKey, { emitStatusRowMutation: false })
       if (retained) {
         admitLegacyAgentStatus(

@@ -25,6 +25,8 @@ export function buildRelayHookEnvelope(
     promptInteractionKey: event.promptInteractionKey,
     hookEventName: event.hookEventName,
     providerPromptId: event.providerPromptId,
+    providerTurnId: event.providerTurnId,
+    providerTurnTerminal: event.providerTurnTerminal,
     grokPromptBoundary: event.grokPromptBoundary,
     compactTrigger: event.compactTrigger,
     toolUseId: event.toolUseId,

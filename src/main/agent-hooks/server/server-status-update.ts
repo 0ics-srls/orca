@@ -30,6 +30,10 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
   ): EnrichedAgentHookEventPayload {
+    // Provider evidence is reduced independently of the legacy row projection. A terminal record
+    // or interrupt acknowledgement must not be lost merely because a presentation guard rejects
+    // the accompanying status payload.
+    this.applyProviderTurnEvidence(payload)
     if (payload.hookEventName === 'UserPromptSubmit') {
       // Why: the prompt boundary is authoritative even when text is unchanged; its next OSC working row must not inherit the prior cron/background turn stamp.
       this.activeHookTurnCompletedAtByPaneKey.delete(payload.paneKey)

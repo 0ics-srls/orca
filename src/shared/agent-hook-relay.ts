@@ -87,6 +87,10 @@ export type AgentHookRelayEnvelope = {
   hookEventName?: string
   /** Provider-owned turn identity (Claude UUID or opaque Grok prompt id). */
   providerPromptId?: string
+  /** Provider-owned turn identity when a hook exposes a field other than prompt_id. */
+  providerTurnId?: string
+  /** Provider-owned terminal marker; optional for mixed-version relay peers. */
+  providerTurnTerminal?: boolean
   /** The row belongs to an observed Grok prompt boundary whose opaque id may be absent. */
   grokPromptBoundary?: true
   /** Active Claude compact generation, keyed by provider prompt identity. */
