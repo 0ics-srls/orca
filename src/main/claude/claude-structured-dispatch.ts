@@ -1,34 +1,34 @@
 import { randomUUID } from 'node:crypto'
-import type {
-  AgentJournalItemIdentity,
-  AgentJournalMessageItem
-} from '../../shared/agent-session-journal-types'
+import type { AgentJournalMessageItem } from '../../shared/agent-session-journal-types'
 import type { AgentSessionDispatchOutcome } from '../native-chat/agent-session-wire/structured-agent-session-adapter'
 import {
   claudeHasReplayContent,
   readClaudeMessageEnvelope
 } from './claude-structured-item-translation'
-import type { ClaudeDispatchWaiter, ClaudeSession } from './claude-structured-session-state'
+import type {
+  ClaudeDispatchWaiter,
+  ClaudeLateDispatchOutcome,
+  ClaudeSession
+} from './claude-structured-session-state'
 import { readClaudeFrameString } from './claude-structured-init-proof'
 import {
   claudeDispatchContentKey,
   claudeDispatchInvokesSlashCommand,
   claudeDispatchMessageContent
 } from './claude-structured-dispatch-content'
+import { dispatchWriteOutcomeUnknownReason } from '../native-chat/agent-session-journal/journal-dispatch-doubt-reasons'
 import {
-  dispatchWriteFailureReason,
-  dispatchWriteOutcomeUnknownReason
-} from '../native-chat/agent-session-journal/journal-dispatch-doubt-reasons'
+  DISPATCH_REJECTED_CANCELLED,
+  DISPATCH_REJECTED_QUEUE_FULL,
+  dispatchWriteFailureReason
+} from '../../shared/structured-agent-session-dispatch-rejection'
 import { claudeUserMessageWasProvablyUnwritten } from './claude-agent-sdk-user-message-queue'
 
 const MAX_RETIRED_DISPATCH_WAITERS = 64
 const MAX_ACTIVE_DISPATCH_WAITERS = 64
 
-/** Directly settles provider-proven delivery; the durable replay row independently reconciles it. */
-export type ClaudeLateDispatchSettlement = (input: {
-  clientMessageId: string
-  providerIdentity: AgentJournalItemIdentity
-}) => void
+/** Settles a provider-proven late outcome; replay rows independently reconcile acceptance. */
+export type ClaudeLateDispatchSettlement = (input: ClaudeLateDispatchOutcome) => void
 
 export function resolveClaudeReplayWaiter(
   session: ClaudeSession,
@@ -227,6 +227,34 @@ function forgetWaiter(session: ClaudeSession, waiter: ClaudeDispatchWaiter): voi
   }
 }
 
+export function settleCancelledClaudeDispatchWaiters(
+  session: ClaudeSession,
+  cancelledUuids: readonly string[],
+  onSettledLate?: ClaudeLateDispatchSettlement
+): void {
+  const cancelled = new Set(cancelledUuids)
+  const activeWaiters = session.dispatchWaiters.filter((waiter) => cancelled.has(waiter.sentUuid))
+  const retiredWaiters = session.retiredDispatchWaiters.filter((waiter) =>
+    cancelled.has(waiter.sentUuid)
+  )
+  for (const waiter of activeWaiters) {
+    forgetWaiter(session, waiter)
+    waiter.resolve(null)
+  }
+  for (const waiter of retiredWaiters) {
+    forgetRetiredWaiter(session, waiter)
+  }
+  for (const waiter of [...activeWaiters, ...retiredWaiters]) {
+    if (waiter.clientMessageId) {
+      onSettledLate?.({
+        clientMessageId: waiter.clientMessageId,
+        state: 'rejected',
+        reason: DISPATCH_REJECTED_CANCELLED
+      })
+    }
+  }
+}
+
 function retireWaiter(session: ClaudeSession, waiter: ClaudeDispatchWaiter): void {
   forgetWaiter(session, waiter)
   if (!waiter.retired) {
@@ -263,7 +291,7 @@ export async function dispatchClaudeTurn(
     return { state: 'rejected', reason: (error as Error).message }
   }
   if (session.dispatchWaiters.length >= MAX_ACTIVE_DISPATCH_WAITERS) {
-    return { state: 'rejected', reason: 'claude structured dispatch queue is full' }
+    return { state: 'rejected', reason: DISPATCH_REJECTED_QUEUE_FULL }
   }
   const dispatchSequence = ++session.dispatchSequence
   // Read the sent content, not the journal blocks: only the mapped trailing prompt decides
@@ -299,21 +327,19 @@ export async function dispatchClaudeTurn(
         }
       }
     }
-    const provablyUnwritten = claudeUserMessageWasProvablyUnwritten(error)
-    if (provablyUnwritten) {
+    if (claudeUserMessageWasProvablyUnwritten(error)) {
       forgetWaiter(session, waiter)
       forgetRetiredWaiter(session, waiter)
       waiter.resolve(null)
-    } else if (!waiter.retired) {
+      // The frame was never handed to the SDK's input pump, so this is not doubt:
+      // the message provably did not happen, which is what `rejected` means.
+      return { state: 'rejected', reason: dispatchWriteFailureReason(error) }
+    }
+    if (!waiter.retired) {
       retireWaiter(session, waiter)
       waiter.resolve(null)
     }
-    return {
-      state: 'unknown',
-      reason: provablyUnwritten
-        ? dispatchWriteFailureReason(error)
-        : dispatchWriteOutcomeUnknownReason(error)
-    }
+    return { state: 'unknown', reason: dispatchWriteOutcomeUnknownReason(error) }
   }
   // The write is the admission signal. Awaiting the echo here would block on the
   // turn already running, which is why the deadline this replaces kept declaring
