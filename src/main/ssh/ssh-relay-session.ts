@@ -108,6 +108,10 @@ import {
 } from './ssh-remote-orchestration-post-output'
 import { toSshExecutionHostId, type ExecutionHostId } from '../../shared/execution-host'
 import {
+  isUnsupportedAgentStatusStoreMethod,
+  type AgentStatusStoreNegotiation
+} from './ssh-relay-status-negotiation'
+import {
   SSH_AI_VAULT_LIST_SESSIONS_METHOD,
   SSH_AI_VAULT_LIST_SESSIONS_TIMEOUT_MS,
   SSH_AI_VAULT_RESOLVE_SESSION_TITLES_METHOD,
@@ -301,11 +305,6 @@ function normalizeRelayGracePeriodSeconds(graceTimeSeconds: number | undefined):
 
 function isAgentStatusStoreSnapshot(value: unknown): value is AgentStatusStoreSnapshot {
   return isAgentStatusStoreFrame(value) && value.type === 'snapshot'
-}
-
-function isMissingAgentStatusStoreMethod(error: unknown): boolean {
-  const code = typeof error === 'object' && error !== null ? Reflect.get(error, 'code') : undefined
-  return code === -32601 || code === 'CONNECTION_LOST' || code === 'DISPOSED'
 }
 
 // Why: teardown barriers are independent, so one failing store write must not hide the others —
@@ -1230,7 +1229,7 @@ export class SshRelaySession {
 
     this.wireUpPtyEvents(ptyProvider, mux, providerGeneration)
     const replicatedStatus = await this.wireUpAgentStatusStore(mux, shouldContinue)
-    if (!replicatedStatus) {
+    if (replicatedStatus === 'legacy') {
       this.wireUpAgentHookEvents(mux)
     }
     this.wireUpRemoteWorkspaceEvents(mux)
@@ -1242,15 +1241,15 @@ export class SshRelaySession {
   private async wireUpAgentStatusStore(
     mux: SshChannelMultiplexer,
     shouldContinue?: () => boolean
-  ): Promise<boolean> {
+  ): Promise<AgentStatusStoreNegotiation> {
     this.teardownAgentStatusReplica()
     const replicaStore = this.runtime?.getAgentStatusHostReplicaStore()
     const expectedHostId = toSshExecutionHostId(this.targetId)
     if (!replicaStore) {
-      return false
+      return 'legacy'
     }
     if (shouldContinue && !shouldContinue()) {
-      return false
+      return 'unavailable'
     }
     let snapshot: AgentStatusStoreSnapshot
     try {
@@ -1258,25 +1257,27 @@ export class SshRelaySession {
         capability: AGENT_STATUS_STORE_REPLICA_CAPABILITY
       })
       if (!isAgentStatusStoreSnapshot(result) || result.executionHostId !== expectedHostId) {
-        replicaStore.abandonHost(expectedHostId)
-        return false
+        return 'unavailable'
       }
       snapshot = result
     } catch (error) {
-      if ((!shouldContinue || shouldContinue()) && !mux.isDisposed()) {
+      // A transport failure is a contact loss, not a host inventory statement. Keep the
+      // previous rows unverifiable so reconnect cannot erase the last authoritative view.
+      if (isUnsupportedAgentStatusStoreMethod(error)) {
         replicaStore.abandonHost(expectedHostId)
+        return 'legacy'
       }
-      if (!isMissingAgentStatusStoreMethod(error) && !mux.isDisposed()) {
+      if (!isUnsupportedAgentStatusStoreMethod(error) && !mux.isDisposed()) {
         console.warn(
           `[ssh-relay-session] status store negotiation failed for ${this.targetId}: ${
             error instanceof Error ? error.message : String(error)
           }`
         )
       }
-      return false
+      return 'unavailable'
     }
     if (shouldContinue && !shouldContinue()) {
-      return false
+      return 'unavailable'
     }
     const pendingFrames: AgentStatusStoreFrame[] = []
     let pendingOverflow = false
@@ -1315,19 +1316,24 @@ export class SshRelaySession {
       })
     } catch (error) {
       this.teardownAgentStatusReplica()
-      replicaStore.abandonHost(expectedHostId)
-      if (!isMissingAgentStatusStoreMethod(error) && !mux.isDisposed()) {
+      if (isUnsupportedAgentStatusStoreMethod(error)) {
+        // Only a confirmed old relay may retire the capable projection. A lost request leaves
+        // the prior host membership in place until a complete snapshot or explicit abandon.
+        replicaStore.abandonHost(expectedHostId)
+        return 'legacy'
+      }
+      if (!isUnsupportedAgentStatusStoreMethod(error) && !mux.isDisposed()) {
         console.warn(
           `[ssh-relay-session] status store subscription failed for ${this.targetId}: ${
             error instanceof Error ? error.message : String(error)
           }`
         )
       }
-      return false
+      return 'unavailable'
     }
     if (shouldContinue && !shouldContinue()) {
       this.teardownAgentStatusReplica()
-      return false
+      return 'unavailable'
     }
     const priorHost = replicaStore.getHostSnapshot(expectedHostId)
     const legacyClearFloor =
@@ -1346,7 +1352,7 @@ export class SshRelaySession {
     this.agentStatusReplicaDisposeCleanup = mux.onDispose(() => {
       replicaStore.setContact(expectedHostId, 'unverifiable')
     })
-    return true
+    return 'capable'
   }
 
   private requestAgentStatusReplicaSnapshot(

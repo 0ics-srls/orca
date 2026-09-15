@@ -297,7 +297,6 @@ export class RelayAgentHookServer {
     this.lastEnvelopeMetaByPaneKey.delete(event.paneKey)
     this.lastEnvelopeMetaByPaneKey.set(event.paneKey, { source, env, version })
     this.statusStoreSource.recordEvent(event, previous)
-    evictCachedPanesOverCap(this.state.lastStatusByPaneKey, (key) => this.clearPaneState(key))
     this.forward(buildRelayHookEnvelope(event, source, env, version, options))
   }
 }
