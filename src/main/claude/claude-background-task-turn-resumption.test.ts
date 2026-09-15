@@ -133,4 +133,40 @@ describe('a typed background-task row opens the turn it resumes', () => {
     expect(running).toHaveLength(1)
     expect(projected(items())).toBe('working')
   })
+
+  it('does not reopen a completed turn for a late task revision', () => {
+    const { translator, items } = harness()
+    spawnToolCall(translator)
+    translator.handle(
+      systemFrame('s1', {
+        subtype: 'task_started',
+        task_id: 'late-revision',
+        tool_use_id: TOOL,
+        task_type: 'local_bash',
+        description: 'Wait for the verification verdict',
+        is_backgrounded: true
+      })
+    )
+    translator.handle(
+      systemFrame('s2', {
+        subtype: 'task_notification',
+        task_id: 'late-revision',
+        tool_use_id: TOOL,
+        status: 'completed',
+        summary: 'first run finished'
+      })
+    )
+    settleTurn(translator)
+    expect(projected(items())).toBe('idle')
+
+    translator.handle(
+      systemFrame('s3', {
+        subtype: 'task_progress',
+        task_id: 'late-revision',
+        usage: { total_tokens: 99 }
+      })
+    )
+
+    expect(projected(items())).toBe('idle')
+  })
 })

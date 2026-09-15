@@ -3,12 +3,14 @@ import {
   isSettledBackgroundTaskState
 } from '../../shared/native-chat-background-task-row'
 import type { NativeChatBackgroundTaskBlock } from '../../shared/native-chat-types'
+import type { ClaudeSubagentIds } from './claude-subagent-id-aliases'
 import {
   classifyClaudeBackgroundTaskKind,
   liveClaudeTaskRunState,
   record,
   taskAliasId,
   taskDescription,
+  taskId,
   taskName,
   taskText,
   taskUsageTotalTokens,
@@ -19,6 +21,8 @@ export type ClaudeBackgroundTaskRow = {
   block: NativeChatBackgroundTaskBlock
   lastSerialized: string | null
   toolUseId?: string
+  /** Whether the provider's terminal notification finalized this run. */
+  terminalNotificationReceived: boolean
   /** Which RUN of this task id the row records. 1 for the first. */
   generation: number
 }
@@ -31,6 +35,22 @@ export type ClaudeBackgroundTaskChange = {
   error?: string | undefined
   outputFile?: string | undefined
   tokens?: number | undefined
+}
+
+export function canonicalClaudeBackgroundTaskId(
+  message: Record<string, unknown>,
+  ids: ClaudeSubagentIds
+): string | null {
+  const declared = taskId(message)
+  const toolUseId = claudeBackgroundTaskToolUseId(message)
+  if (declared === null) {
+    const aliased = toolUseId === undefined ? null : ids.canonical(toolUseId)
+    return aliased !== null && aliased !== toolUseId ? aliased : null
+  }
+  if (toolUseId !== undefined) {
+    ids.alias(toolUseId, declared)
+  }
+  return declared
 }
 
 export function claudeBackgroundTaskToolUseId(
@@ -80,6 +100,7 @@ export function newClaudeBackgroundTaskRow(
   const toolUseId = claudeBackgroundTaskToolUseId(message)
   return {
     lastSerialized: null,
+    terminalNotificationReceived: false,
     generation,
     ...(toolUseId === undefined ? {} : { toolUseId }),
     block: {

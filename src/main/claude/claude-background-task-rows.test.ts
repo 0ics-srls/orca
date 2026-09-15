@@ -48,6 +48,7 @@ const FORWARDED_TOOL = 'toolu_01CqPd7y'
 
 function harness(forwarded: readonly string[] = [FORWARDED_TOOL, 'toolu_first', 'toolu_second']) {
   const items: { identity: AgentJournalItemIdentity; body: AgentJournalItemBody }[] = []
+  const turnOpens: number[] = []
   const sink: StructuredAgentSessionEventSink = {
     appendItem: (identity, body) => items.push({ identity, body }),
     appendTombstone: vi.fn(),
@@ -58,6 +59,7 @@ function harness(forwarded: readonly string[] = [FORWARDED_TOOL, 'toolu_first', 
   const rows = new ClaudeBackgroundTaskRows({
     sink,
     isForwardedParentTool: (toolUseId) => forwardedTools.has(toolUseId),
+    openOutputTurn: () => turnOpens.push(1),
     now: () => (clock += 10)
   })
   const keys = (): string[] =>
@@ -70,7 +72,8 @@ function harness(forwarded: readonly string[] = [FORWARDED_TOOL, 'toolu_first', 
     keys,
     forwardedTools,
     latest: () => blockOf(items.at(-1)?.body),
-    latestTwin: () => twinOf(items.at(-1)?.body)
+    latestTwin: () => twinOf(items.at(-1)?.body),
+    turnOpens
   }
 }
 
@@ -326,6 +329,61 @@ describe('claude background task rows', () => {
     expect(latest()).toMatchObject({ state: 'blocked' })
   })
 
+  it('ignores late revisions after a task has reported its outcome', () => {
+    const { rows, items, latest, turnOpens } = harness()
+    rows.observe(START_BASH)
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: START_BASH.task_id,
+      status: 'failed',
+      summary: 'first run failed'
+    })
+    const writes = items.length
+    const opens = turnOpens.length
+
+    rows.observe({
+      type: 'system',
+      subtype: 'task_progress',
+      task_id: START_BASH.task_id,
+      usage: { total_tokens: 99 }
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_updated',
+      task_id: START_BASH.task_id,
+      patch: { error: 'late update' }
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'background_tasks_changed',
+      tasks: [{ task_id: START_BASH.task_id, task_type: 'local_bash', description: 'late roster' }]
+    })
+    rows.observe({ ...START_BASH, description: 'duplicate start' })
+
+    expect(items).toHaveLength(writes)
+    expect(turnOpens).toHaveLength(opens)
+    expect(latest()).toMatchObject({ state: 'blocked', summary: 'first run failed' })
+  })
+
+  it('does not reopen a turn when a settled session receives a late outcome', () => {
+    const { rows, latest, turnOpens } = harness()
+    rows.observe(START_BASH)
+    rows.settleSession()
+    const opens = turnOpens.length
+
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: START_BASH.task_id,
+      status: 'failed',
+      summary: 'late outcome'
+    })
+
+    expect(turnOpens).toHaveLength(opens)
+    expect(latest()).toMatchObject({ state: 'blocked', summary: 'late outcome' })
+  })
+
   it('reopens a settled row when Claude re-announces the same task id with a new tool id', () => {
     const { rows, latest } = harness()
     rows.observe({ ...START_BASH, task_id: 'resume-1', tool_use_id: 'toolu_first' })
@@ -539,6 +597,98 @@ describe('claude background task rows', () => {
     expect(rows.observe({ ...START_BASH, task_id: 'overflow-live' })).toBe(false)
   })
 
+  it('keeps overflow frames on fallback until terminal, then ignores late duplicates', () => {
+    const { rows } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+
+    expect(rows.observe({ ...START_BASH, task_id: 'overflow-fallback' })).toBe(false)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_updated',
+        task_id: 'overflow-fallback',
+        patch: { status: 'failed' }
+      })
+    ).toBe(false)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'overflow-fallback',
+        status: 'failed',
+        summary: 'overflow failed'
+      })
+    ).toBe(false)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_progress',
+        task_id: 'overflow-fallback',
+        usage: { total_tokens: 3 }
+      })
+    ).toBe(true)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'overflow-fallback',
+        status: 'failed',
+        summary: 'duplicate overflow failed'
+      })
+    ).toBe(true)
+  })
+
+  it('preserves a fallback run alias across a duplicate terminal without one', () => {
+    const { rows, latest } = harness([FORWARDED_TOOL, 'toolu_second'])
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+
+    expect(rows.observe({ ...START_BASH, task_id: 'overflow-restart' })).toBe(false)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'overflow-restart',
+        tool_use_id: FORWARDED_TOOL,
+        status: 'completed'
+      })
+    ).toBe(false)
+    expect(
+      rows.observe({
+        type: 'system',
+        subtype: 'task_notification',
+        task_id: 'overflow-restart',
+        status: 'completed'
+      })
+    ).toBe(true)
+
+    // Make a typed slot available for the new invocation. The alias from the
+    // first terminal edge is still needed to distinguish this restart from a
+    // redelivery of the completed fallback run.
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'live-0',
+      status: 'completed'
+    })
+    expect(
+      rows.observe({
+        ...START_BASH,
+        task_id: 'overflow-restart',
+        tool_use_id: 'toolu_second',
+        description: 'second overflow run'
+      })
+    ).toBe(true)
+    expect(latest()).toMatchObject({
+      taskId: 'overflow-restart',
+      state: 'working',
+      label: 'second overflow run'
+    })
+  })
+
   it('bounds foreign-owner memory for tasks rendered elsewhere', () => {
     const { rows } = harness()
     for (let index = 0; index < 600; index += 1) {
@@ -554,6 +704,20 @@ describe('claude background task rows', () => {
     const foreign = Reflect.get(rows, 'foreign')
     expect(foreign).toBeInstanceOf(Map)
     expect(foreign.size).toBeLessThanOrEqual(512)
+  })
+
+  it('bounds fallback ownership memory for capacity-refused tasks', () => {
+    const { rows } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+    for (let index = 0; index < 600; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `overflow-${index}` })
+    }
+
+    const fallback = Reflect.get(rows, 'fallbackTaskIds')
+    expect(fallback).toBeInstanceOf(Set)
+    expect(fallback.size).toBeLessThanOrEqual(512)
   })
 
   it('loses contact rather than claiming an outcome when the provider goes away', () => {

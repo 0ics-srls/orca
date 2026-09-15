@@ -14,6 +14,7 @@ import {
   claudeBackgroundTaskNotificationChange,
   claudeBackgroundTaskPatchChange,
   claudeBackgroundTaskToolUseId,
+  canonicalClaudeBackgroundTaskId,
   isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
   reviseClaudeBackgroundTaskRow,
@@ -21,6 +22,12 @@ import {
   type ClaudeBackgroundTaskChange,
   type ClaudeBackgroundTaskRow
 } from './claude-background-task-row-lifecycle'
+import {
+  ensureClaudeBackgroundTaskRowSlot,
+  rememberBoundedClaudeTaskMap,
+  rememberBoundedClaudeTaskSet,
+  rememberClaudeBackgroundTaskTerminal
+} from './claude-background-task-memory'
 import { writeClaudeBackgroundTaskRow } from './claude-background-task-row-journal'
 import { ClaudeSubagentIds } from './claude-subagent-id-aliases'
 import { isClaudeSubagentTask } from './claude-subagent-task-frames'
@@ -28,6 +35,7 @@ import { isClaudeSubagentTask } from './claude-subagent-task-frames'
 const MAX_TASK_ROWS = 64
 const MAX_FOREIGN_TASK_ROWS = 512
 const MAX_TERMINAL_TASK_IDS = 512
+const MAX_FALLBACK_TASK_IDS = 512
 
 const TASK_SUBTYPES: ReadonlySet<string> = new Set([
   'task_started',
@@ -58,6 +66,9 @@ export class ClaudeBackgroundTaskRows {
    *  overwriting the finished one. Survives the row being evicted. */
   private readonly generations = new Map<string, number>()
   private readonly foreign = new Map<string, ForeignOwner>()
+  /** Tasks that were declined because every typed row slot was live. Their
+   *  later frames must remain visible through the generic fallback. */
+  private readonly fallbackTaskIds = new Set<string>()
   private readonly terminalTaskIds = new Set<string>()
   /** The parent alias for the terminal run, when one was reported. Keeping it
    *  lets an evicted row distinguish a late duplicate start from a genuine
@@ -97,7 +108,7 @@ export class ClaudeBackgroundTaskRows {
     if (typeof message.subtype !== 'string' || !TASK_SUBTYPES.has(message.subtype)) {
       return false
     }
-    const id = this.canonicalId(message)
+    const id = canonicalClaudeBackgroundTaskId(message, this.ids)
     if (id === null) {
       return false
     }
@@ -126,25 +137,30 @@ export class ClaudeBackgroundTaskRows {
     this.rows.clear()
     this.generations.clear()
     this.foreign.clear()
+    this.fallbackTaskIds.clear()
     this.terminalTaskIds.clear()
     this.terminalToolUseIds.clear()
     this.ids.clear()
   }
 
-  private canonicalId(message: Record<string, unknown>): string | null {
-    const declared = readTaskId(message)
-    const toolUseId = claudeBackgroundTaskToolUseId(message)
-    if (declared === null) {
-      const aliased = toolUseId === undefined ? null : this.ids.canonical(toolUseId)
-      return aliased !== null && aliased !== toolUseId ? aliased : null
-    }
-    if (toolUseId !== undefined) {
-      this.ids.alias(toolUseId, declared)
-    }
-    return declared
-  }
-
   private observeStart(id: string, message: Record<string, unknown>): boolean {
+    if (this.fallbackTaskIds.has(id)) {
+      if (this.terminalTaskIds.has(id)) {
+        const previousToolUseId = this.terminalToolUseIds.get(id)
+        const currentToolUseId = claudeBackgroundTaskToolUseId(message)
+        if (
+          previousToolUseId !== undefined &&
+          currentToolUseId !== undefined &&
+          previousToolUseId !== currentToolUseId
+        ) {
+          this.fallbackTaskIds.delete(id)
+        } else {
+          return false
+        }
+      } else {
+        return false
+      }
+    }
     if (message.ambient === true || message.skip_transcript === true) {
       this.rememberForeign(id, 'ambient')
       return true
@@ -169,8 +185,6 @@ export class ClaudeBackgroundTaskRows {
       }
       if (shouldRestartClaudeBackgroundTaskRow(existing, message)) {
         this.openRow(id, message, existing.generation + 1)
-      } else {
-        this.revise(id, claudeBackgroundTaskPatchChange(message))
       }
       return true
     }
@@ -193,7 +207,8 @@ export class ClaudeBackgroundTaskRows {
     if (!this.admitsFirstRun(message)) {
       return true
     }
-    if (!this.ensureRowSlot()) {
+    if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
+      this.rememberFallbackTaskId(id)
       return false
     }
     if (restartedTerminal) {
@@ -224,11 +239,20 @@ export class ClaudeBackgroundTaskRows {
   }
 
   private observeNotification(id: string, message: Record<string, unknown>): boolean {
+    if (this.fallbackTaskIds.has(id)) {
+      this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+      this.fallbackTaskIds.delete(id)
+      return false
+    }
+    const row = this.rows.get(id)
+    if (row && row.terminalNotificationReceived) {
+      return true
+    }
     // Remembered even for a task never admitted: Orca is deliberately stricter
     // than the reference here, which keeps no trace of one. It stops a late
     // announcement from opening a row for work already reported finished.
-    this.rememberTerminalId(id, claudeBackgroundTaskToolUseId(message))
-    if (!this.rows.has(id)) {
+    this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+    if (!row) {
       // Matched on `task_id` alone. A terminal frame for a task that was never
       // admitted names nothing this transcript is tracking, so it yields no
       // row — the forwarded-parent question was already settled at admission
@@ -236,10 +260,22 @@ export class ClaudeBackgroundTaskRows {
       return true
     }
     this.revise(id, claudeBackgroundTaskNotificationChange(message))
+    row.terminalNotificationReceived = true
     return true
   }
 
   private observePatch(id: string, message: Record<string, unknown>): boolean {
+    if (this.fallbackTaskIds.has(id)) {
+      const change = claudeBackgroundTaskPatchChange(message)
+      if (change.state && isSettledBackgroundTaskState(change.state)) {
+        this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
+      }
+      return false
+    }
+    const row = this.rows.get(id)
+    if (row && isSettledBackgroundTaskState(row.block.state)) {
+      return true
+    }
     const patch = record(message.patch)
     // A tracked row remains this owner's responsibility even if a later patch
     // reports foreground execution; its terminal notification still revises
@@ -250,11 +286,11 @@ export class ClaudeBackgroundTaskRows {
     }
     const change = claudeBackgroundTaskPatchChange(message)
     if (change.state && isSettledBackgroundTaskState(change.state)) {
-      this.rememberTerminalId(id, claudeBackgroundTaskToolUseId(message))
+      this.rememberTerminal(id, claudeBackgroundTaskToolUseId(message))
     }
     // A patch is folded into the row it names and is never a row of its own, so
     // an untracked task takes no row from it.
-    if (this.rows.has(id)) {
+    if (row) {
       this.revise(id, change)
     }
     return true
@@ -267,7 +303,14 @@ export class ClaudeBackgroundTaskRows {
     for (const entry of value) {
       const task = record(entry)
       const id = task === null ? null : readTaskId(task)
-      if (task === null || id === null || task.ambient === true || !this.rows.has(id)) {
+      const row = id === null ? undefined : this.rows.get(id)
+      if (
+        task === null ||
+        id === null ||
+        task.ambient === true ||
+        !row ||
+        isSettledBackgroundTaskState(row.block.state)
+      ) {
         continue
       }
       // Membership is the ONLY liveness this payload carries: it is the whole
@@ -297,61 +340,38 @@ export class ClaudeBackgroundTaskRows {
     if (!row) {
       return
     }
+    const wasLive = !isSettledBackgroundTaskState(row.block.state)
     reviseClaudeBackgroundTaskRow(row, change, this.now())
-    this.write(id)
-  }
-
-  private ensureRowSlot(): boolean {
-    if (this.rows.size < MAX_TASK_ROWS) {
-      return true
-    }
-    for (const [id, row] of this.rows) {
-      if (isSettledBackgroundTaskState(row.block.state)) {
-        this.rows.delete(id)
-        return true
-      }
-    }
-    return false
+    this.write(id, wasLive)
   }
 
   private rememberForeign(id: string, owner: ForeignOwner): void {
-    if (this.foreign.has(id)) {
-      this.foreign.delete(id)
-    }
-    this.foreign.set(id, owner)
-    while (this.foreign.size > MAX_FOREIGN_TASK_ROWS) {
-      const oldest = this.foreign.keys().next()
-      if (oldest.done || oldest.value === id) {
-        break
-      }
-      this.foreign.delete(oldest.value)
-    }
+    rememberBoundedClaudeTaskMap(this.foreign, id, owner, MAX_FOREIGN_TASK_ROWS)
   }
 
-  private rememberTerminalId(id: string, toolUseId?: string): void {
-    if (this.terminalTaskIds.has(id)) {
-      this.terminalTaskIds.delete(id)
-    }
-    this.terminalTaskIds.add(id)
-    this.terminalToolUseIds.set(id, toolUseId ?? this.rows.get(id)?.toolUseId)
-    while (this.terminalTaskIds.size > MAX_TERMINAL_TASK_IDS) {
-      const oldest = this.terminalTaskIds.values().next()
-      if (oldest.done || oldest.value === id) {
-        break
-      }
-      this.terminalToolUseIds.delete(oldest.value)
-      this.terminalTaskIds.delete(oldest.value)
-    }
+  private rememberFallbackTaskId(id: string): void {
+    rememberBoundedClaudeTaskSet(this.fallbackTaskIds, id, MAX_FALLBACK_TASK_IDS)
   }
 
-  private write(id: string): void {
+  private rememberTerminal(id: string, toolUseId?: string): void {
+    rememberClaudeBackgroundTaskTerminal(
+      this.terminalTaskIds,
+      this.terminalToolUseIds,
+      this.rows,
+      id,
+      toolUseId,
+      MAX_TERMINAL_TASK_IDS
+    )
+  }
+
+  private write(id: string, openOutputTurn = true): void {
     const row = this.rows.get(id)
     if (!row) {
       return
     }
     const journaling = this.journaling
     writeClaudeBackgroundTaskRow(this.deps.sink, id, row, () => {
-      if (journaling) {
+      if (journaling && openOutputTurn) {
         this.deps.openOutputTurn?.(journaling.frame, journaling.observedAt)
       }
     })

@@ -161,6 +161,72 @@ describe('claude journal translation — background task rows', () => {
     expect(fallbackRows()).toEqual(['Background command "Wait" failed with exit code 1'])
   })
 
+  it('keeps a refused live task failure visible through the generic fallback', () => {
+    const { translator, fallbackRows } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      const toolUseId = `toolu-live-${index}`
+      spawnToolCall(translator, toolUseId)
+      translator.handle(
+        systemFrame({
+          subtype: 'task_started',
+          task_id: `live-${index}`,
+          tool_use_id: toolUseId,
+          task_type: 'local_bash',
+          description: `live ${index}`,
+          is_backgrounded: true
+        })
+      )
+    }
+
+    spawnToolCall(translator, 'toolu-overflow')
+    translator.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'overflow-fallback',
+        tool_use_id: 'toolu-overflow',
+        task_type: 'local_bash',
+        description: 'overflow task',
+        is_backgrounded: true
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_updated',
+        task_id: 'overflow-fallback',
+        patch: { status: 'failed' }
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'overflow-fallback',
+        tool_use_id: 'toolu-overflow',
+        status: 'failed',
+        summary: 'overflow failed'
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_progress',
+        task_id: 'overflow-fallback',
+        usage: { total_tokens: 3 }
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'overflow-fallback',
+        status: 'failed',
+        summary: 'duplicate overflow failed'
+      })
+    )
+
+    expect(fallbackRows().at(-1)).toBe('overflow failed')
+    expect(fallbackRows().at(-2)).toBe('Background task failed')
+    expect(fallbackRows().at(-2)).not.toContain('message:system:task_')
+    expect(fallbackRows()).toHaveLength(2)
+  })
+
   it('settles live background rows when the provider ends before disposal', () => {
     const { translator, taskRowTexts } = harness()
     spawnToolCall(translator)
