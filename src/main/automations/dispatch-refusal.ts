@@ -119,3 +119,34 @@ export function sendRendererDispatch(
     })
   }
 }
+
+/**
+ * A run that came due while the scheduler was down, outside its catch-up budget.
+ * Why this is not "late": grace covers downtime, not the scheduler's own tick latency, so an
+ * occurrence that came due while we were running is merely waiting for the next tick (#11299).
+ */
+export function missedDuringDowntime(input: {
+  automation: Automation
+  scheduledFor: number
+  now: number
+  availableSince: number | null
+}): boolean {
+  const { automation, scheduledFor, now, availableSince } = input
+  const cameDueWhileAvailable = availableSince !== null && scheduledFor >= availableSince
+  const graceMs = automation.missedRunGraceMinutes * 60 * 1000
+  return !cameDueWhileAvailable && now - scheduledFor > graceMs
+}
+
+export function recordMissedRun(input: {
+  runs: AutomationRunWriter
+  automation: Automation
+  scheduledFor: number
+}): void {
+  const missed = input.runs.createRun(input.automation, input.scheduledFor)
+  input.runs.updateRun({
+    runId: missed.id,
+    status: 'skipped_missed',
+    workspaceId: input.automation.workspaceId,
+    error: 'Orca was unavailable during the missed-run grace window.'
+  })
+}
