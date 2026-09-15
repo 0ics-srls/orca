@@ -15,6 +15,7 @@ import { useAppStore } from '../store'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { translate } from '@/i18n/i18n'
 import { formatUiRelativeTime } from '@/i18n/relative-time-format'
+import { parseWorkspaceKey } from '../../../shared/workspace-scope'
 
 /**
  * What would be reconnected, shown before anything runs.
@@ -63,6 +64,69 @@ function announceResumed(count: number): void {
             value0: count
           }
         )
+  )
+}
+
+/**
+ * A workspace id is not a name. `folder:<uuid>` identifies nothing at twenty rows, and recognising
+ * which chats would reconnect is the entire point of this list.
+ *
+ * Resolved the way automation dispatch already resolves the same id space: a folder workspace is
+ * keyed by its full `folder:<uuid>` key, a git worktree by its bare `repoId::path` id. Falls back
+ * to the id — what the row showed before — when nothing is resolvable, which also covers the window
+ * before the worktree store has hydrated.
+ */
+function useWorkspaceLabel(workspaceId: string): string {
+  // Returns a primitive, so the selector re-runs freely without churning referential equality.
+  return useAppStore((store) => {
+    const scope = parseWorkspaceKey(workspaceId)
+    const worktree =
+      scope?.type === 'folder'
+        ? store.getKnownWorktreeById(workspaceId)
+        : store.allWorktrees().find((entry) => entry.id === workspaceId)
+    return worktree?.displayName ?? workspaceId
+  })
+}
+
+/** Its own component because a hook cannot run inside `map`, and the label needs one per row. */
+function ResumeOnRestartRow({
+  candidate,
+  listedAt,
+  busy,
+  onReconnect
+}: {
+  candidate: ResumeCandidate
+  listedAt: number
+  busy: boolean
+  onReconnect: () => void
+}): React.JSX.Element {
+  const workspaceLabel = useWorkspaceLabel(candidate.workspaceId)
+  return (
+    <li className="flex items-center gap-2">
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xs font-medium">
+          {candidate.latestPrompt.trim() ||
+            translate('auto.components.NativeChatResumeOnRestartModal.untitled', 'Untitled chat')}
+        </p>
+        {/* Age matters: the TTL is 24h, so an eight-hour-old offer must not look like one from a
+            minute ago. */}
+        <p className="truncate text-[11px] text-muted-foreground">
+          {`${candidate.agent} · ${workspaceLabel} · ${formatUiRelativeTime(
+            candidate.recordedAt - listedAt
+          )}`}
+        </p>
+      </div>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="h-7 shrink-0 gap-1 px-2"
+        disabled={busy}
+        onClick={onReconnect}
+      >
+        <Play className="size-3" />
+        {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
+      </Button>
+    </li>
   )
 }
 
@@ -207,34 +271,13 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           className="flex min-h-0 flex-col gap-1 overflow-y-auto scrollbar-sleek rounded-md border bg-muted/35 p-1.5"
         >
           {candidates.map((candidate) => (
-            <li key={candidate.sessionId} className="flex items-center gap-2">
-              <div className="min-w-0 flex-1">
-                <p className="truncate text-xs font-medium">
-                  {candidate.latestPrompt.trim() ||
-                    translate(
-                      'auto.components.NativeChatResumeOnRestartModal.untitled',
-                      'Untitled chat'
-                    )}
-                </p>
-                {/* Age matters: the TTL is 24h, so an eight-hour-old offer must not look like one
-                    from a minute ago. */}
-                <p className="truncate text-[11px] text-muted-foreground">
-                  {`${candidate.agent} · ${candidate.workspaceId} · ${formatUiRelativeTime(
-                    candidate.recordedAt - listedAt
-                  )}`}
-                </p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 shrink-0 gap-1 px-2"
-                disabled={busy}
-                onClick={() => void resume([candidate.sessionId])}
-              >
-                <Play className="size-3" />
-                {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
-              </Button>
-            </li>
+            <ResumeOnRestartRow
+              key={candidate.sessionId}
+              candidate={candidate}
+              listedAt={listedAt}
+              busy={busy}
+              onReconnect={() => void resume([candidate.sessionId])}
+            />
           ))}
         </ul>
 
