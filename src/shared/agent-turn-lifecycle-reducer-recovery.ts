@@ -48,6 +48,7 @@ export function recoveryStarted(
       lastEvidence: eventEvidence(event)
     })
   ) {
+    state.recoveries = state.recoveries.filter((entry) => entry.custodyId !== event.custodyId)
     issue(state, {
       kind: 'capacity-overflow',
       turnId: event.turnId,

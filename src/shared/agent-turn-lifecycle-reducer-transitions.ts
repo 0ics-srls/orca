@@ -148,7 +148,7 @@ function deriveDispatchOutcome(
   state: AgentTurnLifecycleState,
   dispatch: AgentTurnDispatchRecord
 ): AgentTurnDispatchRecord['outcome'] {
-  if (dispatch.receipt !== 'received' || dispatch.outcome !== null) {
+  if (dispatch.receipt !== 'received') {
     return dispatch.outcome
   }
   const turn = findTurn(state, dispatch.turnId)
@@ -167,6 +167,21 @@ function deriveDispatchOutcome(
   if (turn.outcome !== 'completed') {
     return turn.outcome
   }
+  const joined = state.work.filter(
+    (item) => item.turnId === dispatch.turnId && item.kind === 'joined-child'
+  )
+  if (dispatch.outcome === 'completed') {
+    return joined.some(
+      (item) =>
+        item.phase === 'active' ||
+        item.phase === 'unresolved' ||
+        item.phase === 'abandoned' ||
+        item.outcome === 'failed' ||
+        item.outcome === 'interrupted'
+    )
+      ? 'unresolved'
+      : 'completed'
+  }
   if (
     state.integrityIssues.some(
       (entry) => entry.kind === 'capacity-overflow' && entry.turnId === dispatch.turnId
@@ -174,9 +189,6 @@ function deriveDispatchOutcome(
   ) {
     return 'unresolved'
   }
-  const joined = state.work.filter(
-    (item) => item.turnId === dispatch.turnId && item.kind === 'joined-child'
-  )
   if (joined.some((item) => item.phase === 'active')) {
     return null
   }
@@ -192,7 +204,7 @@ function deriveDispatchOutcome(
 export function reconcileDispatches(state: AgentTurnLifecycleState, observedAt: number): void {
   for (const dispatch of state.dispatches) {
     const outcome = deriveDispatchOutcome(state, dispatch)
-    if (outcome !== null && dispatch.outcome === null) {
+    if (outcome !== null && outcome !== dispatch.outcome) {
       dispatch.outcome = outcome
       dispatch.settledAt = observedAt
     }

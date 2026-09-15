@@ -92,6 +92,10 @@ export function providerCurrentTurnInventory(
   if (joinedChildren === null || residentBackground === null) {
     return null
   }
+  const workIds = new Set([...joinedChildren, ...residentBackground].map((item) => item.workId))
+  if (workIds.size !== joinedChildren.length + residentBackground.length) {
+    return null
+  }
   const startedAt = optionalTimestamp(record.startedAt)
   if (startedAt === null) {
     return null

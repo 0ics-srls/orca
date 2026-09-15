@@ -2279,6 +2279,7 @@ export class SshRelaySession {
   private retireExitedPty(payload: SshPtyExitPayload, deliveryHandled = false): void {
     const relayPtyId = toRelaySshPtyId(this.targetId, payload.id)
     this.retiredSourceDeliveries.activate(relayPtyId)
+    this.runtime?.onPtyExit(payload.id, payload.code, payload.incarnationId)
     clearProviderPtyState(payload.id)
     deletePtyOwnership(payload.id)
     this.rejectedPtyRecoveryAttempts.delete(payload.id)
@@ -2290,7 +2291,6 @@ export class SshRelaySession {
     if (deliveryHandled) {
       return
     }
-    this.runtime?.onPtyExit(payload.id, payload.code, payload.incarnationId)
     const win = this.getMainWindow()
     if (win && !win.isDestroyed()) {
       win.webContents.send('pty:exit', payload)

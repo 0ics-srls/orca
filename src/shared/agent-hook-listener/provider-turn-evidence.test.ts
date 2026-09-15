@@ -202,6 +202,16 @@ describe('provider turn evidence adapter', () => {
       providerCurrentTurnInventory(
         {
           turnId: 'turn-1',
+          joinedChildren: [{ id: 'duplicate', phase: 'active' }],
+          residentBackground: [{ id: 'duplicate', phase: 'active' }]
+        },
+        true
+      )
+    ).toBeNull()
+    expect(
+      providerCurrentTurnInventory(
+        {
+          turnId: 'turn-1',
           startedAt: -1,
           joinedChildren: [],
           residentBackground: []

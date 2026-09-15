@@ -124,6 +124,42 @@ describe('canonical agent turn lifecycle reducer', () => {
     ])
   })
 
+  it('reopens a completed dispatch when a late joined child makes completion uncertain', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-late-child' })).state
+    current = apply(
+      current,
+      event({ kind: 'dispatch-associated', dispatchId: 'dispatch-late', turnId: 'turn-late-child' })
+    ).state
+    current = apply(
+      current,
+      event({ kind: 'dispatch-received', dispatchId: 'dispatch-late', turnId: 'turn-late-child' })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-late-child',
+        outcome: 'completed',
+        recordKind: 'event'
+      })
+    ).state
+    expect(current.dispatches[0]).toMatchObject({ outcome: 'completed' })
+    const lateChild = apply(
+      current,
+      event({
+        kind: 'work-started',
+        turnId: 'turn-late-child',
+        workId: 'child-after-root',
+        workKind: 'joined-child'
+      })
+    )
+    expect(lateChild.state.dispatches[0]).toMatchObject({ outcome: 'unresolved' })
+    expect(lateChild.committedDispatches).toEqual([
+      expect.objectContaining({ dispatchId: 'dispatch-late', outcome: 'unresolved' })
+    ])
+  })
+
   it('allows an attributable terminal record to recover a missed start, but not an ordinary end', () => {
     const ordinary = apply(
       state(),
@@ -295,6 +331,26 @@ describe('canonical agent turn lifecycle reducer', () => {
       expect.arrayContaining([
         expect.objectContaining({ turnId: 'turn-2', phase: 'abandoned', outcome: null })
       ])
+    )
+  })
+
+  it('does not retain recovery custody when turn admission is at capacity', () => {
+    let current = state()
+    for (let index = 0; index < 128; index += 1) {
+      current = apply(current, event({ kind: 'turn-started', turnId: `turn-${index}` })).state
+    }
+    const rejected = apply(
+      current,
+      event({
+        kind: 'turn-recovery-started',
+        turnId: 'turn-overflow',
+        custodyId: 'custody-overflow',
+        deadlineAt: 1000
+      })
+    )
+    expect(rejected.reason).toBe('capacity')
+    expect(rejected.state.recoveries).not.toContainEqual(
+      expect.objectContaining({ custodyId: 'custody-overflow' })
     )
   })
 
