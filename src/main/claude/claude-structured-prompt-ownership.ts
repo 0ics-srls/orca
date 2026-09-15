@@ -14,6 +14,7 @@ import type { ClaudeSession } from './claude-structured-session-state'
 
 /** Keep an unresolved delivery fence long enough for the provider input pump to settle. */
 export const CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS = 3_000
+const CLAUDE_DISPATCH_ADMISSION_POLL_MS = 50
 
 type CancelInput = Parameters<StructuredAgentSessionAdapter['cancelTurn']>[0]
 type AnswerInput = Parameters<StructuredAgentSessionAdapter['answerPrompt']>[0]
@@ -51,11 +52,36 @@ function requireSession(sessions: Map<string, ClaudeSession>, sessionId: string)
 }
 
 function waitForClaudeDispatchAdmission(
+  admitted: () => boolean,
   timeoutMs = CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS
-): Promise<void> {
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const timer = setTimeout(resolve, timeoutMs)
-    timer.unref?.()
+    let settled = false
+    let deadline: ReturnType<typeof setTimeout> | null = null
+    let poll: ReturnType<typeof setInterval> | null = null
+    const finish = (value: boolean): void => {
+      if (settled) {
+        return
+      }
+      settled = true
+      if (deadline) {
+        clearTimeout(deadline)
+      }
+      if (poll) {
+        clearInterval(poll)
+      }
+      resolve(value)
+    }
+    const check = (): void => {
+      if (admitted()) {
+        finish(true)
+      }
+    }
+    deadline = setTimeout(() => finish(false), timeoutMs)
+    poll = setInterval(check, CLAUDE_DISPATCH_ADMISSION_POLL_MS)
+    check()
+    deadline.unref?.()
+    poll.unref?.()
   })
 }
 
@@ -112,10 +138,20 @@ export async function cancelClaudeStructuredTurn(input: {
     dispatchAdmissionIsCurrent() ||
     (Boolean(prompt) && supportsClaudeQueuedInterruptCancellation(session))
   const compactionOwnsTurn = (): boolean => compactions.ownsTurn(request.sessionId, request.turnId)
+  const currentDispatchHasRetiredWaiter = (): boolean =>
+    session.retiredDispatchWaiters.some(
+      (waiter) => waiter.dispatchSequence === session.dispatchSequence
+    )
   let dispatchAdmissionExpired = false
-  if (!prompt && !compactionOwnsTurn() && !dispatchAdmissionAllowsCancellation()) {
-    await waitForClaudeDispatchAdmission()
-    dispatchAdmissionExpired = true
+  if (
+    !prompt &&
+    !compactionOwnsTurn() &&
+    !dispatchAdmissionAllowsCancellation() &&
+    (request.dispatchStatus !== undefined || currentDispatchHasRetiredWaiter())
+  ) {
+    dispatchAdmissionExpired = !(await waitForClaudeDispatchAdmission(
+      dispatchAdmissionAllowsCancellation
+    ))
   }
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
