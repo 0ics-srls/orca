@@ -28,11 +28,12 @@ export function useTerminalEditorCloseFoundation(
     closeDialogDebounceTimersRef.current.add(timer)
   }, [])
   useEffect(() => {
+    const debounceTimers = closeDialogDebounceTimersRef.current
     return () => {
-      for (const timer of closeDialogDebounceTimersRef.current) {
+      for (const timer of debounceTimers) {
         window.clearTimeout(timer)
       }
-      closeDialogDebounceTimersRef.current.clear()
+      debounceTimers.clear()
     }
   }, [])
   const [windowCloseDialogOpen, setWindowCloseDialogOpen] = useState(false)
