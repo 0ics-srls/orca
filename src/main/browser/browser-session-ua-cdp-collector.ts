@@ -167,15 +167,6 @@ export class BrowserSessionUaCdpCollector {
       const targetId = readString(info, 'targetId') ?? 'unknown'
       const targetUrl = readString(info, 'url') ?? ''
       this.diagnostics.push(`target-created:${targetType}:${targetId}:${targetUrl}`)
-      if ((targetType === 'iframe' || targetType === 'worker') && targetId !== 'unknown') {
-        // Electron can report an isolated target before its automatic flattened attachment; attach
-        // explicitly so the frame/worker Network events remain target-scoped and auditable.
-        void this.send('Target.attachToTarget', { targetId, flatten: true }).catch(
-          (error: unknown) => {
-            this.diagnostics.push(`${targetType}-attach-error:${String(error)}`)
-          }
-        )
-      }
     }
     if (message.method === 'Target.attachedToTarget') {
       const params = readRecord(message.params)
@@ -186,7 +177,9 @@ export class BrowserSessionUaCdpCollector {
         const targetId = readString(targetInfo, 'targetId') ?? 'unknown'
         const targetUrl = readString(targetInfo, 'url') ?? ''
         this.diagnostics.push(
-          `attached:${targetType}:${targetId}:${targetUrl}:${attachedSessionId}`
+          // wfd records whether the target arrived paused; an unpaused nested target is how a
+          // capture silently comes back empty.
+          `attached:${targetType}:${targetId}:${targetUrl}:${attachedSessionId}:wfd=${String(params?.waitingForDebugger)}`
         )
         this.targetsBySessionId.set(attachedSessionId, targetType)
         void this.prepareTarget(attachedSessionId)
@@ -241,13 +234,28 @@ export class BrowserSessionUaCdpCollector {
   }
 
   private async prepareTarget(sessionId: string): Promise<void> {
+    // Root auto-attach only reaches browser-level targets; an OOPIF or dedicated worker is auto-
+    // attached — and held paused — only once its own parent session arms auto-attach. Arm it before
+    // the resume below so nested targets arrive paused instead of already fetching.
+    const autoAttach = this.send(
+      'Target.setAutoAttach',
+      {
+        autoAttach: true,
+        waitForDebuggerOnStart: true,
+        flatten: true,
+        // Only nested targets; browser-level ones already attach once through the root session, and
+        // re-attaching them here would double-count every request they make.
+        filter: [{ type: 'iframe' }, { type: 'worker' }]
+      },
+      sessionId
+    )
     // Paused Electron targets acknowledge queued domain enables only after Runtime resumes them.
     const network = this.send('Network.enable', {}, sessionId)
     const runtime = this.send('Runtime.enable', {}, sessionId)
     await this.send('Runtime.runIfWaitingForDebugger', {}, sessionId).catch((error: unknown) => {
       this.diagnostics.push(`resume-error:${sessionId}:${String(error)}`)
     })
-    const enabled = await Promise.allSettled([network, runtime])
+    const enabled = await Promise.allSettled([autoAttach, network, runtime])
     this.diagnostics.push(
       `enabled:${sessionId}:${enabled.map((result) => result.status).join(',')}`
     )
