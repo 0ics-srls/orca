@@ -55,17 +55,17 @@ export function operationModuleLoader(
       return new Proxy(
         {},
         {
-          // `__esModule` is the module system's interop marker, not a native API. Refusing it kills
-          // a default import inside `__importDefault`, before any member is read; answering
-          // `undefined` defers the refusal to the first real member, the same rule the substitute
-          // traps follow. A namespace import is the one shape that loses it: `__importStar` copies
-          // own keys into a fresh object, of which there are none, so an unlisted member of an
-          // `import * as` reads back `undefined` and fails at the call instead of at the read.
+          // `__esModule` is the module system's interop marker, not a native API. Answering `true`
+          // makes both emitted interop helpers hand this trap straight back — `__importDefault`
+          // returns it instead of wrapping it, `__importStar` returns it instead of copying its
+          // (absent) own keys — so all three import forms load and refuse at the first member read,
+          // naming the member. Substitute partials answer `undefined` instead, because there a real
+          // member object must bind as the module's default.
           get: (_target, key) => {
             if (key === '__esModule') {
-              return undefined
+              return true
             }
-            throw new Error(`Unspecified native mounting dependency: ${name}`)
+            throw new Error(`Unspecified native mounting dependency: ${name}.${String(key)}`)
           }
         }
       )

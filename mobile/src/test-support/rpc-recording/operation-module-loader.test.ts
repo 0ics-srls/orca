@@ -54,11 +54,11 @@ describe('the mounted module loader', () => {
   })
 
   /**
-   * `__importDefault` reads `__esModule` before any member, so refusing it kills a default import of
-   * an unlisted package at module load — before the recording can show which member was wanted, and
-   * for modules that never touch the package at all.
+   * Both interop helpers short-circuit on `__esModule`, so the trap binds as the module itself in
+   * all three import forms: the module loads, and the refusal lands on the member a recording
+   * actually wanted rather than on every module that merely mentions the package.
    */
-  it('defers an unlisted package refusal from module load to the first member read', () => {
+  it('lets a default import of an unlisted package load, and refuses the member it uses', () => {
     const modules = loaderOver({
       'uses-default.ts': `
         import Animated from 'react-native-not-substituted'
@@ -66,8 +66,9 @@ describe('the mounted module loader', () => {
       `
     })
     const { read } = modules.load<{ read: () => unknown }>('mobile/src/uses-default.ts')
+    expect(typeof read).toBe('function')
     expect(() => read()).toThrow(
-      'Unspecified native mounting dependency: react-native-not-substituted'
+      'Unspecified native mounting dependency: react-native-not-substituted.default'
     )
   })
 
@@ -79,16 +80,16 @@ describe('the mounted module loader', () => {
       `
     })
     const { read } = modules.load<{ read: () => unknown }>('mobile/src/uses-named.ts')
-    expect(() => read()).toThrow('Unspecified native mounting dependency: expo-not-substituted')
+    expect(() => read()).toThrow(
+      'Unspecified native mounting dependency: expo-not-substituted.thing'
+    )
   })
 
   /**
-   * The one shape that loses the named refusal: `__importStar` copies own keys into a fresh object,
-   * of which the trap has none, so an unlisted member reads back `undefined` and fails at the call.
-   * Pinned rather than left implicit — it is what lets a screen load a module such as
-   * `platform/haptics.ts`, which imports a device package it only touches on a press.
+   * What lets a screen mount a module such as `platform/haptics.ts`, which imports a device package
+   * it only touches on a press: loading the importer is not itself a use.
    */
-  it('lets a namespace import of an unlisted package load, with undefined members', () => {
+  it('lets a namespace import of an unlisted package load, and refuses the member it reads', () => {
     const modules = loaderOver({
       'uses-namespace.ts': `
         import * as Haptics from 'expo-not-substituted'
@@ -96,6 +97,9 @@ describe('the mounted module loader', () => {
       `
     })
     const { read } = modules.load<{ read: () => unknown }>('mobile/src/uses-namespace.ts')
-    expect(read()).toBeUndefined()
+    expect(typeof read).toBe('function')
+    expect(() => read()).toThrow(
+      'Unspecified native mounting dependency: expo-not-substituted.selectionAsync'
+    )
   })
 })
