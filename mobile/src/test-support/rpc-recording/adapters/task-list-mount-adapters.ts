@@ -1,7 +1,72 @@
-import type { MountAdapter } from './recording-scenario'
-import { mountFixture, mountModelHook } from './model-hook-mount'
-import type { operationModuleLoader } from './operation-module-loader'
-import { HOSTED_REPO, REPO_ID } from './task-item-fixtures'
+import { hookMount, performHookAction } from '../hook-mount'
+import { observableModel, projectObservable } from '../observable-model'
+import type { MountAdapter, MountContext, MountedOperation } from '../recording-scenario'
+import type { operationModuleLoader } from '../operation-module-loader'
+
+const REPO_ID = 'repo-1'
+
+/** The one hosted repository every task family queries, shaped the way `isHostedTaskRepo` needs. */
+const HOSTED_REPO = { id: REPO_ID, displayName: 'Repo', path: '/repo', provider: 'github' }
+
+/**
+ * One model in, an actions object out, every setter recorded as an effect: the shape this domain's
+ * hooks share. Copied per module rather than shared, because an adapter may not import another file
+ * in this directory: a golden pins the one module it was recorded through, so plumbing reaching
+ * across the seam would drive recordings its header does not cover.
+ */
+type ModelHookSpec<Actions> = {
+  /** Called inside the render body, so a hook that throws is recorded as a mount failure. */
+  readonly useHook: (model: never) => Actions
+  readonly fixture: Record<string, unknown>
+  readonly actions: (context: {
+    /** A getter, not a value: an action that re-renders first needs the rebuilt callbacks. */
+    readonly actions: () => Actions
+    readonly model: Record<string, unknown>
+    readonly update: () => void
+  }) => Record<string, (args: Record<string, unknown>) => unknown>
+  readonly state: (model: Record<string, unknown>) => Record<string, unknown>
+}
+
+/** The recorder supplies only the members the mounted action reads; completing the fixture into a
+ * full domain object would invent data no scenario observes. */
+function mountFixture<T>(value: unknown): T {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries every member the action it is passed to reads.
+  return value as T
+}
+
+function mountModelHook<Actions>(
+  context: MountContext,
+  spec: ModelHookSpec<Actions>
+): MountedOperation {
+  const model = observableModel(context, { client: context.client, ...spec.fixture })
+  let actions!: Actions
+  const hook = hookMount(() => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the recorder supplies every member the hook reads.
+    actions = spec.useHook(model as unknown as never)
+  })
+  return {
+    action(name, args) {
+      if (name === 'mount') {
+        return hook.mount()
+      }
+      if (name === 'update') {
+        return hook.update()
+      }
+      const step = spec.actions({
+        actions: () => actions,
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the proxy is the fixture record the spec declared.
+        model: model as unknown as Record<string, unknown>,
+        update: hook.update
+      })[name]
+      if (!step) {
+        throw new Error(`Unknown action: ${name}`)
+      }
+      return performHookAction(() => step(args))
+    },
+    state: () => projectObservable(spec.state(model)),
+    dispose: hook.unmount
+  }
+}
 
 /**
  * The task list screen's loads and the composer's writes: provider item pages and counts, the
@@ -14,7 +79,7 @@ export function taskListMountAdapters(
   const load = <T>(file: string): T => modules.load<T>(`mobile/src/tasks/${file}`)
 
   const providerLoad: MountAdapter = (context) => {
-    const useActions = load<typeof import('../../tasks/use-mobile-tasks-provider-load-actions')>(
+    const useActions = load<typeof import('../../../tasks/use-mobile-tasks-provider-load-actions')>(
       'use-mobile-tasks-provider-load-actions.tsx'
     ).useMobileTasksProviderLoadActions
     return mountModelHook(context, {
@@ -55,7 +120,7 @@ export function taskListMountAdapters(
   }
 
   function taskList(provider: string, extra: Record<string, unknown>) {
-    const useLoading = load<typeof import('../../tasks/use-mobile-tasks-task-list-loading')>(
+    const useLoading = load<typeof import('../../../tasks/use-mobile-tasks-task-list-loading')>(
       'use-mobile-tasks-task-list-loading.tsx'
     ).useMobileTasksTaskListLoading
     return (context: Parameters<MountAdapter>[0]) =>
@@ -113,9 +178,9 @@ export function taskListMountAdapters(
   }
 
   const linearConnect: MountAdapter = (context) => {
-    const useActions = load<typeof import('../../tasks/use-mobile-tasks-task-pagination-actions')>(
-      'use-mobile-tasks-task-pagination-actions.tsx'
-    ).useMobileTasksTaskPaginationActions
+    const useActions = load<
+      typeof import('../../../tasks/use-mobile-tasks-task-pagination-actions')
+    >('use-mobile-tasks-task-pagination-actions.tsx').useMobileTasksTaskPaginationActions
     return mountModelHook(context, {
       useHook: (model) => useActions(model),
       fixture: {
@@ -150,7 +215,7 @@ export function taskListMountAdapters(
   }
 
   function taskCreate(provider: string) {
-    const useActions = load<typeof import('../../tasks/use-mobile-tasks-task-create-actions')>(
+    const useActions = load<typeof import('../../../tasks/use-mobile-tasks-task-create-actions')>(
       'use-mobile-tasks-task-create-actions.tsx'
     ).useMobileTasksTaskCreateActions
     return (context: Parameters<MountAdapter>[0]) =>
