@@ -5,7 +5,6 @@ import { Button } from '../ui/button'
 import { Label } from '../ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import {
-  buildAudioCaptureConstraints,
   buildVoiceMicrophoneSelectOptions,
   listVoiceMicrophoneDevices,
   microphoneDeviceIdFromSelectValue,
@@ -20,16 +19,22 @@ type VoiceMicrophoneSettingProps = {
   onUpdateVoiceSettings: (updates: Partial<VoiceSettings>) => void
 }
 
-// Why read the DOMException directly: a getUserMedia rejection never crossed IPC, so unwrapping it
-// with the IPC reader would assert the wrong provenance.
+function readMediaDeviceError(error: unknown): { name: string; message?: string } {
+  if (!error || typeof error !== 'object') {
+    return { name: '' }
+  }
+  const name = 'name' in error ? String(error.name) : ''
+  const message = 'message' in error ? String(error.message).trim() || undefined : undefined
+  return { name, message }
+}
+
 function isMicrophonePermissionDenied(error: unknown): boolean {
-  const name = error instanceof Error ? error.name : ''
+  const { name } = readMediaDeviceError(error)
   return name === 'NotAllowedError' || name === 'SecurityError'
 }
 
 function microphoneAccessErrorMessage(error: unknown): string {
-  const name = error instanceof Error ? error.name : ''
-  const message = error instanceof Error ? error.message : undefined
+  const { name, message } = readMediaDeviceError(error)
   if (name === 'NotAllowedError' || name === 'SecurityError') {
     return translate(
       'auto.components.settings.VoiceMicrophoneSetting.permissionDenied',
@@ -42,14 +47,11 @@ function microphoneAccessErrorMessage(error: unknown): string {
       'No microphone was found. Connect one, then try again.'
     )
   }
-  // Why: a getUserMedia rejection never crossed IPC, so the IPC reader would assert the wrong
-  // provenance — read the DOMException message directly.
-  const detail = message?.trim() || undefined
-  return detail
+  return message
     ? translate(
         'auto.components.settings.VoiceMicrophoneSetting.openFailedDetail',
         'Could not open the microphone. {{value0}}',
-        { value0: detail }
+        { value0: message }
       )
     : translate(
         'auto.components.settings.VoiceMicrophoneSetting.openFailed',
@@ -118,17 +120,12 @@ export function VoiceMicrophoneSetting({
     }
   }, [refreshDevices, voiceSettings.enabled])
 
-  // Why: enumerateDevices hides ids and labels until a stream has been opened in THIS renderer,
-  // so refreshing alone leaves the list empty even once permission is granted.
+  // A generic stream grants discovery even when the saved device is stale.
   const openStreamAndRefreshDevices = useCallback(async (): Promise<void> => {
-    // Why the preferred device: probing the one the user actually selected surfaces a device-specific
-    // failure here rather than at dictation time.
-    const stream = await navigator.mediaDevices.getUserMedia(
-      buildAudioCaptureConstraints(voiceSettings.microphoneDeviceId)
-    )
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
     stream.getTracks().forEach((track) => track.stop())
     await refreshDevices()
-  }, [refreshDevices, voiceSettings.microphoneDeviceId])
+  }, [refreshDevices])
 
   const requestMicrophoneAccess = useCallback(async (): Promise<void> => {
     if (typeof navigator === 'undefined' || !navigator.mediaDevices?.getUserMedia) {

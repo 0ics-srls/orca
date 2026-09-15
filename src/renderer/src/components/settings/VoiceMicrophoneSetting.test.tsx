@@ -17,11 +17,11 @@ vi.mock('sonner', () => ({
 
 import { VoiceMicrophoneSetting } from './VoiceMicrophoneSetting'
 
-const voiceSettings = {
+const voiceSettings: VoiceSettings = {
   enabled: true,
   microphoneDeviceId: null,
   microphoneDeviceLabel: null
-} as VoiceSettings
+}
 
 function namedError(name: string, message = 'boom'): Error {
   const error = new Error(message)
@@ -29,7 +29,7 @@ function namedError(name: string, message = 'boom'): Error {
   return error
 }
 
-function installMediaDevices(getUserMedia: () => Promise<MediaStream>): void {
+function installMediaDevices(getUserMedia: () => Promise<Pick<MediaStream, 'getTracks'>>): void {
   Object.assign(navigator, {
     mediaDevices: {
       getUserMedia: vi.fn(getUserMedia),
@@ -58,13 +58,13 @@ function installPermissionsApi(result: DeveloperPermissionRequestResult | Error)
 let container: HTMLDivElement
 let root: Root
 
-async function renderSetting(): Promise<void> {
+async function renderSetting(settings: VoiceSettings = voiceSettings): Promise<void> {
   container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
     root.render(
-      <VoiceMicrophoneSetting voiceSettings={voiceSettings} onUpdateVoiceSettings={() => {}} />
+      <VoiceMicrophoneSetting voiceSettings={settings} onUpdateVoiceSettings={() => {}} />
     )
   })
 }
@@ -162,7 +162,7 @@ describe('VoiceMicrophoneSetting access failures', () => {
   })
 
   it('shows the plain hint until something actually fails', async () => {
-    installMediaDevices(async () => ({ getTracks: () => [] }) as unknown as MediaStream)
+    installMediaDevices(async () => ({ getTracks: () => [] }))
 
     await renderSetting()
 
@@ -172,6 +172,31 @@ describe('VoiceMicrophoneSetting access failures', () => {
     await clickAllowAccess()
 
     expect(container.querySelector('[role="alert"]')).toBeNull()
+  })
+
+  it('uses a generic stream when the saved microphone is stale', async () => {
+    const getUserMedia = vi.fn(async () => ({ getTracks: () => [] }))
+    installMediaDevices(getUserMedia)
+
+    await renderSetting({
+      ...voiceSettings,
+      microphoneDeviceId: 'unplugged-mic',
+      microphoneDeviceLabel: 'Old headset'
+    })
+    await clickAllowAccess()
+
+    expect(getUserMedia).toHaveBeenCalledWith({ audio: true })
+  })
+
+  it('classifies browser-shaped permission errors without requiring Error identity', async () => {
+    installMediaDevices(async () => {
+      throw { name: 'NotAllowedError', message: 'Permission denied' }
+    })
+
+    await renderSetting()
+    await clickAllowAccess()
+
+    expect(window.api.developerPermissions.request).toHaveBeenCalledWith({ id: 'microphone' })
   })
 
   it('opens a stream after the OS grant so the device list is not left empty', async () => {
@@ -185,7 +210,7 @@ describe('VoiceMicrophoneSetting access failures', () => {
         throw namedError('NotAllowedError')
       }
       streamOpened = true
-      return { getTracks: () => [] } as unknown as MediaStream
+      return { getTracks: () => [] }
     })
     Object.assign(navigator, {
       mediaDevices: {
