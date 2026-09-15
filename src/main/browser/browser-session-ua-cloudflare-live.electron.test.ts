@@ -233,7 +233,7 @@ const site = ${JSON.stringify(options.site)}
 app.setName('OrcaCloudflareLiveProbe')
 const clean = userAgent => userAgent.replace(/\s+Electron\/\S+/, '').replace(/(\)\s+)\S+\s+(Chrome\/)/, '$1$2')
 let identity
-if (arm === 'branch') identity = processIdentity.initializeBrowserProcessUserAgent()
+if (arm === 'branch') identity = processIdentity.initializeBrowserProcessUserAgent('clean')
 const waitForBarrier = async () => {
   const deadline = Date.now() + 15000
   while (!existsSync(${JSON.stringify(options.barrierPath)})) {
@@ -245,8 +245,8 @@ async function run() {
   await app.whenReady()
   await waitForBarrier()
   const sess = session.fromPartition('persist:cloudflare-live-probe')
-  const nativeUserAgent = identity?.nativeUserAgent ?? sess.getUserAgent()
-  const cleanUserAgent = identity?.cleanUserAgent ?? clean(nativeUserAgent)
+  const nativeUserAgent = sess.getUserAgent()
+  const cleanUserAgent = identity?.userAgent ?? clean(nativeUserAgent)
   const firefoxUserAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:140.0) Gecko/20100101 Firefox/140.0'
   if (arm === 'origin-main') sess.setUserAgent(cleanUserAgent)
   if (arm === 'branch') {
