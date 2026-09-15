@@ -96,29 +96,12 @@ export const AGENT_LAUNCH_METHODS = [
       }
       const intent = await agentLaunchIntent(params, context.runtime)
       await validateReusedTerminal(intent, context.runtime)
-      const run = () =>
-        executeAgentLaunch({
-          runtime: context.runtime,
-          intent,
-          surfaces: agentLaunchSurfaceFactory(context),
-          workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
-        })
-      if (params.target.kind !== 'create-worktree') {
-        return run()
-      }
-      // Why the WHOLE launch and not just the worktree, the way `worktree.create` wraps its own
-      // body: dedupe used to sit around the create alone, so a replayed launch reused the worktree
-      // and then built a SECOND surface inside it. The terminal route hid that — its cached create
-      // carries a startup terminal handle, which the executor returns on early — while a structured
-      // create has no handle by construction and fell through to `createSurface` again, minting a
-      // second session with `activate: true`. Memoizing the launch makes both routes replay to the
-      // same receipt. A failed launch is dropped rather than cached, so an unknown outcome stays
-      // unknown instead of replaying as a fabricated success.
-      return context.runtime.dedupeWorktreeCreate(
-        params.target.create.repo,
-        params.target.create.clientMutationId,
-        run
-      )
+      return executeAgentLaunch({
+        runtime: context.runtime,
+        intent,
+        surfaces: agentLaunchSurfaceFactory(context),
+        workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
+      })
     }
   })
 ]

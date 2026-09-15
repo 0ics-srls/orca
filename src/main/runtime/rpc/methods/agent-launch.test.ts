@@ -40,37 +40,16 @@ function runtimeStub(
       state: 'running' | 'skipped' | 'not_configured' | 'spawn_failed'
       terminalHandle?: string
     }
-    /** Memoize creates the way the real runtime does, so a replay can be observed at all. */
-    memoizeCreates?: boolean
   } = {}
 ) {
   const waitForSetupTerminalCompletion = vi.fn(async () => ({ exitCode: 0 }))
-  const dedupeEntries = new Map<string, Promise<unknown>>()
   return {
     getClientSettings: vi.fn(() => options.settings ?? STRUCTURED_PREFERENCE),
     getStructuredAgentSessionCreateSupport: vi.fn(
       async () => options.createSupport ?? { supported: true }
     ),
-    // Why both shapes: most tests want every call observed, so the default passes through. A
-    // replay guard cannot fail against that — it would re-run the launch either way — so the
-    // memoizing shape mirrors the real method: keyed on repo + mutation id, failures dropped so a
-    // genuine retry starts fresh. The real TTL and coalescing semantics are pinned separately in
-    // orca-runtime-tests/dedupe-worktree-create.spec.ts; what this stub pins is the wiring.
     dedupeWorktreeCreate: vi.fn(
-      (repo: string, key: string | undefined, run: () => Promise<unknown>) => {
-        if (!options.memoizeCreates || !key) {
-          return run()
-        }
-        const id = `${repo}\0${key}`
-        const existing = dedupeEntries.get(id)
-        if (existing) {
-          return existing
-        }
-        const created = run()
-        dedupeEntries.set(id, created)
-        void created.catch(() => dedupeEntries.delete(id))
-        return created
-      }
+      <T>(_repo: string, _key: string | undefined, run: () => Promise<T>) => run()
     ),
     showRepo: vi.fn(async () => ({ id: 'repo-1' })),
     createManagedWorktree: vi.fn(async (args: Record<string, unknown>) => ({
@@ -356,61 +335,6 @@ describe('the structured session factory', () => {
     expect(createStructuredSession.mock.calls[0]?.[0]).toMatchObject({
       options: { model: 'sonnet', effort: 'high' }
     })
-  })
-})
-
-describe('replaying a launch', () => {
-  // Why the structured route specifically: the terminal route CANNOT reproduce this. Its cached
-  // create carries a startup terminal handle, so the executor returns on early and a replay is
-  // already safe. A structured create has no handle by construction, so a replay used to fall
-  // through to `createSurface` and mint a second session with `activate: true`. A guard written
-  // against the terminal route would pass with or without the fix.
-  const REPLAYED = {
-    agent: 'claude',
-    target: {
-      kind: 'create-worktree',
-      create: { repo: 'id:repo-1', name: 'task', clientMutationId: 'mutation-1' }
-    }
-  }
-
-  it('returns the original receipt instead of minting a second structured session', async () => {
-    const runtime = runtimeStub({ memoizeCreates: true })
-    const first = await launch(REPLAYED, runtime)
-    const replayed = await launch(REPLAYED, runtime)
-
-    expect(createStructuredSession).toHaveBeenCalledTimes(1)
-    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
-    expect(replayed).toEqual(first)
-  })
-
-  it('still launches for a different mutation id', async () => {
-    // The memo is scoped to the replay identity, not a blanket one-session-per-worktree latch.
-    const runtime = runtimeStub({ memoizeCreates: true })
-    await launch(REPLAYED, runtime)
-    await launch(
-      {
-        ...REPLAYED,
-        target: {
-          kind: 'create-worktree',
-          create: { repo: 'id:repo-1', name: 'task', clientMutationId: 'mutation-2' }
-        }
-      },
-      runtime
-    )
-
-    expect(createStructuredSession).toHaveBeenCalledTimes(2)
-  })
-
-  it('does not memoize a failed launch, so a genuine retry starts fresh', async () => {
-    // An unknown or failed outcome must never be replayed as a fabricated success.
-    const runtime = runtimeStub({ memoizeCreates: true })
-    createStructuredSession.mockRejectedValueOnce(new Error('surface_create_failed'))
-
-    await expect(launch(REPLAYED, runtime)).rejects.toThrow('surface_create_failed')
-    const retried = await launch(REPLAYED, runtime)
-
-    expect(createStructuredSession).toHaveBeenCalledTimes(2)
-    expect(retried.outcome).toMatchObject({ kind: 'structured' })
   })
 })
 
