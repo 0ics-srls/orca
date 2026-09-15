@@ -18,11 +18,11 @@ import * as zod from 'zod'
  *
  * Every substitute that stands in for part of a module keeps the default's shape: a member nobody
  * listed throws on the read rather than resolving to `undefined`, because an undefined native
- * member is not a recording of anything — the product would call it. The secret store inverts that,
+ * member is not a recording of anything — the product would call it. Async storage inverts that,
  * reading every member back as a function that throws when called: a default-dependency object may
- * name them, and a recording that reaches native storage fails at the call instead. Whether that
- * failure is visible depends on the caller. `host-app-version-store.ts` catches and degrades to its
- * unread state, which is what it does on a device too.
+ * name them, and a recording that reaches it fails at the call instead. Whether that failure is
+ * visible depends on the caller. `host-app-version-store.ts` catches and degrades to its unread
+ * state, which is what it does on a device too.
  *
  * Both traps leave `__esModule` undefined. It is the module system's interop marker rather than a
  * native API, and answering it truthfully binds a transpiled `import X from` to the trap's own
