@@ -121,4 +121,15 @@ describe('worker request identity under viewport emulation', () => {
 
     expect(resolve(session)).toBe(GUEST_CLEAN_UA)
   })
+
+  // A popup carries a webContentsId that maps to no registered tab. It resolves through the same
+  // branch as a worker, so the one rule covers both: no mapped tab means the process identity.
+  it('keeps an unmapped webContents desktop-clean beside an emulated tab', async () => {
+    const session = registerGuest('tab-mobile', 4242)
+    expect(await browserManager.setViewportOverride('tab-mobile', MOBILE_VIEWPORT_OVERRIDE)).toBe(
+      true
+    )
+
+    expect(resolve(session, 9999)).toBe(GUEST_CLEAN_UA)
+  })
 })
