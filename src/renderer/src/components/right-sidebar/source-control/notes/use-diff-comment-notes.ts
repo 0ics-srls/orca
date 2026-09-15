@@ -67,14 +67,8 @@ export function useSourceControlDiffCommentNotes({
       // reads as a successful copy — the user finds out on paste.
       toast.error(
         translate(
-          'auto.components.right.sidebar.SourceControl.c06193ef57',
-          'Failed to copy {{value0}}',
-          {
-            value0: translate(
-              'auto.components.right.sidebar.SourceControl.diffCommentNotesNoun',
-              'notes'
-            )
-          }
+          'auto.components.right.sidebar.SourceControl.diffCommentNotesCopyFailed',
+          'Failed to copy notes'
         ),
         { description: readIpcErrorMessage(error) }
       )

@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DiffComment } from '../../../../../../shared/diff-comment-types'
 
 const mocks = vi.hoisted(() => ({
-  toastError: vi.fn(),
+  toastError: vi.fn<(title: string, options: { description?: string }) => void>(),
   writeClipboardText: vi.fn()
 }))
 
@@ -15,7 +15,15 @@ vi.mock('@/store', () => ({
 }))
 vi.mock('@/store/worktree-diff-comments-selector', () => ({
   selectWorktreeDiffCommentsOrEmpty: () => [
-    { id: 'c1', filePath: 'src/app.ts', body: 'rename this' } as unknown as DiffComment
+    {
+      id: 'c1',
+      worktreeId: 'wt-1',
+      filePath: 'src/app.ts',
+      lineNumber: 1,
+      body: 'rename this',
+      createdAt: 1,
+      side: 'modified'
+    } satisfies DiffComment
   ]
 }))
 
@@ -49,7 +57,11 @@ describe('diff-comment notes copy failures', () => {
 
     expect(result.current.diffCommentsCopied).toBe(false)
     expect(mocks.toastError).toHaveBeenCalledTimes(1)
-    const [title, options] = mocks.toastError.mock.calls[0] as [string, { description?: string }]
+    const firstCall = mocks.toastError.mock.calls[0]
+    if (!firstCall) {
+      throw new Error('Expected an error toast')
+    }
+    const [title, options] = firstCall
     expect(title).toBe('Failed to copy notes')
     expect(options.description).toBe('payload too large')
   })
