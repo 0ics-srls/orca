@@ -3,25 +3,129 @@
   "family": "tasks.project-row-fields",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "fc525c355d741ea5478dd1b106526b5b8205de1b",
+  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "2093a4fa0906b3becfe1846f9c18e86b7df8383620a17b5746d51352193150fb",
-  "scenarioSha256": "233e932c9d798256fb4bf2649c266fda42772481bfef4fd3df94255fe697bfbf",
+  "recorderSha256": "202244bdc6c5981af34b4ab9900e21915367608449399c380aaee173c584aa25",
+  "adapterSha256": "c27aec0af475a33b773d9a008896cbe42f74368ae20d0ce5501a7b54ed110f8a",
+  "scenarioSha256": "0fe8c60631cf04d33b34371155f5f80c8426b07b1cbec2fabc5d6d619f2633b8",
   "platform": "darwin",
   "scenarioVersion": 1,
   "projectionVersion": 2,
-  "goldenFormatVersion": 4,
+  "goldenFormatVersion": 5,
   "values": {
+    "010155bc60dd": {
+      "name": "githubProjectTable",
+      "value": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
     "057a0b5a420b": {
       "name": "projectRowDetailError",
       "value": ""
+    },
+    "06620643557d": {
+      "name": "projectRowItem",
+      "value": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      }
     },
     "0924615699bf": {
       "name": "projectRowDetailError",
       "value": "transport failure"
     },
-    "0a7b06657d84": {
-      "error": "Cannot read properties of null (reading 'ok')",
+    "11453f1749a4": {
+      "error": "transport failure",
       "mutating": false,
       "row": {
         "content": {
@@ -37,9 +141,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -50,8 +156,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -74,11 +187,79 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "1153dfcb2ccc": {
+      "name": "githubProjectTable",
+      "value": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {},
             "id": "item-1",
             "itemType": "ISSUE"
           },
@@ -153,94 +334,6 @@
         "field-1": ""
       }
     },
-    "196cae5baf1b": {
-      "error": "Cannot read properties of undefined (reading 'ok')",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
     "1c2300267a50": {
       "name": "github.project.clearItemField#1",
       "args": [
@@ -275,13 +368,108 @@
         }
       }
     },
-    "1eb99afa4500": {
-      "name": "github.project.updateItemField#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.project.updateItemField\",\"params\":{\"projectId\":\"project-1\",\"host\":\"github.enterprise.test\",\"itemId\":\"item-1\",\"fieldId\":\"field-1\",\"value\":{\"singleSelectOptionId\":\"option-1\"}}}"
-    },
     "27f506c59cc7": {
       "name": "projectRowDetailError",
       "value": "outer refused"
+    },
+    "292291b21e81": {
+      "error": "Cannot read properties of null (reading 'ok')",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "$rpc": "null"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
     },
     "2cd14f7121a5": {
       "name": "projectMutating",
@@ -290,6 +478,115 @@
     "2e2da1bbd7ed": {
       "name": "projectRowDetailError",
       "value": "Cannot read properties of undefined (reading 'ok')"
+    },
+    "311a2f79b43d": {
+      "error": "transport failure",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
     },
     "31dba010fada": {
       "name": "github.project.clearItemField#1",
@@ -328,105 +625,22 @@
         }
       }
     },
-    "38e75bd382e6": {
-      "error": "Unknown method",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "3d6cb0d60f28": {
+    "3a0ba35a3b28": {
       "name": "githubProjectTable",
       "value": {
         "fields": [
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -449,9 +663,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -483,15 +699,14 @@
         }
       }
     },
-    "461ee70a0d5c": {
-      "error": "",
+    "3acce5b08290": {
+      "error": "inner refused",
       "mutating": false,
       "row": {
         "content": {
           "assignees": [],
           "issueType": {
-            "id": "type-1",
-            "name": "Bug"
+            "$rpc": "null"
           },
           "labels": [],
           "number": 1,
@@ -501,9 +716,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -514,8 +731,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -528,8 +752,7 @@
             "content": {
               "assignees": [],
               "issueType": {
-                "id": "type-1",
-                "name": "Bug"
+                "$rpc": "null"
               },
               "labels": [],
               "number": 1,
@@ -539,9 +762,110 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "424e9a1ae7ed": {
+      "error": "",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "$rpc": "null"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -613,167 +937,17 @@
       "name": "github.project.updateIssueTypeBySlug#1",
       "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"github.project.updateIssueTypeBySlug\",\"params\":{\"owner\":\"owner\",\"repo\":\"repo\",\"host\":\"github.enterprise.test\",\"number\":1,\"issueTypeId\":\"type-1\"}}"
     },
-    "4eaffe9aefaa": {
+    "57a8b31d7765": {
       "error": "",
       "mutating": false,
       "row": {
         "content": {
           "assignees": [],
           "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {},
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
             },
-            "fieldValuesByFieldId": {},
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "588aad68fc29": {
-      "error": "",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {},
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "6774186fcc50": {
-      "error": "Failed to update project field",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
             "id": "type-1",
             "name": "Bug"
           },
@@ -785,9 +959,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -798,8 +974,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -812,6 +995,10 @@
             "content": {
               "assignees": [],
               "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
                 "id": "type-1",
                 "name": "Bug"
               },
@@ -823,9 +1010,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -857,12 +1046,215 @@
         }
       }
     },
-    "6908cf02303e": {
-      "name": "projectRowItem",
-      "value": {
+    "5f110d72ade0": {
+      "error": "outer refused",
+      "mutating": false,
+      "row": {
         "content": {
           "assignees": [],
           "issueType": {
+            "$rpc": "null"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "6294f739146e": {
+      "error": "Failed to update project field",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "$rpc": "null"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "645856fd5e4f": {
+      "error": "Unknown method",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
             "id": "type-1",
             "name": "Bug"
           },
@@ -874,13 +1266,283 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
         "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "674d1327dcc8": {
+      "error": "Cannot read properties of null (reading 'ok')",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "68296a29ee63": {
+      "error": "",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "$rpc": "null"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {},
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
       }
     },
     "6b6431f01d00": {
@@ -944,94 +1606,6 @@
         }
       }
     },
-    "781d29c902e8": {
-      "error": "inner refused",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
     "7aa05181323a": {
       "name": "github.project.clearItemField#1",
       "args": [
@@ -1069,96 +1643,6 @@
         }
       }
     },
-    "7d2c7d0455dc": {
-      "error": "transport failure",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
     "7da1fa6feb18": {
       "name": "github.project.clearItemField#1",
       "args": [
@@ -1193,7 +1677,257 @@
         }
       }
     },
-    "7db9f08e469a": {
+    "828b2d745070": {
+      "name": "projectRowDetailError",
+      "value": "Failed to update project field"
+    },
+    "83ef3d3c2cac": {
+      "name": "projectRowItem",
+      "value": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {},
+        "id": "item-1",
+        "itemType": "ISSUE"
+      }
+    },
+    "895e7a6b9398": {
+      "name": "github.project.updateItemField#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.project.updateItemField\",\"params\":{\"projectId\":\"project-1\",\"host\":\"github.enterprise.test\",\"itemId\":\"item-1\",\"fieldId\":\"field-1\",\"value\":{\"kind\":\"single-select\",\"optionId\":\"option-1\"}}}"
+    },
+    "9b25901e2435": {
+      "error": "Cannot read properties of undefined (reading 'ok')",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "bd34a3803a4e": {
+      "error": "inner refused",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "c28945c7087a": {
       "name": "projectRowItem",
       "value": {
         "content": {
@@ -1209,688 +1943,22 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
         "itemType": "ISSUE"
       }
     },
-    "7f70b4da0976": {
-      "name": "githubProjectTable",
-      "value": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
+    "c2a271fc5d97": {
+      "name": "projectMutating",
+      "value": true
     },
-    "821826d73b5a": {
-      "error": "Cannot read properties of undefined (reading 'ok')",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "828b2d745070": {
-      "name": "projectRowDetailError",
-      "value": "Failed to update project field"
-    },
-    "90cc871eee39": {
-      "name": "githubProjectTable",
-      "value": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "92fd6ad4b157": {
-      "error": "Failed to update project field",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "9e0859bdce26": {
-      "name": "github.project.updateItemField#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "github.project.updateItemField"
-        },
-        {
-          "name": "params",
-          "value": {
-            "fieldId": "field-1",
-            "host": "github.enterprise.test",
-            "itemId": "item-1",
-            "projectId": "project-1",
-            "value": {
-              "singleSelectOptionId": "option-1"
-            }
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "timeoutMs": 30000
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-1",
-          "ok": true,
-          "result": {
-            "ok": true
-          }
-        }
-      }
-    },
-    "a058c7eb11d3": {
-      "error": "outer refused",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "a5879021e96b": {
-      "error": "inner refused",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "aed1fe77b927": {
-      "error": "",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "$rpc": "null"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "b2f9e8fd8a24": {
-      "name": "githubProjectTable",
-      "value": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
-        }
-      }
-    },
-    "b36364084f36": {
+    "c5d817856415": {
       "error": "",
       "mutating": true,
       "row": {
@@ -1907,9 +1975,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -1920,8 +1990,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -1944,9 +2021,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -1978,7 +2057,7 @@
         }
       }
     },
-    "b3fba752237c": {
+    "c668cb389101": {
       "error": "Unknown method",
       "mutating": false,
       "row": {
@@ -1995,9 +2074,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -2008,8 +2089,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -2032,9 +2120,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -2066,12 +2156,17 @@
         }
       }
     },
-    "b4445eeaf940": {
-      "name": "projectRowItem",
-      "value": {
+    "c70cb6df3f9c": {
+      "error": "Failed to update project field",
+      "mutating": false,
+      "row": {
         "content": {
           "assignees": [],
           "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
             "id": "type-1",
             "name": "Bug"
           },
@@ -2081,14 +2176,94 @@
           "state": "OPEN",
           "url": "https://github.com/owner/repo/issues/1"
         },
-        "fieldValuesByFieldId": {},
+        "fieldValuesByFieldId": {
+          "field-1": {
+            "color": "YELLOW",
+            "fieldId": "field-1",
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
+          }
+        },
         "id": "item-1",
         "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
       }
-    },
-    "c2a271fc5d97": {
-      "name": "projectMutating",
-      "value": true
     },
     "c729dad3a433": {
       "name": "github.project.clearItemField#1",
@@ -2123,6 +2298,85 @@
           "result": {
             "$rpc": "null"
           }
+        }
+      }
+    },
+    "ca40db170f48": {
+      "name": "githubProjectTable",
+      "value": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {
+              "field-1": {
+                "color": "YELLOW",
+                "fieldId": "field-1",
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
+              }
+            },
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
         }
       }
     },
@@ -2163,17 +2417,17 @@
         }
       }
     },
-    "d330309fabb3": {
-      "name": "projectRowDetailError",
-      "value": "Cannot read properties of null (reading 'ok')"
-    },
-    "d75d666414e4": {
-      "error": "Cannot read properties of null (reading 'ok')",
+    "cfc00f66b739": {
+      "error": "outer refused",
       "mutating": false,
       "row": {
         "content": {
           "assignees": [],
           "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
             "id": "type-1",
             "name": "Bug"
           },
@@ -2185,9 +2439,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -2198,8 +2454,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -2212,6 +2475,10 @@
             "content": {
               "assignees": [],
               "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
                 "id": "type-1",
                 "name": "Bug"
               },
@@ -2223,9 +2490,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -2256,6 +2525,50 @@
           "number": 1
         }
       }
+    },
+    "d19660e0ba85": {
+      "name": "github.project.updateItemField#1",
+      "args": [
+        {
+          "name": "method",
+          "value": "github.project.updateItemField"
+        },
+        {
+          "name": "params",
+          "value": {
+            "fieldId": "field-1",
+            "host": "github.enterprise.test",
+            "itemId": "item-1",
+            "projectId": "project-1",
+            "value": {
+              "kind": "single-select",
+              "optionId": "option-1"
+            }
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "timeoutMs": 30000
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-1",
+          "ok": true,
+          "result": {
+            "ok": true
+          }
+        }
+      }
+    },
+    "d330309fabb3": {
+      "name": "projectRowDetailError",
+      "value": "Cannot read properties of null (reading 'ok')"
     },
     "d7d194b8694f": {
       "name": "github.project.clearItemField#1",
@@ -2330,8 +2643,105 @@
         }
       }
     },
-    "da25ab1389a9": {
-      "error": "transport failure",
+    "dca464e5bca3": {
+      "name": "github.project.clearItemField#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"github.project.clearItemField\",\"params\":{\"projectId\":\"project-1\",\"host\":\"github.enterprise.test\",\"itemId\":\"item-1\",\"fieldId\":\"field-1\"}}"
+    },
+    "de29905548eb": {
+      "error": "",
+      "mutating": false,
+      "row": {
+        "content": {
+          "assignees": [],
+          "issueType": {
+            "color": "RED",
+            "description": {
+              "$rpc": "null"
+            },
+            "id": "type-1",
+            "name": "Bug"
+          },
+          "labels": [],
+          "number": 1,
+          "repository": "owner/repo",
+          "state": "OPEN",
+          "url": "https://github.com/owner/repo/issues/1"
+        },
+        "fieldValuesByFieldId": {},
+        "id": "item-1",
+        "itemType": "ISSUE"
+      },
+      "table": {
+        "fields": [
+          {
+            "dataType": "SINGLE_SELECT",
+            "id": "field-1",
+            "kind": "single-select",
+            "name": "Status",
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
+          }
+        ],
+        "project": {
+          "id": "project-1",
+          "number": 3,
+          "title": "Board"
+        },
+        "rows": [
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "color": "RED",
+                "description": {
+                  "$rpc": "null"
+                },
+                "id": "type-1",
+                "name": "Bug"
+              },
+              "labels": [],
+              "number": 1,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/issues/1"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-1",
+            "itemType": "ISSUE"
+          },
+          {
+            "content": {
+              "assignees": [],
+              "issueType": {
+                "$rpc": "null"
+              },
+              "labels": [],
+              "number": 2,
+              "repository": "owner/repo",
+              "state": "OPEN",
+              "url": "https://github.com/owner/repo/pull/2"
+            },
+            "fieldValuesByFieldId": {},
+            "id": "item-2",
+            "itemType": "PULL_REQUEST"
+          }
+        ],
+        "selectedView": {
+          "filter": "",
+          "id": "view-1",
+          "layout": "TABLE_LAYOUT",
+          "name": "Table",
+          "number": 1
+        }
+      }
+    },
+    "e0b55fd5ddd3": {
+      "error": "Cannot read properties of undefined (reading 'ok')",
       "mutating": false,
       "row": {
         "content": {
@@ -2347,9 +2757,11 @@
         },
         "fieldValuesByFieldId": {
           "field-1": {
+            "color": "YELLOW",
             "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
+            "kind": "single-select",
+            "name": "In progress",
+            "optionId": "option-1"
           }
         },
         "id": "item-1",
@@ -2360,8 +2772,15 @@
           {
             "dataType": "SINGLE_SELECT",
             "id": "field-1",
+            "kind": "single-select",
             "name": "Status",
-            "options": []
+            "options": [
+              {
+                "color": "YELLOW",
+                "id": "option-1",
+                "name": "In progress"
+              }
+            ]
           }
         ],
         "project": {
@@ -2384,9 +2803,11 @@
             },
             "fieldValuesByFieldId": {
               "field-1": {
+                "color": "YELLOW",
                 "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
+                "kind": "single-select",
+                "name": "In progress",
+                "optionId": "option-1"
               }
             },
             "id": "item-1",
@@ -2417,10 +2838,6 @@
           "number": 1
         }
       }
-    },
-    "dca464e5bca3": {
-      "name": "github.project.clearItemField#1",
-      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"github.project.clearItemField\",\"params\":{\"projectId\":\"project-1\",\"host\":\"github.enterprise.test\",\"itemId\":\"item-1\",\"fieldId\":\"field-1\"}}"
     },
     "e14ea8ebe65d": {
       "name": "github.project.clearItemField#1",
@@ -2456,96 +2873,6 @@
             "error": "inner refused",
             "ok": false
           }
-        }
-      }
-    },
-    "e1f4c57db822": {
-      "error": "outer refused",
-      "mutating": false,
-      "row": {
-        "content": {
-          "assignees": [],
-          "issueType": {
-            "id": "type-1",
-            "name": "Bug"
-          },
-          "labels": [],
-          "number": 1,
-          "repository": "owner/repo",
-          "state": "OPEN",
-          "url": "https://github.com/owner/repo/issues/1"
-        },
-        "fieldValuesByFieldId": {
-          "field-1": {
-            "fieldId": "field-1",
-            "kind": "text",
-            "text": ""
-          }
-        },
-        "id": "item-1",
-        "itemType": "ISSUE"
-      },
-      "table": {
-        "fields": [
-          {
-            "dataType": "SINGLE_SELECT",
-            "id": "field-1",
-            "name": "Status",
-            "options": []
-          }
-        ],
-        "project": {
-          "id": "project-1",
-          "number": 3,
-          "title": "Board"
-        },
-        "rows": [
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "id": "type-1",
-                "name": "Bug"
-              },
-              "labels": [],
-              "number": 1,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/issues/1"
-            },
-            "fieldValuesByFieldId": {
-              "field-1": {
-                "fieldId": "field-1",
-                "kind": "text",
-                "text": ""
-              }
-            },
-            "id": "item-1",
-            "itemType": "ISSUE"
-          },
-          {
-            "content": {
-              "assignees": [],
-              "issueType": {
-                "$rpc": "null"
-              },
-              "labels": [],
-              "number": 2,
-              "repository": "owner/repo",
-              "state": "OPEN",
-              "url": "https://github.com/owner/repo/pull/2"
-            },
-            "fieldValuesByFieldId": {},
-            "id": "item-2",
-            "itemType": "PULL_REQUEST"
-          }
-        ],
-        "selectedView": {
-          "filter": "",
-          "id": "view-1",
-          "layout": "TABLE_LAYOUT",
-          "name": "Table",
-          "number": 1
         }
       }
     },
@@ -2601,31 +2928,31 @@
       {
         "id": "tk-project-row-fields.prelude:set-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26"],
-          "payloads": ["1eb99afa4500"],
+          "sender": ["d19660e0ba85"],
+          "payloads": ["895e7a6b9398"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a"
           },
-          "state": "aed1fe77b927",
-          "effects": ["c2a271fc5d97", "7db9f08e469a", "3d6cb0d60f28", "2cd14f7121a5"]
+          "state": "424e9a1ae7ed",
+          "effects": ["c2a271fc5d97", "c28945c7087a", "3a0ba35a3b28", "2cd14f7121a5"]
         }
       },
       {
         "id": "tk-project-row-fields.prelude:cleanup",
         "observation": {
-          "sender": ["9e0859bdce26", "759540f23b63"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "759540f23b63"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "b36364084f36",
+          "state": "c5d817856415",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "f871d643501c",
@@ -2636,22 +2963,22 @@
       {
         "id": "tk-project-row-fields.normal:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "46c028c0d924"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "46c028c0d924"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "4eaffe9aefaa",
+          "state": "68296a29ee63",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6be8b6473722",
-            "7f70b4da0976",
+            "1153dfcb2ccc",
             "1939e469a4b3",
             "2cd14f7121a5"
           ]
@@ -2660,28 +2987,28 @@
       {
         "id": "tk-project-row-fields.normal:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "46c028c0d924", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "46c028c0d924", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "588aad68fc29",
+          "state": "de29905548eb",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6be8b6473722",
-            "7f70b4da0976",
+            "1153dfcb2ccc",
             "1939e469a4b3",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "b4445eeaf940",
-            "90cc871eee39",
+            "83ef3d3c2cac",
+            "010155bc60dd",
             "2cd14f7121a5"
           ]
         }
@@ -2689,18 +3016,18 @@
       {
         "id": "tk-project-row-fields.result-absent:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "f71162f2f6ab"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "f71162f2f6ab"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "196cae5baf1b",
+          "state": "e0b55fd5ddd3",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "2e2da1bbd7ed",
@@ -2711,26 +3038,26 @@
       {
         "id": "tk-project-row-fields.result-absent:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "f71162f2f6ab", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "f71162f2f6ab", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "821826d73b5a",
+          "state": "9b25901e2435",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "2e2da1bbd7ed",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -2738,18 +3065,18 @@
       {
         "id": "tk-project-row-fields.result-null:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "c729dad3a433"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "c729dad3a433"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "0a7b06657d84",
+          "state": "292291b21e81",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "d330309fabb3",
@@ -2760,26 +3087,26 @@
       {
         "id": "tk-project-row-fields.result-null:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "c729dad3a433", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "c729dad3a433", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "d75d666414e4",
+          "state": "674d1327dcc8",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "d330309fabb3",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -2787,22 +3114,22 @@
       {
         "id": "tk-project-row-fields.inner-ok-missing:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "d7d194b8694f"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "d7d194b8694f"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "4eaffe9aefaa",
+          "state": "68296a29ee63",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6be8b6473722",
-            "7f70b4da0976",
+            "1153dfcb2ccc",
             "1939e469a4b3",
             "2cd14f7121a5"
           ]
@@ -2811,28 +3138,28 @@
       {
         "id": "tk-project-row-fields.inner-ok-missing:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "d7d194b8694f", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "d7d194b8694f", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "588aad68fc29",
+          "state": "de29905548eb",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6be8b6473722",
-            "7f70b4da0976",
+            "1153dfcb2ccc",
             "1939e469a4b3",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "b4445eeaf940",
-            "90cc871eee39",
+            "83ef3d3c2cac",
+            "010155bc60dd",
             "2cd14f7121a5"
           ]
         }
@@ -2840,18 +3167,18 @@
       {
         "id": "tk-project-row-fields.inner-false-string-error:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "e14ea8ebe65d"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "e14ea8ebe65d"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "92fd6ad4b157",
+          "state": "6294f739146e",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "828b2d745070",
@@ -2862,26 +3189,26 @@
       {
         "id": "tk-project-row-fields.inner-false-string-error:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "e14ea8ebe65d", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "e14ea8ebe65d", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "6774186fcc50",
+          "state": "c70cb6df3f9c",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "828b2d745070",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -2889,18 +3216,18 @@
       {
         "id": "tk-project-row-fields.inner-false-object-error:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "17d68b64c995"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "17d68b64c995"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "781d29c902e8",
+          "state": "3acce5b08290",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6fe1c7d73e4d",
@@ -2911,26 +3238,26 @@
       {
         "id": "tk-project-row-fields.inner-false-object-error:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "17d68b64c995", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "17d68b64c995", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "a5879021e96b",
+          "state": "bd34a3803a4e",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6fe1c7d73e4d",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -2938,18 +3265,18 @@
       {
         "id": "tk-project-row-fields.outer-refused:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "7aa05181323a"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "7aa05181323a"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "a058c7eb11d3",
+          "state": "5f110d72ade0",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "27f506c59cc7",
@@ -2960,26 +3287,26 @@
       {
         "id": "tk-project-row-fields.outer-refused:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "7aa05181323a", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "7aa05181323a", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "e1f4c57db822",
+          "state": "cfc00f66b739",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "27f506c59cc7",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -2987,18 +3314,18 @@
       {
         "id": "tk-project-row-fields.outer-refused-no-message:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "31dba010fada"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "31dba010fada"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "aed1fe77b927",
+          "state": "424e9a1ae7ed",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "057a0b5a420b",
@@ -3009,26 +3336,26 @@
       {
         "id": "tk-project-row-fields.outer-refused-no-message:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "31dba010fada", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "31dba010fada", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "461ee70a0d5c",
+          "state": "57a8b31d7765",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "057a0b5a420b",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -3036,18 +3363,18 @@
       {
         "id": "tk-project-row-fields.method-not-found:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "cdb1e0ec3294"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "cdb1e0ec3294"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "b3fba752237c",
+          "state": "c668cb389101",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6b6431f01d00",
@@ -3058,26 +3385,26 @@
       {
         "id": "tk-project-row-fields.method-not-found:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "cdb1e0ec3294", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "cdb1e0ec3294", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "38e75bd382e6",
+          "state": "645856fd5e4f",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "6b6431f01d00",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -3085,18 +3412,18 @@
       {
         "id": "tk-project-row-fields.transport-rejection:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "1c2300267a50"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "1c2300267a50"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "da25ab1389a9",
+          "state": "11453f1749a4",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "0924615699bf",
@@ -3107,26 +3434,26 @@
       {
         "id": "tk-project-row-fields.transport-rejection:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "1c2300267a50", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "1c2300267a50", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "7d2c7d0455dc",
+          "state": "311a2f79b43d",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "0924615699bf",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }
@@ -3134,18 +3461,18 @@
       {
         "id": "tk-project-row-fields.transport-rejection-no-message:clear-field-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "7da1fa6feb18"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3"],
+          "sender": ["d19660e0ba85", "7da1fa6feb18"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a"
           },
-          "state": "aed1fe77b927",
+          "state": "424e9a1ae7ed",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "057a0b5a420b",
@@ -3156,26 +3483,26 @@
       {
         "id": "tk-project-row-fields.transport-rejection-no-message:issue-type-settled",
         "observation": {
-          "sender": ["9e0859bdce26", "7da1fa6feb18", "d8504a4a27ff"],
-          "payloads": ["1eb99afa4500", "dca464e5bca3", "4bb4179487e7"],
+          "sender": ["d19660e0ba85", "7da1fa6feb18", "d8504a4a27ff"],
+          "payloads": ["895e7a6b9398", "dca464e5bca3", "4bb4179487e7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "set-field-0": "eb79a9b3682a",
             "clear-field-1": "eb79a9b3682a",
             "issue-type-2": "eb79a9b3682a"
           },
-          "state": "461ee70a0d5c",
+          "state": "57a8b31d7765",
           "effects": [
             "c2a271fc5d97",
-            "7db9f08e469a",
-            "3d6cb0d60f28",
+            "c28945c7087a",
+            "3a0ba35a3b28",
             "2cd14f7121a5",
             "c2a271fc5d97",
             "057a0b5a420b",
             "2cd14f7121a5",
             "c2a271fc5d97",
-            "6908cf02303e",
-            "b2f9e8fd8a24",
+            "06620643557d",
+            "ca40db170f48",
             "2cd14f7121a5"
           ]
         }

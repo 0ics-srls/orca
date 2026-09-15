@@ -215,12 +215,12 @@ export function taskItemConversationMountAdapters(
 ): Record<string, MountAdapter> {
   const load = <T>(file: string): T => modules.load<T>(`mobile/src/tasks/${file}`)
   function commentReview(item: Record<string, unknown>, payload: Record<string, unknown>) {
-    const useActions = load<
-      typeof import('../../../tasks/use-mobile-tasks-hosted-comment-review-actions')
-    >('use-mobile-tasks-hosted-comment-review-actions.tsx').useMobileTasksHostedCommentReviewActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-hosted-comment-review-actions')>(
+            'use-mobile-tasks-hosted-comment-review-actions.tsx'
+          ).useMobileTasksHostedCommentReviewActions(model),
         fixture: {
           copiedLinkResetTimerRef: { current: null },
           detailPayload: payload,
@@ -247,12 +247,12 @@ export function taskItemConversationMountAdapters(
       })
   }
   function replyMerge(item: Record<string, unknown>) {
-    const useActions = load<
-      typeof import('../../../tasks/use-mobile-tasks-github-reply-merge-actions')
-    >('use-mobile-tasks-github-reply-merge-actions.tsx').useMobileTasksGithubReplyMergeActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-github-reply-merge-actions')>(
+            'use-mobile-tasks-github-reply-merge-actions.tsx'
+          ).useMobileTasksGithubReplyMergeActions(model),
         fixture: {
           itemReplyDrafts: { '501': 'a reply', 'comment-2': 'a reply' },
           loadTasks: async () => {},

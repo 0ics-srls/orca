@@ -213,12 +213,12 @@ export function taskItemHostedMetadataMountAdapters(
 ): Record<string, MountAdapter> {
   const load = <T>(file: string): T => modules.load<T>(`mobile/src/tasks/${file}`)
   function hostedMetadata(item: Record<string, unknown>) {
-    const useActions = load<
-      typeof import('../../../tasks/use-mobile-tasks-hosted-metadata-actions')
-    >('use-mobile-tasks-hosted-metadata-actions.tsx').useMobileTasksHostedMetadataActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-hosted-metadata-actions')>(
+            'use-mobile-tasks-hosted-metadata-actions.tsx'
+          ).useMobileTasksHostedMetadataActions(model),
         fixture: {
           detailPayload: item.provider === 'github' ? githubDetailPayload() : gitlabDetailPayload(),
           loadTasks: async () => {},

@@ -220,14 +220,12 @@ export function taskProjectRowCommentMountAdapters(
     })
   }
   function rowComments(row: Record<string, unknown>) {
-    const useActions = load<
-      typeof import('../../../tasks/use-mobile-tasks-project-workspace-comment-actions')
-    >(
-      'use-mobile-tasks-project-workspace-comment-actions.tsx'
-    ).useMobileTasksProjectWorkspaceCommentActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-project-workspace-comment-actions')>(
+            'use-mobile-tasks-project-workspace-comment-actions.tsx'
+          ).useMobileTasksProjectWorkspaceCommentActions(model),
         fixture: {
           ...boardFixture,
           projectRowItem: row,

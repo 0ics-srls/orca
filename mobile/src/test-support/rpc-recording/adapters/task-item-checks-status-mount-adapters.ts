@@ -241,12 +241,12 @@ export function taskItemChecksStatusMountAdapters(
     })
   }
   function hostedStatus(item: Record<string, unknown>) {
-    const useActions = load<
-      typeof import('../../../tasks/use-mobile-tasks-gitlab-github-status-actions')
-    >('use-mobile-tasks-gitlab-github-status-actions.tsx').useMobileTasksGitlabGithubStatusActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-gitlab-github-status-actions')>(
+            'use-mobile-tasks-gitlab-github-status-actions.tsx'
+          ).useMobileTasksGitlabGithubStatusActions(model),
         fixture: {
           detailPayload: item.provider === 'github' ? githubDetailPayload() : gitlabDetailPayload(),
           loadTasks: async () => {},

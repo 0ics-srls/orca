@@ -127,12 +127,12 @@ export function taskListMountAdapters(
   }
 
   function taskList(provider: string, extra: Record<string, unknown>) {
-    const useLoading = load<typeof import('../../../tasks/use-mobile-tasks-task-list-loading')>(
-      'use-mobile-tasks-task-list-loading.tsx'
-    ).useMobileTasksTaskListLoading
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useLoading(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-task-list-loading')>(
+            'use-mobile-tasks-task-list-loading.tsx'
+          ).useMobileTasksTaskListLoading(model),
         fixture: {
           appliedQuery: '',
           clientRef: { current: context.client },
@@ -222,12 +222,12 @@ export function taskListMountAdapters(
   }
 
   function taskCreate(provider: string) {
-    const useActions = load<typeof import('../../../tasks/use-mobile-tasks-task-create-actions')>(
-      'use-mobile-tasks-task-create-actions.tsx'
-    ).useMobileTasksTaskCreateActions
     return (context: Parameters<MountAdapter>[0]) =>
       mountModelHook(context, {
-        useHook: (model) => useActions(model),
+        useHook: (model) =>
+          load<typeof import('../../../tasks/use-mobile-tasks-task-create-actions')>(
+            'use-mobile-tasks-task-create-actions.tsx'
+          ).useMobileTasksTaskCreateActions(model),
         fixture: {
           createBody: 'a body',
           createRepoId: REPO_ID,

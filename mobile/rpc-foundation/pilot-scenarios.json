@@ -8384,7 +8384,7 @@
               "projects": [
                 {
                   "owner": "owner",
-                  "ownerType": "ORGANIZATION",
+                  "ownerType": "organization",
                   "number": 3,
                   "title": "Board",
                   "host": "github.com"
@@ -8406,7 +8406,7 @@
           "params": {
             "host": "github.enterprise.test",
             "owner": "owner",
-            "ownerType": "ORGANIZATION",
+            "ownerType": "organization",
             "projectNumber": 3
           },
           "reply": {
@@ -8436,7 +8436,7 @@
           "params": {
             "host": "github.enterprise.test",
             "owner": "owner",
-            "ownerType": "ORGANIZATION",
+            "ownerType": "organization",
             "projectNumber": 3,
             "viewId": "view-1"
           },
@@ -8481,7 +8481,7 @@
             "result": {
               "ok": true,
               "owner": "owner",
-              "ownerType": "ORGANIZATION",
+              "ownerType": "organization",
               "number": 3,
               "title": "Board",
               "host": "github.com",
@@ -8494,7 +8494,7 @@
           "params": {
             "host": "github.com",
             "owner": "owner",
-            "ownerType": "ORGANIZATION",
+            "ownerType": "organization",
             "projectNumber": 3
           },
           "reply": {
@@ -8660,7 +8660,8 @@
             "itemId": "item-1",
             "projectId": "project-1",
             "value": {
-              "singleSelectOptionId": "option-1"
+              "kind": "single-select",
+              "optionId": "option-1"
             }
           },
           "reply": {
