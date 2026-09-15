@@ -24,10 +24,14 @@
 export function partialNativeModule(module: string, members: Record<string, unknown>): unknown {
   return new Proxy(members, {
     get: (target, key) => {
-      if (typeof key === 'string' && key !== '__esModule' && !(key in target)) {
-        throw new Error(`Unsubstituted native member: ${module}.${key}`)
+      if (typeof key === 'string') {
+        if (key !== '__esModule' && !(key in target)) {
+          throw new Error(`Unsubstituted native member: ${module}.${key}`)
+        }
+        return target[key]
       }
-      return Reflect.get(target, key)
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a symbol key cannot index the declared string record; the trap reads whatever the member object holds there.
+      return (target as Record<symbol, unknown>)[key]
     }
   })
 }
@@ -45,7 +49,7 @@ export function nativeStoreModule(module: string, declared: Record<string, unkno
         return undefined
       }
       if (typeof key === 'string' && key in target) {
-        return Reflect.get(target, key)
+        return target[key]
       }
       return (...args: unknown[]) => {
         void args
