@@ -21,7 +21,10 @@ type FakeWaiter = {
   timer: ReturnType<typeof setTimeout>
 }
 
-function createFakeRuntime(initial: Partial<FakePane>) {
+function createFakeRuntime(
+  initial: Partial<FakePane>,
+  readinessOptions: { resolveUnknown?: boolean } = {}
+) {
   const pane: FakePane = {
     lastAgentStatus: null,
     paneTitle: null,
@@ -44,13 +47,19 @@ function createFakeRuntime(initial: Partial<FakePane>) {
   } = {
     getTerminalHandleForPaneKey: () => HANDLE,
     readTerminal: async () => ({ tail: ['previous run output'] }),
-    waitForTerminal: (_handle, options) => {
+    waitForTerminal: (_handle, waitOptions) => {
       waitCalls += 1
-      if (options?.signal?.aborted) {
+      if (waitOptions?.signal?.aborted) {
         return Promise.reject(new Error('request_aborted'))
       }
       if (satisfiedNow()) {
         return Promise.resolve({ satisfied: true })
+      }
+      if (readinessOptions.resolveUnknown) {
+        return Promise.resolve({
+          satisfied: false,
+          readiness: { state: 'unknown' as const }
+        })
       }
       return new Promise((resolve, reject) => {
         const waiter: FakeWaiter = {
@@ -59,7 +68,7 @@ function createFakeRuntime(initial: Partial<FakePane>) {
           timer: setTimeout(() => {
             waiters.delete(waiter)
             reject(new Error('timeout'))
-          }, options?.timeoutMs ?? RUNTIME_TUI_IDLE_TIMEOUT_MS)
+          }, waitOptions?.timeoutMs ?? RUNTIME_TUI_IDLE_TIMEOUT_MS)
         }
         waiters.add(waiter)
       })
@@ -164,6 +173,26 @@ describe('createRuntimeAutomationRunTerminalObserver', () => {
     await vi.advanceTimersByTimeAsync(2 * 60 * 1000 + 1_000)
     expect(run.settled[0]?.status).toBe('dispatch_failed')
     expect(run.settled[0]?.error).toContain('never started')
+    await run.promise
+  })
+
+  it('does not treat an explicit unknown readiness result as proof the run started', async () => {
+    const readiness = { resolveUnknown: true }
+    const runtime = createFakeRuntime({}, readiness)
+    const run = observe(runtime)
+
+    await vi.advanceTimersByTimeAsync(0)
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(run.settled).toEqual([])
+
+    readiness.resolveUnknown = false
+    runtime.setPane({ lastAgentStatus: 'working' })
+    await vi.advanceTimersByTimeAsync(1_000)
+    expect(run.settled).toEqual([])
+
+    runtime.setPane({ lastAgentStatus: 'idle' })
+    await vi.advanceTimersByTimeAsync(10)
+    expect(run.settled[0]?.status).toBe('completed')
     await run.promise
   })
 

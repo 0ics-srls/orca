@@ -1,7 +1,7 @@
 import type { AgentStatus } from '../../shared/agent-detection'
 import { isFreshNonDoneAgentStatus } from '../../shared/agent-status-freshness'
 import type { AgentStatusState } from '../../shared/agent-status-types'
-import { getSyntheticAgentTerminalTitle } from '../../shared/synthetic-agent-title'
+import { getAgentReadinessCapability } from '../../shared/agent-readiness-capabilities'
 import { resolveExplicitTerminalTitleAgentType } from '../../shared/terminal-title-agent-type'
 import type { TuiAgent } from '../../shared/tui-agent'
 import { detectExplicitIdleStatusFromTitle } from './terminal-wait-detection'
@@ -15,12 +15,11 @@ import { detectExplicitIdleStatusFromTitle } from './terminal-wait-detection'
  * stale spinner (#1437) — so a busy Codex/Devin pane is routinely titled idle, and
  * accepting it satisfied a wait in ~0s mid-turn (#6011).
  *
- *   1. POSITIVE — the agent states it is ready: an explicit idle marker in its own
+ *   1. READY — the agent states it is ready: an explicit idle marker in its own
  *      title, or a known ready-prompt body.
- *   2. VETO — a fresh first-party agent status (OSC 9999) saying working/blocked/
+ *   2. BUSY — a fresh first-party agent status (OSC 9999) saying working/blocked/
  *      waiting. The agent's own account of itself outranks anything inferred.
- *   3. ABSENCE — a name-only title, or a quiet non-shell foreground process. A last
- *      resort, and only once sustained.
+ *   3. UNKNOWN — a title, screen, or process observation with no provider capability.
  *
  * Why derived here rather than stamped onto the record at write time: `syncWindowGraph`
  * rebuilds every leaf from an explicit field list, so a bespoke provenance field is
@@ -36,15 +35,19 @@ export type TuiIdleEvidenceRecord = {
 
 export type FirstPartyAgentStatus = { state: AgentStatusState; updatedAt: number } | null
 
-/** Tier 1: an idle marker the agent put in a title itself. */
+export type TuiIdleObservation = {
+  state: 'ready' | 'busy' | 'unsupported' | 'unknown'
+  source: 'title' | 'screen' | 'first-party' | 'capability' | 'none'
+  agent: TuiAgent | null
+}
+
+/** A positive idle marker the agent put in a title itself. */
 export function hasExplicitIdleTitle(
   record: TuiIdleEvidenceRecord,
   rendererTitle?: string | null
 ): boolean {
-  // Why lastOscTitle too, not just the renderer's pane title: a daemon-hosted or
-  // background pane has no renderer publishing a title, so reading only the synced
-  // one dropped an explicit `Codex ready` to the tier-3 lane and delayed it by the
-  // whole quiescence window.
+  // Why lastOscTitle too, not just the renderer's pane title: daemon-hosted and background panes
+  // may have no renderer title, while the PTY record still carries the provider's marker.
   for (const title of [rendererTitle, record.lastOscTitle]) {
     if (title && detectExplicitIdleStatusFromTitle(title) === 'idle') {
       return true
@@ -53,86 +56,79 @@ export function hasExplicitIdleTitle(
   return false
 }
 
-/** Tier 2: the agent's own status stream says this turn is still open. */
+/** The agent's own status stream says this turn is still open. */
 export function hasFreshWorkingFirstPartyStatus(status: FirstPartyAgentStatus): boolean {
   return isFreshNonDoneAgentStatus(status ?? undefined)
 }
 
-/**
- * Whether a name-only title from `agent` may be held to the tier-3 quiescence demand.
- *
- * Only for agents that go on to announce rest with an explicit title of their own (the
- * hook-driven `Codex ready` / `Devin ready`). Grok, Copilot, Aider, Mimo, agy and
- * OpenCode emit their NAME and nothing more at rest, so holding them to it leaves no
- * settle signal at all: a real idle Grok pane repaints its banner about four times a
- * second forever, so the stream never quiesces and the wait runs to timeout.
- */
-export function nameOnlyIdleNeedsCorroboration(
-  agent: TuiAgent | null | undefined,
-  title?: string | null
-): boolean {
-  // Why the title fallback: an adopted pane carries no launch metadata, but its
-  // name-only title is exactly the thing that names the agent.
-  const resolved = agent ?? (title ? resolveExplicitTerminalTitleAgentType(title) : null)
-  return getSyntheticAgentTerminalTitle(resolved, 'done') !== null
+function resolveObservedAgent(input: TuiIdleSatisfactionInput): TuiAgent | null {
+  if (input.agent) {
+    return input.agent
+  }
+  for (const title of [input.rendererTitle, input.record.lastOscTitle]) {
+    if (!title) {
+      continue
+    }
+    const resolved = resolveExplicitTerminalTitleAgentType(title)
+    if (resolved) {
+      return resolved
+    }
+  }
+  return null
 }
 
-/** Tier 3: a title-derived idle, usable only once the stream has also gone quiet. */
-export function hasSustainedTitleIdle(
-  record: TuiIdleEvidenceRecord,
-  agent: TuiAgent | null | undefined,
-  quiescenceMs: number
-): boolean {
-  if (record.lastAgentStatus !== 'idle') {
-    return false
-  }
-  if (!nameOnlyIdleNeedsCorroboration(agent, record.lastOscTitle)) {
-    // The title is the only rest signal this agent emits, so there is nothing to wait for.
-    return true
-  }
-  // Why not "no timestamp means nothing to debounce": an adopted or daemon-backed pane has
-  // no local output clock, so for an agent that WILL announce rest explicitly there is no
-  // corroboration available at all. Settling here let a busy Codex/Devin satisfy the wait
-  // from a name-only title (#6011); hold out for tier 1/2 or the caller's timeout instead.
-  if (record.lastOutputAt === null) {
-    return false
-  }
-  return Date.now() - record.lastOutputAt >= quiescenceMs
-}
-
-/**
- * Tier 3, cold start: Orca launched a known agent on this PTY, so a quiet non-shell
- * foreground process is an agent still booting, not one sitting at its prompt. Resolving
- * on it is what let `dispatch --inject` write into a TUI that had not yet attached its
- * reader and silently lose the prompt (#9976).
- */
-export function quietForegroundProcessProvesTuiIdle(agent: TuiAgent | null | undefined): boolean {
-  return !agent
+function supportsEvidence(agent: TuiAgent | null, source: 'title' | 'screen'): boolean {
+  return getAgentReadinessCapability(agent, 'terminal')?.evidence.includes(source) ?? false
 }
 
 export type TuiIdleSatisfactionInput = {
   record: TuiIdleEvidenceRecord
   /** Renderer-synced pane/tab title, when one exists. */
   rendererTitle?: string | null
-  /** Tier 1 body evidence: a known ready prompt, or an adopted pane's explicit title.
+  /** Body evidence: a known ready prompt, or an adopted pane's explicit title.
    *  A thunk because producing it means building the pane's wait text and lowercasing it
    *  (~11us and a multi-KB string on a full tail); the title check below usually answers
    *  first, and then none of that has to happen at all. */
   readPositiveBodyEvidence: () => boolean
+  /** Provider identity behind the body evidence, when the scanner can identify it. */
+  positiveBodyEvidenceAgent?: TuiAgent | null
+  /** Body evidence is normally a rendered terminal preview; adopted title evidence opts in. */
+  positiveBodyEvidenceSource?: 'title' | 'screen'
   agent: TuiAgent | null | undefined
   firstPartyStatus: FirstPartyAgentStatus
-  quiescenceMs: number
 }
 
-/** The one place the three tiers are combined; every satisfaction site routes here. */
-export function isTuiIdleSatisfied(input: TuiIdleSatisfactionInput): boolean {
-  // Why the title before the body: both are tier 1, so either settles, but the title is a
-  // memoized lookup and the body is a fresh multi-KB scan. Same verdict, cheaper order.
-  if (hasExplicitIdleTitle(input.record, input.rendererTitle) || input.readPositiveBodyEvidence()) {
-    return true
-  }
+/**
+ * Evaluates only evidence that can be tied to this launch's provider. Silence and process
+ * presence intentionally have no ready branch: they cannot prove that a composer accepts input.
+ */
+export function observeTuiIdle(input: TuiIdleSatisfactionInput): TuiIdleObservation {
+  // A prompt scanner is itself provider evidence when launch metadata is absent. It is read from
+  // this exact attachment, so retaining that identity is safer than treating a known prompt as
+  // anonymous and losing a usable readiness fact.
+  const agent = resolveObservedAgent(input) ?? input.positiveBodyEvidenceAgent ?? null
+  const bodySource = input.positiveBodyEvidenceSource ?? 'screen'
+  const bodyAgent = input.positiveBodyEvidenceAgent ?? agent
   if (hasFreshWorkingFirstPartyStatus(input.firstPartyStatus)) {
-    return false
+    return { state: 'busy', source: 'first-party', agent }
   }
-  return hasSustainedTitleIdle(input.record, input.agent, input.quiescenceMs)
+  if (hasExplicitIdleTitle(input.record, input.rendererTitle) && supportsEvidence(agent, 'title')) {
+    return { state: 'ready', source: 'title', agent }
+  }
+  if (
+    input.readPositiveBodyEvidence() &&
+    bodyAgent === agent &&
+    supportsEvidence(agent, bodySource)
+  ) {
+    return { state: 'ready', source: bodySource, agent }
+  }
+  if (!agent || getAgentReadinessCapability(agent, 'terminal')?.readiness === 'unsupported') {
+    return { state: agent ? 'unsupported' : 'unknown', source: 'capability', agent }
+  }
+  return { state: 'unknown', source: 'none', agent }
+}
+
+/** The one place readiness facts are combined; every satisfaction site routes here. */
+export function isTuiIdleSatisfied(input: TuiIdleSatisfactionInput): boolean {
+  return observeTuiIdle(input).state === 'ready'
 }

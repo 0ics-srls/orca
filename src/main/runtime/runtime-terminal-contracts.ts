@@ -158,6 +158,8 @@ export type OrchestrationCompatibilitySshAttachmentAuthority = Extract<
 
 export type TerminalWaiter = {
   handle: string
+  /** PTY/process incarnation captured when the wait was registered. */
+  processIncarnation: string | null
   condition: RuntimeTerminalWaitCondition
   resolve: (result: RuntimeTerminalWait) => void
   reject: (error: Error) => void

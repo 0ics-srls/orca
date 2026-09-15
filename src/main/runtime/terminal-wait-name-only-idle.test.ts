@@ -16,11 +16,11 @@ import type { FirstPartyAgentStatus } from './tui-idle-evidence'
 
 // #6011: `terminal wait --for tui-idle` returned satisfied in ~0s against a working agent,
 // because a Codex/Devin OSC title that carries only the agent NAME is stored as `idle` and
-// the wait accepted the stored value. These tests pin which evidence settles the wait,
-// which only corroborates, and which vetoes.
+// the wait accepted the stored value. These tests pin which attachment-bound evidence settles
+// the wait, which remains unknown, and which vetoes.
 
 const POLL_INTERVAL_MS = 2000
-const QUIESCENCE_MS = 3000
+const OUTPUT_AGE_FIXTURE_MS = 3000
 const NAME_ONLY_TITLE = 'Codex'
 const EXPLICIT_IDLE_TITLE = 'Codex ready'
 const HANDLE = 'terminal-1'
@@ -29,6 +29,7 @@ function createWait(options: {
   pty?: RuntimePtyWorktreeRecord
   leaf?: RuntimeLeafRecord
   adoptedIdleStatus?: AgentStatus | null
+  adoptedTitle?: string | null
   tabTitle?: string | null
   foreground?: string | null
   agent?: TuiAgent | null
@@ -40,14 +41,14 @@ function createWait(options: {
   const shared = {
     getTabTitle: () => options.tabTitle ?? null,
     getAdoptedPtyIdleStatus: () => options.adoptedIdleStatus ?? null,
+    getAdoptedPtyTitle: () => options.adoptedTitle ?? null,
     getPaneAgent: () => options.agent ?? null,
     getFirstPartyAgentStatus: () => options.firstPartyStatus ?? null,
-    quiescenceMs: QUIESCENCE_MS
+    getTerminalProcessIncarnation: () => 'test-incarnation'
   }
   const polls = new RuntimeTerminalIdlePolls({
     ...shared,
     intervalMs: POLL_INTERVAL_MS,
-    getForegroundProcess: () => Promise.resolve(options.foreground ?? null),
     getLiveLeaf: (leaf) => options.liveLeaf?.() ?? leaf,
     resolve: (waiter, result) => waiters.resolve(waiter, result)
   })
@@ -74,7 +75,7 @@ function watch(promise: Promise<unknown>) {
   return settled
 }
 
-/** Keeps the record "streaming": output stays younger than the quiescence window. */
+/** Keeps the record "streaming": each poll sees a fresh output timestamp. */
 async function advanceWhileStreaming(
   record: { lastOutputAt: number | null },
   ticks: number
@@ -102,18 +103,21 @@ describe('tui-idle evidence ranking', () => {
     expect(settled).not.toHaveBeenCalled()
   })
 
-  it('settles a name-only idle once the pane has been quiet for the window', async () => {
+  it('remains unknown after a name-only pane has been quiet for the window', async () => {
     const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitle: NAME_ONLY_TITLE })
     const { wait } = createWait({ pty, agent: 'codex' })
-    const settled = watch(wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 }))
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 10_000 })
 
     await advanceWhileStreaming(pty, 2)
-    expect(settled).not.toHaveBeenCalled()
-    await vi.advanceTimersByTimeAsync(QUIESCENCE_MS + POLL_INTERVAL_MS)
-    expect(settled).toHaveBeenCalledWith({ ok: expect.objectContaining({ satisfied: true }) })
+    // Still inside the timeout while output is arriving.
+    await vi.advanceTimersByTimeAsync(6_000)
+    await expect(result).resolves.toMatchObject({
+      satisfied: false,
+      readiness: { state: 'unknown' }
+    })
   })
 
-  it('settles an explicit idle title immediately, with no quiescence at all', async () => {
+  it('settles an explicit idle title immediately, without an elapsed-silence delay', async () => {
     const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitle: EXPLICIT_IDLE_TITLE })
     const { wait } = createWait({ pty, agent: 'codex' })
     await expect(
@@ -121,9 +125,50 @@ describe('tui-idle evidence ranking', () => {
     ).resolves.toMatchObject({ satisfied: true })
   })
 
-  // Why this case exists: tier 1 used to read only the renderer-synced pane title, so a
-  // daemon-hosted pane with no renderer dropped its explicit `Codex ready` to the
-  // quiescence lane and waited the whole window for a result it already had.
+  it('accepts a provider-specific ready screen when launch metadata is absent', async () => {
+    const pty = makeTuiIdlePty({
+      preview: 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'
+    })
+    const { wait } = createWait({ pty, agent: null })
+    await expect(
+      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    ).resolves.toMatchObject({
+      satisfied: true,
+      readiness: { state: 'ready', source: 'screen', agent: 'codex' }
+    })
+  })
+
+  it('accepts an adopted provider title when PTY launch metadata is absent', async () => {
+    const pty = makeTuiIdlePty({ lastAgentStatus: 'idle' })
+    const { wait } = createWait({
+      pty,
+      agent: null,
+      adoptedIdleStatus: 'idle',
+      adoptedTitle: 'OMP ready'
+    })
+    await expect(
+      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    ).resolves.toMatchObject({
+      satisfied: true,
+      readiness: { state: 'ready', source: 'title', agent: 'omp' }
+    })
+  })
+
+  it('does not attach a ready screen from a different provider to the launch', async () => {
+    const pty = makeTuiIdlePty({
+      preview: 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'
+    })
+    const { wait } = createWait({ pty, agent: 'claude' })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 100 })
+    await vi.advanceTimersByTimeAsync(100)
+    await expect(result).resolves.toMatchObject({
+      satisfied: false,
+      readiness: { state: 'unknown', agent: 'claude' }
+    })
+  })
+
+  // Why this case exists: daemon-hosted panes may have no renderer title, but their retained
+  // attachment record still carries an explicit provider marker.
   it('reads an explicit idle title off the record when no renderer published one', async () => {
     const leaf = makeTuiIdleLeaf({
       lastAgentStatus: 'idle',
@@ -140,7 +185,7 @@ describe('tui-idle evidence ranking', () => {
     const pty = makeTuiIdlePty({
       lastAgentStatus: 'idle',
       lastOscTitle: NAME_ONLY_TITLE,
-      lastOutputAt: Date.now() - QUIESCENCE_MS * 4
+      lastOutputAt: Date.now() - OUTPUT_AGE_FIXTURE_MS * 4
     })
     const { wait } = createWait({
       pty,
@@ -152,16 +197,15 @@ describe('tui-idle evidence ranking', () => {
     expect(settled).not.toHaveBeenCalled()
   })
 
-  // Why the scoping: demoting every name-only title left agents that emit their NAME and
-  // nothing else at rest with no settle signal at all. A real idle Grok pane repaints its
-  // banner about four times a second forever, so output never quiesces and the wait ran to
-  // timeout — a total loss of tui-idle for that provider.
-  it('settles immediately for an agent that never emits anything but its name', async () => {
+  it('returns unknown for an agent that never emits anything but its name', async () => {
     const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitle: 'grok' })
     const { wait } = createWait({ pty, agent: 'grok' })
-    await expect(
-      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    ).resolves.toMatchObject({ satisfied: true })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 100 })
+    await vi.advanceTimersByTimeAsync(100)
+    await expect(result).resolves.toMatchObject({
+      satisfied: false,
+      readiness: { state: 'unsupported' }
+    })
   })
 
   it('falls back to the title when the pane carries no launch metadata', async () => {
@@ -172,9 +216,8 @@ describe('tui-idle evidence ranking', () => {
     expect(settled).not.toHaveBeenCalled()
   })
 
-  // Why: `syncWindowGraph` rebuilds leaf records, so a poll that keeps reading the record it
-  // captured sees a frozen `lastOutputAt`, and its quiescence gate passes while the real pane
-  // is still streaming.
+  // Why: `syncWindowGraph` rebuilds leaf records, so a poll must re-read the live attachment
+  // rather than a stale object from waiter registration.
   it('tracks the live leaf record across a graph sync instead of a frozen capture', async () => {
     const registered = makeTuiIdleLeaf({ lastAgentStatus: 'idle', lastOscTitle: NAME_ONLY_TITLE })
     let live = registered
@@ -183,7 +226,7 @@ describe('tui-idle evidence ranking', () => {
 
     // The renderer republishes: a brand-new object replaces the captured one.
     live = makeTuiIdleLeaf({ lastAgentStatus: 'idle', lastOscTitle: NAME_ONLY_TITLE })
-    registered.lastOutputAt = Date.now() - QUIESCENCE_MS * 10
+    registered.lastOutputAt = Date.now() - OUTPUT_AGE_FIXTURE_MS * 10
     await advanceWhileStreaming(live, 4)
     expect(settled).not.toHaveBeenCalled()
   })
@@ -195,7 +238,7 @@ describe('tui-idle evidence ranking', () => {
     })
     const { wait } = createWait({ pty, agent: 'codex' })
     const settled = watch(wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 }))
-    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4 + QUIESCENCE_MS)
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4 + OUTPUT_AGE_FIXTURE_MS)
     expect(settled).not.toHaveBeenCalled()
   })
 })
@@ -263,7 +306,10 @@ describe('tui-idle over the live OSC title pipeline', () => {
     // The agent is mid-turn and repaints its title to the bare product name.
     runtime.onPtyData(E2E_PTY_ID, `${oscTitle(NAME_ONLY_TITLE)}more output\n`, Date.now())
 
-    await expect(waiting).rejects.toThrow('timeout')
+    await expect(waiting).resolves.toMatchObject({
+      satisfied: false,
+      readiness: { state: 'unknown' }
+    })
   })
 
   it('settles when the agent reports idle explicitly', async () => {
@@ -283,15 +329,19 @@ describe('tui-idle over the live OSC title pipeline', () => {
 
     await expect(
       runtime.waitForTerminal(handle, { condition: 'tui-idle', timeoutMs: 250 })
-    ).rejects.toThrow('timeout')
+    ).resolves.toMatchObject({ satisfied: false, readiness: { state: 'unknown' } })
   })
 
-  it('still settles for an agent whose only rest signal is its name', async () => {
+  it('returns unknown for an agent whose only rest signal is its name', async () => {
     const { runtime, handle } = await makeRuntime('grok')
     runtime.onPtyData(E2E_PTY_ID, `${oscTitle('grok')}banner\n`, Date.now())
 
     await expect(
-      runtime.waitForTerminal(handle, { condition: 'tui-idle', timeoutMs: 2_000 })
-    ).resolves.toMatchObject({ condition: 'tui-idle', satisfied: true })
+      runtime.waitForTerminal(handle, { condition: 'tui-idle', timeoutMs: 100 })
+    ).resolves.toMatchObject({
+      condition: 'tui-idle',
+      satisfied: false,
+      readiness: { state: 'unsupported' }
+    })
   })
 })
