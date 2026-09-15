@@ -7,10 +7,11 @@ import { triggerSuccess } from '../platform/haptics'
 import { formatDiffComments, formatMobileDiffReviewPrompt } from './mobile-diff-comments'
 import { clearSentMobileDiffComments, markMobileDiffCommentsSent } from './mobile-diff-comment-edit'
 import {
-  readMobileReviewCreatedTerminal,
-  readMobileReviewTerminalSendAccepted,
-  readMobileReviewTerminalTabs
-} from './mobile-diff-review-rpc'
+  reviewTerminalCreateRun,
+  reviewTerminalListRead,
+  reviewTerminalSendRun
+} from './mobile-review-terminal-operations'
+import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
 import { healMobileNativeChatStaleInput } from './mobile-native-chat-stale-input'
 import type { ReviewScreenState, SendSheetState } from './mobile-diff-review-screen-model'
 
@@ -80,15 +81,18 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
       if (!(await healMobileNativeChatStaleInput({ client, terminal, deviceToken: null }))) {
         throw new Error('Failed to send notes')
       }
-      const response = await client.sendRequest('terminal.send', {
+      const response = await reviewTerminalSendRun.request(client, {
         terminal,
         text: formatMobileDiffReviewPrompt(comments),
         enter: true
       })
-      if (!response.ok) {
-        throw new Error(response.error?.message || 'Failed to send notes')
+      let accepted
+      try {
+        accepted = reviewTerminalSendRun.interpret(response)
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to send notes'))
       }
-      if (!readMobileReviewTerminalSendAccepted(response.result)) {
+      if (!accepted) {
         throw new Error('Terminal input is locked')
       }
       await markNotesSent(comments)
@@ -104,16 +108,18 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
       if (!client || connState !== 'connected') {
         throw new Error('Waiting for desktop...')
       }
-      const response = await client.sendRequest('session.tabs.createTerminal', {
+      const response = await reviewTerminalCreateRun.request(client, {
         worktree: `id:${worktreeId}`,
         activate: false,
         select: true,
         navigation: 'caller'
       })
-      if (!response.ok) {
-        throw new Error(response.error?.message || 'Failed to create terminal')
+      let created
+      try {
+        created = reviewTerminalCreateRun.interpret(response)
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to create terminal'))
       }
-      const created = readMobileReviewCreatedTerminal(response.result)
       if (!created) {
         throw new Error('Created terminal response was invalid')
       }
@@ -129,13 +135,16 @@ export function useMobileDiffReviewSendActions(input: SendActionsInput) {
     }
     setSendSheet({ kind: 'loading' })
     try {
-      const response = await client.sendRequest('session.tabs.list', {
+      const response = await reviewTerminalListRead.request(client, {
         worktree: `id:${worktreeId}`
       })
-      if (!response.ok) {
-        throw new Error(response.error?.message || 'Unable to load agent sessions')
+      let terminals
+      try {
+        terminals = reviewTerminalListRead.interpret(response)
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, 'Unable to load agent sessions'))
       }
-      setSendSheet({ kind: 'ready', terminals: readMobileReviewTerminalTabs(response.result) })
+      setSendSheet({ kind: 'ready', terminals })
     } catch (err) {
       setSendSheet({
         kind: 'error',

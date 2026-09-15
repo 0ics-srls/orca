@@ -1,6 +1,10 @@
 import { useEffect, useCallback } from 'react'
 import * as Clipboard from 'expo-clipboard'
-import type { RpcFailure, RpcSuccess } from '../transport/types'
+import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import {
+  sessionWorktreeNotesRead,
+  sessionWorktreeNotesWrite
+} from './mobile-session-write-operations'
 import { triggerSelection, triggerSuccess, triggerError } from '../platform/haptics'
 import {
   addMobileDiffComment,
@@ -30,16 +34,15 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
       setDiffComments([])
       return
     }
-    const response = await client.sendRequest('worktree.show', {
-      worktree: `id:${worktreeId}`
-    })
-    if (!response.ok) {
+    const response = sessionWorktreeNotesRead.interpret(
+      await sessionWorktreeNotesRead.request(client, { worktree: `id:${worktreeId}` })
+    )
+    if (!response.accepted) {
       return
     }
-    const result = (response as RpcSuccess).result as {
-      worktree?: { diffComments?: unknown }
-    }
-    setDiffComments(normalizeMobileDiffComments(result.worktree?.diffComments, worktreeId))
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this member unread; the reader hands back the same `worktree` value.
+    const worktree = response.value as { diffComments?: unknown } | undefined
+    setDiffComments(normalizeMobileDiffComments(worktree?.diffComments, worktreeId))
   }, [client, connState, worktreeId, isFloatingWorkspaceRoute])
 
   const persistDiffComments = useCallback(
@@ -47,12 +50,14 @@ export function useMobileSessionDiffComments(scope: MobileSessionDocumentReaders
       if (!client || connState !== 'connected') {
         throw new Error('Waiting for desktop...')
       }
-      const response = await client.sendRequest('worktree.set', {
+      const response = await sessionWorktreeNotesWrite.request(client, {
         worktree: `id:${worktreeId}`,
-        diffComments: comments
+        diffComments: [...comments]
       })
-      if (!response.ok) {
-        throw new Error((response as RpcFailure).error.message || 'Failed to save review notes')
+      try {
+        sessionWorktreeNotesWrite.interpret(response)
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, 'Failed to save review notes'))
       }
     },
     [client, connState, worktreeId]

@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
+import { nativeChatRepoListRead } from './mobile-session-read-operations'
 import { isFloatingWorkspaceWorktreeId } from './floating-workspace'
 import { isMobileNativeChatTranscriptReadable } from './mobile-native-chat-eligibility'
 import { getRepoIdFromMobileWorktreeId } from './mobile-session-route-helpers'
 
-type RepoSummary = { id: string; connectionId?: string | null }
 type ReadabilityState = { client: RpcClient | null; worktreeId: string; readable: boolean }
 
 export function useMobileNativeChatReadability(
@@ -27,15 +27,14 @@ export function useMobileNativeChatReadability(
       setState({ client, worktreeId, readable: false })
       return
     }
-    void client
-      .sendRequest('repo.list')
+    void nativeChatRepoListRead
+      .request(client)
       .then((response) => {
         if (!active) {
           return
         }
-        const repos = response.ok
-          ? ((response.result as { repos?: RepoSummary[] }).repos ?? [])
-          : []
+        const accepted = nativeChatRepoListRead.interpret(response)
+        const repos = accepted.accepted ? accepted.value : []
         const repoId = getRepoIdFromMobileWorktreeId(worktreeId)
         const repo = repos.find((candidate) => candidate.id === repoId)
         setState({

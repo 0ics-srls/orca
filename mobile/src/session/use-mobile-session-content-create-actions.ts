@@ -1,9 +1,27 @@
-import type { RpcFailure, RpcSuccess } from '../transport/types'
 import { normalizeBrowserUrl } from '../browser/browser-url'
 import { captureMobileFileMutationOwnership } from '../files/mobile-file-mutation-ownership'
+import {
+  browserGoBack,
+  browserGoForward,
+  browserReload
+} from '../browser/mobile-browser-command-operations'
+import { sourceFileOpenRun } from '../source-control/mobile-source-file-open-operations'
+import {
+  sessionBrowserTabCreate,
+  sessionMarkdownNoteCreate
+} from './mobile-session-launch-operations'
+import { refusedRpcMessageOrFallback } from '../transport/rpc-refusal-message'
+import type { MobileBrowserNavigationMethod } from './MobileBrowserTabActionSheet'
 import { isFileExistsErrorMessage } from './mobile-session-route-helpers'
 import type { MobileSessionTab } from './mobile-session-route-types'
 import type { MobileSessionTerminalCreateActionsModel } from './use-mobile-session-terminal-create-actions'
+
+/** The tab sheet names the method it wants; each one is a separate operation on the same policy. */
+const BROWSER_NAVIGATION_COMMANDS = {
+  'browser.back': browserGoBack,
+  'browser.forward': browserGoForward,
+  'browser.reload': browserReload
+} as const
 
 export function useMobileSessionContentCreateActions(
   scope: MobileSessionTerminalCreateActionsModel
@@ -37,26 +55,28 @@ export function useMobileSessionContentCreateActions(
       const mutationOwnership = await captureMobileFileMutationOwnership(client, worktree)
       for (let attempt = 1; attempt <= 100; attempt += 1) {
         const relativePath = attempt === 1 ? 'untitled.md' : `untitled-${attempt}.md`
-        const createResponse = await client.sendRequest(
-          'files.createFile',
+        const createResponse = await sessionMarkdownNoteCreate.request(
+          client,
           { worktree, relativePath, ...mutationOwnership },
           { timeoutMs: 15_000 }
         )
         if (!createResponse.ok) {
-          const message = (createResponse as RpcFailure).error.message
+          const message = createResponse.error.message
           if (isFileExistsErrorMessage(message) && attempt < 100) {
             continue
           }
           throw new Error(message || 'Failed to create markdown note')
         }
 
-        const openResponse = await client.sendRequest(
-          'files.open',
+        const openResponse = await sourceFileOpenRun.request(
+          client,
           { worktree, relativePath },
           { timeoutMs: 15_000 }
         )
-        if (!openResponse.ok) {
-          throw new Error((openResponse as RpcFailure).error.message)
+        try {
+          sourceFileOpenRun.interpret(openResponse)
+        } catch (error) {
+          throw new Error(refusedRpcMessageOrFallback(error, ''))
         }
         scheduleDelayedAction(() => void fetchSessionTabs(), 300)
         return
@@ -91,8 +111,8 @@ export function useMobileSessionContentCreateActions(
     setCreatingBrowser(true)
     setCreateError('')
     try {
-      const response = await client.sendRequest(
-        'browser.tabCreate',
+      const response = await sessionBrowserTabCreate.request(
+        client,
         {
           worktree: `id:${worktreeId}`,
           url,
@@ -101,11 +121,14 @@ export function useMobileSessionContentCreateActions(
         },
         { timeoutMs: 30_000 }
       )
-      if (!response.ok) {
-        throw new Error((response as RpcFailure).error.message)
+      let created
+      try {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: main cast this payload unread; the reader hands it back whole.
+        created = sessionBrowserTabCreate.interpret(response) as { browserPageId?: string }
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, ''))
       }
       // Focus the new browser tab once it syncs; refresh a few times since the desktop registers the tab asynchronously.
-      const created = (response as RpcSuccess).result as { browserPageId?: string }
       if (created.browserPageId) {
         pendingBrowserFocusPageIdRef.current = created.browserPageId
       }
@@ -127,23 +150,26 @@ export function useMobileSessionContentCreateActions(
 
   async function handleBrowserNavigationCommand(
     tab: Extract<MobileSessionTab, { type: 'browser' }>,
-    method: 'browser.back' | 'browser.forward' | 'browser.reload'
+    method: MobileBrowserNavigationMethod
   ) {
     if (!client || !tab.browserPageId) {
       showToast('Browser page is not available yet.', 1500)
       return
     }
     try {
-      const response = await client.sendRequest(
-        method,
+      const command = BROWSER_NAVIGATION_COMMANDS[method]
+      const response = await command.request(
+        client,
         {
           worktree: `id:${worktreeId}`,
           page: tab.browserPageId
         },
         { timeoutMs: 15_000 }
       )
-      if (!response.ok) {
-        throw new Error((response as RpcFailure).error.message)
+      try {
+        command.interpret(response)
+      } catch (error) {
+        throw new Error(refusedRpcMessageOrFallback(error, ''))
       }
       scheduleDelayedAction(() => void fetchSessionTabs(), 250)
     } catch (err) {
