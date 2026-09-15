@@ -28,7 +28,7 @@ import { createAutomationRunWriter, type AutomationRunWriter } from './automatio
 import { reportAutomationScheduleDrift } from './schedule-drift-report'
 import {
   describeScheduledRefusal,
-  missedDuringDowntime,
+  missedBeyondGrace,
   recordMissedRun,
   recordRefusedAutomationRun,
   recordUnevaluableAutomation,
@@ -253,7 +253,7 @@ export class AutomationService {
       this.store.advanceAutomationNextRun(automation.id, now)
       return
     }
-    if (missedDuringDowntime({ automation, scheduledFor, now, tickMs: this.tickMs })) {
+    if (missedBeyondGrace({ automation, scheduledFor, now, tickMs: this.tickMs })) {
       recordMissedRun({ runs: this.runs, automation, scheduledFor })
       this.store.advanceAutomationNextRun(automation.id, now)
       return

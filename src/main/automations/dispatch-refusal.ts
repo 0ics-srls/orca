@@ -129,6 +129,11 @@ export function sendRendererDispatch(
  * liveness flag waves through an occurrence that came due during a multi-hour sleep -- exactly
  * what grace exists for. Elapsed lateness cannot be faked that way.
  *
+ * Consequence worth knowing: elapsed lateness cannot distinguish a short outage from a late
+ * tick, so a zero-grace run that came due during an outage shorter than the tolerance is
+ * dispatched rather than skipped. That is the deliberate trade -- the alternative was a
+ * liveness flag, which got the far worse case wrong (a multi-hour sleep replayed on wake).
+ *
  * Known remaining gap: an evaluation pass holds the re-entrancy guard across its dispatches, and
  * in serve mode a dispatch runs inline (precheck up to 600s, then a worktree create). A pass
  * longer than the tolerance drops every intervening tick, so the next automation's lateness is
@@ -136,7 +141,7 @@ export function sendRendererDispatch(
  * unaffected -- its dispatch is synchronous IPC. Tracked separately; forgiving "time since the
  * last pass" is NOT the fix, because a suspended process runs no passes either.
  */
-export function missedDuringDowntime(input: {
+export function missedBeyondGrace(input: {
   automation: Automation
   scheduledFor: number
   now: number
@@ -158,6 +163,6 @@ export function recordMissedRun(input: {
     runId: missed.id,
     status: 'skipped_missed',
     workspaceId: input.automation.workspaceId,
-    error: 'Orca was unavailable during the missed-run grace window.'
+    error: 'This run was past its missed-run grace window when Orca next checked.'
   })
 }
