@@ -10,15 +10,15 @@ export type BrowserProcessUserAgentIdentity = Readonly<{
 let identity: BrowserProcessUserAgentIdentity | null = null
 
 // Why: Electron's default includes its runtime and app tokens, which invalidate Chrome-imported sessions.
-// Why anchored on the engine comment rather than a token shape: app.setName decides the app token
-// and dev uses a name containing a space, which a single \S+ cannot span — it left "Orca Dev/x.y"
-// on the wire. Anchoring on "(KHTML, like Gecko)" and consuming lazily up to Chrome/ removes any
-// number of app tokens, and a user agent without that comment is returned unchanged rather than
-// mangled.
+// Why anchored on the nearest ")" before Chrome/ and never crossing another ")": app.setName decides
+// the app token, and dev uses a name containing a space ("Orca Dev"), which a single \S+ cannot span
+// — it left the app name on the wire. Consuming only non-")" tokens keeps the match inside the gap
+// between the last comment and Chrome/, so any number of app tokens go and nothing else does. A user
+// agent with no such gap is returned unchanged, because over-stripping is worse than under-stripping.
 export function cleanElectronUserAgent(userAgent: string): string {
   return userAgent
     .replace(/\s+Electron\/\S+/, '')
-    .replace(/(\(KHTML, like Gecko\)\s+)(?:\S+(?:\s+\S+)*?\s+)?(Chrome\/)/, '$1$2')
+    .replace(/(\)\s+)(?:[^)\s]+\s+)*?(Chrome\/)/, '$1$2')
 }
 
 /**
