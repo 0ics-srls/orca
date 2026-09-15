@@ -9,6 +9,7 @@ import {
 const TARGET = 'target-home'
 
 function sessionReporting(remoteHome: string | null): never {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: getRemoteHomeDirectory is the only member the home lookup calls on a session.
   return { getRemoteHomeDirectory: () => remoteHome } as never
 }
 
@@ -32,6 +33,7 @@ describe('getActiveSshHostHomeDirectory', () => {
     // Pins the module-scope registration: without it the route silently answers
     // `homePath: null` forever and the host home stops protecting anything.
     activeSessions.set(TARGET, sessionReporting('/srv/homes/alice'))
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the provider is registered only so the SSH route resolves; the home answer comes from the session, not from git.
     registerSshGitProvider(TARGET, {} as never)
 
     expect(resolveWorktreeRemovalHome(resolveWorktreeRemovalRoute(`ssh:${TARGET}`))).toEqual({

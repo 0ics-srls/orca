@@ -54,28 +54,36 @@ function removeOverSsh(
   worktreePath: string,
   fsProvider: ReturnType<typeof provenOrphanFilesystem>
 ) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: fsProvider implements the readFile the orphan proof needs; nothing else on the provider is reached before the home guard refuses.
   registerSshFilesystemProvider(CONNECTION_ID, fsProvider as never)
   const context = {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: no window work runs: the refusal happens before any renderer notification.
     mainWindow: {} as never,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the store is never consulted: the home guard refuses before any persistence runs.
     store: {} as never,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the runtime stub carries the two hooks removal calls on this route.
     runtime: {
       acquireFileWatcherRemoval: async () => ({ finish: async () => {} }),
       clearOptimisticReconcileToken: () => {}
     } as never,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: cancellation bookkeeping is untouched on a route that refuses before it starts.
     detectedWorktreeCancellations: {} as never,
     worktreeRemovalsInFlight: new Map()
   }
   return removeUnregisteredWorktree(
     context,
     { worktreeId: 'repo-1::wt-1', force: true, allowUnverifiedPtyStop: true },
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: removal reads only the repo id, path and connection id on this route.
     { id: 'repo-1', path: REPO_PATH, connectionId: CONNECTION_ID } as never,
     'repo-1',
     worktreePath,
     `ssh:${CONNECTION_ID}`,
     [],
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the removed-meta fields here are the two the SSH route inspects.
     { orcaCreatedAt: 1, orcaCreationSource: 'ssh' } as never,
     undefined,
     {},
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the trailing options bag is unread: every value it could carry applies after the guard.
     {} as never
   )
 }

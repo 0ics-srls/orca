@@ -40,18 +40,24 @@ function provenOrphanFilesystem(worktreePath: string) {
 }
 
 function removalArgs(worktreePath: string, fsProvider: ReturnType<typeof provenOrphanFilesystem>) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the SSH git provider is registered only so dispatch resolves; the home guard refuses before any git call.
   registerSshGitProvider(TARGET, {} as never)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: fsProvider implements the readFile the orphan proof needs; the rest of the provider surface is unreached here.
   registerSshFilesystemProvider(TARGET, fsProvider as never)
   return {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: removal reads only the repo path on this route.
     repo: { path: REPO_PATH } as never,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: removal reads only the target id and path on this route.
     target: { id: 'wt-1', path: worktreePath } as never,
     registeredWorktrees: [],
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the removed-meta fields below are the two the SSH route inspects.
     removedMeta: { orcaCreatedAt: 1, orcaCreationSource: 'ssh' } as never,
     removedPushTarget: undefined,
     force: true,
     allowUnverifiedPtyStop: true,
     route: resolveWorktreeRemovalRoute(`ssh:${TARGET}`),
     localOptions: {},
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the store is never consulted: the home guard refuses before any persistence runs.
     store: {} as never,
     acquireWatcherRemoval: async () => ({ finish: async () => {} }),
     stopPtys: async () => {},
