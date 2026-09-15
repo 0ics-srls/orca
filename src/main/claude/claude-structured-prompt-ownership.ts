@@ -9,7 +9,10 @@ import {
   cancelClaudeTurn,
   supportsClaudeQueuedInterruptCancellation
 } from './claude-structured-control-actions'
-import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
+import {
+  claudeHasUnsettledDispatch,
+  type ClaudeLateDispatchSettlement
+} from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
 
 type CancelInput = Parameters<StructuredAgentSessionAdapter['cancelTurn']>[0]
@@ -71,20 +74,22 @@ export async function cancelClaudeStructuredTurn(input: {
     session.prompts.releaseClaim(claim)
     return { cancelled: false }
   }
+  // The translator owns turn identity. A session with no journal has published no
+  // turn row for a client to name, so it holds no identity this request can contradict.
+  const ownsRequestedTurn = (): boolean => {
+    const currentTurnId = session.translator?.currentTurnId ?? null
+    return currentTurnId === null || currentTurnId === request.turnId
+  }
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
     session.fence === request.fence &&
     session.acquisitionGeneration === acquisitionGeneration &&
     (claim && prompt
-      ? session.activeTurnId === request.turnId &&
+      ? ownsRequestedTurn() &&
         session.prompts.ownsBoundClaim(claim, prompt.itemId, request.turnId) &&
-        (session.activeTurnSequence === session.dispatchSequence ||
-          supportsClaudeQueuedInterruptCancellation(session))
+        (!claudeHasUnsettledDispatch(session) || supportsClaudeQueuedInterruptCancellation(session))
       : compactions.ownsTurn(request.sessionId, request.turnId) ||
-        (session.activeTurnId === undefined
-          ? session.dispatchSequence === 0
-          : session.activeTurnId === request.turnId &&
-            session.activeTurnSequence === session.dispatchSequence))
+        (ownsRequestedTurn() && !claudeHasUnsettledDispatch(session)))
   let interruptConfirmed = false
   try {
     const result = await cancelClaudeTurn(
