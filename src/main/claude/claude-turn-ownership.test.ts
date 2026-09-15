@@ -189,6 +189,23 @@ describe('Claude turn ownership', () => {
     expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
   })
 
+  it('honors an unresolved journal submission before the first in-memory dispatch', async () => {
+    const claude = fakeClaude({ replayUuid: null })
+    const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+    providerOutput(connection, 'provider-turn')
+    expect(runningTurnId(bodies)).toBe('provider-turn')
+
+    await expect(
+      adapter.cancelTurn({
+        sessionId: 'session-1',
+        turnId: 'provider-turn',
+        fence: 7,
+        dispatchStatus: { state: 'pending', recovered: false }
+      })
+    ).resolves.toEqual({ cancelled: false })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+  })
+
   it('still stops an echo-opened turn', async () => {
     const claude = fakeClaude({ replayUuid: 'echo-turn' })
     const { adapter, bodies, connection } = await acquiredWithJournal(claude)

@@ -86,14 +86,14 @@ export async function cancelClaudeStructuredTurn(input: {
   // The host supplies the durable latest submission; direct adapter callers fall back to
   // the current in-memory waiter so an unknown dispatch remains fenced without a latch.
   const dispatchAdmissionIsCurrent = (): boolean =>
-    session.dispatchSequence === 0 ||
-    (request.dispatchStatus
+    request.dispatchStatus
       ? request.dispatchStatus.state === 'accepted' ||
         request.dispatchStatus.state === 'rejected' ||
         (request.dispatchStatus.state === 'unknown' && request.dispatchStatus.recovered)
-      : ![...session.dispatchWaiters, ...session.retiredDispatchWaiters].some(
+      : session.dispatchSequence === 0 ||
+        ![...session.dispatchWaiters, ...session.retiredDispatchWaiters].some(
           (waiter) => waiter.dispatchSequence === session.dispatchSequence
-        ))
+        )
   const dispatchAdmissionAllowsCancellation = (): boolean =>
     dispatchAdmissionIsCurrent() ||
     (Boolean(prompt) && supportsClaudeQueuedInterruptCancellation(session))
