@@ -21,8 +21,7 @@ import {
  * Preflight reads the root record before `ready` and hands its mode to the engine. The ready
  * phase used to mirror the *active Orca profile's* setting back into that record, so switching
  * from a native profile to a clean one started the clean profile in native. That second authority
- * is gone: the root record is the only one, and every mutation is serialized through the queue
- * below so a concurrent set cannot interleave a read-modify-write.
+ * is gone: the root record is the only one, and this module is its only writer.
  *
  * `appliedMode` is what this launch is actually presenting and never changes while the process
  * lives; `configuredMode` is what the next launch will take. `restartRequired` is derived from the
@@ -35,7 +34,6 @@ type BrowserIdentityModeStore = {
 }
 
 let modeStore: BrowserIdentityModeStore | null = null
-let writeQueue: Promise<void> = Promise.resolve()
 const snapshotListeners = new Set<(snapshot: BrowserIdentityModeSnapshot) => void>()
 let migrationNoticeDegraded = false
 let launchMigrationNoticePending = false
@@ -126,141 +124,132 @@ export function onBrowserIdentityModeSnapshotChanged(
   return () => snapshotListeners.delete(listener)
 }
 
-// Why both arms run the operation: a rejected predecessor must not cancel the writes behind it.
-function enqueueWrite<T>(operation: () => T): Promise<T> {
-  const pending = writeQueue.then(operation, operation)
-  writeQueue = pending.then(
-    () => undefined,
-    () => undefined
-  )
-  return pending
-}
-
-/** Commits an explicit choice. The record lands durably before this resolves. */
-export function setBrowserIdentityMode(
+/**
+ * Commits an explicit choice. The record lands durably before this resolves.
+ *
+ * No queue: writeRecord is synchronous end to end, so two calls cannot interleave and a
+ * serialization layer here would be machinery no test could falsify. If durable writes ever
+ * become async, reintroduce serialization with that change, where it is testable.
+ */
+export async function setBrowserIdentityMode(
   mode: BrowserUserAgentMode,
   options: { reset?: boolean } = {}
 ): Promise<BrowserIdentityModeSetResult> {
-  return enqueueWrite(() => {
-    const store = requireModeStore()
-    const current = store.snapshot
-    if (current.configuredMode === null) {
-      // Why never automatic: the data may belong to a newer Orca, and overwriting it silently
-      // would destroy the only copy. The caller has to ask, and the old bytes survive the ask.
-      if (!options.reset) {
-        return {
-          ok: false,
-          error: {
-            code: 'browser_identity_reset_required',
-            message:
-              current.state === 'future'
-                ? 'Browser identity data was written by a newer Orca; update Orca, or reset it explicitly to overwrite it.'
-                : `Browser identity data is ${current.state}; reset it explicitly to overwrite it.`
-          },
-          identity: current
-        }
-      }
-      try {
-        backupUnhealthyRecord(store.userDataPath)
-      } catch (error) {
-        return {
-          ok: false,
-          error: {
-            code: 'browser_identity_backup_failed',
-            message: error instanceof Error ? error.message : String(error)
-          },
-          identity: current
-        }
-      }
-    }
-    const record: BrowserIdentityModeRecord = {
-      version: BROWSER_IDENTITY_MODE_VERSION,
-      mode,
-      explicitSelection: true,
-      migrationNoticePending: false
-    }
-    try {
-      writeRecord(store.userDataPath, record)
-    } catch (error) {
-      // Why unchanged: a rejected write leaves disk on the old value, so reporting the new one
-      // would make the UI and the next launch disagree.
+  const store = requireModeStore()
+  const current = store.snapshot
+  if (current.configuredMode === null) {
+    // Why never automatic: the data may belong to a newer Orca, and overwriting it silently
+    // would destroy the only copy. The caller has to ask, and the old bytes survive the ask.
+    if (!options.reset) {
       return {
         ok: false,
         error: {
-          code: 'browser_identity_write_failed',
+          code: 'browser_identity_reset_required',
+          message:
+            current.state === 'future'
+              ? 'Browser identity data was written by a newer Orca; update Orca, or reset it explicitly to overwrite it.'
+              : `Browser identity data is ${current.state}; reset it explicitly to overwrite it.`
+        },
+        identity: current
+      }
+    }
+    try {
+      backupUnhealthyRecord(store.userDataPath)
+    } catch (error) {
+      return {
+        ok: false,
+        error: {
+          code: 'browser_identity_backup_failed',
           message: error instanceof Error ? error.message : String(error)
         },
         identity: current
       }
     }
-    const identity: BrowserIdentityModeSnapshot = {
-      state: 'valid',
-      appliedMode: current.appliedMode,
-      configuredMode: mode,
-      explicitSelection: true,
-      migrationNoticePending: false,
-      restartRequired: mode !== current.appliedMode
+  }
+  const record: BrowserIdentityModeRecord = {
+    version: BROWSER_IDENTITY_MODE_VERSION,
+    mode,
+    explicitSelection: true,
+    migrationNoticePending: false
+  }
+  try {
+    writeRecord(store.userDataPath, record)
+  } catch (error) {
+    // Why unchanged: a rejected write leaves disk on the old value, so reporting the new one
+    // would make the UI and the next launch disagree.
+    return {
+      ok: false,
+      error: {
+        code: 'browser_identity_write_failed',
+        message: error instanceof Error ? error.message : String(error)
+      },
+      identity: current
     }
-    store.snapshot = identity
-    launchMigrationNoticePending = false
-    migrationNoticeDegraded = false
-    notifySnapshotListeners(identity)
-    return { ok: true, identity }
-  })
+  }
+  const identity: BrowserIdentityModeSnapshot = {
+    state: 'valid',
+    appliedMode: current.appliedMode,
+    configuredMode: mode,
+    explicitSelection: true,
+    migrationNoticePending: false,
+    restartRequired: mode !== current.appliedMode
+  }
+  store.snapshot = identity
+  launchMigrationNoticePending = false
+  migrationNoticeDegraded = false
+  notifySnapshotListeners(identity)
+  return { ok: true, identity }
 }
 
 /**
  * Records that a launch found retired per-profile identity data. Best-effort by design: this is
  * bookkeeping, so a failure is reported and never allowed to gate session startup.
  */
-export function markBrowserIdentityMigrationNoticePending(
+export async function markBrowserIdentityMigrationNoticePending(
   userDataPath: string,
   degraded: boolean
 ): Promise<boolean> {
-  return enqueueWrite(() => {
-    if (!modeStore) {
-      initializeBrowserIdentityModeStore(userDataPath)
-    }
-    const store = requireModeStore()
-    if (store.userDataPath !== userDataPath) {
-      throw new Error('Browser identity mode store userData path changed')
-    }
-    const current = store.snapshot
-    // Why the in-memory flag regardless: the user still needs the notice even when the record
-    // cannot be written, and unhealthy data has no mode to write it beside.
-    launchMigrationNoticePending = true
-    migrationNoticeDegraded ||= degraded
-    if (current.configuredMode === null) {
-      return false
-    }
-    const record: BrowserIdentityModeRecord = {
-      version: BROWSER_IDENTITY_MODE_VERSION,
-      mode: current.configuredMode,
-      explicitSelection: current.explicitSelection,
-      migrationNoticePending: true
-    }
-    try {
-      writeRecord(userDataPath, record)
-    } catch (error) {
-      console.error('[browser-identity] Could not persist retired profile notice:', error)
-      return false
-    }
-    store.snapshot = {
-      state: 'valid',
-      appliedMode: current.appliedMode,
-      configuredMode: current.configuredMode,
-      explicitSelection: current.explicitSelection,
-      migrationNoticePending: true,
-      restartRequired: current.restartRequired
-    }
-    notifySnapshotListeners(store.snapshot)
-    return true
-  })
+  if (!modeStore) {
+    initializeBrowserIdentityModeStore(userDataPath)
+  }
+  const store = requireModeStore()
+  if (store.userDataPath !== userDataPath) {
+    throw new Error('Browser identity mode store userData path changed')
+  }
+  const current = store.snapshot
+  // Why the in-memory flag regardless: the user still needs the notice even when the record
+  // cannot be written, and unhealthy data has no mode to write it beside.
+  launchMigrationNoticePending = true
+  migrationNoticeDegraded ||= degraded
+  if (current.configuredMode === null) {
+    return false
+  }
+  const record: BrowserIdentityModeRecord = {
+    version: BROWSER_IDENTITY_MODE_VERSION,
+    mode: current.configuredMode,
+    explicitSelection: current.explicitSelection,
+    migrationNoticePending: true
+  }
+  try {
+    writeRecord(userDataPath, record)
+  } catch (error) {
+    console.error('[browser-identity] Could not persist retired profile notice:', error)
+    return false
+  }
+  store.snapshot = {
+    state: 'valid',
+    appliedMode: current.appliedMode,
+    configuredMode: current.configuredMode,
+    explicitSelection: current.explicitSelection,
+    migrationNoticePending: true,
+    restartRequired: current.restartRequired
+  }
+  notifySnapshotListeners(store.snapshot)
+  return true
 }
 
 export function resetBrowserIdentityModeStoreForTests(): void {
   modeStore = null
-  writeQueue = Promise.resolve()
   snapshotListeners.clear()
   migrationNoticeDegraded = false
   launchMigrationNoticePending = false

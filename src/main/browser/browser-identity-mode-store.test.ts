@@ -76,7 +76,9 @@ describe('browser identity mode store', () => {
     })
   })
 
-  it('serializes concurrent read-modify-write updates', async () => {
+  // Not a serialization claim: writeRecord is synchronous, so two calls cannot interleave. This
+  // pins the observable contract instead -- the later selection is the one that survives.
+  it('applies the last of two selections issued together', async () => {
     const userDataPath = makeUserData()
     initializeBrowserIdentityModeStore(userDataPath)
 
@@ -158,6 +160,30 @@ describe('browser identity mode store', () => {
     expect(
       JSON.parse(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8'))
     ).toMatchObject({ version: BROWSER_IDENTITY_MODE_VERSION, mode: 'native' })
+  })
+
+  it('never reuses a backup path across repeated resets', async () => {
+    const userDataPath = mkdtempSync(join(tmpdir(), 'orca-browser-identity-store-'))
+    const recordPath = join(userDataPath, BROWSER_IDENTITY_MODE_FILE)
+    writeFileSync(recordPath, '{bad json', 'utf8')
+    initializeBrowserIdentityModeStore(userDataPath)
+    await expect(setBrowserIdentityMode('native', { reset: true })).resolves.toMatchObject({
+      ok: true
+    })
+
+    // A later launch finds the record unhealthy again; the first backup must survive untouched.
+    writeFileSync(recordPath, '{bad json again', 'utf8')
+    resetBrowserIdentityModeStoreForTests()
+    initializeBrowserIdentityModeStore(userDataPath)
+    await expect(setBrowserIdentityMode('clean', { reset: true })).resolves.toMatchObject({
+      ok: true
+    })
+
+    const backups = readdirSync(userDataPath).filter((name) => name.endsWith('.bak'))
+    expect(new Set(backups).size).toBe(2)
+    expect(backups.map((name) => readFileSync(join(userDataPath, name), 'utf8')).sort()).toEqual(
+      ['{bad json', '{bad json again'].sort()
+    )
   })
 
   it('leaves the unhealthy bytes in place when the backup cannot be written', async () => {
