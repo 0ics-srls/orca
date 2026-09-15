@@ -56,7 +56,7 @@ export function NativeChatResolutionReceipt({
           !(
             body.kind === 'question' &&
             body.questions?.length === 1 &&
-            subject.kind === 'question' &&
+            subject?.kind === 'question' &&
             answer.question === subject.text
           ) ? (
             <p>{answer.question}</p>
