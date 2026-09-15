@@ -6,7 +6,12 @@ import type { AgentJournalItemBody } from '../../shared/agent-session-journal-ty
 import { readAgentJournalTurn } from '../../shared/agent-session-turn-record'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
-import { CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS } from './claude-structured-prompt-ownership'
+import { StructuredSessionCompaction } from '../native-chat/agent-session-wire/structured-session-compaction'
+import {
+  CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS,
+  cancelClaudeStructuredTurn
+} from './claude-structured-prompt-ownership'
+import { sessionFor } from './claude-structured-dispatch-test-support'
 import {
   PROVIDER_SESSION_ID,
   USER_MESSAGE,
@@ -226,6 +231,76 @@ describe('Claude turn ownership', () => {
 
       await vi.advanceTimersByTimeAsync(1)
       await expect(cancellation).resolves.toEqual({ cancelled: true })
+      expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('releases ordinary Stop as soon as a retired delivery fence settles', async () => {
+    vi.useFakeTimers()
+    try {
+      const session = sessionFor()
+      session.dispatchSequence = 1
+      session.translator = {
+        handle: vi.fn(),
+        journalPrompts: { cancel: vi.fn(), resolve: vi.fn() },
+        currentTurnId: 'turn-1',
+        flush: vi.fn(),
+        pendingStreamedBlocks: 0,
+        dispose: vi.fn()
+      }
+      session.retiredDispatchWaiters = [
+        {
+          acceptsResult: false,
+          clientMessageId: 'client-2',
+          sentUuid: 'uncertain',
+          dispatchSequence: 1,
+          replayContentKey: 'ship-it',
+          resolve: vi.fn(),
+          retired: true
+        }
+      ]
+      const interrupt = vi.fn().mockResolvedValue(undefined)
+      session.connection.interrupt = interrupt
+      const cancellation = cancelClaudeStructuredTurn({
+        request: { sessionId: 'session-1', turnId: 'turn-1', fence: 1 },
+        sessions: new Map([['session-1', session]]),
+        compactions: new StructuredSessionCompaction(),
+        admitPromptCancellation: () => true
+      })
+      await vi.advanceTimersByTimeAsync(100)
+      session.retiredDispatchWaiters = []
+      await vi.advanceTimersByTimeAsync(100)
+      const settledBeforeDeadline = interrupt.mock.calls.length > 0
+      if (!settledBeforeDeadline) {
+        await vi.advanceTimersByTimeAsync(CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS)
+        await cancellation
+      }
+      expect(settledBeforeDeadline).toBe(true)
+      await expect(cancellation).resolves.toEqual({ cancelled: true })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not wait when the dispatch admission is already current', async () => {
+    vi.useFakeTimers()
+    try {
+      const claude = fakeClaude({ replayUuid: 'echo-turn' })
+      const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+
+      await adapter.dispatch({
+        sessionId: 'session-1',
+        clientMessageId: 'client-1',
+        body: USER_MESSAGE,
+        fence: 7
+      })
+      expect(runningTurnId(bodies)).toBe('echo-turn')
+
+      await expect(
+        adapter.cancelTurn({ sessionId: 'session-1', turnId: 'echo-turn', fence: 7 })
+      ).resolves.toEqual({ cancelled: true })
       expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
     } finally {
       vi.useRealTimers()

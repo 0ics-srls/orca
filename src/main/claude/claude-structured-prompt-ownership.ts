@@ -12,7 +12,8 @@ import {
 import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
 import type { ClaudeSession } from './claude-structured-session-state'
 
-/** Keep an unresolved delivery fence long enough for the provider input pump to settle. */
+/** Conservative user-facing window: below the 10s init and 30s control deadlines, trading
+ * residual slow-pump risk for ensuring delivery bookkeeping cannot block Stop indefinitely. */
 export const CLAUDE_DISPATCH_ADMISSION_TIMEOUT_MS = 3_000
 const CLAUDE_DISPATCH_ADMISSION_POLL_MS = 50
 
