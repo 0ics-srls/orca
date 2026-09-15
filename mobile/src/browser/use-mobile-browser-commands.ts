@@ -1,6 +1,5 @@
 import { useCallback, useRef, type Dispatch, type SetStateAction } from 'react'
 import type { RpcClient } from '../transport/rpc-client'
-import { interpretOrThrowRefusalMessage } from '../transport/rpc-refusal-message'
 import type { BrowserScreencastFrameMetadata } from '../transport/browser-screencast-protocol'
 import {
   browserDialogAccept,
@@ -91,19 +90,13 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
           x: pending.point.x,
           y: pending.point.y
         })
-        interpretOrThrowRefusalMessage(
-          () => browserPointerMove.interpret(moveReply),
-          'Browser pointer move failed'
-        )
+        browserPointerMove.interpret(moveReply)
         const wheelReply = await browserPointerWheel.request(client, {
           ...pending.base,
           dx: pending.dx,
           dy: pending.dy
         })
-        interpretOrThrowRefusalMessage(
-          () => browserPointerWheel.interpret(wheelReply),
-          'Browser scroll failed'
-        )
+        browserPointerWheel.interpret(wheelReply)
         setError(null)
       } catch {
         // Scroll bursts commonly race page reload/navigation. Avoid replacing
@@ -157,20 +150,11 @@ export function useMobileBrowserCommands(args: MobileBrowserCommandArgs) {
           x: point.x,
           y: point.y
         })
-        interpretOrThrowRefusalMessage(
-          () => browserPointerMove.interpret(moveReply),
-          'Browser pointer move failed'
-        )
+        browserPointerMove.interpret(moveReply)
         const downReply = await browserPointerDown.request(client, { ...base, button })
-        interpretOrThrowRefusalMessage(
-          () => browserPointerDown.interpret(downReply),
-          'Browser pointer down failed'
-        )
+        browserPointerDown.interpret(downReply)
         const upReply = await browserPointerUp.request(client, { ...base, button })
-        interpretOrThrowRefusalMessage(
-          () => browserPointerUp.interpret(upReply),
-          'Browser pointer up failed'
-        )
+        browserPointerUp.interpret(upReply)
         setError(null)
       } catch {
         // Pointer commands can race page navigation. Keep the stream visible;
