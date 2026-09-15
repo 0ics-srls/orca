@@ -27,7 +27,9 @@ import * as zod from 'zod'
 function partialNativeModule(module: string, members: Record<string, unknown>): unknown {
   return new Proxy(members, {
     get: (target, key) => {
-      if (typeof key === 'string' && !(key in target)) {
+      // `import * as X` transpiles to an interop helper that probes this marker before copying
+      // members; it is the module system asking, not product code reading an API.
+      if (typeof key === 'string' && key !== '__esModule' && !(key in target)) {
         throw new Error(`Unsubstituted native member: ${module}.${key}`)
       }
       return target[key as string]
