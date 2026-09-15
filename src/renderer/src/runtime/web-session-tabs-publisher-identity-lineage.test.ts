@@ -31,6 +31,7 @@ const GEN_2 = 'renderer-generation-2'
 const MERGED_GEN_1 = `${GEN_1}:headless-merge:abc`
 
 function frame(publicationEpoch: string, snapshotVersion: number): RuntimeMobileSessionTabsResult {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal names every field this lineage suite reads; the cast only supplies the rest of the frame shape.
   return {
     worktree: WORKTREE,
     publicationEpoch,

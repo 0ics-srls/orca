@@ -123,7 +123,9 @@ async function loadBuild(ref: string | null): Promise<Build> {
     ])
     return {
       label: 'stack',
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a dynamic import is typed unknown; this module is the proof ledger by path.
       ledger: ledger as unknown as ProofLedger,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a dynamic import is typed unknown; the two modules together are the host publisher surface this spec drives.
       host: { ...proof, ...retirement } as unknown as HostProofPublisher
     }
   }
@@ -138,7 +140,9 @@ async function loadBuild(ref: string | null): Promise<Build> {
   ])
   return {
     label: ref,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the release checkout is loaded by path, so its exports arrive unknown.
     ledger: ledger as unknown as ProofLedger,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the release checkout is loaded by path, so its exports arrive unknown.
     host: { ...proof, ...retirement } as unknown as HostProofPublisher
   }
 }
@@ -248,6 +252,7 @@ describe('cross-version session-tabs retirement proof', () => {
     const first = hostPublishesOnExit(stack, snapshotAfterRendererRepublished())
     expect(first).not.toBeNull()
     // A version bump carrying nothing new would wake every paired client for no reason.
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the assertion above already proves `first` is a published snapshot, not null.
     expect(hostPublishesOnExit(stack, first as Snapshot)).toBeNull()
   })
 })

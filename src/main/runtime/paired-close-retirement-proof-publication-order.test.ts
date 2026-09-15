@@ -87,6 +87,7 @@ function createHost(): {
   retirePersistedSurface: () => void
 } {
   let session = makePersistedSession()
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the store stub carries the four members this publication-order suite drives; the rest of Store is unreached.
   const runtime = new OrcaRuntimeService({
     getRepos: () => [LIVE_REPO],
     getWorkspaceSession: () => session,

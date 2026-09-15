@@ -36,6 +36,7 @@ const LIVE_EPOCH = 'renderer-generation-1'
 const LEAF_ID = '11111111-1111-4111-8111-111111111111'
 
 function liveFrame(snapshotVersion: number): RuntimeMobileSessionTabsResult {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the live frame names every field this suite reads; the cast only supplies the rest of the frame shape.
   return {
     worktree: WORKTREE,
     publicationEpoch: LIVE_EPOCH,
@@ -59,6 +60,7 @@ function liveFrame(snapshotVersion: number): RuntimeMobileSessionTabsResult {
 }
 
 function removalFrame(): RuntimeMobileSessionTabsResult {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the removal frame carries `removed: true`, which the published frame type does not declare.
   return {
     worktree: WORKTREE,
     publicationEpoch: `removed:${(1_700_000_000_000).toString(36)}`,

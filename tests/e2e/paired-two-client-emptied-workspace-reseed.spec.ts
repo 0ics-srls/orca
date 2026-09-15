@@ -62,6 +62,7 @@ async function callEnvironment<TResult>(
   method: string,
   params: unknown
 ): Promise<TResult> {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: page.evaluate is typed unknown across the bridge; TResult is the caller's declared RPC result.
   return page.evaluate(
     async ({ environmentId, method, params }) => {
       const response = await window.api.runtimeEnvironments.call({

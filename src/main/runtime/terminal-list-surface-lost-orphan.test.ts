@@ -55,7 +55,9 @@ function tab(tabId: string, activeLeafId: string) {
 
 /** Both PTYs stay live on the host throughout; only the graph changes. */
 function makeRuntime(): OrcaRuntimeService {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: makeStore returns the repo and session reads this suite drives; the rest of Store is unreached.
   const runtime = new OrcaRuntimeService(makeStore() as never)
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub carries the four controller members this suite drives; both PTYs stay live throughout.
   runtime.setPtyController({
     spawn: vi.fn(async () => ({ id: 'never' })),
     write: () => true,
@@ -135,7 +137,8 @@ describe('terminal inventory after a pane is dropped', () => {
     // silence is not a retraction. This also pins that the runtime stamps the record at all —
     // orca-runtime-record-pty-worktree.ts is `@ts-nocheck`, so a missing stamp is silent there
     // and would leave every freshly spawned terminal reporting orphaned for one graph.
-    ;(
+    ;// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recordPtyWorktree is protected; reaching it is the only way to stamp a pane the graph never published.
+    (
       runtime as unknown as {
         recordPtyWorktree: (
           ptyId: string,

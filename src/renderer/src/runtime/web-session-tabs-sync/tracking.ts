@@ -102,7 +102,7 @@ export function recordReceivedWebSessionTabsSnapshot(
   }
   recordReceivedWebSessionTabsEnvironmentFrame(environmentId, frame)
   const publicationEpoch = snapshot.publicationEpoch
-  const isRetraction = (snapshot as { removed?: unknown }).removed === true
+  const isRetraction = 'removed' in snapshot && snapshot.removed === true
   const history = sessionTabsPublicationEpochHistoryByWorktree.get(key)
   const isRetired = history?.retired.includes(publicationEpoch) ?? false
   if (isRetired) {
