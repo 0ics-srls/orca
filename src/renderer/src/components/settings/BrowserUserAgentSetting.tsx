@@ -13,7 +13,9 @@ type BrowserUserAgentSettingProps = {
   hostId: ExecutionHostId
 }
 
-export function BrowserUserAgentSetting({ hostId }: BrowserUserAgentSettingProps): React.JSX.Element {
+export function BrowserUserAgentSetting({
+  hostId
+}: BrowserUserAgentSettingProps): React.JSX.Element {
   const [status, setStatus] = useState<BrowserIdentityModeStatus | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -98,11 +100,11 @@ export function BrowserUserAgentSetting({ hostId }: BrowserUserAgentSettingProps
           size="sm"
           ariaLabel={title}
           value={status.identity.configuredMode}
-          disabled={saving}
           onChange={setMode}
           options={[
             {
               value: 'clean',
+              disabled: saving,
               label: translate('settings.browser.userAgent.optionClean', 'Cleaned'),
               tooltip: translate(
                 'settings.browser.userAgent.optionCleanTooltip',
@@ -111,6 +113,7 @@ export function BrowserUserAgentSetting({ hostId }: BrowserUserAgentSettingProps
             },
             {
               value: 'native',
+              disabled: saving,
               label: translate('settings.browser.userAgent.optionNative', 'Native'),
               tooltip: translate(
                 'settings.browser.userAgent.optionNativeTooltip',
@@ -136,11 +139,7 @@ export function BrowserUserAgentSetting({ hostId }: BrowserUserAgentSettingProps
       description={description}
       keywords={['browser', 'identity', 'user agent', 'native', 'cleaned', 'restart']}
     >
-      <SettingsRow
-        label={title}
-        description={description}
-        control={control}
-      />
+      <SettingsRow label={title} description={description} control={control} />
     </SearchableSetting>
   )
 }

@@ -2,11 +2,12 @@ import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as DurableFileWrite from '../durable-file-write'
 
 const mocks = vi.hoisted(() => ({ failWrite: false }))
 
 vi.mock('../durable-file-write', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../durable-file-write')>()
+  const actual = await importOriginal<typeof DurableFileWrite>()
   return {
     ...actual,
     writeFileDurableSync: (...args: Parameters<typeof actual.writeFileDurableSync>) => {
@@ -63,14 +64,14 @@ describe('browser identity mode store', () => {
         restartRequired: true
       }
     })
-    expect(JSON.parse(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8'))).toEqual(
-      {
-        version: BROWSER_IDENTITY_MODE_VERSION,
-        mode: 'native',
-        explicitSelection: true,
-        migrationNoticePending: false
-      }
-    )
+    expect(
+      JSON.parse(readFileSync(join(userDataPath, BROWSER_IDENTITY_MODE_FILE), 'utf8'))
+    ).toEqual({
+      version: BROWSER_IDENTITY_MODE_VERSION,
+      mode: 'native',
+      explicitSelection: true,
+      migrationNoticePending: false
+    })
   })
 
   it('serializes concurrent read-modify-write updates', async () => {

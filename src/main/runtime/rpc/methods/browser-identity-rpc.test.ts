@@ -19,22 +19,23 @@ function request(method: string, params?: unknown): RpcRequest {
   return { id: 'identity-1', authToken: 'token', method, params }
 }
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the identity handlers read no runtime member; only the reply envelope needs getRuntimeId.
+const RUNTIME = { getRuntimeId: () => 'runtime-1' } as unknown as OrcaRuntimeService
+
+function identityDispatcher(): RpcDispatcher {
+  return new RpcDispatcher({ runtime: RUNTIME, methods: BROWSER_CORE_METHODS })
+}
+
 describe('browser identity RPC', () => {
   it('serves the host-local identity snapshot', async () => {
-    const runtime = { getRuntimeId: () => 'runtime-1' } as unknown as OrcaRuntimeService
-    const dispatcher = new RpcDispatcher({ runtime, methods: BROWSER_CORE_METHODS })
-
-    const response = await dispatcher.dispatch(request('browser.identity.get'))
+    const response = await identityDispatcher().dispatch(request('browser.identity.get'))
 
     expect(response).toMatchObject({ ok: true, result: { migrationNotice: null } })
     expect(mocks.get).toHaveBeenCalledTimes(1)
   })
 
   it('commits a host-local identity selection', async () => {
-    const runtime = { getRuntimeId: () => 'runtime-1' } as unknown as OrcaRuntimeService
-    const dispatcher = new RpcDispatcher({ runtime, methods: BROWSER_CORE_METHODS })
-
-    await dispatcher.dispatch(request('browser.identity.set', { mode: 'native' }))
+    await identityDispatcher().dispatch(request('browser.identity.set', { mode: 'native' }))
 
     expect(mocks.set).toHaveBeenCalledWith('native')
   })

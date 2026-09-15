@@ -53,6 +53,16 @@ function installModuleMocks(
   }))
 
   vi.doMock('node:fs', () => ({
+    // The identity sidecar goes through writeFileDurableSync, so the in-memory fs has to
+    // answer its fsync/rename syscalls too or every identity write looks like a disk failure.
+    closeSync: vi.fn(),
+    fsyncSync: vi.fn(),
+    openSync: vi.fn(() => 1),
+    rmSync: vi.fn((p: string) => {
+      const key = fsKey(p)
+      fsState.present.delete(key)
+      fsState.files.delete(key)
+    }),
     copyFileSync: vi.fn((src: string, dst: string) => {
       const sourceKey = fsKey(src)
       const destinationKey = fsKey(dst)
@@ -70,7 +80,9 @@ function installModuleMocks(
     readFileSync: vi.fn((p: string) => {
       const v = fsState.files.get(fsKey(p))
       if (v === undefined) {
-        throw new Error('ENOENT')
+        // Carry the code: absent data reads as "missing", while a codeless throw would
+        // look "unreadable" and make every caller refuse to write.
+        throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
       }
       return v
     }),
@@ -92,6 +104,9 @@ function installModuleMocks(
       fsState.files.delete(key)
     }),
     writeFileSync: vi.fn((p: string, data: string | Uint8Array) => {
+      if (failIdentityWrite && fsKey(p).includes('browser-identity-mode.json')) {
+        throw new Error('read-only userData')
+      }
       const value = typeof data === 'string' ? data : Buffer.from(data).toString('utf-8')
       const key = fsKey(p)
       fsState.files.set(key, value)
@@ -421,16 +436,11 @@ describe('BrowserSessionRegistry persistence', () => {
     expect(installBrowserSessionUserAgentPolicyMock).toHaveBeenCalled()
   })
 
-  it('migrates retired native profiles without choosing the app-wide identity', async () => {
+  it('flags the retired per-profile choice without rewriting its persisted bytes', async () => {
     const importedPartition = 'persist:orca-browser-session-11111111-1111-4111-8111-111111111111'
-    const importedUa = 'Mozilla/5.0 Chrome/120.0.0.0 Safari/537.36'
     const fsState = createFsState()
     seedMeta(fsState, {
       defaultSource: null,
-      userAgent: null,
-      userAgentByPartition: { [importedPartition]: importedUa },
-      pendingCookieDbPath: null,
-      pendingCookieImports: {},
       profiles: [
         {
           id: '11111111-1111-4111-8111-111111111111',
@@ -443,41 +453,31 @@ describe('BrowserSessionRegistry persistence', () => {
       ]
     })
 
-    const { sessionFromPartitionMock } = installModuleMocks(fsState)
+    installModuleMocks(fsState)
     const { browserSessionRegistry } = await import('./browser-session-registry')
 
     browserSessionRegistry.initializeBrowserSessionsFromPersistedState()
 
-    const importedSessions = sessionFromPartitionMock.mock.results
-      .filter((_, idx) => sessionFromPartitionMock.mock.calls[idx]?.[0] === importedPartition)
-      .map((r) => r.value)
-    expect(importedSessions.length).toBeGreaterThan(0)
-    expect(
-      importedSessions.every((s) => s.setUserAgent.mock.calls[0]?.[0] === CLEAN_USER_AGENT)
-    ).toBe(true)
-    const persistedMeta = JSON.parse(fsState.files.get(META_PATH) ?? '{}')
-    expect(persistedMeta.profiles[0]).not.toHaveProperty('userAgentMode')
-    expect(
-      JSON.parse(fsState.files.get(`${USER_DATA}/browser-identity-mode.json`) ?? '{}')
-    ).toEqual({
-      version: 1,
-      mode: 'clean',
-      migratedNativeProfileIds: ['11111111-1111-4111-8111-111111111111'],
-      migrationNoticePending: true
-    })
-    const { clearBrowserIdentityMigrationNotice, readPendingBrowserIdentityMigrationNotice } =
-      await import('./browser-identity-mode-record')
-    expect(readPendingBrowserIdentityMigrationNotice(USER_DATA)).toEqual([
-      '11111111-1111-4111-8111-111111111111'
-    ])
-    expect(clearBrowserIdentityMigrationNotice(USER_DATA)).toBe(true)
-    expect(readPendingBrowserIdentityMigrationNotice(USER_DATA)).toBeNull()
+    await vi.waitFor(() =>
+      expect(
+        JSON.parse(fsState.files.get(`${USER_DATA}/browser-identity-mode.json`) ?? '{}')
+      ).toEqual({
+        version: 1,
+        mode: 'clean',
+        explicitSelection: false,
+        migrationNoticePending: true
+      })
+    )
+    // Retaining the retired key is what makes rollback and data-loss machinery unnecessary.
+    expect(JSON.parse(fsState.files.get(META_PATH) ?? '{}').profiles[0].userAgentMode).toBe(
+      'native'
+    )
   })
 
   it.each([
     { scenario: 'malformed members', malformed: [null, 42, 'broken'], failWrite: false },
     { scenario: 'a read-only notice', malformed: [], failWrite: true }
-  ])('continues migration despite $scenario', async ({ malformed, failWrite }) => {
+  ])('hydrates the valid profile despite $scenario', async ({ malformed, failWrite }) => {
     const profileId = '11111111-1111-4111-8111-111111111111'
     const partition = `persist:orca-browser-session-${profileId}`
     const fsState = createFsState()
@@ -496,20 +496,22 @@ describe('BrowserSessionRegistry persistence', () => {
       ]
     })
     installModuleMocks(fsState, new Set(), failWrite)
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { browserSessionRegistry } = await import('./browser-session-registry')
 
     expect(() => browserSessionRegistry.initializeBrowserSessionsFromPersistedState()).not.toThrow()
     expect(browserSessionRegistry.getProfile(profileId)?.partition).toBe(partition)
-    const written = JSON.parse(fsState.files.get(META_PATH) ?? '{}')
-    expect(written.profiles).toHaveLength(1)
     if (failWrite) {
-      expect(written.profiles[0].userAgentMode).toBe('native')
-      const { getBrowserIdentityPersistenceFailure } =
-        await import('./browser-identity-mode-record')
-      expect(getBrowserIdentityPersistenceFailure()).toContain('read-only userData')
-    } else {
-      expect(written.profiles[0]).not.toHaveProperty('userAgentMode')
+      // Notice bookkeeping may fail; it must report and never gate session startup.
+      await vi.waitFor(() => expect(errors).toHaveBeenCalled())
+      expect(errors.mock.calls[0]?.[1]).toMatchObject({ message: 'read-only userData' })
     }
+    await vi.waitFor(() =>
+      expect(fsState.files.has(`${USER_DATA}/browser-identity-mode.json`)).toBe(!failWrite)
+    )
+    const written = JSON.parse(fsState.files.get(META_PATH) ?? '{}')
+    expect(written.profiles).toHaveLength(malformed.length + 1)
+    expect(written.profiles.at(-1).userAgentMode).toBe('native')
   })
 
   it('hydrates a retired native profile under the process identity', async () => {

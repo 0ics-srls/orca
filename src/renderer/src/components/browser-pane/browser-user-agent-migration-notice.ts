@@ -40,7 +40,7 @@ export function useBrowserIdentityMigrationNotice(): void {
             }
           }
         )
-      }
+      })
       .catch(() => {})
   }, [])
 }
