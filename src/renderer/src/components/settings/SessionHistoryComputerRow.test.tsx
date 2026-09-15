@@ -80,7 +80,7 @@ function serverRow(
   )
 }
 const serverSwitch = (): HTMLElement =>
-  screen.getByRole('switch', { name: 'Index sessions on build-box' })
+  screen.getByRole('switch', { name: 'Search sessions on build-box' })
 
 beforeEach(() => {
   vi.useFakeTimers()
@@ -107,16 +107,16 @@ it('renders a computer as icon, name, version, one status line and a switch', ()
       kind="server"
       name="build-box"
       version="1.4.202"
-      status="Up to date · 12 files indexed"
-      details={['2 files could not be read and will be retried.']}
+      status="Ready · 12 sessions searchable"
+      details={['2 sessions could not be read and will be retried.']}
       checked
       onToggle={vi.fn()}
     />
   )
   expect(screen.getByText('build-box')).toBeInTheDocument()
   expect(screen.getByText('Orca v1.4.202')).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('Up to date · 12 files indexed')
-  expect(screen.getByText('2 files could not be read and will be retried.')).toBeInTheDocument()
+  expect(screen.getByRole('status')).toHaveTextContent('Ready · 12 sessions searchable')
+  expect(screen.getByText('2 sessions could not be read and will be retried.')).toBeInTheDocument()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'true')
 })
 
@@ -131,7 +131,7 @@ it('reports a reachable server by its live index status and version', async () =
   serverRow(connectedDetails())
   await act(async () => {})
   expect(mocks.status).toHaveBeenCalledWith('runtime:env-1')
-  expect(screen.getByRole('status')).toHaveTextContent('Up to date · 4880 files indexed')
+  expect(screen.getByRole('status')).toHaveTextContent('Ready · 4880 sessions searchable')
   expect(screen.getByText('Orca v1.4.202')).toBeInTheDocument()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'true')
 })
@@ -156,7 +156,7 @@ it('keeps an offline server dimmed, disabled and honest about its index', async 
     await vi.advanceTimersByTimeAsync(30_000)
   })
   expect(mocks.status).not.toHaveBeenCalled()
-  expect(screen.getByRole('status')).toHaveTextContent('Offline · index kept as it was')
+  expect(screen.getByRole('status')).toHaveTextContent('Offline')
   expect(serverSwitch()).toBeDisabled()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'false')
 })
@@ -171,13 +171,13 @@ it('asks for consent naming the server before enabling it', async () => {
   })
   expect(confirm).toHaveBeenCalledWith(
     expect.objectContaining({
-      title: 'Start indexing agent sessions on build-box?',
-      description: expect.stringContaining('This client only receives search results'),
-      confirmLabel: 'Start indexing'
+      title: 'Turn on session search on build-box?',
+      description: expect.stringContaining('results are sent to this computer'),
+      confirmLabel: 'Turn on'
     })
   )
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:env-1', true)
-  expect(screen.getByRole('status')).toHaveTextContent('Up to date · 4880 files indexed')
+  expect(screen.getByRole('status')).toHaveTextContent('Ready · 4880 sessions searchable')
 })
 
 it('leaves a server untouched when the consent is declined', async () => {
@@ -214,9 +214,7 @@ it('turns a host-too-old rejection into the update-server state', async () => {
   await act(async () => {
     fireEvent.click(serverSwitch())
   })
-  expect(screen.getByRole('status')).toHaveTextContent(
-    'Update this server to enable session search'
-  )
+  expect(screen.getByRole('status')).toHaveTextContent('Needs a newer version of Orca.')
   expect(serverSwitch()).toBeDisabled()
   expect(onError).not.toHaveBeenCalledWith(expect.stringContaining('Could not change'))
   await act(async () => {

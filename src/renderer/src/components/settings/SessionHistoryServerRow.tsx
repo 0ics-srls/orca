@@ -84,15 +84,15 @@ export function SessionHistoryServerRow({
       accepted = await confirm({
         title: translate(
           'sessionHistory.settings.serverEnableTitle',
-          'Start indexing agent sessions on {{host}}?',
+          'Turn on session search on {{host}}?',
           { host: environment.name }
         ),
         description: translate(
           'sessionHistory.settings.serverEnableConsent',
-          'Orca will build a search index on {{host}}. This client only receives search results. It copies conversation text and tool output from agent transcripts as written; content is not redacted. Indexing starts now, runs in the background, and the first scan can take several minutes. You can turn it off at any time; progress is kept.',
+          'Orca will make the agent conversations and tool output on {{host}} searchable from Agent Session History. The searchable copy stays on {{host}}; results are sent to this computer when you search. The first pass runs in the background and can take a few minutes.',
           { host: environment.name }
         ),
-        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Start indexing')
+        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Turn on')
       })
     } finally {
       if (mounted.current) {
@@ -123,10 +123,7 @@ export function SessionHistoryServerRow({
         dimmed
         checked={false}
         disabled
-        status={translate(
-          'sessionHistory.settings.serverTooOld',
-          'Update this server to enable session search.'
-        )}
+        status={translate('sessionHistory.settings.serverTooOld', 'Needs a newer version of Orca.')}
         action={{
           label: translate('sessionHistory.settings.updateServer', 'Update server'),
           onClick: openServerSettings
@@ -146,7 +143,7 @@ export function SessionHistoryServerRow({
         status={
           checking
             ? sessionSearchCheckingMessage()
-            : translate('sessionHistory.settings.serverOffline', 'Offline · index kept as it was')
+            : translate('sessionHistory.settings.serverOffline', 'Offline')
         }
       />
     )
