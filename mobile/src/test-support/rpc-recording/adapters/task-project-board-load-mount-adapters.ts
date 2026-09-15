@@ -194,7 +194,7 @@ export function taskProjectBoardLoadMountAdapters(
       fixture: {
         activeGitHubProject: {
           owner: 'owner',
-          ownerType: 'ORGANIZATION',
+          ownerType: 'organization',
           number: 3,
           host: PROJECT_HOST
         },
@@ -228,7 +228,7 @@ export function taskProjectBoardLoadMountAdapters(
           actions().loadGitHubProjectViews(
             mountFixture({
               owner: 'owner',
-              ownerType: 'ORGANIZATION',
+              ownerType: 'organization',
               number: 3,
               host: PROJECT_HOST
             })
@@ -259,7 +259,7 @@ export function taskProjectBoardLoadMountAdapters(
         actionItem: null,
         activeGitHubProject: {
           owner: 'owner',
-          ownerType: 'ORGANIZATION',
+          ownerType: 'organization',
           number: 3,
           host: PROJECT_HOST
         },

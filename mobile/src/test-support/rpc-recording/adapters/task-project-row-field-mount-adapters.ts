@@ -87,12 +87,18 @@ const PR_ROW = {
   fieldValuesByFieldId: {}
 } as const
 
+/**
+ * A single-select field as the board actually holds one. `kind` is the discriminant
+ * `optimisticProjectFieldValue` switches on, and the option has to be present for the optimistic
+ * value to carry its name and colour rather than the not-found fallback.
+ */
 const STATUS_FIELD = {
+  kind: 'single-select',
   id: 'field-1',
   name: 'Status',
   dataType: 'SINGLE_SELECT',
-  options: []
-}
+  options: [{ id: 'option-1', name: 'In progress', color: 'YELLOW' }]
+} as const
 
 const PROJECT_TABLE = {
   project: { id: 'project-1', title: 'Board', number: 3 },
@@ -195,9 +201,7 @@ export function taskProjectRowFieldMountAdapters(
           actions().mutateProjectRowField(
             mountFixture(ISSUE_ROW),
             mountFixture(STATUS_FIELD),
-            mountFixture({
-              singleSelectOptionId: 'option-1'
-            })
+            mountFixture({ kind: 'single-select', optionId: 'option-1' })
           ),
         'clear-field': () =>
           actions().mutateProjectRowField(
@@ -208,10 +212,7 @@ export function taskProjectRowFieldMountAdapters(
         'issue-type': () =>
           actions().mutateProjectRowIssueType(
             mountFixture(ISSUE_ROW),
-            mountFixture({
-              id: 'type-1',
-              name: 'Bug'
-            })
+            mountFixture({ id: 'type-1', name: 'Bug', color: 'RED', description: null })
           )
       }),
       state: (model) => ({
