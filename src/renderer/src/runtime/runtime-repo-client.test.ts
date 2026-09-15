@@ -2,6 +2,11 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+  createCompatibleRuntimeStatusResponseIfNeeded,
+  type RuntimeEnvironmentCallRequest
+} from './runtime-compatibility-test-fixture'
+import { clearRuntimeCompatibilityCacheForTests } from './runtime-rpc-client'
+import {
   getRuntimeRepoBaseRefDefault,
   searchRuntimeRepoBaseRefDetails,
   searchRuntimeRepoBaseRefs
@@ -13,6 +18,7 @@ const searchBaseRefDetails = vi.fn()
 const runtimeCall = vi.fn()
 
 beforeEach(() => {
+  clearRuntimeCompatibilityCacheForTests()
   getBaseRefDefault.mockReset()
   searchBaseRefs.mockReset()
   searchBaseRefDetails.mockReset()
@@ -25,7 +31,8 @@ beforeEach(() => {
         searchBaseRefDetails
       },
       runtimeEnvironments: {
-        call: runtimeCall
+        call: (args: RuntimeEnvironmentCallRequest) =>
+          createCompatibleRuntimeStatusResponseIfNeeded(args) ?? runtimeCall(args)
       }
     }
   })
@@ -76,5 +83,29 @@ describe('runtime repo client search bounds', () => {
       limit: 20,
       hostId: 'ssh:server'
     })
+  })
+
+  it('rejects an unverifiable runtime search instead of returning empty refs', async () => {
+    runtimeCall.mockResolvedValue({
+      id: 'rpc-1',
+      ok: true,
+      result: { refs: [], truncated: false, unverifiableReason: 'remote Git unavailable' },
+      _meta: { runtimeId: 'remote-runtime' }
+    })
+    const settings = { activeRuntimeEnvironmentId: 'env-1' }
+
+    await expect(searchRuntimeRepoBaseRefs(settings, 'repo-1', 'main', 20)).rejects.toThrow(
+      'remote Git unavailable'
+    )
+    await expect(searchRuntimeRepoBaseRefDetails(settings, 'repo-1', 'main', 20)).rejects.toThrow(
+      'remote Git unavailable'
+    )
+  })
+
+  it('propagates native IPC search failures', async () => {
+    searchBaseRefs.mockRejectedValue(new Error('git remote failed'))
+    await expect(searchRuntimeRepoBaseRefs(null, 'repo-1', 'main', 20)).rejects.toThrow(
+      'git remote failed'
+    )
   })
 })

@@ -47,6 +47,7 @@ export function BaseRefPicker({
   const [remoteCount, setRemoteCount] = useState<number>(0)
   const [baseRefQuery, setBaseRefQuery] = useState('')
   const [baseRefResults, setBaseRefResults] = useState<string[]>([])
+  const [baseRefSearchFailed, setBaseRefSearchFailed] = useState(false)
   const [isSearchingBaseRefs, setIsSearchingBaseRefs] = useState(false)
   const baseRefResultsListRef = useRef<HTMLDivElement>(null)
 
@@ -93,6 +94,7 @@ export function BaseRefPicker({
 
     setBaseRefQuery('')
     setBaseRefResults([])
+    setBaseRefSearchFailed(false)
     // Why: reset the previous repo's default ref before the new IPC resolves so
     // we never attribute a stale "Following primary branch (<ref>)" label to
     // the newly selected repo during the brief resolution window.
@@ -108,18 +110,21 @@ export function BaseRefPicker({
   useEffect(() => {
     if (!isRuntimeRepoRefSearchQueryWithinLimit(baseRefQuery)) {
       setBaseRefResults([])
+      setBaseRefSearchFailed(false)
       setIsSearchingBaseRefs(false)
       return
     }
     const trimmedQuery = baseRefQuery.trim()
     if (trimmedQuery.length < 2) {
       setBaseRefResults([])
+      setBaseRefSearchFailed(false)
       setIsSearchingBaseRefs(false)
       return
     }
 
     let stale = false
     setIsSearchingBaseRefs(true)
+    setBaseRefSearchFailed(false)
 
     const timer = window.setTimeout(() => {
       void searchRuntimeRepoBaseRefs(
@@ -132,12 +137,14 @@ export function BaseRefPicker({
         .then((results) => {
           if (!stale) {
             setBaseRefResults(results)
+            setBaseRefSearchFailed(false)
           }
         })
         .catch((err) => {
           console.error('[BaseRefPicker] searchBaseRefs failed', err)
           if (!stale) {
             setBaseRefResults([])
+            setBaseRefSearchFailed(true)
           }
         })
         .finally(() => {
@@ -237,7 +244,14 @@ export function BaseRefPicker({
       ) : null}
 
       {!isSearchingBaseRefs && baseRefQuery.trim().length >= 2 ? (
-        baseRefResults.length > 0 ? (
+        baseRefSearchFailed ? (
+          <p className="text-xs text-destructive" role="alert">
+            {translate(
+              'auto.components.settings.BaseRefPicker.branchSearchFailed',
+              'Branch discovery failed.'
+            )}
+          </p>
+        ) : baseRefResults.length > 0 ? (
           <div
             ref={baseRefResultsListRef}
             className="max-h-[min(12rem,40vh)] overflow-y-auto overflow-x-hidden rounded-md border border-border/50 scrollbar-sleek"

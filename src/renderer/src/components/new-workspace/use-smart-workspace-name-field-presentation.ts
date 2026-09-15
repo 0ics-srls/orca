@@ -177,6 +177,10 @@ export function useSmartWorkspaceNameFieldPresentation(
   const debouncedQueryWithinSourceLimit = isSmartWorkspaceSourceQueryWithinLimit(debouncedQuery)
   const trimmedValue = valueWithinSourceLimit ? value.trim() : ''
   const trimmedDebouncedQuery = debouncedQueryWithinSourceLimit ? debouncedQuery.trim() : ''
+  const branchSearchFailed =
+    branchResultsSource?.unverifiable === true &&
+    branchResultsSource.repoId === selectedRepo?.id &&
+    branchResultsSource.query === trimmedValue
   const isQueryStale =
     !linearUrlIntentOwnsInput && trimmedValue.length > 0 && trimmedDebouncedQuery !== trimmedValue
   // Why: unambiguous refs highlight their source row instead of the typed-text fallback.
@@ -278,6 +282,7 @@ export function useSmartWorkspaceNameFieldPresentation(
     rows,
     typedTextActionRow,
     searchResultRows,
+    branchSearchFailed,
     isQueryStale,
     resolvedCommandValue,
     activeEmojiShortcode,

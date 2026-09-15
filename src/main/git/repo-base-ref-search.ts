@@ -8,14 +8,15 @@ import {
   isRepoSearchRefsScanLimit
 } from '../../shared/repo-search-limits'
 import { isSafeGitRefName } from '../../shared/git-status-upstream-ref'
+import type { GitCapabilityCache } from '../../shared/git-capability-cache'
 import {
   parseAndFilterSearchRefDetails,
   resolveConfiguredRemoteBranchName,
   resolveLocalBranchName
 } from './base-ref-search-result-parsing'
-import { getLocalGitCapabilityCache } from './git-capability-state'
-import { gitExecOptions, type LocalGitExecOptions } from './repo-default-base-ref'
+import { getLocalGitCapabilityCache, getSshGitCapabilityCache } from './git-capability-state'
 import { gitExecFileAsync } from './runner'
+import type { SshGitProvider } from '../providers/ssh-git-provider'
 
 const REF_SEARCH_CANDIDATE_MULTIPLIER = 4
 const REF_SEARCH_LEGACY_HEADROOM = 100
@@ -114,29 +115,18 @@ export function buildSearchBaseRefsArgv(
 }
 
 async function runSearchBaseRefsGit(
-  path: string,
   normalizedQuery: string,
   limit: number,
-  options: { remoteNames: readonly string[]; patternGroup?: RefSearchPatternGroup }
+  options: { remoteNames: readonly string[]; patternGroup?: RefSearchPatternGroup },
+  execGit: (args: string[]) => Promise<{ stdout: string }>,
+  capabilities: GitCapabilityCache
 ): Promise<{ stdout: string }> {
-  return getLocalGitCapabilityCache({ cwd: path }).runWithFallback(
+  return capabilities.runWithFallback(
     'for-each-ref-exclude',
+    () => execGit(buildSearchBaseRefsArgv(normalizedQuery, limit, options)),
     () =>
-      gitExecFileAsync(
-        buildSearchBaseRefsArgv(normalizedQuery, limit, {
-          remoteNames: options.remoteNames,
-          patternGroup: options.patternGroup
-        }),
-        { cwd: path }
-      ),
-    () =>
-      gitExecFileAsync(
-        buildSearchBaseRefsArgv(normalizedQuery, limit, {
-          excludeRemoteHead: false,
-          remoteNames: options.remoteNames,
-          patternGroup: options.patternGroup
-        }),
-        { cwd: path }
+      execGit(
+        buildSearchBaseRefsArgv(normalizedQuery, limit, { ...options, excludeRemoteHead: false })
       ),
     isForEachRefExcludeUnsupportedError
   )
@@ -165,17 +155,6 @@ export function mergeBaseRefSearchResultGroups(
   return merged
 }
 
-/**
- * A ref search either answered or could not be run. The distinction matters because an empty
- * `results` is a real answer -- this repo has no ref matching the query -- while `unverifiable`
- * means Git never reported, and a caller that shows "no matching branches" for that is asserting
- * something it does not know.
- *
- * `unverifiable` is the repo's verdict-layer word (see docs/reference/ssh-execution-boundary.md and
- * the `hostScope` fields in shared/runtime-worktree-contracts.ts); `unavailable` is reserved for the
- * raw process-evidence layer in main/daemon. Callers with no room for a third state use the array
- * adapters below.
- */
 export type BaseRefSearchOutcome =
   | { status: 'ok'; results: BaseRefSearchResult[] }
   | { status: 'unverifiable'; reason: string }
@@ -192,7 +171,6 @@ export async function searchBaseRefs(
   return (await searchBaseRefDetails(path, query, boundedLimit)).map((entry) => entry.refName)
 }
 
-/** Array adapter for callers whose contract has no room for the unverifiable state. */
 export async function searchBaseRefDetails(
   path: string,
   query: string,
@@ -207,27 +185,80 @@ export async function searchBaseRefDetailsOutcome(
   query: string,
   limit = REPO_SEARCH_REFS_DEFAULT_LIMIT
 ): Promise<BaseRefSearchOutcome> {
+  return searchBaseRefDetailsWithGit(
+    path,
+    query,
+    limit,
+    (args) => gitExecFileAsync(args, { cwd: path }),
+    getLocalGitCapabilityCache({ cwd: path })
+  )
+}
+
+export async function searchBaseRefDetailsOnSsh(
+  path: string,
+  query: string,
+  limit: number,
+  provider: SshGitProvider | undefined
+): Promise<BaseRefSearchOutcome> {
+  if (!provider) {
+    return { status: 'unverifiable', reason: 'no SSH git provider for this connection' }
+  }
+  return searchBaseRefDetailsWithGit(
+    path,
+    query,
+    limit,
+    (args) => provider.exec(args, path),
+    getSshGitCapabilityCache(provider)
+  )
+}
+
+async function searchBaseRefDetailsWithGit(
+  path: string,
+  query: string,
+  limit: number,
+  execGit: (args: string[]) => Promise<{ stdout: string }>,
+  capabilities: GitCapabilityCache
+): Promise<BaseRefSearchOutcome> {
   if (!isRepoSearchRefsRequestLimit(limit)) {
-    // Unreachable from the IPC and runtime callers, which both validate first -- but `ok` here would
-    // mean "this repo has no matching ref" on the one path where nothing was ever asked.
     return { status: 'unverifiable', reason: `invalid ref search limit: ${String(limit)}` }
   }
   const boundedScanLimit = clampRepoSearchRefsScanLimit(limit)
   const normalizedQuery = normalizeRefSearchQuery(query)
 
   try {
-    const remotes = await listRemoteNames(path)
+    // Remote names determine multi-segment search patterns; a failed lookup is not an empty list.
+    let remotes: string[]
+    try {
+      remotes = (await execGit(['remote'])).stdout
+        .split('\n')
+        .map((line) => line.trim())
+        .filter(Boolean)
+    } catch (error) {
+      return { status: 'unverifiable', reason: describeBaseRefSearchFailure(error, 'remote') }
+    }
     const tokens = getRefSearchTokens(normalizedQuery)
     if (tokens.length > 1) {
       const results = await Promise.all([
-        runSearchBaseRefsGit(path, normalizedQuery, boundedScanLimit, {
-          remoteNames: remotes,
-          patternGroup: 'segmented'
-        }),
-        runSearchBaseRefsGit(path, normalizedQuery, boundedScanLimit, {
-          remoteNames: remotes,
-          patternGroup: 'branchRoot'
-        })
+        runSearchBaseRefsGit(
+          normalizedQuery,
+          boundedScanLimit,
+          {
+            remoteNames: remotes,
+            patternGroup: 'segmented'
+          },
+          execGit,
+          capabilities
+        ),
+        runSearchBaseRefsGit(
+          normalizedQuery,
+          boundedScanLimit,
+          {
+            remoteNames: remotes,
+            patternGroup: 'branchRoot'
+          },
+          execGit,
+          capabilities
+        )
       ])
       return {
         status: 'ok',
@@ -240,49 +271,29 @@ export async function searchBaseRefDetailsOutcome(
       }
     }
 
-    const result = await runSearchBaseRefsGit(path, normalizedQuery, boundedScanLimit, {
-      remoteNames: remotes
-    })
+    const result = await runSearchBaseRefsGit(
+      normalizedQuery,
+      boundedScanLimit,
+      {
+        remoteNames: remotes
+      },
+      execGit,
+      capabilities
+    )
     return {
       status: 'ok',
       results: parseAndFilterSearchRefDetails(result.stdout, boundedScanLimit, remotes)
     }
   } catch (err) {
-    console.warn('[searchBaseRefs] for-each-ref failed', { path, err })
-    return { status: 'unverifiable', reason: describeBaseRefSearchFailure(err) }
+    console.warn('[searchBaseRefs] git ref search failed', { path, err })
+    return { status: 'unverifiable', reason: describeBaseRefSearchFailure(err, 'for-each-ref') }
   }
 }
 
-function describeBaseRefSearchFailure(error: unknown): string {
+function describeBaseRefSearchFailure(error: unknown, command: string): string {
   const message = error instanceof Error ? error.message : String(error)
   const firstLine = message.split('\n')[0]?.trim()
-  return firstLine ? `git for-each-ref failed: ${firstLine}` : 'git for-each-ref failed'
-}
-
-/**
- * `[]` already reads as "no hint", not as "this repo has no remotes": every consumer branches on
- * `remoteNames.length > 0` and an empty list produces byte-identical `for-each-ref` argv to an
- * absent one, so a third state here would change no behaviour. Doctrine remedy 1 -- uncached, and
- * almost every consequence degrades toward showing more rows rather than fewer: `<remote>/HEAD`
- * filtering is lost and `resolveLocalBranchName` cannot strip a slash-containing remote's prefix.
- * The one exception is a ref under a slash-containing remote on a multi-token query: the branch-root
- * patterns fall back to a single-segment wildcard, which cannot reach past the first remote segment,
- * so `up/stream/feature/x` is unmatched. Accepted rather than fixed here -- the remedy belongs with
- * a remote-name-aware pattern builder, not with a swallow that re-asks on the next keystroke.
- */
-export async function listRemoteNames(
-  path: string,
-  options: LocalGitExecOptions = {}
-): Promise<string[]> {
-  try {
-    const { stdout } = await gitExecFileAsync(['remote'], gitExecOptions(path, options))
-    return stdout
-      .split('\n')
-      .map((line) => line.trim())
-      .filter(Boolean)
-  } catch {
-    return []
-  }
+  return firstLine ? `git ${command} failed: ${firstLine}` : `git ${command} failed`
 }
 
 export function normalizeRefSearchQuery(query: string): string {

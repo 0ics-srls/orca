@@ -1,6 +1,7 @@
 import type { PreloadApi } from '../../../../preload/api-types'
 import { legacyBaseRefSearchResult } from '../../../../shared/base-ref-search-result'
 import type { Repo } from '../../../../shared/repo-types'
+import type { RuntimeRepoSearchRefs } from '../../../../shared/runtime-types'
 import { getDefaultCreateProjectParent } from '@/components/sidebar/create-project-defaults'
 import {
   callRuntimeResult,
@@ -106,23 +107,26 @@ export function createReposApi(): NonNullable<Partial<PreloadApi>['repos']> {
     getGitUsername: () => Promise.resolve(''),
     getBaseRefDefault: async ({ repoId }) =>
       callRuntimeResult('repo.baseRefDefault', { repo: repoId }),
-    searchBaseRefs: async ({ repoId, query, limit }) =>
-      (
-        await callRuntimeResult<{ refs: string[] }>('repo.searchRefs', {
-          repo: repoId,
-          query,
-          limit
-        })
-      ).refs,
-    searchBaseRefDetails: async ({ repoId, query, limit }) => {
-      const result = await callRuntimeResult<{
-        refs: string[]
-        refDetails?: { refName: string; localBranchName: string }[]
-      }>('repo.searchRefs', {
+    searchBaseRefs: async ({ repoId, query, limit }) => {
+      const result = await callRuntimeResult<RuntimeRepoSearchRefs>('repo.searchRefs', {
         repo: repoId,
         query,
         limit
       })
+      if (result.unverifiableReason) {
+        throw new Error(result.unverifiableReason)
+      }
+      return result.refs
+    },
+    searchBaseRefDetails: async ({ repoId, query, limit }) => {
+      const result = await callRuntimeResult<RuntimeRepoSearchRefs>('repo.searchRefs', {
+        repo: repoId,
+        query,
+        limit
+      })
+      if (result.unverifiableReason) {
+        throw new Error(result.unverifiableReason)
+      }
       return result.refDetails ?? result.refs.map(legacyBaseRefSearchResult)
     },
     onChanged: () => noopUnsubscribe

@@ -1,13 +1,15 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-const { searchBaseRefDetailsOutcomeMock } = vi.hoisted(() => ({
-  searchBaseRefDetailsOutcomeMock: vi.fn()
+const { searchBaseRefDetailsOutcomeMock, searchBaseRefDetailsOnSshMock } = vi.hoisted(() => ({
+  searchBaseRefDetailsOutcomeMock: vi.fn(),
+  searchBaseRefDetailsOnSshMock: vi.fn()
 }))
 
 vi.mock('../git/repo-base-ref-search', () => ({
-  searchBaseRefDetailsOutcome: searchBaseRefDetailsOutcomeMock
+  searchBaseRefDetailsOutcome: searchBaseRefDetailsOutcomeMock,
+  searchBaseRefDetailsOnSsh: searchBaseRefDetailsOnSshMock
 }))
-vi.mock('../providers/ssh-git-dispatch', () => ({ getSshGitProvider: vi.fn(() => null) }))
+vi.mock('../providers/ssh-git-dispatch', () => ({ getSshGitProvider: vi.fn(() => undefined) }))
 
 import { RuntimeRepositoryRefQueries } from './runtime-repository-ref-queries'
 import type { Repo } from '../../shared/repo-types'
@@ -24,6 +26,15 @@ function queriesFor(repo: Pick<Repo, 'id' | 'path'> & Partial<Repo>): RuntimeRep
 }
 
 describe('runtime repo.searchRefs', () => {
+  beforeEach(() => {
+    searchBaseRefDetailsOutcomeMock.mockReset()
+    searchBaseRefDetailsOnSshMock.mockReset()
+    searchBaseRefDetailsOnSshMock.mockResolvedValue({
+      status: 'unverifiable',
+      reason: 'no SSH git provider for this connection'
+    })
+  })
+
   it('carries the unverifiable reason instead of an empty ref list', async () => {
     searchBaseRefDetailsOutcomeMock.mockResolvedValue({
       status: 'unverifiable',
@@ -57,7 +68,8 @@ describe('runtime repo.searchRefs', () => {
       10
     )
     expect(result.unverifiableReason).toBe('no SSH git provider for this connection')
-    expect(searchBaseRefDetailsOutcomeMock).not.toHaveBeenCalledWith('/repo', 'feat', 10)
+    expect(searchBaseRefDetailsOutcomeMock).not.toHaveBeenCalled()
+    expect(searchBaseRefDetailsOnSshMock).toHaveBeenCalledWith('/repo', 'feat', 11, undefined)
   })
 
   it('keeps a folder workspace an answer, because it has no refs to search', async () => {

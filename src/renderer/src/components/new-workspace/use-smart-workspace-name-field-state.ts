@@ -20,6 +20,7 @@ export function useSmartWorkspaceNameFieldState(textOnly: boolean, value: string
   const [branchResultsSource, setBranchResultsSource] = useState<{
     repoId: string
     query: string
+    unverifiable?: true
   } | null>(null)
   const [linearIssues, setLinearIssues] = useState<LinearIssue[]>([])
   const [jiraIssues, setJiraIssues] = useState<JiraIssue[]>([])

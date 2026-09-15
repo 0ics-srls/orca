@@ -23,6 +23,7 @@ export function renderSmartWorkspaceSourceResults(
     jiraSource,
     loading,
     searchResultRows,
+    branchSearchFailed,
     linearStatusChecked,
     linearStatus,
     showJiraSiteContext,
@@ -114,16 +115,30 @@ export function renderSmartWorkspaceSourceResults(
               <div key={index} className="h-8 animate-pulse rounded bg-muted/40" />
             ))}
           </div>
-        ) : searchResultRows.length === 0 && !typedTextActionRow ? (
-          <div className="px-3 py-6 text-center text-xs text-muted-foreground">
-            {jiraSource.intent
-              ? null
-              : mode === 'linear' && linearStatusChecked && !linearStatus.connected
-                ? translate(
-                    'auto.components.new.workspace.SmartWorkspaceNameField.3e8bb1176a',
-                    'Connect Linear in Settings to search issues.'
-                  )
-                : getSmartWorkspaceEmptyHint(mode)}
+        ) : (mode === 'branches' && branchSearchFailed) ||
+          (searchResultRows.length === 0 && !typedTextActionRow) ? (
+          <div
+            role={mode === 'branches' && branchSearchFailed ? 'alert' : undefined}
+            className={cn(
+              'px-3 py-6 text-center text-xs',
+              mode === 'branches' && branchSearchFailed
+                ? 'text-destructive'
+                : 'text-muted-foreground'
+            )}
+          >
+            {mode === 'branches' && branchSearchFailed
+              ? translate(
+                  'auto.components.new.workspace.SmartWorkspaceNameField.branchSearchFailed',
+                  'Branch discovery failed.'
+                )
+              : jiraSource.intent
+                ? null
+                : mode === 'linear' && linearStatusChecked && !linearStatus.connected
+                  ? translate(
+                      'auto.components.new.workspace.SmartWorkspaceNameField.3e8bb1176a',
+                      'Connect Linear in Settings to search issues.'
+                    )
+                  : getSmartWorkspaceEmptyHint(mode)}
           </div>
         ) : searchResultRows.length > 0 ? (
           <CommandGroup className="p-1">

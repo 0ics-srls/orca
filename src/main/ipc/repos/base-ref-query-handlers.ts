@@ -11,17 +11,14 @@ import { getRepoExecutionHostId, type ExecutionHostId } from '../../../shared/ex
 import {
   getBaseRefDefault,
   getRemoteCount,
-  normalizeRefSearchQuery,
-  parseAndFilterSearchRefDetails,
   parseRemoteCount,
-  resolveDefaultBaseRefViaExec,
-  buildSearchBaseRefsArgv,
-  isForEachRefExcludeUnsupportedError,
-  mergeBaseRefSearchResultGroups
+  resolveDefaultBaseRefViaExec
 } from '../../git/repo'
-import { searchBaseRefDetailsOutcome } from '../../git/repo-base-ref-search'
+import {
+  searchBaseRefDetailsOnSsh,
+  searchBaseRefDetailsOutcome
+} from '../../git/repo-base-ref-search'
 import { getSshGitProvider } from '../../providers/ssh-git-dispatch'
-import { getSshGitCapabilityCache } from '../../git/git-capability-state'
 
 export function registerBaseRefQueryHandlers(store: Store): void {
   ipcMain.handle(
@@ -123,78 +120,16 @@ async function searchBaseRefDetailsForRepo(
   // Keep the public IPC shape forgiving while bounding Git and retained results
   // for callers that request an unusually large page.
   const limit = clampRepoSearchRefsLimit(requestedLimit)
-  // Why: remote repos need the relay to list branches on the remote host.
-  if (repo.connectionId) {
-    const provider = getSshGitProvider(repo.connectionId)
-    if (!provider) {
-      return []
-    }
-    // Why: strip glob metacharacters to prevent glob injection (mirrors local normalizeRefSearchQuery).
-    const normalizedQuery = normalizeRefSearchQuery(args.query)
-    try {
-      // Why: argv lives in buildSearchBaseRefsArgv so SSH and local paths cannot drift.
-      const remotesResult = await provider.exec(['remote'], repo.path).catch(() => ({ stdout: '' }))
-      const remotes = remotesResult.stdout
-        .split('\n')
-        .map((line) => line.trim())
-        .filter(Boolean)
-      const capabilities = getSshGitCapabilityCache(provider)
-      const runSearch = async (patternGroup?: 'segmented' | 'branchRoot'): Promise<string> => {
-        return capabilities.runWithFallback(
-          'for-each-ref-exclude',
-          async () =>
-            (
-              await provider.exec(
-                buildSearchBaseRefsArgv(normalizedQuery, limit, {
-                  remoteNames: remotes,
-                  patternGroup
-                }),
-                repo.path
-              )
-            ).stdout,
-          async () =>
-            (
-              await provider.exec(
-                buildSearchBaseRefsArgv(normalizedQuery, limit, {
-                  excludeRemoteHead: false,
-                  remoteNames: remotes,
-                  patternGroup
-                }),
-                repo.path
-              )
-            ).stdout,
-          isForEachRefExcludeUnsupportedError
-        )
-      }
-      // Why: delegate the parse/filter/dedup/limit pipeline to the shared helper so SSH and local paths cannot diverge.
-      const searchTokens = normalizedQuery.split('/').filter((token) => token.length > 0)
-      if (searchTokens.length > 1) {
-        const results = await Promise.all([runSearch('segmented'), runSearch('branchRoot')])
-        return mergeBaseRefSearchResultGroups(
-          results.map((stdout) => parseAndFilterSearchRefDetails(stdout, limit, remotes)),
-          limit
-        )
-      }
-      return parseAndFilterSearchRefDetails(await runSearch(), limit, remotes)
-    } catch (err) {
-      console.warn('[repos:searchBaseRefs] SSH for-each-ref failed', {
-        path: repo.path,
-        err
-      })
-      // Array contract, same as the local branch below: the third state reaches clients through the
-      // runtime `repo.searchRefs` result's `unverifiableReason`, not through this channel.
-      return []
-    }
-  }
-  const outcome = await searchBaseRefDetailsOutcome(repo.path, args.query, limit)
+  const outcome = repo.connectionId
+    ? await searchBaseRefDetailsOnSsh(
+        repo.path,
+        args.query,
+        limit,
+        getSshGitProvider(repo.connectionId)
+      )
+    : await searchBaseRefDetailsOutcome(repo.path, args.query, limit)
   if (outcome.status === 'unverifiable') {
-    // This IPC contract is an array, so the gap can only be logged here. The third state reaches
-    // clients through the runtime `repo.searchRefs` result's `unverifiableReason`.
-    console.warn('[repos:searchBaseRefs] ref search unverifiable', {
-      path: repo.path,
-      reason: outcome.reason
-    })
-    return []
+    throw new Error(outcome.reason)
   }
   return outcome.results
 }

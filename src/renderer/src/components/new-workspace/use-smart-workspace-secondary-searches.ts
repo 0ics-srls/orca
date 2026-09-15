@@ -124,7 +124,11 @@ export function useSmartWorkspaceSecondarySearches({
       .catch(() => {
         if (!stale) {
           setBranches([])
-          setBranchResultsSource(null)
+          setBranchResultsSource({
+            repoId: branchSearchRequest.repoId,
+            query: branchSearchRequest.query,
+            unverifiable: true
+          })
         }
       })
       .finally(() => {

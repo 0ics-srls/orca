@@ -71,7 +71,7 @@ describe('searchBaseRefDetailsOutcome', () => {
     await expect(searchBaseRefDetails('/repo', 'feat', 5)).resolves.toEqual([])
   })
 
-  it('still answers when only `git remote` fails, because the remote list is a hint', async () => {
+  it('does not claim an empty answer when remote names cannot be read', async () => {
     respond((args) => {
       if (args[0] === 'remote') {
         throw new Error('fatal: cannot read config')
@@ -79,11 +79,11 @@ describe('searchBaseRefDetailsOutcome', () => {
       return { stdout: ROW }
     })
 
-    // Doctrine remedy 1: `[]` remotes cost only `<remote>/HEAD` filtering, never a row.
-    await expect(searchBaseRefDetailsOutcome('/repo', 'main', 5)).resolves.toEqual({
-      status: 'ok',
-      results: [{ refName: 'main', localBranchName: 'main' }]
+    await expect(searchBaseRefDetailsOutcome('/repo', 'feature/x', 5)).resolves.toEqual({
+      status: 'unverifiable',
+      reason: 'git remote failed: fatal: cannot read config'
     })
+    expect(gitExecFileAsyncMock).toHaveBeenCalledTimes(1)
   })
 
   it('does not pin the failure: concurrent probes both report it and the next call recovers', async () => {
