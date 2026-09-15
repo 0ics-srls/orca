@@ -4,6 +4,7 @@ import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { DeveloperPermissionRequestResult } from '../../../../shared/developer-permissions-types'
+import { getDefaultVoiceSettings } from '../../../../shared/constants'
 import type { VoiceSettings } from '../../../../shared/speech-types'
 
 // Why: repo convention — React only suppresses its act() warning when this global is set.
@@ -18,9 +19,8 @@ vi.mock('sonner', () => ({
 import { VoiceMicrophoneSetting } from './VoiceMicrophoneSetting'
 
 const voiceSettings: VoiceSettings = {
-  enabled: true,
-  microphoneDeviceId: null,
-  microphoneDeviceLabel: null
+  ...getDefaultVoiceSettings(),
+  enabled: true
 }
 
 function namedError(name: string, message = 'boom'): Error {
