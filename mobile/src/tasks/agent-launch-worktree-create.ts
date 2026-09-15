@@ -14,6 +14,7 @@
 
 import {
   withoutReservedAgentCreateFields,
+  type AgentLaunchOutcome,
   type AgentLaunchResult
 } from '../../../src/shared/agent-launch-intent'
 import type { TuiAgent } from '../../../src/shared/tui-agent'
@@ -59,27 +60,46 @@ export function readAgentLaunchCreateOutcome(result: unknown): AgentLaunchCreate
   if (typeof worktreeId !== 'string' || !worktreeId.trim()) {
     return null
   }
-  const warning = terminalLaunchWarning(result)
+  const warning = parseTerminalLaunchOutcome(
+    'outcome' in result ? result.outcome : undefined
+  )?.warning?.trim()
   return { worktreeId, ...(warning ? { warning } : {}) }
 }
 
 /**
- * The startup failure a terminal launch reports: the workspace exists, the agent did not start
- * (pty exhaustion). Dropping it is what lands the phone on an unexplained empty session.
+ * The terminal outcome, narrowed to the fields this reader consumes. Taken from the shared union
+ * rather than restated, so a change to the contract fails here instead of flowing through.
  *
- * Narrowed rather than asserted, because the payload is whatever the host sent — a reader that
- * claims the contract's shape without checking it is how a malformed reply reaches the UI as a
- * TypeError instead of a message.
+ * `handle` is deliberately not required: nothing here reads it, and demanding it would drop the
+ * warning off a reply that omitted it — a behaviour change smuggled in under a typing change.
  */
-function terminalLaunchWarning(result: object): string {
-  if (!('outcome' in result) || !result.outcome || typeof result.outcome !== 'object') {
-    return ''
+type TerminalLaunchOutcome = Pick<
+  Extract<AgentLaunchOutcome, { kind: 'terminal' }>,
+  'kind' | 'warning'
+>
+
+/**
+ * Parses the launch outcome, which arrives as whatever the host sent.
+ *
+ * A terminal launch reports its startup failure here: the workspace exists, the agent did not
+ * start (pty exhaustion). Dropping it is what lands the phone on an unexplained empty session.
+ *
+ * Parsed into a named type at this boundary rather than read off a loose `object`, and narrowed
+ * rather than asserted — a reader that claims the contract's shape without checking it is how a
+ * malformed reply reaches the UI as a TypeError instead of a message.
+ */
+function parseTerminalLaunchOutcome(outcome: unknown): TerminalLaunchOutcome | null {
+  if (
+    !outcome ||
+    typeof outcome !== 'object' ||
+    !('kind' in outcome) ||
+    outcome.kind !== 'terminal'
+  ) {
+    return null
   }
-  const outcome = result.outcome
-  if (!('kind' in outcome) || outcome.kind !== 'terminal') {
-    return ''
-  }
-  return 'warning' in outcome && typeof outcome.warning === 'string' ? outcome.warning.trim() : ''
+  const warning =
+    'warning' in outcome && typeof outcome.warning === 'string' ? outcome.warning : undefined
+  return { kind: 'terminal', ...(warning === undefined ? {} : { warning }) }
 }
 
 /**
