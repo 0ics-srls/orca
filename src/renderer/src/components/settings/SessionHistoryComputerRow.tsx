@@ -76,7 +76,7 @@ export function SessionHistoryComputerRow({
           onChange={onToggle}
           ariaLabel={translate(
             'sessionHistory.settings.rowSwitchLabel',
-            'Index sessions on {{host}}',
+            'Search sessions on {{host}}',
             {
               host: name
             }

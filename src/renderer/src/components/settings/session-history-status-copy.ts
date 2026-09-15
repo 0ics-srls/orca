@@ -21,15 +21,19 @@ export function sessionSearchPollIntervalMs(status: AiVaultSearchStatus | null):
 function sweepMessage(status: AiVaultSearchStatus): string {
   if (status.lastSweepCompletedAt === null) {
     // No completed sweep yet, so the denominator is still growing and a percentage would mislead.
-    return translate('sessionHistory.status.firstScan', 'Indexing… {{indexed}} files so far', {
-      indexed: status.filesIndexed
-    })
+    return translate(
+      'sessionHistory.status.firstScan',
+      'Preparing search · {{indexed}} sessions so far',
+      {
+        indexed: status.filesIndexed
+      }
+    )
   }
   const total = status.filesIndexed + status.filesDue + status.filesFailed
   const percent = total > 0 ? Math.floor((status.filesIndexed / total) * 100) : 0
   return translate(
     'sessionHistory.status.progress',
-    'Indexing · {{percent}}% · {{indexed}} of {{total}} files',
+    'Preparing search · {{percent}}% · {{indexed}} of {{total}} sessions',
     { percent, indexed: status.filesIndexed, total }
   )
 }
@@ -39,18 +43,18 @@ export function sessionSearchStatusMessage(status: AiVaultSearchStatus): string 
   if (!status.enabled || status.phase === 'idle' || status.phase === 'closed') {
     return translate(
       'sessionHistory.status.unavailable',
-      'Index is not ready or the search service is unavailable.'
+      'Search is not available on this computer right now.'
     )
   }
   if (isSweepingSessionSearch(status)) {
     return sweepMessage(status)
   }
-  return translate('sessionHistory.status.upToDate', 'Up to date · {{indexed}} files indexed', {
+  return translate('sessionHistory.status.upToDate', 'Ready · {{indexed}} sessions searchable', {
     indexed: status.filesIndexed
   })
 }
 
-/** Lines shown under the status sentence while a host is actually indexing. */
+/** Lines shown under the status sentence when something needs the user's attention. */
 export function sessionSearchStatusDetails(status: AiVaultSearchStatus | null): string[] {
   if (!status?.enabled) {
     return []
@@ -60,22 +64,14 @@ export function sessionSearchStatusDetails(status: AiVaultSearchStatus | null): 
     lines.push(
       translate(
         'sessionHistory.status.unreadable',
-        '{{failed}} files could not be read and will be retried.',
+        '{{failed}} sessions could not be read and will be retried.',
         { failed: status.filesFailed }
-      )
-    )
-  }
-  if (isSweepingSessionSearch(status)) {
-    lines.push(
-      translate(
-        'sessionHistory.status.stopHint',
-        'Turn off search to stop. Progress is kept and resumes when you turn it back on.'
       )
     )
   }
   if (status.degradedRoots.length > 0) {
     lines.push(
-      translate('sessionHistory.status.roots', 'Unverified source roots: {{roots}}', {
+      translate('sessionHistory.status.roots', '{{roots}} session folders could not be checked.', {
         roots: status.degradedRoots.length
       })
     )
@@ -84,15 +80,15 @@ export function sessionSearchStatusDetails(status: AiVaultSearchStatus | null): 
 }
 
 export function sessionSearchCheckingMessage(): string {
-  return translate('sessionHistory.status.checking', 'Checking index…')
+  return translate('sessionHistory.status.checking', 'Checking…')
 }
 
 export function sessionSearchOffMessage(): string {
-  return translate('sessionHistory.status.off', 'Search is off. Any existing index copy is kept.')
+  return translate('sessionHistory.status.off', 'Off')
 }
 
 export function sessionSearchReadErrorMessage(): string {
-  return translate('sessionHistory.status.error', 'Could not read index status. Retrying…')
+  return translate('sessionHistory.status.error', 'Could not check status. Retrying…')
 }
 
 // IPC wraps a rejection's message, so the host-too-old marker arrives inside a longer string.

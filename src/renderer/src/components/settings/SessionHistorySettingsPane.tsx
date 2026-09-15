@@ -89,12 +89,12 @@ export function SessionHistorySettingsPane({
     let accepted = false
     try {
       accepted = await confirm({
-        title: translate('sessionHistory.settings.enableTitle', 'Start indexing agent sessions?'),
+        title: translate('sessionHistory.settings.enableTitle', 'Turn on session search?'),
         description: translate(
           'sessionHistory.settings.enableConsent',
-          'Orca will build a local search index on this computer. It copies conversation text and tool output from agent transcripts as written; content is not redacted. Indexing starts now, runs in the background, and the first scan can take several minutes. You can turn it off at any time; progress is kept.'
+          'Orca will make your past agent conversations and tool output on this computer searchable from Agent Session History. It stays on this computer. The first pass runs in the background and can take a few minutes.'
         ),
-        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Start indexing')
+        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Turn on')
       })
     } finally {
       if (mounted.current) {
@@ -128,10 +128,10 @@ export function SessionHistorySettingsPane({
       const accepted = await confirm({
         title: translate(
           'sessionHistory.settings.deleteTitle',
-          'Delete this computer’s search index?'
+          'Clear search data on this computer?'
         ),
         description: deleteDescription(wasEnabled),
-        confirmLabel: translate('sessionHistory.settings.delete', 'Delete index'),
+        confirmLabel: translate('sessionHistory.settings.delete', 'Clear'),
         confirmVariant: 'destructive'
       })
       if (!accepted || !mounted.current) {
@@ -148,18 +148,15 @@ export function SessionHistorySettingsPane({
           wasEnabled
             ? translate(
                 'sessionHistory.settings.clearedAndTurnedOff',
-                'Search is off and the index was deleted. Original transcripts were kept.'
+                'Search turned off and search data cleared.'
               )
-            : translate(
-                'sessionHistory.settings.cleared',
-                'Search index cleared. Original transcripts were kept.'
-              )
+            : translate('sessionHistory.settings.cleared', 'Search data cleared.')
         )
       }
     } catch {
       if (mounted.current) {
         setError(
-          translate('sessionHistory.settings.clearError', 'Could not clear the index. Try again.')
+          translate('sessionHistory.settings.clearError', 'Could not clear search data. Try again.')
         )
       }
     } finally {
@@ -185,17 +182,17 @@ export function SessionHistorySettingsPane({
       <div className="divide-y divide-border">
         <div className="space-y-1 py-3">
           <Label className="select-text">
-            {translate('sessionHistory.settings.indexComputers', 'Index agent sessions')}
+            {translate('sessionHistory.settings.indexComputers', 'Search agent sessions')}
           </Label>
           <p className="select-text text-xs text-muted-foreground">
             {isWebClient
               ? translate(
                   'sessionHistory.settings.webUnsupported',
-                  'Manage indexing in the Orca desktop app on the computer that owns the transcripts. These controls are unavailable from a paired client.'
+                  'Turn on session search from the Orca desktop app on that computer.'
                 )
               : translate(
                   'sessionHistory.settings.computersConsent',
-                  'Each computer keeps a local index of its own transcripts, including conversation text and tool output as written. Content is not redacted. Turning a computer off stops indexing and keeps its index.'
+                  'Each computer keeps a searchable copy of its own agent conversations and tool output. Nothing leaves that computer.'
                 )}
           </p>
         </div>
@@ -230,7 +227,7 @@ export function SessionHistorySettingsPane({
           </CollapsibleTrigger>
           <CollapsibleContent className="collapsible-height-content">
             <SettingsRow
-              label={translate('sessionHistory.settings.deleteIndexCopy', 'Delete index copy')}
+              label={translate('sessionHistory.settings.deleteIndexCopy', 'Clear search data')}
               description={deleteDescription(policy.enabled)}
               control={
                 <Button
@@ -239,7 +236,7 @@ export function SessionHistorySettingsPane({
                   disabled={busy || isWebClient}
                   onClick={() => void deleteIndex()}
                 >
-                  {translate('sessionHistory.settings.delete', 'Delete index')}
+                  {translate('sessionHistory.settings.delete', 'Clear')}
                 </Button>
               }
             />
@@ -253,8 +250,8 @@ export function SessionHistorySettingsPane({
       </div>
       <p className="text-xs text-muted-foreground">
         {translate(
-          'sessionHistory.settings.sshNote',
-          'SSH hosts appear here once indexing is available on SSH.'
+          'sessionHistory.settings.panelHint',
+          'Search from the Agent Session History panel in the sidebar.'
         )}
       </p>
     </div>
@@ -262,10 +259,7 @@ export function SessionHistorySettingsPane({
 }
 
 function saveErrorMessage(): string {
-  return translate(
-    'sessionHistory.settings.saveError',
-    'Could not save session search settings. Try again.'
-  )
+  return translate('sessionHistory.settings.saveError', 'Could not save. Try again.')
 }
 
 /** Shared by the Advanced row and its confirm dialog so both promise the same thing. */
@@ -273,10 +267,10 @@ function deleteDescription(enabled: boolean): string {
   return enabled
     ? translate(
         'sessionHistory.settings.deleteEnabled',
-        'Turn off search on this computer and remove its index. Original transcripts are not touched. Switch search back on to rebuild.'
+        'Turns off search and removes the searchable copy from this computer. Your agent sessions are not affected.'
       )
     : translate(
         'sessionHistory.settings.deleteDisabled',
-        'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
+        'Removes the searchable copy from this computer. Your agent sessions are not affected.'
       )
 }

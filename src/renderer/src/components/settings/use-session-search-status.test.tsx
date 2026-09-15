@@ -61,12 +61,12 @@ it('keeps polling a settled index so counts stay live between sweeps', async () 
   const view = poll()
   await act(async () => {})
   expect(mocks.status).toHaveBeenCalledWith('local')
-  expect(message(view.result.current.status)).toBe('Up to date · 12 files indexed')
+  expect(message(view.result.current.status)).toBe('Ready · 12 sessions searchable')
   mocks.status.mockResolvedValue({ ...current, filesIndexed: 30 })
   await act(async () => {
     await vi.advanceTimersByTimeAsync(10_000)
   })
-  expect(message(view.result.current.status)).toBe('Up to date · 30 files indexed')
+  expect(message(view.result.current.status)).toBe('Ready · 30 sessions searchable')
 })
 
 it('reports a first scan by count and later sweeps by percentage', async () => {
@@ -79,10 +79,8 @@ it('reports a first scan by count and later sweeps by percentage', async () => {
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Indexing… 4 files so far')
-  expect(sessionSearchStatusDetails(view.result.current.status)).toContain(
-    'Turn off search to stop. Progress is kept and resumes when you turn it back on.'
-  )
+  expect(message(view.result.current.status)).toBe('Preparing search · 4 sessions so far')
+  expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([])
   mocks.status.mockResolvedValue({
     ...current,
     phase: 'indexing',
@@ -94,7 +92,7 @@ it('reports a first scan by count and later sweeps by percentage', async () => {
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2_000)
   })
-  expect(message(view.result.current.status)).toBe('Indexing · 40% · 4 of 10 files')
+  expect(message(view.result.current.status)).toBe('Preparing search · 40% · 4 of 10 sessions')
 })
 
 it('polls a sweep faster than a settled index', async () => {
@@ -119,11 +117,10 @@ it('names unreadable files while degraded and still reports progress', async () 
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Indexing · 80% · 8 of 10 files')
+  expect(message(view.result.current.status)).toBe('Preparing search · 80% · 8 of 10 sessions')
   expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([
-    '1 files could not be read and will be retried.',
-    'Turn off search to stop. Progress is kept and resumes when you turn it back on.',
-    'Unverified source roots: 1'
+    '1 sessions could not be read and will be retried.',
+    '1 session folders could not be checked.'
   ])
 })
 
@@ -137,9 +134,9 @@ it('calls a drained degraded index up to date', async () => {
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Up to date · 9 files indexed')
+  expect(message(view.result.current.status)).toBe('Ready · 9 sessions searchable')
   expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([
-    '2 files could not be read and will be retried.'
+    '2 sessions could not be read and will be retried.'
   ])
 })
 
@@ -148,7 +145,7 @@ it('does not describe an absent service as an empty current index', async () => 
   const view = poll()
   await act(async () => {})
   expect(message(view.result.current.status)).toBe(
-    'Index is not ready or the search service is unavailable.'
+    'Search is not available on this computer right now.'
   )
 })
 

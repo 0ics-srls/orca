@@ -74,15 +74,15 @@ export function buildWorkflowSettingsSections(
       title: translate('sessionHistory.settings.title', 'Agent Session History'),
       description: translate(
         'sessionHistory.settings.description',
-        'Each computer keeps its own index of the transcripts it owns. Turn on indexing here for this computer and for any paired Orca server.'
+        'Search everything your agents have said and done, on this computer and on any paired Orca server.'
       ),
       icon: History,
       searchEntries: [
         {
-          title: translate('sessionHistory.settings.indexComputers', 'Index agent sessions'),
+          title: translate('sessionHistory.settings.indexComputers', 'Search agent sessions'),
           description: translate(
             'sessionHistory.settings.searchDescription',
-            'Transcript indexing on this computer and paired servers, index status and delete index.'
+            'Turn on session search for this computer and paired servers, or clear search data.'
           )
         }
       ],
