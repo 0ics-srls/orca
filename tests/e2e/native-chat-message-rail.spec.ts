@@ -1,9 +1,7 @@
-// Visual proof for the transcript message rail. The guards for the rail's logic
-// are vitest units; this spec exists to render it against a real seeded
-// transcript and capture what the reader actually sees.
+// Exercise the prompt picker and an off-window jump against a real transcript.
 
 import { randomUUID } from 'node:crypto'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import type { Page } from '@stablyai/playwright-test'
@@ -68,7 +66,7 @@ function claudeTranscript(rowCount: number, sessionId: string): string {
     const body = isUser
       ? `Question ${turn}: what does the rail do when I scroll a long reply?`
       : Array.from(
-          { length: 6 },
+          { length: 6 + (turn % 7) * 3 },
           (_unused, line) => `Answer paragraph ${line + 1} for turn ${turn}.`
         ).join('\n\n')
     return JSON.stringify({
@@ -86,7 +84,7 @@ function claudeTranscript(rowCount: number, sessionId: string): string {
 }
 
 test.describe('Native chat message rail', () => {
-  test('renders ticks for user messages and previews them on hover', async ({ orcaPage }) => {
+  test('previews prompts and jumps without following later output', async ({ orcaPage }) => {
     await waitForSessionReady(orcaPage)
     await waitForActiveWorktree(orcaPage)
     await ensureTerminalVisible(orcaPage)
@@ -123,19 +121,54 @@ test.describe('Native chat message rail', () => {
     expect(tickCount).toBeGreaterThan(2)
     expect(tickCount).toBeLessThanOrEqual(20)
 
-    await orcaPage.screenshot({ path: path.join(SHOT_DIR, 'rail-01-app.png') })
+    await orcaPage.screenshot({
+      path: path.join(SHOT_DIR, 'rail-01-app.png'),
+      animations: 'disabled'
+    })
 
     await rail.hover()
-    const panel = orcaPage.locator('[data-slot="hover-card-content"]')
+    const panel = orcaPage.getByRole('dialog', { name: 'Your messages' })
     await expect(panel).toBeVisible({ timeout: 10_000 })
     // The panel lists every user message, not the sampled ticks.
     await expect(panel.getByRole('button').first()).toBeVisible()
-    await orcaPage.screenshot({ path: path.join(SHOT_DIR, 'rail-02-panel.png') })
+    await orcaPage.screenshot({
+      path: path.join(SHOT_DIR, 'rail-02-panel.png'),
+      animations: 'disabled'
+    })
 
     // Exact, not `> ticks`: a panel that listed only the sampled ticks would
     // still satisfy a loose bound at 20 vs 20.
     const panelCount = await panel.getByRole('button').count()
     expect(panelCount).toBe(TRANSCRIPT_ROWS / 2)
+
+    // Activating the hover preview transfers focus into the prompt picker.
+    await rail.press('Enter')
+    await expect(panel.getByRole('button').first()).toBeFocused()
+    await panel.getByRole('button', { name: 'Question 5:', exact: false }).click()
+    await expect(panel).not.toBeVisible()
+    const target = transcriptWindow.locator('[data-index="10"]')
+    const scroller = orcaPage.locator('[data-native-chat-scroll]')
+    const targetOffset = async (): Promise<number> => {
+      const [row, viewport] = await Promise.all([target.boundingBox(), scroller.boundingBox()])
+      return row && viewport ? Math.abs(row.y - viewport.y) : Number.POSITIVE_INFINITY
+    }
+    await expect.poll(targetOffset).toBeLessThan(4)
+
+    for (let revision = 0; revision < 3; revision += 1) {
+      const body = `Later streamed output ${revision}`
+      appendFileSync(
+        transcriptPath,
+        `${JSON.stringify({
+          sessionId,
+          uuid: `${sessionId}-stream-${revision}`,
+          type: 'assistant',
+          timestamp: new Date().toISOString(),
+          message: { role: 'assistant', content: [{ type: 'text', text: body }] }
+        })}\n`
+      )
+      await expect(transcriptWindow.getByText(body, { exact: true })).toBeAttached()
+      await expect.poll(targetOffset).toBeLessThan(4)
+    }
 
     console.log(`[rail] ticks=${tickCount} panelRows=${panelCount} shots=${SHOT_DIR}`)
   })

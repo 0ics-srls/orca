@@ -62,6 +62,22 @@ function railItems(count: number): NativeChatRailItem[] {
 }
 
 describe('rail items', () => {
+  it('invalidates cached previews and positions after edits, prepends and removals', () => {
+    const prompt = text('u1', 'original prompt', 'user')
+    const first = buildNativeChatRailItems(slotsOf([prompt]))
+    const prepended = buildNativeChatRailItems(
+      slotsOf([text('a0', 'earlier reply'), prompt]),
+      first
+    )
+    expect(prepended[0]).toEqual({ ...first[0], slotIndex: 1 })
+    const edited = buildNativeChatRailItems(
+      slotsOf([text('u1', 'edited prompt', 'user')]),
+      prepended
+    )
+    expect(edited[0]).toEqual({ ...first[0], text: 'edited prompt' })
+    expect(buildNativeChatRailItems([], edited)).toEqual([])
+  })
+
   it('ticks only the user messages', () => {
     const items = buildNativeChatRailItems(
       slotsOf([

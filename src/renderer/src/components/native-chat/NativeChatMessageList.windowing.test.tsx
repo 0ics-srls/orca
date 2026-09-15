@@ -464,7 +464,7 @@ describe('jumping to a message from the rail', () => {
 
   /** Open the hover panel through the trigger and click the first prompt. */
   function jumpToFirstPrompt(): void {
-    fireEvent.focus(screen.getByRole('button', { name: 'Your messages' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Your messages' }))
     act(() => {
       vi.advanceTimersByTime(300)
     })

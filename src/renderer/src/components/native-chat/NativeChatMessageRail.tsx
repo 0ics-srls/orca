@@ -1,7 +1,8 @@
 // The rail itself: a column of ticks down the right edge of the transcript, one
 // per user message, with a hover panel that previews them and jumps on click.
 
-import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card'
+import { memo, useEffect, useRef, useState } from 'react'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { cn } from '@/lib/utils'
 import { translate } from '@/i18n/i18n'
 import type { NativeChatRailItem } from './native-chat-message-rail-items'
@@ -21,7 +22,7 @@ function railItemLabel(item: NativeChatRailItem): string {
     : translate('components.native-chat.railEmptyMessage', 'Message')
 }
 
-export function NativeChatMessageRail({
+export const NativeChatMessageRail = memo(function NativeChatMessageRail({
   rail,
   scrollRef,
   onSelect
@@ -30,19 +31,72 @@ export function NativeChatMessageRail({
   scrollRef: React.RefObject<HTMLDivElement | null>
   onSelect: (item: NativeChatRailItem) => void
 }): React.JSX.Element | null {
+  // Hover preserves focus; activation enters the focus-managed prompt picker.
+  const [mode, setMode] = useState<'hover' | 'interactive' | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const contentRef = useRef<HTMLDivElement>(null)
+  const restoreFocus = useRef(false)
+  const cancelClose = (): void => {
+    if (closeTimer.current !== null) {
+      clearTimeout(closeTimer.current)
+    }
+    closeTimer.current = null
+  }
+  const leavePreview = (): void => {
+    cancelClose()
+    if (mode === 'hover') {
+      closeTimer.current = setTimeout(() => setMode(null), 120)
+    }
+  }
+  useEffect(
+    () => () => {
+      if (closeTimer.current !== null) {
+        clearTimeout(closeTimer.current)
+      }
+    },
+    []
+  )
+
   if (!rail.visible) {
     return null
   }
 
   return (
-    <HoverCard openDelay={120} closeDelay={120}>
-      <HoverCardTrigger asChild>
+    <Popover
+      open={mode !== null}
+      onOpenChange={(open) => {
+        cancelClose()
+        if (open) {
+          restoreFocus.current = true
+        }
+        setMode(open ? 'interactive' : null)
+      }}
+    >
+      <PopoverTrigger asChild>
         <button
           type="button"
           data-native-chat-rail
           aria-label={translate('components.native-chat.railLabel', 'Your messages')}
-          // A real button, not a div: `asChild` drops the primitive's own focusable
-          // trigger, and the panel is the only way to reach these messages.
+          onPointerEnter={(event) => {
+            if (event.pointerType === 'touch') {
+              return
+            }
+            cancelClose()
+            if (mode === null) {
+              restoreFocus.current = false
+            }
+            setMode((current) => current ?? 'hover')
+          }}
+          onPointerLeave={leavePreview}
+          onClick={(event) => {
+            cancelClose()
+            if (mode === 'hover') {
+              event.preventDefault()
+              restoreFocus.current = true
+              setMode('interactive')
+              contentRef.current?.querySelector('button')?.focus()
+            }
+          }}
           // The rail overlays the transcript without being inside it, so a wheel
           // here would otherwise land on nothing and freeze the scroll. Deltas
           // arrive in lines or pages on some platforms, not only in pixels.
@@ -59,7 +113,7 @@ export function NativeChatMessageRail({
                   : 1
             element.scrollTop += event.deltaY * scale
           }}
-          className="group/rail absolute inset-y-0 right-[14px] z-10 flex w-4 cursor-default flex-col items-center justify-center gap-2"
+          className="group/rail absolute inset-y-0 right-[14px] z-10 flex w-4 cursor-default flex-col items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           {rail.ticks.map((item) => (
             <span
@@ -74,14 +128,42 @@ export function NativeChatMessageRail({
             />
           ))}
         </button>
-      </HoverCardTrigger>
-      <HoverCardContent side="left" align="center" className="w-72 p-1">
+      </PopoverTrigger>
+      <PopoverContent
+        ref={contentRef}
+        side="left"
+        align="center"
+        aria-label={translate('components.native-chat.railLabel', 'Your messages')}
+        className="w-72 p-1"
+        onPointerEnter={cancelClose}
+        onPointerLeave={leavePreview}
+        onFocusCapture={() => {
+          cancelClose()
+          restoreFocus.current = true
+          setMode('interactive')
+        }}
+        onOpenAutoFocus={(event) => {
+          if (mode === 'hover') {
+            event.preventDefault()
+          }
+        }}
+        onCloseAutoFocus={(event) => {
+          if (!restoreFocus.current) {
+            event.preventDefault()
+          }
+        }}
+      >
         <ul className="scrollbar-sleek max-h-64 overflow-y-auto overflow-x-hidden">
           {rail.items.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
-                onClick={() => onSelect(item)}
+                onClick={() => {
+                  onSelect(item)
+                  setMode(null)
+                }}
+                aria-current={item.id === rail.activeId ? 'true' : undefined}
+                data-current={item.id === rail.activeId}
                 className={cn(
                   'flex w-full cursor-pointer rounded-md px-2 py-1.5 text-left transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
                   item.id === rail.activeId && 'bg-accent'
@@ -99,7 +181,7 @@ export function NativeChatMessageRail({
             </li>
           ))}
         </ul>
-      </HoverCardContent>
-    </HoverCard>
+      </PopoverContent>
+    </Popover>
   )
-}
+})

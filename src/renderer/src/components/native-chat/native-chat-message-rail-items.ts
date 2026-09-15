@@ -6,6 +6,7 @@
 // virtual item without a second lookup table.
 
 import { deriveNativeChatRowContent } from './native-chat-row-content'
+import type { NativeChatBlock } from '../../../../shared/native-chat-types'
 import type { NativeChatTranscriptSlot } from './native-chat-transcript-slots'
 
 /** Ticks past this are sampled away: a taller rail than the viewport cannot be
@@ -24,23 +25,40 @@ export type NativeChatRailItem = {
   hasImages: boolean
 }
 
+const previews = new WeakMap<readonly NativeChatBlock[], { text: string; hasImages: boolean }>()
+
 export function buildNativeChatRailItems(
-  slots: readonly NativeChatTranscriptSlot[]
-): NativeChatRailItem[] {
+  slots: readonly NativeChatTranscriptSlot[],
+  previous: readonly NativeChatRailItem[] = []
+): readonly NativeChatRailItem[] {
   const items: NativeChatRailItem[] = []
   for (const [slotIndex, slot] of slots.entries()) {
     if (slot.message.role !== 'user') {
       continue
     }
-    const content = deriveNativeChatRowContent(slot.message.blocks)
-    items.push({
-      id: slot.message.id,
-      slotIndex,
-      text: content.markdown.replace(/\s+/g, ' ').trim(),
-      hasImages: content.hasImages
-    })
+    let preview = previews.get(slot.message.blocks)
+    if (!preview) {
+      const content = deriveNativeChatRowContent(slot.message.blocks)
+      preview = { text: content.markdown.replace(/\s+/g, ' ').trim(), hasImages: content.hasImages }
+      previews.set(slot.message.blocks, preview)
+    }
+    const prior = previous[items.length]
+    items.push(
+      prior?.id === slot.message.id &&
+        prior.slotIndex === slotIndex &&
+        prior.text === preview.text &&
+        prior.hasImages === preview.hasImages
+        ? prior
+        : {
+            id: slot.message.id,
+            slotIndex,
+            ...preview
+          }
+    )
   }
-  return items
+  return items.length === previous.length && items.every((item, index) => item === previous[index])
+    ? previous
+    : items
 }
 
 /** Evenly spaced ticks across the whole thread, always including both ends and
