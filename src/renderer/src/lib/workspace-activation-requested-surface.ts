@@ -12,7 +12,10 @@ import {
   isActivationExecutionRouteCurrent,
   WORKSPACE_ACTIVATION_RECOVERY_DEADLINE_MS
 } from './workspace-activation-recovery-state'
-import type { WorkspaceExecutionEvidence } from './workspace-execution-evidence'
+import {
+  describeWorkspaceExecutionEvidence,
+  type WorkspaceExecutionEvidence
+} from './workspace-execution-evidence'
 import {
   consumeWorkspaceSurfaceProducerAttempt,
   discardWorkspaceSurfaceProducerAttempt,
@@ -125,7 +128,7 @@ export function produceRequestedWorkspaceSurface({
       (error: unknown) => producer.unexpected(error)
     )
   } else {
-    producer.unverifiable('Orca cannot verify the execution host for this requested surface.')
+    producer.unverifiable(describeWorkspaceExecutionEvidence(executionEvidence))
   }
   return null
 }

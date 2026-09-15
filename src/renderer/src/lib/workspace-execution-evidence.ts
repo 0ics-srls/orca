@@ -7,6 +7,18 @@ import {
 
 export type WorkspaceExecutionEvidence = 'live' | 'unverifiable' | 'exited'
 
+// One sentence per verdict, so every reader that refused to write reports the same vocabulary.
+// `live` is positive host ownership and must never be reported as an unverifiable host.
+export function describeWorkspaceExecutionEvidence(evidence: WorkspaceExecutionEvidence): string {
+  if (evidence === 'live') {
+    return 'The execution host owns this workspace surface. Wait for it to publish or reconnect.'
+  }
+  if (evidence === 'unverifiable') {
+    return 'Orca cannot verify the execution host. Reconnect before retrying recovery.'
+  }
+  return 'No concrete surface producer owns this empty workspace activation.'
+}
+
 export function resolveWorkspaceExecutionEvidence(
   state: WorkspaceTerminalHostAuthorityState,
   workspaceKey: string,

@@ -1,6 +1,7 @@
 import { useAppStore } from '@/store'
 import { clearWorkspaceActivationRecoveryPresentation } from './workspace-activation-recovery-presentation'
 import {
+  describeWorkspaceExecutionEvidence,
   resolveWorkspaceExecutionEvidence,
   type WorkspaceExecutionEvidence
 } from './workspace-execution-evidence'
@@ -101,12 +102,7 @@ export async function recoverWorkspaceActivationOwned(
       identity.workspaceKey,
       identity.executionHostId
     )
-    const detail =
-      evidence === 'live'
-        ? 'The execution host owns this workspace surface. Wait for it to publish or reconnect.'
-        : evidence === 'unverifiable'
-          ? 'Orca cannot verify the execution host. Reconnect before retrying recovery.'
-          : 'No concrete surface producer owns this empty workspace activation.'
+    const detail = describeWorkspaceExecutionEvidence(evidence)
     publishActivationRecovery(
       identity,
       context,

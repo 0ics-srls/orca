@@ -88,17 +88,28 @@ function settleProducedSurface(
 
 // An automatic activation only reclaims its own settled attempts: a concrete producer's verdict is
 // still the truthful report of that launch, and re-gating it can only replace it with a weaker one.
+// A settled `unverifiable` is the exception — it is a claim about the host, not about that launch, so
+// once route evidence says otherwise the claim is stale and must not latch the workspace shut.
 // Retry is the explicit abandon path, so it supersedes every settled attempt.
 function clearSettledActivationOwnership(
   identity: WorkspaceActivationIdentity,
   supersedeAll: boolean
 ): void {
+  const entries = readWorkspaceSurfaceProducerEntries(identity)
+  const evidence = entries.some((entry) => entry.result?.kind === 'unverifiable')
+    ? resolveWorkspaceExecutionEvidence(
+        useAppStore.getState(),
+        identity.workspaceKey,
+        identity.executionHostId
+      )
+    : 'unverifiable'
   const supersededAttemptIds: string[] = []
-  for (const entry of readWorkspaceSurfaceProducerEntries(identity)) {
-    if (
-      entry.result !== null &&
-      (supersedeAll || entry.attempt.purpose === 'activation-recovery')
-    ) {
+  for (const entry of entries) {
+    if (entry.result === null) {
+      continue
+    }
+    const staleHostClaim = entry.result.kind === 'unverifiable' && evidence !== 'unverifiable'
+    if (supersedeAll || entry.attempt.purpose === 'activation-recovery' || staleHostClaim) {
       discardWorkspaceSurfaceProducerAttempt(entry.attempt.id)
       supersededAttemptIds.push(entry.attempt.id)
     }

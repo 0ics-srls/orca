@@ -220,7 +220,7 @@ export function activateAndRevealWorktree(
         : opts?.backendStartupTerminalSpawned
           ? 'backend-confirmed'
           : 'local',
-      createSurface: () =>
+      createSurface: (hostAbsenceConfirmed) =>
         ensureWorktreeHasInitialTerminal(
           useAppStore.getState(),
           worktreeId,
@@ -231,7 +231,8 @@ export function activateAndRevealWorktree(
           {
             ...(opts?.backendStartupTerminalSpawned ? { backendStartupTerminalSpawned: true } : {}),
             ...(opts?.createNewTerminalForStartup ? { createNewTerminalForStartup: true } : {}),
-            reseedEmptiedWorkspace: true
+            reseedEmptiedWorkspace: true,
+            hostAbsenceConfirmed
           }
         )
     })

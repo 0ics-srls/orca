@@ -260,6 +260,38 @@ describe('workspace activation surface producer', () => {
     ])
   })
 
+  it('supersedes a settled unverifiable attempt once route evidence disagrees', async () => {
+    const stranded = registerWorkspaceSurfaceProducer(IDENTITY)
+    stranded.unverifiable('The execution host could not be reached.')
+    mocks.evidence.mockReturnValue('exited')
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit' }
+    )
+
+    await vi.waitFor(() => expect(mocks.gate).toHaveBeenCalledOnce())
+    expect(
+      readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)
+    ).not.toContain(stranded.attempt.id)
+  })
+
+  it('keeps a settled unverifiable attempt while the host is still unverifiable', () => {
+    const stranded = registerWorkspaceSurfaceProducer(IDENTITY)
+    stranded.unverifiable('The execution host could not be reached.')
+    mocks.evidence.mockReturnValue('unverifiable')
+
+    startWorkspaceActivationSurfaceProducer(
+      { ...IDENTITY, attemptId: 'activation-2' },
+      { mode: 'explicit' }
+    )
+
+    expect(mocks.gate).not.toHaveBeenCalled()
+    expect(readWorkspaceSurfaceProducerEntries(IDENTITY).map((entry) => entry.attempt.id)).toEqual([
+      stranded.attempt.id
+    ])
+  })
+
   it('discards stale route ownership without starting a writer', async () => {
     mocks.gate.mockResolvedValue('stale')
 
