@@ -65,16 +65,18 @@ describe('AutomationService zero-grace tick latency', () => {
       missedRunGraceMinutes: 0
     })
 
+  /** One evaluation pass at exactly `at` -- start()/setRendererReady() triggers it directly, so
+   *  advancing the timer would silently add a second pass a minute later (and did). */
   const evaluateAt = async (
     store: Awaited<ReturnType<typeof createStore>>,
     at: number
   ): Promise<void> => {
     vi.setSystemTime(at)
     const service = new AutomationService(store, { tickMs: 60_000 })
-    service.setWebContents({ isDestroyed: () => false, send: vi.fn() } as never)
+    service.setWebContents({ isDestroyed: () => false, send: vi.fn() })
     service.start()
     service.setRendererReady()
-    await vi.advanceTimersByTimeAsync(60_000)
+    await vi.advanceTimersByTimeAsync(0)
     service.stop()
   }
 
@@ -117,6 +119,8 @@ describe('AutomationService zero-grace tick latency', () => {
     store.addRepo(makeRepo())
     const automation = makeZeroGrace(store)
     await evaluateAt(store, DUE - 30_000)
+    // Nothing may have run yet, or the second pass is not the one under test.
+    expect(store.listAutomationRuns(automation.id)).toHaveLength(0)
     await evaluateAt(store, DUE + 30_000)
     expect(store.listAutomationRuns(automation.id)[0]?.status).toBe('dispatching')
   })

@@ -125,16 +125,17 @@ export function sendRendererDispatch(
  * evaluation runs on a fixed interval never aligned to an occurrence, so with zero grace every
  * tick arrived "late" and skipped the run, blaming downtime that never happened (#11299).
  *
- * Why a latency tolerance and not process liveness: a suspended process (system sleep) keeps its
- * start time, so a liveness flag would wave through an occurrence that came due during a
- * multi-hour sleep -- exactly the downtime grace exists for. Elapsed lateness cannot be faked
- * that way, and it needs no restart bookkeeping.
+ * Why not process liveness: a suspended process (system sleep) keeps its start time, so a
+ * liveness flag waves through an occurrence that came due during a multi-hour sleep -- exactly
+ * what grace exists for. Elapsed lateness cannot be faked that way.
+ *
+ * Known remaining gap: an evaluation pass holds the re-entrancy guard across its dispatches, and
+ * in serve mode a dispatch runs inline (precheck up to 600s, then a worktree create). A pass
+ * longer than the tolerance drops every intervening tick, so the next automation's lateness is
+ * the scheduler's stall rather than downtime and can still be mis-skipped. Desktop is
+ * unaffected -- its dispatch is synchronous IPC. Tracked separately; forgiving "time since the
+ * last pass" is NOT the fix, because a suspended process runs no passes either.
  */
-export function schedulerLatencyToleranceMs(tickMs: number): number {
-  // Two intervals: one for the tick that should have caught it, one for ordinary jitter.
-  return tickMs * 2
-}
-
 export function missedDuringDowntime(input: {
   automation: Automation
   scheduledFor: number
@@ -142,8 +143,9 @@ export function missedDuringDowntime(input: {
   tickMs: number
 }): boolean {
   const graceMs = input.automation.missedRunGraceMinutes * 60 * 1000
-  const budget = graceMs + schedulerLatencyToleranceMs(input.tickMs)
-  return input.now - input.scheduledFor > budget
+  // Two intervals: one for the tick that should have caught it, one for ordinary jitter.
+  const jitterMs = input.tickMs * 2
+  return input.now - input.scheduledFor > graceMs + jitterMs
 }
 
 export function recordMissedRun(input: {
