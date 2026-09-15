@@ -55,7 +55,7 @@ export function SessionHistoryComputerRow({
                 type="button"
                 variant="link"
                 size="xs"
-                className="ml-1 h-auto p-0 align-baseline text-xs"
+                className="ml-1 h-auto align-baseline"
                 onClick={action.onClick}
               >
                 {action.label}

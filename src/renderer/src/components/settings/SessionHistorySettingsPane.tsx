@@ -216,16 +216,16 @@ export function SessionHistorySettingsPane({
                 onError={setError}
               />
             ))}
-        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="pt-2">
+        <Collapsible open={advancedOpen} onOpenChange={setAdvancedOpen} className="mt-2">
           <CollapsibleTrigger asChild>
-            <Button type="button" variant="ghost" size="sm" className="-ml-2 text-xs">
+            <Button type="button" variant="ghost" size="xs" className="-ml-2">
               {translate('sessionHistory.settings.advanced', 'Advanced')}
               <ChevronDown
                 className={cn('size-4 transition-transform', advancedOpen && 'rotate-180')}
               />
             </Button>
           </CollapsibleTrigger>
-          <CollapsibleContent className="collapsible-height-content">
+          <CollapsibleContent>
             <SettingsRow
               label={translate('sessionHistory.settings.deleteIndexCopy', 'Clear search data')}
               description={deleteDescription(policy.enabled)}
