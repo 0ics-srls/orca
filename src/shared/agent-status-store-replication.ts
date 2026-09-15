@@ -1,9 +1,11 @@
-import type { AgentStatusIpcPayload } from './agent-status-types'
-import type { ExecutionHostId } from './execution-host'
+import { normalizeAgentStatusPayload, type AgentStatusIpcPayload } from './agent-status-types'
+import { normalizeExecutionHostId, type ExecutionHostId } from './execution-host'
 
 export const AGENT_STATUS_STORE_REPLICA_CAPABILITY = 'agent-status.store-replica.v1' as const
 export const AGENT_STATUS_STORE_REPLICA_BUFFER_MAX = 256
 export const AGENT_STATUS_STORE_FRAME_NOTIFICATION = 'agentStatus.storeFrame' as const
+export const AGENT_STATUS_STORE_SUBSCRIBE_METHOD = 'agentStatus.subscribeStore' as const
+export const AGENT_STATUS_STORE_SNAPSHOT_METHOD = 'agentStatus.getStoreSnapshot' as const
 
 export type AgentStatusStoreRowIdentity = {
   paneKey: string
@@ -65,6 +67,72 @@ export type AgentStatusStoreReplicaHostSnapshot = {
 
 export type AgentStatusStoreReplicaApplyResult = 'applied' | 'ignored-stale' | 'resnapshot-required'
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+function isCursor(value: unknown): value is number {
+  return Number.isSafeInteger(value) && Number(value) >= 0
+}
+
+function isRowIdentity(value: unknown): value is AgentStatusStoreRowIdentity {
+  return (
+    isRecord(value) &&
+    typeof value.paneKey === 'string' &&
+    value.paneKey.length > 0 &&
+    (value.runId === undefined || typeof value.runId === 'string')
+  )
+}
+
+function isStatusRow(value: unknown): value is AgentStatusIpcPayload {
+  return (
+    isRecord(value) &&
+    typeof value.paneKey === 'string' &&
+    value.paneKey.length > 0 &&
+    (value.connectionId === null || typeof value.connectionId === 'string') &&
+    typeof value.receivedAt === 'number' &&
+    Number.isFinite(value.receivedAt) &&
+    typeof value.stateStartedAt === 'number' &&
+    Number.isFinite(value.stateStartedAt) &&
+    normalizeAgentStatusPayload(value) !== null
+  )
+}
+
+/** Validates replication frames at transport boundaries before they can mutate a replica. */
+export function isAgentStatusStoreFrame(value: unknown): value is AgentStatusStoreFrame {
+  if (
+    !isRecord(value) ||
+    normalizeExecutionHostId(
+      typeof value.executionHostId === 'string' ? value.executionHostId : undefined
+    ) !== value.executionHostId ||
+    typeof value.ownerEpoch !== 'string' ||
+    value.ownerEpoch.length === 0 ||
+    value.ownerEpoch.length > 128 ||
+    !isCursor(value.cursor)
+  ) {
+    return false
+  }
+  if (value.type === 'snapshot') {
+    return (
+      typeof value.complete === 'boolean' &&
+      Array.isArray(value.rows) &&
+      value.rows.every(isStatusRow)
+    )
+  }
+  if (value.type === 'resnapshot-required') {
+    return value.reason === 'gap' || value.reason === 'overflow' || value.reason === 'owner-restart'
+  }
+  if (value.type !== 'delta' || !isCursor(value.previousCursor) || !Array.isArray(value.changes)) {
+    return false
+  }
+  return value.changes.every(
+    (change) =>
+      isRecord(change) &&
+      ((change.type === 'set' && isStatusRow(change.row)) ||
+        (change.type === 'drop' && isRowIdentity(change.identity)))
+  )
+}
+
 export function agentStatusStoreRowKey(identity: AgentStatusStoreRowIdentity): string {
   return identity.runId ? `run\0${identity.runId}` : `pane\0${identity.paneKey}`
 }
@@ -106,6 +174,10 @@ export class AgentStatusStoreReplica {
       return this.applySnapshot(state, frame)
     }
     if (frame.type === 'resnapshot-required') {
+      // The marker is authoritative about the publisher epoch. Reset the cursor as
+      // well as membership so a stale delta from the prior owner cannot be accepted.
+      state.ownerEpoch = frame.ownerEpoch
+      state.cursor = null
       state.membershipConfirmed = false
       return 'resnapshot-required'
     }
@@ -137,6 +209,11 @@ export class AgentStatusStoreReplica {
     const state = this.hosts.get(executionHostId) ?? newReplicaHostState()
     this.hosts.set(executionHostId, state)
     state.contact = contact
+  }
+
+  /** Explicitly abandons one mirrored host without implying that any represented process exited. */
+  abandonHost(executionHostId: ExecutionHostId): void {
+    this.hosts.delete(executionHostId)
   }
 
   getHostSnapshot(executionHostId: ExecutionHostId): AgentStatusStoreReplicaHostSnapshot {

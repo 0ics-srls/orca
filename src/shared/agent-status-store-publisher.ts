@@ -90,8 +90,11 @@ export class AgentStatusStorePublisher {
         cursor: this.cursor,
         reason: 'overflow'
       })
-      this.subscribers.delete(subscriber)
-      return () => {}
+      subscriber.buffered = []
+      subscriber.buffering = false
+      return () => {
+        this.subscribers.delete(subscriber)
+      }
     }
     subscriber.emit(snapshot)
     for (const delta of subscriber.buffered) {

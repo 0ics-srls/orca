@@ -33,22 +33,28 @@ export const AGENT_STATUS_STORE_METHODS = [
       if (!clientCapabilities?.includes(AGENT_STATUS_STORE_REPLICA_CAPABILITY)) {
         throw new Error('agent_status_store_capability_required')
       }
-      const publisher = requirePublisher(runtime)
-      let unsubscribe = (): void => {}
-      const abort = (): void => unsubscribe()
-      unsubscribe = publisher.subscribe(emit)
-      signal?.addEventListener('abort', abort, { once: true })
-      if (signal?.aborted) {
-        abort()
+      if (!signal) {
+        throw new Error('agent_status_store_subscription_signal_required')
       }
-      await new Promise<void>((resolve) => {
-        signal?.addEventListener('abort', () => resolve(), { once: true })
-        if (!signal) {
-          resolve()
-        }
+      if (signal.aborted) {
+        return
+      }
+      const publisher = requirePublisher(runtime)
+      let resolveAbort = (): void => {}
+      const aborted = new Promise<void>((resolve) => {
+        resolveAbort = resolve
       })
-      signal?.removeEventListener('abort', abort)
-      unsubscribe()
+      signal.addEventListener('abort', resolveAbort, { once: true })
+      const unsubscribe = publisher.subscribe(emit)
+      try {
+        if (signal.aborted) {
+          resolveAbort()
+        }
+        await aborted
+      } finally {
+        signal.removeEventListener('abort', resolveAbort)
+        unsubscribe()
+      }
     }
   })
 ] as const

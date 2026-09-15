@@ -27,6 +27,8 @@ import {
   AgentStatusObservedPaneIdentities,
   recordObservedAgentStatusPaneIdentity
 } from '../runtime/agent-status-observed-pane-identity'
+import { AgentStatusHostReplicaStore } from '../runtime/agent-status-host-replica-store'
+import { installHookStatusSessionTabsRepublish } from '../agent-hooks/hook-status-session-tabs-republish'
 
 export function getDesktopWindowStatus(): RuntimeDesktopWindowStatus {
   const activation = state.desktopActivationGate
@@ -71,6 +73,11 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
   const agentStatusStorePublisher = agentHookServer.createStatusStorePublisher({
     executionHostId: 'local'
   })
+  const agentStatusHostReplicaStore = new AgentStatusHostReplicaStore()
+  const getAgentStatusSnapshot = () => [
+    ...agentHookServer.getStatusSnapshot(),
+    ...agentStatusHostReplicaStore.getStatusSnapshot()
+  ]
   const runtime = new OrcaRuntimeService(store, stats, {
     agentSessionClaimSigner: loadAgentSessionClaimSigner(
       getProfileUserDataPath(),
@@ -91,8 +98,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     getDesktopWindowStatus,
     // Why: worktree.ps pulls hook-reported agent status (same source as the desktop sidebar) at query time so mobile shows the same agents.
     getAgentStatusSnapshot: () =>
-      agentHookServer.getStatusSnapshot().filter((entry) => entry.providerSessionOnly !== true),
+      getAgentStatusSnapshot().filter((entry) => entry.providerSessionOnly !== true),
     agentStatusStorePublisher,
+    agentStatusHostReplicaStore,
     // Why: structured chats have no hooks, so the host writes their projections here itself; the
     // snapshot above then lists them for the CLI and mobile without a second store.
     structuredAgentStatusSink: {
@@ -105,9 +113,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     // Why: the filter above hides resume-identity rows from the live-agent views, but
     // those rows carry the provider session mobile native chat addresses transcripts
     // by — Pi publishes identity that way and would otherwise be unreachable.
-    getAgentProviderSessionSnapshot: () => agentHookServer.getStatusSnapshot(),
+    getAgentProviderSessionSnapshot: getAgentStatusSnapshot,
     getAgentProviderSessionRowsForPane: (paneKey) =>
-      agentHookServer.getStatusSnapshotForPane(paneKey),
+      getAgentStatusSnapshot().filter((entry) => entry.paneKey === paneKey),
     attestAgentHookCompatibilityAuthority: (candidate) =>
       agentHookServer.attestCompatibilityAuthority(candidate),
     retireAgentHookCompatibilityAuthority: (paneKey) =>
@@ -144,6 +152,11 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
   })
   app.once('will-quit', () => sessionSearch?.dispose())
   state.runtime = runtime
+  const uninstallReplicaStatusRepublish = installHookStatusSessionTabsRepublish(
+    agentStatusHostReplicaStore,
+    () => runtime
+  )
+  app.once('will-quit', uninstallReplicaStatusRepublish)
   agentHookServer.subscribeEnrichedStatus((enriched) =>
     recordObservedAgentStatusPaneIdentity(observedPaneIdentities, enriched.paneKey, runtime)
   )

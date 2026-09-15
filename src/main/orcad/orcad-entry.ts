@@ -156,6 +156,7 @@ async function startOrcadRuntime(
     await import('../agent-hooks/hook-status-session-tabs-republish')
   const { AgentStatusObservedPaneIdentities, AgentStatusObservedPaneIdentityCapture } =
     await import('../runtime/agent-status-observed-pane-identity')
+  const { AgentStatusHostReplicaStore } = await import('../runtime/agent-status-host-replica-store')
 
   let rpc: InstanceType<typeof OrcaRuntimeRpcServer> | null = null
   let uninstallHookStatusRepublish = (): void => {}
@@ -186,6 +187,11 @@ async function startOrcadRuntime(
   const agentStatusStorePublisher = agentHookServer.createStatusStorePublisher({
     executionHostId: 'local'
   })
+  const agentStatusHostReplicaStore = new AgentStatusHostReplicaStore()
+  const getAgentStatusSnapshot = () => [
+    ...agentHookServer.getStatusSnapshot(),
+    ...agentStatusHostReplicaStore.getStatusSnapshot()
+  ]
   // Why a real Store: without one every persistence-backed RPC throws `runtime_unavailable`
   // and the read paths that use `this.store?.x ?? []` quietly answer "empty" instead —
   // a server that pairs and lists nothing looks healthy and is not.
@@ -231,11 +237,12 @@ async function startOrcadRuntime(
     // Why here too and not only on the desktop: orcad serves `worktree.ps` and `agentSession.*`,
     // so without these a headless host publishes its structured chats nowhere and lists no agents.
     getAgentStatusSnapshot: () =>
-      agentHookServer.getStatusSnapshot().filter((entry) => entry.providerSessionOnly !== true),
+      getAgentStatusSnapshot().filter((entry) => entry.providerSessionOnly !== true),
     agentStatusStorePublisher,
-    getAgentProviderSessionSnapshot: () => agentHookServer.getStatusSnapshot(),
+    agentStatusHostReplicaStore,
+    getAgentProviderSessionSnapshot: getAgentStatusSnapshot,
     getAgentProviderSessionRowsForPane: (paneKey) =>
-      agentHookServer.getStatusSnapshotForPane(paneKey),
+      getAgentStatusSnapshot().filter((entry) => entry.paneKey === paneKey),
     // Why captured rather than resolved at read: the fleet snapshot remints cached rows on every
     // read, so a row observed under one process otherwise acquires whatever process owns the pane now.
     readObservedAgentStatusPaneIdentity: (paneKey) => observedPaneIdentities.read(paneKey),
@@ -262,6 +269,15 @@ async function startOrcadRuntime(
     agentHookServer,
     () => runtime
   )
+  const uninstallReplicaStatusRepublish = installHookStatusSessionTabsRepublish(
+    agentStatusHostReplicaStore,
+    () => runtime
+  )
+  const uninstallStatusRepublish = uninstallHookStatusRepublish
+  uninstallHookStatusRepublish = () => {
+    uninstallStatusRepublish()
+    uninstallReplicaStatusRepublish()
+  }
 
   // Why the headless entry point rather than registerPtyHandlers directly: this is the
   // same call `--serve` makes, and it threads the store through. Without the store the

@@ -1,4 +1,5 @@
 import { REMOTE_SERVER_UPDATE_CAPABILITY } from './remote-server-update'
+import { AGENT_STATUS_STORE_REPLICA_CAPABILITY } from './agent-status-store-replication'
 import {
   SKILL_BUNDLE_INSTALL_CAPABILITY,
   SKILL_DELETE_CAPABILITY,
@@ -132,7 +133,7 @@ export const AGENT_SESSION_BOUNDARY_RUNTIME_CAPABILITY =
 export { REMOTE_SERVER_UPDATE_CAPABILITY } from './remote-server-update'
 export const AGENT_SESSION_HOST_AUTHORITY_RUNTIME_CAPABILITY =
   'agent-session.host-authority.v1' as const
-export const AGENT_STATUS_STORE_REPLICA_CAPABILITY = 'agent-status.store-replica.v1' as const
+export { AGENT_STATUS_STORE_REPLICA_CAPABILITY } from './agent-status-store-replication'
 export const AGENT_SESSION_OMP_RESUME_PATH_RUNTIME_CAPABILITY =
   'agent-session.omp-resume-path.v1' as const
 // Why: structured sessions are journal-backed, not PTY-backed, so an incapable client must not

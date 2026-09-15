@@ -112,6 +112,37 @@ describe('AgentStatusStoreReplica', () => {
     })
   })
 
+  it('resets the cursor when a new-owner resnapshot marker arrives', () => {
+    const replica = new AgentStatusStoreReplica()
+    replica.apply(snapshot({ rows: [row('a')], cursor: 7 }))
+
+    expect(
+      replica.apply({
+        type: 'resnapshot-required',
+        executionHostId: 'local',
+        ownerEpoch: 'epoch-b',
+        cursor: 2,
+        reason: 'owner-restart'
+      })
+    ).toBe('resnapshot-required')
+    expect(replica.getHostSnapshot('local')).toMatchObject({
+      ownerEpoch: 'epoch-b',
+      cursor: null,
+      membershipConfirmed: false,
+      rows: [row('a')]
+    })
+    expect(
+      replica.apply(
+        delta({
+          ownerEpoch: 'epoch-b',
+          previousCursor: 2,
+          cursor: 3,
+          changes: [{ type: 'drop', identity: { paneKey: 'a' } }]
+        })
+      )
+    ).toBe('resnapshot-required')
+  })
+
   it('does not turn contact loss into row deletion or execution evidence', () => {
     const replica = new AgentStatusStoreReplica()
     replica.apply(snapshot({ rows: [row('question', 'waiting')] }))
@@ -209,5 +240,17 @@ describe('AgentStatusStorePublisher', () => {
         reason: 'overflow'
       }
     ])
+
+    for (const listener of listeners) {
+      listener({ before: null, after: { paneKey: 'c' } })
+    }
+    expect(frames[1]).toEqual({
+      type: 'delta',
+      executionHostId: 'local',
+      ownerEpoch: 'epoch-a',
+      previousCursor: 2,
+      cursor: 3,
+      changes: [{ type: 'set', row: row('c') }]
+    })
   })
 })

@@ -139,6 +139,16 @@ import {
 } from './ssh-pty-consumer-recovery'
 import { classifySshPtyFrameRejection, SshPtyFrameRejectionLog } from './ssh-pty-frame-rejection'
 import { SshPtyTargetedReattachQueue } from './ssh-pty-targeted-reattach-queue'
+import {
+  AGENT_STATUS_STORE_FRAME_NOTIFICATION,
+  AGENT_STATUS_STORE_REPLICA_BUFFER_MAX,
+  AGENT_STATUS_STORE_REPLICA_CAPABILITY,
+  AGENT_STATUS_STORE_SNAPSHOT_METHOD,
+  AGENT_STATUS_STORE_SUBSCRIBE_METHOD,
+  isAgentStatusStoreFrame,
+  type AgentStatusStoreFrame,
+  type AgentStatusStoreSnapshot
+} from '../../shared/agent-status-store-replication'
 
 export type RelaySessionState = 'idle' | 'deploying' | 'ready' | 'reconnecting' | 'disposed'
 
@@ -288,6 +298,15 @@ function normalizeRelayGracePeriodSeconds(graceTimeSeconds: number | undefined):
       )
 }
 
+function isAgentStatusStoreSnapshot(value: unknown): value is AgentStatusStoreSnapshot {
+  return isAgentStatusStoreFrame(value) && value.type === 'snapshot'
+}
+
+function isMissingAgentStatusStoreMethod(error: unknown): boolean {
+  const code = typeof error === 'object' && error !== null ? Reflect.get(error, 'code') : undefined
+  return code === -32601 || code === 'CONNECTION_LOST' || code === 'DISPOSED'
+}
+
 // Why: teardown barriers are independent, so one failing store write must not hide the others —
 // settle them all and aggregate, rather than rethrowing only whichever rejected first.
 async function settleSshSessionTeardown(
@@ -370,6 +389,9 @@ export class SshRelaySession {
   private readonly ptyConsumerClientInstanceId: string
   private ptyConsumerSessionState: SshPtyConsumerSessionState | null = null
   private activeCompatibilityAttachmentIds = new Set<string>()
+  private agentStatusReplicaNotificationCleanup: (() => void) | null = null
+  private agentStatusReplicaDisposeCleanup: (() => void) | null = null
+  private agentStatusReplicaRefresh: Promise<void> | null = null
 
   constructor(
     readonly targetId: string,
@@ -1206,10 +1228,178 @@ export class SshRelaySession {
     registerSshGitProvider(this.targetId, gitProvider)
 
     this.wireUpPtyEvents(ptyProvider, mux, providerGeneration)
-    this.wireUpAgentHookEvents(mux)
+    const replicatedStatus = await this.wireUpAgentStatusStore(mux, shouldContinue)
+    if (!replicatedStatus) {
+      this.wireUpAgentHookEvents(mux)
+    }
     this.wireUpRemoteWorkspaceEvents(mux)
     void this.installManagedHooksOnRemote(mux, shouldContinue)
     return true
+  }
+
+  /** Negotiate the host-owned status projection before accepting legacy hook envelopes. */
+  private async wireUpAgentStatusStore(
+    mux: SshChannelMultiplexer,
+    shouldContinue?: () => boolean
+  ): Promise<boolean> {
+    this.teardownAgentStatusReplica()
+    const replicaStore = this.runtime?.getAgentStatusHostReplicaStore()
+    const expectedHostId = toSshExecutionHostId(this.targetId)
+    if (!replicaStore) {
+      return false
+    }
+    if (shouldContinue && !shouldContinue()) {
+      return false
+    }
+    let snapshot: AgentStatusStoreSnapshot
+    try {
+      const result = await mux.request(AGENT_STATUS_STORE_SNAPSHOT_METHOD, {
+        capability: AGENT_STATUS_STORE_REPLICA_CAPABILITY
+      })
+      if (!isAgentStatusStoreSnapshot(result) || result.executionHostId !== expectedHostId) {
+        replicaStore.abandonHost(expectedHostId)
+        return false
+      }
+      snapshot = result
+    } catch (error) {
+      if ((!shouldContinue || shouldContinue()) && !mux.isDisposed()) {
+        replicaStore.abandonHost(expectedHostId)
+      }
+      if (!isMissingAgentStatusStoreMethod(error) && !mux.isDisposed()) {
+        console.warn(
+          `[ssh-relay-session] status store negotiation failed for ${this.targetId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      }
+      return false
+    }
+    if (shouldContinue && !shouldContinue()) {
+      return false
+    }
+    const pendingFrames: AgentStatusStoreFrame[] = []
+    let pendingOverflow = false
+    let publicationActive = false
+    const applyFrame = (frame: AgentStatusStoreFrame, deliveryFloor?: number): void => {
+      const result = replicaStore.apply(
+        frame,
+        { executionHostId: expectedHostId, connectionId: this.targetId },
+        { deliveryFloor }
+      )
+      if (result === 'resnapshot-required') {
+        this.requestAgentStatusReplicaSnapshot(mux, expectedHostId)
+      }
+    }
+    this.agentStatusReplicaNotificationCleanup = mux.onNotificationByMethod(
+      AGENT_STATUS_STORE_FRAME_NOTIFICATION,
+      (params) => {
+        if (!isAgentStatusStoreFrame(params) || params.executionHostId !== expectedHostId) {
+          return
+        }
+        if (!publicationActive) {
+          if (pendingFrames.length >= AGENT_STATUS_STORE_REPLICA_BUFFER_MAX) {
+            pendingFrames.length = 0
+            pendingOverflow = true
+          } else if (!pendingOverflow) {
+            pendingFrames.push(params)
+          }
+          return
+        }
+        applyFrame(params)
+      }
+    )
+    try {
+      await mux.request(AGENT_STATUS_STORE_SUBSCRIBE_METHOD, {
+        capability: AGENT_STATUS_STORE_REPLICA_CAPABILITY
+      })
+    } catch (error) {
+      this.teardownAgentStatusReplica()
+      replicaStore.abandonHost(expectedHostId)
+      if (!isMissingAgentStatusStoreMethod(error) && !mux.isDisposed()) {
+        console.warn(
+          `[ssh-relay-session] status store subscription failed for ${this.targetId}: ${
+            error instanceof Error ? error.message : String(error)
+          }`
+        )
+      }
+      return false
+    }
+    if (shouldContinue && !shouldContinue()) {
+      this.teardownAgentStatusReplica()
+      return false
+    }
+    const priorHost = replicaStore.getHostSnapshot(expectedHostId)
+    const legacyClearFloor =
+      priorHost.ownerEpoch === null
+        ? (agentHookServer.clearStatusEntriesForConnection(this.targetId) ?? undefined)
+        : undefined
+    publicationActive = true
+    applyFrame(snapshot, legacyClearFloor)
+    if (pendingOverflow) {
+      this.requestAgentStatusReplicaSnapshot(mux, expectedHostId)
+    } else {
+      for (const frame of pendingFrames) {
+        applyFrame(frame)
+      }
+    }
+    this.agentStatusReplicaDisposeCleanup = mux.onDispose(() => {
+      replicaStore.setContact(expectedHostId, 'unverifiable')
+    })
+    return true
+  }
+
+  private requestAgentStatusReplicaSnapshot(
+    mux: SshChannelMultiplexer,
+    expectedHostId: ExecutionHostId
+  ): void {
+    if (this.agentStatusReplicaRefresh) {
+      return
+    }
+    const pending = this.refreshAgentStatusReplicaSnapshot(mux, expectedHostId).finally(() => {
+      if (this.agentStatusReplicaRefresh === pending) {
+        this.agentStatusReplicaRefresh = null
+      }
+    })
+    this.agentStatusReplicaRefresh = pending
+  }
+
+  private async refreshAgentStatusReplicaSnapshot(
+    mux: SshChannelMultiplexer,
+    expectedHostId: ExecutionHostId
+  ): Promise<void> {
+    const replicaStore = this.runtime?.getAgentStatusHostReplicaStore()
+    if (!replicaStore) {
+      return
+    }
+    try {
+      const result = await mux.request(AGENT_STATUS_STORE_SNAPSHOT_METHOD, {
+        capability: AGENT_STATUS_STORE_REPLICA_CAPABILITY
+      })
+      if (
+        this.mux !== mux ||
+        mux.isDisposed() ||
+        !isAgentStatusStoreSnapshot(result) ||
+        result.executionHostId !== expectedHostId
+      ) {
+        return
+      }
+      replicaStore.apply(result, {
+        executionHostId: expectedHostId,
+        connectionId: this.targetId
+      })
+    } catch {
+      if (this.mux === mux && !mux.isDisposed()) {
+        replicaStore.setContact(expectedHostId, 'unverifiable')
+      }
+    }
+  }
+
+  private teardownAgentStatusReplica(): void {
+    this.agentStatusReplicaNotificationCleanup?.()
+    this.agentStatusReplicaNotificationCleanup = null
+    this.agentStatusReplicaDisposeCleanup?.()
+    this.agentStatusReplicaDisposeCleanup = null
+    this.agentStatusReplicaRefresh = null
   }
 
   private activePtyConsumerOwner(): SshPtyConsumerOwnerState | null {
@@ -1638,6 +1828,12 @@ export class SshRelaySession {
     outputGenerationReason: string = reason
   ): void {
     this.releaseRelayLossWatcher()
+    if (reason === 'connection_lost') {
+      this.runtime
+        ?.getAgentStatusHostReplicaStore()
+        ?.setContact(toSshExecutionHostId(this.targetId), 'unverifiable')
+    }
+    this.teardownAgentStatusReplica()
     this.muxNotificationCleanup?.()
     this.muxNotificationCleanup = null
     for (const cleanup of this.ptyRecoveryNotificationCleanups) {

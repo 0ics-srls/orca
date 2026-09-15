@@ -145,10 +145,10 @@ export abstract class AgentHookServerCleanup extends AgentHookServerAuthorityFen
   }
 
   /** Clear statuses proven to belong to one lost SSH transport. */
-  clearStatusEntriesForConnection(connectionId: string): void {
+  clearStatusEntriesForConnection(connectionId: string): number | null {
     const normalizedConnectionId = connectionId.trim()
     if (normalizedConnectionId.length === 0) {
-      return
+      return null
     }
     const clearedAt = Math.max(
       Date.now(),
@@ -195,6 +195,7 @@ export abstract class AgentHookServerCleanup extends AgentHookServerAuthorityFen
       connectionId: normalizedConnectionId,
       clearedAt
     })
+    return clearedAt
   }
 
   protected deleteStatusEntry(

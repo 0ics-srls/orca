@@ -17,35 +17,40 @@ import {
 import { resolveSetupAgentSequenceLaunchCommand } from '../shared/setup-agent-sequencing'
 import { relayLogLine } from './relay-diagnostic-log'
 import { registerManagedHookInstaller } from './managed-hook-installer'
-import { RelayAgentStatusStore } from './relay-agent-status-store'
-import { AGENT_STATUS_STORE_FRAME_NOTIFICATION } from '../shared/agent-status-store-replication'
+import {
+  AGENT_STATUS_STORE_FRAME_NOTIFICATION,
+  AGENT_STATUS_STORE_SNAPSHOT_METHOD,
+  AGENT_STATUS_STORE_SUBSCRIBE_METHOD
+} from '../shared/agent-status-store-replication'
 import { AGENT_STATUS_STORE_REPLICA_CAPABILITY } from '../shared/protocol-version'
+import type { ExecutionHostId } from '../shared/execution-host'
 
 export class RelayAgentHookRuntime {
   private readonly hookServer: RelayAgentHookServer
-  private readonly statusStore = new RelayAgentStatusStore()
   private readonly statusStorePublisher
-  private stopStatusPublication: (() => void) | null = null
   private readonly pluginOverlay = new PluginOverlayManager()
+  private readonly statusStoreSubscriptions = new Map<number, () => void>()
+  private disposeStatusStoreDetachListener: (() => void) | null = null
+  private disposeStatusStoreDispatcherListener: (() => void) | null = null
 
   constructor(
     private readonly dispatcher: RelayDispatcher,
     private readonly ptyHandler: PtyHandler,
     sockPath: string,
-    endpointDir?: string
+    endpointDir?: string,
+    executionHostId: ExecutionHostId = 'local'
   ) {
     this.hookServer = new RelayAgentHookServer({
       endpointDir: endpointDir ?? endpointDirForRelaySocket(sockPath),
       forward: (envelope) => {
-        this.statusStore.apply(envelope)
         publishAgentHookEnvelope(dispatcher, envelope)
       },
       // Why: the PTY handler is the only component that knows which panes still have a client
       // surface, so it — not the client — decides whether a hook post describes a live pane.
       isPaneSurfaceRetired: (paneKey) => ptyHandler.isPaneSurfaceRetired(paneKey)
     })
-    this.statusStorePublisher = this.statusStore.createPublisher({
-      executionHostId: 'local'
+    this.statusStorePublisher = this.hookServer.createStatusStorePublisher({
+      executionHostId
     })
   }
 
@@ -59,14 +64,6 @@ export class RelayAgentHookRuntime {
     }
     this.registerPtyEnvironment()
     this.registerHandlers()
-    this.stopStatusPublication = this.statusStorePublisher.subscribe((frame) => {
-      if (typeof this.dispatcher.notify === 'function') {
-        this.dispatcher.notify(
-          AGENT_STATUS_STORE_FRAME_NOTIFICATION,
-          Object.fromEntries(Object.entries(frame))
-        )
-      }
-    })
   }
 
   publishEndpointFile(): void {
@@ -74,8 +71,14 @@ export class RelayAgentHookRuntime {
   }
 
   stop(): void {
-    this.stopStatusPublication?.()
-    this.stopStatusPublication = null
+    for (const unsubscribe of this.statusStoreSubscriptions.values()) {
+      unsubscribe()
+    }
+    this.statusStoreSubscriptions.clear()
+    this.disposeStatusStoreDetachListener?.()
+    this.disposeStatusStoreDetachListener = null
+    this.disposeStatusStoreDispatcherListener?.()
+    this.disposeStatusStoreDispatcherListener = null
     this.statusStorePublisher.dispose()
     this.hookServer.stop()
   }
@@ -86,7 +89,6 @@ export class RelayAgentHookRuntime {
     this.ptyHandler.setExitListener(({ paneKey, id }) => {
       if (paneKey) {
         this.hookServer.clearPaneState(paneKey)
-        this.statusStore.drop(paneKey)
       }
       this.pluginOverlay.clearOverlay(paneKey ?? id)
     })
@@ -95,7 +97,6 @@ export class RelayAgentHookRuntime {
     // reconnecting client cannot be handed a replay of an agent nobody owns.
     this.ptyHandler.setSurfaceRetiredListener(({ paneKey }) => {
       this.hookServer.clearPaneState(paneKey)
-      this.statusStore.drop(paneKey)
     })
   }
 
@@ -162,12 +163,53 @@ export class RelayAgentHookRuntime {
   }
 
   private registerHandlers(): void {
-    this.dispatcher.onRequest('agentStatus.getStoreSnapshot', async (params) => {
+    this.disposeStatusStoreDetachListener?.()
+    this.disposeStatusStoreDetachListener =
+      this.dispatcher.onClientDetached?.((clientId) => {
+        this.statusStoreSubscriptions.get(clientId)?.()
+        this.statusStoreSubscriptions.delete(clientId)
+      }) ?? null
+    this.disposeStatusStoreDispatcherListener?.()
+    this.disposeStatusStoreDispatcherListener =
+      this.dispatcher.onDisposed?.(() => {
+        for (const unsubscribe of this.statusStoreSubscriptions.values()) {
+          unsubscribe()
+        }
+        this.statusStoreSubscriptions.clear()
+      }) ?? null
+    this.dispatcher.onRequest(AGENT_STATUS_STORE_SNAPSHOT_METHOD, async (params) => {
       if (params.capability !== AGENT_STATUS_STORE_REPLICA_CAPABILITY) {
         throw new Error('agent_status_store_capability_required')
       }
       const snapshot = this.statusStorePublisher.snapshot()
       return snapshot
+    })
+    this.dispatcher.onRequest(AGENT_STATUS_STORE_SUBSCRIBE_METHOD, async (params, context) => {
+      if (params.capability !== AGENT_STATUS_STORE_REPLICA_CAPABILITY) {
+        throw new Error('agent_status_store_capability_required')
+      }
+      this.statusStoreSubscriptions.get(context.clientId)?.()
+      const unsubscribe = this.statusStorePublisher.subscribe((frame) => {
+        if (!context.isStale()) {
+          this.dispatcher.notifyClient(
+            context.clientId,
+            AGENT_STATUS_STORE_FRAME_NOTIFICATION,
+            frame
+          )
+        }
+      })
+      this.statusStoreSubscriptions.set(context.clientId, unsubscribe)
+      context.signal?.addEventListener(
+        'abort',
+        () => {
+          if (this.statusStoreSubscriptions.get(context.clientId) === unsubscribe) {
+            this.statusStoreSubscriptions.delete(context.clientId)
+            unsubscribe()
+          }
+        },
+        { once: true }
+      )
+      return { subscribed: true }
     })
     this.dispatcher.onRequest(AGENT_HOOK_REQUEST_REPLAY_METHOD, async () => ({
       replayed: this.hookServer.replayCachedPayloadsForPanes()
