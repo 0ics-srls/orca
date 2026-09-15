@@ -54,16 +54,17 @@ export class OrcaRuntimeWithBindPtyIncarnationHandle extends OrcaRuntimeWithBuil
     for (const [ptyId, retained] of this.handleByPtyIncarnation) {
       const pty = this.ptysById.get(ptyId)
       const leaves = this.getLeavesForPty(ptyId)
-      if (!pty || leaves.length !== 1) {
+      // Why: a handle issued before the host reported the incarnation is un-fenced, so
+      // learning it is not a replacement; only a known-to-different incarnation is.
+      const incarnationReplaced =
+        retained.incarnationId !== null &&
+        pty !== undefined &&
+        pty.incarnationId !== retained.incarnationId
+      if (!pty || incarnationReplaced || leaves.length !== 1 || this.handleByPtyId.has(ptyId)) {
         this.invalidatePtyIncarnationHandle(ptyId)
         continue
       }
-      // PTY startup can replace the shell incarnation (for example Git Bash
-      // entering cmd.exe on Windows). Keep the caller's preallocated handle
-      // bound to the live PTY instead of making the create receipt stale.
-      if (pty.incarnationId !== retained.incarnationId) {
-        retained.incarnationId = pty.incarnationId
-      }
+      retained.incarnationId = pty.incarnationId
       this.bindPtyIncarnationHandle(retained, leaves[0])
     }
   }
