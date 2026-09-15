@@ -137,16 +137,11 @@ describe('terminal inventory after a pane is dropped', () => {
     // silence is not a retraction. This also pins that the runtime stamps the record at all —
     // orca-runtime-record-pty-worktree.ts is `@ts-nocheck`, so a missing stamp is silent there
     // and would leave every freshly spawned terminal reporting orphaned for one graph.
-    ;// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recordPtyWorktree is protected; reaching it is the only way to stamp a pane the graph never published.
-    (
-      runtime as unknown as {
-        recordPtyWorktree: (
-          ptyId: string,
-          worktreeId: string,
-          state: Record<string, unknown>
-        ) => void
-      }
-    ).recordPtyWorktree(DROPPED_PTY, WORKTREE_ID, {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: recordPtyWorktree is protected; reaching it is the only way to stamp a pane the graph never published.
+    const stamp = runtime as unknown as {
+      recordPtyWorktree: (ptyId: string, worktreeId: string, state: Record<string, unknown>) => void
+    }
+    stamp.recordPtyWorktree(DROPPED_PTY, WORKTREE_ID, {
       connected: true,
       tabId: 'tab-dropped',
       paneKey: `tab-dropped:${DROPPED_LEAF}`
