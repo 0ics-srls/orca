@@ -1,4 +1,4 @@
-import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc-client'
 import {
   fetchDictationSetup,
   setDictationConfig,
@@ -7,9 +7,7 @@ import {
 } from '../dictation/mobile-dictation-setup'
 import type { VoiceSettingsOperations } from './voice-settings-operations'
 
-export function nativeVoiceSettingsOperations(
-  client: UnvalidatedRpcRequestPort
-): VoiceSettingsOperations {
+export function nativeVoiceSettingsOperations(client: RpcClient): VoiceSettingsOperations {
   return {
     load: () => fetchDictationSetup(client),
     configure: (params) => setDictationConfig(client, params),

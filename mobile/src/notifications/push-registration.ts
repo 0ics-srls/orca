@@ -13,7 +13,7 @@ import type {
   MobilePushRegisterResult
 } from '../../../src/shared/mobile-push-contract'
 import { NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
-import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc-client'
 import { startRuntimeCapabilityProbe } from '../transport/runtime-capability-probe'
 import { pushRouteRegister, pushRouteUnregister } from './mobile-push-registration-operations'
 import {
@@ -26,7 +26,7 @@ import { addPushTokenListener, getDevicePushToken, type MobilePushToken } from '
 
 export const NOTIFICATIONS_REMOTE_PUSH_CAPABILITY = NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY
 
-type PushClient = UnvalidatedRpcRequestPort
+type PushClient = RpcClient
 
 const REQUEST_TIMEOUT_MS = 5_000
 const REMOVAL_TIMEOUT_MS = 2_000

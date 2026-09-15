@@ -2,11 +2,11 @@ import { reportWorkerTerminalUserInput } from './worker-terminal-takeover-report
 import { getTerminalLiveAccessoryRawSendTarget } from './terminal-live-accessory-raw-send-target'
 import { buildTerminalSendParams, TERMINAL_INPUT_SEND_OPTIONS } from './terminal-send-request'
 import { terminalInputSend } from './mobile-terminal-operations'
-import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState } from '../transport/types'
 
 type TerminalLiveAccessoryRawSendArgs = {
-  readonly client: UnvalidatedRpcRequestPort | null
+  readonly client: RpcClient | null
   readonly targetHandle: string
   readonly activeHandle: string | null
   readonly activeSessionTabType: string | null

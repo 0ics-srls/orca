@@ -1,5 +1,5 @@
 import { isTerminalQueryReply } from '../../../src/shared/terminal-query-reply'
-import type { UnvalidatedRpcRequestPort } from '../transport/rpc-client'
+import type { RpcClient } from '../transport/rpc-client'
 import { terminalInputSend } from './mobile-terminal-operations'
 
 type TerminalSubscriptionRegistry = {
@@ -8,7 +8,7 @@ type TerminalSubscriptionRegistry = {
 
 type MobileTerminalQueryReplyOptions = {
   bytes: string
-  client: UnvalidatedRpcRequestPort | null
+  client: RpcClient | null
   clientId: string | null
   connected: boolean
   handle: string
