@@ -30,7 +30,7 @@ export function sessionScreenTabMountAdapters(
       let creatingMarkdown = false
       let createError = ''
       let screencastSupported = true
-      const pendingBrowserFocusPageIdRef = { current: null as string | null }
+      const pendingBrowserFocusPageIdRef: { current: string | null } = { current: null }
       let actions: ReturnType<typeof useCreate>
       const timers: ReturnType<typeof setTimeout>[] = []
       const hook = hookMount(() => {
@@ -110,7 +110,7 @@ export function sessionScreenTabMountAdapters(
       const sessionTabsRef = { current: [terminalTab] }
       let sessionTabs: MobileSessionTab[] = sessionTabsRef.current
       let activeHandle: string | null = HANDLE
-      const activeHandleRef = { current: HANDLE as string | null }
+      const activeHandleRef: { current: string | null } = { current: HANDLE }
       const renameTarget: { handle: string } | null = { handle: HANDLE }
       const timers: ReturnType<typeof setTimeout>[] = []
       let actions: ReturnType<typeof useClose>

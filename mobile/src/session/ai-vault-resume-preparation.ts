@@ -46,6 +46,7 @@ export async function prepareMobileAiVaultSessionResume(
       response.error?.message || 'Could not prepare this legacy Codex session. Retry resume.'
     )
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
   const result = aiVaultResumePreparationRun.interpret(response) as {
     useRealCodexHome?: unknown
     substituteCodexHome?: unknown
