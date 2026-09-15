@@ -9,11 +9,11 @@ import {
 export function installBrowserRoutePartitionPolicies(
   profile: BrowserSessionProfile,
   partition: string
-): void {
+): Promise<void> {
   if (!isBrowserRoutePartition(partition)) {
     throw new Error('browser_route_partition_profile_unavailable')
   }
-  void installBrowserSessionPartitionPolicies(
+  return installBrowserSessionPartitionPolicies(
     { ...profile, partition },
     { applyAppWideProxy: false }
   )
