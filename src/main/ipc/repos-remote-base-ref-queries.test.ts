@@ -504,7 +504,7 @@ describe('repos:searchBaseRefs SSH relay', () => {
     expect(result).not.toContain('upstream/HEAD')
   })
 
-  it('returns [] when the relay exec throws', async () => {
+  it('propagates an unverifiable verdict when the relay exec throws', async () => {
     mockGitProvider.exec = vi.fn().mockRejectedValue(new Error('ssh connection dropped'))
 
     mockStore.getRepo.mockReturnValue({
@@ -514,16 +514,15 @@ describe('repos:searchBaseRefs SSH relay', () => {
       kind: 'git'
     })
 
-    const result = await handlers.get('repos:searchBaseRefs')!(null, {
-      repoId: 'r1',
-      query: 'main'
-    })
-
-    // Why: transport failure falls back to an empty result set so the picker doesn't crash.
-    expect(result).toEqual([])
+    await expect(
+      handlers.get('repos:searchBaseRefs')!(null, {
+        repoId: 'r1',
+        query: 'main'
+      })
+    ).rejects.toThrow('git remote failed: ssh connection dropped')
   })
 
-  it('returns [] when the SSH provider is not connected', async () => {
+  it('propagates an unverifiable verdict when the SSH provider is not connected', async () => {
     mockStore.getRepo.mockReturnValue({
       id: 'r1',
       path: '/remote/repo',
@@ -531,11 +530,11 @@ describe('repos:searchBaseRefs SSH relay', () => {
       kind: 'git'
     })
 
-    const result = await handlers.get('repos:searchBaseRefs')!(null, {
-      repoId: 'r1',
-      query: 'main'
-    })
-
-    expect(result).toEqual([])
+    await expect(
+      handlers.get('repos:searchBaseRefs')!(null, {
+        repoId: 'r1',
+        query: 'main'
+      })
+    ).rejects.toThrow('no SSH git provider for this connection')
   })
 })
