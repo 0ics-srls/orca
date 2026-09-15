@@ -33,11 +33,12 @@ calls `renderItem`, so the data it was handed is the only record of what the scr
 drawn. `screen-native-substitutes.test.ts` is the census; it renders every element with a callback
 prop and a render callback as children and fails if either is called.
 
-Two members deserve naming because inertness costs something. `InteractionManager.runAfterInteractions`
-never runs its task, so a call site that defers a request behind one records no send; and
-`Alert.alert` never answers, so a flow gated on a confirmation stops there. Both are deliberate —
-a recording that needs either has to schedule it on the pinned clock or drive it through the
-operation's own API — but neither is a substitute for noticing.
+One member deserves naming because inertness costs something. `Alert.alert` never answers, so a
+flow gated on a confirmation stops there; a recording that needs one has to drive it through the
+operation's own API. `InteractionManager.runAfterInteractions` is the exception to the inert rule:
+it runs its task on a microtask and returns the real handle, because a scheduler that drops its
+task swallows the send the screen deferred, which is the one failure this oracle must not have.
+Cancelling the handle before the task runs still prevents it.
 
 ## What a scenario declares about its device
 

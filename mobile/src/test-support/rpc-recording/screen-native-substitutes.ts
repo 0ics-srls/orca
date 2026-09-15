@@ -128,6 +128,26 @@ function flattenStyle(style: unknown): unknown {
   return Object.assign({}, ...style.map((entry) => flattenStyle(entry)))
 }
 
+/**
+ * A task deferred to a microtask rather than dropped: a scheduler that never runs its task swallows
+ * whatever send the screen deferred, and the recording claims the screen sends nothing.
+ */
+function runAfterInteractions(task?: () => unknown): Promise<unknown> & {
+  done: (onFulfilled?: () => unknown, onRejected?: (reason: unknown) => unknown) => void
+  cancel: () => void
+} {
+  let cancelled = false
+  const settled = Promise.resolve().then(() => (cancelled ? undefined : task?.()))
+  return Object.assign(settled, {
+    done: (onFulfilled?: () => unknown, onRejected?: (reason: unknown) => unknown) => {
+      void settled.then(onFulfilled, onRejected)
+    },
+    cancel: () => {
+      cancelled = true
+    }
+  })
+}
+
 /** The react-native primitives and module members a mounted screen reads. */
 export function reactNativeScreenMembers(): Record<string, unknown> {
   return {
@@ -156,8 +176,6 @@ export function reactNativeScreenMembers(): Record<string, unknown> {
     BackHandler: { addEventListener: silentNativeSubscription },
     Keyboard: { addListener: silentNativeSubscription, dismiss: () => {} },
     Linking: { openURL: () => Promise.resolve(true), openSettings: () => Promise.resolve() },
-    // Inert, so a deferred task never runs: a recording that needs one has to schedule it on the
-    // pinned clock rather than leave the runner to decide when interactions are over.
-    InteractionManager: { runAfterInteractions: () => ({ cancel: () => {} }) }
+    InteractionManager: { runAfterInteractions }
   }
 }

@@ -109,12 +109,27 @@ describe('the inert screen substitutes', () => {
     }
     let fired = 0
     expect(typeof keyboard.addListener('keyboardDidShow', () => fired++).remove).toBe('function')
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: as above.
-    const interactions = member('react-native', 'InteractionManager') as {
-      runAfterInteractions: (task: () => void) => { cancel: () => void }
-    }
-    expect(typeof interactions.runAfterInteractions(() => fired++).cancel).toBe('function')
     expect(fired).toBe(0)
+  })
+
+  /**
+   * The inert rule stops at the interaction scheduler: a screen that defers its first fetch past
+   * interactions would otherwise record as a screen that sends nothing.
+   */
+  it('runs a task deferred past interactions, unless it is cancelled first', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the member is the substituted InteractionManager by construction.
+    const interactions = member('react-native', 'InteractionManager') as {
+      runAfterInteractions: (task: () => void) => Promise<unknown> & { cancel: () => void }
+    }
+    let ran = 0
+    const handle = interactions.runAfterInteractions(() => ran++)
+    expect(ran).toBe(0)
+    await handle
+    expect(ran).toBe(1)
+    const cancelled = interactions.runAfterInteractions(() => ran++)
+    cancelled.cancel()
+    await cancelled
+    expect(ran).toBe(1)
   })
 
   it('assembles a gesture chain without ever recognising one', () => {
