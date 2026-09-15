@@ -10,7 +10,9 @@
  * importing another, and every adapter may import the engine.
  *
  * Functions pass through whole: a fixture stub like `async () => 0` stands in for a callback, and
- * making its parameters optional would accept a stub the hook cannot call.
+ * making its parameters optional would accept a stub the hook cannot call. That branch is also what
+ * refuses a structural stand-in for a `Date`, whose members are all methods. A set or a map has
+ * members that are not, so those two pass through whole as well.
  *
  * A member may also be `null` even where the product type says only optional, because these
  * fixtures stand in for JSON the host sent and JSON spells an absent object `null`. Rejecting it
@@ -18,7 +20,7 @@
  */
 export type PartialRecorderFixture<T> = T extends (...args: never[]) => unknown
   ? T
-  : T extends ReadonlySet<unknown> | ReadonlyMap<unknown, unknown> | Date
+  : T extends ReadonlySet<unknown> | ReadonlyMap<unknown, unknown>
     ? T
     : T extends readonly (infer Element)[]
       ? readonly PartialRecorderFixture<Element>[]
