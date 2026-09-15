@@ -239,6 +239,7 @@ describe('useMobileStructuredAgentSession', () => {
     listener = onData
     return unsubscribe
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: test double implements the RPC client surface.
   const client = { sendRequest, subscribe } as unknown as RpcClient
 
   it('ignores old-owner prompts and running turns while retaining the transcript', async () => {
