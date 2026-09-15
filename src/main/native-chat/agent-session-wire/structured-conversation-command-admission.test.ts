@@ -9,18 +9,23 @@ import type { AgentSessionTurnContext } from './structured-agent-session-turns'
 const CURRENT_FENCE = 4
 
 function contextWith(
-  backgroundTasks: AgentSessionBackgroundTaskState | null,
-  submissions: readonly AgentJournalSubmission[] = []
+  backgroundTasks: AgentSessionBackgroundTaskState | null
 ): AgentSessionTurnContext {
   return {
     sessionId: 'session-1',
-    fence: CURRENT_FENCE,
     journal: {
       snapshot: () => ({ items: [] }),
-      submissions: () => submissions
+      submissions: () => []
     },
     adapter: { backgroundTaskState: () => backgroundTasks }
   } as unknown as AgentSessionTurnContext
+}
+
+function contextHolding(submissions: AgentJournalSubmission[]): AgentSessionTurnContext {
+  const ctx = contextWith(null)
+  ctx.fence = CURRENT_FENCE
+  ctx.journal.submissions = () => submissions
+  return ctx
 }
 
 function submission(
@@ -98,33 +103,31 @@ describe('conversationCommandBlocked unsettled submissions', () => {
     // Crash recovery skips rows it already marked, the restart reconciler only
     // narrows accepted outcomes, and Retry drops the outbox entry without
     // touching the journal. Refusing here asks for a step that does not exist.
-    const ctx = contextWith(null, [submission('unknown', { recovered: true })])
+    const ctx = contextHolding([submission('unknown', { recovered: true })])
     expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
   })
 
   it('admits the command on a legacy host that publishes the reason without the marker', () => {
-    const ctx = contextWith(null, [
-      submission('unknown', { reason: DISPATCH_DOUBT_HOST_RESTARTED })
-    ])
+    const ctx = contextHolding([submission('unknown', { reason: DISPATCH_DOUBT_HOST_RESTARTED })])
     expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
   })
 
   it('admits the command on a dead generation the current fence has passed', () => {
-    const ctx = contextWith(null, [submission('pending', { fence: CURRENT_FENCE - 1 })])
+    const ctx = contextHolding([submission('pending', { fence: CURRENT_FENCE - 1 })])
     expect(conversationCommandBlocked(ctx, RECORD)).toBeNull()
   })
 
   it('still refuses while this generation owes an answer', () => {
-    expect(conversationCommandBlocked(contextWith(null, [submission('pending')]), RECORD)).toBe(
+    expect(conversationCommandBlocked(contextHolding([submission('pending')]), RECORD)).toBe(
       UNSETTLED_REFUSAL
     )
-    expect(conversationCommandBlocked(contextWith(null, [submission('unknown')]), RECORD)).toBe(
+    expect(conversationCommandBlocked(contextHolding([submission('unknown')]), RECORD)).toBe(
       UNSETTLED_REFUSAL
     )
   })
 
   it('admits the command once every submission is terminally settled', () => {
-    const ctx = contextWith(null, [
+    const ctx = contextHolding([
       submission('accepted', { clientMessageId: 'm1' }),
       submission('rejected', { clientMessageId: 'm2' })
     ])
