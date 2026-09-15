@@ -53,7 +53,11 @@ const TURN_OUTCOME_EVENTS = new Set([
   'turn_completed',
   'turn/completed',
   'turn_cancelled',
-  'turn/cancelled'
+  'turn/cancelled',
+  'turn/interrupted',
+  'interrupt_acknowledged',
+  'interrupted',
+  'cancelled'
 ])
 const CHILD_START_EVENTS = new Set(['SubagentStart', 'subagent_start', 'child_started'])
 const CHILD_OUTCOME_EVENTS = new Set([

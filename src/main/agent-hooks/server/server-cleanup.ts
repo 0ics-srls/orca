@@ -126,6 +126,9 @@ export abstract class AgentHookServerCleanup extends AgentHookServerAuthorityFen
     let cleared = 0
     for (const paneKey of paneKeys) {
       const resolvedPaneKey = this.resolvePaneKeyAlias(paneKey)
+      // Lifecycle ownership is authoritative even when a legacy row was dismissed or suppressed.
+      // Observe the certified exit before deciding whether there is a projection to clear.
+      this.observeAgentExecutionVerdict(resolvedPaneKey, 'exited')
       if (!this.hasLiveClaimsForPaneKey(resolvedPaneKey)) {
         continue
       }
@@ -139,9 +142,6 @@ export abstract class AgentHookServerCleanup extends AgentHookServerAuthorityFen
       const previous = this.state.lastStatusByPaneKey.get(resolvedPaneKey) as
         | EnrichedAgentHookEventPayload
         | undefined
-      // A certified process exit is an execution verdict, not a successful turn completion. Feed
-      // it to the bound lifecycle before retiring the pane's legacy projection.
-      this.observeAgentExecutionVerdict(resolvedPaneKey, 'exited')
       this.clearPaneState(resolvedPaneKey, { emitStatusRowMutation: false })
       if (retained) {
         admitLegacyAgentStatus(

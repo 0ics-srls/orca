@@ -181,7 +181,22 @@ describe('AgentHookServer turn lifecycle integration', () => {
     ).toBeNull()
   })
 
-  it('binds child hooks without a provider turn id to the active root turn', () => {
+  it('observes certified exit even when the legacy status row was dismissed', () => {
+    const server = new AgentHookServer()
+    server.registerAgentTurnOwner(PANE, owner)
+    ingest(server, 'UserPromptSubmit', 'turn-dismissed', { state: 'working' })
+    server.clearPaneState(PANE)
+
+    expect(server.reconcileEndedProcessForPaneKeys([PANE])).toBe(0)
+    expect(server.getAgentTurnLifecycleSnapshot(PANE)).toMatchObject({
+      executionVerdict: 'exited'
+    })
+    expect(server.getAgentTurnLifecycleSnapshot(PANE)?.turns).toContainEqual(
+      expect.objectContaining({ turnId: 'turn-dismissed', phase: 'unresolved' })
+    )
+  })
+
+  it('does not bind anonymous child hooks to whichever root turn is current', () => {
     const server = new AgentHookServer()
     server.registerAgentTurnOwner(PANE, owner)
     ingest(server, 'UserPromptSubmit', 'turn-child', { state: 'working' })
@@ -195,14 +210,19 @@ describe('AgentHookServer turn lifecycle integration', () => {
     })
     const snapshot = server.getAgentTurnLifecycleSnapshot(PANE)
     expect(snapshot?.currentTurn).toMatchObject({ phase: 'active', turnId: 'turn-child' })
-    expect(snapshot?.joinedChildren).toContainEqual(
-      expect.objectContaining({
-        turnId: 'turn-child',
-        workId: 'child-1',
-        phase: 'settled',
-        outcome: 'completed'
-      })
-    )
+    expect(snapshot?.joinedChildren).toEqual([])
+  })
+
+  it('does not rebind delayed anonymous child evidence to a later root turn', () => {
+    const server = new AgentHookServer()
+    server.registerAgentTurnOwner(PANE, owner)
+    ingest(server, 'UserPromptSubmit', 'turn-first', { state: 'working' })
+    ingest(server, 'UserPromptSubmit', 'turn-next', { state: 'working' })
+    ingest(server, 'Stop', undefined, { state: 'done', toolAgentId: 'child-1' })
+
+    const snapshot = server.getAgentTurnLifecycleSnapshot(PANE)
+    expect(snapshot?.currentTurn).toMatchObject({ phase: 'active', turnId: 'turn-next' })
+    expect(snapshot?.joinedChildren).toEqual([])
   })
 
   it('reconciles a complete remote inventory instead of treating a missing field as empty', () => {
@@ -307,5 +327,8 @@ describe('AgentHookServer turn lifecycle integration', () => {
     }
     expect(server.registerAgentTurnOwner(PANE, replacement)).toBe(true)
     expect(server.getAgentTurnLifecycleSnapshot(PANE)?.turns).toHaveLength(0)
+    expect(server.unregisterAgentTurnOwner(PANE, owner)).toBe(false)
+    expect(server.getAgentTurnLifecycleSnapshot(PANE)?.owner.runId).toBe('run-replacement')
+    expect(server.unregisterAgentTurnOwner(PANE, replacement)).toBe(true)
   })
 })

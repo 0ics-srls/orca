@@ -165,6 +165,27 @@ describe('provider turn evidence adapter', () => {
     ])
   })
 
+  it.each(['turn/interrupted', 'interrupt_acknowledged', 'interrupted', 'cancelled'])(
+    'maps %s to an attributable interrupt acknowledgement',
+    (hookEventName) => {
+      const result = readProviderTurnEvidence({
+        event: event({
+          hookEventName,
+          payload: { state: 'done', prompt: 'ship it', agentType: 'codex' }
+        }),
+        observedAt: 43
+      })
+      expect(result.evidence).toEqual([
+        expect.objectContaining({
+          kind: 'turn-interrupt-acknowledged',
+          turnId: 'turn-1',
+          outcome: 'interrupted',
+          observedAt: 43
+        })
+      ])
+    }
+  )
+
   it('requires complete current-turn inventories', () => {
     const incomplete = providerCurrentTurnInventory({ turnId: 'turn-1', joinedChildren: [] }, false)
     expect(incomplete).toBeNull()

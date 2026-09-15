@@ -6,7 +6,6 @@ import {
   type AgentTurnLifecycleEvent,
   type AgentTurnLifecycleReduction,
   type AgentTurnLifecycleSnapshot,
-  type AgentTurnLifecycleState,
   type AgentTurnOwner
 } from '../../../shared/agent-turn-lifecycle'
 import { agentTurnOwnersEqual } from '../../../shared/agent-turn-lifecycle-state'
@@ -52,10 +51,10 @@ export abstract class AgentHookServerTurnLifecycle extends AgentHookServerState 
   }
 
   /** Remove an owner binding only when the caller still holds that exact binding. */
-  unregisterAgentTurnOwner(paneKey: string, owner?: AgentTurnOwner): boolean {
+  unregisterAgentTurnOwner(paneKey: string, owner: AgentTurnOwner): boolean {
     const resolvedPaneKey = this.resolvePaneKeyAlias(paneKey.trim())
     const existing = this.agentTurnLifecycleByPaneKey.get(resolvedPaneKey)
-    if (!existing || (owner && !agentTurnOwnersEqual(existing.owner, owner))) {
+    if (!existing || !isAgentTurnOwner(owner) || !agentTurnOwnersEqual(existing.owner, owner)) {
       return false
     }
     this.agentTurnLifecycleByPaneKey.delete(resolvedPaneKey)
@@ -110,32 +109,12 @@ export abstract class AgentHookServerTurnLifecycle extends AgentHookServerState 
     if (registration.state.executionVerdict === 'exited') {
       return null
     }
-    const boundEvidence = this.bindProviderEvidenceToCurrentTurn(registration.state, evidence)
-    const events = providerEvidenceToLifecycleEvents(owner, boundEvidence)
+    const events = providerEvidenceToLifecycleEvents(owner, evidence)
     let lastReduction: AgentTurnLifecycleReduction | null = null
     for (const event of events) {
       lastReduction = this.reduceAgentTurnEvent(paneKey, event)
     }
     return lastReduction
-  }
-
-  /**
-   * Some provider child hooks identify the child but omit the root turn id. Once the host has
-   * already observed a root start, binding that child to the current turn is the only safe
-   * recovery; root outcomes remain anonymous and are rejected by the provider adapter.
-   */
-  private bindProviderEvidenceToCurrentTurn(
-    state: AgentTurnLifecycleState,
-    evidence: ProviderTurnEvidence
-  ): ProviderTurnEvidence {
-    if (evidence.turnId || !evidence.workId || !state.currentTurnId) {
-      return evidence
-    }
-    return {
-      ...evidence,
-      turnId: state.currentTurnId,
-      eventId: boundedAgentTurnEvidenceId(`${evidence.eventId}:turn:${state.currentTurnId}`)
-    }
   }
 
   protected reduceAgentTurnEvent(
