@@ -100,13 +100,16 @@ function spokeIn(read: CapturedRead): boolean {
   return read.messages.some((message) => message.role === 'user' || message.role === 'assistant')
 }
 
-it('publishes at least one user or assistant message for every supported agent', async () => {
+it('publishes at least one user or assistant message for every source it reads', async () => {
   const reads = await readEveryAgentVault()
 
-  const silent = AI_VAULT_AGENTS.filter(
-    (agent) => !reads.some((read) => read.agent === agent && spokeIn(read))
-  )
-  expect(silent).toEqual([])
+  // Per source, not per agent: OpenCode has two storage shapes, and asking only
+  // that *some* OpenCode session spoke is exactly the question that read as
+  // healthy while every SQLite session in the vault was silent.
+  expect(reads.filter((read) => !spokeIn(read)).map((read) => read.path)).toEqual([])
+  // And the vault really does cover every agent, so a new one cannot be added
+  // without a fixture that proves it publishes.
+  expect(new Set(reads.map((read) => read.agent))).toEqual(new Set(AI_VAULT_AGENTS))
 })
 
 it('publishes an OpenCode SQLite session through the same channel as every file source', async () => {
