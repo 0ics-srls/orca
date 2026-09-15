@@ -1,6 +1,6 @@
 // @vitest-environment happy-dom
 
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { TooltipProvider } from '@/components/ui/tooltip'
@@ -8,6 +8,7 @@ import type { AiVaultSession } from '../../../../shared/ai-vault-types'
 import type { AiVaultSessionWorktreeInfo } from './ai-vault-session-worktree'
 import { searchHit } from '../../../../shared/ai-vault-search-test-fixture'
 import type { AiVaultSearchHit } from '../../../../shared/ai-vault-search-types'
+import type { AiVaultSubagentResumeActions } from './AiVaultSessionSubagents'
 import { VaultSessionRow } from './AiVaultSessionRow'
 
 const session = {
@@ -61,6 +62,8 @@ afterEach(() => {
 function renderRow(
   overrides: {
     searchHit?: AiVaultSearchHit
+    session?: AiVaultSession
+    subagentResume?: AiVaultSubagentResumeActions
     detailsExpanded?: boolean
     worktreeInfo?: AiVaultSessionWorktreeInfo | null
     onToggleDetails?: () => void
@@ -70,8 +73,9 @@ function renderRow(
   return render(
     <TooltipProvider>
       <VaultSessionRow
-        session={session}
+        session={overrides.session ?? session}
         searchHit={overrides.searchHit}
+        subagentResume={overrides.subagentResume}
         liveState={null}
         resumeStartup={{ command: 'gemini --resume sess-1' }}
         realHomeResumeStartup={{ command: 'gemini --resume sess-1' }}
@@ -167,4 +171,42 @@ describe('VaultSessionRow agent metadata line', () => {
 it('keeps matching evidence visible in expanded search rows', () => {
   const { container } = renderRow({ detailsExpanded: true, searchHit: searchHit() })
   expect(container.querySelector('mark')?.textContent).toBe('needle')
+})
+
+it('threads child resume through expanded parent details without resuming the parent', async () => {
+  const child: AiVaultSession = {
+    ...session,
+    agent: 'omp',
+    sessionId: 'child',
+    filePath: '/tmp/parent/worker.jsonl',
+    title: 'OMP worker',
+    subagent: { parentSessionId: 'parent', agentType: 'worker', status: 'completed' }
+  }
+  vi.mocked(window.api.aiVault.listSubagentSessions).mockResolvedValue({
+    sessions: [child],
+    issues: []
+  })
+  const resume = {
+    getState: vi.fn(() => ({
+      blocked: false,
+      worktreeId: 'folder:target',
+      usesSessionWorktree: false
+    })),
+    onResume: vi.fn()
+  }
+  renderRow({
+    session: {
+      ...session,
+      agent: 'omp',
+      sessionId: 'parent',
+      messageCount: 0,
+      previewMessages: [],
+      subagentTranscriptCount: 1
+    },
+    detailsExpanded: true,
+    subagentResume: resume
+  })
+  await act(async () => {})
+  fireEvent.click(screen.getByTitle('Resume in New Tab'))
+  expect(resume.onResume).toHaveBeenCalledExactlyOnceWith(child, 'folder:target')
 })
