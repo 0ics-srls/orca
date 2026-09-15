@@ -172,9 +172,7 @@ export function sessionScreenTabMountAdapters(
             )
           }
           if (name === 'close-tab') {
-            return performHookAction(() =>
-              actions.handleCloseSessionTab(terminalTab)
-            )
+            return performHookAction(() => actions.handleCloseSessionTab(terminalTab))
           }
           throw new Error(`Unknown tab close action: ${name}`)
         },
