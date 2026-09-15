@@ -58,9 +58,14 @@ export abstract class BrowserManagerNavigation extends BrowserManagerVisibility 
       request.webContentsId === undefined
         ? undefined
         : this.tabIdByWebContentsId.get(request.webContentsId)
+    // Viewport emulation is delivered per-target over CDP and cannot reach a worker. A worker
+    // request carries no webContentsId, and resolving a session-wide mobile intent for it put the
+    // mobile UA on the wire for a context whose own navigator.userAgent is desktop-clean — and for
+    // every tab sharing the session, not just the emulated one. One context, one identity: workers
+    // stay on the session identity, and viewport emulation reaches documents only.
     const mobile = browserPageId
       ? (this.viewportUaOverrideMobileByTabId.get(browserPageId) ?? false)
-      : this.hasSessionMobileViewportIntent(request.session)
+      : false
     return buildViewportUserAgentOverride({
       url: request.url,
       mobile,

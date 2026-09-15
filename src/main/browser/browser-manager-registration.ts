@@ -46,7 +46,6 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     const previousWebContentsId = this.webContentsIdByTabId.get(browserTabId)
     if (previousWebContentsId !== undefined && previousWebContentsId !== webContentsId) {
       this.retireStaleGuestWebContents(previousWebContentsId)
-      this.clearSessionMobileViewportIntent(browserTabId)
       this.viewportPresetActiveByTabId.delete(browserTabId)
       this.viewportScrollStateByTabId.delete(browserTabId)
     }
@@ -126,7 +125,6 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     this.worktreeIdByTabId.delete(browserTabId)
     // Why: drop the viewport-op chain so the Map doesn't retain a promise keyed to a destroyed guest.
     this.viewportOpsByTabId.delete(browserTabId)
-    this.clearSessionMobileViewportIntent(browserTabId)
     this.viewportUaOverrideMobileByTabId.delete(browserTabId)
     this.viewportPresetActiveByTabId.delete(browserTabId)
     this.viewportScrollStateByTabId.delete(browserTabId)
@@ -163,7 +161,6 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     const previousWebContentsId = this.webContentsIdByTabId.get(browserPageId)
     if (previousWebContentsId !== undefined && previousWebContentsId !== webContentsId) {
       this.retireStaleGuestWebContents(previousWebContentsId)
-      this.clearSessionMobileViewportIntent(browserPageId)
       this.viewportPresetActiveByTabId.delete(browserPageId)
       this.viewportScrollStateByTabId.delete(browserPageId)
     }
@@ -200,7 +197,6 @@ export abstract class BrowserManagerRegistration extends BrowserManagerGuestPoli
     this.worktreeIdByTabId.clear()
     this.sessionProfileIdByPageId.clear()
     this.viewportUaOverrideMobileByTabId.clear()
-    this.mobileViewportTabIdsBySession.clear()
     this.viewportPresetActiveByTabId.clear()
     this.viewportScrollStateByTabId.clear()
     this.authUserAgentOverrideStateByGuestId.clear()

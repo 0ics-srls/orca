@@ -164,9 +164,8 @@ export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifec
           enabled: override.mobile,
           maxTouchPoints: override.mobile ? 5 : 0
         })
-        // Navigation and worker requests must see the preset while the final CDP write is in flight.
+        // Navigation must see the preset while the final CDP write is in flight.
         this.viewportUaOverrideMobileByTabId.set(browserTabId, override.mobile)
-        this.setSessionMobileViewportIntent(browserTabId, guest.session, override.mobile)
         await this.sendViewportUserAgentOverride(guest, override.mobile)
       } else {
         await dbg.sendCommand('Emulation.clearDeviceMetricsOverride', {})
@@ -183,7 +182,6 @@ export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifec
         const trackedMobile = this.viewportUaOverrideMobileByTabId.get(browserTabId)
         // A navigation after this point must not re-install the override behind the clear.
         this.viewportUaOverrideMobileByTabId.delete(browserTabId)
-        this.clearSessionMobileViewportIntent(browserTabId)
         try {
           if (this.authUserAgentOverrideStateByGuestId.has(guest.id)) {
             const url = this.resolveTabNavigationUrl(guest)
@@ -208,7 +206,6 @@ export abstract class BrowserManagerViewport extends BrowserManagerDownloadLifec
         } catch (error) {
           if (trackedMobile !== undefined) {
             this.viewportUaOverrideMobileByTabId.set(browserTabId, trackedMobile)
-            this.setSessionMobileViewportIntent(browserTabId, guest.session, trackedMobile)
           }
           throw error
         }

@@ -90,29 +90,53 @@ describe('browser session wire identity under Electron', () => {
     expect(result.receipts.some(({ userAgent }) => /Firefox\//.test(userAgent ?? ''))).toBe(false)
   }, 40_000)
 
-  it('keeps mobile traffic CriOS while an unmapped numeric popup stays desktop-clean', async () => {
+  // Viewport emulation is a per-target CDP override. It reaches the emulated target and nothing
+  // else, so every context must report on the wire the same identity its own JavaScript reports —
+  // a document that fetches as mobile and a worker that fetches as whatever it says it is.
+  it('emulates the targeted tab and leaves every other context self-consistent', async () => {
     const result = await runProbe('mobile')
     assertCoverage(result)
-    const mobilePaths = [
+
+    const targetPaths = [
       '/',
+      '/document-fetch',
+      '/document-xhr',
+      '/document-image',
       '/blob-fetch',
       '/blob-xhr',
       '/blob-image',
-      '/shared-worker-fetch-a',
-      '/shared-worker-fetch-b',
-      '/service-worker-fetch',
       '/plain-ws',
       '/secure-ws'
     ]
-    expect(distinctUserAgents(receiptsForPaths(result.receipts, mobilePaths))).toEqual([
+    expect(distinctUserAgents(receiptsForPaths(result.receipts, targetPaths))).toEqual([
       result.mobileUserAgent
     ])
+    expect(identityForContext(result.identities, 'document').userAgent).toBe(result.mobileUserAgent)
+    expect(identityForContext(result.identities, 'blob').userAgent).toBe(result.mobileUserAgent)
+
+    // A per-target override cannot reach a worker, so the worker stays on the session identity in
+    // JavaScript. Its requests must leave on that same identity rather than borrowing the preset
+    // of whichever tab happened to start it.
+    for (const [context, paths] of [
+      ['shared-worker', ['/shared-worker-fetch-a', '/shared-worker-fetch-b']],
+      ['service-worker', ['/service-worker-fetch']]
+    ] as const) {
+      expect(identityForContext(result.identities, context).userAgent).toBe(result.cleanUserAgent)
+      expect(distinctUserAgents(receiptsForPaths(result.receipts, paths))).toEqual([
+        result.cleanUserAgent
+      ])
+    }
+
     expect(userAgentForPath(result.receipts, '/popup')).toBe(result.cleanUserAgent)
     expect(identityForContext(result.identities, 'popup').userAgent).toBe(result.cleanUserAgent)
-    expect(identityForContext(result.identities, 'document').userAgent).toBe(result.mobileUserAgent)
   }, 40_000)
 
-  it('makes the shared-session mobile worker contract explicit with a desktop peer', async () => {
+  // The leak this closes: with one tab emulated mobile and a desktop peer sharing the session, the
+  // shared worker reported desktop in JavaScript while its fetches left as mobile — and the peer's
+  // own worker traffic inherited a preset that peer never had. Closing the emulated tab silently
+  // reverted it. A single context was internally inconsistent, which is worse than two contexts
+  // that disagree but are each coherent.
+  it('leaves a desktop peer and the shared worker untouched by another tab emulation', async () => {
     const result = await runProbe('mixed-mobile')
     assertCoverage(result)
     expect(identityForContext(result.identities, 'document').userAgent).toBe(result.mobileUserAgent)
@@ -120,16 +144,18 @@ describe('browser session wire identity under Electron', () => {
       result.cleanUserAgent
     )
     expect(userAgentForPath(result.receipts, '/desktop-peer')).toBe(result.cleanUserAgent)
-    expect(
-      distinctUserAgents(
-        receiptsForPaths(result.receipts, ['/shared-worker-fetch-a', '/shared-worker-fetch-b'])
-      )
-    ).toEqual([result.mobileUserAgent])
+
+    // Both shared workers report clean in JavaScript, so both must fetch as clean.
     expect(
       result.identities
         .filter(({ context }) => context === 'shared-worker')
         .map(({ userAgent }) => userAgent)
     ).toEqual([result.cleanUserAgent, result.cleanUserAgent])
+    expect(
+      distinctUserAgents(
+        receiptsForPaths(result.receipts, ['/shared-worker-fetch-a', '/shared-worker-fetch-b'])
+      )
+    ).toEqual([result.cleanUserAgent])
   }, 40_000)
 
   it('keeps the process-native identity across documents, frames, and workers', async () => {
@@ -325,7 +351,10 @@ async function run() {
           callback({ requestHeaders: details.requestHeaders })
           return
         }
-        if (details.webContentsId !== undefined && details.webContentsId !== mainWebContentsId) {
+        // Models the viewport-emulation rule: only the emulated target's own requests are rewritten.
+        // A worker request carries no webContentsId, so it keeps the session identity here — which is
+        // the identity the worker's own JavaScript reports.
+        if (details.webContentsId !== mainWebContentsId) {
           callback({ requestHeaders: details.requestHeaders })
           return
         }
