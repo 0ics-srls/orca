@@ -90,6 +90,7 @@ describe('requestTerminalTabCloseFromRenderer', () => {
       isDestroyed: () => false,
       webContents
     })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the EventEmitter test double implements the BrowserWindow events used by this test.
     const pending = requestTerminalTabCloseFromRenderer(mainWindow as never, 'tab-closed')
     expect(ipcEmitter.listenerCount('ui:terminalTabCloseResponse')).toBe(1)
 
