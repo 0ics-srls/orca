@@ -109,6 +109,26 @@ describe('Claude turn ownership', () => {
     expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(true)
   })
 
+  it('refuses a stale id after the owned turn settles', async () => {
+    const claude = fakeClaude({ replayUuid: 'echo-turn' })
+    const { adapter, bodies, connection } = await acquiredWithJournal(claude)
+
+    await adapter.dispatch({
+      sessionId: 'session-1',
+      clientMessageId: 'client-1',
+      body: USER_MESSAGE,
+      fence: 7
+    })
+    expect(runningTurnId(bodies)).toBe('echo-turn')
+    completeTurn(connection, 'result-1')
+    expect(runningTurnId(bodies)).toBeNull()
+
+    await expect(
+      adapter.cancelTurn({ sessionId: 'session-1', turnId: 'echo-turn', fence: 7 })
+    ).resolves.toEqual({ cancelled: false })
+    expect(connection.calls.some((call) => call.subtype === 'interrupt')).toBe(false)
+  })
+
   it('still stops an echo-opened turn', async () => {
     const claude = fakeClaude({ replayUuid: 'echo-turn' })
     const { adapter, bodies, connection } = await acquiredWithJournal(claude)

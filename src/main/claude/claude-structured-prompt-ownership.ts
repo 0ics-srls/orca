@@ -77,8 +77,14 @@ export async function cancelClaudeStructuredTurn(input: {
   // The translator owns turn identity. A session with no journal has published no
   // turn row for a client to name, so it holds no identity this request can contradict.
   const ownsRequestedTurn = (): boolean => {
-    const currentTurnId = session.translator?.currentTurnId ?? null
-    return currentTurnId === null || currentTurnId === request.turnId
+    const translator = session.translator
+    if (!translator) {
+      return session.dispatchSequence === 0
+    }
+    const currentTurnId = translator.currentTurnId
+    return currentTurnId === null
+      ? session.dispatchSequence === 0
+      : currentTurnId === request.turnId
   }
   const isCurrent = (): boolean =>
     sessions.get(request.sessionId) === session &&
