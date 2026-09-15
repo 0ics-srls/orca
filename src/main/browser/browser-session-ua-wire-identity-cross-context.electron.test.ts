@@ -40,6 +40,9 @@ type ProbeResult = Readonly<{
   identities: readonly WireProbeJavaScriptIdentity[]
   cdpRequests: readonly BrowserSessionUaCdpRequest[]
   cdpDiagnostics: readonly string[]
+  /** Why carried: a CI-only capture failure is undiagnosable without the fixture's own output. */
+  fixtureResult: string
+  fixtureStderr: string
 }>
 
 describe('browser session wire identity in cross-site frames and dedicated workers', () => {
@@ -113,10 +116,17 @@ async function runProbe(arm: ProbeArm): Promise<ProbeResult> {
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON.parse is untyped; the fixture writes this exact shape before exiting.
     const parsed = JSON.parse(fixtureResult) as Omit<
       ProbeResult,
-      'receipts' | 'identities' | 'cdpRequests' | 'cdpDiagnostics'
+      | 'receipts'
+      | 'identities'
+      | 'cdpRequests'
+      | 'cdpDiagnostics'
+      | 'fixtureResult'
+      | 'fixtureStderr'
     >
     return {
       ...parsed,
+      fixtureResult,
+      fixtureStderr: processResult.stderr,
       receipts: [...server.receipts],
       identities: [...server.identities],
       cdpDiagnostics: [...collector.diagnostics],
@@ -249,7 +259,7 @@ function assertCapturedContexts(result: ProbeResult): void {
   ]) {
     expect(
       paths,
-      `${result.arm} omitted ${path}: ${JSON.stringify(result.cdpDiagnostics)}`
+      `${result.arm} omitted ${path}\n  cdp: ${JSON.stringify(result.cdpDiagnostics)}\n  receipts: ${JSON.stringify(result.receipts.map((r) => r.path))}\n  fixture: ${result.fixtureResult}\n  stderr: ${result.fixtureStderr}`
     ).toContain(path)
   }
   expect(
