@@ -40,9 +40,17 @@ export function extractExecError(err: unknown): { stderr: string; stdout: string
   return { stderr: String(err), stdout: '' }
 }
 
-/** True only when the OS could not find the command binary to spawn. */
+/** Recognizes spawn ENOENT; callers must separately rule out a missing cwd. */
 export function isMissingCommandBinaryError(err: unknown): boolean {
-  return Boolean(err && typeof err === 'object' && 'code' in err && err.code === 'ENOENT')
+  return Boolean(
+    err &&
+    typeof err === 'object' &&
+    'code' in err &&
+    err.code === 'ENOENT' &&
+    'syscall' in err &&
+    typeof err.syscall === 'string' &&
+    err.syscall.startsWith('spawn ')
+  )
 }
 
 /**
