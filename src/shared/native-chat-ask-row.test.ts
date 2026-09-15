@@ -18,7 +18,17 @@ describe('native chat ask row', () => {
     const output: NativeChatBlock = { type: 'tool-result', output: 'file contents' }
     expect(nativeChatAskRunBlocks([ask, read, answer, output])).toEqual({
       asks: [ask],
+      unansweredAsks: [],
       work: [read, output]
+    })
+  })
+
+  it('keeps an ask open only until its FIFO result arrives', () => {
+    const ask = askCall({ questions: [{ question: 'Proceed?' }] })
+    expect(nativeChatAskRunBlocks([ask])).toEqual({
+      asks: [ask],
+      unansweredAsks: [ask],
+      work: []
     })
   })
   it('names the one question a prompt asks', () => {

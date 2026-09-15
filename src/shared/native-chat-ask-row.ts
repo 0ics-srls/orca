@@ -29,21 +29,33 @@ export function isNativeChatAskCall(block: NativeChatBlock): boolean {
 /** Remove each summarized call together with its FIFO result, preserving failed calls. */
 export function nativeChatAskRunBlocks(blocks: NativeChatBlock[]): {
   asks: NativeChatBlock[]
+  unansweredAsks: NativeChatBlock[]
   work: NativeChatBlock[]
 } {
+  if (!blocks.some(isNativeChatAskCall)) {
+    return { asks: [], unansweredAsks: [], work: blocks }
+  }
   const removed = new Set<NativeChatBlock>()
   const asks: NativeChatBlock[] = []
+  const unansweredAsks: NativeChatBlock[] = []
   for (const { call, result } of pairToolBlocks(blocks)) {
     if (!call || !isNativeChatAskCall(call) || result?.isError) {
       continue
     }
     asks.push(call)
+    if (!result) {
+      unansweredAsks.push(call)
+    }
     removed.add(call)
     if (result) {
       removed.add(result)
     }
   }
-  return { asks, work: removed.size ? blocks.filter((block) => !removed.has(block)) : blocks }
+  return {
+    asks,
+    unansweredAsks,
+    work: removed.size ? blocks.filter((block) => !removed.has(block)) : blocks
+  }
 }
 
 /** Whether this run asks the reader anything. Decided by the tool name alone,

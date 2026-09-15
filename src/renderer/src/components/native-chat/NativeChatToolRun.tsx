@@ -93,10 +93,11 @@ export function NativeChatToolRun({
   const subagentRows = subagentGroups
     .filter(isRenderableSubagentGroup)
     .map((group) => <NativeChatSubagentRun key={group.groupId} block={group} />)
-  const { asks, work: headerBlocks } = useMemo(
-    () => (structuredActivityUi ? nativeChatAskRunBlocks(blocks) : { asks: [], work: blocks }),
-    [blocks, structuredActivityUi]
-  )
+  const {
+    asks,
+    unansweredAsks,
+    work: headerBlocks
+  } = useMemo(() => nativeChatAskRunBlocks(blocks), [blocks])
   const hasAskCall = asks.length > 0
   const askSubject = hasAskCall ? nativeChatAskRunSubject(asks) : null
   const showsHeader = !hasAskCall || countToolCalls(headerBlocks) > 0
@@ -121,7 +122,7 @@ export function NativeChatToolRun({
     ? selectActiveToolCall(headerBlocks, { activeTurnIsWorking })
     : null
   const isSettled = headerActiveCall == null
-  const askIsActive = selectActiveToolCall(asks, { activeTurnIsWorking }) !== null
+  const askIsActive = selectActiveToolCall(unansweredAsks, { activeTurnIsWorking }) !== null
   const hasRunningCall = headerBlocks.some(
     (block) => isToolCallBlock(block) && block.state === 'running'
   )
