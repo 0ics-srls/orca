@@ -9,7 +9,7 @@ import { nativeStoreModule, partialNativeModule } from './native-module-traps'
  * a read that could return a byte nothing declared would put the device back inside the recording.
  * They are recorded as effects instead, which is where an unobserved write becomes observable.
  */
-export type DeclaredNotification = {
+type DeclaredNotification = {
   readonly request: {
     readonly identifier: string
     readonly content: { readonly data?: unknown }
@@ -20,7 +20,7 @@ export type DeclaredDeviceState = {
   readonly deviceStore?: Readonly<Record<string, string>>
   readonly deviceState?: { readonly notificationTray?: readonly DeclaredNotification[] }
 }
-export type DeviceEffect = (name: string, value: unknown) => void
+type DeviceEffect = (name: string, value: unknown) => void
 
 /**
  * The substitutes a scenario's declarations back, and the sink its writes are recorded through.

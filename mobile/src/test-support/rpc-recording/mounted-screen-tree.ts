@@ -120,7 +120,7 @@ export function projectMountedScreen(screen: { tree: () => unknown; crash: () =>
  * read off the screen, and the labels are the affordances. A screen that stops rendering its rows,
  * or blanks its copy, moves all three.
  */
-export function projectScreenTree(tree: unknown): {
+function projectScreenTree(tree: unknown): {
   elements: Record<string, number>
   text: string[]
   labels: string[]
