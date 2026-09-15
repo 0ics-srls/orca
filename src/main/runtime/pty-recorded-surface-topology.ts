@@ -33,6 +33,21 @@ export type RecordedPtySurface = {
   surfaceRecordedAtGraphSequence: number
 }
 
+/**
+ * The one way to name a PTY's surface. A bare `tabId =` / `paneKey =` leaves the stamp behind,
+ * and the leaf map then answers for a pane the graph has not been shown yet.
+ */
+export function recordPtySurface(
+  pty: RecordedPtySurface,
+  tabId: string,
+  paneKey: string,
+  graphSequence: number
+): void {
+  pty.tabId = tabId
+  pty.paneKey = paneKey
+  pty.surfaceRecordedAtGraphSequence = graphSequence
+}
+
 export type PtySurfaceTopology = {
   /** Monotonic count of authoritative graph statements applied so far. */
   graphSequence: number

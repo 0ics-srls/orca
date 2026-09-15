@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { ptyHoldsRecordedSurface, type PtySurfaceTopology } from './pty-recorded-surface-topology'
+import {
+  ptyHoldsRecordedSurface,
+  recordPtySurface,
+  type PtySurfaceTopology
+} from './pty-recorded-surface-topology'
 
 const TAB = 'tab-1'
 const LEAF = '11111111-1111-4111-8111-111111111111'
@@ -79,6 +83,18 @@ describe('ptyHoldsRecordedSurface', () => {
         topology({ graphSequence: 2, ptyIdHoldingPane: () => undefined })
       )
     ).toBe(false)
+  })
+
+  it('re-attaches a contradicted record once a claim re-records its surface', () => {
+    // Orphan adoption, split, and TUI-owner recovery all name a pane the graph has not been shown
+    // yet, exactly as spawn does; written through the one writer they are immune until it speaks.
+    const record = pty({ surfaceRecordedAtGraphSequence: 1 })
+    const graph = topology({ graphSequence: 3, ptyIdHoldingPane: () => undefined })
+    expect(ptyHoldsRecordedSurface(record, graph)).toBe(false)
+
+    recordPtySurface(record, TAB, `${TAB}:${LEAF}`, graph.graphSequence)
+    expect(ptyHoldsRecordedSurface(record, graph)).toBe(true)
+    expect(ptyHoldsRecordedSurface(record, { ...graph, graphSequence: 4 })).toBe(false)
   })
 
   it('reports no surface when the record never named a pane', () => {
