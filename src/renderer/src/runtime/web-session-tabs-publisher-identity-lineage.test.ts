@@ -77,21 +77,31 @@ describe('a headless merge is the same publisher as its base epoch', () => {
     expect(decideWebSessionTabsSnapshot(frame(GEN_1, 3), ENV).apply).toBe(true)
   })
 
-  /** The same single answer has to hold at the recovery gate, which fences on identity too. */
-  it('fences a merged predecessor at the recovery gate as well', () => {
-    const firstReceived = recordReceivedWebSessionTabsSnapshot(ENV, frame(GEN_1, 5))
-    expect(decideWebSessionTabsSnapshot(frame(GEN_1, 5), ENV).apply).toBe(true)
+  /**
+   * The same single answer has to hold at the recovery gate, which fences on identity too. Since a
+   * retraction no longer retires anything, a handover is the only thing that reaches this fence:
+   * narrower than it was, not unreachable.
+   */
+  for (const [label, epoch] of [
+    ['bare', GEN_1],
+    ['headless-merge', MERGED_GEN_1]
+  ] as const) {
+    it(`fences a ${label} predecessor at the recovery gate as well`, () => {
+      const firstReceived = recordReceivedWebSessionTabsSnapshot(ENV, frame(GEN_1, 5))
+      expect(decideWebSessionTabsSnapshot(frame(GEN_1, 5), ENV).apply).toBe(true)
 
-    const successorReceived = recordReceivedWebSessionTabsSnapshot(ENV, frame(GEN_2, 1))
-    expect(successorReceived).toBeGreaterThan(firstReceived)
-    expect(decideWebSessionTabsSnapshot(frame(GEN_2, 1), ENV).apply).toBe(true)
+      const successorReceived = recordReceivedWebSessionTabsSnapshot(ENV, frame(GEN_2, 1))
+      expect(successorReceived).toBeGreaterThan(firstReceived)
+      expect(decideWebSessionTabsSnapshot(frame(GEN_2, 1), ENV).apply).toBe(true)
 
-    // Late enough to win on delivery order; retired by lineage, so it must still lose.
-    const merged = frame(MERGED_GEN_1, 9)
-    const mergedReceived = recordReceivedWebSessionTabsSnapshot(ENV, merged)
-    expect(mergedReceived).toBeGreaterThan(successorReceived)
-    expect(shouldApplyRecoveredWebSessionTabsSnapshot(ENV, merged, mergedReceived)).toBe(false)
-  })
+      // A sibling stream delivers it late enough to win on delivery order; retired by lineage, so
+      // it must still lose.
+      const late = frame(epoch, 9)
+      const lateReceived = recordReceivedWebSessionTabsSnapshot(ENV, late)
+      expect(lateReceived).toBeGreaterThan(successorReceived)
+      expect(shouldApplyRecoveredWebSessionTabsSnapshot(ENV, late, lateReceived)).toBe(false)
+    })
+  }
 
   /** A retirement is per worktree: a sibling worktree's history must not fence this one. */
   it('keeps lineage retirement scoped to the worktree that retired it', () => {
