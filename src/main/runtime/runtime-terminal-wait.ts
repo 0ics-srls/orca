@@ -89,6 +89,9 @@ export class RuntimeTerminalWait {
         const waiter: TerminalWaiter = {
           handle,
           processIncarnation: this.deps.getTerminalProcessIncarnation(handle),
+          ...(condition === 'tui-idle'
+            ? { evidenceCursor: this.evidence.capturePty(pty.pty) }
+            : {}),
           condition,
           resolve,
           reject,
@@ -107,7 +110,14 @@ export class RuntimeTerminalWait {
               reject(new Error('timeout'))
               return
             }
-            resolvePtyTuiIdleTimeout(handle, resolve, reject, this.deps, this.evidence)
+            resolvePtyTuiIdleTimeout(
+              handle,
+              resolve,
+              reject,
+              this.deps,
+              this.evidence,
+              waiter.evidenceCursor
+            )
           }, effectiveTimeoutMs)
         }
         this.waiters.add(waiter)
@@ -129,7 +139,9 @@ export class RuntimeTerminalWait {
               waiter,
               buildPtyTerminalWaitBlockedResult(handle, condition, live.pty, blockedReason)
             )
-          } else if (this.evidence.isPtySatisfied(live.pty, livePtyWaitText)) {
+          } else if (
+            this.evidence.isPtySatisfied(live.pty, livePtyWaitText, waiter.evidenceCursor)
+          ) {
             this.waiters.resolve(
               waiter,
               buildPtyTerminalWaitResult(
@@ -187,6 +199,7 @@ export class RuntimeTerminalWait {
       const waiter: TerminalWaiter = {
         handle,
         processIncarnation: this.deps.getTerminalProcessIncarnation(handle),
+        ...(condition === 'tui-idle' ? { evidenceCursor: this.evidence.captureLeaf(leaf) } : {}),
         condition,
         resolve,
         reject,
@@ -207,7 +220,14 @@ export class RuntimeTerminalWait {
             reject(new Error('timeout'))
             return
           }
-          resolveLeafTuiIdleTimeout(handle, resolve, reject, this.deps, this.evidence)
+          resolveLeafTuiIdleTimeout(
+            handle,
+            resolve,
+            reject,
+            this.deps,
+            this.evidence,
+            waiter.evidenceCursor
+          )
         }, effectiveTimeoutMs)
       }
 
@@ -229,7 +249,9 @@ export class RuntimeTerminalWait {
               waiter,
               buildTerminalWaitBlockedResult(handle, condition, live.leaf, blockedReason)
             )
-          } else if (this.evidence.isLeafSatisfied(live.leaf, liveLeafWaitText)) {
+          } else if (
+            this.evidence.isLeafSatisfied(live.leaf, liveLeafWaitText, waiter.evidenceCursor)
+          ) {
             this.waiters.resolve(
               waiter,
               buildTerminalWaitResult(

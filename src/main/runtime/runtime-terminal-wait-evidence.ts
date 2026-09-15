@@ -5,7 +5,9 @@ import { detectKnownReadyPromptAgent } from './terminal-wait-detection'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import {
   observeTuiIdle,
+  captureTuiIdleEvidenceCursor,
   type FirstPartyAgentStatus,
+  type TuiIdleEvidenceCursor,
   type TuiIdleObservation
 } from './tui-idle-evidence'
 
@@ -15,6 +17,7 @@ type RuntimeTerminalWaitEvidenceDependencies = {
   getTabTitle(tabId: string): string | null
   getPaneAgent(ptyId: string | null | undefined): TuiAgent | null
   getFirstPartyAgentStatus(ptyId: string | null | undefined): FirstPartyAgentStatus
+  getAttachmentId?(ptyId: string | null | undefined): string | null
 }
 
 export class RuntimeTerminalWaitEvidence {
@@ -28,38 +31,84 @@ export class RuntimeTerminalWaitEvidence {
     }
   }
 
-  observePty(pty: RuntimePtyWorktreeRecord, waitText: string): TuiIdleObservation {
+  observePty(
+    pty: RuntimePtyWorktreeRecord,
+    waitText: string,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): TuiIdleObservation {
     const promptAgent = detectKnownReadyPromptAgent(waitText)
     const adoptedIdle = this.deps.getAdoptedPtyIdleStatus(pty) === 'idle'
     const adoptedTitle = this.deps.getAdoptedPtyTitle?.(pty) ?? null
     return observeTuiIdle({
-      record: pty,
+      record: {
+        ...pty,
+        lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
+        attachmentId: pty.incarnationId
+      },
       rendererTitle: adoptedTitle,
       readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,
       positiveBodyEvidenceAgent: promptAgent,
       positiveBodyEvidenceSource: adoptedIdle ? 'title' : 'screen',
       agent: this.deps.getPaneAgent(pty.ptyId),
-      firstPartyStatus: this.deps.getFirstPartyAgentStatus(pty.ptyId)
+      firstPartyStatus: this.deps.getFirstPartyAgentStatus(pty.ptyId),
+      evidenceCursor
     })
   }
 
-  observeLeaf(leaf: RuntimeLeafRecord, waitText: string): TuiIdleObservation {
+  observeLeaf(
+    leaf: RuntimeLeafRecord,
+    waitText: string,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): TuiIdleObservation {
     const promptAgent = detectKnownReadyPromptAgent(waitText)
     return observeTuiIdle({
-      record: leaf,
+      record: {
+        ...leaf,
+        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+      },
       rendererTitle: leaf.paneTitle ?? this.deps.getTabTitle(leaf.tabId),
       readPositiveBodyEvidence: () => promptAgent !== null,
       positiveBodyEvidenceAgent: promptAgent,
       agent: this.deps.getPaneAgent(leaf.ptyId),
-      firstPartyStatus: this.deps.getFirstPartyAgentStatus(leaf.ptyId)
+      firstPartyStatus: this.deps.getFirstPartyAgentStatus(leaf.ptyId),
+      evidenceCursor
     })
   }
 
-  isPtySatisfied(pty: RuntimePtyWorktreeRecord, waitText: string): boolean {
-    return this.observePty(pty, waitText).state === 'ready'
+  capturePty(pty: RuntimePtyWorktreeRecord): TuiIdleEvidenceCursor {
+    return captureTuiIdleEvidenceCursor(
+      {
+        ...pty,
+        lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
+        attachmentId: pty.incarnationId
+      },
+      pty.incarnationId
+    )
   }
 
-  isLeafSatisfied(leaf: RuntimeLeafRecord, waitText: string): boolean {
-    return this.observeLeaf(leaf, waitText).state === 'ready'
+  captureLeaf(leaf: RuntimeLeafRecord): TuiIdleEvidenceCursor {
+    return captureTuiIdleEvidenceCursor(
+      {
+        ...leaf,
+        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+      },
+      this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+    )
+  }
+
+  isPtySatisfied(
+    pty: RuntimePtyWorktreeRecord,
+    waitText: string,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): boolean {
+    return this.observePty(pty, waitText, evidenceCursor).state === 'ready'
+  }
+
+  isLeafSatisfied(
+    leaf: RuntimeLeafRecord,
+    waitText: string,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): boolean {
+    return this.observeLeaf(leaf, waitText, evidenceCursor).state === 'ready'
   }
 }

@@ -13,6 +13,11 @@ import type { AgentStatus } from '../../shared/agent-detection'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import type { FirstPartyAgentStatus } from './tui-idle-evidence'
+import {
+  captureTuiIdleEvidenceCursor,
+  observeTuiIdle,
+  type TuiIdleEvidenceRecord
+} from './tui-idle-evidence'
 
 // #6011: `terminal wait --for tui-idle` returned satisfied in ~0s against a working agent,
 // because a Codex/Devin OSC title that carries only the agent NAME is stored as `idle` and
@@ -252,6 +257,82 @@ describe('tui-idle evidence ranking', () => {
     const settled = watch(wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 }))
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 4 + OUTPUT_AGE_FIXTURE_MS)
     expect(settled).not.toHaveBeenCalled()
+  })
+
+  it('does not promote retained title or screen evidence after first-party work ages out', () => {
+    const now = Date.now()
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: EXPLICIT_IDLE_TITLE,
+      lastOscTitleObservedAt: now - 31 * 60 * 1000,
+      lastOutputAt: now - 31 * 60 * 1000,
+      attachmentId: 'inc-1'
+    }
+    expect(
+      observeTuiIdle({
+        record,
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'working',
+          updatedAt: now - 31 * 60 * 1000,
+          attachmentId: 'inc-1'
+        },
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'unknown', source: 'first-party', agent: 'codex' })
+  })
+
+  it('accepts a same-attachment title observation newer than the stale first-party fact', () => {
+    const now = Date.now()
+    expect(
+      observeTuiIdle({
+        record: {
+          lastAgentStatus: 'idle',
+          lastOscTitle: EXPLICIT_IDLE_TITLE,
+          lastOscTitleObservedAt: now,
+          lastOutputAt: now,
+          attachmentId: 'inc-1'
+        },
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'working',
+          updatedAt: now - 31 * 60 * 1000,
+          attachmentId: 'inc-1'
+        },
+        readPositiveBodyEvidence: () => false
+      })
+    ).toMatchObject({ state: 'ready', source: 'title', agent: 'codex' })
+  })
+
+  it('requires a new title or screen observation for each readiness operation', () => {
+    const now = Date.now()
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: EXPLICIT_IDLE_TITLE,
+      lastOscTitleObservedAt: now,
+      lastOutputAt: now,
+      attachmentId: 'inc-1'
+    }
+    const cursor = captureTuiIdleEvidenceCursor(record)
+    expect(
+      observeTuiIdle({
+        record,
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => false
+      })
+    ).toMatchObject({ state: 'unknown', agent: 'codex' })
+    expect(
+      observeTuiIdle({
+        record: { ...record, lastOscTitleObservedAt: now + 1, lastOutputAt: now + 1 },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => false
+      })
+    ).toMatchObject({ state: 'ready', source: 'title', agent: 'codex' })
   })
 })
 

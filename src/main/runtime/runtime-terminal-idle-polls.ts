@@ -11,7 +11,11 @@ import {
   buildTerminalWaitResult
 } from './terminal-wait-results'
 import { buildTerminalWaitText } from './terminal-wait-tail-state'
-import { observeTuiIdle, type FirstPartyAgentStatus } from './tui-idle-evidence'
+import {
+  observeTuiIdle,
+  type FirstPartyAgentStatus,
+  type TuiIdleEvidenceRecord
+} from './tui-idle-evidence'
 import type { TuiAgent } from '../../shared/tui-agent'
 
 import type { TerminalWaiter } from './runtime-terminal-contracts'
@@ -24,6 +28,7 @@ type RuntimeTerminalIdlePollDependencies = {
   getAdoptedPtyTitle?(pty: RuntimePtyWorktreeRecord): string | null
   getPaneAgent(ptyId: string | null | undefined): TuiAgent | null
   getFirstPartyAgentStatus(ptyId: string | null | undefined): FirstPartyAgentStatus
+  getAttachmentId?(ptyId: string | null | undefined): string | null
   /** Re-read the record the waiter registered against; see `liveLeaf` below. */
   getLiveLeaf(leaf: RuntimeLeafRecord): RuntimeLeafRecord
   resolve(waiter: TerminalWaiter, result: RuntimeTerminalWait): void
@@ -104,12 +109,16 @@ export class RuntimeTerminalIdlePolls {
         return
       }
       const observation = observeTuiIdle({
-        record: leaf,
+        record: {
+          ...leaf,
+          attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+        } satisfies TuiIdleEvidenceRecord,
         rendererTitle: leaf.paneTitle ?? this.deps.getTabTitle(leaf.tabId),
         readPositiveBodyEvidence: () => promptAgent !== null,
         positiveBodyEvidenceAgent: promptAgent,
         agent,
-        firstPartyStatus: this.deps.getFirstPartyAgentStatus(leaf.ptyId)
+        firstPartyStatus: this.deps.getFirstPartyAgentStatus(leaf.ptyId),
+        evidenceCursor: waiter.evidenceCursor
       })
       if (observation.state === 'ready') {
         this.stop(entry)
@@ -150,13 +159,18 @@ export class RuntimeTerminalIdlePolls {
       const adoptedIdle = this.deps.getAdoptedPtyIdleStatus(pty) === 'idle'
       const adoptedTitle = this.deps.getAdoptedPtyTitle?.(pty) ?? null
       const observation = observeTuiIdle({
-        record: pty,
+        record: {
+          ...pty,
+          lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
+          attachmentId: pty.incarnationId
+        } satisfies TuiIdleEvidenceRecord,
         rendererTitle: adoptedTitle,
         readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,
         positiveBodyEvidenceAgent: promptAgent,
         positiveBodyEvidenceSource: adoptedIdle ? 'title' : 'screen',
         agent,
-        firstPartyStatus: this.deps.getFirstPartyAgentStatus(pty.ptyId)
+        firstPartyStatus: this.deps.getFirstPartyAgentStatus(pty.ptyId),
+        evidenceCursor: waiter.evidenceCursor
       })
       if (observation.state === 'ready') {
         this.stop(entry)

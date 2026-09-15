@@ -41,6 +41,8 @@ export type RuntimeLeafRecord = RuntimeSyncedLeaf &
     lastAgentStatusObservedLive: boolean
     lastOscTitle: string | null
     lastOscTitleAt: number | null
+    /** Host wall-clock time for the title observation; used to fence historical screen state. */
+    lastOscTitleObservedAt?: number | null
     paneTitleUpdatedAt: number | null
   }
 

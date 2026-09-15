@@ -9,7 +9,11 @@ import {
   detectKnownReadyPromptAgent
 } from './terminal-wait-detection'
 import { buildTerminalWaitText } from './terminal-wait-tail-state'
-import { observeTuiIdle, type TuiIdleObservation } from './tui-idle-evidence'
+import {
+  observeTuiIdle,
+  type TuiIdleEvidenceCursor,
+  type TuiIdleObservation
+} from './tui-idle-evidence'
 
 export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyIncarnationHandle {
   protected resolveExitWaiters(leaf: RuntimeLeafRecord): void {
@@ -50,12 +54,12 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     }
     // A title transition is only usable when the shared evidence evaluator identifies a
     // provider-supported readiness fact; name-only or otherwise unbound observations stay open.
-    const observation = this.observeTuiIdleForLeaf(leaf)
-    if (observation.state !== 'ready') {
-      return
-    }
     for (const waiter of [...waiters]) {
       if (waiter.condition === 'tui-idle') {
+        const observation = this.observeTuiIdleForLeaf(leaf, waiter.evidenceCursor)
+        if (observation.state !== 'ready') {
+          continue
+        }
         this.resolveWaiter(
           waiter,
           buildTerminalWaitResult(handle, 'tui-idle', leaf, {
@@ -97,12 +101,12 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
       return
     }
     // Why: same re-ranking as resolveTuiIdleWaiters above.
-    const observation = this.observeTuiIdleForPty(pty)
-    if (observation.state !== 'ready') {
-      return
-    }
     for (const waiter of [...waiters]) {
       if (waiter.condition === 'tui-idle') {
+        const observation = this.observeTuiIdleForPty(pty, waiter.evidenceCursor)
+        if (observation.state !== 'ready') {
+          continue
+        }
         this.resolveWaiter(
           waiter,
           buildPtyTerminalWaitResult(handle, 'tui-idle', pty, {
@@ -120,17 +124,24 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     return this.observeTuiIdleForLeaf(leaf).state === 'ready'
   }
 
-  protected observeTuiIdleForLeaf(leaf: RuntimeLeafRecord): TuiIdleObservation {
+  protected observeTuiIdleForLeaf(
+    leaf: RuntimeLeafRecord,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): TuiIdleObservation {
     const waitText = buildTerminalWaitText(leaf.tailBuffer, leaf.tailPartialLine, leaf.preview)
     const promptAgent = detectKnownReadyPromptAgent(waitText)
     return observeTuiIdle({
-      record: leaf,
+      record: {
+        ...leaf,
+        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null
+      },
       rendererTitle: leaf.paneTitle ?? this.tabs.get(leaf.tabId)?.title ?? null,
       readPositiveBodyEvidence: () => promptAgent !== null,
       positiveBodyEvidenceAgent: promptAgent,
       agent: this.getPaneAgentForTuiIdle(leaf.ptyId),
       firstPartyStatus:
-        (leaf.ptyId ? this.ptysById.get(leaf.ptyId)?.lastExplicitAgentStatus : null) ?? null
+        (leaf.ptyId ? this.ptysById.get(leaf.ptyId)?.lastExplicitAgentStatus : null) ?? null,
+      evidenceCursor
     })
   }
 
@@ -158,19 +169,27 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     return this.observeTuiIdleForPty(pty).state === 'ready'
   }
 
-  protected observeTuiIdleForPty(pty: RuntimePtyWorktreeRecord): TuiIdleObservation {
+  protected observeTuiIdleForPty(
+    pty: RuntimePtyWorktreeRecord,
+    evidenceCursor?: TuiIdleEvidenceCursor
+  ): TuiIdleObservation {
     const waitText = buildTerminalWaitText(pty.tailBuffer, pty.tailPartialLine, pty.preview)
     const promptAgent = detectKnownReadyPromptAgent(waitText)
     const adoptedIdle = this.getAdoptedPtyExplicitIdleStatus(pty) === 'idle'
     const adoptedTitle = this.getAdoptedPtyTitle(pty)
     return observeTuiIdle({
-      record: pty,
+      record: {
+        ...pty,
+        lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
+        attachmentId: pty.incarnationId
+      },
       rendererTitle: adoptedTitle,
       readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,
       positiveBodyEvidenceAgent: promptAgent,
       positiveBodyEvidenceSource: adoptedIdle ? 'title' : 'screen',
       agent: this.getPaneAgentForTuiIdle(pty.ptyId),
-      firstPartyStatus: pty.lastExplicitAgentStatus ?? null
+      firstPartyStatus: pty.lastExplicitAgentStatus ?? null,
+      evidenceCursor
     })
   }
 

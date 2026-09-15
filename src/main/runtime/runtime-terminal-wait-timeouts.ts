@@ -3,6 +3,7 @@ import { buildPtyTerminalWaitResult, buildTerminalWaitResult } from './terminal-
 import { buildTerminalWaitText } from './terminal-wait-tail-state'
 import type { RuntimeTerminalWaitEvidence } from './runtime-terminal-wait-evidence'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import type { TuiIdleEvidenceCursor } from './tui-idle-evidence'
 
 type RuntimeTerminalWaitTimeoutDependencies = {
   getLivePty(handle: string): { pty: RuntimePtyWorktreeRecord } | null
@@ -14,7 +15,8 @@ export function resolvePtyTuiIdleTimeout(
   resolve: (result: RuntimeTerminalWaitResult) => void,
   reject: (error: Error) => void,
   deps: RuntimeTerminalWaitTimeoutDependencies,
-  evidence: RuntimeTerminalWaitEvidence
+  evidence: RuntimeTerminalWaitEvidence,
+  evidenceCursor?: TuiIdleEvidenceCursor
 ): void {
   const live = deps.getLivePty(handle)
   if (!live) {
@@ -32,7 +34,7 @@ export function resolvePtyTuiIdleTimeout(
       handle,
       'tui-idle',
       current,
-      evidence.result(evidence.observePty(current, currentText))
+      evidence.result(evidence.observePty(current, currentText, evidenceCursor))
     )
   )
 }
@@ -42,7 +44,8 @@ export function resolveLeafTuiIdleTimeout(
   resolve: (result: RuntimeTerminalWaitResult) => void,
   reject: (error: Error) => void,
   deps: RuntimeTerminalWaitTimeoutDependencies,
-  evidence: RuntimeTerminalWaitEvidence
+  evidence: RuntimeTerminalWaitEvidence,
+  evidenceCursor?: TuiIdleEvidenceCursor
 ): void {
   let current: RuntimeLeafRecord
   try {
@@ -61,7 +64,7 @@ export function resolveLeafTuiIdleTimeout(
       handle,
       'tui-idle',
       current,
-      evidence.result(evidence.observeLeaf(current, currentText))
+      evidence.result(evidence.observeLeaf(current, currentText, evidenceCursor))
     )
   )
 }

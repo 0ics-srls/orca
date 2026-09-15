@@ -14,7 +14,7 @@ import {
   detectKnownReadyPromptAgent,
   type KnownReadyPromptAgent
 } from './terminal-wait-detection'
-import { observeTuiIdle } from './tui-idle-evidence'
+import { observeTuiIdle, type TuiIdleEvidenceCursor } from './tui-idle-evidence'
 import type {
   RuntimeTerminalWait,
   RuntimeTerminalWaitBlockedReason
@@ -73,7 +73,12 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         const snapshotText = projection.tail.join('\n')
         const blockedReason = detectTerminalWaitBlockedReason(snapshotText)
         const promptAgent = detectKnownReadyPromptAgent(snapshotText)
-        const result = this.buildTuiIdleProbeResult(waiter.handle, blockedReason, promptAgent)
+        const result = this.buildTuiIdleProbeResult(
+          waiter.handle,
+          blockedReason,
+          promptAgent,
+          waiter.evidenceCursor
+        )
         if (!result) {
           return
         }
@@ -88,7 +93,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
   protected buildTuiIdleProbeResult(
     handle: string,
     blockedReason: RuntimeTerminalWaitBlockedReason | null,
-    promptAgent: KnownReadyPromptAgent | null
+    promptAgent: KnownReadyPromptAgent | null,
+    evidenceCursor?: TuiIdleEvidenceCursor
   ): RuntimeTerminalWait | null {
     const pty = this.getLivePtyForHandle(handle)
     if (pty) {
@@ -96,13 +102,18 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         return buildPtyTerminalWaitBlockedResult(handle, 'tui-idle', pty.pty, blockedReason)
       }
       const observation = observeTuiIdle({
-        record: pty.pty,
+        record: {
+          ...pty.pty,
+          lastOscTitleObservedAt: pty.pty.lastOscTitleEpochMs,
+          attachmentId: pty.pty.incarnationId
+        },
         rendererTitle: this.getAdoptedPtyTitle(pty.pty),
         readPositiveBodyEvidence: () => promptAgent !== null,
         positiveBodyEvidenceAgent: promptAgent,
         positiveBodyEvidenceSource: 'screen',
         agent: this.getPaneAgentForTuiIdle(pty.pty.ptyId),
-        firstPartyStatus: pty.pty.lastExplicitAgentStatus ?? null
+        firstPartyStatus: pty.pty.lastExplicitAgentStatus ?? null,
+        evidenceCursor
       })
       return observation.state === 'ready'
         ? buildPtyTerminalWaitResult(handle, 'tui-idle', pty.pty, {
@@ -117,14 +128,18 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
       return buildTerminalWaitBlockedResult(handle, 'tui-idle', leaf, blockedReason)
     }
     const observation = observeTuiIdle({
-      record: leaf,
+      record: {
+        ...leaf,
+        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null
+      },
       rendererTitle: leaf.paneTitle ?? this.tabs.get(leaf.tabId)?.title ?? null,
       readPositiveBodyEvidence: () => promptAgent !== null,
       positiveBodyEvidenceAgent: promptAgent,
       positiveBodyEvidenceSource: 'screen',
       agent: this.getPaneAgentForTuiIdle(leaf.ptyId),
       firstPartyStatus:
-        (leaf.ptyId ? this.ptysById.get(leaf.ptyId)?.lastExplicitAgentStatus : null) ?? null
+        (leaf.ptyId ? this.ptysById.get(leaf.ptyId)?.lastExplicitAgentStatus : null) ?? null,
+      evidenceCursor
     })
     return observation.state === 'ready'
       ? buildTerminalWaitResult(handle, 'tui-idle', leaf, {

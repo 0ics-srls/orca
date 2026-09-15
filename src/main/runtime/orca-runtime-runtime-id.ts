@@ -326,6 +326,7 @@ export class OrcaRuntimeWithRuntimeId {
     getPaneAgent: (ptyId) => this.getPaneAgentForTuiIdle(ptyId),
     getFirstPartyAgentStatus: (ptyId) =>
       (ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null) ?? null,
+    getAttachmentId: (ptyId) => (ptyId ? (this.ptysById.get(ptyId)?.incarnationId ?? null) : null),
     getTerminalProcessIncarnation: (handle) => this.getTerminalProcessIncarnation(handle),
     getLiveLeaf: (leaf) => this.leaves.get(this.getLeafKey(leaf.tabId, leaf.leafId)) ?? leaf,
     resolve: (waiter, result) => this.terminalWaiters.resolve(waiter, result)
@@ -342,6 +343,8 @@ export class OrcaRuntimeWithRuntimeId {
       getPaneAgent: (ptyId) => this.getPaneAgentForTuiIdle(ptyId),
       getFirstPartyAgentStatus: (ptyId) =>
         (ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null) ?? null,
+      getAttachmentId: (ptyId) =>
+        ptyId ? (this.ptysById.get(ptyId)?.incarnationId ?? null) : null,
       getTerminalProcessIncarnation: (handle) => this.getTerminalProcessIncarnation(handle),
       startVisibleReadProbe: (waiter, waiterTimeoutMs) =>
         this.startTuiIdleVisibleReadProbe(waiter, waiterTimeoutMs)
