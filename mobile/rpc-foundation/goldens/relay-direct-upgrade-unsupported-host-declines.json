@@ -3,9 +3,9 @@
   "family": "relay.direct-upgrade",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "c6a72169843ececf3a21da370ac50c5c5a4e6462",
+  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "fc1f0b1f8c685b481838dfacd28c8608c6fa7a8a21faa1b81e05950c8d8e65f4",
+  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
   "adapterSha256": "651e75383caf1b30c329dec2d5d4f0da5358c410402d03cbb087f39600d7a4d2",
   "scenarioSha256": "7d5cad367e76767b039fc5ebc15837930f02c5e1bed33ae7ca4695bae56287bd",
   "platform": "darwin",
@@ -53,9 +53,10 @@
       },
       "outcome": "declined"
     },
-    "a2c193508948": {
+    "8ea887e0fc46": {
       "name": "journal-cleared",
-      "value": "upgrade"
+      "value": "upgrade",
+      "sent": 1
     },
     "beafd16aeb22": {
       "name": "pairing.getEndpoints#1",
@@ -82,7 +83,7 @@
             "upgrade": "ee20a1dc39e7"
           },
           "state": "6c43da669636",
-          "effects": ["a2c193508948"]
+          "effects": ["8ea887e0fc46"]
         }
       }
     ]
