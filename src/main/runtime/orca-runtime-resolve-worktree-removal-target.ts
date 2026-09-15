@@ -17,6 +17,7 @@ import type { TerminalCreateOptions } from './runtime-terminal-contracts'
 import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
 import { terminalShellOverrideRefusal } from './terminal-shell-override-host-support'
+import { resolveLocalProjectRuntimeForWorktreeId } from '../local-project-runtime-resolution'
 import { resolveBareAgentLaunchCommand } from './runtime-agent-launch-resolution'
 import { buildAgentStartupPlan } from '../../shared/tui-agent-startup'
 import {
@@ -158,7 +159,11 @@ export class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRuntimeWith
     const shellRefusal = terminalShellOverrideRefusal({
       shellOverride: opts.shellOverride,
       connectionId: workspace.connectionId,
-      platform: process.platform
+      platform: process.platform,
+      projectRuntime:
+        opts.shellOverride && this.store
+          ? resolveLocalProjectRuntimeForWorktreeId(this.store, workspace.id)
+          : undefined
     })
     if (shellRefusal) {
       throw shellRefusal

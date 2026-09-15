@@ -44,6 +44,11 @@ so a runtime-created terminal could only ever be the host's default shell. `orca
   terminal routed over SSH resolves its shell on the SSH host, whose platform and installed shells
   this runtime cannot see. Refusing is the point: spawning the default shell and reporting success
   is the failure `--shell` exists to remove.
-- A WSL project runtime still wins over `--shell` (`resolveLocalWindowsTerminalRuntimeOptions`).
-  That is deliberate: the project's runtime decides which machine the shell runs on, and a
-  per-terminal pick may not override that.
+- A project's execution runtime decides which MACHINE the shell runs on, so it outranks a
+  per-terminal pick — but it outranks it by REFUSING, not by rewriting. A `--shell` that
+  contradicts the project runtime (a Windows shell on a WSL project, or a WSL name on a
+  Windows-host project) is refused. `resolveLocalWindowsTerminalRuntimeOptions` would otherwise
+  rewrite the value — a WSL project forces `wsl.exe`, a Windows-host project discards a WSL name in
+  favour of `COMSPEC` — and hand back a terminal running something the caller never asked for. It
+  also splits an agent launch's quoting from the shell that receives it: POSIX-quoted args typed
+  into cmd, or cmd-quoted args typed into a WSL shell.

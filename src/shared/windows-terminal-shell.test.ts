@@ -39,13 +39,24 @@ describe('resolveWindowsShellStartupFamily', () => {
 })
 
 describe('isSupportedWindowsShellOverride', () => {
-  it('accepts every shell the relay is willing to spawn', () => {
-    for (const shell of listSupportedWindowsShellOverrides()) {
-      expect(isSupportedWindowsShellOverride(shell)).toBe(true)
-    }
-    expect(listSupportedWindowsShellOverrides()).toContain('cmd.exe')
-    expect(listSupportedWindowsShellOverrides()).toContain('powershell.exe')
-    expect(listSupportedWindowsShellOverrides()).toContain('git-bash')
+  // Spelled out rather than looped over the list, which would assert the list against itself.
+  it('accepts exactly the shells the relay is willing to spawn', () => {
+    expect(listSupportedWindowsShellOverrides()).toEqual([
+      'bash',
+      'bash.exe',
+      'cmd',
+      'cmd.exe',
+      'git-bash',
+      'powershell',
+      'powershell.exe',
+      'pwsh',
+      'pwsh.exe',
+      'wsl',
+      'wsl.exe'
+    ])
+    expect(isSupportedWindowsShellOverride('cmd.exe')).toBe(true)
+    expect(isSupportedWindowsShellOverride('powershell.exe')).toBe(true)
+    expect(isSupportedWindowsShellOverride('git-bash')).toBe(true)
   })
 
   it('accepts a differently cased spelling of an allowed shell', () => {

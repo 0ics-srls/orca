@@ -1,3 +1,6 @@
+import { isWslShellName } from '../../shared/local-windows-terminal-runtime'
+import type { ProjectExecutionRuntimeResolution } from '../../shared/project-execution-runtime'
+
 /**
  * Whether the host about to spawn a terminal can honour a requested Windows shell.
  *
@@ -9,6 +12,7 @@ export function terminalShellOverrideRefusal(args: {
   shellOverride: string | undefined
   connectionId: string | null
   platform: NodeJS.Platform
+  projectRuntime: ProjectExecutionRuntimeResolution | undefined
 }): Error | null {
   if (!args.shellOverride) {
     return null
@@ -24,5 +28,32 @@ export function terminalShellOverrideRefusal(args: {
       `--shell ${args.shellOverride} names a Windows shell, and this execution host is ${args.platform}, which spawns the user's login shell. No terminal was created; omit --shell.`
     )
   }
-  return null
+  return projectRuntimeShellConflict(args.shellOverride, args.projectRuntime)
+}
+
+/**
+ * The project's execution runtime decides which MACHINE the shell runs on, so it outranks a
+ * per-terminal pick — and `resolveLocalWindowsTerminalRuntimeOptions` enforces that by rewriting
+ * the value: a WSL project forces `wsl.exe`, and a Windows-host project discards a WSL name in
+ * favour of the host shell. Either rewrite hands back a terminal running something the caller did
+ * not ask for, and it also splits the startup-command quoting from the shell that receives it
+ * (POSIX args typed into cmd, or cmd args typed into a WSL shell). Refusing the contradiction is
+ * the only answer that keeps the request and the terminal describing the same thing.
+ */
+function projectRuntimeShellConflict(
+  shellOverride: string,
+  projectRuntime: ProjectExecutionRuntimeResolution | undefined
+): Error | null {
+  if (projectRuntime?.status !== 'resolved') {
+    return null
+  }
+  const runsInWsl = projectRuntime.runtime.kind === 'wsl'
+  if (runsInWsl === isWslShellName(shellOverride)) {
+    return null
+  }
+  return new Error(
+    runsInWsl
+      ? `This workspace's project runs its terminals in WSL, so --shell ${shellOverride} cannot be applied. No terminal was created. Use --shell wsl.exe, or change the project's execution runtime.`
+      : `This workspace's project runs its terminals on the Windows host, so --shell ${shellOverride} cannot be applied. No terminal was created. Change the project's execution runtime to WSL, or pass a Windows shell.`
+  )
 }

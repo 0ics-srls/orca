@@ -92,7 +92,7 @@ describe('OrcaRuntimeService', () => {
     })
   })
 
-  it('spawns a requested shell AS the pty instead of typing it into the host default', async () => {
+  it('asks the pty controller for the requested shell instead of a startup command', async () => {
     const hostPlatform = Object.getOwnPropertyDescriptor(process, 'platform')!
     Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' })
     try {
