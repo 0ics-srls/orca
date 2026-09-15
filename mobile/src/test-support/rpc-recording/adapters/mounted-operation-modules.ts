@@ -5,9 +5,14 @@ import {
 } from './agent-history-mount-adapters'
 import { browserMountAdapters } from './browser-mount-adapters'
 import { clipboardImageMountAdapters } from './clipboard-image-mount-adapters'
+import { codexResetCreditMountAdapters } from './codex-reset-credit-mount-adapters'
 import { dictationMountAdapters } from './dictation-mount-adapters'
 import { diffReviewActionMountAdapters } from './diff-review-action-mount-adapters'
 import { diffReviewMountAdapters } from './diff-review-mount-adapters'
+import {
+  fileExplorerScreenMountAdapters,
+  fileExplorerScreenMountExposures
+} from './file-explorer-screen-mount-adapters'
 import { fileInventoryMountAdapters } from './file-inventory-mount-adapters'
 import { fileTapOpenMountAdapters } from './file-tap-open-mount-adapters'
 import { fileRequestMountAdapters } from './file-request-mount-adapters'
@@ -18,7 +23,9 @@ import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { nativeChatWriteMountAdapters } from './native-chat-write-mount-adapters'
 import { newTabAgentMountAdapters } from './new-tab-agent-mount-adapters'
 import { newWorkspaceMountAdapters } from './new-workspace-mount-adapters'
+import { newWorkspaceRepositoryMountAdapters } from './new-workspace-repository-mount-adapters'
 import { pairingJournalMountAdapters } from './pairing-journal-mount-adapters'
+import { pushDismissalMountAdapters } from './push-dismissal-mount-adapters'
 import {
   pushRegistrationMountAdapters,
   pushRegistrationMountExposures
@@ -65,9 +72,15 @@ export const MOUNTED_OPERATION_MODULES: readonly MountedOperationModule[] = [
   { source: 'ai-vault-resume-mount-adapters.ts', mounts: aiVaultResumeMountAdapters },
   { source: 'browser-mount-adapters.ts', mounts: browserMountAdapters },
   { source: 'clipboard-image-mount-adapters.ts', mounts: clipboardImageMountAdapters },
+  { source: 'codex-reset-credit-mount-adapters.ts', mounts: codexResetCreditMountAdapters },
   { source: 'dictation-mount-adapters.ts', mounts: dictationMountAdapters },
   { source: 'diff-review-action-mount-adapters.ts', mounts: diffReviewActionMountAdapters },
   { source: 'diff-review-mount-adapters.ts', mounts: diffReviewMountAdapters },
+  {
+    source: 'file-explorer-screen-mount-adapters.ts',
+    mounts: fileExplorerScreenMountAdapters,
+    exposes: fileExplorerScreenMountExposures
+  },
   { source: 'file-inventory-mount-adapters.ts', mounts: fileInventoryMountAdapters },
   { source: 'file-tap-open-mount-adapters.ts', mounts: fileTapOpenMountAdapters },
   { source: 'file-request-mount-adapters.ts', mounts: fileRequestMountAdapters },
@@ -81,7 +94,12 @@ export const MOUNTED_OPERATION_MODULES: readonly MountedOperationModule[] = [
   { source: 'native-chat-write-mount-adapters.ts', mounts: nativeChatWriteMountAdapters },
   { source: 'new-tab-agent-mount-adapters.ts', mounts: newTabAgentMountAdapters },
   { source: 'new-workspace-mount-adapters.ts', mounts: newWorkspaceMountAdapters },
+  {
+    source: 'new-workspace-repository-mount-adapters.ts',
+    mounts: newWorkspaceRepositoryMountAdapters
+  },
   { source: 'pairing-journal-mount-adapters.ts', mounts: pairingJournalMountAdapters },
+  { source: 'push-dismissal-mount-adapters.ts', mounts: pushDismissalMountAdapters },
   {
     source: 'push-registration-mount-adapters.ts',
     mounts: pushRegistrationMountAdapters,
