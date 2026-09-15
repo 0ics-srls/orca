@@ -49,3 +49,10 @@ alive for a scenario were reviewed separately from application code.
 The ledger is updated as each agent returns a concrete finding or a verified
 no-finding result. A fix gets its own commit so it can be proposed as a separate
 PR.
+
+## Runtime debugging availability
+
+No Chrome DevTools heap snapshot or memory-debugging MCP tools were available
+in this session. This pass therefore used source retaining-path analysis and
+listener/timer lifecycle regression tests; it does not claim a measured heap
+slope or a heap-snapshot comparison. No raw heap snapshots were read.
