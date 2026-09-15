@@ -7231,6 +7231,78 @@
       ]
     },
     {
+      "id": "aivault-history-scan-worktrees-late",
+      "operation": "aiVault.history-scan",
+      "version": 1,
+      "family": "aiVault.history",
+      "sites": ["mobile/src/agent-history/use-mobile-agent-history-state.ts"],
+      "schedules": [],
+      "steps": [
+        {
+          "action": "mount",
+          "id": "mount",
+          "args": {
+            "worktreesLoaded": false
+          }
+        },
+        {
+          "complete": "status.get#1",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "capabilities": ["aiVault.v1"]
+            }
+          }
+        },
+        {
+          "checkpoint": "held"
+        },
+        {
+          "action": "worktrees-loaded",
+          "id": "worktrees-loaded"
+        },
+        {
+          "complete": "status.get#2",
+          "params": {
+            "$undefined": true
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "capabilities": ["aiVault.v1"]
+            }
+          }
+        },
+        {
+          "complete": "aiVault.listSessions#1",
+          "params": {
+            "force": false,
+            "limit": 500,
+            "scopePaths": ["/repo/feature"]
+          },
+          "reply": {
+            "ok": true,
+            "result": {
+              "sessions": [
+                {
+                  "id": "s1",
+                  "agent": "claude",
+                  "cwd": "/repo/feature"
+                }
+              ],
+              "issues": []
+            }
+          }
+        },
+        {
+          "checkpoint": "ready"
+        }
+      ]
+    },
+    {
       "id": "terminal-query-reply-accepted",
       "operation": "terminal.query-reply",
       "version": 1,

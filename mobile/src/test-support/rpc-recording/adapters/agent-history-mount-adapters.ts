@@ -13,6 +13,8 @@ const WORKTREES = [
   { worktreeId: WORKTREE_ID, path: '/repo/feature', repoId: 'repo-1' },
   { worktreeId: 'worktree-2', path: '/repo/sibling', repoId: 'repo-1' }
 ]
+/** Hoisted for the same reason, and empty because an unloaded list has nothing in it yet. */
+const UNLOADED_WORKTREES: typeof WORKTREES = []
 
 /**
  * The history hook reaches its client through the shared per-host context rather than a parameter,
@@ -69,6 +71,8 @@ export function agentHistoryMountAdapters(
       // A holder rather than a bare binding: the harness is a component, and a component may not
       // assign a variable declared outside it.
       const observed: { history?: ReturnType<typeof useHistory> } = {}
+      // The list and the flag move together, because the screen learns both from the same fetch.
+      let worktrees = WORKTREES
       let worktreesLoaded = true
       let renderer: ReactTestRenderer | undefined
       function Harness() {
@@ -76,7 +80,7 @@ export function agentHistoryMountAdapters(
         const params = {
           hostId: HOST_ID,
           worktreeId: WORKTREE_ID,
-          worktrees: WORKTREES,
+          worktrees,
           worktreesLoaded
         } as unknown as Parameters<typeof useHistory>[0]
         observed.history = useHistory(params)
@@ -91,6 +95,10 @@ export function agentHistoryMountAdapters(
       return {
         action(name, args) {
           if (name === 'mount') {
+            if (args.worktreesLoaded === false) {
+              worktrees = UNLOADED_WORKTREES
+              worktreesLoaded = false
+            }
             act(() => {
               renderer = create(element())
             })
@@ -104,6 +112,7 @@ export function agentHistoryMountAdapters(
             return
           }
           if (name === 'worktrees-loaded') {
+            worktrees = WORKTREES
             worktreesLoaded = true
             act(() => renderer?.update(element()))
             return
