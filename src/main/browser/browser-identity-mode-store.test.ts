@@ -21,12 +21,14 @@ vi.mock('../durable-file-write', async (importOriginal) => {
 
 import {
   BROWSER_IDENTITY_MODE_FILE,
-  BROWSER_IDENTITY_MODE_VERSION,
+  BROWSER_IDENTITY_MODE_VERSION
+} from './browser-identity-mode-record'
+import {
   getBrowserIdentityModeSnapshot,
   initializeBrowserIdentityModeStore,
   resetBrowserIdentityModeStoreForTests,
   setBrowserIdentityMode
-} from './browser-identity-mode-record'
+} from './browser-identity-mode-store'
 
 function makeUserData(mode: 'clean' | 'native' = 'clean'): string {
   const userDataPath = mkdtempSync(join(tmpdir(), 'orca-browser-identity-store-'))

@@ -1,7 +1,6 @@
 import { defineMethod } from '../core'
 import { BrowserTarget } from '../schemas'
 import {
-  BrowserIdentitySet,
   Check,
   Drag,
   Element,
@@ -35,22 +34,8 @@ import {
 import { BrowserOpenUrlParams, BrowserTabCreateParams } from './browser-tab-create-schema'
 import { BROWSER_TEXT_METHODS } from './browser-text-rpc-methods'
 import { CertificateProceed } from '../../../../shared/rpc-contract/browser-core-params'
-import {
-  getBrowserIdentityModeStatus,
-  setBrowserIdentityMode
-} from '../../../browser/browser-identity-mode-record'
 
 export const BROWSER_CORE_METHODS = [
-  defineMethod({
-    name: 'browser.identity.get',
-    params: null,
-    handler: () => getBrowserIdentityModeStatus()
-  }),
-  defineMethod({
-    name: 'browser.identity.set',
-    params: BrowserIdentitySet,
-    handler: async ({ mode }) => setBrowserIdentityMode(mode)
-  }),
   defineMethod({
     name: 'browser.snapshot',
     params: BrowserTarget,

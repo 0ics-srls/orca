@@ -39,7 +39,7 @@ import { invalidateBrowserSessionProxyApplication } from './browser-session-prox
 import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
 import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
 import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
-import { markBrowserIdentityMigrationNoticePending } from './browser-identity-mode-record'
+import { markBrowserIdentityMigrationNoticePending } from './browser-identity-mode-store'
 
 export type BrowserSessionRegistryProfileOptions = {
   orcaProfileId: string

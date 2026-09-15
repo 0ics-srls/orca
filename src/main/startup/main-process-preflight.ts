@@ -87,7 +87,7 @@ import { maybeApplyGpuFallbackForThisLaunch, registerGpuLifecycleHandlers } from
 import { mainProcessState as state } from './main-process-state'
 import { initializeSyntheticTitleRuntime } from './synthetic-title-runtime'
 import { initializeBrowserProcessUserAgent } from '../browser/browser-process-user-agent'
-import { initializeBrowserIdentityModeStore } from '../browser/browser-identity-mode-record'
+import { initializeBrowserIdentityModeStore } from '../browser/browser-identity-mode-store'
 
 export type MainProcessPreflightOptions = {
   focusExistingWindow: () => void

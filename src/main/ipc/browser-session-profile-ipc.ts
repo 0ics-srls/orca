@@ -19,7 +19,7 @@ import type {
 import {
   getBrowserIdentityModeStatus,
   setBrowserIdentityMode
-} from '../browser/browser-identity-mode-record'
+} from '../browser/browser-identity-mode-store'
 import { normalizeBrowserUserAgentMode } from '../../shared/browser-user-agent-mode'
 
 export function registerBrowserSessionProfileHandlers(): void {

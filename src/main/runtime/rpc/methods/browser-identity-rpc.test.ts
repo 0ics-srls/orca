@@ -5,7 +5,7 @@ const mocks = vi.hoisted(() => ({
   set: vi.fn(async () => ({ ok: true }))
 }))
 
-vi.mock('../../../browser/browser-identity-mode-record', () => ({
+vi.mock('../../../browser/browser-identity-mode-store', () => ({
   getBrowserIdentityModeStatus: mocks.get,
   setBrowserIdentityMode: mocks.set
 }))
@@ -13,7 +13,7 @@ vi.mock('../../../browser/browser-identity-mode-record', () => ({
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import { RpcDispatcher } from '../dispatcher'
 import type { RpcRequest } from '../core'
-import { BROWSER_CORE_METHODS } from './browser-core'
+import { BROWSER_IDENTITY_METHODS } from './browser-identity-rpc'
 
 function request(method: string, params?: unknown): RpcRequest {
   return { id: 'identity-1', authToken: 'token', method, params }
@@ -23,7 +23,7 @@ function request(method: string, params?: unknown): RpcRequest {
 const RUNTIME = { getRuntimeId: () => 'runtime-1' } as unknown as OrcaRuntimeService
 
 function identityDispatcher(): RpcDispatcher {
-  return new RpcDispatcher({ runtime: RUNTIME, methods: BROWSER_CORE_METHODS })
+  return new RpcDispatcher({ runtime: RUNTIME, methods: BROWSER_IDENTITY_METHODS })
 }
 
 describe('browser identity RPC', () => {

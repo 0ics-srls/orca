@@ -40,7 +40,7 @@ import { startDesktopPushService } from './main-process-push-startup'
 import { mainProcessState as state } from './main-process-state'
 import { logStartupMilestone } from './startup-diagnostics'
 import { emitServeBrowserIdentityActionLine } from '../server/serve-stdout-boundary'
-import { getBrowserIdentityModeStatus } from '../browser/browser-identity-mode-record'
+import { getBrowserIdentityModeStatus } from '../browser/browser-identity-mode-store'
 
 type RuntimeService = NonNullable<typeof state.runtime>
 

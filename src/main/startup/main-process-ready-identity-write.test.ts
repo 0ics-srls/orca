@@ -1,6 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
+  // Assigned in beforeAll; the factories below read it lazily, so a real directory is available
+  // by the time ready composition resolves the canonical userData path.
+  userDataPath: '',
+  profileUserAgentMode: 'native',
   state: {
     devInstanceIdentity: { appUserModelId: 'app.id', appName: 'Orca' },
     isServeMode: false,
@@ -35,7 +42,8 @@ vi.mock('./main-process-state', () => ({ mainProcessState: mocks.state }))
 vi.mock('../persistence', () => ({
   Store: class {
     getSettings() {
-      return { browserUserAgentMode: 'native' }
+      // The retired per-profile key is still on disk for real users; ready must ignore it.
+      return { browserUserAgentMode: mocks.profileUserAgentMode }
     }
     onSettingsChanged() {}
     getClaudeLivePtySessionIds() {
@@ -45,7 +53,7 @@ vi.mock('../persistence', () => ({
       return []
     }
   },
-  getCanonicalUserDataPath: () => '/test-userdata'
+  getCanonicalUserDataPath: () => mocks.userDataPath
 }))
 vi.mock('../codex-accounts/fs-utils', () => ({
   writeFileAtomically: mocks.writeFileAtomically
@@ -144,21 +152,68 @@ vi.mock('./main-process-runtime-launch', () => ({
 }))
 
 import { initializeMainProcessReady } from './main-process-ready'
+import {
+  BROWSER_IDENTITY_MODE_FILE,
+  BROWSER_IDENTITY_MODE_VERSION,
+  readBrowserIdentityModeRecord
+} from '../browser/browser-identity-mode-record'
+import {
+  getBrowserIdentityModeSnapshot,
+  initializeBrowserIdentityModeStore,
+  resetBrowserIdentityModeStoreForTests
+} from '../browser/browser-identity-mode-store'
+
 describe('ready-phase browser identity authority', () => {
+  beforeAll(() => {
+    mocks.userDataPath = mkdtempSync(join(tmpdir(), 'orca-ready-identity-'))
+  })
+
   beforeEach(() => {
     mocks.openMainWindow.mockClear()
     mocks.runtimeRpcStart.mockClear()
     mocks.writeFileAtomically.mockClear()
     mocks.state.isServeMode = false
+    resetBrowserIdentityModeStoreForTests()
   })
 
-  it('does not mirror the active Orca profile identity over the process-wide sidecar', async () => {
-    await initializeMainProcessReady({
-      openMainWindow: mocks.openMainWindow,
-      handleMacAppActivation: vi.fn()
-    })
+  // The bug: ready used to mirror the active Orca profile's retired setting into the root record,
+  // so switching from a native profile to a clean one started the clean profile in native. The
+  // root record is the only authority now, and ready must not touch it in either direction.
+  it.each([
+    { rootMode: 'native', profileUserAgentMode: 'clean' },
+    { rootMode: 'clean', profileUserAgentMode: 'native' }
+  ])(
+    'keeps root=$rootMode authoritative over a retired profile value of $profileUserAgentMode',
+    async ({ rootMode, profileUserAgentMode }) => {
+      mocks.profileUserAgentMode = profileUserAgentMode
+      writeFileSync(
+        join(mocks.userDataPath, BROWSER_IDENTITY_MODE_FILE),
+        JSON.stringify({
+          version: BROWSER_IDENTITY_MODE_VERSION,
+          mode: rootMode,
+          explicitSelection: true,
+          migrationNoticePending: false
+        }),
+        'utf8'
+      )
+      // Preflight's read is what fixes the identity for this launch.
+      initializeBrowserIdentityModeStore(mocks.userDataPath)
 
-    expect(mocks.writeFileAtomically).not.toHaveBeenCalled()
-  })
+      await initializeMainProcessReady({
+        openMainWindow: mocks.openMainWindow,
+        handleMacAppActivation: vi.fn()
+      })
 
+      const snapshot = getBrowserIdentityModeSnapshot()
+      expect(snapshot.appliedMode).toBe(rootMode)
+      expect(snapshot.configuredMode).toBe(rootMode)
+      expect(readBrowserIdentityModeRecord(mocks.userDataPath)).toMatchObject({
+        state: 'valid',
+        appliedMode: rootMode,
+        configuredMode: rootMode,
+        explicitSelection: true
+      })
+      expect(mocks.writeFileAtomically).not.toHaveBeenCalled()
+    }
+  )
 })
