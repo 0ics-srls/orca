@@ -1,5 +1,5 @@
-import type { MountAdapter } from './recording-scenario'
-import type { operationModuleLoader } from './operation-module-loader'
+import type { MountAdapter } from '../recording-scenario'
+import type { operationModuleLoader } from '../operation-module-loader'
 
 const WORKTREE = 'repo-9::/w'
 const PR_NUMBER = 12
@@ -16,7 +16,7 @@ export function githubPrMountAdapters(
 ): Record<string, MountAdapter> {
   return {
     'session.pr-reads': ({ client }) => {
-      const reads = modules.load<typeof import('../../session/github-pr-rpc')>(
+      const reads = modules.load<typeof import('../../../session/github-pr-rpc')>(
         'mobile/src/session/github-pr-rpc.ts'
       )
       const results: Record<string, unknown> = {}
@@ -68,7 +68,7 @@ export function githubPrMountAdapters(
       }
     },
     'session.pr-mutations': ({ client }) => {
-      const mutations = modules.load<typeof import('../../session/github-pr-mutations')>(
+      const mutations = modules.load<typeof import('../../../session/github-pr-mutations')>(
         'mobile/src/session/github-pr-mutations.ts'
       )
       const results: Record<string, unknown> = {}
@@ -169,7 +169,7 @@ export function githubPrMountAdapters(
       }
     },
     'session.pr-triage-launch': ({ client }) => {
-      const launch = modules.load<typeof import('../../session/pr-ai-triage-launch')>(
+      const launch = modules.load<typeof import('../../../session/pr-ai-triage-launch')>(
         'mobile/src/session/pr-ai-triage-launch.ts'
       ).createTerminalAndSendPrompt
       let launched: unknown = 'unlaunched'
@@ -183,7 +183,7 @@ export function githubPrMountAdapters(
       }
     },
     'session.pr-branch-context': ({ client }) => {
-      const context = modules.load<typeof import('../../session/use-mobile-pr-branch-context')>(
+      const context = modules.load<typeof import('../../../session/use-mobile-pr-branch-context')>(
         'mobile/src/session/use-mobile-pr-branch-context.ts'
       )
       let repoContext: unknown = 'unread'

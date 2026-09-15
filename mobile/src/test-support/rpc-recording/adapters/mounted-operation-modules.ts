@@ -1,4 +1,6 @@
+import { diffReviewMountAdapters } from './diff-review-mount-adapters'
 import { fileInventoryMountAdapters } from './file-inventory-mount-adapters'
+import { githubPrMountAdapters } from './github-pr-mount-adapters'
 import { hostedReviewMountAdapters } from './hosted-review-mount-adapters'
 import { newTabAgentMountAdapters } from './new-tab-agent-mount-adapters'
 import { settingsMountAdapters, settingsMountExposures } from './settings-mount-adapters'
@@ -15,7 +17,9 @@ import type { MountedOperationModule } from '../mounted-operation-module'
  * `adapter-seam.test.ts` checks each pairing names the file that declares it.
  */
 export const MOUNTED_OPERATION_MODULES: readonly MountedOperationModule[] = [
+  { source: 'diff-review-mount-adapters.ts', mounts: diffReviewMountAdapters },
   { source: 'file-inventory-mount-adapters.ts', mounts: fileInventoryMountAdapters },
+  { source: 'github-pr-mount-adapters.ts', mounts: githubPrMountAdapters },
   { source: 'hosted-review-mount-adapters.ts', mounts: hostedReviewMountAdapters },
   { source: 'new-tab-agent-mount-adapters.ts', mounts: newTabAgentMountAdapters },
   {

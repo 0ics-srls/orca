@@ -1,5 +1,5 @@
-import type { MountAdapter } from './recording-scenario'
-import type { operationModuleLoader } from './operation-module-loader'
+import type { MountAdapter } from '../recording-scenario'
+import type { operationModuleLoader } from '../operation-module-loader'
 
 const WORKTREE = 'repo-9::/w'
 
@@ -27,7 +27,7 @@ export function diffReviewMountAdapters(
 ): Record<string, MountAdapter> {
   return {
     'session.diff-review-load': ({ client }) => {
-      const loaders = modules.load<typeof import('../../session/mobile-diff-review-loaders')>(
+      const loaders = modules.load<typeof import('../../../session/mobile-diff-review-loaders')>(
         'mobile/src/session/mobile-diff-review-loaders.ts'
       )
       let snapshot: unknown = 'unloaded'
