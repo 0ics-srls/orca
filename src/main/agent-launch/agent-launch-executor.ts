@@ -1,10 +1,13 @@
 /**
- * The one place an agent is actually started.
+ * The one place an agent is actually started — for the surfaces moved onto it, which today is
+ * `agent.launch` alone. Orchestration dispatch, mobile create, CLI create and the desktop agent
+ * tab each still start agents their own way; moving them here is later stack work.
  *
- * Every launch surface routes through here: an orchestration dispatch, a mobile create, a CLI
- * create, and (once the renderer stops deciding for itself) a desktop agent tab. What those
- * surfaces duplicated was never the decision — that already lived in `agent-launch-mode` — but the
- * *sequencing* around it, and the sequencing is where the bug was:
+ * The mode decision is duplicated rather than shared: `agent-launch-mode` is a surface-neutral
+ * second copy of orchestration's `orchestration-worker-start-mode`, which is unchanged and still
+ * the one orchestration uses, with nothing enforcing agreement between them. That cutover is later
+ * stack work too. What this module adds is the *sequencing*, and the sequencing is where the bug
+ * was:
  *
  *   create the worktree agent-first  ->  its startup terminal IS the agent
  *                                    ->  the structured branch below it is unreachable
