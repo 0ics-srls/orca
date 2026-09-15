@@ -58,21 +58,20 @@ export function SessionHistorySettingsPane({
     }
   }, [])
 
+  function writePolicy(updates: Partial<typeof policy>): Promise<void> {
+    return updateSettings({
+      aiVaultSearch: AiVaultSearchSettingsSchema.parse({ ...policy, ...updates })
+    })
+  }
+
   async function save(updates: Partial<typeof policy>): Promise<void> {
     setBusy(true)
     setError(null)
     try {
-      await updateSettings({
-        aiVaultSearch: AiVaultSearchSettingsSchema.parse({ ...policy, ...updates })
-      })
+      await writePolicy(updates)
     } catch {
       if (mounted.current) {
-        setError(
-          translate(
-            'sessionHistory.settings.saveError',
-            'Could not save session search settings. Try again.'
-          )
-        )
+        setError(saveErrorMessage())
       }
     } finally {
       if (mounted.current) {
@@ -108,7 +107,21 @@ export function SessionHistorySettingsPane({
     await save({ enabled: true })
   }
 
+  /** False when the settings write failed or the pane went away, so the delete is skipped. */
+  async function turnSearchOffBeforeDelete(): Promise<boolean> {
+    try {
+      await writePolicy({ enabled: false })
+    } catch {
+      if (mounted.current) {
+        setError(saveErrorMessage())
+      }
+      return false
+    }
+    return mounted.current
+  }
+
   async function deleteIndex(): Promise<void> {
+    const wasEnabled = policy.enabled
     setBusy(true)
     setError(null)
     try {
@@ -117,29 +130,30 @@ export function SessionHistorySettingsPane({
           'sessionHistory.settings.deleteTitle',
           'Delete this computer’s search index?'
         ),
-        description: policy.enabled
-          ? translate(
-              'sessionHistory.settings.deleteEnabled',
-              'Remove the search index from this computer. Original transcripts are not touched. Search is on, so Orca scans them again from scratch afterward.'
-            )
-          : translate(
-              'sessionHistory.settings.deleteDisabled',
-              'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
-            ),
+        description: deleteDescription(wasEnabled),
         confirmLabel: translate('sessionHistory.settings.delete', 'Delete index'),
         confirmVariant: 'destructive'
       })
       if (!accepted || !mounted.current) {
         return
       }
+      // Clearing while search is on makes the host rebuild the index immediately; turn it off first.
+      if (wasEnabled && !(await turnSearchOffBeforeDelete())) {
+        return
+      }
       await window.api.aiVault.clearSearchIndex()
       if (mounted.current) {
         setRefresh((value) => value + 1)
         toast.success(
-          translate(
-            'sessionHistory.settings.cleared',
-            'Search index cleared. Original transcripts were kept.'
-          )
+          wasEnabled
+            ? translate(
+                'sessionHistory.settings.clearedAndTurnedOff',
+                'Search is off and the index was deleted. Original transcripts were kept.'
+              )
+            : translate(
+                'sessionHistory.settings.cleared',
+                'Search index cleared. Original transcripts were kept.'
+              )
         )
       }
     } catch {
@@ -217,17 +231,7 @@ export function SessionHistorySettingsPane({
           <CollapsibleContent className="collapsible-height-content">
             <SettingsRow
               label={translate('sessionHistory.settings.deleteIndexCopy', 'Delete index copy')}
-              description={
-                policy.enabled
-                  ? translate(
-                      'sessionHistory.settings.deleteEnabled',
-                      'Remove the search index from this computer. Original transcripts are not touched. Search is on, so Orca scans them again from scratch afterward.'
-                    )
-                  : translate(
-                      'sessionHistory.settings.deleteDisabled',
-                      'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
-                    )
-              }
+              description={deleteDescription(policy.enabled)}
               control={
                 <Button
                   variant="outline"
@@ -255,4 +259,24 @@ export function SessionHistorySettingsPane({
       </p>
     </div>
   )
+}
+
+function saveErrorMessage(): string {
+  return translate(
+    'sessionHistory.settings.saveError',
+    'Could not save session search settings. Try again.'
+  )
+}
+
+/** Shared by the Advanced row and its confirm dialog so both promise the same thing. */
+function deleteDescription(enabled: boolean): string {
+  return enabled
+    ? translate(
+        'sessionHistory.settings.deleteEnabled',
+        'Turn off search on this computer and remove its index. Original transcripts are not touched. Switch search back on to rebuild.'
+      )
+    : translate(
+        'sessionHistory.settings.deleteDisabled',
+        'Remove the search index from this computer. Original transcripts are not touched. Search stays off.'
+      )
 }
