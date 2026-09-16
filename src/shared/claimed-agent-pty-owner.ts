@@ -13,6 +13,7 @@ import {
   buildClaimedAgentPtyOwnerIndex,
   cloneAgentSessionClaim,
   cloneAgentSessionOwner,
+  cloneAgentSessionOwnerBinding,
   cloneAgentSessionSurface,
   cloneAgentStatusExecutionBinding,
   countClaimedAgentPtyOwners,
@@ -24,7 +25,10 @@ import {
 } from './claimed-agent-pty-owner-snapshot'
 import type { AgentStatusExecutionBinding } from './agent-status-run'
 import { findClaimedAgentStatusBinding } from './claimed-agent-pty-owner-status-binding'
-import { assertClaimedAgentPtyOwnerCapacity } from './claimed-agent-pty-owner-capacity'
+import {
+  assertClaimedAgentPtyOwnerCapacity,
+  MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES
+} from './claimed-agent-pty-owner-capacity'
 
 export { agentSessionOwnerBindingsEqual } from './claimed-agent-pty-owner-snapshot'
 export { MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES } from './claimed-agent-pty-owner-capacity'
@@ -97,7 +101,7 @@ export class ClaimedAgentPtyOwnerRegistry {
       if (result.owner.phase !== 'live') {
         throw new Error('agent_session_ownership_unknown')
       }
-      return { disposition: 'adopted', owner: cloneAgentSessionOwner(result.owner) }
+      return { disposition: 'adopted', owner: cloneAgentSessionOwnerBinding(result.owner) }
     }
 
     assertClaimedAgentPtyOwnerCapacity(this.live, this.conflicts, this.reserved.size)
