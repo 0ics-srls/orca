@@ -36,6 +36,7 @@ const initialAppStoreState = useAppStore.getState()
 const LEAF_ID = '22222222-2222-4222-8222-222222222222'
 const WEB_TAB_ID = 'web-terminal-host-tab-1'
 const SECOND_LEAF_ID = '33333333-3333-4333-8333-333333333333'
+const SIBLING_LEAF_ID = '44444444-4444-4444-8444-444444444444'
 const SECOND_TAB_ID = 'web-terminal-host-tab-2'
 const RUNTIME_ENV_ID = 'env-handle-gap'
 
@@ -85,6 +86,40 @@ function seedMirroredWorkspace(worktree: ReturnType<typeof makeCreatedAgentWorkt
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState(state as AppState)
+}
+
+/**
+ * Rebinds the published tab as a SPLIT whose sibling leaf is `ready` and whose record-bearing leaf
+ * is still `pending-handle`.
+ *
+ * Why this shape and not "the tab published a handle nobody's leaf is bound to": the mirror builds
+ * `ptyIdsByTabId[tab]` out of the very map it writes to `terminalLayoutsByTabId[tab].ptyIdsByLeafId`
+ * (web-session-tabs-sync/terminal-build.ts), so those two can never disagree about which PTY ids
+ * exist. The only producible way for a tab to hold handles while THIS pane holds none is a split
+ * whose other surface went `ready` first — a per-surface state the host projects
+ * (runtime-mobile-session-projection.ts) and the client does not keep.
+ */
+function seedPendingLeafBesideReadySibling(): void {
+  const before = useAppStore.getState()
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
+  useAppStore.setState({
+    terminalLayoutsByTabId: {
+      ...before.terminalLayoutsByTabId,
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
+      [WEB_TAB_ID]: {
+        root: {
+          type: 'split',
+          direction: 'row',
+          first: { type: 'leaf', leafId: LEAF_ID },
+          second: { type: 'leaf', leafId: SIBLING_LEAF_ID }
+        },
+        activeLeafId: SIBLING_LEAF_ID,
+        expandedLeafId: null,
+        // The record's leaf is absent: pending-handle with no prior binding to retain.
+        ptyIdsByLeafId: { [SIBLING_LEAF_ID]: 'remote:env-handle-gap@@term_sibling' }
+      } as never
+    }
+  } as never)
 }
 
 /** A second published mirrored row in the same environment, with its own leaf binding. */
@@ -184,14 +219,31 @@ describe('resume across the mirror handle gap', () => {
     expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(1)
   })
 
-  it('still resumes once the host has published the row without any live handle', () => {
+  // The counterweight to the park, and the reason the hydration short-circuit could not simply be
+  // dropped: a pane with nothing outstanding must still resume. Here no leaf of the published row
+  // binds a PTY this environment minted, so there is no handle on its way and no wait to arm —
+  // parking would be the latch-that-never-releases defect, since mirror settlement has already run
+  // and will not replay the sweep a second time.
+  it('still resumes a published row no leaf of which binds this environment', () => {
     const worktree = makeRuntimeOwnedWorktree()
     seedMirroredWorkspace(worktree)
     seedActiveSleepingRecord(worktree.id)
-    useAppStore.setState({ ptyIdsByTabId: { [WEB_TAB_ID]: ['remote:env-handle-gap@@other'] } })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
+    useAppStore.setState({
+      terminalLayoutsByTabId: {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture carries the fields this suite drives; the cast only supplies the rest of the declared shape.
+        [WEB_TAB_ID]: {
+          root: { type: 'leaf', leafId: LEAF_ID },
+          activeLeafId: LEAF_ID,
+          expandedLeafId: null,
+          ptyIdsByLeafId: {}
+        } as never
+      }
+    } as never)
     markHostSessionMirrorHydrated(RUNTIME_ENV_ID)
 
     expect(resumeSleepingAgentSessionsForWorktree(worktree.id)).toBe(1)
+    expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(0)
   })
 
   // The three exits of the per-pane park. A park with no bounded release is the
@@ -215,14 +267,29 @@ describe('resume across the mirror handle gap', () => {
     expect(after.sleepingAgentSessionsByPaneKey[paneKey]).toBeDefined()
   })
 
-  it('releases when a handle lands for the tab and resumes if it belongs to another pane', () => {
+  // KNOWN RESIDUAL, pinned as current behaviour rather than as desired behaviour. The gate this
+  // wait sits behind is tab-granular (`host-mirrored-pane-liveness.ts`: any published handle for
+  // the tab makes the pane decidable), while everything below it is leaf-aware. In a SPLIT mirrored
+  // tab a sibling surface reaching `ready` therefore ends the wait for a surface that is still
+  // `pending-handle`, and the sweep resumes it — #19735's own shape, narrowed to split tabs.
+  //
+  // It is not closable inside this module: during the gap the pane's own leaf has NO binding, and
+  // the binding is what names the pane in a verdict, so a leaf-keyed wait has nothing to key on.
+  // The client has to stop discarding each surface's `pending-handle` status
+  // (runtime-mobile-session-projection.ts publishes it; terminal-build.ts keeps only `ready`
+  // leaves' bindings). Tracked separately; this case exists so the residual cannot be mistaken for
+  // a covered one.
+  it('resumes a pending leaf once a sibling leaf of the same tab publishes its handle', () => {
     const worktree = makeRuntimeOwnedWorktree()
     seedMirroredWorkspace(worktree)
     const paneKey = seedActiveSleepingRecord(worktree.id)
     markHostSessionMirrorHydrated(RUNTIME_ENV_ID)
     expect(resumeSleepingAgentSessionsForWorktree(worktree.id)).toBe(0)
 
-    useAppStore.setState({ ptyIdsByTabId: { [WEB_TAB_ID]: ['remote:env-handle-gap@@other'] } })
+    seedPendingLeafBesideReadySibling()
+    useAppStore.setState({
+      ptyIdsByTabId: { [WEB_TAB_ID]: ['remote:env-handle-gap@@term_sibling'] }
+    })
 
     const after = useAppStore.getState()
     const resumeTabIds = (after.tabsByWorktree[worktree.id] ?? [])

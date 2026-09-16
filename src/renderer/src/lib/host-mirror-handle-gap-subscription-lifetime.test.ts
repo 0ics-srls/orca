@@ -17,10 +17,11 @@ import {
 //   - RETAIN direction (drop the verdict term from `stopStoreSubscriptionIfIdle`, so a verdict
 //     with no waiter behind it loses the subscription its drain needs): already caught, by
 //     host-mirror-handle-gap-landed-handle.test.ts. Two failures there without this file.
-//   - RELEASE direction (never release the subscription at all): caught by NOTHING. That mutation
-//     passes all 272 tests across the 33 other handle-gap and session-tabs suites. A leaked
+//   - RELEASE direction (never release the subscription at all): caught by NOTHING else. With
+//     `stopStoreSubscriptionIfIdle` neutered, the three cases below are the only failures in the
+//     handle-gap and session-tabs tree: 326 tests across the other 37 files still pass. A leaked
 //     subscription rescans every parked pane on every store write for the life of the session and
-//     no test notices.
+//     nothing else notices.
 //
 // So this file exists for the release direction; the retain cases are here because the two belong
 // in one place, not because they were missing. `stopStoreSubscriptionIfIdle` counts VERDICTS as

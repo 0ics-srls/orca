@@ -118,7 +118,9 @@ describe('handle-gap verdict map, all rules on one tree', () => {
     expect(hasHostMirrorHandleWaitExpired(ENV_A, 'a1')).toBe(false)
     // B drained: by teardown, which is the only trigger that fires for a removed environment.
     expect(hasHostMirrorHandleWaitExpired(ENV_B, 'b1')).toBe(false)
-    // C drained: env-a's expiry retired env-c's superseded row, though env-c never expired again.
+    // C: env-c reconnected at :109, so this read is false on the read-time generation gate alone
+    // and says nothing about whether the drain ran. The drain is what the COUNT below proves — it
+    // is the only assertion here that distinguishes "retired" from "stranded but unreachable".
     expect(hasHostMirrorHandleWaitExpired(ENV_C, 'c1')).toBe(false)
 
     // D is closed, and NOT by a prune. No trigger any rule above owns fires at the right moment:
@@ -191,9 +193,10 @@ describe('handle-gap verdict map, all rules on one tree', () => {
   })
 
   it('never evicts a live pane verdict, whichever environment sweeps', () => {
-    // Three environments on purpose: with two at one generation the candidate rules are
-    // indistinguishable and the naive "judge everything against the recording environment"
-    // mutation survives. env-c is the discriminator — its verdict is live.
+    // env-b is the discriminator, and it is the only assertion here that is not a control: its row
+    // goes absent at the moment env-a records, so widening the tab-death rule past the recording
+    // environment deletes a verdict whose pane is merely mid-republish. env-a's and env-c's rows
+    // are published throughout and hold under every candidate rule.
     for (const environmentId of [ENV_A, ENV_B, ENV_C]) {
       setRuntimeEnvironmentConnectionGenerationForTests(environmentId, 1)
     }
@@ -213,13 +216,24 @@ describe('handle-gap verdict map, all rules on one tree', () => {
     expect(hasHostMirrorHandleWaitExpired(ENV_A, 'a1')).toBe(true)
   })
 
-  it('returns to baseline under churn across all three drains', () => {
+  it('holds the verdict map at one live row per environment under churn', () => {
     for (let round = 0; round < 300; round += 1) {
       const environmentId = [ENV_A, ENV_B, ENV_C][round % 3]!
       setRuntimeEnvironmentConnectionGenerationForTests(environmentId, round + 1)
-      setLiveTabs([`tab-${round}`])
+      // Bind each round's pane to the environment that is recording it. Falling back to env-a for
+      // every round would store `paneBinding: ''` on two rounds in three, which is the match value
+      // the read-time check refuses — two thirds of the churn would then be synthetic.
+      setLiveTabs([`tab-${round}`], { [`tab-${round}`]: `remote:${environmentId}@@term_${round}` })
       parkAndExpire(environmentId, `tab-${round}`)
     }
+
+    // The assertion the loop exists for, and it has to come BEFORE teardown: the clear below
+    // deletes every key in the map by construction, so `toBe(0)` after it holds whether the drains
+    // work or are deleted outright. 300 expiries must leave one live verdict per environment —
+    // each environment's own generation bump retires its predecessors, and the two environments
+    // not recording keep exactly their latest row.
+    expect(countHostMirrorHandleGapVerdictsForTests()).toBe(3)
+
     for (const environmentId of [ENV_A, ENV_B, ENV_C]) {
       clearHostMirrorHandleGapVerdictsForEnvironment(environmentId)
     }

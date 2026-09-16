@@ -58,6 +58,19 @@ export function findUnhydratedHostMirrorForPane(
   }
   // Why: a published PTY handle for the tab is the mirror having spoken for it,
   // whatever the individual leaf's fate.
+  //
+  // TAB-GRANULAR, and everything below this line is leaf-aware — the asymmetry is a known residual,
+  // not an oversight. For a single-leaf tab (every agent tab Orca creates) it is exact: the mirror
+  // builds `ptyIdsByTabId[tab]` out of the same map it writes to the layout's `ptyIdsByLeafId`
+  // (web-session-tabs-sync/terminal-build.ts), so a non-empty entry means this leaf is bound and
+  // live. For a SPLIT mirrored tab it is not: a sibling surface reaching `ready` first ends the
+  // wait for one still `pending-handle`, and the resume fires — #19735 narrowed to split tabs.
+  // It cannot be closed here, because during the gap the pane's own leaf holds no binding and the
+  // binding is what names a pane in a handle-gap verdict. Closing it means keeping each surface's
+  // `pending-handle` status, which the host already publishes
+  // (main/runtime/runtime-mobile-session-projection.ts) and the client drops on apply.
+  // Pinned as current behaviour by "resumes a pending leaf once a sibling leaf of the same tab
+  // publishes its handle" in host-mirror-handle-gap-resume.test.ts.
   if ((state.ptyIdsByTabId[tabId]?.length ?? 0) > 0) {
     return null
   }

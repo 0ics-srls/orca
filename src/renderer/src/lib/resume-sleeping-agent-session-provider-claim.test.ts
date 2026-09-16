@@ -177,7 +177,10 @@ describe('resume sleeping agent provider claims', () => {
     expect(useAppStore.getState().sleepingAgentSessionsByPaneKey[record.paneKey]).toBeUndefined()
   })
 
-  it('does not fork a provider session a live pane in another workspace is running', () => {
+  // The load-bearing half of the pair: this is the only case that proves the live arm carries no
+  // workspace scope. The peer is `done` here too — a finished turn on a pane whose shell is still
+  // up — so "live" means the PTY, not the agent.
+  it('does not fork a provider session a live pane in another workspace already finished a turn on', () => {
     const paneKey = makePaneKey('tab-1', LEAF_ID)
     const peerPaneKey = makePaneKey('tab-peer', OTHER_LEAF_ID)
     const record = makeRecord(paneKey)

@@ -117,6 +117,13 @@ function activeOrQueuedResumeClaimsProviderSession(
     // orphaned terminal re-keys `tabsByWorktree` without re-keying the sleeping records that name
     // the old id (workspace-session-worktree-id.ts), and a completed turn on a live pane is exactly
     // where the drift stops being caught.
+    // What this trades, stated because it reads as a regression: `entry.state` is ignored, so a
+    // FINISHED agent whose shell is still up releases its record and will not auto-resume. That is
+    // the intended side of the trade, not an oversight. A live PTY is positive evidence the host
+    // holds the transcript, and a bare `done` row cannot be told apart from a REPL idling at its
+    // prompt with the process still attached. Nothing is killed: the pane, its shell and the
+    // transcript survive, the record was only a queued respawn, and the user can resume by hand.
+    // Forking the transcript is not recoverable; declining to auto-resume is.
     if (
       pane &&
       tabId === pane.tabId &&
