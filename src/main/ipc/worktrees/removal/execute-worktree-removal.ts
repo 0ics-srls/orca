@@ -57,6 +57,9 @@ function assertRemovalHostMatchesRepoRow(
     connectionId: repo.connectionId,
     executionHostId: null
   })
+  // `repoRowHostId` is built from `connectionId`, so it is always `local` or an `ssh:` id and its
+  // name is never `null`. An unroutable `removalHostId` can therefore only ever be the left operand,
+  // and `null` matches no name — which is how `runtime:<env>` is refused here.
   if (removalHostName(removalHostId) !== removalHostName(repoRowHostId)) {
     throw new Error(
       `Refusing to delete worktree: repo ${repoId} names execution host ${removalHostId}, but its checkout is only reachable as ${repoRowHostId}.`
@@ -69,8 +72,8 @@ function assertRemovalHostMatchesRepoRow(
  *
  * Compared after decoding rather than as stored text: `ssh:my target` and `ssh:my%20target` are the
  * same host, and refusing a removal over the spelling of a percent-escape would be a false alarm on
- * a row that is perfectly consistent. `runtime:<env>` and an unparseable id return `null`, which
- * matches nothing — including each other.
+ * a row that is perfectly consistent. `runtime:<env>` and an unparseable id name no machine this
+ * path can delete on, so they answer `null` and the caller refuses them outright.
  */
 function removalHostName(hostId: ExecutionHostId): string | null {
   const parsed = parseExecutionHostId(hostId)
