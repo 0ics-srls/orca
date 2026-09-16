@@ -18,6 +18,7 @@ import {
   trackWebSessionTabsWorktree,
   recordAcceptedWebSessionTabsEnvironment
 } from './tracking'
+import { hostSnapshotAffirmsWorktreeContents } from '../host-session-snapshot-authority'
 import { clearWebSessionTabsTrackingForWorktree } from './tracking-lifecycle'
 import { queueAcceptedWebSessionTerminalSnapshot } from '../web-session-terminal-handle-events'
 
@@ -113,7 +114,10 @@ export function decideWebSessionTabsSnapshot(
   }
   rememberHostTerminalTabCount(environmentId, snapshot)
   replayableSessionTabsSnapshotByWorktree.delete(key)
-  noteSessionTabsPublicationEpoch(key, snapshot.publicationEpoch)
+  // A frame that affirms nothing about the worktree has not taken over publishing it.
+  if (hostSnapshotAffirmsWorktreeContents(snapshot)) {
+    noteSessionTabsPublicationEpoch(key, snapshot.publicationEpoch)
+  }
   latestSessionTabsSnapshotByWorktree.set(key, {
     publicationEpoch: snapshot.publicationEpoch,
     snapshotVersion: snapshot.snapshotVersion

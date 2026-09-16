@@ -22,6 +22,7 @@ import {
   noteSessionTabsPublicationEpoch,
   recordReceivedWebSessionTabsEnvironmentFrame
 } from './publisher-identity-fences'
+import { hostSnapshotAffirmsWorktreeContents } from '../host-session-snapshot-authority'
 
 export function isSessionTabsListAllResult(value: unknown): value is SessionTabsListAllResult {
   return (
@@ -110,9 +111,14 @@ export function recordReceivedWebSessionTabsSnapshot(
   if (isRetiredSessionTabsPublicationEpoch(key, publicationEpoch)) {
     return frame
   }
-  // A retraction withdraws the worktree; it does not take over publishing it. Noting it as current
-  // would retire the generation that is still live and fence its next frame out of its own worktree.
-  if (!isRetraction && (!history || history.current !== publicationEpoch)) {
+  // Neither a retraction nor a "nothing published yet" placeholder takes over publishing this
+  // worktree, so neither may be noted as current: doing so retires the generation that is still
+  // live and fences its next frame out of its own worktree.
+  if (
+    !isRetraction &&
+    hostSnapshotAffirmsWorktreeContents(snapshot) &&
+    (!history || history.current !== publicationEpoch)
+  ) {
     noteSessionTabsPublicationEpoch(key, publicationEpoch)
   }
   // Stream delivery order is the freshest evidence even when a host's version
@@ -126,12 +132,17 @@ export function recordReceivedWebSessionTabsSnapshot(
     snapshot.snapshotVersion > current.snapshotVersion ||
     (snapshot.snapshotVersion === current.snapshotVersion && current.receivedFrame <= frame)
   ) {
-    setBoundedSessionTabsReceipt(latestReceivedSessionTabsSnapshotByWorktree, key, {
-      receivedFrame: frame,
-      publicationEpoch,
-      snapshotVersion: snapshot.snapshotVersion,
-      ...(runtimeId ? { runtimeId } : {})
-    })
+    setBoundedSessionTabsReceipt(
+      latestReceivedSessionTabsSnapshotByWorktree,
+      key,
+      {
+        receivedFrame: frame,
+        publicationEpoch,
+        snapshotVersion: snapshot.snapshotVersion,
+        ...(runtimeId ? { runtimeId } : {})
+      },
+      (entry) => entry.receivedFrame
+    )
     if (isRetraction) {
       recordReceivedWebSessionTabsRemoval(environmentId, snapshot.worktree, frame, publicationEpoch)
     }
@@ -158,15 +169,21 @@ export function recordReceivedWebSessionTabsRemoval(
   // live publisher's next frame outrank the pre-close one on version; the watermark is what the
   // slot cannot be, because a later frame overwrites the slot and the boundary has to outlive it.
   if (!latest || latest.receivedFrame <= receivedFrame) {
-    setBoundedSessionTabsReceipt(latestReceivedSessionTabsSnapshotByWorktree, key, {
-      receivedFrame,
-      publicationEpoch,
-      snapshotVersion: 0
-    })
+    setBoundedSessionTabsReceipt(
+      latestReceivedSessionTabsSnapshotByWorktree,
+      key,
+      { receivedFrame, publicationEpoch, snapshotVersion: 0 },
+      (entry) => entry.receivedFrame
+    )
   }
   const watermark = sessionTabsRemovalWatermarkByWorktree.get(key) ?? 0
   if (receivedFrame > watermark) {
-    setBoundedSessionTabsReceipt(sessionTabsRemovalWatermarkByWorktree, key, receivedFrame)
+    setBoundedSessionTabsReceipt(
+      sessionTabsRemovalWatermarkByWorktree,
+      key,
+      receivedFrame,
+      (entry) => entry
+    )
   }
 }
 

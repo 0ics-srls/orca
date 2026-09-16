@@ -13,6 +13,12 @@ import { captureRuntimeEnvironmentCall } from './web-runtime-session-environment
 import { throwIfE2eWebRuntimeBrowserReconciliationFails } from './web-runtime-browser-creation-e2e-fault'
 import { getSessionTabsRuntimeIdFromResponse } from './web-session-tabs-sync/publisher-identity-fences'
 import { WEB_SESSION_TABS_FRAME_OUTRANKED } from './web-session-tabs-sync/tracking-decisions'
+// Not through the barrel: receipt ordering is this path's gate, not an optional collaborator a
+// caller's module mock may leave out — doing so is what left this path unordered to begin with.
+import {
+  recordReceivedWebSessionTabsSnapshot,
+  shouldApplyRecoveredWebSessionTabsSnapshot
+} from './web-session-tabs-sync/tracking'
 import { recoverWebSessionTerminalOrphansBeforeApply } from './web-session-terminal-orphan-recovery'
 
 const pendingRuntimeWorktreeRecoveryRefreshes = new Map<string, symbol>()
@@ -90,9 +96,7 @@ export async function refreshWebRuntimeSessionTabsSnapshot(
     const {
       applyWebSessionTabsSnapshot,
       applyWebSessionTabsStorePatch,
-      decideWebSessionTabsSnapshot,
-      recordReceivedWebSessionTabsSnapshot,
-      shouldApplyRecoveredWebSessionTabsSnapshot
+      decideWebSessionTabsSnapshot
     } = webSessionTabsSync
     // A list is evidence about a moment, not about now. Record its place in receipt order before
     // ranking it, or a snapshot the host answered before a close lands after the retraction did.

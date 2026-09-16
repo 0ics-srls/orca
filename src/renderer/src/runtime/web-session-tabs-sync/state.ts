@@ -92,16 +92,27 @@ export const latestReceivedSessionTabsSnapshotByWorktree = new Map<
 /** Receipt ledgers outlive the worktrees they order, so their keys need a bound of their own. */
 export const MAX_TRACKED_SESSION_TABS_RECEIPTS = 512
 
-/** Writes evict least-recently-written first, so the surviving keys are the ones still being ordered. */
-export function setBoundedSessionTabsReceipt<T>(map: Map<string, T>, key: string, value: T): void {
-  map.delete(key)
+/**
+ * Bounds a receipt ledger by frame age, never by entry count. One inventory records a receipt per
+ * worktree under a single reserved frame, and evicting by insertion order would drop that batch's
+ * own earlier entries — which the recovery gate reads as "no evidence for this worktree" and uses
+ * to reject it. Only a receipt no in-flight frame can still be ranked against is droppable.
+ */
+export function setBoundedSessionTabsReceipt<T>(
+  map: Map<string, T>,
+  key: string,
+  value: T,
+  frameOf: (entry: T) => number
+): void {
   map.set(key, value)
-  while (map.size > MAX_TRACKED_SESSION_TABS_RECEIPTS) {
-    const oldest = map.keys().next().value
-    if (typeof oldest !== 'string') {
-      break
+  if (map.size <= MAX_TRACKED_SESSION_TABS_RECEIPTS) {
+    return
+  }
+  const oldestRankableFrame = receivedSessionTabsFrameSequence - MAX_TRACKED_SESSION_TABS_RECEIPTS
+  for (const [entryKey, entry] of map) {
+    if (frameOf(entry) < oldestRankableFrame) {
+      map.delete(entryKey)
     }
-    map.delete(oldest)
   }
 }
 

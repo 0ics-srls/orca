@@ -7,9 +7,11 @@ import {
   shouldApplyRecoveredWebSessionTabsSnapshot
 } from './web-session-tabs-sync/tracking'
 import {
+  MAX_TRACKED_SESSION_TABS_RECEIPTS,
   nextReceivedSessionTabsFrame,
   VISIBILITY_INVENTORY_REMOVAL_EPOCH
 } from './web-session-tabs-sync/state'
+import { UNPUBLISHED_WORKTREE_PUBLICATION_EPOCH } from '../../../shared/runtime-types'
 import { resetWebSessionTabsSyncTestState } from './web-session-tabs-sync-test-harness'
 
 vi.mock('../store', () => ({ useAppStore: { setState: vi.fn() } }))
@@ -111,6 +113,74 @@ describe('a removal frame must not retire the publisher that is still live', () 
       'bootstrap'
     )
     expect(admits(delayed, delayedReceived)).toBe(false)
+  })
+
+  /**
+   * The receipt ledger is bounded, and one bootstrap inventory records a receipt per worktree under
+   * a single reserved frame. Evicting by insertion count would drop that batch's own earlier
+   * entries, and an absent receipt is what the recovery gate reads as "no evidence for this
+   * worktree" — so the bound would silently discard the worktrees it was meant to protect.
+   */
+  it('keeps every receipt an inventory recorded under one frame, past the bound', () => {
+    const requestReceivedFrame = nextReceivedSessionTabsFrame()
+    const worktrees = Array.from(
+      { length: MAX_TRACKED_SESSION_TABS_RECEIPTS + 64 },
+      (_value, index) => `repo::/worktree-${index}`
+    )
+    for (const worktree of worktrees) {
+      recordReceivedWebSessionTabsSnapshot(
+        ENVIRONMENT_ID,
+        { ...liveFrame(1), worktree },
+        requestReceivedFrame,
+        undefined,
+        'bootstrap'
+      )
+    }
+
+    for (const worktree of [worktrees[0]!, worktrees.at(-1)!]) {
+      expect(
+        shouldApplyRecoveredWebSessionTabsSnapshot(
+          ENVIRONMENT_ID,
+          { ...liveFrame(1), worktree },
+          requestReceivedFrame
+        )
+      ).toBe(true)
+    }
+  })
+
+  /**
+   * A worktree the host has published nothing for still answers a forced list, with a synthesized
+   * `none`/v0 frame that means "ask me later" (host-session-snapshot-authority.ts). Every
+   * post-close list and every activation of an emptied worktree gets one. Noting it as a
+   * publication retires the renderer generation that is still live, and since that generation's
+   * epoch is per-process, the terminal the user creates next never reaches this client.
+   */
+  it('does not let an unpublished-worktree placeholder retire the live publisher', () => {
+    const liveReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, liveFrame(1))
+    expect(admits(liveFrame(1), liveReceived)).toBe(true)
+
+    const removedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, removalFrame())
+    expect(admits(removalFrame(), removedReceived)).toBe(true)
+
+    const placeholder = {
+      ...liveFrame(1),
+      publicationEpoch: UNPUBLISHED_WORKTREE_PUBLICATION_EPOCH,
+      snapshotVersion: 0,
+      tabs: []
+    } as RuntimeMobileSessionTabsResult
+    const placeholderReceived = recordReceivedWebSessionTabsSnapshot(
+      ENVIRONMENT_ID,
+      placeholder,
+      undefined,
+      undefined,
+      'bootstrap'
+    )
+    admits(placeholder, placeholderReceived)
+
+    // The user creates a terminal; the same live generation publishes its worktree again.
+    const republished = liveFrame(2)
+    const republishedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, republished)
+    expect(admits(republished, republishedReceived)).toBe(true)
   })
 
   /**
