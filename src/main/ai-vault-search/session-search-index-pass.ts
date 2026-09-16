@@ -33,9 +33,11 @@ export type SessionSearchIndexPassOptions = {
  * drop. What the reads themselves leave behind is written by the index consumer
  * onto the rows.
  *
- * `left` is what makes the backlog sayable: a candidate with no row yet is owed
- * a read and counted by no query, so without this the status has no way to tell
- * an index that holds everything from one that has barely started.
+ * `left` is what makes the backlog sayable: a candidate with no row yet, or one
+ * whose row does not say it is owed, is counted by no `due` query, so without
+ * this the status has no way to tell an index that holds everything from one
+ * that has barely started. Candidates whose row is already `due` are left out,
+ * because the status adds `left` to that same count.
  */
 export async function runSessionSearchIndexPass(
   store: SessionSearchStore,
@@ -67,7 +69,11 @@ export async function runSessionSearchIndexPass(
     // count of what a pass left is worth more than the microseconds.
     outOfTime ||= read > 0 && options.overdue?.() === true
     if (outOfTime) {
-      left += 1
+      // A `due` row is already in `stateCounts().due`, which the status adds
+      // this to; counting it here would report the same file twice.
+      if (row?.state !== 'due') {
+        left += 1
+      }
       continue
     }
     // The clock the deadline reads is one the owner may close behind: the read

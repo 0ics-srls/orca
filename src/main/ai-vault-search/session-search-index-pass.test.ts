@@ -111,6 +111,22 @@ it('leaves what it ran out of time for owed, with nothing written down', async (
   expect(store.files()).toHaveLength(2)
 })
 
+// A deferred candidate whose row already says `due` is in `stateCounts().due`,
+// which the status adds `left` to; counting it here would report it twice.
+it('leaves a deferred candidate out of the count when its row already says due', async () => {
+  await passOverAll()
+  for (const row of store.files()) {
+    store.setFileState(row.path, 'due')
+  }
+
+  const cut = await runSessionSearchIndexPass(store, await candidates(), {
+    rows: rows(),
+    overdue: () => true
+  })
+
+  expect(cut).toMatchObject({ outOfTime: true, left: 0 })
+})
+
 // The deadline is never applied before the pass has read anything, so a single
 // transcript larger than one deadline is read alone rather than starved.
 it('reads one file even when the deadline has already expired', async () => {
