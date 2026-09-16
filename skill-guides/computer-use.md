@@ -3,16 +3,16 @@ name: computer-use
 description: >-
   Drives the GUI of a visible local app window through `orca computer`: accessibility
   tree, clicks, typing, menus, dialogs, and screenshots in native apps and external
-  browser windows (Chrome, Edge, Safari) or webviews. Use only when the task requires
-  interacting with an on-screen window that has no equivalent CLI, filesystem, or API
-  path. Do not use for files, folders, git, or shell commands, including paths like
-  Desktop or Documents. Do not use for Orca's embedded browser (`orca-cli`) or
-  page-only automation (Playwright or CDP).
+  browser windows (Chrome, Edge, Safari) or webviews. Prefer a programmatic path
+  (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can
+  complete the task. Use only when a visible window needs GUI control those cannot
+  reach. Do not use for Orca's embedded browser (`orca-cli`) or page-only automation
+  (Playwright or CDP).
 ---
 
 # Computer Use
 
-Use this skill to drive a visible app window through `orca computer`. Prefer shell, filesystem, and existing CLIs whenever they can complete the task; "Desktop" as a folder path is not a GUI task. For a website or web app, use it only when the page is in an external browser window that needs window-level control. Do not use it for page-only automation: use `orca-cli` for Orca's embedded pages and a page-automation tool such as Playwright or CDP for external pages.
+Use this skill to drive a visible app window through `orca computer`. Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can complete the task; use this skill only when a visible window needs GUI control those cannot reach. For a website or web app, use it only when the page is in an external browser window that needs window-level control. Do not use it for page-only automation: use `orca-cli` for Orca's embedded pages and a page-automation tool such as Playwright or CDP for external pages.
 
 ## Preconditions
 

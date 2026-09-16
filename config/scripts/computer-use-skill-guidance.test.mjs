@@ -12,18 +12,22 @@ const stubPath = join(projectDir, 'skills', 'computer-use', 'SKILL.md')
 const bundledGuide = BUNDLED_SKILL_GUIDES.find((guide) => guide.name === 'computer-use')?.markdown
 
 describe('computer-use skill guidance', () => {
-  it('keeps discovery scoped to GUI windows and out of filesystem and the embedded browser', () => {
+  it('keeps discovery scoped to last-resort GUI and out of the embedded browser', () => {
     const frontmatter = /^---\n([\s\S]*?)\n---\n/u.exec(readFileSync(guidePath, 'utf8'))?.[1] ?? ''
     const description = frontmatter.replace(/\s+/gu, ' ')
 
     expect(description).toContain('Drives the GUI of a visible local app window')
-    expect(description).toContain('no equivalent CLI, filesystem, or API path')
-    expect(description).toContain('Do not use for files, folders, git, or shell commands')
-    expect(description).toContain('paths like Desktop or Documents')
+    expect(description).toContain(
+      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can complete the task.'
+    )
+    expect(description).toContain(
+      'Use only when a visible window needs GUI control those cannot reach.'
+    )
     expect(description).toContain('external browser windows')
     expect(description).toContain("Do not use for Orca's embedded browser (`orca-cli`)")
     expect(description).toContain('page-only automation (Playwright or CDP)')
     expect(description).not.toContain('OS/window-level')
+    expect(description).not.toContain('Desktop or Documents')
     expect(description).not.toContain('read Slack')
     expect(description).not.toContain('get app state')
   })
@@ -32,7 +36,12 @@ describe('computer-use skill guidance', () => {
     const skill = readFileSync(guidePath, 'utf8')
 
     expect(skill).toContain('Use this skill to drive a visible app window through `orca computer`')
-    expect(skill).toContain('"Desktop" as a folder path is not a GUI task')
+    expect(skill).toContain(
+      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can complete the task'
+    )
+    expect(skill).toContain(
+      'use this skill only when a visible window needs GUI control those cannot reach'
+    )
     expect(skill).toContain('external browser window that needs window-level control')
     expect(skill).not.toMatch(/\borca goto\b/iu)
     expect(skill).not.toMatch(/\borca snapshot\b/iu)

@@ -8,9 +8,8 @@ description: >-
   agent", "another worktree" — unless asked to supervise, monitor, or coordinate
   a DAG, and for terminal control, lightweight terminal prompts, shell commands,
   Orca worktree management, and reading or waiting on terminals. Use Computer
-  Use for external browser windows, webviews, or Orca app UI only for clicks, menus,
-  dialogs, coordinates, or screenshots in a visible window; never for files, folders,
-  git, or shell. Use `orca-cli` for Orca's embedded pages and a page-automation
+  Use only when a visible window needs GUI control that a CLI, filesystem, or API
+  cannot do. Use `orca-cli` for Orca's embedded pages and a page-automation
   tool such as Playwright or CDP for external pages.
 ---
 
