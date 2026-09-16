@@ -413,6 +413,20 @@ class FakeControlSocket extends EventEmitter {
     this.close(1006)
   }
 
+  pings = 0
+
+  ping(): void {
+    if (this.readyState !== 1) {
+      throw new Error('socket_not_open')
+    }
+    this.pings += 1
+  }
+
+  /** The RFC 6455 reply a live peer owes any ping, delivered out of band. */
+  pong(): void {
+    this.emit('pong')
+  }
+
   deliver(message: ControlFrame): void {
     this.emit('message', JSON.stringify(message), false)
   }
@@ -629,5 +643,86 @@ describe('RelayControlClient scripted-socket lifecycle', () => {
     expect(client.isLive()).toBe(false)
     expect(socket.readyState).toBe(3)
     expect(onClose).toHaveBeenCalledWith(MOBILE_RELAY_CLOSE_CODE.BAD_OUTER_CREDENTIAL)
+  })
+})
+
+// STA-7672: a Windows desktop behind NAT/VPN (or resuming from sleep) can hold a
+// half-open control socket that send() writes into happily while nothing comes
+// back. Every pairing request then failed at its 10s deadline against a socket
+// the 75s silence watchdog would not reap for another minute-plus.
+describe('RelayControlClient half-open recovery', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('probes and tears down a control whose request timed out with no inbound traffic', async () => {
+    vi.useFakeTimers()
+    const { client, socket, onClose } = scriptedControl()
+    await client.connect()
+    const invite = client.createInvite('device-1').catch((error: Error) => error.message)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    // The request deadline alone must not close the control — a close would have
+    // rejected as relay_control_closed_<code> instead.
+    expect(await invite).toContain('relay_control_request_timeout')
+    expect(socket.pings).toBe(1)
+    expect(socket.readyState).toBe(1)
+
+    // No pong inside the probe deadline: the pipe is proven dead, so the origin
+    // gets its close now rather than after the 75s silence bound.
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(socket.readyState).toBe(3)
+    expect(onClose).toHaveBeenCalledWith(1006)
+    expect(client.isLive()).toBe(false)
+  })
+
+  it('keeps a control that answers the probe', async () => {
+    vi.useFakeTimers()
+    const { client, socket, onClose } = scriptedControl()
+    await client.connect()
+    const invite = client.createInvite('device-1').catch((error: Error) => error.message)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+    await invite
+    socket.pong()
+
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(socket.readyState).toBe(1)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(client.isLive()).toBe(true)
+  })
+
+  it('does not probe a control that kept talking while a request went unanswered', async () => {
+    vi.useFakeTimers()
+    const { client, socket } = scriptedControl()
+    await client.connect()
+    const invite = client.createInvite('device-1').catch((error: Error) => error.message)
+
+    await vi.advanceTimersByTimeAsync(5_000)
+    socket.deliver({ type: 'ping', t: Date.now() })
+    await vi.advanceTimersByTimeAsync(5_000)
+
+    // A reply running past its deadline under relay DB load is not a dead
+    // socket; tearing this control down would strand every phone on the cell.
+    expect(await invite).toContain('relay_control_request_timeout')
+    expect(socket.pings).toBe(0)
+    expect(client.isLive()).toBe(true)
+  })
+
+  it('names the cell and the silence in the timeout error', async () => {
+    vi.useFakeTimers()
+    const { client } = scriptedControl()
+    await client.connect()
+    const invite = client.createInvite('device-1').catch((error: Error) => error.message)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+
+    const message = await invite
+    expect(message).toContain('reqKind=invite')
+    expect(message).toContain('cell=http://relay.test')
+    expect(message).toContain('socketAgeMs=10000')
+    expect(message).toContain('sinceInboundMs=10000')
+    expect(message).toContain('probe=armed')
   })
 })

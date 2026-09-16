@@ -16,7 +16,21 @@ type PendingRequest = {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
+  sentAt: number
 }
+
+export type RelayControlRequestTimeout = {
+  reqId: string
+  kind: PendingRequest['kind']
+  sentAt: number
+}
+
+/**
+ * Returns a diagnostic suffix appended to the timeout error. A bare
+ * `relay_control_request_timeout` cost a full code trace to interpret in
+ * STA-7672, because the same string covers a slow relay and a dead socket.
+ */
+export type OnRelayControlRequestTimeout = (timeout: RelayControlRequestTimeout) => string
 
 export type DeviceCredentialInstallAuthorization =
   | { mode: 'relay-basis'; basisConnId: string }
@@ -42,7 +56,10 @@ type SendRelayControlRequest = (payload: RelayControlRequestPayload) => void
 export class RelayControlRequests {
   private readonly pending = new Map<string, PendingRequest>()
 
-  constructor(private readonly onPendingChanged?: () => void) {}
+  constructor(
+    private readonly onPendingChanged?: () => void,
+    private readonly onTimeout?: OnRelayControlRequestTimeout
+  ) {}
 
   get size(): number {
     return this.pending.size
@@ -170,12 +187,17 @@ export class RelayControlRequests {
     if (this.pending.has(reqId)) {
       return Promise.reject(new Error('duplicate_relay_request_id'))
     }
+    const sentAt = Date.now()
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.finish(reqId)
-        reject(new Error('relay_control_request_timeout'))
+        // Runs before the reject so the diagnostics describe the socket as the
+        // deadline found it, and so a proven-dead socket is torn down while the
+        // caller still learns it was a timeout rather than a close.
+        const diagnostics = this.onTimeout?.({ reqId, kind, sentAt }) ?? ''
+        reject(new Error(`relay_control_request_timeout${diagnostics && ` ${diagnostics}`}`))
       }, 10_000)
-      this.pending.set(reqId, { kind, resolve, reject, timer })
+      this.pending.set(reqId, { kind, resolve, reject, timer, sentAt })
       try {
         send(payload)
       } catch (error) {

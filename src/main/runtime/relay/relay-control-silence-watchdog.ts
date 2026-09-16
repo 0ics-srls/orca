@@ -17,6 +17,11 @@ export class RelayControlSilenceWatchdog {
     this.lastInboundAt = Date.now()
   }
 
+  /** 0 before the control activates; callers treat that as "no inbound yet". */
+  get lastInboundTime(): number {
+    return this.lastInboundAt
+  }
+
   start(): void {
     this.lastInboundAt = Date.now()
     this.timer = setInterval(() => {
