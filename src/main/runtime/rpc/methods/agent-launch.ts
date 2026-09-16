@@ -61,7 +61,7 @@ async function agentLaunchIntent(
   return {
     agent: params.agent,
     target: await agentLaunchTarget(params, runtime),
-    operation: params.operation,
+    clientOperationId: params.clientOperationId,
     ...(params.prompt ? { prompt: params.prompt } : {}),
     ...(params.sessionOptions ? { sessionOptions: params.sessionOptions } : {}),
     ...(params.reuseTerminal ? { reuseTerminal: params.reuseTerminal } : {})
@@ -104,10 +104,15 @@ export const AGENT_LAUNCH_METHODS = [
           surfaces: agentLaunchSurfaceFactory(context),
           workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
         })
-      if (params.target.kind === 'create-worktree' && params.target.create.clientMutationId) {
+      // Keyed on the attempt id the contract requires, not on the create payload's own
+      // `clientMutationId`: that one is optional, so keying on it left a launch that omitted it
+      // with no idempotency at all. A launch into an existing workspace is not deduped here —
+      // `dedupeWorktreeCreate` is scoped by repo selector, and closing that half is the ledger's
+      // job, not a second cache beside this one.
+      if (params.target.kind === 'create-worktree') {
         return context.runtime.dedupeWorktreeCreate(
           params.target.create.repo,
-          `agent.launch:${params.target.create.clientMutationId}`,
+          `agent.launch:${params.clientOperationId}`,
           execute
         )
       }

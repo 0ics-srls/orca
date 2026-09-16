@@ -42,35 +42,33 @@ export type AgentLaunchTarget =
   | { kind: 'existing'; worktree: string }
   /** A worktree this launch creates. `create` is the `worktree.create` request minus
    *  `AGENT_LAUNCH_RESERVED_CREATE_FIELDS`, so a caller can neither set a startup agent behind the
-   *  router nor file the launch under a second dedupe key. */
+   *  router nor leave a key in the payload that nothing downstream honours. */
   | { kind: 'create-worktree'; create: Readonly<Record<string, unknown>> }
 
 /** An existing terminal the caller wants reused rather than a fresh surface. Always resolves to a
  *  terminal agent: a running PTY keeps its execution transport. */
 export type AgentLaunchReusedTerminal = { handle: string }
 
-/**
- * The caller's name for this launch attempt, carried so a retry of an interrupted launch is
- * recognisable as the same attempt rather than a second one.
- *
- * The id's shape is the contract, not an opaque token: it is the shipped
- * `createStructuredAgentSessionOperationId` mint, whose leading 13 digits are the mint time. A host
- * reads that timestamp back to decide whether an attempt is still young enough to admit, so an id
- * in any other shape is unusable and is rejected at the wire rather than stored.
- *
- * Deliberately no caller-supplied fingerprint of the request: a digest a caller computes is a
- * channel for claiming two different launches are the same one, and it would freeze the host's
- * canonicalisation into the wire contract. The host derives its own from the params it parsed.
- */
-export type AgentLaunchOperation = {
-  /** `<13-digit ms timestamp>-<32 lowercase hex>`; see `createStructuredAgentSessionOperationId`. */
-  id: string
-}
-
 export type AgentLaunchIntent = {
   agent: TuiAgent
   target: AgentLaunchTarget
-  operation: AgentLaunchOperation
+  /**
+   * The caller's name for this launch attempt, carried so a retry of an interrupted launch is
+   * recognisable as the same attempt rather than a second one.
+   *
+   * Flat and spelled exactly as `terminal.createAgentSession` and the structured mutation envelope
+   * already spell it, so a caller that mints one id for a session and a launch spells it once.
+   *
+   * The id's shape is the contract, not an opaque token: it is the shipped
+   * `createStructuredAgentSessionOperationId` mint (`<13-digit ms timestamp>-<32 lowercase hex>`).
+   * A host reads that timestamp back to decide whether an attempt is still young enough to admit,
+   * so an id in any other shape is unusable and is rejected at the wire rather than stored.
+   *
+   * Deliberately no caller-supplied fingerprint of the request: a digest a caller computes is a
+   * channel for claiming two different launches are the same one, and it would freeze the host's
+   * canonicalisation into the wire contract. The host derives its own from the params it parsed.
+   */
+  clientOperationId: string
   prompt?: AgentLaunchPrompt
   /** Seeded launch options, narrowed by the host to what a structured create accepts. */
   sessionOptions?: Readonly<Record<string, unknown>>
@@ -95,20 +93,21 @@ export type AgentLaunchDisposition = 'created' | 'replayed'
  * apart. A receipt may under-claim — reporting a delivery it cannot vouch for as `not-delivered` is
  * a wasted resend, while over-claiming loses the text silently.
  */
-export type AgentLaunchPromptOutcome =
-  /** Committed to the session's transcript; `messageId` names it. */
-  | 'journaled'
+export type AgentLaunchPromptOutcome = AgentLaunchPromptDisposal['outcome']
+
+/** `messageId` hangs off the `journaled` arm rather than sitting optional beside all three: a
+ *  producer must not be able to claim the text was committed and then not say where. */
+type AgentLaunchPromptDisposal =
+  /** Committed to the session's transcript, which `messageId` names. */
+  | { outcome: 'journaled'; messageId: string }
   /** Written to a PTY, whose consumption only the pane's owner observes. */
-  | 'handed-to-terminal'
+  | { outcome: 'handed-to-terminal' }
   /** Not delivered by this call; the caller still owns the text. */
-  | 'not-delivered'
+  | { outcome: 'not-delivered' }
 
 export type AgentLaunchPromptReceipt = {
   delivery: AgentLaunchPromptDelivery
-  outcome: AgentLaunchPromptOutcome
-  /** Set only for `journaled`, so a caller can locate the turn it asked for. */
-  messageId?: string
-}
+} & AgentLaunchPromptDisposal
 
 export type AgentLaunchResult = {
   outcome: AgentLaunchOutcome
@@ -161,9 +160,10 @@ export function agentLaunchTargetIsCreate(
  * The create fields the launch owns rather than the caller.
  *
  * Every `startup*` field is placement: a caller that set one would route itself around the host's
- * mode decision. `clientMutationId` is the same argument for idempotency — `operation.id` names the
- * attempt now, and leaving a second key in the create payload would register one launch under two
- * independent dedupe keys.
+ * mode decision. `clientMutationId` is there for a different reason: `agent.launch` dedupes on
+ * `clientOperationId`, and `createManagedWorktree` never reads `clientMutationId` at all, so a copy
+ * left in the forwarded payload is an inert field that still reads as an idempotency guarantee.
+ * Stripping it makes the payload say what is true.
  *
  * `createdWithAgent` is deliberately absent: it records which agent a workspace was made for, which
  * is provenance rather than placement, and the launch overwrites it with its own agent anyway.

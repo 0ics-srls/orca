@@ -8,7 +8,7 @@
  */
 
 import { z } from 'zod'
-import { AGENT_SESSION_OPERATION_ID_PATTERN } from '../../../../shared/agent-session-host-authority'
+import { parseAgentSessionOperationTimestamp } from '../../../../shared/agent-session-host-authority'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { WorktreeCreate } from './worktree-create-schemas'
@@ -25,12 +25,15 @@ const LaunchAgent = z
 
 export const AgentLaunch = z.object({
   agent: LaunchAgent,
-  /** Names this launch attempt. Required, and pinned to the mint the host's own operation parser
-   *  reads: the embedded timestamp decides admission, so an id it cannot parse is refused here
-   *  rather than stored and found unusable later. */
-  operation: z.object({
-    id: z.string().regex(AGENT_SESSION_OPERATION_ID_PATTERN, 'Malformed launch operation id')
-  }),
+  /** Names this launch attempt. Required, and admitted by the same parser `CreateAgentSessionParams`
+   *  uses rather than a second copy of its pattern: the embedded timestamp decides admission, so an
+   *  id the host cannot parse is refused here rather than stored and found unusable later. */
+  clientOperationId: z
+    .string()
+    .refine(
+      (value) => parseAgentSessionOperationTimestamp(value) !== null,
+      'Invalid agent operation ID'
+    ),
   target: z.discriminatedUnion('kind', [
     z.object({
       kind: z.literal('existing'),

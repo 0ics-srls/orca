@@ -30,8 +30,10 @@ describe('the create fields agent.launch reserves', () => {
   })
 
   it('reserves the create payload’s own idempotency key', () => {
-    // `operation.id` names the attempt; leaving this in the create payload would register one
-    // launch under two independent dedupe keys.
+    // `agent.launch` dedupes on `clientOperationId`, and `buildManagedWorktreeCreateArgs` never
+    // reads `clientMutationId`, so a copy left in the forwarded payload is inert while still
+    // reading as an idempotency guarantee. Stripping it is what makes the payload honest — not a
+    // second dedupe being disarmed, which is what an earlier version of this comment claimed.
     expect(AGENT_LAUNCH_RESERVED_CREATE_FIELDS).toContain('clientMutationId')
   })
 

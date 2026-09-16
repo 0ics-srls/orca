@@ -141,17 +141,19 @@ async function launch(
   return AGENT_LAUNCH.handler(parsed.data, rpcContext(runtime, context))
 }
 
-const OPERATION = { id: '1758000000000-0123456789abcdef0123456789abcdef' }
+const CLIENT_OPERATION_ID = '1758000000000-0123456789abcdef0123456789abcdef'
 
 const CREATE_LAUNCH = {
   agent: 'claude',
-  operation: OPERATION,
+  clientOperationId: CLIENT_OPERATION_ID,
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
 }
 
-const IDEMPOTENT_CREATE_LAUNCH = {
+/** A payload migrated from `worktree.create`, so it still carries that method's own idempotency
+ *  key. `agent.launch` must neither honour it nor forward it. */
+const CREATE_LAUNCH_WITH_STALE_MUTATION_ID = {
   agent: 'claude',
-  operation: OPERATION,
+  clientOperationId: CLIENT_OPERATION_ID,
   target: {
     kind: 'create-worktree' as const,
     create: { repo: 'id:repo-1', name: 'task', clientMutationId: 'launch-1' }
@@ -195,7 +197,11 @@ describe('what agent.launch accepts', () => {
 
   it('rejects a target that names neither an existing workspace nor a create', () => {
     expect(
-      parseLaunch({ agent: 'claude', operation: OPERATION, target: { kind: 'somewhere' } }).success
+      parseLaunch({
+        agent: 'claude',
+        clientOperationId: CLIENT_OPERATION_ID,
+        target: { kind: 'somewhere' }
+      }).success
     ).toBe(false)
   })
 
@@ -203,7 +209,7 @@ describe('what agent.launch accepts', () => {
     expect(
       parseLaunch({
         agent: 'claude',
-        operation: OPERATION,
+        clientOperationId: CLIENT_OPERATION_ID,
         target: { kind: 'existing', worktree: '' }
       }).success
     ).toBe(false)
@@ -213,7 +219,7 @@ describe('what agent.launch accepts', () => {
     expect(
       parseLaunch({
         agent: 'claude',
-        operation: OPERATION,
+        clientOperationId: CLIENT_OPERATION_ID,
         target: { kind: 'create-worktree', create: { name: 'x' } }
       }).success
     ).toBe(false)
@@ -223,7 +229,7 @@ describe('what agent.launch accepts', () => {
     expect(
       parseLaunch({
         agent: 'codex',
-        operation: OPERATION,
+        clientOperationId: CLIENT_OPERATION_ID,
         target: { kind: 'existing', worktree: 'id:wt-1' },
         prompt: { text: 'do the thing', delivery: 'draft' },
         sessionOptions: { model: 'gpt-5', effort: 'high' },
@@ -237,7 +243,7 @@ describe('what agent.launch accepts', () => {
     const result = await launch(
       {
         agent: 'claude',
-        operation: OPERATION,
+        clientOperationId: CLIENT_OPERATION_ID,
         target: { kind: 'existing', worktree: 'id:wt-7' },
         reuseTerminal: { handle: 'term_live' }
       },
@@ -257,7 +263,7 @@ describe('what agent.launch accepts', () => {
       launch(
         {
           agent: 'claude',
-          operation: OPERATION,
+          clientOperationId: CLIENT_OPERATION_ID,
           target: { kind: 'existing', worktree: 'id:wt-7' },
           reuseTerminal: { handle: 'term_live' }
         },
@@ -279,13 +285,13 @@ describe('what agent.launch accepts', () => {
 
 describe('the launch operation id', () => {
   it('is required, so no launch is anonymous', () => {
-    const { operation: _omitted, ...withoutOperation } = CREATE_LAUNCH
+    const { clientOperationId: _omitted, ...withoutOperation } = CREATE_LAUNCH
     expect(parseLaunch(withoutOperation).success).toBe(false)
   })
 
   it('accepts what the shipped mint produces', () => {
     const minted = createStructuredAgentSessionOperationId(randomUUID)
-    expect(parseLaunch({ ...CREATE_LAUNCH, operation: { id: minted } }).success).toBe(true)
+    expect(parseLaunch({ ...CREATE_LAUNCH, clientOperationId: minted }).success).toBe(true)
   })
 
   it.each([
@@ -297,7 +303,7 @@ describe('the launch operation id', () => {
     // Why: the host reads the leading timestamp back to decide admission, so an id it cannot parse
     // is refused at the wire rather than accepted and found unusable once it matters.
   ])('refuses %s', (_label, id) => {
-    expect(parseLaunch({ ...CREATE_LAUNCH, operation: { id } }).success).toBe(false)
+    expect(parseLaunch({ ...CREATE_LAUNCH, clientOperationId: id }).success).toBe(false)
   })
 })
 
@@ -319,25 +325,53 @@ describe('the worktree factory', () => {
     const runtime = runtimeStub()
 
     const results = await Promise.all([
-      launch(IDEMPOTENT_CREATE_LAUNCH, runtime),
-      launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
+      launch(CREATE_LAUNCH, runtime),
+      launch(CREATE_LAUNCH, runtime)
     ])
 
     expect(results[0]).toEqual(results[1])
     expect(runtime.dedupeWorktreeCreate).toHaveBeenCalledTimes(2)
+    // Keyed on the attempt id, which the contract requires — so a caller that sent no
+    // `clientMutationId` is deduped too. Keying on that optional field left this launch unguarded.
     expect(runtime.dedupeWorktreeCreate.mock.calls).toEqual([
-      ['id:repo-1', 'agent.launch:launch-1', expect.any(Function)],
-      ['id:repo-1', 'agent.launch:launch-1', expect.any(Function)]
+      ['id:repo-1', `agent.launch:${CLIENT_OPERATION_ID}`, expect.any(Function)],
+      ['id:repo-1', `agent.launch:${CLIENT_OPERATION_ID}`, expect.any(Function)]
     ])
     expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
     expect(createStructuredSession).toHaveBeenCalledTimes(1)
   })
 
+  it('ignores a migrated payload’s own idempotency key', async () => {
+    const runtime = runtimeStub()
+
+    await launch(CREATE_LAUNCH_WITH_STALE_MUTATION_ID, runtime)
+
+    // `worktree.create`'s key names a create; this names the launch attempt. Honouring the stale one
+    // would file two attempts that differ only in `clientOperationId` under a single key.
+    expect(runtime.dedupeWorktreeCreate.mock.calls[0]?.[1]).toBe(
+      `agent.launch:${CLIENT_OPERATION_ID}`
+    )
+    expect(createArgs(runtime)).not.toHaveProperty('clientMutationId')
+  })
+
+  it('separates two attempts that name themselves differently', async () => {
+    const runtime = runtimeStub()
+
+    await launch(CREATE_LAUNCH, runtime)
+    await launch(
+      { ...CREATE_LAUNCH, clientOperationId: createStructuredAgentSessionOperationId(randomUUID) },
+      runtime
+    )
+
+    // The guard must not be so wide that a genuinely new launch is swallowed by the last one.
+    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(2)
+  })
+
   it('reuses a completed launch result for a sequential retry', async () => {
     const runtime = runtimeStub()
 
-    const first = await launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
-    const retried = await launch(IDEMPOTENT_CREATE_LAUNCH, runtime)
+    const first = await launch(CREATE_LAUNCH, runtime)
+    const retried = await launch(CREATE_LAUNCH, runtime)
 
     expect(retried).toEqual(first)
     expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
@@ -418,7 +452,7 @@ describe('the worktree factory', () => {
     await launch(
       {
         agent: 'claude',
-        operation: OPERATION,
+        clientOperationId: CLIENT_OPERATION_ID,
         target: {
           kind: 'create-worktree',
           create: {
@@ -488,7 +522,11 @@ describe('the terminal factory', () => {
   it('takes an existing workspace without creating one', async () => {
     const runtime = runtimeStub()
     const result = await launch(
-      { agent: 'grok', operation: OPERATION, target: { kind: 'existing', worktree: 'id:wt-7' } },
+      {
+        agent: 'grok',
+        clientOperationId: CLIENT_OPERATION_ID,
+        target: { kind: 'existing', worktree: 'id:wt-7' }
+      },
       runtime
     )
 

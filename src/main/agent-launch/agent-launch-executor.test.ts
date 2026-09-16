@@ -81,11 +81,11 @@ function harness(options: {
   }
 }
 
-const OPERATION = { id: '1758000000000-0123456789abcdef0123456789abcdef' }
+const CLIENT_OPERATION_ID = '1758000000000-0123456789abcdef0123456789abcdef'
 
 const CREATE_INTENT: AgentLaunchIntent = {
   agent: 'claude',
-  operation: OPERATION,
+  clientOperationId: CLIENT_OPERATION_ID,
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
 }
 
@@ -181,7 +181,7 @@ describe('a structured launch that creates its own worktree', () => {
     const h = harness({})
     await h.run({
       agent: 'claude',
-      operation: OPERATION,
+      clientOperationId: CLIENT_OPERATION_ID,
       target: {
         kind: 'create-worktree',
         // Exactly what mobile sends `worktree.create` today.
@@ -197,7 +197,8 @@ describe('a structured launch that creates its own worktree', () => {
     const passed = h.createWorktree.mock.calls[0]?.[0]
     expect(passed?.create).not.toHaveProperty('startupAgent')
     expect(passed?.create).not.toHaveProperty('startupDraft')
-    // `operation.id` names the attempt now; a second dedupe key below it would file one launch twice.
+    // `clientOperationId` names the attempt; this one is inert below here and would only read as a
+    // guarantee the forwarded payload no longer carries.
     expect(passed?.create).not.toHaveProperty('clientMutationId')
     expect(passed?.create).toMatchObject({ repo: 'id:repo-1', name: 'task' })
   })
@@ -221,7 +222,7 @@ describe('a launch into a workspace that already exists', () => {
     const h = harness({})
     const result = await h.run({
       agent: 'codex',
-      operation: OPERATION,
+      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' }
     })
     expect(h.calls).toEqual(['createSupport', 'createStructuredSession'])
@@ -233,7 +234,7 @@ describe('a launch into a workspace that already exists', () => {
     const h = harness({})
     const result = await h.run({
       agent: 'claude',
-      operation: OPERATION,
+      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' },
       reuseTerminal: { handle: 'term_live' }
     })
@@ -248,7 +249,7 @@ describe('an agent with no structured session', () => {
     const h = harness({})
     const result = await h.run({
       agent: 'grok',
-      operation: OPERATION,
+      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' }
     })
     expect(h.calls).toEqual(['createTerminalAgent'])
@@ -278,7 +279,7 @@ describe('a warning raised by the surface', () => {
     const h = harness({ terminalWarning: 'shell fell back to bash' })
     const result = await h.run({
       agent: 'grok',
-      operation: OPERATION,
+      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' }
     })
 
