@@ -12,6 +12,7 @@ import { ExecutionHostNotDispatchableError } from './providers/execution-host-pr
 import {
   getWorktreeRemovalConnectionId,
   resolveWorktreeRemovalHome,
+  resolveWorktreeRemovalHomeForHost,
   resolveWorktreeRemovalRoute,
   setWorktreeRemovalSshHostHomeResolver
 } from './worktree-removal-execution-host-route'
@@ -126,6 +127,43 @@ describe('resolveWorktreeRemovalHome', () => {
   it('keeps a local removal on this client s home', () => {
     expect(resolveWorktreeRemovalHome(resolveWorktreeRemovalRoute('local'))).toEqual({
       kind: 'client'
+    })
+  })
+})
+
+describe('resolveWorktreeRemovalHomeForHost', () => {
+  it('answers an ssh host id without needing a registered provider', () => {
+    // The IPC entry point resolves the home before it has a route, and a row naming its owner only
+    // as `executionHostId: 'ssh:<target>'` has no `connectionId` to key on at all.
+    setWorktreeRemovalSshHostHomeResolver((id) => (id === HOST_A ? '/srv/homes/alice' : null))
+
+    expect(resolveWorktreeRemovalHomeForHost('ssh:target-a')).toEqual({
+      kind: 'executionHost',
+      homePath: '/srv/homes/alice'
+    })
+    expect(resolveWorktreeRemovalHomeForHost('ssh:target-b')).toEqual({
+      kind: 'executionHost',
+      homePath: null
+    })
+  })
+
+  it('keeps the client home for the local host', () => {
+    expect(resolveWorktreeRemovalHomeForHost('local')).toEqual({ kind: 'client' })
+  })
+
+  it('refuses to answer a runtime host with this client s home', () => {
+    // `runtime:<env>` deletes on that environment's own server; this client's home vouches for
+    // nothing there, so the authority stays unknown and the guard refuses.
+    expect(resolveWorktreeRemovalHomeForHost('runtime:env-1')).toEqual({
+      kind: 'executionHost',
+      homePath: null
+    })
+  })
+
+  it('refuses to answer an id that names no host', () => {
+    expect(resolveWorktreeRemovalHomeForHost('nonsense' as never)).toEqual({
+      kind: 'executionHost',
+      homePath: null
     })
   })
 })

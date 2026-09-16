@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   removeWorktreeMock,
+  listWorktreesMock,
   parseOrcaYamlMock,
   hasHooksFileMock,
   getSshGitProviderMock,
@@ -141,6 +142,66 @@ describe('registerWorktreeHandlers', () => {
     })
 
     expect(provider.removeWorktree).toHaveBeenCalledWith('/remote/feature-wt', undefined)
+    expect(removeWorktreeMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses a row whose execution host and connection id name different machines', async () => {
+    // #11163: everything below the handler picks the filesystem from `repo.connectionId` while the
+    // prune, the archive-hook route and the home guard come from the resolved execution host. This
+    // row would have listed a remote checkout on this client and deleted a same-named local path.
+    const brokenRepo = {
+      id: 'repo-host-only',
+      path: '/remote/repo',
+      displayName: 'ssh',
+      badgeColor: '#000',
+      addedAt: 0,
+      connectionId: null,
+      executionHostId: 'ssh:conn-1' as const
+    }
+    const provider = {
+      listWorktrees: vi.fn(),
+      removeWorktree: vi.fn(),
+      worktreeIsClean: vi.fn()
+    }
+    store.getRepo.mockReturnValue(brokenRepo)
+    store.getRepos.mockReturnValue([brokenRepo])
+    getSshGitProviderMock.mockReturnValue(provider)
+
+    await expect(
+      handlers['worktrees:remove'](null, {
+        worktreeId: 'repo-host-only::/remote/feature-wt',
+        force: true
+      })
+    ).rejects.toThrow(
+      'Refusing to delete worktree: repo repo-host-only names execution host ssh:conn-1, but its checkout is only reachable as local.'
+    )
+
+    expect(listWorktreesMock).not.toHaveBeenCalled()
+    expect(provider.listWorktrees).not.toHaveBeenCalled()
+    expect(removeWorktreeMock).not.toHaveBeenCalled()
+  })
+
+  it('refuses the mirror row that names local while carrying a connection id', async () => {
+    const brokenRepo = {
+      id: 'repo-local-spelled',
+      path: '/remote/repo',
+      displayName: 'ssh',
+      badgeColor: '#000',
+      addedAt: 0,
+      connectionId: 'conn-1',
+      executionHostId: 'local' as const
+    }
+    store.getRepo.mockReturnValue(brokenRepo)
+    store.getRepos.mockReturnValue([brokenRepo])
+
+    await expect(
+      handlers['worktrees:remove'](null, {
+        worktreeId: 'repo-local-spelled::/remote/feature-wt',
+        force: true
+      })
+    ).rejects.toThrow(
+      'Refusing to delete worktree: repo repo-local-spelled names execution host local, but its checkout is only reachable as ssh:conn-1.'
+    )
     expect(removeWorktreeMock).not.toHaveBeenCalled()
   })
 

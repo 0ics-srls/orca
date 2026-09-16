@@ -115,4 +115,17 @@ describe('removeUnregisteredWorktree against an SSH host home', () => {
 
     expect(fsProvider.deletePath).toHaveBeenCalledWith(worktreePath, true)
   })
+
+  it('refuses a proven orphan when the host never reported a home', async () => {
+    // The orphan proof is complete and the path looks ordinary; the only thing missing is the
+    // host's answer. `unverifiable` leaves the directory in place rather than deleting it.
+    setWorktreeRemovalSshHostHomeResolver(() => null)
+    const worktreePath = `${HOST_HOME}/workspaces/leftover`
+    const fsProvider = provenOrphanFilesystem(worktreePath)
+
+    await expect(removeOverSsh(worktreePath, fsProvider)).rejects.toThrow(
+      `Refusing to delete unregistered worktree path: ${worktreePath}`
+    )
+    expect(fsProvider.deletePath).not.toHaveBeenCalled()
+  })
 })

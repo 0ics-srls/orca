@@ -27,7 +27,11 @@
  * worktree in place, while the incumbent fallback deleted a client-side path.
  */
 
-import type { ExecutionHostId, LOCAL_EXECUTION_HOST_ID } from '../shared/execution-host'
+import {
+  parseExecutionHostId,
+  type ExecutionHostId,
+  type LOCAL_EXECUTION_HOST_ID
+} from '../shared/execution-host'
 import {
   CLIENT_REMOVAL_HOME,
   executionHostRemovalHome,
@@ -98,23 +102,36 @@ export function setWorktreeRemovalSshHostHomeResolver(
 
 /**
  * Whose home directory the removal's safety guards may consult — one answer for
- * the whole removal, taken from the same route that owns the filesystem.
+ * the whole removal, taken from the same host id that owns the filesystem.
  */
 export function resolveWorktreeRemovalHome(
   route: WorktreeRemovalRoute
 ): WorktreeRemovalHomeAuthority {
-  return resolveWorktreeRemovalHomeForConnection(
-    route.kind === 'ssh' ? route.connectionId : undefined
-  )
+  return resolveWorktreeRemovalHomeForHost(route.hostId)
 }
 
-/** The same answer for the callers that still carry `repo.connectionId` instead of a route. */
-export function resolveWorktreeRemovalHomeForConnection(
-  connectionId: string | null | undefined
+/**
+ * The same answer for the entry points that hold a host id rather than a route.
+ *
+ * Keyed on the resolved `ExecutionHostId`, not on `repo.connectionId`: a row naming its owner only
+ * as `executionHostId: 'ssh:<target>'` has a null `connectionId`, and answering that with this
+ * client's home is how the guard would vouch for the wrong machine (#11163).
+ */
+export function resolveWorktreeRemovalHomeForHost(
+  hostId: ExecutionHostId
 ): WorktreeRemovalHomeAuthority {
-  return connectionId
-    ? executionHostRemovalHome(sshHostHomeResolver(connectionId))
-    : CLIENT_REMOVAL_HOME
+  const parsed = parseExecutionHostId(hostId)
+  switch (parsed?.kind) {
+    case 'local':
+      return CLIENT_REMOVAL_HOME
+    case 'ssh':
+      return executionHostRemovalHome(sshHostHomeResolver(parsed.targetId))
+    default:
+      // Why: `runtime:<env>` deletes on that environment's own server, and an id that parses to
+      // nothing names no machine at all. Neither can be answered with this client's home, so both
+      // stay unknown and the guard refuses.
+      return executionHostRemovalHome(null)
+  }
 }
 
 /** The connection to teardown PTYs, watchers and history against — `undefined` on a local host. */

@@ -553,8 +553,10 @@ describe('isDangerousWorktreeRemovalPath on an execution host', () => {
     ['C:\\Users', 'C:\\src\\repo', true],
     ['C:\\Users\\bob\\wt\\foo', 'C:\\src\\repo', false]
   ])('%s under %s -> dangerous=%s', (worktreePath, repoPath, expected) => {
+    // `/var/empty` is a resolved host home that matches no row, so each verdict comes from the
+    // path rules alone — the same verdicts the client authority reaches.
     expect(
-      isDangerousWorktreeRemovalPath(worktreePath, repoPath, executionHostRemovalHome(null))
+      isDangerousWorktreeRemovalPath(worktreePath, repoPath, executionHostRemovalHome('/var/empty'))
     ).toBe(expected)
     expect(isDangerousWorktreeRemovalPath(worktreePath, repoPath, CLIENT_REMOVAL_HOME)).toBe(
       expected
@@ -569,6 +571,32 @@ describe('isDangerousWorktreeRemovalPath on an execution host', () => {
         executionHostRemovalHome('/srv/homes/alice')
       )
     ).toBe(true)
+  })
+
+  it('recognises a POSIX home when the repo path drags the pair into win32 path ops', () => {
+    // `getPathOps` reads both paths, so a `//`-rooted repo path put `/home/alice` under
+    // Windows-only shape rules and the last guard on a recursive delete stopped matching.
+    expect(
+      isDangerousWorktreeRemovalPath(
+        '/home/alice',
+        '//nas/share/repo',
+        executionHostRemovalHome('/var/empty')
+      )
+    ).toBe(true)
+    expect(
+      isDangerousWorktreeRemovalPath(
+        '/srv/homes/alice',
+        '//nas/share/repo',
+        executionHostRemovalHome('/srv/homes/alice')
+      )
+    ).toBe(true)
+    expect(
+      isDangerousWorktreeRemovalPath(
+        '/srv/homes/alice/wt/feature',
+        '//nas/share/repo',
+        executionHostRemovalHome('/srv/homes/alice')
+      )
+    ).toBe(false)
   })
 })
 
@@ -622,6 +650,65 @@ describe('canSafelyRemoveOrphanedWorktreeDirectory on an execution host', () => 
           ['C:\\src\\repo\\.git\\worktrees\\feature\\gitdir', 'C:\\Users\\bob\\wt\\feature\\.git\n']
         ])
       )
+    ).resolves.toBe(true)
+  })
+
+  it('refuses a proven orphan of any shape while the host home is unanswered', async () => {
+    // A bare-repo dotfiles checkout puts exactly this `.git` file at the top of a home directory,
+    // and `/srv/homes/alice` has no home shape to fall back on. Unanswered is not permission.
+    const orphan = {
+      statPath: makeStatPath(['/srv/homes/alice/.git'], ['/opt/src/repo/.git']),
+      readPath: makeReadPath([
+        ['/srv/homes/alice/.git', 'gitdir: /opt/src/repo/.git/worktrees/alice\n'],
+        ['/opt/src/repo/.git/worktrees/alice/gitdir', '/srv/homes/alice/.git\n']
+      ])
+    }
+
+    await expect(
+      canSafelyRemoveOrphanedWorktreeDirectory(
+        '/srv/homes/alice',
+        '/opt/src/repo',
+        executionHostRemovalHome(null),
+        orphan.statPath,
+        orphan.readPath
+      )
+    ).resolves.toBe(false)
+    // The same call with an answer that does not match still removes it, so the refusal above is
+    // the missing answer and not the path.
+    await expect(
+      canSafelyRemoveOrphanedWorktreeDirectory(
+        '/srv/homes/alice',
+        '/opt/src/repo',
+        executionHostRemovalHome('/srv/homes/bob'),
+        orphan.statPath,
+        orphan.readPath
+      )
+    ).resolves.toBe(true)
+  })
+
+  it('refuses the leftover-directory cleanup while the host home is unanswered', async () => {
+    const leftoverArgs = {
+      meta: { orcaCreatedAt: 1, orcaCreationSource: 'ssh' } as never,
+      worktreePath: '/srv/homes/alice',
+      runtimeWorktreePath: '/srv/homes/alice',
+      repo: { path: '/opt/src/repo' },
+      runtimeRepoPath: '/opt/src/repo',
+      registeredWorktrees: [],
+      statPath: makeStatPath([], ['/srv/homes/alice']),
+      isGitRepository: vi.fn().mockResolvedValue(false)
+    }
+
+    await expect(
+      canCleanupUnregisteredOrcaLeftoverDirectory({
+        ...leftoverArgs,
+        home: executionHostRemovalHome(null)
+      })
+    ).resolves.toBe(false)
+    await expect(
+      canCleanupUnregisteredOrcaLeftoverDirectory({
+        ...leftoverArgs,
+        home: executionHostRemovalHome('/srv/homes/bob')
+      })
     ).resolves.toBe(true)
   })
 })

@@ -8,15 +8,28 @@ vi.mock('node:os', async (importOriginal) => {
   return { ...actual, homedir: homedirMock }
 })
 
-const { CLIENT_REMOVAL_HOME, executionHostRemovalHome, getPathOps, isHomeDirectoryRemovalPath } =
-  await import('./worktree-removal-home-guard')
+const {
+  CLIENT_REMOVAL_HOME,
+  executionHostRemovalHome,
+  getPathOps,
+  isHomeDirectoryRemovalPath,
+  isRemovalHomeAuthorityResolved
+} = await import('./worktree-removal-home-guard')
 
 function isHome(
   worktreePath: string,
   home: Parameters<typeof isHomeDirectoryRemovalPath>[2]
 ): boolean {
-  const pathOps = getPathOps(worktreePath)
-  return isHomeDirectoryRemovalPath(pathOps.resolve(worktreePath), pathOps, home)
+  return isHomeDirectoryRemovalPath(worktreePath, getPathOps(worktreePath), home)
+}
+
+/** The ops a removal actually gets: chosen from the worktree/repo pair, not the path alone. */
+function isHomeForPair(
+  worktreePath: string,
+  repoPath: string,
+  home: Parameters<typeof isHomeDirectoryRemovalPath>[2]
+): boolean {
+  return isHomeDirectoryRemovalPath(worktreePath, getPathOps(worktreePath, repoPath), home)
 }
 
 function withProcessPlatform<T>(platform: NodeJS.Platform, callback: () => T): T {
@@ -102,14 +115,28 @@ describe('whose home the guard consults', () => {
     // Without the host's answer the same path has no recognisable home shape,
     // which is exactly why the client home must not stand in for it.
     expect(isHome('/srv/homes/alice', CLIENT_REMOVAL_HOME)).toBe(false)
-    expect(isHome('/srv/homes/alice', executionHostRemovalHome(null))).toBe(false)
   })
 
-  it('never lets an unknown execution-host home fall back to the client homedir', () => {
-    // The client's home coincides with the remote path here; `null` still means unknown.
+  it('reports an unanswered execution host as unresolved, never as this client s home', () => {
+    // `null` is `unverifiable`. The client's home coincides with the remote path here, and must
+    // still not be the thing that answers — the shape rules are all that is left.
     homedirMock.mockReturnValue('/srv/homes/alice')
+    expect(isRemovalHomeAuthorityResolved(executionHostRemovalHome(null))).toBe(false)
     expect(isHome('/srv/homes/alice', executionHostRemovalHome(null))).toBe(false)
+    expect(isHome('/home/alice', executionHostRemovalHome(null))).toBe(true)
     expect(homedirMock).not.toHaveBeenCalled()
+  })
+
+  it('treats an empty execution-host home as unknown rather than as a resolved answer', () => {
+    // An empty `$HOME` is an absent answer; normalising it here keeps the authority type honest
+    // instead of leaving `''` to read as "resolved" at every consumer.
+    expect(executionHostRemovalHome('')).toEqual({ kind: 'executionHost', homePath: null })
+    expect(isRemovalHomeAuthorityResolved(executionHostRemovalHome(''))).toBe(false)
+  })
+
+  it('treats the client and an answering host as resolved', () => {
+    expect(isRemovalHomeAuthorityResolved(CLIENT_REMOVAL_HOME)).toBe(true)
+    expect(isRemovalHomeAuthorityResolved(executionHostRemovalHome('/srv/homes/alice'))).toBe(true)
   })
 
   it('honours a Windows execution-host home in the forward-slash form the relay reports', () => {
@@ -143,5 +170,52 @@ describe('whose home the guard consults', () => {
         isHome('C:\\Users\\bob\\OneDrive', executionHostRemovalHome('C:\\Users\\bob\\OneDrive'))
       )
     ).toBe(true)
+  })
+})
+
+describe('path ops chosen from the worktree/repo pair', () => {
+  // `getPathOps` switches to win32 as soon as EITHER path looks Windows-absolute, and `//nas/...`
+  // does. A POSIX worktree path then gets judged by Windows-only shape rules, which recognise
+  // `<root>\\Users\\<name>` and nothing else — so `/home/alice` and a non-standard client home
+  // both stopped being homes because of a path the home comparison never involved.
+  it('still recognises a POSIX home when the repo path drags the pair into win32 ops', () => {
+    homedirMock.mockReturnValue('/Users/ci')
+    expect(isHomeForPair('/home/alice', '//nas/share/repo', CLIENT_REMOVAL_HOME)).toBe(true)
+    expect(isHomeForPair('/home', '//nas/share/repo', CLIENT_REMOVAL_HOME)).toBe(true)
+    expect(isHomeForPair('/root', 'C:\\src\\repo', CLIENT_REMOVAL_HOME)).toBe(true)
+  })
+
+  it('still recognises the client home itself under the same contaminated ops', () => {
+    homedirMock.mockReturnValue('/srv/homes/ci')
+    expect(
+      withProcessPlatform('linux', () =>
+        isHomeForPair('/srv/homes/ci', '//nas/share/repo', CLIENT_REMOVAL_HOME)
+      )
+    ).toBe(true)
+    expect(
+      withProcessPlatform('linux', () =>
+        isHomeForPair('/srv/homes/ci', 'C:\\src\\repo', CLIENT_REMOVAL_HOME)
+      )
+    ).toBe(true)
+  })
+
+  it('still recognises an execution-host home under the same contaminated ops', () => {
+    expect(
+      isHomeForPair(
+        '/srv/homes/alice',
+        'C:\\src\\repo',
+        executionHostRemovalHome('/srv/homes/alice')
+      )
+    ).toBe(true)
+  })
+
+  it('keeps a linked worktree deletable when the pair is mixed-syntax', () => {
+    homedirMock.mockReturnValue('/srv/homes/ci')
+    expect(
+      withProcessPlatform('linux', () =>
+        isHomeForPair('/srv/homes/ci/wt/feature', '//nas/share/repo', CLIENT_REMOVAL_HOME)
+      )
+    ).toBe(false)
+    expect(isHomeForPair('/opt/src/checkout', '//nas/share/repo', CLIENT_REMOVAL_HOME)).toBe(false)
   })
 })

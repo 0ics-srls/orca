@@ -33,7 +33,23 @@ export const CLIENT_REMOVAL_HOME: WorktreeRemovalHomeAuthority = { kind: 'client
 export function executionHostRemovalHome(
   homePath: string | null | undefined
 ): WorktreeRemovalHomeAuthority {
-  return { kind: 'executionHost', homePath: homePath ?? null }
+  // Why `||`: an empty answer is an absent one, and `''` would otherwise read as a resolved home.
+  return { kind: 'executionHost', homePath: homePath || null }
+}
+
+/**
+ * Whether the host that executes the removal actually named its home directory.
+ *
+ * `false` is `unverifiable`, not "no home here" (docs/reference/ssh-execution-boundary.md). The
+ * recursive-directory gates in `worktree-removal-safety.ts` require `true`, because there the home
+ * guard is the only evidence standing between an `rm -rf` and somebody's `$HOME` — a bare-repo
+ * dotfiles checkout puts a real `.git` file at the top of a home directory, which is exactly the
+ * orphan proof those gates accept. `git worktree remove` does not require it: the execution host's
+ * own Git registry already established that the path is a linked worktree of that repo, and a
+ * missing second opinion does not retract that.
+ */
+export function isRemovalHomeAuthorityResolved(home: WorktreeRemovalHomeAuthority): boolean {
+  return home.kind === 'client' || !!home.homePath
 }
 
 export function getPathOps(...paths: string[]): PathOps {
@@ -54,16 +70,34 @@ export function containsPath(parentPath: string, childPath: string, pathOps: Pat
 }
 
 /**
- * Whether removing `resolvedWorktreePath` would take a home directory with it.
+ * Whether removing `worktreePath` would take a home directory with it.
  *
  * True when the path is, or contains, the home of the machine that executes the
- * removal, or when its shape is a home directory on the filesystem it names.
+ * removal, or when its shape is a home directory on the filesystem it names. An
+ * execution host that never reported a home answers neither — see
+ * `isRemovalHomeAuthorityResolved` for who has to insist on an answer.
  */
 export function isHomeDirectoryRemovalPath(
-  resolvedWorktreePath: string,
+  worktreePath: string,
   pathOps: PathOps,
   home: WorktreeRemovalHomeAuthority
 ): boolean {
+  if (isHomeUnderPathOps(worktreePath, pathOps, home)) {
+    return true
+  }
+  // Why: `pathOps` is picked from the worktree/repo PAIR, so a Windows-shaped repo path drags a
+  // POSIX worktree path into win32 rules and `/home/alice` stops matching anything. Read the path
+  // in its own syntax as well, and refuse if either reading names a home.
+  const ownPathOps = getPathOps(worktreePath)
+  return ownPathOps !== pathOps && isHomeUnderPathOps(worktreePath, ownPathOps, home)
+}
+
+function isHomeUnderPathOps(
+  worktreePath: string,
+  pathOps: PathOps,
+  home: WorktreeRemovalHomeAuthority
+): boolean {
+  const resolvedWorktreePath = pathOps.resolve(worktreePath)
   const homePath = resolveGuardHomePath(home, pathOps)
   if (!!homePath && containsPath(resolvedWorktreePath, pathOps.resolve(homePath), pathOps)) {
     return true

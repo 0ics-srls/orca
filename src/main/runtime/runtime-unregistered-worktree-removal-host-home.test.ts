@@ -92,4 +92,16 @@ describe('removeRuntimeUnregisteredWorktree against an SSH host home', () => {
 
     expect(fsProvider.deletePath).toHaveBeenCalledWith(worktreePath, true)
   })
+
+  it('refuses a proven orphan when the host never reported a home', async () => {
+    // Same orphan, same proof; the host just never answered. Loss of contact is not permission.
+    setWorktreeRemovalSshHostHomeResolver(() => null)
+    const worktreePath = `${HOST_HOME}/workspaces/leftover`
+    const fsProvider = provenOrphanFilesystem(worktreePath)
+
+    await expect(
+      removeRuntimeUnregisteredWorktree(removalArgs(worktreePath, fsProvider))
+    ).rejects.toThrow(`Refusing to delete unregistered worktree path: ${worktreePath}`)
+    expect(fsProvider.deletePath).not.toHaveBeenCalled()
+  })
 })

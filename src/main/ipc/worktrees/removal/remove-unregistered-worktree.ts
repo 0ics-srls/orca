@@ -17,7 +17,7 @@ import {
   ORPHANED_WORKTREE_DIRECTORY_MESSAGE,
   UNREGISTERED_MISSING_WORKTREE_MESSAGE
 } from '../../../worktree-removal-safety'
-import { resolveWorktreeRemovalHomeForConnection } from '../../../worktree-removal-execution-host-route'
+import { resolveWorktreeRemovalHomeForHost } from '../../../worktree-removal-execution-host-route'
 import {
   getLocalWorktreePathAccess,
   removeLocalWorktreePath,
@@ -54,7 +54,7 @@ export async function removeUnregisteredWorktree(
 ): Promise<RemoveWorktreeResult> {
   const { mainWindow, store, runtime } = context
   const fsProvider = repo.connectionId ? getSshFilesystemProvider(repo.connectionId) : null
-  const removalHome = resolveWorktreeRemovalHomeForConnection(repo.connectionId)
+  const removalHome = resolveWorktreeRemovalHomeForHost(removalHostId)
   let canCleanOrphanedDirectory = false
   if (
     canCleanupUnregisteredOrcaWorktreeDirectory({

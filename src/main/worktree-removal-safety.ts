@@ -7,6 +7,7 @@ import {
   containsPath,
   getPathOps,
   isHomeDirectoryRemovalPath,
+  isRemovalHomeAuthorityResolved,
   type WorktreeRemovalHomeAuthority
 } from './worktree-removal-home-guard'
 import {
@@ -75,7 +76,8 @@ export function isDangerousWorktreeRemovalPath(
     return true
   }
 
-  return isHomeDirectoryRemovalPath(resolvedWorktreePath, pathOps, home)
+  // Raw, not `resolvedWorktreePath`: the guard re-reads the path under its own syntax too.
+  return isHomeDirectoryRemovalPath(worktreePath, pathOps, home)
 }
 
 export function getRegisteredDeletableWorktree(
@@ -135,6 +137,14 @@ export async function canSafelyRemoveOrphanedWorktreeDirectory(
   statPath: StatPath = lstat,
   readPath: ReadPath = (path) => readFile(path, 'utf8')
 ): Promise<boolean> {
+  // Why: this answer authorises a recursive delete, and the proof it relies on — a `.git` file at
+  // the top of the directory — is also what a bare-repo dotfiles home looks like. An execution host
+  // that never named its home leaves that check with nothing to compare against, and
+  // `unverifiable` does not authorise a delete (docs/reference/ssh-execution-boundary.md).
+  if (!isRemovalHomeAuthorityResolved(home)) {
+    return false
+  }
+
   if (isDangerousWorktreeRemovalPath(worktreePath, repoPath, home)) {
     return false
   }
@@ -183,6 +193,11 @@ export async function canCleanupUnregisteredOrcaLeftoverDirectory(args: {
   // Why: without a surviving .git file, path shape alone is too weak to prove
   // ownership for recursive deletion; require persisted Orca-created evidence.
   if (!hasCurrentOrcaCreationProvenance(args.meta) && !hasLegacyOrcaCreationEvidence(args.meta)) {
+    return false
+  }
+
+  // Why: same recursive delete, same rule — no home answer from the executing host, no delete.
+  if (!isRemovalHomeAuthorityResolved(args.home)) {
     return false
   }
 
