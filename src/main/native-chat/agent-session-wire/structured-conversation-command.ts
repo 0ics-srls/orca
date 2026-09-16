@@ -270,11 +270,7 @@ export function runStructuredConversationCommand(
                 control?.endProviderCall()
                 await ctx.journal.appendItem(
                   identity,
-                  {
-                    kind: 'status',
-                    text: 'Compaction completion is unconfirmed.',
-                    turnLifecycle: { turnId: `compact:${clientOperationId}`, state: 'running' }
-                  },
+                  { kind: 'status', text: 'Compaction completion is unconfirmed.' },
                   { fence: ctx.fence }
                 )
                 ctx.publish()

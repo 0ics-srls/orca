@@ -148,9 +148,9 @@ describe('host conversation commands', () => {
       .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
       .page.items.find((item) => item.body.kind === 'status')
     expect(status?.body).toMatchObject({
-      text: 'Compaction completion is unconfirmed.',
-      turnLifecycle: { state: 'running' }
+      text: 'Compaction completion is unconfirmed.'
     })
+    expect(status?.body).not.toHaveProperty('turnLifecycle')
   })
 
   /** The replacement seeds from what the provider reports now, not from what the

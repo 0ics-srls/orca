@@ -28,7 +28,7 @@ function compactItem(
             : state === 'unconfirmed'
               ? 'Compaction completion is unconfirmed.'
               : 'Provider refused compaction.',
-      ...(state === 'running' || state === 'unconfirmed'
+      ...(state === 'running'
         ? { turnLifecycle: { turnId: `compact:${operationId}`, state: 'running' as const } }
         : {})
     }
