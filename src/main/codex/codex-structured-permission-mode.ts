@@ -11,11 +11,14 @@ import { YOLO_TUI_AGENT_ARGS } from '../../shared/tui-agent-permissions'
  * untouched profile resolves to the default Orca ships, which is the bypass flag.
  */
 export function codexStructuredPermissionArgsForSettings(
-  settings: Partial<Pick<GlobalSettings, 'agentDefaultArgs'>> | null | undefined
+  settings:
+    | Partial<Pick<GlobalSettings, 'agentDefaultArgs' | 'terminalWindowsShell'>>
+    | null
+    | undefined
 ): string[] {
   const bypassArg = YOLO_TUI_AGENT_ARGS.codex
   return bypassArg !== undefined &&
-    resolvedTuiAgentArgsBypassPermissions('codex', settings?.agentDefaultArgs)
+    resolvedTuiAgentArgsBypassPermissions('codex', settings, process.platform)
     ? [bypassArg]
     : []
 }
