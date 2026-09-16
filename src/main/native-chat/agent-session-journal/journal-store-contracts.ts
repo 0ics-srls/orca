@@ -39,6 +39,12 @@ export type JournalAppendResult = {
   revision: number
 }
 
+export type JournalOrderedAppendResult<T> = {
+  value: T
+  appended: boolean
+  precedingPendingSubmissionIds: string[]
+}
+
 export type JournalItemAppendOptions = { fence: number; observedAt?: number; recovered?: true }
 export type JournalTombstoneInput = { fence: number }
 

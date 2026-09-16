@@ -11,6 +11,7 @@ import type {
   AgentSessionJournalIdentity
 } from '../../../shared/agent-session-journal-types'
 import { agentJournalItemKey } from '../../../shared/agent-session-journal-item-key'
+import { readAgentJournalTurn } from '../../../shared/agent-session-turn-record'
 import { activeStructuredAgentSessionTurnIdBySequence } from '../../../shared/structured-agent-session-live-turn'
 import { agentSessionJournalCloseRetries } from './journal-close-retry'
 import { openJournalDatabase, type OpenJournalDatabase } from './journal-database'
@@ -36,6 +37,7 @@ import type {
   JournalAppendResult,
   JournalItemAppendOptions,
   JournalLifecycleBatchInput,
+  JournalOrderedAppendResult,
   JournalReadSince,
   JournalSubmissionInput,
   JournalTombstoneInput,
@@ -50,6 +52,7 @@ import { createJournalStoreCollaborators } from './journal-store-collaborators'
 import { ensureJournalDir, journalStoreLoadedFields } from './journal-store-open'
 import type { JournalItemAppender } from './journal-item-appender'
 import type { JournalLifecycleBatchAppender } from './journal-lifecycle-batch-appender'
+import { DISPATCH_DOUBT_TURN_SETTLED } from './journal-dispatch-doubt-reasons'
 
 export { AgentSessionJournalError } from './journal-write-guards'
 
@@ -216,7 +219,9 @@ export class AgentSessionJournal {
     body: AgentJournalItemBody,
     options: JournalItemAppendOptions = { fence: 0 }
   ): Promise<JournalAppendResult> {
-    return this.itemAppender.append(identity, body, options)
+    return this.appendWithTurnSettlement([body], options.fence, (capture) =>
+      this.itemAppender.append(identity, body, options, capture)
+    )
   }
 
   appendTombstone(
@@ -230,7 +235,12 @@ export class AgentSessionJournal {
   }
 
   appendLifecycleBatch(input: JournalLifecycleBatchInput): Promise<AgentJournalCursor> {
-    return this.lifecycleBatchAppender.append(input)
+    const bodies = input.mutations.flatMap((mutation) =>
+      mutation.kind === 'item' ? [mutation.body] : []
+    )
+    return this.appendWithTurnSettlement(bodies, input.fence, (capture) =>
+      this.lifecycleBatchAppender.append(input, capture)
+    )
   }
 
   /**
@@ -298,5 +308,50 @@ export class AgentSessionJournal {
    */
   private enqueue(build: (seq: number, ts: number) => JournalRow): Promise<JournalRow> {
     return this.rowWriter.enqueue(build)
+  }
+
+  private async appendWithTurnSettlement<T>(
+    bodies: readonly AgentJournalItemBody[],
+    fence: number,
+    append: (
+      capturePrecedingPendingSubmissions: () => string[]
+    ) => Promise<JournalOrderedAppendResult<T>>
+  ): Promise<T> {
+    const settlesTurn = bodies.some((body) => {
+      const turn = readAgentJournalTurn(body)
+      return turn !== null && turn.state !== 'running'
+    })
+    const capturePrecedingPendingSubmissions = (): string[] => {
+      if (!settlesTurn) {
+        return []
+      }
+      return this.submissions()
+        .filter(
+          (submission) => submission.dispatchState === 'pending' && submission.fence === fence
+        )
+        .map((submission) => submission.clientMessageId)
+    }
+    const result = await append(capturePrecedingPendingSubmissions)
+    if (!result.appended || !settlesTurn) {
+      return result.value
+    }
+    await Promise.all(
+      result.precedingPendingSubmissionIds.map(async (clientMessageId) => {
+        try {
+          await this.resolveDispatch({
+            clientMessageId,
+            state: 'unknown',
+            reason: DISPATCH_DOUBT_TURN_SETTLED,
+            fence
+          })
+        } catch (error) {
+          console.warn(
+            `[agent-session-journal] could not settle submission ${clientMessageId} after its turn ended`,
+            error
+          )
+        }
+      })
+    )
+    return result.value
   }
 }
