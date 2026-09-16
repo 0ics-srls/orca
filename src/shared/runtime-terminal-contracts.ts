@@ -13,6 +13,7 @@ import type { TerminalExitCause } from './terminal-exit-cause'
 import type { TerminalPaneLayoutNode } from './terminal-tab-types'
 import type { TuiAgent } from './tui-agent'
 import type { AgentSessionExecutionClaim } from './agent-session-host-authority'
+import type { RuntimeTerminalWaitBlockedReason } from './runtime-terminal-wait-contracts'
 
 export type {
   RuntimeTerminalWait,
