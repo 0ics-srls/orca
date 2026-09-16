@@ -35,7 +35,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     origin: AgentStatusObservationOrigin = 'hook',
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
-  ): EnrichedAgentHookEventPayload | null {
+  ): EnrichedAgentHookEventPayload | null | undefined {
     const binding = resolveAgentStatusBinding({
       payload,
       previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
@@ -47,6 +47,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       return binding.previous ?? null
     }
     payload = binding.payload
+    if (!this.canWriteLegacyStatusRow(payload)) {
+      return undefined
+    }
     const previousBeforeIdentity = binding.previous
     if (binding.replacement) {
       // A replacement run is a new subject even when the pane slot is reused.
@@ -93,7 +96,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       }
       this.clearAssistantMessageRetry(enriched.paneKey)
       this.runtimeObservedStatusPaneKeys.delete(enriched.paneKey)
-      this.writeLegacyStatusRow(enriched)
+      if (!this.writeLegacyStatusRow(enriched)) {
+        return undefined
+      }
       this.commitStatusRowMutation(rowBefore, enriched)
       this.scheduleStatusPersist()
       this.notifyStatusChangeListeners()
@@ -124,7 +129,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     if (boundaryReconciledPrevious !== previous) {
       previous = boundaryReconciledPrevious
       if (previous) {
-        this.writeLegacyStatusRow(previous)
+        if (!this.writeLegacyStatusRow(previous)) {
+          return undefined
+        }
         this.scheduleStatusPersist()
       }
     }
@@ -224,7 +231,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     } else {
       this.runtimeObservedStatusPaneKeys.add(enriched.paneKey)
     }
-    this.writeLegacyStatusRow(enriched)
+    if (!this.writeLegacyStatusRow(enriched)) {
+      return undefined
+    }
     this.commitStatusRowMutation(rowBefore, enriched)
     // Why skipped for structured rows: the serializer drops them, so the whole walk and stringify
     // can only ever reproduce the last file — once per debounce window for a streaming chat.
@@ -241,6 +250,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     mutationBefore?: EnrichedAgentHookEventPayload,
     emitEnrichedStatus = false
   ): void {
+    if (!this.canWriteLegacyStatusRow(previous)) {
+      return
+    }
     const connectionClearWatermark = previous.connectionId
       ? this.connectionTimestampWatermarkById.get(previous.connectionId)
       : undefined
@@ -266,7 +278,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     }
     const firstRuntimeObservation = !this.runtimeObservedStatusPaneKeys.has(refreshed.paneKey)
     this.runtimeObservedStatusPaneKeys.add(refreshed.paneKey)
-    this.writeLegacyStatusRow(refreshed)
+    if (!this.writeLegacyStatusRow(refreshed)) {
+      return
+    }
     this.commitStatusRowMutation(mutationBefore ?? previous, refreshed)
     this.scheduleStatusPersist()
     // A dismissed row may retain only provider resume identity. Its preserved payload can still
@@ -291,21 +305,8 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     }
   }
 
-  // Why: every status emit must reach plugins too, so a new early-return path
-  // upstream cannot silently leave the plugin tap behind the main-window fanout.
-  protected emitEnrichedStatus(enriched: EnrichedAgentHookEventPayload): void {
-    this.onAgentStatus?.(enriched)
-    for (const listener of this.enrichedStatusListeners) {
-      try {
-        listener(enriched)
-      } catch (err) {
-        console.error('[agent-hooks] enriched status listener threw', err)
-      }
-    }
-  }
-
-  private writeLegacyStatusRow(entry: EnrichedAgentHookEventPayload): void {
-    admitLegacyAgentStatus(
+  private writeLegacyStatusRow(entry: EnrichedAgentHookEventPayload): boolean {
+    return admitLegacyAgentStatus(
       this.state,
       'main-status-update',
       entry,

@@ -26,7 +26,14 @@ import {
 import { acquireOrcadInstanceLock, OrcadInstanceLockError } from './orcad-instance-lock'
 import { startOrcadWithLifecycle } from './orcad-lifecycle'
 import { parseArgs } from './orcad-command-arguments'
-import { admitLocalVerifiedAgentDiscoveries } from '../runtime/runtime-agent-discovery-admission'
+import {
+  publishCommittedAgentSessionMembership,
+  reconcileAgentSessionMembership
+} from '../runtime/runtime-agent-session-membership'
+import {
+  changedAiVaultSearchSettings,
+  type AiVaultSearchSettings
+} from '../../shared/ai-vault-search-settings'
 
 export { parseArgs }
 
@@ -206,6 +213,10 @@ async function startOrcadRuntime(
   // registerPtyHandlers so the IPC layer routes through the daemon from the first call.
   await startOrcadDaemon()
 
+  // Why a holder and not a direct reference: the index is installed after the runtime is
+  // constructed, and the deps hook is only ever called later, from an RPC.
+  let sessionSearch: { apply(settings: AiVaultSearchSettings): void; dispose(): void } | null = null
+
   const runtime = new OrcaRuntimeService(store, undefined, {
     // Why lazy: a daemon swap replaces the provider after construction, so an eager
     // reference would freeze the pre-daemon one.
@@ -226,30 +237,8 @@ async function startOrcadRuntime(
     // PTY agent on this host, and the store is the only place `worktree.ps` and the mobile
     // projection read from — unwired, orcad lists no PTY agents at all.
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
-    onAgentSessionCommitted: (commit) => {
-      agentHookServer.admitAgentSessionOwner({
-        owner: commit.result.owner,
-        paneKey: commit.paneKey,
-        tabId: commit.tabId,
-        worktreeId: commit.worktreeId,
-        connectionId: commit.connectionId,
-        terminalHandle: commit.result.owner.surface.terminalHandle,
-        agentType: commit.agentType ?? commit.result.owner.claim.agent,
-        launchToken: commit.launchToken,
-        disposition: commit.result.disposition
-      })
-    },
-    onAgentSessionInventoryReconciled: (reconciliation) => {
-      agentHookServer.reconcileAgentLaunchMembership(reconciliation.owners, {
-        complete: reconciliation.complete,
-        ...(reconciliation.connectionId !== undefined
-          ? { connectionId: reconciliation.connectionId }
-          : {})
-      })
-      if (reconciliation.connectionId === null) {
-        admitLocalVerifiedAgentDiscoveries(reconciliation.discoveries)
-      }
-    },
+    onAgentSessionCommitted: publishCommittedAgentSessionMembership,
+    onAgentSessionInventoryReconciled: reconcileAgentSessionMembership,
     // Why here too and not only on the desktop: orcad serves `worktree.ps` and `agentSession.*`,
     // so without these a headless host publishes its structured chats nowhere and lists no agents.
     getAgentStatusSnapshot: () =>
@@ -265,17 +254,25 @@ async function startOrcadRuntime(
     // read, so a row observed under one process otherwise acquires whatever process owns the pane now.
     readObservedAgentStatusPaneIdentity: (paneKey) => observedPaneIdentities.read(paneKey),
     structuredAgentStatusSink: {
-      publish: (summary) => agentHookServer.ingestStructuredStatus(summary),
-      forget: (sessionId) => agentHookServer.dropStructuredStatus(sessionId)
+      publish: (summary, subject) => agentHookServer.ingestStructuredStatus(summary, subject),
+      forget: (subject) => agentHookServer.dropStructuredStatus(subject)
     },
     reconcileAgentStatusForEndedProcess: (paneKeys) =>
       agentHookServer.reconcileEndedProcessForPaneKeys(paneKeys),
     buildAgentHookPtyEnv: () =>
-      isAgentStatusHooksEnabled(store.getSettings()) ? agentHookServer.buildPtyEnv() : {}
+      isAgentStatusHooksEnabled(store.getSettings()) ? agentHookServer.buildPtyEnv() : {},
+    // Why the dedupe here and not in the instance: `apply` closes and reconstructs
+    // unconditionally, so an unchanged value would restart a healthy index.
+    applySessionSearchSettings: (before, after) => {
+      const next = changedAiVaultSearchSettings(before, after)
+      if (next) {
+        sessionSearch?.apply(next)
+      }
+    }
   })
 
   const { installOrcadSessionSearchService } = await import('./orcad-session-search')
-  const sessionSearch = await installOrcadSessionSearchService({
+  sessionSearch = await installOrcadSessionSearchService({
     userDataPath: runtimeUserDataPath,
     getSettings: () => store.getSettings()
   })

@@ -133,7 +133,7 @@ export abstract class AgentHookServerLaunchMembership extends AgentHookServerIng
         agentType: args.agentType
       }
     }
-    return this.applyNormalizedStatus(event, undefined, 'launch', committedAt)
+    return this.applyNormalizedStatus(event, undefined, 'launch', committedAt) ?? null
   }
 
   /** Convenience seam for owner registries: C5's binding is the only identity source. */

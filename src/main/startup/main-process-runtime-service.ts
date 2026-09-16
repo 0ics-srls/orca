@@ -1,4 +1,7 @@
-import { installChildSessionSearchService } from '../ai-vault-search/session-search-enablement'
+import {
+  applySessionSearchSettingsChange,
+  installChildSessionSearchService
+} from '../ai-vault-search/session-search-enablement'
 import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { app } from 'electron'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
@@ -6,7 +9,10 @@ import { getLocalPtyProvider, getSshPtyProvider, clearProviderPtyState } from '.
 import { agentHookServer } from '../agent-hooks/server'
 import { browserManager } from '../browser/browser-manager'
 import { loadAgentSessionClaimSigner } from '../runtime/agent-session-claim-identity'
-import { admitLocalVerifiedAgentDiscoveries } from '../runtime/runtime-agent-discovery-admission'
+import {
+  publishCommittedAgentSessionMembership,
+  reconcileAgentSessionMembership
+} from '../runtime/runtime-agent-session-membership'
 import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
 import { prepareCodexAiVaultSessionResume } from '../codex/codex-ai-vault-session-resume'
 import { resolveHostCodexSessionSourceHome } from '../codex/codex-session-source-home'
@@ -80,33 +86,8 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     getSshProvider: (connectionId) => getSshPtyProvider(connectionId),
     onPtyStopped: clearProviderPtyState,
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
-    onAgentSessionCommitted: (commit) => {
-      agentHookServer.admitAgentSessionOwner({
-        owner: commit.result.owner,
-        paneKey: commit.paneKey,
-        tabId: commit.tabId,
-        worktreeId: commit.worktreeId,
-        connectionId: commit.connectionId,
-        terminalHandle: commit.result.owner.surface.terminalHandle,
-        agentType: commit.agentType ?? commit.result.owner.claim.agent,
-        launchToken: commit.launchToken,
-        disposition: commit.result.disposition
-      })
-    },
-    onAgentSessionInventoryReconciled: (reconciliation) => {
-      agentHookServer.reconcileAgentLaunchMembership(reconciliation.owners, {
-        complete: reconciliation.complete,
-        ...(reconciliation.connectionId !== undefined
-          ? { connectionId: reconciliation.connectionId }
-          : {})
-      })
-      // A manual process can only be adopted by the execution host that supplied the
-      // process/ancestry proof. Remote inventories remain unverifiable until their host
-      // exposes the same admission transaction.
-      if (reconciliation.connectionId === null) {
-        admitLocalVerifiedAgentDiscoveries(reconciliation.discoveries)
-      }
-    },
+    onAgentSessionCommitted: publishCommittedAgentSessionMembership,
+    onAgentSessionInventoryReconciled: reconcileAgentSessionMembership,
     // Why: serve can be promoted in place, so wire the listener from startup; runtime enables desktop-only scanners only for a ready renderer.
     onTerminalSideEffects: (batch: TerminalSideEffectBatch) => {
       if (state.mainWindow && !state.mainWindow.isDestroyed()) {
@@ -120,8 +101,8 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     // Why: structured chats have no hooks, so the host writes their projections here itself; the
     // snapshot above then lists them for the CLI and mobile without a second store.
     structuredAgentStatusSink: {
-      publish: (summary) => agentHookServer.ingestStructuredStatus(summary),
-      forget: (sessionId) => agentHookServer.dropStructuredStatus(sessionId)
+      publish: (summary, subject) => agentHookServer.ingestStructuredStatus(summary, subject),
+      forget: (subject) => agentHookServer.dropStructuredStatus(subject)
     },
     // Why captured rather than resolved at read: the fleet snapshot remints cached rows on every
     // read, so a row observed under one process otherwise acquires whatever the pane owns now.
@@ -163,6 +144,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     buildAgentHookPtyEnv: () =>
       isAgentStatusHooksEnabled(state.store?.getSettings()) ? agentHookServer.buildPtyEnv() : {},
     orchestrationEnvironmentTransport,
+    // Why the same function the settings IPC handler calls: a paired client's write and a
+    // local one must reconcile the scanner child through one path, or they can disagree.
+    applySessionSearchSettings: applySessionSearchSettingsChange,
     skillTransactionRecovery: state.skillTransactionRecovery
   })
   // Both desktop and headless serve own a host-local search service.
