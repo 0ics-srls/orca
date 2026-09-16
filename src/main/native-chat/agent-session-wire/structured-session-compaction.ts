@@ -5,6 +5,7 @@ type PendingCompaction = {
   error?: string
   compacted: boolean
   finish: (result: { error?: string }) => void
+  interrupt: () => void
 }
 
 function record(value: unknown): Record<string, unknown> {
@@ -45,11 +46,16 @@ export class StructuredSessionCompaction {
         }
         resolve(result)
       }
+      const interrupt = () => {
+        this.pending.delete(sessionId)
+        reject(new Error('Compaction was interrupted.'))
+      }
       this.pending.set(sessionId, {
         identity,
         commandTurnId,
         compacted: false,
-        finish
+        finish,
+        interrupt
       })
       timer = setTimeout(() => {
         expired = true
@@ -90,6 +96,11 @@ export class StructuredSessionCompaction {
 
   ended(sessionId: string): void {
     this.pending.get(sessionId)?.finish({ error: 'The provider exited during compaction.' })
+  }
+
+  /** A confirmed provider interrupt ends this attempt; later commands must not inherit its latch. */
+  interrupted(sessionId: string): void {
+    this.pending.get(sessionId)?.interrupt()
   }
 
   codex(sessionId: string, method: string, value: unknown): void {

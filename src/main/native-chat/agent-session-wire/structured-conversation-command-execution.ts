@@ -2,12 +2,12 @@ import type {
   AgentSessionConversationCommandRecord,
   AgentSessionConversationCommandResult
 } from '../../../shared/agent-session-conversation-command'
-import type { AgentSessionMutationResult } from '../../../shared/agent-session-wire'
 import { attachConversationClearReplacement } from './structured-conversation-clear-replacement'
 import {
   conversationCommandResult,
   persistConversationCommandResult,
-  type ConversationCommandParams,
+  type ConversationCommandResult,
+  type PendingConversationCommand,
   type PreparedConversationCommand
 } from './structured-conversation-command'
 import {
@@ -17,19 +17,6 @@ import {
 } from './structured-conversation-command-lifecycle'
 import type { StructuredAgentSessionMutationContext } from './structured-agent-session-host-mutations'
 import type { StructuredAgentSessionHost } from './structured-agent-session-host'
-
-export type ConversationCommandResult =
-  AgentSessionMutationResult<AgentSessionConversationCommandResult>
-
-export type PendingConversationCommand = {
-  key: string
-  command: ConversationCommandParams['command']
-  operationId: string
-  execution: PreparedConversationCommand | null
-  promise: Promise<ConversationCommandResult>
-  resolve: (result: ConversationCommandResult) => void
-  waiterSettled: boolean
-}
 
 type ExecutionOwner = {
   isCurrent: (entry: PendingConversationCommand) => boolean
@@ -53,17 +40,19 @@ export class StructuredConversationCommandExecution {
     if (!execution || !this.owner.isCurrent(entry)) {
       return
     }
+    let providerMaySettleLate = false
     try {
       await this.publishLifecycle(entry, execution.prepared, 'running')
       await this.host.flushStreamedEvents(execution.turn.sessionId)
       if (!this.owner.isCurrent(entry)) {
         return
       }
+      providerMaySettleLate = entry.command === 'compact'
       await (entry.command === 'clear'
         ? this.executeClear(entry, execution)
         : this.executeCompact(entry, execution))
     } catch (error) {
-      await this.markUnknown(entry, error)
+      await this.markUnknown(entry, error, !providerMaySettleLate)
     }
   }
 
@@ -103,7 +92,12 @@ export class StructuredConversationCommandExecution {
       fence: execution.turn.fence,
       onLateResult: (late) => this.complete(entry, late.error)
     })
-    await this.host.flushStreamedEvents(execution.turn.sessionId)
+    try {
+      await this.host.flushStreamedEvents(execution.turn.sessionId)
+    } catch (error) {
+      await this.markUnknown(entry, error, true)
+      return
+    }
     await this.complete(entry, result.error)
   }
 
@@ -214,13 +208,17 @@ export class StructuredConversationCommandExecution {
     })
   }
 
-  private async markUnknown(entry: PendingConversationCommand, cause: unknown): Promise<void> {
+  private async markUnknown(
+    entry: PendingConversationCommand,
+    cause: unknown,
+    retire = false
+  ): Promise<void> {
     const execution = entry.execution
     if (!execution) {
       return
     }
     await this.context().serialize(execution.turn.sessionId, () =>
-      this.markUnknownInLane(entry, cause)
+      this.markUnknownInLane(entry, cause, retire)
     )
   }
 
@@ -240,7 +238,11 @@ export class StructuredConversationCommandExecution {
         operationId: execution.prepared.operationId,
         outcome: { status: 'unknown' }
       })
-      await this.publishLifecycle(entry, { ...execution.prepared, error }, 'unverifiable')
+      await this.publishLifecycle(
+        entry,
+        { ...execution.prepared, error },
+        retire ? 'unverifiable' : 'running'
+      )
     } catch (persistError) {
       this.owner.report(entry, persistError)
     }

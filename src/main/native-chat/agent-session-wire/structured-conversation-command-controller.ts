@@ -1,13 +1,11 @@
 import { sendStructuredAgentSessionTurn } from './structured-agent-session-host-mutations'
 import {
   prepareStructuredConversationCommand,
-  type ConversationCommandParams
-} from './structured-conversation-command'
-import {
-  StructuredConversationCommandExecution,
+  type ConversationCommandParams,
   type ConversationCommandResult,
   type PendingConversationCommand
-} from './structured-conversation-command-execution'
+} from './structured-conversation-command'
+import { StructuredConversationCommandExecution } from './structured-conversation-command-execution'
 import type { StructuredAgentSessionMutationContext } from './structured-agent-session-host-mutations'
 import type { StructuredAgentSessionCaller } from './structured-agent-session-host-types'
 import type { StructuredAgentSessionHost } from './structured-agent-session-host'

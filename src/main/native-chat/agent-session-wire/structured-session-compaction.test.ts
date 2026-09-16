@@ -79,6 +79,20 @@ describe('structured compaction lifecycle', () => {
     })
     await expect(next).resolves.toEqual({})
   })
+
+  it('cleans up after a confirmed interrupt and permits another operation', async () => {
+    const tracker = new StructuredSessionCompaction()
+    const pending = tracker.run('s', 'p', async () => {}, undefined, 'compact:operation-1')
+    tracker.interrupted('s')
+    await expect(pending).rejects.toThrow('interrupted')
+    expect(tracker.hasPending('s')).toBe(false)
+
+    const next = tracker.run('s', 'p', async () => {
+      tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
+      tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
+    })
+    await expect(next).resolves.toEqual({})
+  })
   it('reconciles a terminal frame after timeout without repeating the provider request', async () => {
     vi.useFakeTimers()
     try {

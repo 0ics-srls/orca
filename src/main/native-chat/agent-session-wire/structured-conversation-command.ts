@@ -40,6 +40,19 @@ export type PreparedConversationCommand = {
   supersededOperation: AgentSessionConversationCommandRecord | null
 }
 
+export type ConversationCommandResult =
+  AgentSessionMutationResult<AgentSessionConversationCommandResult>
+
+export type PendingConversationCommand = {
+  key: string
+  command: ConversationCommandParams['command']
+  operationId: string
+  execution: PreparedConversationCommand | null
+  promise: Promise<ConversationCommandResult>
+  resolve: (result: ConversationCommandResult) => void
+  waiterSettled: boolean
+}
+
 export type ConversationCommandPreparation =
   | {
       decision: 'return'
@@ -47,14 +60,37 @@ export type ConversationCommandPreparation =
     }
   | { decision: 'execute'; execution: PreparedConversationCommand }
 
+function clearReplacementSessionId(
+  sessionId: string,
+  callerKey: string,
+  operationId: string
+): string {
+  return `clear-${createHash('sha256')
+    .update(JSON.stringify([sessionId, callerKey, operationId]))
+    .digest('hex')
+    .slice(0, 40)}`
+}
+
 function matchingCommand(
   context: StructuredAgentSessionMutationContext,
   callerKey: string,
   params: ConversationCommandParams
 ): AgentSessionConversationCommandRecord | null {
   const command = context.deps.store.getRecord(params.envelope.sessionId)?.conversationCommand
-  return command?.operationId === params.envelope.clientOperationId &&
+  if (
+    command?.operationId === params.envelope.clientOperationId &&
     command.callerKey === callerKey
+  ) {
+    return command
+  }
+  return params.command === 'clear' &&
+    command?.command === 'clear' &&
+    command.replacementSessionId ===
+      clearReplacementSessionId(
+        params.envelope.sessionId,
+        callerKey,
+        params.envelope.clientOperationId
+      )
     ? command
     : null
 }
@@ -159,10 +195,7 @@ export async function prepareStructuredConversationCommand(
   const replacementSessionId =
     command === 'clear'
       ? (prior?.replacementSessionId ??
-        `clear-${createHash('sha256')
-          .update(JSON.stringify([sessionId, caller.callerKey, clientOperationId]))
-          .digest('hex')
-          .slice(0, 40)}`)
+        clearReplacementSessionId(sessionId, caller.callerKey, clientOperationId))
       : undefined
   const prepared: AgentSessionConversationCommandRecord = {
     command,

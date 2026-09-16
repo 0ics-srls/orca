@@ -56,7 +56,24 @@ function mutate<TValue>(
       adapter: context.deps.adapter,
       callerKey: caller.callerKey,
       envelope,
-      plan,
+      plan:
+        plan.method === 'agentSession.cancel'
+          ? plan
+          : {
+              ...plan,
+              run: (ctx) => {
+                const command = context.deps.store.getRecord(ctx.sessionId)?.conversationCommand
+                return command?.phase === 'prepared' && command.state === 'unknown'
+                  ? Promise.resolve({
+                      ok: false as const,
+                      refusal: {
+                        code: 'agent_session_operation_invalid' as const,
+                        message: 'Wait for the conversation operation to finish.'
+                      }
+                    })
+                  : plan.run(ctx)
+              }
+            },
       journal: context.sessions.get(envelope.sessionId)?.journal,
       publish: (journal) => context.publish(envelope.sessionId, journal),
       flushStreamedEvents: context.flushStreamedEvents,
@@ -120,7 +137,7 @@ export function cancelStructuredAgentSessionTurn(
     ...plan,
     run: async (ctx) => {
       const outcome = await plan.run(ctx)
-      if (outcome.ok) {
+      if (outcome.ok && outcome.value.cancelled) {
         await context.abandonConversationCommand(params.envelope.sessionId, params.turnId)
       }
       return outcome

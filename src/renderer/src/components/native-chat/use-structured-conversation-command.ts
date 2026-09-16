@@ -48,14 +48,18 @@ export function useStructuredConversationCommand(args: {
     const current = claim.current
     const ids = operationIds.current
     return () => {
-      ids.clear()
-      current.reset()
+      ids.delete('compact')
+      current.reset(true)
     }
   }, [fence])
 
   useEffect(() => {
+    const current = claim.current
     const ids = operationIds.current
-    return () => ids.clear()
+    return () => {
+      ids.clear()
+      current.reset()
+    }
   }, [sessionId])
 
   return {

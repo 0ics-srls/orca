@@ -27,9 +27,13 @@ export async function publishConversationCommandLifecycle(input: {
   const turnId = `${command}:${operationId}`
   const text =
     state === 'running'
-      ? command === 'compact'
-        ? 'Compacting conversation…'
-        : 'Clearing conversation…'
+      ? value.error
+        ? command === 'compact'
+          ? COMPACTION_UNCONFIRMED
+          : 'Conversation clear completion is unconfirmed.'
+        : command === 'compact'
+          ? 'Compacting conversation…'
+          : 'Clearing conversation…'
       : state === 'unverifiable'
         ? command === 'compact'
           ? COMPACTION_UNCONFIRMED

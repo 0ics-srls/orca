@@ -53,7 +53,7 @@ describe('StructuredConversationCommandClaim', () => {
     }
   )
 
-  it('keeps an unverifiable host lifecycle pending until interrupt or restart', async () => {
+  it('settles an unverifiable host lifecycle with recovery guidance', async () => {
     const claim = new StructuredConversationCommandClaim()
     const outcome = claim.run({
       command: 'compact',
@@ -62,11 +62,12 @@ describe('StructuredConversationCommandClaim', () => {
       send: async () => ({ result: { command: 'compact', state: 'unknown' }, unresolved: false })
     })
     await Promise.resolve()
-    expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'unverifiable')])).toBe(false)
-    expect(claim.isRunning).toBe(true)
-
-    claim.reset()
-    await expect(outcome).resolves.toMatchObject({ accepted: false })
+    expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'unverifiable')])).toBe(true)
+    await expect(outcome).resolves.toMatchObject({
+      accepted: false,
+      error: expect.stringContaining('Restart the session')
+    })
+    expect(claim.isRunning).toBe(false)
   })
 
   it('preserves a provider failure carried by terminal lifecycle', async () => {

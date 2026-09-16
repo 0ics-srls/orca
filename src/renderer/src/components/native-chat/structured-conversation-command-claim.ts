@@ -27,6 +27,14 @@ function message(key: string, fallback: string): string {
   return translate(`components.native-chat.conversationCommand.${key}`, fallback)
 }
 
+function unresolvedMessage(command: AgentSessionConversationCommand): string {
+  return translate(
+    'components.native-chat.conversationCommand.mayStillBeRunning',
+    'The previous /{{value0}} may still be running. Restart the session before running it again.',
+    { value0: command }
+  )
+}
+
 function terminalFrameOutcome(
   items: readonly AgentJournalRenderItem[],
   claim: LiveClaim
@@ -38,8 +46,14 @@ function terminalFrameOutcome(
     return null
   }
   const lifecycle = readAgentJournalTurn(item.body)
-  if (lifecycle?.state === 'running' || lifecycle?.state === 'unverifiable') {
+  if (lifecycle?.state === 'running') {
     return null
+  }
+  if (
+    lifecycle?.state === 'unverifiable' ||
+    (lifecycle === null && item.body.text === 'Compaction completion is unconfirmed.')
+  ) {
+    return { accepted: false, error: unresolvedMessage(claim.command) }
   }
   const completedText =
     claim.command === 'compact' ? 'Conversation compacted.' : 'Conversation cleared.'
@@ -116,11 +130,14 @@ export class StructuredConversationCommandClaim {
     return true
   }
 
-  reset(): void {
+  reset(retryPreparedClear = false): void {
     if (this.live) {
       this.finish(this.live, {
         accepted: false,
-        error: message('unconfirmed', 'Conversation operation was not confirmed.')
+        error: message('unconfirmed', 'Conversation operation was not confirmed.'),
+        ...(retryPreparedClear && this.live.command === 'clear'
+          ? { retrySameOperation: true as const }
+          : {})
       })
     }
   }
