@@ -117,3 +117,57 @@ it.each(
     expect(reopened.agentStatusByPaneKey[sibling]).toBeDefined()
   }
 )
+
+it.each(
+  [
+    {
+      name: 'migration',
+      metadata: {
+        migrationUnsupportedByPtyId: {
+          foreign: {
+            ptyId: 'foreign',
+            paneKey: sibling,
+            reason: 'legacy-numeric-pane-key' as const,
+            source: 'local' as const,
+            updatedAt: 1
+          }
+        }
+      }
+    },
+    { name: 'acknowledgement', metadata: { acknowledgedAgentsByPaneKey: { [sibling]: 2 } } },
+    {
+      name: 'foreground',
+      metadata: {
+        paneForegroundAgentByPaneKey: {
+          [sibling]: { agent: 'omp' as const, shellForeground: false }
+        }
+      }
+    },
+    {
+      name: 'launch config',
+      metadata: {
+        agentLaunchConfigByPaneKey: {
+          [sibling]: {
+            launchConfig: { agentArgs: '', agentEnv: {} },
+            registeredAt: 1,
+            identity: {}
+          }
+        }
+      }
+    }
+  ].flatMap((variant) => [false, true].map((batch) => ({ ...variant, batch })))
+)('preserves foreign $name without a status row (batch=$batch)', ({ metadata, batch }) => {
+  const initial = makeState()
+  const own = applyWebSessionTabsSnapshot(initial, snapshot('folder:same', LEAF_ID), 'host-a', NOW)
+  applyWebSessionTabsSnapshot(initial, snapshot('folder:other', SECOND_LEAF_ID), 'host-b', NOW)
+  const state = makeState({ ...own, ...metadata })
+  expect(state.agentStatusByPaneKey[sibling]).toBeUndefined()
+  const empty = makeSnapshot([], { worktree: 'folder:same', snapshotVersion: 2 })
+  const patch = batch
+    ? applyWebSessionTabsSnapshots(state, [empty], 'host-a', NOW + 1)
+    : applyWebSessionTabsSnapshot(state, empty, 'host-a', NOW + 1)
+  const after = { ...state, ...patch }
+  expect(after).toMatchObject(metadata)
+  expect(after.agentStatusByPaneKey[ownPane]).toBeUndefined()
+  expect(after.recentlyClosedAgentStatusTabIds?.[tabId]).toBeUndefined()
+})

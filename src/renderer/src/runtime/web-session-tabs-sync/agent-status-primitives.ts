@@ -154,41 +154,6 @@ export function buildRemirroredClosedTabMarkerLiftPatch(
   return next ? { recentlyClosedAgentStatusTabIds: next } : null
 }
 
-export function collectCollidingRetractionPaneKeys(
-  state: WebSessionTabsSyncState,
-  retractedTabIds: readonly string[],
-  environmentId: string,
-  worktreeId: string,
-  batchContext?: WebSessionTabsBatchContext
-): ReadonlySet<string> | undefined {
-  if (retractedTabIds.length === 0) {
-    return undefined
-  }
-  const retractedIds = new Set(retractedTabIds)
-  const scopedPaneKeys = new Set<string>()
-  let hasForeignPane = false
-  const entries = new Map([
-    ...Object.entries(state.retainedAgentsByPaneKey ?? {}).map(
-      ([key, retained]) => [key, retained.entry] as const
-    ),
-    ...batchAgentPaneKeysForTabs(state, retractedIds, batchContext).map(
-      (key) => [key, state.agentStatusByPaneKey[key]] as const
-    )
-  ])
-  for (const [paneKey, entry] of entries) {
-    const tabId = parsePaneKey(paneKey)?.tabId
-    if (!tabId || !retractedIds.has(tabId)) {
-      continue
-    }
-    if (isMirroredAgentStatusOwnedBy(entry, environmentId, worktreeId)) {
-      scopedPaneKeys.add(paneKey)
-    } else {
-      hasForeignPane = true
-    }
-  }
-  return hasForeignPane ? scopedPaneKeys : undefined
-}
-
 /**
  * A host retraction owes the retracted tab closeTab's renderer-state sweep: without it,
  * client-owned rows (STA-3107-exempt in the mirror's delete loop) and retention promotions
@@ -202,7 +167,7 @@ export function buildRetractedMirroredTabSweepPatch(
     'agentStatusByPaneKey' | 'agentStatusEpoch' | 'sortEpoch'
   > | null,
   removedTerminalResourceIds: readonly string[],
-  scopedPaneKeys: ReadonlySet<string> | undefined,
+  scopedPaneKeysByTabId: ReadonlyMap<string, ReadonlySet<string>>,
   batchContext?: WebSessionTabsBatchContext
 ): Partial<WebSessionTabsSyncState> | null {
   // Why: only a mirrored id the host stopped publishing is a retraction — a local or provisional
@@ -211,7 +176,7 @@ export function buildRetractedMirroredTabSweepPatch(
   if (retractedTabIds.length === 0) {
     return null
   }
-  const sweepState: RetiredTerminalTabSweepState = {
+  let sweepState: RetiredTerminalTabSweepState = {
     acknowledgedAgentsByPaneKey: state.acknowledgedAgentsByPaneKey ?? {},
     activityClearedAtByPaneKey: state.activityClearedAtByPaneKey ?? {},
     agentLaunchConfigByPaneKey: state.agentLaunchConfigByPaneKey ?? {},
@@ -232,10 +197,20 @@ export function buildRetractedMirroredTabSweepPatch(
   // cutoffs means a republished pane cannot replay activity the user cleared on this client.
   // The host retracts exact tab ids; a worktree-wide orphan sweep could erase a sibling host.
   // A colliding host tab id cannot authorize global tombstones or tab registry cleanup.
-  const sweep = buildRetiredTerminalTabStateSweepPatch(sweepState, retractedTabIds, undefined, {
-    preserveActivityClearedState: true,
-    ...(scopedPaneKeys ? { paneKeys: scopedPaneKeys } : {})
-  })
+  const previousAgentStatuses = sweepState.agentStatusByPaneKey
+  let sweep: Partial<RetiredTerminalTabSweepState> | null = null
+  for (const tabId of retractedTabIds) {
+    const paneKeys = scopedPaneKeysByTabId.get(tabId)
+    const patch = buildRetiredTerminalTabStateSweepPatch(sweepState, [tabId], undefined, {
+      preserveActivityClearedState: true,
+      ...(paneKeys ? { paneKeys } : {})
+    })
+    if (patch) {
+      sweep ??= {}
+      Object.assign(sweep, patch)
+      sweepState = { ...sweepState, ...patch }
+    }
+  }
   if (!sweep?.agentStatusByPaneKey || !batchContext) {
     return sweep ?? null
   }
@@ -243,7 +218,7 @@ export function buildRetractedMirroredTabSweepPatch(
   const mutableState = state as unknown as Record<string, unknown>
   mutableState.agentStatusByPaneKey = sweep.agentStatusByPaneKey
   batchContext.changedRecords.add('agentStatusByPaneKey')
-  for (const paneKey of Object.keys(sweepState.agentStatusByPaneKey)) {
+  for (const paneKey of Object.keys(previousAgentStatuses)) {
     if (!(paneKey in sweep.agentStatusByPaneKey)) {
       updateBatchAgentPaneKey(paneKey, false, batchContext)
     }
