@@ -784,6 +784,7 @@ class SqliteDatabase extends SqliteTransaction {
 class PostgresTransaction implements RelayDatabase {
   readonly dialect = 'postgres' as const
   private heldFromMs: number | undefined
+  private lockUnavailable = 0
 
   constructor(protected readonly client: pg.PoolClient) {}
 
@@ -792,6 +793,14 @@ class PostgresTransaction implements RelayDatabase {
     const holdMs = performance.now() - this.heldFromMs
     this.heldFromMs = undefined
     return holdMs
+  }
+
+  // Drained by the owning database on both the commit and the rollback path: a
+  // 55P03 rolls the transaction back, so counting only on success would drop it.
+  consumeLockUnavailable(): number {
+    const count = this.lockUnavailable
+    this.lockUnavailable = 0
+    return count
   }
 
   async query(sql: string, params: unknown[] = []): Promise<SqlRow[]> {
@@ -829,6 +838,7 @@ class PostgresTransaction implements RelayDatabase {
         options.failIfUnavailable &&
         String((error as { code?: unknown }).code) === '55P03'
       ) {
+        if (options.measureHoldMs) this.lockUnavailable += 1
         throw new Error('database_lock_unavailable')
       }
       throw error
@@ -950,6 +960,7 @@ class PostgresDatabase implements RelayDatabase {
         options.failIfUnavailable &&
         String((error as { code?: unknown }).code) === '55P03'
       ) {
+        if (options.measureHoldMs) this.holds.recordUnavailable()
         throw new Error('database_lock_unavailable')
       }
       throw error
@@ -968,9 +979,11 @@ class PostgresDatabase implements RelayDatabase {
         const result = await operation(transaction)
         await client.query('COMMIT')
         this.holds.record(measuredHoldMs(transaction) ?? Number.NaN)
+        this.holds.recordUnavailable(transaction.consumeLockUnavailable())
         return result
       } catch (error) {
         await client.query('ROLLBACK').catch(() => undefined)
+        this.holds.recordUnavailable(transaction.consumeLockUnavailable())
         if (!retryablePostgresTransactionError(error) || attempt === POSTGRES_TRANSACTION_ATTEMPTS) {
           if (retryablePostgresTransactionError(error) && options.reportRetries !== false) {
             console.warn(
