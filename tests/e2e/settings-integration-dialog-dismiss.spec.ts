@@ -1,5 +1,5 @@
 /**
- * STA-7332: a backdrop click in the Settings → Integrations Linear and Jira connect dialogs must
+ * A backdrop click in the Settings → Integrations Linear and Jira connect dialogs must
  * not close the dialog and discard typed credentials. Escape / Cancel stay the explicit discard
  * paths. (Bitbucket's baseline-seeded predicate is covered by the component tests.)
  *
