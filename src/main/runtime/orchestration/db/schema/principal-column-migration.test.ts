@@ -12,8 +12,8 @@ const LEAF2 = '22222222-2222-4222-8222-222222222222'
 const LEAF3 = '33333333-3333-4333-8333-333333333333'
 const STRUCTURED_PANE = `structured-agent-session-sess1:${LEAF2}`
 
-/** Puts an already-migrated database back into pre-principal (v41) shape for the direct-unit cases. */
-function revertToV41Shape(db: OrchestrationDb): void {
+/** Undoes the principal migration so the direct-unit cases start from a v41 database. */
+function revertPrincipalMigration(db: OrchestrationDb): void {
   db.db.exec(`
     DROP TRIGGER IF EXISTS trg_runs_remember_coordinator_insert;
     DROP TRIGGER IF EXISTS trg_runs_remember_coordinator_update;
@@ -71,7 +71,7 @@ describe('principal column migration', () => {
   it('v41 -> v42 migrates and backfills by classification, and is idempotent', () => {
     const db = new OrchestrationDb(':memory:')
     try {
-      revertToV41Shape(db)
+      revertPrincipalMigration(db)
       seedV41Rows(db)
       migrateV42.call(db, 41)
 
