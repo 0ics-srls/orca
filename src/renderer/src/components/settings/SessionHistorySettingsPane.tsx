@@ -20,9 +20,10 @@ import { SessionHistoryComputerRow } from './SessionHistoryComputerRow'
 import { SessionHistoryServerRow } from './SessionHistoryServerRow'
 import { SessionSearchComputerList } from './SessionSearchComputerList'
 import {
-  countTurnOnableSessionSearchComputers,
   isTurnOnableSessionSearchState,
   orderSessionSearchServers,
+  sessionSearchSummarySentence,
+  summarizeSessionSearchComputers,
   type SessionSearchComputerEntry,
   type SessionSearchComputerState
 } from './session-search-computer-rollup'
@@ -81,7 +82,7 @@ export function SessionHistorySettingsPane({
     state: serverStates[environment.id] ?? 'checking',
     environment
   }))
-  const turnOnableCount = countTurnOnableSessionSearchComputers([localEntry, ...serverEntries])
+  const summary = summarizeSessionSearchComputers([localEntry, ...serverEntries])
   const orderedServers = orderSessionSearchServers(serverEntries)
   // Rebuilt each render on purpose: the hook keys off the host ids, not this array.
   const autoEnableTargets = serverEntries
@@ -229,11 +230,13 @@ export function SessionHistorySettingsPane({
               )}
         </p>
       </div>
-      {/* With no paired server this row only restates the single switch below it. Each row
-          already says whether it is offline or too old, so nothing here counts those again. */}
+      {/* With no paired server the line and the button only restate the single switch below them. */}
       {serverEntries.length === 0 ? null : (
-        <div className="flex items-center justify-end gap-4 pt-2">
-          {turnOnableCount > 0 ? (
+        <div className="flex items-center justify-between gap-4 pt-2">
+          <p className="text-xs text-muted-foreground">
+            {sessionSearchSummarySentence(summary, autoEnableNewComputers)}
+          </p>
+          {summary.turnOnable > 0 ? (
             <Button
               type="button"
               variant="outline"
@@ -241,17 +244,8 @@ export function SessionHistorySettingsPane({
               disabled={busy}
               onClick={() => void turnOnEveryComputer()}
             >
-              {translate('sessionHistory.settings.turnOnAll', 'Turn on for all {{count}}', {
-                count: turnOnableCount
-              })}
+              {translate('sessionHistory.settings.turnOnAll', 'Turn on all')}
             </Button>
-          ) : autoEnableNewComputers ? (
-            <p className="text-xs text-muted-foreground">
-              {translate(
-                'sessionHistory.settings.autoEnableArmed',
-                'New computers turn on automatically.'
-              )}
-            </p>
           ) : null}
         </div>
       )}

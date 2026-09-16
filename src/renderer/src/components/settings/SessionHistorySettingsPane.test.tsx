@@ -110,7 +110,7 @@ function statusByHost(): void {
     return answer
   })
 }
-const turnOnButton = (name: string | RegExp) => screen.queryByRole('button', { name })
+const summaryLine = (): string => screen.getByText(/computers/).textContent ?? ''
 async function openAdvanced(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
@@ -359,7 +359,7 @@ it('offers only this computer to a paired client, with no server rows', async ()
   expect(screen.getAllByRole('switch')).toHaveLength(1)
   expect(screen.getByRole('switch')).toBeDisabled()
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
-  expect(turnOnButton(/Turn on for all/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Open' })).not.toBeInTheDocument()
   expect(mocks.status).not.toHaveBeenCalled()
 })
@@ -391,30 +391,25 @@ it('leaves a lone computer to its own switch, with no roll-up above it', async (
   pane(true)
   await act(async () => {})
   expect(screen.getAllByRole('switch')).toHaveLength(1)
-  expect(turnOnButton(/Turn on for all/)).not.toBeInTheDocument()
+  expect(screen.queryByText(/of 1 computers/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
   expect(screen.queryByText('This computer')).not.toBeInTheDocument()
   expect(screen.queryByText('Orca remote servers')).not.toBeInTheDocument()
 })
 
-it('names in the button how many computers it would actually turn on', async () => {
+it('counts every computer in one line, leaving out the segments worth zero', async () => {
   mixedFleet()
   pane(true)
   await act(async () => {})
-  // Of five computers only gpu-a is reachable, new enough and off; the offline and
-  // too-old ones are not counted, and this computer and build-01 are already on.
-  expect(turnOnButton('Turn on for all 1')).toBeInTheDocument()
-
-  mocks.environments = [
-    { id: 'a', name: 'gpu-a' },
-    { id: 'b', name: 'gpu-b' }
-  ]
-  mocks.details = { a: CONNECTED_DETAILS, b: CONNECTED_DETAILS }
-  mocks.statusByHost = { local: off, 'runtime:a': off, 'runtime:b': off }
+  expect(summaryLine()).toBe('On 2 of 5 computers · 1 offline · 1 need an update')
+  mocks.environments = [{ id: 'off', name: 'gpu-a' }]
+  mocks.details = { off: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:off': off }
   statusByHost()
   cleanup()
-  pane(false)
+  pane(true)
   await act(async () => {})
-  expect(turnOnButton('Turn on for all 3')).toBeInTheDocument()
+  expect(summaryLine()).toBe('On 1 of 2 computers')
 })
 
 it('turns on every reachable computer and skips the ones it cannot', async () => {
@@ -424,7 +419,7 @@ it('turns on every reachable computer and skips the ones it cannot', async () =>
   pane(true, confirm, save)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on for all 1' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
   })
   expect(confirm).not.toHaveBeenCalled()
   expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:off'])
@@ -440,7 +435,7 @@ it('turns this computer on as part of turning them all on', async () => {
   pane(false, vi.fn().mockResolvedValue(true), save)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on for all 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
   })
   expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:off', true)
@@ -459,14 +454,14 @@ it('keeps going after a host refuses, and withholds the standing consent', async
   pane(true, vi.fn().mockResolvedValue(true), save)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on for all 2' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
   })
   expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:a', 'runtime:b'])
   expect(screen.getByRole('alert')).toHaveTextContent('Could not change session search on gpu-a')
   expect(save).not.toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
 })
 
-it('replaces the button with the standing promise once nothing is left to turn on', async () => {
+it('hides the button and says so once nothing is left to turn on', async () => {
   mocks.environments = [
     { id: 'a', name: 'gpu-a' },
     { id: 'gone', name: 'linux 1' }
@@ -476,19 +471,8 @@ it('replaces the button with the standing promise once nothing is left to turn o
   statusByHost()
   pane(true, undefined, undefined, null, true)
   await act(async () => {})
-  expect(turnOnButton(/Turn on for all/)).not.toBeInTheDocument()
-  expect(screen.getByText('New computers turn on automatically.')).toBeInTheDocument()
-})
-
-it('stays silent about automatic turn-on when that consent was never given', async () => {
-  mocks.environments = [{ id: 'a', name: 'gpu-a' }]
-  mocks.details = { a: CONNECTED_DETAILS }
-  mocks.statusByHost = { local: current, 'runtime:a': current }
-  statusByHost()
-  pane(true)
-  await act(async () => {})
-  expect(turnOnButton(/Turn on for all/)).not.toBeInTheDocument()
-  expect(screen.queryByText('New computers turn on automatically.')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(summaryLine()).toBe('On 2 of 3 computers · 1 offline New computers turn on when they can.')
 })
 
 it('turns on a newly reachable server while the standing consent holds', async () => {

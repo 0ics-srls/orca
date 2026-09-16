@@ -1,3 +1,5 @@
+import { translate } from '@/i18n/i18n'
+
 /**
  * What one computer in the pane is doing, as far as this client can tell.
  *
@@ -12,15 +14,62 @@ export type SessionSearchComputerEntry = {
   state: SessionSearchComputerState
 }
 
+export type SessionSearchFleetSummary = {
+  on: number
+  total: number
+  offline: number
+  needUpdate: number
+  /** Reachable, new enough, and still off: exactly what Turn on all would act on. */
+  turnOnable: number
+}
+
 export function isTurnOnableSessionSearchState(state: SessionSearchComputerState): boolean {
   return state === 'off'
 }
 
-/** How many computers Turn on would actually reach: reachable, new enough, and still off. */
-export function countTurnOnableSessionSearchComputers(
+export function summarizeSessionSearchComputers(
   entries: readonly SessionSearchComputerEntry[]
-): number {
-  return entries.filter((entry) => isTurnOnableSessionSearchState(entry.state)).length
+): SessionSearchFleetSummary {
+  const count = (state: SessionSearchComputerState): number =>
+    entries.filter((entry) => entry.state === state).length
+  return {
+    on: count('on'),
+    total: entries.length,
+    offline: count('offline'),
+    needUpdate: count('needs-update'),
+    turnOnable: entries.filter((entry) => isTurnOnableSessionSearchState(entry.state)).length
+  }
+}
+
+/** Sentence above the list. A segment worth zero is left out rather than printed as "0". */
+export function sessionSearchSummarySentence(
+  summary: SessionSearchFleetSummary,
+  autoEnableNewComputers: boolean
+): string {
+  const segments = [
+    translate('sessionHistory.settings.summaryOn', 'On {{on}} of {{total}} computers', {
+      on: summary.on,
+      total: summary.total
+    })
+  ]
+  if (summary.offline > 0) {
+    segments.push(
+      translate('sessionHistory.settings.summaryOffline', '{{offline}} offline', {
+        offline: summary.offline
+      })
+    )
+  }
+  if (summary.needUpdate > 0) {
+    segments.push(
+      translate('sessionHistory.settings.summaryNeedUpdate', '{{needUpdate}} need an update', {
+        needUpdate: summary.needUpdate
+      })
+    )
+  }
+  const sentence = segments.join(' · ')
+  return autoEnableNewComputers
+    ? `${sentence} ${translate('sessionHistory.settings.summaryAutoEnable', 'New computers turn on when they can.')}`
+    : sentence
 }
 
 // Reachable and working first, then what the user could act on, then what they cannot.
