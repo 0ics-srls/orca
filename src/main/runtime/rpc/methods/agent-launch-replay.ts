@@ -19,9 +19,11 @@ import {
   computeAgentLaunchFingerprint,
   deriveAgentLaunchChildOperationId
 } from '../../../../shared/agent-launch-operation'
-import type { AgentLaunchResult } from '../../../../shared/agent-launch-intent'
-import type { AgentSessionOperationOutcome } from '../../../../shared/agent-session-operation-ledger'
-import type { AgentSessionWireRefusal } from '../../../../shared/agent-session-wire'
+import { isAgentLaunchResult, type AgentLaunchResult } from '../../../../shared/agent-launch-intent'
+import type {
+  AgentSessionOperationOutcome,
+  AgentSessionOperationRefusalCode
+} from '../../../../shared/agent-session-operation-ledger'
 import { resolveAgentSessionReplayOutcome } from '../../../native-chat/agent-session-wire/structured-agent-session-replay-outcome'
 import { getStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
 import type { AgentSessionRecordStore } from '../../agent-session-record-store'
@@ -31,13 +33,18 @@ import type { AgentLaunchParams } from './agent-launch-schemas'
 /**
  * Who the ledger partitions this operation under.
  *
- * Matches `terminal.create`'s derivation so one client gets one operation namespace across the
- * lifecycle methods. Stated honestly: only the paired device id is an identity a caller keeps
- * across reconnects. `clientId` is the documented fallback, and on the websocket dispatch path it
- * is the bearer token itself — which rotates, so a caller that re-authenticates lands in a fresh
- * partition where its earlier ids are unreachable rather than replayable. That is the safe
- * direction (an unreachable row never replays as done), but it is a real limit, not the absence of
- * one. `local` covers the in-process caller, which is the same build as the host.
+ * Matches `terminal.create`'s derivation. Stated honestly: only the paired device id is an identity
+ * a caller keeps across reconnects. `clientId` is the documented fallback, and on the websocket
+ * dispatch path it is the bearer token itself — which rotates, so a caller that re-authenticates
+ * lands in a fresh partition where its earlier ids are unreachable rather than replayable. That is
+ * the safe direction (an unreachable row never replays as done), but it is a real limit, not the
+ * absence of one. `local` covers the in-process caller, which is the same build as the host.
+ *
+ * It does NOT give one client a single namespace across surfaces: the structured attach this launch
+ * performs partitions under `structuredCallerFor` (`clientId` or `trusted-local:<kind>`), so the
+ * two coincide only for a bearer-identity caller with no paired device. The child id below is what
+ * makes that coincidence safe; when they diverge the attach's row simply lands elsewhere, is never
+ * read back — the launch's own row answers every replay — and ages out on its own schedule.
  */
 export function agentLaunchOperationCallerKey(
   context: Pick<RpcContext, 'pairedDeviceId' | 'clientId'>
@@ -59,6 +66,14 @@ async function requireLaunchOperationStore(context: RpcContext): Promise<AgentSe
   return host.deps.store
 }
 
+/**
+ * `agent.launch` raises its refusals as the thrown code, the way the method's own guards do, so a
+ * refusal here carries whatever code the operation recorded rather than the closed `agentSession.*`
+ * envelope. An `AgentSessionWireRefusal` still fits, which is how the shared replay resolver's
+ * answers pass through unchanged.
+ */
+export type AgentLaunchRefusal = { code: string; message: string }
+
 export type AgentLaunchAdmission =
   /** This caller owns the operation. It alone runs the effect, and it must settle the row. */
   | {
@@ -70,7 +85,7 @@ export type AgentLaunchAdmission =
     }
   /** Already run under this id; hand back what it produced rather than producing it again. */
   | { decision: 'replay'; result: AgentLaunchResult }
-  | { decision: 'refuse'; refusal: AgentSessionWireRefusal }
+  | { decision: 'refuse'; refusal: AgentLaunchRefusal }
 
 /** A recorded row read back as an answer. `pending` is the one state with no answer yet — nobody
  *  has claimed it — so it reports `rerun`, and the caller goes on to try the claim. */
@@ -78,10 +93,29 @@ function answerFromRecordedRow(
   operationId: string,
   outcome: AgentSessionOperationOutcome
 ): AgentLaunchAdmission | null {
+  if (outcome.status === 'failed') {
+    // Replayed verbatim rather than narrowed to the `agentSession.*` vocabulary. A launch fails
+    // with its own codes — `worktree_not_found` and the reuse-terminal guards — none of which is on
+    // that closed list, so narrowing would answer every one of them with
+    // `agent_session_operation_invalid`: the ledger's "your id is malformed" signal, which invites
+    // a client to mint a fresh id when what actually happened is a launch that definitively did not
+    // run and is worth retrying under the same one.
+    return {
+      decision: 'refuse',
+      refusal: {
+        code: outcome.code,
+        message:
+          outcome.message ?? `Launch operation ${operationId} already failed: ${outcome.code}.`
+      }
+    }
+  }
   const replay = resolveAgentSessionReplayOutcome<AgentLaunchResult>({
     operationId,
     outcome,
-    reconstruct: () => (outcome.status === 'succeeded' ? (outcome.launch ?? null) : null)
+    // Narrowed here rather than in the row validator: a launch payload this build cannot read must
+    // cost this one replay, not the whole store. `isAgentSessionOperationRow` says why.
+    reconstruct: () =>
+      outcome.status === 'succeeded' && isAgentLaunchResult(outcome.launch) ? outcome.launch : null
   })
   if (replay.decision === 'rerun') {
     return null
@@ -131,6 +165,12 @@ export async function admitAgentLaunchOperation(
   const claim = await store.claimOperation({ callerKey, operationId })
   if (claim.claim === 'lost') {
     // Never `pending` — a pending row is exactly what a claim takes — so this always has an answer.
+    //
+    // KNOWN LIMIT, deliberate here: `unknown` does not distinguish a sibling executing in this very
+    // process from one a restart abandoned, so a duplicate that arrives while the real launch is
+    // still running is refused as uncertain rather than made to wait for it. Telling those apart
+    // needs the claim to record which execution generation took it, and re-deriving against the
+    // live one is recovery — the thing this PR draws its line at.
     return (
       answerFromRecordedRow(operationId, claim.row.outcome) ??
       refusal(operationId, 'agent_session_operation_unknown', 'is claimed but unsettled')
@@ -170,7 +210,7 @@ export async function admitAgentLaunchOperation(
 
 function refusal(
   operationId: string,
-  code: AgentSessionWireRefusal['code'],
+  code: AgentSessionOperationRefusalCode | 'agent_session_operation_unknown',
   detail: string
 ): AgentLaunchAdmission {
   return {

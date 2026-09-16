@@ -152,12 +152,23 @@ export function isAgentLaunchResult(value: unknown): value is AgentLaunchResult 
     typeof result.worktreeId === 'string' &&
     isAgentLaunchModeReceipt(result.receipt) &&
     (result.warning === undefined || typeof result.warning === 'string') &&
-    (result.prompt === undefined ||
-      (typeof result.prompt === 'object' &&
-        result.prompt !== null &&
-        isAgentLaunchPromptDelivery(result.prompt.delivery) &&
-        typeof result.prompt.delivered === 'boolean'))
+    (result.prompt === undefined || isAgentLaunchPromptReceipt(result.prompt))
   )
+}
+
+function isAgentLaunchPromptReceipt(value: unknown): value is AgentLaunchPromptReceipt {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  if (!('delivery' in value) || !isAgentLaunchPromptDelivery(value.delivery)) {
+    return false
+  }
+  if (!('outcome' in value)) {
+    return false
+  }
+  return value.outcome === 'journaled'
+    ? 'messageId' in value && typeof value.messageId === 'string'
+    : value.outcome === 'handed-to-terminal' || value.outcome === 'not-delivered'
 }
 
 function isAgentLaunchOutcome(value: unknown): value is AgentLaunchOutcome {

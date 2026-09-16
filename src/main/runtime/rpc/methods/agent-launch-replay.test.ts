@@ -7,7 +7,7 @@
  * harness rather than of the guard.
  */
 
-import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -19,6 +19,7 @@ import {
 } from '../../../../shared/agent-launch-operation'
 import {
   claimAgentSessionOperation,
+  isAgentSessionOperationRow,
   settleAgentSessionOperation,
   type AgentSessionOperationRow
 } from '../../../../shared/agent-session-operation-ledger'
@@ -136,29 +137,33 @@ describe('exactly one execution per launch operation', () => {
     expect(settled).toHaveLength(1)
   })
 
-  it('ABLATION: reading the row and then writing unknown lets both callers claim it', async () => {
-    // The composition this replaced: observe the admitted row, then settle it `unknown`.
-    // `settleAgentSessionOperation` replaces the outcome blind, so serializing the two writes tells
-    // neither caller that the other got there first — and with this substituted into the handler,
-    // the test above creates two worktrees for one tap.
-    const blindClaim = async (callerKey: string): Promise<'won' | 'lost'> => {
-      const before = rowFor(OPERATION_ID)?.outcome.status
+  it('ABLATION: a claim that reads and then writes in separate steps launches twice', async () => {
+    // The composition this replaced, substituted back into the handler's own store: observe the
+    // admitted row, then settle it `unknown`. Two transactions, so both callers drain their read
+    // before either write lands, and `settleAgentSessionOperation` replaces the outcome blind —
+    // neither write can tell the other it was second.
+    vi.spyOn(store, 'claimOperation').mockImplementation(async ({ callerKey, operationId }) => {
+      const before = rowFor(operationId)
+      if (!before) {
+        return { claim: 'absent' }
+      }
+      if (before.outcome.status !== 'pending') {
+        return { claim: 'lost', row: before }
+      }
       await store.recordOperationOutcome({
         callerKey,
-        operationId: OPERATION_ID,
+        operationId,
         outcome: { status: 'unknown' }
       })
-      return before === 'pending' ? 'won' : 'lost'
-    }
-    await store.admitOperation({
-      callerKey: 'device-1',
-      operationId: OPERATION_ID,
-      fingerprint: 'fp-1',
-      now: NOW
+      return { claim: 'won', row: { ...before, outcome: { status: 'unknown' } } }
     })
 
-    const blind = await Promise.all([blindClaim('device-1'), blindClaim('device-1')])
-    expect(blind.filter((claim) => claim === 'won')).toHaveLength(2)
+    const runtime = runtimeStub()
+    const params = createLaunch({ operationId: OPERATION_ID })
+    await Promise.allSettled([launch(params, runtime), launch(params, runtime)])
+
+    // One tap, two workspaces. This is the number the first test in this block holds at 1.
+    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(2)
   })
 
   it('the atomic claim admits exactly one winner where the blind settle admitted two', async () => {
@@ -201,7 +206,7 @@ describe('a replay answers from the record', () => {
     expect(replayed).toEqual(first)
     expect(replayed.receipt.preferred).toBe('structured')
     expect(replayed.warning).toBe('Could not copy untracked files.')
-    expect(replayed.prompt).toEqual({ delivery: 'draft', delivered: false })
+    expect(replayed.prompt).toEqual({ delivery: 'draft', outcome: 'not-delivered' })
     expect(movedSettings.createManagedWorktree).not.toHaveBeenCalled()
   })
 
@@ -360,6 +365,98 @@ describe('the recorded row stays readable by a build that predates it', () => {
   })
 })
 
+describe('an unreadable launch payload costs one replay, never the store', () => {
+  /** The whole file, primary and backup: `loadAgentSessionStore` falls through to the backup, and
+   *  the backup is a copy of the validated primary, so both carry the same payload in real life. */
+  async function rewriteRecordedLaunch(payload: unknown): Promise<void> {
+    const path = agentSessionStorePath(directory)
+    const file: { operations: Record<string, { outcome: Record<string, unknown> }> } = JSON.parse(
+      await readFile(path, 'utf-8')
+    )
+    const row = Object.values(file.operations)[0]
+    row.outcome.launch = payload
+    const written = JSON.stringify(file)
+    await writeFile(path, written)
+    await writeFile(`${path}.bak`, written)
+  }
+
+  it('still admits the row, because one rejected row makes the whole file unparseable', () => {
+    // The ratchet. `isAgentLaunchResult` mirrors a result type by hand, so a field tightened there
+    // would reject rows this same build wrote — and a primary and backup that both fail to parse
+    // raise `agent_session_store_corrupt`, taking every lease in the profile with them.
+    expect(
+      isAgentSessionOperationRow({
+        callerKey: 'device-1',
+        operationId: OPERATION_ID,
+        fingerprint: 'fp-1',
+        operationTimestamp: NOW,
+        recordedAt: NOW,
+        expiresAt: NOW + 1,
+        outcome: { status: 'succeeded', sessionId: 'sess-1', launch: { not: 'a launch result' } }
+      })
+    ).toBe(true)
+  })
+
+  it('reopens the store and refuses only the operation whose payload it cannot read', async () => {
+    const runtime = runtimeStub()
+    const params = createLaunch({ operationId: OPERATION_ID })
+    await launch(params, runtime)
+    await rewriteRecordedLaunch({ outcome: { kind: 'structured' }, worktreeId: 'wt-1' })
+
+    const reopened = await AgentSessionRecordStore.open({ directory, hostId: 'local' })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: see the setup above.
+    setStructuredAgentSessionHost({
+      deps: { store: reopened }
+    } as unknown as StructuredAgentSessionHost)
+
+    expect(reopened.listOperationRows()).toHaveLength(1)
+    const retry = runtimeStub()
+    await expect(launch(params, retry)).rejects.toThrow('agent_session_operation_unknown')
+    expect(retry.createManagedWorktree).not.toHaveBeenCalled()
+  })
+})
+
+describe('a recorded failure replays as the failure it was', () => {
+  it('answers with the code the launch actually raised, not the ledger vocabulary', async () => {
+    const runtime = runtimeStub()
+    runtime.showManagedTerminalWorkspace.mockRejectedValue(new Error('worktree_not_found'))
+    const params = createLaunch({
+      operationId: OPERATION_ID,
+      target: { kind: 'existing', worktree: 'gone' }
+    })
+    await expect(launch(params, runtime)).rejects.toThrow('worktree_not_found')
+
+    // `worktree_not_found` is not in AGENT_SESSION_WIRE_REFUSAL_CODES. Narrowing the recorded code
+    // through that closed list answers `agent_session_operation_invalid` — the ledger's "your id is
+    // malformed" signal, which tells a client to mint a fresh id when the truthful answer is that
+    // this launch definitively did not run.
+    const replayed = runtimeStub()
+    replayed.showManagedTerminalWorkspace.mockRejectedValue(new Error('worktree_not_found'))
+    await expect(launch(params, replayed)).rejects.toThrow('worktree_not_found')
+    expect(replayed.showManagedTerminalWorkspace).not.toHaveBeenCalled()
+  })
+
+  it('bounds the code it persists, because a code is an identifier and a message is not', async () => {
+    const runtime = runtimeStub()
+    runtime.showManagedTerminalWorkspace.mockRejectedValue(
+      new Error(`ENOENT: no such file or directory, stat '${'/very/long/path'.repeat(400)}'`)
+    )
+
+    await expect(
+      launch(
+        createLaunch({ operationId: OPERATION_ID, target: { kind: 'existing', worktree: 'gone' } }),
+        runtime
+      )
+    ).rejects.toThrow('ENOENT')
+
+    const outcome = rowFor(OPERATION_ID)?.outcome
+    if (outcome?.status !== 'failed') {
+      throw new Error('the pre-execution failure must record a failed row')
+    }
+    expect(outcome.code.length).toBeLessThanOrEqual(128)
+  })
+})
+
 describe('a client that names no operation keeps today behaviour', () => {
   it('runs the launch and writes no ledger row at all', async () => {
     const runtime = runtimeStub()
@@ -410,7 +507,7 @@ describe('the inner attach reserves under its own id', () => {
     expect(attachOperationIds[0]).toBe(deriveAgentLaunchChildOperationId(OPERATION_ID))
   })
 
-  it('ABLATION: forwarding the launch id unchanged makes the attach refuse a conflict', async () => {
+  it('what forwarding the launch id unchanged would do: the attach refuses a conflict', async () => {
     const callerKey = 'client-9'
     await store.admitOperation({
       callerKey,

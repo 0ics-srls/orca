@@ -25,9 +25,11 @@ import { createStructuredAgentSessionForWorktree } from './structured-agent-sess
 /**
  * `attachOperationId` is the launch's derived child id, present only when the caller named the
  * launch. It cannot be the launch's own id: the ledger keys a row on `(callerKey, operationId)`
- * with no method in it, so the attach would meet the launch's own row, disagree with its
- * fingerprint, and refuse a conflict before creating anything. Absent, the attach mints its own —
- * which is what every launch did before, and is still correct for a launch nobody can replay.
+ * with no method in it, and for a bearer-identity caller `structuredCallerFor` below derives the
+ * same key the launch partitioned under — so the attach would meet the launch's own row, disagree
+ * with its fingerprint, and refuse a conflict before creating anything. Absent, the attach mints
+ * its own — which is what every launch did before, and is still correct for a launch nobody can
+ * replay.
  */
 export function agentLaunchSurfaceFactory(
   context: RpcContext,

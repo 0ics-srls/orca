@@ -22,7 +22,6 @@ import {
   isAgentSessionConversationCommandResult,
   type AgentSessionConversationCommandResult
 } from './agent-session-conversation-command'
-import { isAgentLaunchResult, type AgentLaunchResult } from './agent-launch-intent'
 
 export const AGENT_SESSION_DURABLE_OPERATION_PER_CLIENT_LIMIT = 512
 export const AGENT_SESSION_DURABLE_OPERATION_GLOBAL_LIMIT = 4_096
@@ -45,8 +44,16 @@ export type AgentSessionOperationOutcome =
        * The full `agent.launch` answer. Recorded whole rather than rebuilt, because the preferred
        * mode and the reason a launch downgraded away from it cannot be recomputed once the user's
        * settings move: a replay must return what ran, not what would run now.
+       *
+       * Typed `unknown`, and deliberately NOT checked by `isAgentSessionOperationRow`, for the same
+       * reason `sessionId` above stays required: a row this file rejects makes the whole store
+       * unparseable, and a primary and backup that both fail to parse raise
+       * `agent_session_store_corrupt` rather than degrading. `isAgentLaunchResult` is a
+       * hand-maintained mirror of a result type later work will edit, so a field tightened there
+       * would reject rows this same build wrote and take every lease in the file with them. It is
+       * narrowed where the value is read instead, where a payload we cannot read costs one replay.
        */
-      launch?: AgentLaunchResult
+      launch?: unknown
     }
   | { status: 'failed'; code: string; message?: string; rewindReason?: AgentSessionRewindReason }
   /** The effect may or may not have happened; replay this answer instead of spawning again. */
@@ -260,10 +267,10 @@ export function isAgentSessionOperationRow(value: unknown): value is AgentSessio
     typeof outcome === 'object' &&
     outcome !== null &&
     ((outcome.status === 'pending' && true) ||
+      // `launch` is intentionally absent from this check; see the field's own note above.
       (outcome.status === 'succeeded' &&
         typeof outcome.sessionId === 'string' &&
         (outcome.rewind === undefined || isAgentSessionRewindResult(outcome.rewind)) &&
-        (outcome.launch === undefined || isAgentLaunchResult(outcome.launch)) &&
         (outcome.conversationCommand === undefined ||
           isAgentSessionConversationCommandResult(outcome.conversationCommand))) ||
       (outcome.status === 'failed' && typeof outcome.code === 'string') ||
