@@ -284,10 +284,14 @@ function releaseDueWaiters(state: HandleGapStoreState): void {
     // is retraction evidence about the wrong workspace, the defect the `existing.worktreeId`
     // assignment exists to prevent. Re-judging costs nothing: a waiter that is no longer due stays
     // parked, bounded by its own deadline and judged again on the next write.
-    // `state` and a fresh store read cannot differ here, because a re-park only happens when
-    // `findUnhydratedHostMirrorForPane` finds the row already filed under the sweeping worktree —
-    // rows this frame carries. Judging the frame keeps the drain on one snapshot, as it claims to.
-    if (!waiterIsReleased(waiter, state)) {
+    // The live store and not `state`, and NO TEST CAN TELL THE DIFFERENCE — deliberately. The two
+    // agree on every sequence the sweep can produce: a replay's only write is `createTab`, which
+    // appends a freshly minted tab id, so it can neither make an absent tab id present nor touch
+    // `ptyIdsByTabId`. They are kept apart anyway because if they ever did diverge `state` is the
+    // staler one, and its error is to RELEASE a pane whose row has come back — the direction this
+    // module exists to refuse. Holding on possibly-stale evidence costs a frame; acting on it is
+    // #19735. Do not "simplify" this to `state` on the grounds that nothing fails.
+    if (!waiterIsReleased(waiter, useAppStore.getState())) {
       continue
     }
     releaseWaiter(key)
