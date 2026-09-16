@@ -26,7 +26,7 @@ export function useStructuredAgentSession(args: {
   transportEnabled?: boolean
 }) {
   const { agent, isVisible, sessionId, target, transportEnabled = true } = args
-  const { state, loadingOlder, loadOlder, mutate, writeError, providerVisible } =
+  const { state, loadingOlder, loadOlder, mutate, writeError, clearWriteError, providerVisible } =
     useStructuredAgentSessionTransport({
       sessionId,
       target,
@@ -69,7 +69,8 @@ export function useStructuredAgentSession(args: {
       transportState.backgroundTasks.isMonitoring ||
       outbox.length
     ),
-    mutate
+    mutate,
+    onReconciled: clearWriteError
   })
   return {
     conversationCommands,

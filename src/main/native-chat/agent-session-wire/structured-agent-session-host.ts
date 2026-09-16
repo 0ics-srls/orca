@@ -196,7 +196,8 @@ export class StructuredAgentSessionHost {
     // it must not queue behind that wait.
     const lane = structuredAgentSessionControlLaneFor(
       sessionId,
-      this.deps.store.getRecord(sessionId)
+      this.deps.store.getRecord(sessionId),
+      this.conversationCommands.requestControl(sessionId)
     )
     return this.serialize(lane, async () => {
       await this.handoffs.closeRetainedTuiOwner(sessionId)
@@ -277,6 +278,8 @@ export class StructuredAgentSessionHost {
       flushStreamedEvents: this.flushStreamedEvents,
       requireSession: (sessionId) => this.requireSession(sessionId),
       serialize: (sessionId, task) => this.serialize(sessionId, task),
+      requestConversationCommandControl: (sessionId, turnId) =>
+        this.conversationCommands.requestControl(sessionId, turnId),
       now: () => this.now()
     }
   }

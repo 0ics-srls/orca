@@ -12,23 +12,26 @@ export function structuredAgentSessionControlLane(sessionId: string): string {
 }
 
 /**
- * Re-derived from the durable record, never timed: a prepared conversation command is the one
- * mutation that holds the main lane across a provider round trip. A record left prepared by a dead
- * owner reports parked too, and that is harmless -- the control lane is then simply empty.
+ * Re-derived from the durable record, never timed: only compaction holds the main lane across a
+ * provider round trip. Clear stays serialized with close because it creates and commits a
+ * replacement before the source may be retired.
  */
 export function structuredAgentSessionMainLaneParked(
   record: Pick<AgentSessionRecord, 'conversationCommand'> | null | undefined
 ): boolean {
   const command = record?.conversationCommand
-  return command?.phase === 'prepared' && command.state === 'unknown'
+  return (
+    command?.command === 'compact' && command.phase === 'prepared' && command.state === 'unknown'
+  )
 }
 
 /** The lane a user control should run on: its own while a command parks the main one, else the main one. */
 export function structuredAgentSessionControlLaneFor(
   sessionId: string,
-  record: Pick<AgentSessionRecord, 'conversationCommand'> | null | undefined
+  record: Pick<AgentSessionRecord, 'conversationCommand'> | null | undefined,
+  liveMainLaneParked?: boolean
 ): string {
-  return structuredAgentSessionMainLaneParked(record)
+  return (liveMainLaneParked ?? structuredAgentSessionMainLaneParked(record))
     ? structuredAgentSessionControlLane(sessionId)
     : sessionId
 }

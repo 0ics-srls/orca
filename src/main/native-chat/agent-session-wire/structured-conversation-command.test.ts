@@ -144,6 +144,13 @@ describe('host conversation commands', () => {
       refusal: { code: 'agent_session_operation_unknown' }
     })
     expect(compact).toHaveBeenCalledTimes(1)
+    const status = host
+      .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
+      .page.items.find((item) => item.body.kind === 'status')
+    expect(status?.body).toMatchObject({
+      text: 'Compaction completion is unconfirmed.',
+      turnLifecycle: { state: 'running' }
+    })
   })
 
   /** The replacement seeds from what the provider reports now, not from what the
@@ -290,6 +297,50 @@ describe('host conversation commands', () => {
     await running.catch(() => undefined)
   })
 
+  it('cancels a compaction admitted immediately before close instead of parking close', async () => {
+    const running = host.conversationCommand(caller, commandParams('compact'))
+    const closed = host.close(HOST_TEST_SESSION)
+
+    await expect(closed).resolves.toBeUndefined()
+    await expect(running).resolves.toMatchObject({
+      ok: false,
+      refusal: { message: 'Conversation operation was cancelled before provider execution.' }
+    })
+    expect(compact).not.toHaveBeenCalled()
+    expect(host.hasSession(HOST_TEST_SESSION)).toBe(false)
+  })
+
+  it('finishes clear before a concurrent close retires the source session', async () => {
+    let finishReplacement!: () => void
+    const originalAcquire = vi.mocked(adapter.acquire).getMockImplementation()!
+    vi.mocked(adapter.acquire).mockImplementation(async (input) => {
+      if (acquisitions > 0) {
+        await new Promise<void>((resolve) => {
+          finishReplacement = resolve
+        })
+      }
+      return originalAcquire(input)
+    })
+    const running = host.conversationCommand(caller, commandParams('clear'))
+    await vi.waitFor(() => expect(finishReplacement).toBeTypeOf('function'))
+    let closed = false
+    const close = host.close(HOST_TEST_SESSION).then(() => {
+      closed = true
+    })
+    await Promise.resolve()
+    expect(closed).toBe(false)
+
+    finishReplacement()
+    const result = await running
+    expect(result).toMatchObject({ ok: true, value: { state: 'completed' } })
+    await close
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
+      command: 'clear',
+      phase: 'committed',
+      state: 'completed'
+    })
+  })
+
   it('reconstructs a committed replacement after the ledger settlement is lost', async () => {
     const persist = store.recordOperationOutcome.bind(store)
     vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
@@ -306,6 +357,46 @@ describe('host conversation commands', () => {
       value: { state: 'completed' }
     })
     expect(acquisitions).toBe(2)
+  })
+
+  it('adopts an interrupted clear under a fresh operation after verified reacquisition', async () => {
+    const originalAttach = host.attach.bind(host)
+    vi.spyOn(host, 'attach').mockImplementationOnce(async (...args) => {
+      const attached = await originalAttach(...args)
+      if (!attached.ok) {
+        return attached
+      }
+      throw new Error('response lost after replacement attach')
+    })
+    const interrupted = commandParams('clear')
+    await expect(host.conversationCommand(caller, interrupted)).rejects.toThrow('response lost')
+    const replacementSessionId =
+      store.getRecord(HOST_TEST_SESSION)?.conversationCommand?.replacementSessionId
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
+      phase: 'prepared',
+      operationId: interrupted.envelope.clientOperationId,
+      replacementSessionId
+    })
+
+    await host.close(HOST_TEST_SESSION)
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+    expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })
+    const recovery = commandParams('clear')
+    const recovered = await host.conversationCommand({ callerKey: 'mobile' }, recovery)
+
+    expect(recovered).toMatchObject({
+      ok: true,
+      value: {
+        phase: 'committed',
+        operationId: recovery.envelope.clientOperationId,
+        replacementSessionId
+      }
+    })
+    expect(await host.conversationCommand(caller, interrupted)).toMatchObject({
+      ok: true,
+      replayed: true,
+      value: { replacementSessionId }
+    })
   })
 
   it('repairs an unknown receipt when the provider completes late', async () => {

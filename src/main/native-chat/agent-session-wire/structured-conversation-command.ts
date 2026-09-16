@@ -1,6 +1,4 @@
 import { createHash } from 'node:crypto'
-import { isDefinitiveAgentSessionCreateRefusal } from '../../../shared/agent-session-definitive-refusal'
-import { parseAgentSessionOperationTimestamp } from '../../../shared/agent-session-host-authority'
 import type {
   AgentSessionConversationCommand,
   AgentSessionConversationCommandResult
@@ -9,16 +7,12 @@ import type {
   AgentSessionMutationEnvelope,
   AgentSessionMutationResult
 } from '../../../shared/agent-session-wire'
-import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
-import {
-  attachFingerprintFields,
-  type AgentSessionAttachParams
-} from './structured-agent-session-attach'
 import { admitAndRunAgentSessionMutation } from './structured-agent-session-mutation-admission'
 import type { StructuredAgentSessionMutationContext } from './structured-agent-session-host-mutations'
 import type { StructuredAgentSessionCaller } from './structured-agent-session-host-types'
 import type { StructuredAgentSessionHost } from './structured-agent-session-host'
 import { conversationCommandBlocked } from './structured-conversation-command-admission'
+import { attachConversationClearReplacement } from './structured-conversation-clear-replacement'
 
 export type ConversationCommandParams = {
   envelope: AgentSessionMutationEnvelope
@@ -31,11 +25,30 @@ export type ConversationReplacement = {
   agent: 'claude' | 'codex'
 }
 
+type ConversationCommandControl = {
+  isCancelled: () => boolean
+  beginProviderCall: () => boolean
+  endProviderCall: () => void
+}
+
+const CANCELLED_BEFORE_PROVIDER = 'Conversation operation was cancelled before provider execution.'
+
+function cancelledBeforeProvider() {
+  return {
+    ok: false as const,
+    refusal: {
+      code: 'agent_session_operation_invalid' as const,
+      message: CANCELLED_BEFORE_PROVIDER
+    }
+  }
+}
+
 export function runStructuredConversationCommand(
   context: StructuredAgentSessionMutationContext,
   host: Pick<StructuredAgentSessionHost, 'attach' | 'flushStreamedEvents'>,
   caller: StructuredAgentSessionCaller,
-  params: ConversationCommandParams
+  params: ConversationCommandParams,
+  control?: ConversationCommandControl
 ): Promise<AgentSessionMutationResult<AgentSessionConversationCommandResult>> {
   const { envelope, command } = params
   const { sessionId, clientOperationId } = envelope
@@ -83,8 +96,33 @@ export function runStructuredConversationCommand(
         rerunWhenReplayMissing: () => command === 'clear' && matching()?.phase === 'prepared',
         run: async (ctx) => {
           await host.flushStreamedEvents(sessionId)
+          if (control?.isCancelled()) {
+            return cancelledBeforeProvider()
+          }
           const record = store.getRecord(sessionId)!
-          const prior = matching()
+          const interruptedClear = record.conversationCommand
+          const prior =
+            matching() ??
+            (command === 'clear' &&
+            interruptedClear?.command === 'clear' &&
+            interruptedClear.phase === 'prepared' &&
+            interruptedClear.runtimeFence !== ctx.fence
+              ? interruptedClear
+              : null)
+          const supersededOperation =
+            prior && prior.operationId !== clientOperationId ? prior : null
+          const settleSupersededOperation = async (
+            value: AgentSessionConversationCommandResult
+          ): Promise<void> => {
+            if (!supersededOperation) {
+              return
+            }
+            await store.recordOperationOutcome({
+              callerKey: supersededOperation.callerKey,
+              operationId: supersededOperation.operationId,
+              outcome: { status: 'succeeded', sessionId, conversationCommand: value }
+            })
+          }
           const blocked =
             prior?.phase === 'prepared' && command === 'clear'
               ? null
@@ -139,50 +177,31 @@ export function runStructuredConversationCommand(
           if (effectiveOptions && command === 'clear') {
             await ctx.persistOptions(effectiveOptions)
           }
+          if (control?.isCancelled()) {
+            return cancelledBeforeProvider()
+          }
           await store.setConversationCommand(sessionId, ctx.fence, prepared)
           let error: string | undefined
           if (command === 'clear' && replacementSessionId) {
-            const attach: AgentSessionAttachParams = {
-              envelope: {
-                sessionId: replacementSessionId,
-                clientOperationId: `${parseAgentSessionOperationTimestamp(clientOperationId)}-${createHash(
-                  'sha256'
-                )
-                  .update(JSON.stringify([sessionId, caller.callerKey, clientOperationId]))
-                  .digest('hex')
-                  .slice(0, 32)}`,
-                expectedRuntimeFence: null,
-                payloadFingerprint: ''
-              },
-              location: record.location,
-              accountHome: record.accountHome,
-              provider: record.provider,
-              agent: record.provider,
-              runtimeKind: 'native',
-              launchArgs: record.launchArgs,
-              options: effectiveOptions
-            }
-            attach.envelope.payloadFingerprint = computeAgentSessionPayloadFingerprint({
-              method: 'agentSession.attach',
-              sessionId: replacementSessionId,
-              fields: attachFingerprintFields(attach)
+            const attachError = await attachConversationClearReplacement({
+              host,
+              store,
+              sourceSessionId: sessionId,
+              replacementSessionId,
+              callerKey: prior?.callerKey ?? caller.callerKey,
+              operationId: prior?.operationId ?? clientOperationId,
+              source: { ...record, options: effectiveOptions }
             })
-            const acquired = await host.attach(caller, attach)
-            if (!acquired.ok) {
-              if (
-                !isDefinitiveAgentSessionCreateRefusal(acquired.refusal.code) &&
-                store.getRecord(replacementSessionId)?.lease.claimStatus !== 'released'
-              ) {
-                throw new Error(acquired.refusal.message)
-              }
+            if (attachError) {
               const failed = {
                 ...prepared,
                 replacementSessionId: undefined,
                 phase: 'committed' as const,
                 state: 'completed' as const,
-                error: acquired.refusal.message.slice(0, 4096)
+                error: attachError.slice(0, 4096)
               }
               await store.setConversationCommand(sessionId, ctx.fence, failed)
+              await settleSupersededOperation(failed)
               return { ok: true, value: failed }
             }
           } else {
@@ -203,54 +222,64 @@ export function runStructuredConversationCommand(
               { fence: ctx.fence }
             )
             ctx.publish()
-            try {
-              error = (
-                await ctx.adapter.compact({
-                  turnId: `compact:${clientOperationId}`,
-                  sessionId,
-                  fence: ctx.fence,
-                  onLateResult: (result) =>
-                    context.serialize(sessionId, async () => {
-                      if (
-                        matching()?.phase !== 'prepared' ||
-                        context.sessions.get(sessionId)?.journal !== ctx.journal
-                      ) {
-                        return
-                      }
-                      await host.flushStreamedEvents(sessionId)
-                      await ctx.journal.appendItem(
-                        identity,
-                        { kind: 'status', text: result.error ?? 'Conversation compacted.' },
-                        { fence: ctx.fence }
-                      )
-                      await store.setConversationCommand(sessionId, ctx.fence, {
-                        ...prepared,
-                        phase: 'committed',
-                        state: 'completed',
-                        ...(result.error ? { error: result.error.slice(0, 4096) } : {})
-                      })
-                      await store.recordOperationOutcome({
-                        callerKey: caller.callerKey,
-                        operationId: clientOperationId,
-                        outcome: {
-                          status: 'succeeded',
-                          sessionId,
-                          conversationCommand: matching()!
+            if (control && !control.beginProviderCall()) {
+              error = CANCELLED_BEFORE_PROVIDER
+            } else {
+              try {
+                error = (
+                  await ctx.adapter.compact({
+                    turnId: `compact:${clientOperationId}`,
+                    sessionId,
+                    fence: ctx.fence,
+                    onLateResult: (result) =>
+                      context.serialize(sessionId, async () => {
+                        if (
+                          matching()?.phase !== 'prepared' ||
+                          context.sessions.get(sessionId)?.journal !== ctx.journal
+                        ) {
+                          return
                         }
+                        await host.flushStreamedEvents(sessionId)
+                        await ctx.journal.appendItem(
+                          identity,
+                          { kind: 'status', text: result.error ?? 'Conversation compacted.' },
+                          { fence: ctx.fence }
+                        )
+                        await store.setConversationCommand(sessionId, ctx.fence, {
+                          ...prepared,
+                          phase: 'committed',
+                          state: 'completed',
+                          ...(result.error ? { error: result.error.slice(0, 4096) } : {})
+                        })
+                        await store.recordOperationOutcome({
+                          callerKey: caller.callerKey,
+                          operationId: clientOperationId,
+                          outcome: {
+                            status: 'succeeded',
+                            sessionId,
+                            conversationCommand: matching()!
+                          }
+                        })
+                        ctx.publish()
                       })
-                      ctx.publish()
-                    })
-                })
-              ).error
-              await host.flushStreamedEvents(sessionId)
-            } catch (cause) {
-              await ctx.journal.appendItem(
-                identity,
-                { kind: 'status', text: 'Compaction completion is unconfirmed.' },
-                { fence: ctx.fence }
-              )
-              ctx.publish()
-              throw cause
+                  })
+                ).error
+                control?.endProviderCall()
+                await host.flushStreamedEvents(sessionId)
+              } catch (cause) {
+                control?.endProviderCall()
+                await ctx.journal.appendItem(
+                  identity,
+                  {
+                    kind: 'status',
+                    text: 'Compaction completion is unconfirmed.',
+                    turnLifecycle: { turnId: `compact:${clientOperationId}`, state: 'running' }
+                  },
+                  { fence: ctx.fence }
+                )
+                ctx.publish()
+                throw cause
+              }
             }
             await ctx.journal.appendItem(
               identity,
@@ -266,6 +295,7 @@ export function runStructuredConversationCommand(
             ...(error ? { error: error.slice(0, 4096) } : {})
           }
           await store.setConversationCommand(sessionId, ctx.fence, completed)
+          await settleSupersededOperation(completed)
           return { ok: true, value: completed }
         }
       }

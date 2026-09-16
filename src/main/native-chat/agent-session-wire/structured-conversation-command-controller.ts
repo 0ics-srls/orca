@@ -7,12 +7,42 @@ import type { StructuredAgentSessionMutationContext } from './structured-agent-s
 import type { StructuredAgentSessionCaller } from './structured-agent-session-host-types'
 import type { StructuredAgentSessionHost } from './structured-agent-session-host'
 
+type PendingConversationCommand = {
+  key: string
+  command: ConversationCommandParams['command']
+  operationId: string
+  count: number
+  providerCallStarted: boolean
+  cancelBeforeProvider: boolean
+}
+
 export class StructuredConversationCommandController {
-  readonly pending = new Map<string, { key: string; count: number }>()
+  private readonly pending = new Map<string, PendingConversationCommand>()
   constructor(
     private readonly context: () => StructuredAgentSessionMutationContext,
     private readonly host: Pick<StructuredAgentSessionHost, 'attach' | 'flushStreamedEvents'>
   ) {}
+
+  /** Resolve the lane synchronously with admission. False means the queued command will yield
+   *  before provider execution; true means the provider call must be stopped from the control lane. */
+  requestControl(sessionId: string, turnId?: string): boolean | undefined {
+    const entry = this.pending.get(sessionId)
+    if (!entry) {
+      return undefined
+    }
+    if (entry.command === 'clear') {
+      return false
+    }
+    if (entry.providerCallStarted) {
+      return true
+    }
+    if (turnId === undefined || turnId === `compact:${entry.operationId}`) {
+      entry.cancelBeforeProvider = true
+      return false
+    }
+    return true
+  }
+
   send = (
     caller: StructuredAgentSessionCaller,
     params: Parameters<typeof sendStructuredAgentSessionTurn>[2]
@@ -39,16 +69,35 @@ export class StructuredConversationCommandController {
         }
       })
     }
-    const entry = pending ?? { key, count: 0 }
+    const entry =
+      pending ??
+      ({
+        key,
+        command: params.command,
+        operationId: params.envelope.clientOperationId,
+        count: 0,
+        providerCallStarted: false,
+        cancelBeforeProvider: false
+      } satisfies PendingConversationCommand)
     entry.count++
     this.pending.set(params.envelope.sessionId, entry)
-    return runStructuredConversationCommand(this.context(), this.host, caller, params).finally(
-      () => {
-        if (--entry.count === 0 && this.pending.get(params.envelope.sessionId) === entry) {
-          this.pending.delete(params.envelope.sessionId)
+    return runStructuredConversationCommand(this.context(), this.host, caller, params, {
+      isCancelled: () => entry.cancelBeforeProvider,
+      beginProviderCall: () => {
+        if (entry.cancelBeforeProvider) {
+          return false
         }
+        entry.providerCallStarted = true
+        return true
+      },
+      endProviderCall: () => {
+        entry.providerCallStarted = false
       }
-    )
+    }).finally(() => {
+      if (--entry.count === 0 && this.pending.get(params.envelope.sessionId) === entry) {
+        this.pending.delete(params.envelope.sessionId)
+      }
+    })
   }
 
   replacements = () => {

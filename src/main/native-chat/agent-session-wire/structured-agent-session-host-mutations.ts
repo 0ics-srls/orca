@@ -41,6 +41,7 @@ export type StructuredAgentSessionMutationContext = {
   flushStreamedEvents: (sessionId: string) => Promise<void>
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
+  requestConversationCommandControl: (sessionId: string, turnId?: string) => boolean | undefined
   now: () => number
 }
 
@@ -115,12 +116,20 @@ export function cancelStructuredAgentSessionTurn(
     prompt?: { itemId: string; expectedRevision: number }
   }
 ): Promise<AgentSessionMutationResult<AgentSessionCancelResult>> {
+  const liveMainLaneParked = context.requestConversationCommandControl(
+    params.envelope.sessionId,
+    params.turnId
+  )
   // Interrupts must reach a provider while a command awaits its terminal frame.
   const cancellationContext = {
     ...context,
     serialize: <T>(sessionId: string, task: () => Promise<T>) =>
       context.serialize(
-        structuredAgentSessionControlLaneFor(sessionId, context.deps.store.getRecord(sessionId)),
+        structuredAgentSessionControlLaneFor(
+          sessionId,
+          context.deps.store.getRecord(sessionId),
+          liveMainLaneParked
+        ),
         task
       )
   }
