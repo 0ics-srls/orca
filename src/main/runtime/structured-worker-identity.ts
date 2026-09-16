@@ -96,7 +96,6 @@ function persistedStructuredWorkerPaneKeyIsValid(
     paneKey !== structuredAgentSessionPaneKey(structuredAgentSessionTabId(sessionId), sessionId) &&
     parsed &&
     parsed.tabId === structuredAgentSessionTabId(sessionId) &&
-    paneKey !== structuredAgentSessionPaneKey(structuredAgentSessionTabId(sessionId), sessionId) &&
     isTerminalLeafId(parsed.leafId)
   )
 }
