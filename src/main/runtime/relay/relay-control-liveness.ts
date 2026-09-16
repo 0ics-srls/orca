@@ -9,9 +9,16 @@ import {
 // (common on Windows behind NAT/VPN or across sleep-resume, where the OS reports
 // the write as succeeding). Only the relay's 75s silence bound catches the
 // second, and pairing has already failed by then. An RFC 6455 ping settles it in
-// seconds and needs no application opcode: any live peer must answer with a
-// pong, so silence past this deadline proves the pipe is dead.
-export const RELAY_CONTROL_PROBE_DEADLINE_MS = 10_000
+// seconds and needs no application opcode: any live peer must answer with a pong.
+//
+// The deadline deliberately exceeds the relay's own 15s ping cadence. The relay
+// keeps its liveness at the application layer (a JSON `ping` frame), so nothing
+// in normal operation depends on control frames surviving end to end; a window
+// shorter than that cadence would turn a middlebox that swallows pongs into a
+// reconnect loop. At 20s a healthy cell clears the probe either way — its own
+// ping lands inside the window — so a fired probe means the pipe carried
+// neither, which is the definition of dead.
+export const RELAY_CONTROL_PROBE_DEADLINE_MS = 20_000
 
 export type RelayControlLivenessOptions = {
   cellUrl: string

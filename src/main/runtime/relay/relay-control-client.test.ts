@@ -669,9 +669,10 @@ describe('RelayControlClient half-open recovery', () => {
     expect(socket.pings).toBe(1)
     expect(socket.readyState).toBe(1)
 
-    // No pong inside the probe deadline: the pipe is proven dead, so the origin
-    // gets its close now rather than after the 75s silence bound.
-    await vi.advanceTimersByTimeAsync(10_000)
+    // Neither a pong nor the relay's own 15s ping inside the probe deadline: the
+    // pipe carried nothing, so the origin gets its close now rather than after
+    // the 75s silence bound.
+    await vi.advanceTimersByTimeAsync(20_000)
     expect(socket.readyState).toBe(3)
     expect(onClose).toHaveBeenCalledWith(1006)
     expect(client.isLive()).toBe(false)
@@ -687,7 +688,29 @@ describe('RelayControlClient half-open recovery', () => {
     await invite
     socket.pong()
 
-    await vi.advanceTimersByTimeAsync(30_000)
+    await vi.advanceTimersByTimeAsync(40_000)
+    expect(socket.readyState).toBe(1)
+    expect(onClose).not.toHaveBeenCalled()
+    expect(client.isLive()).toBe(true)
+  })
+
+  it("clears an armed probe on the relay's next ping, with no pong involved", async () => {
+    vi.useFakeTimers()
+    const { client, socket, onClose } = scriptedControl()
+    await client.connect()
+    const invite = client.createInvite('device-1').catch((error: Error) => error.message)
+
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect(socket.pings).toBe(1)
+    await invite
+
+    // The probe window outlasts the relay's 15s ping cadence on purpose: relay
+    // liveness runs at the application layer, so a middlebox that swallows RFC
+    // 6455 control frames must not be able to turn this into a reconnect loop.
+    await vi.advanceTimersByTimeAsync(15_000)
+    socket.deliver({ type: 'ping', t: Date.now() })
+    await vi.advanceTimersByTimeAsync(10_000)
+
     expect(socket.readyState).toBe(1)
     expect(onClose).not.toHaveBeenCalled()
     expect(client.isLive()).toBe(true)
