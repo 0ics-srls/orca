@@ -190,17 +190,7 @@ export class RelayControlOrigin {
         : {}),
       onConnectionOpen: (message) => this.openConnection(message),
       onDrain: (message) => this.options.onDrain(this, message),
-      onRegionRestored: (message) => {
-        if (control === this.activeControl && !this.closed) {
-          this.options.onRegionRestored?.(this, message)
-        }
-      },
-      onPendingChanged: () => {
-        if (control !== this.activeControl && control.pendingRequestCount === 0) {
-          this.closeRetiredControl(control)
-        }
-        this.options.onPendingChanged?.(this)
-      },
+      onPendingChanged: () => this.options.onPendingChanged?.(this),
       onClose: (code) => {
         this.controls.delete(control)
         const timer = this.retiredControlTimers.get(control)

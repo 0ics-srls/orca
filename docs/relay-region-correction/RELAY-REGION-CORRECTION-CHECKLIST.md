@@ -1,204 +1,110 @@
+> **Fleet upgrade complete — 2026-09-13 00:27 UTC:** All19 targeted general-serving cells upgraded to the approved image and regional capability3. All38 health/ready checks passed; GCE groups stable; director inventory ready/general for all19. Final authenticated inspect [34727921841](https://github.com/stablyai/orca/actions/runs/34727921841) passed at selector230 / disabled control14; serving and rollback cohort0. Broader migration remains off. [Full rollout evidence and remaining gaps](./RELAY-FLEET-UPGRADE-STATUS.md). Older dated statements below are history.
+
+> **Final production test snapshot — 2026-09-12 04:34 UTC:** User desktop migrated Asia C27→US C7 and completed cleanup. One completed migration, zero active/aborted, target reservations0. Durable migration disabled generation14; cohort0 restored on serving00610-huf and rollback00609-dur (workflow34673085225 passed). Latest CPU32.07%. Individual end-to-end test complete: user subsequently confirmed “it does work and connects faster now” on 2026-09-12. This is qualitative connection-speed evidence; broader release validation and numeric latency measurements remain open. [Exact commands, tests, incident history and results](./RELAY-REGION-CORRECTION-LIVE-STATUS.md).
+
+> **2026-09-12 04:29 UTC:** User desktop migrated C27→C7 at04:25:57 UTC; one completed migration, zero active/aborted, target reservations0. Durable switch disabled again generation14 (34673003455); final cohort0 restore34673085225 in progress. Phone confirmation pending. See [live status](./RELAY-REGION-CORRECTION-LIVE-STATUS.md) for exact evidence and the polling fix deployed via#20203.
+
+> **2026-09-12 03:49 UTC:** Both cell upgrades passed. Cohort-100 preparation encountered SQL CPU 88–94% before any migration enablement. Audited recovery 34671192604 passed: serving `00600-nab`, rollback `00599-bos`, cohort 0, durable rehome still disabled generation 12. CPU latest available sample 60.9%, recovery observation ongoing. Small disabled-polling regression fix is local and validated; enabled-load benchmark pending. No successful user migration is claimed.
+
+> Current production snapshot: [2026-09-12 03:23 UTC live status](./RELAY-REGION-CORRECTION-LIVE-STATUS.md). Cloud/desktop and rollout PRs are merged; C27 upgrade passed, C7 replacement is in progress, cohort remains 0, and idle migration is not yet proven. Older pending-PR/no-deployment statements below are historical evidence.
+
 # Relay region correction — implementation checklist
 
-Updated: 2026-09-11. **MERGE BLOCKED: fresh split validation reproduced the rollback confirmation failure. Earlier green runs are insufficient; release/rollout gates also remain.**
+> **Scope: idle-only correction.** Superseded retention history is preserved in
+> `.tmp/idle-cutover-review/checklist-history-before-final.md` and the backup branch.
+> Follow [idle-cutover plan](RELAY-REGION-CORRECTION-IDLE-CUTOVER-PLAN.md).
 
-Source of truth for behavior: [final implementation plan](RELAY-REGION-CORRECTION-PLAN.md), especially section 5a. Independent verdict: [final review](https://github.com/stablyai/orca/blob/0db9fdc486366f7451289f0c0599eed9ae1d94be/docs/relay-region-correction/RELAY-REGION-CORRECTION-FINAL-REVIEW.md), against `a9338438c437e1ba763a03f17b9d468988bd045b`. Investigation history: [progress log](https://github.com/stablyai/orca/blob/0db9fdc486366f7451289f0c0599eed9ae1d94be/docs/relay-region-correction/RELAY-ROLLOUT-PROGRESS.md).
+## Idle-only implementation tracker
 
-This is the execution tracker. Check a task only after its implementation and relevant verification are complete; attach the commit/PR and test evidence to that task or its phase evidence entry. Record in-progress work and blockers below. Prototype results do not complete production implementation tasks. Keep this file current after each meaningful implementation or validation milestone; record design changes in the plan and summarize them in the progress log.
+- [x] Resolve plan review findings and obtain Astra approval (revision 2).
+- [x] Preserve pre-rescope revision on `relay-region-before-idle-implementation`.
+- [x] Endpoint authentication and incarnation check: deterministic red/green.
+- [x] Worker selects before cutover; busy deferral and lost reply tests: red/green.
+- [x] Source barrier covers accepts, attaches, commands and control replacement (48 registry tests, including conflicting operation-ID authority tuples; red/green evidence in acceptance).
+- [x] Constrained assignment commit and locked ambiguous-outcome reconciliation (11 PostgreSQL 16 tests on 55440, including both replacement orders and a lost commit reply).
+- [x] Desktop removes live-retention handling, retains fresh decisions and fallback (53 focused desktop/compatibility tests; node typecheck passes).
+- [x] Remove superseded cloud retention protocol/store/cleanup and obsolete tests. The legacy database capability column remains written as0 for existing schema compatibility; it enables no behavior.
+- [x] Real two-cell transport: two clients, quiet connection, idle move, arrival race, and observed target-registration failure with ordinary recovery (3 tests pass).
+- [x] Focused PostgreSQL transaction/concurrency checks on 55440 (11 passed).
+- [x] Full local relevant cloud/desktop suites: 682 cloud tests with PostgreSQL,177 desktop relay tests,16 transport/compatibility tests.
+- [x] Local pinned-wire compatibility, Docker SSH/folder continuity (7), types, lint and reliability manifest. Packaged/device/platform gates remain open.
+- [x] Fifth Astra low implementation audit: APPROVE within the documented scope.
+- [ ] Validate updated cloud/desktop PRs and fresh CI; capacity semantics now have regression coverage and documentation.
 
-## Current position
+These are merge-readiness tasks. Device/package/platform and production rollout
+requirements remain explicit gaps until independently evidenced.
 
-- [x] Complete independent review of the whole plan; resolve cold-start clarification.
-- [x] Create this implementation checklist.
-- [x] Begin implementation from current baseline `027acb4efa2e6b226d40df266b86367423946d62` in this worktree; preserve unrelated changes (details in progress log).
 
-Active tasks: complete explicit release/evidence gaps below. The current-main rollback regression passed earlier but recurred during split validation; transport is not reliably green. Emergency-drain behavior remains covered. Remaining unchecked items denote release gaps, not claimed test coverage. See [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md). Shared API recorded in [implementation contracts](RELAY-REGION-CORRECTION-API.md).
 
-## 1. Fresh decisions and safe initial placement — plan §§1–2
+Current transport disposition: **the replacement idle-only transport suite is green
+(3 tests), but the PRs are not ready**. Local cloud/desktop verification, final implementation audit, SSH/folder evidence
+and reliability docs are complete. PR updates, fresh CI and release evidence remain.
+The full cloud suite passes682 tests with PostgreSQL16 and no skips; cloud typecheck passes. Final audit and remaining end-to-end/PR tasks are still open. Exact commands/results are at the top of the acceptance document. The original
+live-retention rollback assertion is superseded by the approved product rescope;
+these results do not claim that old design was repaired.
 
-- [x] Review exact schema, protocol, atomic generation allocation and transaction/lock ordering before implementing them; reuse existing preference storage and assignment exchange.
-- [x] Add opt-in server-issued measurement windows: per-host monotonic generation, fixed server expiry, incumbent assignment epoch/region, supported policy and outcome; retain only latest compact evidence.
-- [x] Enforce successor invalidation, idempotent reports, inconclusive tombstones and rejection of conflicting upgrades/stale assignment basis under the claim lock. Retries must not extend expiry.
-- [x] Preserve pre-placement probing and hints on first assignment; obtain the window with/after assignment and require subsequent measurements for migration eligibility.
-- [x] Keep legacy placement/reconnect hints separate from verified migration eligibility; distinguish omission from explicit inconclusive decisions and exclude diagnostic overrides.
-- [x] Negotiate strict request/response schemas and old-server HTTP 400 fallback without disturbing a healthy assignment.
-- [x] Reuse existing sampling/spread rejection; require both regions and at least 25ms AND 20% improvement over the actual assigned region. Validate evidence bounds, policy and epoch on the director.
-- [x] Clear legacy probe caches on adoption; defer movement for missing incumbent, incomplete catalog, inconclusive/tied/unsupported/stale evidence.
-- [ ] Test cold start with correction disabled, hint/assignment mismatch, inconclusive probes and fallback; test delayed reports, duplicates, tombstones, clock changes, restarts, legacy writes, overrides, policy upgrades and threshold boundaries.
+## Publication and release gates
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below.
+- [x] Prepare separate cloud/desktop patches and concrete PR descriptions locally.
+- [x] Reproduce and address old CI failures: fetch audit count and cloud test dependencies.
+- [x] Authorization received; separate PRs #20105 (cloud) and #20106 (desktop) updated with idle-only scope.
+- [ ] Verify exact-head CI.
+- [ ] Packaged mixed-version desktop/mobile and physical-device lifecycle.
+- [ ] Linux/Windows transport evidence, CI soak, bounded rollout and measured benefit.
 
-Phase 1 progress: shared schema tests 35/35; director API/worker and target-selection tests 32/32. Five new endpoint regression oracles fail against baseline app.ts and pass after restore. Store and full compatibility verification pending.
+No production mutation or deployment occurred. Local passing tests and audit approval
+are not a claim that the current published PRs are ready or the feature is deployed.
+The acceptance document lists commands, evidence scope and remaining gaps.
 
-## 2. Desktop refresh and event-driven retirement — plan §§3–4
+## Production capability audit (2026-09-12 UTC)
 
-- [x] Give the broker one deadline and one in-flight refresh/report task, canceled on close; use 24h conclusive / 1h inconclusive cadence with jitter/backoff and separate server eligibility expiry.
-- [x] Handle sleep/resume without waking offline desktops; use network-change refresh only with a reliable existing lifecycle signal.
-- [x] Keep probe/report failures independent of successful auth renewal; reuse the decision/window on report retries.
-- [x] Serialize assignment application with drain/recovery: update same-assignment metadata, activate newer assignments through existing paths, discard stale responses.
-- [x] Prevent overlapping rehomes or replacement of a retained source; allow fresh decisions to be stored for later evaluation.
-- [x] Retire an old origin only after final owned connection, pending attachment and basis-bound control work ends; notify cleanup on response, rejection, timeout and close without polling.
-- [x] After awaited admission, recheck local session/generation and release abandoned reservations; prevent late attachment to a retired origin.
-- [x] Test unchanged-assignment continuity, auth independence, retries, sleep/resume, pending-work completion and admission/retirement races.
+- PR #20105 (merge `cd9aa43a2c76`) changed trusted relay runtime capability from 1 to 3; #20174 only updates rollout tooling. Earlier conversational claims otherwise were incorrect.
+- Read-only GCE inspection: C27 `relay-c27-j5ff` has both rehome trust settings and configured relay image `sha256:c844f77d8ca19469fd61d0a1d958717c5554287009cfdb3664948f276980fbe2`. C7 `relay-c7-bwjc` also has both settings, with image `sha256:4916ed676d8389f694a648e750f1112d9002d68c84a1e0c7af828d5af129de62`. These are configured images, not authenticated runtime-status proof. No evidence supports the previous guess that C27 lacks trust configuration.
+- #20174 review found two valid blockers: parser rejection of 3 and a trust-probe condition restricted to 1. Fixed both; parser regression failed before the fix (`.tmp/protocol3-parser-red.log`).
+- `ORCA_BACKGROUND_LAUNCH=1 node --test cloud/dev/scripts/validate-relay-capacity-plan.test.mjs cloud/dev/scripts/verify-relay-capacity-transition.test.mjs cloud/dev/scripts/relay-same-cap-script-census.test.mjs`: 73 passed, 0 failed (`.tmp/protocol3-rollout-green.log`).
+- Refreshed read-only Asia selector inspection: workflow run 34664574767.
+- Remaining: authenticated live capability proof; exact-head CI/review; compatible source and destination canaries; migration enable/observe/disable test. No production mutation or successful migration is claimed by this audit.
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below.
+- Follow-up PR #20174 merged as `113e58f34e53d7496b0473346dbc209ff0a805be` after all exact-head CI checks passed (`66f61280972c`, Cloud Verify run 34664745443). Independent Astra review found no rollout/rollback blocker at `eecbe85a2d20`; the subsequent change only adds protocol-3 plan coverage across every rollout cell.
+- Full read-only GCE configuration inventory: all 19 approved serving cells have trust configured; the 16 US cells use `4916ed676d83…`, and C27–C29 use `c844f77d8ca1…`. None uses target `d6189b7118b5…`. Legacy/migration-only cells have separate configurations and are outside this rollout.
+- Live director revision `orca-cloud-relay-00590-ruy` serves 100% traffic, target digest `d6189b7118b5…`, cohort 0. Fresh selector inspect 34664574767 succeeded at generation 192. Production read-only pre-drain monitor 34664655626 and durable-control inspect 34664779163 precede any cell mutation.
+- Root cause of the readiness-reporting gap: #20105 shipped cell-side idle behavior and capability advertisement changes, but the rollout checklist did not require proving deployed source/target runtimes, and the same-cap workflow still accepted only 0/1. Director deployment was incorrectly treated as sufficient cloud readiness. Earlier synthetic tests and passing script tests did not cover the protocol-3 CLI path; the new parser and plan regression cases cover that omission.
 
-## 3. Negotiated connection-preserving migration — plan §§4–5a
+- Monitor 34664655626 succeeded with 16 samples, no failures and no frozen gate, completed `2026-09-12T01:38:50.066Z`. Durable inspect 34664779163 succeeded: control generation 12 disabled, selector generation 192. C27 single-cell canary dispatched as 34665504551 with target `d6189b7118b5…`/protocol 3 and rollback `c844f77d8ca1…`/protocol 1. Dispatch is not proof of mutation or successful rollout; result pending. User confirmed no mobile Orca apps in use.
 
-- [x] Persist optional finish-existing mode on the attempt and propagate it director → cell → desktop; bind capabilities to the current authenticated source generation/incarnation and epoch.
-- [x] Defer optional moves for unsupported participants; preserve normal maintenance/emergency deadlines and auth enforcement.
-- [x] Reuse the bidirectional worker, target reservations and dual-origin flow: existing source connections/pending admissions retain ownership; new connections use target.
-- [x] Require a valid first short authorized source grant before drain acknowledgment/cutover; reject stale/failed/expired adoption and reconcile provisional target through rollback.
-- [x] Suppress forced source deadlines only for negotiated optional mode at both desktop and cell; preserve mode through duplicate/lost receipts and zero-grace redispatch.
-- [x] Complete migration after source work/control activity releases and target is live; never infer idle from expired DB splice leases or terminal activity.
-- [x] Test quiet connections, two simultaneous clients, pending attachments, duplicate drains, source replacement, unsupported versions and unchanged emergency closure.
+- C27 canary 34665504551 failed closed at monitor-evidence provenance, before authentication/isolation/drain: the monitor had been sealed before #20174 changed rollout workflow/validator code. This was operator sequencing error, not a cell health failure. No cell mutation occurred. A fresh monitor must run after the tooling merge; do not reuse 34664655626 for rollout.
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below. Timer-removal diagnostic patch is not shippable implementation.
+- Artifact Registry tag lookup binds configured US digest `4916ed676d83…` to source `61b09b7a0257…`, and Asia digest `c844f77d8ca1…` to `9c8f4c398c3f…`. Both source snapshots advertise 1 with both trust settings, otherwise 0. This supports expected predecessor protocol 1 for the 19 configured serving cells; the rollout must still authenticate live runtime-status before mutation. Replacement post-merge monitor: 34665651289.
 
-## 4. Retained control renewal and rollback — plan §5a
+- Post-merge monitor 34665651289 passed: 16 samples, no failures, no frozen gate, completed `2026-09-12T01:59:08.424Z`. Fresh C27 canary retry: 34666416405, same exact target/rollback digests and generations. Result pending; cohort and durable rehome remain disabled.
 
-- [x] Reuse successful cell activity renewal to extend the same retained control to max(existing expiry, request-start activity deadline); add no recurring desktop renewal protocol or six-hour grant per heartbeat.
-- [x] Narrow the atomic DB renewal predicate to exact retained attempt/mode/source authority; prevent current-assignment authorization from bypassing an aborted attempt. Preserve assignment → attempt → migration → activity lock dependencies.
-- [x] Fence every success, failure, scheduling change and awaited reacquisition continuation by captured socket/session, activity ID, authority transition and ordering; clean abandoned acquisition. Applicable denial still closes; obsolete denial after rollback does not.
-- [x] Keep ordinary control rotation, JWT, silence and watchdog behavior intact. Mode flags, pending requests and reacquisition alone must not grant retention.
-- [x] Implement durable idempotent rollback: newer source epoch, exact retained generation, aborted-attempt tombstone and authority validation before source admission restoration.
-- [x] Reconcile cell and desktop to reuse the same source socket/splices/origin; reject late target registration/drains without replacing the preserved generation.
-- [x] Reconcile target reservations and retain one open migration per host through cleanup; use ordinary failure recovery if source generation is gone, without claiming execution exited.
-- [x] Test delayed denial after rollback/new authority, stale success, obsolete missing-activity recovery, expired first grant and applicable denial; assert socket/splice identity as well as expiry.
-- [x] Test target registration failure, failure after activation, lost replies, concurrent rollback/register/drain and source loss.
+- C27 retry 34666416405 also failed before production operations: same-cap requires `--required-migration-policy strict`, whereas monitor 34665651289 used `capacity-transition`. This was a second operator-input error. Local read-only replay of `verifyDryRunAuthority` with the recorded original failure time accepted that artifact for `capacity-transition` and rejected it for `strict`, isolating the cause from freshness/provenance. No artifact was edited or reused for mutation. Correct strict monitor (both source/capacity scope `none`) dispatched as 34666641072. Any future same-cap dispatch must consume strict evidence.
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below. Earlier mocked retention and six PostgreSQL 17 tests do not validate these future predicates/transitions.
+- C27 canary 34667399188 passed cell rollout and sealing: predecessor verified at 02:23:44Z; restart-safe drain at 02:29:21Z; target image/heartbeat at 02:39:40Z; authenticated trust proof passed; general admission restored at selector generation **194** at 02:39:44Z. Final general-state verification passed at 02:39:46Z. Runtime capability 3 was checked against the exact target digest by the workflow.
+- Independent evidence: GCE replacement metadata carries target digest `d6189b7118b5…`; runtime sample 02:40:18Z shows 103 controls, 1 splice, 0 SQL failures. User-digest assignment log 02:40:15Z still points to C27. Thus source rollout succeeded, but no regional migration to the US has occurred. Next: compatible US destination canary, eligibility, temporary enable/observe/disable.
 
-## 5. Multi-day lifetime and resource bounds — plan §§5–5a
+- US pre-canary strict monitor 34668389687 froze after nine samples at 02:50:56Z on C17 `/health` and `/ready` active-probe failures. No US cell mutation was dispatched. Subsequent public checks both returned 200/ok twice, GCE C17 was HEALTHY/RUNNING with currentAction NONE, and recent runtime samples had zero SQL failures. Probe-failure cause remains unconfirmed; failed evidence is not reusable. Replacement strict monitor 34668859631 started at selector 194.
 
-- [x] Make generic and regional cleanup respect durable optional mode: healthy registered sources outlive the 24h refresh ceiling and age-only zero-grace redrain; unregistered targets retain bounded recovery.
-- [x] Do not spend dispatch-failure budget or force-close live work solely because an optional migration is old.
-- [x] Enforce a shared, locked concurrent-migration cap including pre-existing work, alongside existing rate/cooldown/safety/capacity controls; account for both controls and target reservations.
-- [x] Filter eligibility/cohort/capability before LIMIT and recheck under locks; prove fair progress across refresh/candidate pages. Use a conservative cap below the smallest relevant page capacity until traversal is verified.
-- [ ] Define and record the minimum compatible director/worker revision after validation; all cleanup workers must understand durable mode/rollback states, including when claims are disabled.
-- [x] Test multi-day retention, final cleanup, page fairness, concurrent cap enforcement, reservation release and restart/rollback with existing open attempts.
+- Replacement US strict monitor 34668859631 passed with 16 samples and no failures at 03:08:37.249Z; local `verifyDryRunAuthority` accepted it for strict policy at current time. C7 single-cell canary 34669591505 dispatched with target `d6189b7118b5…`/3, rollback `4916ed676d83…`/1, selector 194, disabled control 12. Result pending; no migration enablement yet.
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below.
+### Remaining serving fleet (2026-09-12, in progress)
 
-## 6. Preview and outcome evidence — plan §6
+User authorized upgrading the remaining 17 general-serving cells; C7/C27 are already complete and will not be restarted. Migration stays disabled at control generation 14 and cohort 0. See [fleet upgrade status](RELAY-FLEET-UPGRADE-STATUS.md) for inventory, waves, and evidence.
 
-- [x] Add read-only full aggregate preview sharing actual eligibility predicates; no capped-page census, claims or failure-budget consumption.
-- [x] Record eligibility/exclusions by direction, registration/completion/abort, retained-source counts/ages, concurrent reservations, forced-close counts by mode and reconnect/error rates.
-- [ ] Support compact sampled comparisons and matched before/after assigned-cell/application latency, with an unchanged comparison cohort; exclude credentials, pairing data and raw host IDs.
-- [x] Verify preview side-effect freedom and eligibility agreement, counters and privacy-safe logs.
+Canary-authority reuse fix #20214 merged with 29 focused tests and 20 workflow tests passing. Monitoring adjustment #20238 merged as `1a9a5f9bc720bebd06a5dd190a4ea0000e59ccb4`, after 96 relay-ops tests, typecheck, Cloud Verify 34674803332 and repository verify passed. Astra low found no blockers. Three preflights stopped before mutations on sparse director PostgreSQL connection-timeout 500s; the monitor now permits up to three non-503 director errors per five-minute telemetry window and freezes at four, retaining auth zero-tolerance and other gates. This is an operational allowance, not resolution of those background errors. Fresh strict monitor 34675122903 is running; the remaining fleet is not yet upgraded.
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below. Region probe improvement alone is not proof of mobile end-to-end benefit.
+C8 canary 34675827674 completed successfully at 05:55 UTC: exact target image/capability 3, new incarnation, trust proof, heartbeat, and restored general admission passed. Selector is now 198; durable migration remains disabled at generation 14. Completed serving cells: C7/C8/C27; 16 remain. Next shared strict preflight 34676800738 covers the sequential C9/C10/C13/C14 batch.
 
-## 7. Integrated implementation acceptance — plan §7
+Speed review: Astra reviewed parallel monitoring and larger sequential batches. Current shared locks and exact selector evidence prevent simply overlapping monitors. Increasing batch size would invalidate the new canary and require another, saving approximately one 15-minute window before engineering/CI costs. Continue existing four-cell batches with no additional manual holds. C8 drain took about nine minutes; infrastructure replacement and verification took about nine minutes.
 
-- [x] Run appropriate typechecks, meaningful tests, lint and formatting in their owning workspaces; record exact source revision, commands, results and skipped counts.
-- [x] Run actual PostgreSQL 16 integration/concurrency suites on port **55440 only**, with a configured database and executed tests; missing-env conditional skips do not pass this gate.
-- [x] Exercise real WebSocket traffic across source/target using unique stream markers and delayed mutation acknowledgment; verify continuous source traffic, no duplicate/replayed mutation and independent host-side execution/output.
-- [x] Validate long retention across the old control-lease boundary plus multi-day cleanup; mocked time alone does not replace real transport integration.
-- [ ] Validate mobile background/foreground reconnect and pairing preservation, multiple clients and quiet physical connections; do not infer disconnection from putting a phone down.
-- [ ] Test supported/unsupported desktops/cells and old/new director compatibility, request/response fallback, worker restart and rollback at the supported floor.
-- [ ] Cover SSH execution ownership and folder workspaces; use background launches, isolated profiles and no visible/focus-stealing app tests on the user's desktop.
-- [x] Review the actual implementation against the plan and resolve release-blocking findings; attach final evidence to this checklist.
+## Targeted serving-fleet upgrade completion — 2026-09-13 UTC
 
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below. Historical experiments remain linked from the plan; no current feature acceptance is claimed.
+- [x] All19 general-serving cells upgraded; per-cell exact image/capability3, heartbeat, trust proof and general-admission restoration passed.
+- [x] `python3 .tmp/fleet-final-inventory.py`:19/19 RUNNING and stable on approved digest with trust configured; passed00:25 UTC.
+- [x] `python3 .tmp/fleet-final-observation.py`:38/38 health/ready endpoints,19/19 ready/general director inventory, current GCE instance IDs matched fresh runtime logs;0 active/awaiting receipt/registered regional migrations,1 completed/0 aborted over24h.
+- [x] `gh workflow run cloud-operate-relay-production-rehome.yml -R stablyai/orca --ref main --json < .tmp/fleet-final-inspect-inputs.json`: run34727921841 succeeded; selector230, exact memberships, disabled control14. Director serving00610-huf and rollback00609-dur unchanged, cohort0 on both.
+- [x] Final read-only telemetry: latest SQL CPU32.38%, five-minute auth5xx0/director non5035xx0; lock-wait series maxima4 and2 below20. These are bounded observations, not a guarantee of zero future errors.
+- [ ] Broader regional migration enablement (separate work; remains disabled/cohort0).
+- [ ] Broader packaged mixed-version/platform lifecycle coverage and numeric latency benefit remain open; individual real C27→C7 migration was confirmed by the user.
 
-## 8. Authorized deployment and rollout — separate release gates
-
-Implementation work keeps new correction gated off. These boxes track future authorized operations; checking earlier phases does not authorize deployment or enablement.
-
-- [ ] Set numerical latency/reliability regression limits, sample sizes, observation duration and stop criteria before production enable, using available traffic.
-- [ ] Deploy compatible director/database support and establish the worker rollback floor, then supporting cells/desktops with the feature gated off; record revisions and deployment verification.
-- [ ] Run a fresh operational safety/capability check and aggregate eligibility preview; record current state rather than relying on historical production observations.
-- [ ] Obtain rollout authorization for a bounded cohort; verify disable stops new moves while safely reconciling existing attempts.
-- [ ] Enable the authorized cohort and check connection preservation, cleanup, resource bounds, error rates and measured user benefit against the agreed limits.
-- [ ] Expand only after acceptance evidence supports it; record rollout scope, outcomes and remaining coverage gaps for old/unsupported/inconclusive clients.
-
-Evidence: see [acceptance evidence](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and phase-specific limits below. No production changes performed for checklist creation.
-
-## Update log
-
-| Date | Change | Evidence |
-| --- | --- | --- |
-| 2026-09-10 | Created execution checklist from the independently reviewed final plan; implementation/release tasks remain unchecked. | Final review linked above. |
-
-### Integration verification update — 2026-09-10
-
-- **Full relay suite: 73 files, 687 tests passed, zero skipped** using PostgreSQL16
-  (`ORCA_REGION_CORRECTION_POSTGRES=1`, local port55440, fresh `relay_final_test`,
-  `vitest run --no-file-parallelism`). Log: `.tmp/region-relay-full-suite-final.log`.
-  Earlier run's four failures exposed test fixture pollution and the schema-table
-  inventory oracle; both fixed before this rerun.
-- **Mobile lifecycle compatibility: 42 tests passed** across background lifecycle,
-  background grace, resume director, reconnect controller and pairing recovery.
-  These are deterministic transport tests, not a native mobile app demonstration.
-- Node typecheck and desktop relay oxlint passed. A broad desktop path filter also picked up historical `.tmp/relay-interruption`
-  prototype tests; its one failure was in that prototype, not current source.
-  Shipping suite rerun excluding `.tmp/**`:21 files188 tests passed. Real transport:2 passed.
-- Independent implementation review: **REVISE** with two concrete findings. Claim
-  candidate starvation fixed with separate durable visit order and a >10-host
-  opposite-direction regression. Target recovery versus retained-source rollback
-  race fixed and tested. Independent follow-up: APPROVE both fixes, no remaining P1/P2 blocker;11 retention tests independently passed. See implementation review document.
-- Production gates remain untouched. No deployment, enable, merge or push performed.
-
-### Final local implementation disposition
-
-- [x] Complete and independently review implementation fixes; zero remaining P1/P2 findings.
-- [x] Record full test commands/results and source digest in acceptance evidence.
-- [x] Register real-WebSocket reliability gate as experimental/partial, not deployment proof.
-- [x] Preserve unrelated user edits and record their recovery locations.
-
-Broad testing rows remain unchecked where they also require packaged mixed-version,
-native-phone, actual PTY/SSH, or all-platform coverage. The real transport harness proves
-host-side mutation delivery/continuity but does not execute a real terminal process.
-Sampling and epoch-tagged control/setup logs are implemented; actual application
-latency benefit and numerical rollout limits require release observation. The full
-changed-code-quality gate is blocked only by two pre-existing braces violations in
-preserved `find-cell.mjs`; implementation-specific lint and both typechecks pass.
-
-No production enable, deployment, merge or push performed. Code remains reviewable as
-local worktree changes. Authorization for implementation does not imply rollout.
-
-### Release-readiness follow-up — 2026-09-10
-
-- [x] Test exact old strict schemas against current assignment fallback; preserve a
-  healthy assignment when optional correction metadata is unsupported/malformed.
-- [x] Test durable decisions across database reopen, server expiry and policy rollback.
-- [x] Add independent child-process execution and append-once mutation evidence to
-  real-WebSocket journeys; verify pending restoration beyond105s and ordinary rebind.
-- [x] Build cloud and Electron release output; verify rebuilt app renders with hidden,
-  unfocused windows in an isolated profile.
-- [x] Add audited cohort deployment input and preserve its serving value through
-  Terraform; fix independent release-review findings,55 tests passed.
-- [x] Refresh against current main74cc9b5039 and preserve both reliability entries.
-- [ ] Complete physical phone/signed upgrade/live SSH/platform validation before enable.
-  - 2026-09-10: Android device connected; installed `com.stably.orca.mobile` reports version `0.0.44` (code 13). Background/foreground launch cycle completed via ADB with no relay/reconnect log lines emitted; this validates lifecycle launch only, not a paired relay session.
-
-Full relay suite now691 passed0skips,121 reliability gates validate. See acceptance
-follow-up for exact limitations and control-socket wording correction. No Android
-device connected during this session. Numerical rollout criteria are proposed in
-[rollout plan](RELAY-REGION-CORRECTION-ROLLOUT.md), not accepted production measurements.
-
-### Current-main validation regression — resolved
-
-Current baseline: `74cc9b50390b481009b34823a35eee01a5b90e40`. Latest combined desktop/transport run: **202 passed, 1 failed** (`.tmp/region-on-main-validation.log`). The rollback journey observed source generation 1 replaced by generation 2 with one existing splice. Earlier green transport results do not clear this failure. The corrected focused real-WebSocket rerun passed 2/2; focused registry/origin tests passed 11/11 and Docker SSH transport recovery passed 6/6. No production operations authorized or performed.
-
-### Rollback race fix — 2026-09-11
-
-Independent review confirmed the generation-2 replacement was caused by an already armed `drainRetry` callback firing after rollback restoration removed the retained source. `restoreOrigin()` now calls `drainRetry.cancel()` rather than resetting only its attempt counter. The attempted non-active-origin guard was discarded because it changed emergency-drain semantics. Scoped lint/format passed; rerun the full current-main transport suite before release acceptance.
-
-### Final race rerun — 2026-09-11
-
-The focused retention tests passed (12 tests), but the real-WebSocket rollback journey still failed: `regionalRestoration` remained set after corroboration (`.tmp/final-race-tests.log`), with 12 passed and 1 failed. Two races contributed: the relay registry refused a matching resume while the restored source had entered `drain-only`, allocating generation 2 despite an active splice; and successful corroboration cancelled the ordinary drain retry but left the separate restoration retry armed. The registry now preserves restored generations, and `restoreOrigin()` cancels both schedules. Validation: `ORCA_BACKGROUND_LAUNCH=1 pnpm test tests/e2e/relay-region-correction.unit.test.ts` — **2/2 passed** (`.tmp/rollback-review-transport2.log`); focused registry/origin tests — **11/11 passed**. Production rollout remains gated on the remaining release gaps listed below.
-
-### Pull request and CI — 2026-09-11
-
-- [x] Create coordinated cloud/desktop draft PR and run CI.
-  - PR [#20031](https://github.com/stablyai/orca/pull/20031); corrected commit CI passed Secret scan, build, Terraform, test, and test-vs-non-test LoC. No review comments yet.
-
-## Review scope — 2026-09-11
-
-Cloud and desktop are separate dependent branches: `main` → `relay-region-cloud` →
-`relay-connection-speed`. Historical investigation material is archived outside
-the shipping diff. See acceptance evidence for the simplification and split checks.
-Release gates above remain open; cloud can precede desktop release with correction
-disabled and legacy clients excluded by capability negotiation.
+Exact run mapping, commands, failure/recovery history, and evidence limits are in the [acceptance record](RELAY-REGION-CORRECTION-ACCEPTANCE.md) and [fleet status](RELAY-FLEET-UPGRADE-STATUS.md). Original intermittent probe/404/409/lock-spike causes remain unproven. Local response-body cleanup is unmerged and not deployed. No new test suite was needed for these deployment/documentation-only continuation changes; earlier code fixes retain their recorded red/green and CI evidence.

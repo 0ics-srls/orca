@@ -30,11 +30,6 @@ afterEach(async () => {
 })
 
 async function cleanupPostgres(database: RelayDatabase) {
-  await database.query(
-    `DELETE FROM relay_region_retentions WHERE attempt_id IN
-    (SELECT attempt_id FROM relay_region_rehome_attempts WHERE user_id = ?)`,
-    [identity.userId]
-  )
   for (const table of [
     'relay_control_connection_reservations',
     'relay_region_decisions',
@@ -99,7 +94,7 @@ async function setup() {
     assignmentEpoch: assignment.assignmentEpoch,
     generation: 7,
     cellIncarnation: incarnations[0],
-    finishExistingRegionalRehome: true
+    idleRegionalRehome: true
   })
   return {
     database,
@@ -129,7 +124,7 @@ async function window(context: Awaited<ReturnType<typeof setup>>) {
   return result.window!
 }
 
-async function retainedMigration(context: Awaited<ReturnType<typeof setup>>) {
+async function regionalMigration(context: Awaited<ReturnType<typeof setup>>) {
   const migration = await context.store.startEvacuation(identity, cells[1]!.id)
   const attemptId = '33333333-3333-4333-8333-333333333333'
   await context.database.query(
@@ -151,25 +146,13 @@ async function retainedMigration(context: Awaited<ReturnType<typeof setup>>) {
       context.now()
     ]
   )
-  await context.database.query(
-    `INSERT INTO relay_region_retentions (attempt_id,source_generation,source_activity_id) VALUES (?,7,?)`,
-    [attemptId, context.activityId]
-  )
-  return {
-    migration,
-    retention: {
-      mode: 'finish-existing' as const,
-      attemptId,
-      sourceGeneration: 7,
-      sourceAssignmentEpoch: migration.previousEpoch
-    }
-  }
+  return { migration }
 }
 
-describe('ordered region decisions and exact retained authority', () => {
-  it('reports aggregate retained lifecycle and reservations without identity disclosure or writes', async () => {
+describe('ordered region decisions and migration outcomes', () => {
+  it('reports aggregate migration lifecycle and reservations without identity disclosure or writes', async () => {
     const context = await setup()
-    const { migration } = await retainedMigration(context)
+    const { migration } = await regionalMigration(context)
     context.advance(1_000)
     const before = await context.database.query('SELECT * FROM relay_region_rehome_attempts')
     const outcomes = await context.store.regionCorrectionOutcomes()
@@ -179,8 +162,7 @@ describe('ordered region decisions and exact retained authority', () => {
         targetCellId: cells[1]!.id,
         state: 'registering',
         count: 1,
-        oldestOpenMs: 1_000,
-        retainedSources: 1
+        oldestOpenMs: 1_000
       })
     ])
     expect(outcomes[0]!.targetReservedUnits).toBeGreaterThan(0)
@@ -206,7 +188,6 @@ describe('ordered region decisions and exact retained authority', () => {
     expect(await context.store.regionCorrectionOutcomes()).toEqual([
       expect.objectContaining({
         state: 'completed',
-        retainedSources: 0,
         targetReservedUnits: 0,
         oldestOpenMs: 0
       })
@@ -374,335 +355,5 @@ describe('ordered region decisions and exact retained authority', () => {
         issued.assignmentEpoch
       )
     ).toMatchObject({ reportStatus: 'basis-changed' })
-  })
-
-  it('renews only the exact live retained attempt, generation and incarnation', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    const input = {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0],
-      expiresAt: context.now() + 105_000,
-      retention
-    }
-    await expect(context.store.renewControlActivity(identity, input)).resolves.toBeUndefined()
-    await expect(
-      context.store.renewControlActivity(identity, {
-        ...input,
-        retention: { ...retention, sourceGeneration: 8 }
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-    await expect(
-      context.store.renewControlActivity(identity, { ...input, cellIncarnation: incarnations[1] })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-    await context.database.query(
-      `UPDATE relay_region_rehome_attempts SET aborted_at = ? WHERE attempt_id = ?`,
-      [context.now(), retention.attemptId]
-    )
-    await expect(context.store.renewControlActivity(identity, input)).rejects.toThrow(
-      'activity_cell_not_authoritative'
-    )
-  })
-
-  it('rejects retained renewal after authenticated capability replacement', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    await context.database.query(
-      `UPDATE relay_control_capabilities SET finish_existing = 0 WHERE user_id = ?`,
-      [identity.userId]
-    )
-    await expect(
-      context.store.renewControlActivity(identity, {
-        activityId: context.activityId,
-        cellId: cells[0]!.id,
-        cellIncarnation: incarnations[0],
-        retention,
-        expiresAt: context.now() + 105_000
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-  })
-
-  it('reconciles a failed registered target without waiting for optimization age', async () => {
-    const context = await setup()
-    const { retention, migration } = await retainedMigration(context)
-    const targetActivity = await context.store.activateControl(identity, {
-      cellId: cells[1]!.id,
-      assignmentEpoch: migration.assignmentEpoch,
-      generation: 1
-    })
-    await context.store.markMigrationTargetRegistered(identity, {
-      cellId: cells[1]!.id,
-      assignmentEpoch: migration.assignmentEpoch
-    })
-    await context.store.releaseActivity(identity, targetActivity)
-    context.advance(16 * 60_000)
-    await context.store.renewControlActivity(identity, {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0],
-      retention,
-      expiresAt: context.now() + 105_000
-    })
-    await context.store.recordCellHeartbeat({
-      cellId: cells[0]!.id,
-      cellUrl: cells[0]!.url,
-      cellIncarnation: incarnations[0]!,
-      startedAt: 99_999_000,
-      ready: true,
-      observedRequests: 1
-    })
-    expect(await context.store.refreshRegionalRehomeLeases()).toBe(0)
-    expect(await context.store.abortExpiredEvacuations()).toBe(1)
-    expect(
-      await context.store.regionalRetentionRollback(identity, {
-        cellId: cells[0]!.id,
-        cellIncarnation: incarnations[0]!,
-        activityId: context.activityId,
-        retention,
-        expiresAt: context.now() + 105_000
-      })
-    ).toMatchObject({ assignmentEpoch: migration.assignmentEpoch + 1, sourceGeneration: 7 })
-  })
-
-  it('keeps a registered retained migration beyond multiple days and completes on source release', async () => {
-    const context = await setup()
-    const { retention, migration } = await retainedMigration(context)
-    const targetActivity = await context.store.activateControl(identity, {
-      cellId: cells[1]!.id,
-      assignmentEpoch: migration.assignmentEpoch,
-      generation: 1
-    })
-    await context.store.markMigrationTargetRegistered(identity, {
-      cellId: cells[1]!.id,
-      assignmentEpoch: migration.assignmentEpoch
-    })
-    context.advance(3 * 24 * 60 * 60_000)
-    await context.store.renewControlActivity(identity, {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0],
-      retention,
-      expiresAt: context.now() + 105_000
-    })
-    await context.store.renewControlActivity(identity, {
-      activityId: targetActivity,
-      cellId: cells[1]!.id,
-      expiresAt: context.now() + 105_000
-    })
-    expect(await context.store.refreshRegionalRehomeLeases()).toBe(1)
-    expect(await context.store.abortExpiredRegionalRehomes()).toBe(0)
-    expect(await context.store.abortExpiredEvacuations()).toBe(0)
-    expect(await context.store.completeReadyRegionalRehomes()).toBe(0)
-    await context.store.recordCellHeartbeat({
-      cellId: cells[1]!.id,
-      cellUrl: cells[1]!.url,
-      region: 'asia-east2',
-      cellIncarnation: incarnations[1]!,
-      startedAt: 99_999_000,
-      ready: true,
-      observedRequests: 1
-    })
-    await context.store.releaseActivity(identity, context.activityId)
-    expect(await context.store.completeReadyRegionalRehomes()).toBe(1)
-  })
-
-  it('cannot regrant a released retained source or an expired requested rollback deadline', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    const input = {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0]!,
-      retention,
-      expiresAt: context.now()
-    }
-    expect(await context.store.regionalRetentionRollback(identity, input)).toBeNull()
-    await context.store.releaseActivity(identity, context.activityId)
-    await expect(
-      context.store.renewControlActivity(identity, { ...input, expiresAt: context.now() + 105_000 })
-    ).rejects.toThrow('control_activity_not_found')
-  })
-
-  it('serializes retained renewal against rollback without restoring aborted authority', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    context.advance(5 * 60_000)
-    const renewal = {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0],
-      retention,
-      expiresAt: context.now() + 105_000
-    }
-    await context.store.renewControlActivity(identity, renewal)
-    await context.store.recordCellHeartbeat({
-      cellId: cells[0]!.id,
-      cellUrl: cells[0]!.url,
-      cellIncarnation: incarnations[0]!,
-      startedAt: 99_999_000,
-      ready: true,
-      observedRequests: 1
-    })
-    await context.store.refreshRegionalRehomeLeases()
-    const [renewed, aborted] = await Promise.allSettled([
-      context.store.renewControlActivity(identity, renewal),
-      context.store.abortExpiredEvacuations()
-    ])
-    expect(aborted).toEqual({ status: 'fulfilled', value: 1 })
-    if (renewed.status === 'rejected')
-      expect(String(renewed.reason)).toContain('activity_cell_not_authoritative')
-    await expect(context.store.renewControlActivity(identity, renewal)).rejects.toThrow(
-      'activity_cell_not_authoritative'
-    )
-    expect(
-      await context.store.regionalRetentionRollback(identity, {
-        ...renewal,
-        cellIncarnation: incarnations[0]!
-      })
-    ).toMatchObject({ sourceGeneration: 7, assignmentEpoch: 3 })
-  })
-
-  it('advances the refresh page past an orphaned older attempt', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    await context.database.query(
-      `INSERT INTO relay_region_rehome_attempts
-       (attempt_id,user_id,relay_host_id,preferred_region,source_cell_id,source_cell_incarnation,
-        target_cell_id,target_cell_incarnation,previous_epoch,assignment_epoch,drain_grace_ms,send_attempts,created_at,updated_at)
-       SELECT '44444444-4444-4444-8444-444444444444',user_id,'orphanhost000000',preferred_region,
-         source_cell_id,source_cell_incarnation,target_cell_id,target_cell_incarnation,
-         previous_epoch,assignment_epoch,drain_grace_ms,send_attempts,created_at - 1,updated_at - 1
-       FROM relay_region_rehome_attempts WHERE attempt_id = ?`,
-      [retention.attemptId]
-    )
-    context.advance(1)
-    expect(await context.store.refreshRegionalRehomeLeases(1)).toBe(0)
-    context.advance(1)
-    expect(await context.store.refreshRegionalRehomeLeases(1)).toBe(1)
-  })
-
-  it('renews restored authority beyond the first short grant without authorizing the aborted retention', async () => {
-    const context = await setup()
-    const { retention } = await retainedMigration(context)
-    context.advance(5 * 60_000)
-    const base = {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0]!
-    }
-    await context.store.renewControlActivity(identity, {
-      ...base,
-      retention,
-      expiresAt: context.now() + 105_000
-    })
-    await context.store.recordCellHeartbeat({
-      cellId: cells[0]!.id,
-      cellUrl: cells[0]!.url,
-      cellIncarnation: incarnations[0]!,
-      startedAt: 99_999_000,
-      ready: true,
-      observedRequests: 1
-    })
-    await context.store.refreshRegionalRehomeLeases()
-    expect(await context.store.abortExpiredEvacuations()).toBe(1)
-    const restoration = (await context.store.regionalRetentionRollback(identity, {
-      ...base,
-      retention,
-      expiresAt: context.now() + 105_000
-    }))!
-    expect(restoration).toMatchObject({ assignmentEpoch: 3, sourceGeneration: 7 })
-    for (let round = 0; round < 10; round++) {
-      context.advance(30_000)
-      await context.store.renewControlActivity(identity, {
-        ...base,
-        restoration,
-        expiresAt: context.now() + 105_000
-      })
-    }
-    const lease = (
-      await context.database.query(
-        `SELECT expires_at FROM relay_assignment_activity_leases WHERE user_id = ? AND relay_host_id = ? AND activity_id = ?`,
-        [identity.userId, identity.relayHostId, context.activityId]
-      )
-    )[0]!
-    expect(Number(lease.expires_at)).toBe(context.now() + 105_000)
-    await expect(
-      context.store.renewControlActivity(identity, {
-        ...base,
-        retention,
-        expiresAt: context.now() + 105_000
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-    await expect(
-      context.store.renewControlActivity(identity, {
-        ...base,
-        restoration: { ...restoration, assignmentEpoch: 4 },
-        expiresAt: context.now() + 105_000
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-    await expect(
-      context.store.renewControlActivity(identity, {
-        ...base,
-        restoration: { ...restoration, sourceGeneration: 8 },
-        expiresAt: context.now() + 105_000
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-    await context.database.query(
-      `UPDATE relay_control_capabilities SET finish_existing = 0 WHERE user_id = ?`,
-      [identity.userId]
-    )
-    await expect(
-      context.store.renewControlActivity(identity, {
-        ...base,
-        restoration,
-        expiresAt: context.now() + 105_000
-      })
-    ).rejects.toThrow('activity_cell_not_authoritative')
-  })
-
-  it('rolls back an unregistered target and regrants only the same retained source', async () => {
-    const context = await setup()
-    const { retention, migration } = await retainedMigration(context)
-    context.advance(5 * 60_000)
-    await context.store.renewControlActivity(identity, {
-      activityId: context.activityId,
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0],
-      expiresAt: context.now() + 105_000,
-      retention
-    })
-    await context.store.recordCellHeartbeat({
-      cellId: cells[0]!.id,
-      cellUrl: cells[0]!.url,
-      cellIncarnation: incarnations[0]!,
-      startedAt: 99_999_000,
-      ready: true,
-      observedRequests: 1
-    })
-    await context.store.refreshRegionalRehomeLeases()
-    expect(await context.store.abortExpiredEvacuations()).toBe(1)
-    const input = {
-      cellId: cells[0]!.id,
-      cellIncarnation: incarnations[0]!,
-      activityId: context.activityId,
-      retention,
-      expiresAt: context.now() + 105_000
-    }
-    await expect(context.store.renewControlActivity(identity, input)).rejects.toThrow(
-      'activity_cell_not_authoritative'
-    )
-    expect(await context.store.regionalRetentionRollback(identity, input)).toEqual({
-      attemptId: retention.attemptId,
-      sourceGeneration: retention.sourceGeneration,
-      sourceAssignmentEpoch: retention.sourceAssignmentEpoch,
-      assignmentEpoch: migration.assignmentEpoch + 1
-    })
-    expect(
-      await context.store.regionalRetentionRollback(identity, {
-        ...input,
-        activityId: 'control:missing:7'
-      })
-    ).toBeNull()
   })
 })

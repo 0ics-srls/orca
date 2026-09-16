@@ -9,30 +9,7 @@ export class RelayOriginRetirement {
     private readonly current: () => RelayControlOrigin | null,
     private readonly remove: (origin: RelayControlOrigin) => void
   ) {}
-  adopt(
-    origin: RelayControlOrigin,
-    message: RelayDrainMessage,
-    retained: Map<RelayControlOrigin, NonNullable<RelayDrainMessage['retention']>>
-  ): boolean {
-    if (message.retention) {
-      if (
-        message.retention.sourceGeneration !== origin.controlGeneration ||
-        message.retention.sourceAssignmentEpoch !== origin.assignmentEpoch
-      ) {
-        return false
-      }
-      const previous = retained.get(origin)
-      if (previous && previous.attemptId !== message.retention.attemptId) {
-        return false
-      }
-      retained.set(origin, message.retention)
-    } else {
-      retained.delete(origin)
-      if (origin !== this.current()) {
-        this.schedule(origin, message.graceMs)
-        return false
-      }
-    }
+  adopt(origin: RelayControlOrigin, _message: RelayDrainMessage): boolean {
     if (origin !== this.current()) {
       return false
     }

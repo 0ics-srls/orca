@@ -4,8 +4,7 @@ import {
   CONTROL_CONTINUITY_LIMITS,
   RELAY_CLOSE_CODE,
   RELAY_HOST_CAPABILITY_PENDING_CONN_DETAILS,
-  RELAY_HOST_CAPABILITY_FINISH_EXISTING_REGIONAL_REHOME,
-  type RegionalRetention,
+  RELAY_HOST_CAPABILITY_IDLE_REGIONAL_REHOME,
   RELAY_PROTOCOL_LIMITS
 } from '@orca-cloud/relay-contract'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -110,7 +109,6 @@ function createRegistry(
   activate: ActivateSession
   acquireActivity: ReturnType<typeof vi.fn>
   renewControlActivity: ReturnType<typeof vi.fn>
-  regionalRetentionRollback: ReturnType<typeof vi.fn>
   releaseActivity: ReturnType<typeof vi.fn>
   observer: {
     recordControlClose: ReturnType<typeof vi.fn>
@@ -119,7 +117,6 @@ function createRegistry(
 } {
   const acquireActivity = vi.fn().mockResolvedValue(undefined)
   const renewControlActivity = vi.fn().mockResolvedValue(undefined)
-  const regionalRetentionRollback = vi.fn().mockResolvedValue(null)
   const releaseActivity = vi.fn().mockResolvedValue(true)
   const assignments = {
     activateControl,
@@ -127,7 +124,6 @@ function createRegistry(
     resolve: vi.fn().mockResolvedValue({ cellId: config.cellId }),
     acquireActivity,
     renewControlActivity,
-    regionalRetentionRollback,
     releaseActivity
   } as unknown as RelayAssignmentStore
   const observer = {
@@ -179,7 +175,6 @@ function createRegistry(
     activate,
     acquireActivity,
     renewControlActivity,
-    regionalRetentionRollback,
     releaseActivity,
     observer
   }
@@ -414,26 +409,20 @@ describe('host session cleanup races', () => {
         attemptId: '22222222-2222-4222-8222-222222222222'
       })
     ).toThrow('regional_rehome_attempt_conflict')
-    expect(() =>
-      registry.drainHost({ ...request, sourceAssignmentEpoch: 8 })
-    ).toThrow('regional_rehome_assignment_epoch_mismatch')
+    expect(() => registry.drainHost({ ...request, sourceAssignmentEpoch: 8 })).toThrow(
+      'regional_rehome_assignment_epoch_mismatch'
+    )
 
     const rebound = new FakeSocket()
-    await activate(
-      rebound as unknown as WebSocket,
-      identity,
-      registry.get(request),
-      1,
-      true,
-      7
-    )
+    await activate(rebound as unknown as WebSocket, identity, registry.get(request), 1, true, 7)
     expect(registry.get(request)?.state).toBe('drain-only')
     expect(rebound.send).toHaveBeenCalledWith(expect.stringContaining('"type":"drain"'))
 
     await vi.advanceTimersByTimeAsync(30_000)
     expect(registry.get(request)).toBeNull()
-    expect(registry.get({ userId: secondIdentity.sub, relayHostId: secondIdentity.relayHostId }))
-      .not.toBeNull()
+    expect(
+      registry.get({ userId: secondIdentity.sub, relayHostId: secondIdentity.relayHostId })
+    ).not.toBeNull()
     expect(secondSocket.close).not.toHaveBeenCalled()
   })
 
@@ -529,14 +518,7 @@ describe('host session cleanup races', () => {
     expect(original).not.toBeNull()
 
     const rebindSocket = new FakeSocket()
-    const rebinding = activate(
-      rebindSocket as unknown as WebSocket,
-      identity,
-      original,
-      1,
-      true,
-      1
-    )
+    const rebinding = activate(rebindSocket as unknown as WebSocket, identity, original, 1, true, 1)
     rebindSocket.close()
     blocked.resolve('control:production-gce-c3:1')
     await rebinding
@@ -675,14 +657,7 @@ describe('host session cleanup races', () => {
     originalSocket.close()
 
     const replacementSocket = new FakeSocket()
-    await activate(
-      replacementSocket as unknown as WebSocket,
-      identity,
-      original,
-      2,
-      false,
-      1
-    )
+    await activate(replacementSocket as unknown as WebSocket, identity, original, 2, false, 1)
     const replacement = registry.get({
       userId: identity.sub,
       relayHostId: identity.relayHostId
@@ -712,14 +687,7 @@ describe('host session cleanup races', () => {
     })
     expect(original).not.toBeNull()
 
-    await activate(
-      new FakeSocket() as unknown as WebSocket,
-      identity,
-      original,
-      2,
-      false,
-      1
-    )
+    await activate(new FakeSocket() as unknown as WebSocket, identity, original, 2, false, 1)
     vi.advanceTimersByTime(15_000)
 
     expect(renewControlActivity).toHaveBeenCalledOnce()
@@ -795,9 +763,7 @@ describe('host session cleanup races', () => {
       socket.emit('message', Buffer.from(JSON.stringify({ type: 'pong' })), false)
     }
 
-    const pings = socket.send.mock.calls.filter((call) =>
-      String(call[0]).includes('"ping"')
-    )
+    const pings = socket.send.mock.calls.filter((call) => String(call[0]).includes('"ping"'))
     expect(pings).toHaveLength(4)
     expect(renewControlActivity).toHaveBeenCalledTimes(2)
     const firstExpiry = Number(renewControlActivity.mock.calls[0]![1].expiresAt)
@@ -1182,398 +1148,276 @@ describe('host hello ack pending connections', () => {
   })
 })
 
-describe('negotiated finish-existing regional source', () => {
+describe('source-owned idle cutover', () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => {
     vi.clearAllTimers()
     vi.useRealTimers()
   })
-  const retention: RegionalRetention = {
-    mode: 'finish-existing',
-    attemptId: 'd39b2097-0c36-43a5-a3ab-ab045bca38f4',
-    sourceGeneration: 1,
-    sourceAssignmentEpoch: 1
-  }
   const request = {
-    attemptId: retention.attemptId,
+    attemptId: 'idle-1',
     userId: identity.sub,
     relayHostId: identity.relayHostId,
     sourceAssignmentEpoch: 1,
+    sourceGeneration: 1,
     sourceCellIncarnation: 'incarnation-1',
-    graceMs: 0,
-    retention
+    targetCellId: 'target'
   }
-  async function source(capable = true) {
-    const activateControl = vi.fn().mockResolvedValue('control:production-gce-c3:1')
-    const h = createRegistry(activateControl)
+  async function source(store: Partial<RelayCredentialStore> = {}) {
+    const h = createRegistry(vi.fn().mockResolvedValue('control:1'), store)
     const socket = new FakeSocket()
-    if (capable) {
-      // Activation fixture starts after the upgrade header and key proof are authenticated.
-      const capabilities = (
-        h.registry as unknown as { hostCapabilities: WeakMap<WebSocket, ReadonlySet<string>> }
-      ).hostCapabilities
-      capabilities.set(
-        socket as unknown as WebSocket,
-        new Set([RELAY_HOST_CAPABILITY_FINISH_EXISTING_REGIONAL_REHOME])
-      )
-    }
+    h.registry.acceptControl(
+      socket as unknown as WebSocket,
+      identity,
+      undefined,
+      new Set([RELAY_HOST_CAPABILITY_IDLE_REGIONAL_REHOME])
+    )
+    socket.removeAllListeners('message')
     await h.activate(socket as unknown as WebSocket, identity, null, 1, false, 1)
-    const session = h.registry.get({ userId: identity.sub, relayHostId: identity.relayHostId })!
-    const splice = vi.fn()
-    session.activeSplices.set('live-splice', splice)
-    session.activeConnIds.add('live-splice')
-    return { ...h, socket, session, splice, activateControl }
+    return { ...h, socket, session: h.registry.get(request)! }
   }
-  it('rejects conflicting outer and retained attempt IDs before granting retention', async () => {
+  it('keeps either established client busy until both actually leave', async () => {
     const h = await source()
-    await expect(
-      h.registry.drainHost({
-        ...request,
-        attemptId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
-      })
-    ).rejects.toThrow('regional_rehome_retention_not_supported')
-    expect(h.renewControlActivity).not.toHaveBeenCalled()
-    expect(h.session.regionalRetention).toBeNull()
+    h.session.activeConnIds.add('phone')
+    h.session.activeConnIds.add('ipad')
+    const commit = vi.fn().mockResolvedValue({ outcome: 'committed' })
+    h.session.activeConnIds.delete('ipad')
+    expect(
+      await h.registry.idleRehome(request, commit, vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'busy' })
+    expect(commit).not.toHaveBeenCalled()
+    h.session.activeConnIds.delete('phone')
+    expect(
+      await h.registry.idleRehome(request, commit, vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'committed' })
+    expect(h.socket.close).toHaveBeenCalledWith(RELAY_CLOSE_CODE.DRAINING, expect.any(String))
+    expect(h.releaseActivity).toHaveBeenCalled()
+  })
+  it.each([
+    { userId: 'other-user' },
+    { sourceAssignmentEpoch: 2 },
+    { sourceGeneration: 2 },
+    { sourceCellIncarnation: 'other-incarnation' },
+    { targetCellId: 'other-target' }
+  ])('rejects a reused operation ID with changed authority %j', async (change) => {
+    const h = await source()
+    const result = deferred<{ outcome: 'deferred' }>()
+    const commit = vi.fn().mockReturnValue(result.promise)
+    const reconcile = vi.fn().mockResolvedValue('not-committed')
+    const moving = h.registry.idleRehome(request, commit, reconcile)
+    const conflicting = h.registry.idleRehome({ ...request, ...change }, commit, reconcile)
+    result.resolve({ outcome: 'deferred' })
+    expect(await conflicting).toEqual({ outcome: 'stale' })
+    expect(await moving).toEqual({ outcome: 'deferred' })
+    expect(commit).toHaveBeenCalledOnce()
     expect(h.socket.close).not.toHaveBeenCalled()
-    expect(h.splice).not.toHaveBeenCalled()
   })
-  it('waits for the authorized first grant and deduplicates concurrent delivery', async () => {
-    const h = await source()
-    const grant = deferred<void>()
-    h.renewControlActivity.mockReturnValueOnce(grant.promise)
-    const first = h.registry.drainHost(request)
-    const duplicate = h.registry.drainHost(request)
-    expect(h.socket.send).not.toHaveBeenCalledWith(expect.stringContaining('"type":"drain"'))
-    expect(h.renewControlActivity).toHaveBeenCalledOnce()
-    grant.resolve()
-    expect(await first).toBe('accepted')
-    expect(await duplicate).toBe('already-accepted')
-    expect(h.socket.send).toHaveBeenCalledWith(expect.stringContaining('"mode":"finish-existing"'))
-    expect(h.session.regionalDrainTimer).toBeNull()
-    await vi.advanceTimersByTimeAsync(1)
-    expect(h.splice).not.toHaveBeenCalled()
-    expect(h.socket.close).not.toHaveBeenCalled()
-    expect(await h.registry.drainHost({ ...request, retention: undefined })).toBe(
-      'already-accepted'
-    )
-    expect(h.splice).not.toHaveBeenCalled()
-  })
-  it('refuses an unsupported socket and wrong source incarnation before granting', async () => {
-    const old = await source(false)
-    await expect(old.registry.drainHost(request)).rejects.toThrow('retention_not_supported')
-    expect(old.renewControlActivity).not.toHaveBeenCalled()
-    const h = await source()
-    await expect(
-      h.registry.drainHost({ ...request, sourceCellIncarnation: 'obsolete' })
-    ).rejects.toThrow('retention_not_supported')
-  })
-  it('rejects an expired first grant without acknowledging or extending it', async () => {
-    const h = await source()
-    const grant = deferred<void>()
-    h.renewControlActivity.mockReturnValueOnce(grant.promise)
-    const adoption = h.registry.drainHost(request)
-    const rejection = expect(adoption).rejects.toThrow('grant_obsolete')
-    vi.setSystemTime(Date.now() + 106_000)
-    grant.resolve()
-    await rejection
-    expect(h.session.regionalDrainAttemptId).toBeNull()
-    expect(h.socket.send).not.toHaveBeenCalledWith(expect.stringContaining('"type":"drain"'))
-  })
-  it('retains the same source beyond twelve hours using ordinary successful heartbeat grants', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    for (let tick = 0; tick < 2_900; tick += 1) {
-      h.session.lastPongAt = Date.now()
-      await vi.advanceTimersByTimeAsync(15_000)
-    }
-    expect(h.session.socket).toBe(h.socket)
-    expect(h.session.generation).toBe(1)
-    expect(h.session.leaseExpiresAt).toBeGreaterThan(Date.now())
-    expect(h.splice).not.toHaveBeenCalled()
-    expect(h.socket.close).not.toHaveBeenCalled()
-    expect(h.renewControlActivity.mock.calls.length).toBeLessThanOrEqual(1_452)
-    expect(h.regionalRetentionRollback).not.toHaveBeenCalled()
-  })
-  it('restores the same generation and fences a late denial from the aborted attempt', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    let lateReject!: (error: Error) => void
-    h.renewControlActivity.mockReturnValueOnce(
-      new Promise<void>((_, reject) => {
-        lateReject = reject
-      })
-    )
-    await vi.advanceTimersByTimeAsync(15_000)
-    h.renewControlActivity.mockRejectedValueOnce(new Error('activity_cell_not_authoritative'))
-    h.regionalRetentionRollback.mockResolvedValueOnce({
-      attemptId: retention.attemptId,
-      sourceGeneration: 1,
-      sourceAssignmentEpoch: 1,
-      assignmentEpoch: 3
+  it('accounts for accepts before credential identity resolves', async () => {
+    const lookup = deferred<null>()
+    const h = await source({
+      resolveResume: vi.fn().mockReturnValue(lookup.promise),
+      resolveInviteForMove: vi.fn().mockResolvedValue(null)
     })
-    await vi.advanceTimersByTimeAsync(15_000)
-    expect(h.session.assignmentEpoch).toBe(3)
-    expect(h.session.state).toBe('active')
-    lateReject(new Error('activity_cell_not_authoritative'))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(h.session.socket).toBe(h.socket)
-    expect(h.session.generation).toBe(1)
+    const client = new FakeSocket()
+    const accept = h.registry.acceptClient(
+      client as unknown as WebSocket,
+      identity.relayHostId,
+      'credential'
+    )
+    expect(
+      await h.registry.idleRehome(request, vi.fn(), vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'busy' })
+    lookup.resolve(null)
+    await accept
     expect(h.socket.close).not.toHaveBeenCalled()
-    expect(h.splice).not.toHaveBeenCalled()
-    expect(h.regionalRetentionRollback).toHaveBeenCalledOnce()
-    await expect(h.registry.drainHost(request)).rejects.toThrow('retention_not_supported')
   })
-  it('does not restore authority after an emergency drain overtakes rollback validation', async () => {
+  it('rejects new accepts and replacements synchronously while a commit awaits', async () => {
     const h = await source()
-    await h.registry.drainHost(request)
-    h.renewControlActivity.mockRejectedValueOnce(new Error('activity_cell_not_authoritative'))
-    const rollback = deferred<unknown>()
-    h.regionalRetentionRollback.mockReturnValueOnce(rollback.promise)
-    await vi.advanceTimersByTimeAsync(15_000)
-    h.registry.drain(60_000)
-    rollback.resolve({
-      attemptId: retention.attemptId,
-      sourceGeneration: 1,
-      sourceAssignmentEpoch: 1,
-      assignmentEpoch: 3
-    })
-    await vi.advanceTimersByTimeAsync(0)
-    expect(h.session.assignmentEpoch).toBe(1)
-    expect(h.session.state).toBe('drain-only')
-    expect(h.socket.send).not.toHaveBeenCalledWith(expect.stringContaining('region-restored'))
-    await vi.advanceTimersByTimeAsync(60_000)
-    expect(h.splice).toHaveBeenCalled()
-  })
-  it('keeps retained JWT and silence enforcement independent of successful database grants', async () => {
-    const expired = await source()
-    await expired.registry.drainHost(request)
-    expired.session.identity = {
-      ...identity,
-      exp:
-        Math.floor(Date.now() / 1000) -
-        Math.ceil(CONTROL_CONTINUITY_LIMITS.expiredAuthExistingSpliceGraceMs / 1000) -
-        1
-    }
-    await vi.advanceTimersByTimeAsync(15_000)
-    expect(expired.socket.close).toHaveBeenCalledWith(
-      RELAY_CLOSE_CODE.BAD_OUTER_CREDENTIAL,
-      'relay authorization expired'
+    const result = deferred<{ outcome: 'deferred' }>()
+    const commit = vi.fn().mockReturnValue(result.promise)
+    const moving = h.registry.idleRehome(
+      request,
+      commit,
+      vi.fn().mockResolvedValue('not-committed')
     )
-    const silent = await source()
-    await silent.registry.drainHost(request)
-    await vi.advanceTimersByTimeAsync(90_000)
-    expect(silent.socket.close).toHaveBeenCalledWith(
-      RELAY_CLOSE_CODE.PEER_DROPPED,
-      'control silence timeout'
+    const duplicate = h.registry.idleRehome(
+      request,
+      commit,
+      vi.fn().mockResolvedValue('not-committed')
     )
-  })
-
-  it('rejects a rebind overtaken by retention adoption without releasing the retained control', async () => {
-    const h = await source()
-    const stalled = deferred<string>()
-    h.activateControl.mockReturnValueOnce(stalled.promise)
+    const client = new FakeSocket()
+    const release = vi.fn()
+    await h.registry.acceptClient(
+      client as unknown as WebSocket,
+      identity.relayHostId,
+      'credential',
+      { release } as never
+    )
+    expect(client.close).toHaveBeenCalledWith(RELAY_CLOSE_CODE.WRONG_CELL, expect.any(String))
+    expect(release).toHaveBeenCalledOnce()
     const replacement = new FakeSocket()
-    const rebinding = h.activate(
+    await h.activate(replacement as unknown as WebSocket, identity, h.session, 2, false, 1)
+    expect(replacement.close).toHaveBeenCalledWith(RELAY_CLOSE_CODE.WRONG_CELL, expect.any(String))
+    result.resolve({ outcome: 'deferred' })
+    await moving
+    await duplicate
+    expect(commit).toHaveBeenCalledOnce()
+    expect(h.socket.close).not.toHaveBeenCalled()
+    expect(
+      await h.registry.idleRehome(
+        { ...request, attemptId: 'next' },
+        vi.fn().mockResolvedValue({ outcome: 'committed' }),
+        vi.fn().mockResolvedValue('not-committed')
+      )
+    ).toEqual({ outcome: 'committed' })
+  })
+  it.each(['ambiguous', 'deferred'])(
+    'keeps %s outcomes fenced until locked reconciliation succeeds',
+    async (claim) => {
+      const h = await source()
+      const reconcile = vi
+        .fn()
+        .mockRejectedValueOnce(new Error('database unavailable'))
+        .mockRejectedValueOnce(new Error('database unavailable'))
+        .mockResolvedValue('not-committed')
+      const moving = h.registry.idleRehome(
+        request,
+        claim === 'ambiguous'
+          ? vi.fn().mockRejectedValue(new Error('lost commit reply'))
+          : vi.fn().mockResolvedValue({ outcome: 'deferred' }),
+        reconcile
+      )
+      await vi.advanceTimersByTimeAsync(50)
+      expect(
+        await h.registry.idleRehome(
+          { ...request, attemptId: 'other' },
+          vi.fn(),
+          vi.fn().mockResolvedValue('not-committed')
+        )
+      ).toEqual({ outcome: 'busy' })
+      expect(h.socket.close).not.toHaveBeenCalled()
+      await vi.advanceTimersByTimeAsync(300)
+      expect(await moving).toEqual({ outcome: 'deferred' })
+      expect(reconcile).toHaveBeenCalledTimes(3)
+      expect(h.socket.close).not.toHaveBeenCalled()
+    }
+  )
+  it('owns accepted control mutations before the handler first awaits', async () => {
+    const mutation = deferred<RelayTokenClaims | null>()
+    const h = await source()
+    ;(h.registry as unknown as { verifyRelayToken: unknown }).verifyRelayToken = vi
+      .fn()
+      .mockReturnValue(mutation.promise)
+    h.socket.emit(
+      'message',
+      Buffer.from(JSON.stringify({ type: 'auth-refresh', relayJwt: 'token' })),
+      false
+    )
+    const commit = vi.fn().mockResolvedValue({ outcome: 'deferred' })
+    expect(
+      await h.registry.idleRehome(request, commit, vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'busy' })
+    mutation.resolve(identity)
+    await vi.advanceTimersByTimeAsync(0)
+    expect(
+      await h.registry.idleRehome(request, commit, vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'deferred' })
+  })
+  it('owns queued replacement activation before its first persistence await', async () => {
+    const h = await source()
+    const activation = deferred<string>()
+    const assignments = (h.registry as unknown as { assignments: { activateControl: unknown } })
+      .assignments
+    assignments.activateControl = vi.fn().mockReturnValue(activation.promise)
+    const replacement = new FakeSocket()
+    const activating = h.activate(
       replacement as unknown as WebSocket,
       identity,
       h.session,
-      1,
-      true,
+      2,
+      false,
       1
     )
-    await vi.advanceTimersByTimeAsync(0)
-    await h.registry.drainHost(request)
-    stalled.resolve('control:production-gce-c3:1')
-    await rebinding
-    expect(replacement.close).toHaveBeenCalledWith(
-      RELAY_CLOSE_CODE.WRONG_CELL,
-      'source retained during control rebind'
-    )
-    expect(h.session.socket).toBe(h.socket)
-    expect(h.session.regionalRetention).toEqual(retention)
-    expect(h.releaseActivity).not.toHaveBeenCalled()
-    expect(h.splice).not.toHaveBeenCalled()
+    expect(
+      await h.registry.idleRehome(request, vi.fn(), vi.fn().mockResolvedValue('not-committed'))
+    ).toEqual({ outcome: 'busy' })
+    activation.resolve('control:2')
+    await activating
   })
-
-  async function restoreSource(h: Awaited<ReturnType<typeof source>>) {
-    h.renewControlActivity.mockRejectedValueOnce(new Error('activity_cell_not_authoritative'))
-    const restored = {
-      attemptId: retention.attemptId,
-      sourceGeneration: 1,
-      sourceAssignmentEpoch: 1,
-      assignmentEpoch: 3
-    }
-    h.regionalRetentionRollback.mockResolvedValueOnce(restored)
-    h.session.activityRenewalDueAt = Date.now()
-    h.session.lastPongAt = Date.now()
-    await vi.advanceTimersByTimeAsync(15_000)
-    expect(h.session.regionalRestoration).toEqual(restored)
-    return restored
-  }
-
-  it('replays and renews a restored source beyond the old lease while desktop corroboration is delayed', async () => {
+  it('retires changed authority even when the claim definitively deferred', async () => {
     const h = await source()
-    await h.registry.drainHost(request)
-    for (let tick = 0; tick < 1_600; tick += 1) {
-      h.session.lastPongAt = Date.now()
-      await vi.advanceTimersByTimeAsync(15_000)
-    }
-    const restored = await restoreSource(h)
-    const firstGrant = h.session.leaseExpiresAt
-    h.socket.send.mockClear()
-    // The desktop has not accepted the notification; no rebind acknowledges restoration.
-    for (let tick = 0; tick < 20; tick += 1) {
-      h.session.lastPongAt = Date.now()
-      await vi.advanceTimersByTimeAsync(15_000)
-    }
-    expect(Date.now()).toBeGreaterThan(firstGrant)
-    expect(h.session.leaseExpiresAt).toBeGreaterThan(Date.now())
-    const replays = h.socket.send.mock.calls.filter(
-      ([raw]) => JSON.parse(String(raw)).type === 'region-restored'
-    )
-    expect(replays.length).toBe(10)
-    expect(h.renewControlActivity).toHaveBeenLastCalledWith(
-      { userId: identity.sub, relayHostId: identity.relayHostId },
-      expect.objectContaining({ restoration: restored, cellIncarnation: 'incarnation-1' })
-    )
-    expect(h.regionalRetentionRollback).toHaveBeenCalledOnce()
-    expect(h.splice).not.toHaveBeenCalled()
-    expect(h.socket.close).not.toHaveBeenCalled()
-    const replacement = new FakeSocket()
-    await h.activate(replacement as unknown as WebSocket, identity, h.session, 1, true, 3)
-    expect(h.session.regionalRestoration).toBeNull()
-    expect(h.session.assignmentEpoch).toBe(3)
-    expect(h.session.generation).toBe(1)
-    await vi.advanceTimersByTimeAsync(15_000)
-    const lastInput = h.renewControlActivity.mock.lastCall![1]
-    expect(lastInput).not.toHaveProperty('retention')
-    expect(lastInput).not.toHaveProperty('restoration')
-    expect(replacement.send).not.toHaveBeenCalledWith(expect.stringContaining('region-restored'))
-    expect(h.splice).not.toHaveBeenCalled()
+    expect(
+      await h.registry.idleRehome(
+        request,
+        vi.fn().mockResolvedValue({ outcome: 'deferred' }),
+        vi.fn().mockResolvedValue('stale')
+      )
+    ).toEqual({ outcome: 'stale' })
+    expect(h.session.state).toBe('closed')
+    expect(h.releaseActivity).toHaveBeenCalled()
   })
-
-  it('does not replay or extend a restored grant superseded by emergency drain', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    await restoreSource(h)
-    const slow = deferred<void>()
-    h.renewControlActivity.mockReturnValueOnce(slow.promise)
-    h.session.activityRenewalDueAt = Date.now()
-    await vi.advanceTimersByTimeAsync(15_000)
-    const expiry = h.session.leaseExpiresAt
-    h.socket.send.mockClear()
-    h.registry.drain(60_000)
-    slow.resolve()
-    await vi.advanceTimersByTimeAsync(0)
-    expect(h.session.leaseExpiresAt).toBe(expiry)
-    expect(h.socket.send).not.toHaveBeenCalledWith(expect.stringContaining('region-restored'))
-    await vi.advanceTimersByTimeAsync(60_000)
-    expect(h.splice).toHaveBeenCalled()
-  })
-
-  it('does not reacquire a missing restored control under ordinary assignment authority', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    await restoreSource(h)
-    h.renewControlActivity.mockRejectedValueOnce(new Error('control_activity_not_found'))
-    await vi.advanceTimersByTimeAsync(30_000)
-    expect(h.acquireActivity).not.toHaveBeenCalled()
-    expect(h.socket.close).toHaveBeenCalledWith(
-      RELAY_CLOSE_CODE.DRAINING,
-      'restored control activity lost'
-    )
-  })
-
-  it('closes a current missing assignment but fences an obsolete missing-assignment result', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    let reject!: (error: Error) => void
-    h.renewControlActivity.mockReturnValueOnce(
-      new Promise<void>((_, fail) => {
-        reject = fail
-      })
-    )
-    await vi.advanceTimersByTimeAsync(15_000)
-    await restoreSource(h)
-    reject(new Error('assignment_not_found'))
-    await vi.advanceTimersByTimeAsync(0)
-    expect(h.socket.close).not.toHaveBeenCalled()
-    h.renewControlActivity.mockRejectedValueOnce(new Error('assignment_not_found'))
-    await vi.advanceTimersByTimeAsync(30_000)
-    expect(h.socket.close).toHaveBeenCalledWith(
-      RELAY_CLOSE_CODE.DRAINING,
-      'control assignment missing'
-    )
-  })
-
-  it('switches a restored source to the next exact retention authority without mixing both grants', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    await restoreSource(h)
-    const next = {
-      ...retention,
-      attemptId: 'cb5b3a3a-256f-490c-a3ef-f3b79398c7ca',
-      sourceAssignmentEpoch: 3
-    }
-    await h.registry.drainHost({
-      ...request,
-      attemptId: next.attemptId,
-      sourceAssignmentEpoch: 3,
-      retention: next
+  it('holds attach ownership through basis failure reservation cleanup', async () => {
+    const basis = deferred<void>()
+    const cleanup = deferred<void>()
+    const h = await source({
+      recordConnectionBasis: vi.fn().mockImplementation(async () => {
+        await basis.promise
+        throw new Error('basis failed')
+      }),
+      failReservation: vi.fn().mockReturnValue(cleanup.promise)
     })
-    expect(h.session.regionalRestoration).toBeNull()
-    await vi.advanceTimersByTimeAsync(30_000)
-    expect(h.renewControlActivity.mock.lastCall![1]).toMatchObject({ retention: next })
-    expect(h.renewControlActivity.mock.lastCall![1]).not.toHaveProperty('restoration')
-    expect(h.splice).not.toHaveBeenCalled()
-  })
-
-  it('records only destroyed work, preserving optional mode and privacy on emergency closure', async () => {
-    const h = await source()
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    try {
-      await h.registry.drainHost(request)
-      await vi.advanceTimersByTimeAsync(15_000)
-      const forced = () =>
-        warn.mock.calls
-          .map(([raw]) => String(raw))
-          .filter((raw) => raw.includes('orca_relay_host_drain_forced_close'))
-      expect(forced()).toHaveLength(0)
-      h.registry.drain(0)
-      await vi.advanceTimersByTimeAsync(0)
-      expect(forced()).toHaveLength(1)
-      expect(JSON.parse(forced()[0]!)).toMatchObject({
-        drainMode: 'finish-existing',
-        reason: 'emergency',
-        forcedConnections: 1,
-        splices: 1,
-        assignmentEpoch: 1,
-        controlGeneration: 1,
-        sourceAssignmentEpoch: 1,
-        regionalAttemptId: retention.attemptId,
-        relayHostIdDigest: relayHostLogDigest(identity.relayHostId)
-      })
-      expect(forced()[0]).not.toContain(identity.relayHostId)
-      expect(forced()[0]).not.toContain(h.session.controlResumeSecret)
-      h.registry.drain(0)
-      await vi.advanceTimersByTimeAsync(0)
-      expect(forced()).toHaveLength(1)
-    } finally {
-      warn.mockRestore()
-    }
-  })
-
-  it('still enforces applicable denial and emergency closure', async () => {
-    const h = await source()
-    await h.registry.drainHost(request)
-    h.renewControlActivity.mockRejectedValueOnce(new Error('activity_cell_not_authoritative'))
-    await vi.advanceTimersByTimeAsync(15_000)
-    expect(h.socket.close).toHaveBeenCalled()
-    const emergency = await source()
-    await emergency.registry.drainHost(request)
-    emergency.registry.drain(0)
+    const client = new FakeSocket()
+    h.session.pendingConns.set('conn', {
+      connId: 'conn',
+      connTicket: 'ticket',
+      client: client as unknown as WebSocket,
+      reservation: {
+        userId: identity.sub,
+        relayHostId: identity.relayHostId,
+        credentialKind: 'invite',
+        leaseExpiresAt: Date.now() + 1000
+      },
+      attachTimer: setTimeout(() => {}, 1000),
+      credentialActivityId: null
+    } as never)
+    const attached = h.registry.acceptHostData(
+      new FakeSocket() as unknown as WebSocket,
+      'conn',
+      'ticket',
+      1
+    )
+    const commit = vi.fn().mockResolvedValue({ outcome: 'deferred' })
+    expect(await h.registry.idleRehome(request, commit, vi.fn())).toEqual({ outcome: 'busy' })
+    basis.resolve()
     await vi.advanceTimersByTimeAsync(0)
-    expect(emergency.splice).toHaveBeenCalled()
-    expect(emergency.socket.close).toHaveBeenCalled()
+    expect(h.session.activeConnIds.size).toBe(0)
+    expect(await h.registry.idleRehome(request, commit, vi.fn())).toEqual({ outcome: 'busy' })
+    expect(commit).not.toHaveBeenCalled()
+    cleanup.resolve()
+    await attached
+  })
+  it('returns the durable operation outcome after source retirement', async () => {
+    const h = await source()
+    const commit = vi.fn().mockResolvedValue({ outcome: 'committed' })
+    await h.registry.idleRehome(request, commit, vi.fn())
+    expect(
+      await h.registry.idleRehome(request, commit, vi.fn().mockResolvedValue('committed'))
+    ).toEqual({ outcome: 'committed' })
+    expect(commit).toHaveBeenCalledOnce()
+  })
+  it('does not reopen a source overtaken by emergency drain', async () => {
+    const h = await source()
+    const result = deferred<{ outcome: 'deferred' }>()
+    const moving = h.registry.idleRehome(
+      request,
+      () => result.promise,
+      vi.fn().mockResolvedValue('not-committed')
+    )
+    h.registry.drain(0)
+    await vi.advanceTimersByTimeAsync(0)
+    result.resolve({ outcome: 'deferred' })
+    await moving
+    expect(h.session.state).toBe('closed')
+    expect(h.registry.get(request)).toBeNull()
   })
 })

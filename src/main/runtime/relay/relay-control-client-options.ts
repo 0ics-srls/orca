@@ -1,10 +1,6 @@
 import type WebSocket from 'ws'
 import type { E2EEKeypair } from '../e2ee-keypair'
-import type {
-  RelayConnectionOpenMessage,
-  RelayDrainMessage,
-  RelayRegionRestoredMessage
-} from './relay-control-protocol'
+import type { RelayConnectionOpenMessage, RelayDrainMessage } from './relay-control-protocol'
 
 export type RelayControlClientOptions = {
   cellUrl: string
@@ -20,7 +16,6 @@ export type RelayControlClientOptions = {
   onDrain: (message: RelayDrainMessage) => void
   onClose: (code: number) => void
   onPendingChanged?: () => void
-  onRegionRestored?: (message: RelayRegionRestoredMessage) => void
   createSocket?: (url: string, relayJwt: string) => WebSocket
   connectDeadlineMs?: number
   silenceLimitMs?: number

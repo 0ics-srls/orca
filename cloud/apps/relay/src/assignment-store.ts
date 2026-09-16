@@ -1,3 +1,4 @@
+import { IDLE_REHOME_PAGE_SIZE, selectIdleRegionalRehomes } from './idle-regional-rehome-selection.js'
 import { readRegionCorrectionOutcomes } from './region-correction-outcomes.js'
 import {
   previewRegionalRehomeEligibility,
@@ -20,8 +21,7 @@ import {
   type RelayRegion,
   type RegionCorrectionRequest,
   type RegionCorrectionResponse,
-  type RegionalRetention,
-  type RegionRestored
+  type IdleRegionalRehomeRequest,
 } from '@orca-cloud/relay-contract'
 import {
   cellAdmissionState,
@@ -149,7 +149,6 @@ export type RegionalRehomeAttempt = AssignmentIdentity & {
   assignmentEpoch: number
   drainGraceMs: number
   sendAttempts: number
-  retention?: RegionalRetention
 }
 
 export type RegionalHostDrainOutcome = 'accepted' | 'already-accepted' | 'host-not-connected'
@@ -425,22 +424,6 @@ const ABORTABLE_EXPIRED_MIGRATION = `(
     )
   )
   OR ${ABANDONED_REGISTERED_MIGRATION}
-  OR (
-    migration.target_registered_at IS NOT NULL
-    AND EXISTS (
-      SELECT 1 FROM relay_region_rehome_attempts attempt
-      JOIN relay_region_retentions retention ON retention.attempt_id = attempt.attempt_id
-      WHERE attempt.user_id = migration.user_id AND attempt.relay_host_id = migration.relay_host_id
-        AND attempt.assignment_epoch = migration.assignment_epoch
-        AND attempt.completed_at IS NULL AND attempt.aborted_at IS NULL
-    )
-    AND NOT EXISTS (
-      SELECT 1 FROM relay_assignment_activity_leases target_control
-      WHERE target_control.user_id = migration.user_id AND target_control.relay_host_id = migration.relay_host_id
-        AND target_control.cell_id = migration.target_cell_id AND target_control.activity_kind = 'control'
-        AND target_control.activity_id NOT LIKE 'control-pending:%'
-    )
-  )
 )`
 
 export class RelayAssignmentStore {
@@ -460,7 +443,6 @@ export class RelayAssignmentStore {
   private readonly migrationCellRegistrar: RelayMigrationCellRegistrar
   private readonly activityQueue = new AssignmentIdentityQueue()
   private assignmentTail: Promise<void> = Promise.resolve()
-  private pendingRegionalRehomeDisableLog: Record<string, string | number> | null = null
 
   constructor(
     private readonly database: RelayDatabase,
@@ -3362,6 +3344,133 @@ export class RelayAssignmentStore {
     return previewRegionCorrection(this.database, this.now())
   }
 
+  private idleRegionalCandidateOffset = 0
+
+  async selectIdleRegionalRehomeCandidates(
+    processSafety?: RegionalRehomeSafetySnapshot
+  ): Promise<Array<IdleRegionalRehomeRequest & { sourceCellUrl: string }>> {
+    const now = this.now()
+    if (!processSafety || this.regionalRehomeCohortPercent === 0) return []
+    const control = (await this.database.query(
+      "SELECT enabled, not_before FROM relay_region_rehome_control WHERE control_id = 'global'"
+    ))[0]
+    if (!control || Number(control.enabled) !== 1 || Number(control.not_before) > now) return []
+    const fleetSafety = await this.readRegionalRehomeFleetSafety(this.database, now)
+    if (regionalRehomeFleetSafetyFailure(processSafety, fleetSafety, now)) return []
+    const candidates = await selectIdleRegionalRehomes({
+      database: this.database, now, heartbeatTtlMs: this.heartbeatTtlMs,
+      cohortPercent: this.regionalRehomeCohortPercent, offset: this.idleRegionalCandidateOffset,
+      connectionHeadroom: await this.connectionHeadroomByCell(this.database),
+      cellIsClean: regionalRehomeCellSafetyIsClean
+    })
+    this.idleRegionalCandidateOffset = candidates.length < IDLE_REHOME_PAGE_SIZE
+      ? 0 : this.idleRegionalCandidateOffset + candidates.length
+    return candidates
+  }
+
+  async commitIdleRegionalRehome(
+    request: IdleRegionalRehomeRequest,
+    processSafety?: RegionalRehomeSafetySnapshot,
+    cohortPercent = this.regionalRehomeCohortPercent
+  ): Promise<{ outcome: 'committed' | 'deferred' | 'stale' }> {
+    const prior = await this.reconcileIdleRegionalRehome(request)
+    if (prior !== 'not-committed') return { outcome: prior }
+    if (!processSafety || !Number.isInteger(cohortPercent) || cohortPercent <= 0 || cohortPercent > 100) {
+      return { outcome: 'deferred' }
+    }
+    let safetyDisable: Record<string, string | number> | null = null
+    const result = await this.database.transaction(async (transaction): Promise<{ outcome: 'committed' | 'deferred' | 'stale' }> => {
+      safetyDisable = null
+      const now = this.now()
+      const control = (await transaction.queryLocked(
+        `SELECT * FROM relay_region_rehome_control WHERE control_id = 'global'`
+      ))[0]
+      if (!control || Number(control.enabled) !== 1 || Number(control.not_before) > now) {
+        return { outcome: 'deferred' }
+      }
+      await transaction.query(
+        `INSERT INTO relay_region_rehome_worker_state
+         (worker_id, next_dispatch_at, paused_until, consecutive_failures, updated_at)
+         VALUES ('global', 0, 0, 0, ?) ON CONFLICT (worker_id) DO NOTHING`, [now]
+      )
+      const worker = (await transaction.queryLocked(
+        `SELECT * FROM relay_region_rehome_worker_state WHERE worker_id = 'global'`
+      ))[0]!
+      if (Number(worker.paused_until) > now || Number(worker.next_dispatch_at) > now) {
+        return { outcome: 'deferred' }
+      }
+      const open = (await transaction.query(
+        `SELECT COUNT(*) AS count FROM relay_assignment_migrations
+         WHERE completed_at IS NULL AND aborted_at IS NULL`
+      ))[0]
+      if (Number(open?.count ?? 0) >= REGIONAL_REHOME_CONCURRENT_LIMIT) return { outcome: 'deferred' }
+      const attempt = await this.startRegionalRehomeCandidate(transaction, {
+        identity: request,
+        sourceCellId: request.sourceCellId,
+        assignmentEpoch: request.sourceAssignmentEpoch,
+        preferenceCutoff: now - Number(control.preference_max_age_ms),
+        cooldownCutoff: now - Number(control.host_cooldown_ms),
+        drainGraceMs: 0,
+        processSafety,
+        worker,
+        now,
+        skips: [],
+        idleRequest: request,
+        cohortPercent,
+        onSafetyDisabled: (event) => { safetyDisable = event }
+      })
+      if (!attempt) return { outcome: 'deferred' }
+      await this.markRegionalRehomeDispatchClaimed(
+        transaction, request.attemptId, now, Math.ceil(60_000 / Number(control.rate_per_minute))
+      )
+      await transaction.query(
+        `UPDATE relay_region_rehome_attempts SET drain_receipt_at = ?, drain_outcome = 'accepted'
+         WHERE attempt_id = ?`, [now, request.attemptId]
+      )
+      return { outcome: 'committed' }
+    })
+    if (safetyDisable) console.warn(JSON.stringify(safetyDisable))
+    return result
+  }
+
+  async reconcileIdleRegionalRehome(request: IdleRegionalRehomeRequest): Promise<'committed' | 'not-committed' | 'stale'> {
+    return this.database.transaction(async (transaction) => {
+      // Absence is definitive only after the same assignment lock as commit/activation.
+      const assignment = await this.assignmentRow(transaction, request)
+      const attempt = (await transaction.queryLocked(
+        `SELECT * FROM relay_region_rehome_attempts WHERE attempt_id = ?`,
+        [request.attemptId]
+      ))[0]
+      if (attempt) {
+        return attempt.user_id === request.userId &&
+          attempt.relay_host_id === request.relayHostId &&
+          attempt.source_cell_id === request.sourceCellId &&
+          attempt.source_cell_incarnation === request.sourceCellIncarnation &&
+          Number(attempt.previous_epoch) === request.sourceAssignmentEpoch &&
+          Number(attempt.source_generation) === request.sourceGeneration &&
+          attempt.target_cell_id === request.targetCellId &&
+          attempt.aborted_at == null
+          ? 'committed' : 'stale'
+      }
+      if (!assignment || assignment.cell_id !== request.sourceCellId ||
+          Number(assignment.assignment_epoch) !== request.sourceAssignmentEpoch) return 'stale'
+      const control = (await transaction.query(
+        `SELECT capability.generation, capability.cell_incarnation
+         FROM relay_control_capabilities capability
+         JOIN relay_assignment_activity_leases lease
+           ON lease.user_id = capability.user_id AND lease.relay_host_id = capability.relay_host_id
+          AND lease.activity_id = capability.activity_id
+         WHERE capability.user_id = ? AND capability.relay_host_id = ?
+           AND capability.cell_id = ? AND capability.assignment_epoch = ?
+           AND lease.activity_kind = 'control' AND lease.expires_at > ?
+         ORDER BY capability.generation DESC LIMIT 1`,
+        [request.userId, request.relayHostId, request.sourceCellId, request.sourceAssignmentEpoch, this.now()]
+      ))[0]
+      return control && Number(control.generation) === request.sourceGeneration &&
+        control.cell_incarnation === request.sourceCellIncarnation ? 'not-committed' : 'stale'
+    })
+  }
+
   async previewRegionalRehomeEligibility(
     processSafety?: RegionalRehomeSafetySnapshot
   ): Promise<RegionCorrectionPreview> {
@@ -3380,143 +3489,16 @@ export class RelayAssignmentStore {
     })
   }
 
-  async regionalRetentionRollback(
-    identity: AssignmentIdentity,
-    input: {
-      cellId: string
-      cellIncarnation: string
-      activityId: string
-      retention: RegionalRetention
-      expiresAt: number
-    }
-  ): Promise<RegionRestored | null> {
-    const now = this.now()
-    if (
-      !Number.isSafeInteger(input.expiresAt) ||
-      input.expiresAt <= now ||
-      input.expiresAt >
-        now + ASSIGNMENT_LIMITS.activityLeaseMs + RELAY_PROTOCOL_LIMITS.controlPingIntervalMs * 2
-    )
-      return null
-    return this.database.transaction(async (transaction) => {
-      const assignment = await this.assignmentRow(transaction, identity)
-      if (!assignment || assignment.cell_id !== input.cellId) return null
-      const attempt = (
-        await transaction.queryLocked(
-          `SELECT attempt.*, retention.source_generation, retention.source_activity_id, retention.rollback_epoch
-         FROM relay_region_rehome_attempts attempt
-         JOIN relay_region_retentions retention ON retention.attempt_id = attempt.attempt_id
-         WHERE attempt.user_id = ? AND attempt.relay_host_id = ? AND attempt.attempt_id = ?`,
-          [identity.userId, identity.relayHostId, input.retention.attemptId]
-        )
-      )[0]
-      if (
-        !attempt ||
-        attempt.aborted_at == null ||
-        attempt.completed_at != null ||
-        attempt.source_cell_id !== input.cellId ||
-        attempt.source_cell_incarnation !== input.cellIncarnation ||
-        Number(attempt.previous_epoch) !== input.retention.sourceAssignmentEpoch ||
-        Number(attempt.source_generation) !== input.retention.sourceGeneration ||
-        attempt.source_activity_id !== input.activityId ||
-        Number(attempt.rollback_epoch) !== Number(assignment.assignment_epoch)
-      )
-        return null
-      const runtime = (
-        await transaction.query(
-          `SELECT cell_incarnation, ready FROM relay_cell_runtime WHERE cell_id = ?`,
-          [input.cellId]
-        )
-      )[0]
-      if (
-        !runtime ||
-        runtime.cell_incarnation !== input.cellIncarnation ||
-        Number(runtime.ready) !== 1
-      )
-        return null
-      const capability = (
-        await transaction.query(
-          `SELECT assignment_epoch FROM relay_control_capabilities
-         WHERE user_id = ? AND relay_host_id = ? AND activity_id = ? AND cell_id = ?
-           AND cell_incarnation = ? AND generation = ? AND finish_existing = 1`,
-          [
-            identity.userId,
-            identity.relayHostId,
-            input.activityId,
-            input.cellId,
-            input.cellIncarnation,
-            input.retention.sourceGeneration
-          ]
-        )
-      )[0]
-      if (
-        !capability ||
-        ![input.retention.sourceAssignmentEpoch, Number(assignment.assignment_epoch)].includes(
-          Number(capability.assignment_epoch)
-        )
-      )
-        return null
-      const lease = (await this.lockAssignmentActivities(transaction, identity)).find(
-        (row) => row.activity_id === input.activityId
-      )
-      if (
-        !lease ||
-        lease.cell_id !== input.cellId ||
-        lease.activity_kind !== 'control' ||
-        Number(lease.expires_at) <= now
-      )
-        return null
-      // Regrant only an existing exact control; a missing source cannot be resurrected.
-      await transaction.query(
-        `UPDATE relay_assignment_activity_leases SET expires_at = CASE WHEN expires_at > ? THEN expires_at ELSE ? END, updated_at = ?
-         WHERE user_id = ? AND relay_host_id = ? AND activity_id = ?`,
-        [
-          input.expiresAt,
-          input.expiresAt,
-          now,
-          identity.userId,
-          identity.relayHostId,
-          input.activityId
-        ]
-      )
-      await this.touchAssignment(transaction, identity, input.expiresAt, now)
-      await transaction.query(
-        `UPDATE relay_control_capabilities SET assignment_epoch = ?
-         WHERE user_id = ? AND relay_host_id = ? AND activity_id = ? AND generation = ? AND cell_incarnation = ?`,
-        [
-          assignment.assignment_epoch,
-          identity.userId,
-          identity.relayHostId,
-          input.activityId,
-          input.retention.sourceGeneration,
-          input.cellIncarnation
-        ]
-      )
-      return {
-        attemptId: input.retention.attemptId,
-        sourceGeneration: input.retention.sourceGeneration,
-        sourceAssignmentEpoch: input.retention.sourceAssignmentEpoch,
-        assignmentEpoch: Number(assignment.assignment_epoch)
-      }
-    })
-  }
-
   async renewControlActivity(
     identity: AssignmentIdentity,
-    input: {
-      activityId: string
-      cellId: string
-      expiresAt: number
-      retention?: RegionalRetention
-      restoration?: RegionRestored
-      cellIncarnation?: string
-    }
+    input: { activityId: string; cellId: string; expiresAt: number }
   ): Promise<void> {
     validateActivityId(input.activityId)
-    if (input.retention && input.restoration) throw new Error('conflicting_control_authority')
     const now = this.now()
     const maximumExpiresAt =
-      now + ASSIGNMENT_LIMITS.activityLeaseMs + RELAY_PROTOCOL_LIMITS.controlPingIntervalMs * 2
+      now +
+      ASSIGNMENT_LIMITS.activityLeaseMs +
+      RELAY_PROTOCOL_LIMITS.controlPingIntervalMs * 2
     if (
       !Number.isSafeInteger(input.expiresAt) ||
       input.expiresAt <= now ||
@@ -3545,58 +3527,9 @@ export class RelayAssignmentStore {
 
   private async renewPostgresControlActivity(
     identity: AssignmentIdentity,
-    input: {
-      activityId: string
-      cellId: string
-      expiresAt: number
-      retention?: RegionalRetention
-      restoration?: RegionRestored
-      cellIncarnation?: string
-    },
+    input: { activityId: string; cellId: string; expiresAt: number },
     now: number
   ): Promise<ControlRenewalOutcome> {
-    const retained = input.retention
-    const restored = input.restoration
-    const basis = retained ?? restored
-    const attemptState = basis
-      ? `, retained_attempt AS MATERIALIZED (
-      SELECT attempt.assignment_epoch
-      FROM relay_region_rehome_attempts attempt
-      JOIN relay_region_retentions retention ON retention.attempt_id = attempt.attempt_id
-      JOIN assignment_state assignment ON assignment.assignment_epoch = ${restored ? 'retention.rollback_epoch' : 'attempt.assignment_epoch'}
-        AND assignment.cell_id = ${restored ? 'attempt.source_cell_id' : 'attempt.target_cell_id'}
-      WHERE attempt.user_id = ? AND attempt.relay_host_id = ? AND attempt.attempt_id = ?
-        AND attempt.source_cell_id = ? AND attempt.source_cell_incarnation = ?
-        AND attempt.previous_epoch = ? AND retention.source_generation = ?
-        AND retention.source_activity_id = ?
-        ${restored ? 'AND retention.rollback_epoch = ?' : 'AND retention.rollback_epoch IS NULL'}
-        AND EXISTS (
-          SELECT 1 FROM relay_control_capabilities capability
-          JOIN relay_cell_runtime runtime ON runtime.cell_id = capability.cell_id
-            AND runtime.cell_incarnation = capability.cell_incarnation
-          WHERE capability.user_id = attempt.user_id AND capability.relay_host_id = attempt.relay_host_id
-            AND capability.activity_id = retention.source_activity_id AND capability.cell_id = attempt.source_cell_id
-            AND capability.cell_incarnation = attempt.source_cell_incarnation
-            AND capability.assignment_epoch = ${restored ? 'retention.rollback_epoch' : 'attempt.previous_epoch'}
-            AND capability.generation = retention.source_generation AND capability.finish_existing = 1
-        )
-        AND attempt.completed_at IS NULL AND attempt.aborted_at IS ${restored ? 'NOT NULL' : 'NULL'}
-      FOR UPDATE OF attempt
-    )`
-      : ''
-    const retainedParams = basis
-      ? [
-          identity.userId,
-          identity.relayHostId,
-          basis.attemptId,
-          input.cellId,
-          input.cellIncarnation ?? '',
-          basis.sourceAssignmentEpoch,
-          basis.sourceGeneration,
-          input.activityId,
-          ...(restored ? [restored.assignmentEpoch] : [])
-        ]
-      : []
     const row = (
       await this.database.query(
         `WITH assignment_state AS MATERIALIZED (
@@ -3604,7 +3537,7 @@ export class RelayAssignmentStore {
            FROM relay_assignments
            WHERE user_id = ? AND relay_host_id = ?
            FOR UPDATE
-         )${attemptState}, migration_state AS MATERIALIZED (
+         ), migration_state AS MATERIALIZED (
            SELECT migration.assignment_epoch
            FROM relay_assignment_migrations migration
            JOIN assignment_state assignment
@@ -3613,12 +3546,11 @@ export class RelayAssignmentStore {
            WHERE migration.user_id = ? AND migration.relay_host_id = ?
              AND migration.source_cell_id = ?
              AND migration.completed_at IS NULL AND migration.aborted_at IS NULL
-             ${retained ? 'AND EXISTS (SELECT 1 FROM retained_attempt)' : ''}
            FOR UPDATE OF migration
          ), authorization_state AS MATERIALIZED (
            SELECT 1 AS authorized
            FROM assignment_state assignment
-           WHERE ${restored ? 'assignment.cell_id = ? AND EXISTS (SELECT 1 FROM retained_attempt)' : retained ? 'assignment.cell_id <> ? AND EXISTS (SELECT 1 FROM migration_state)' : 'assignment.cell_id = ? OR EXISTS (SELECT 1 FROM migration_state)'}
+           WHERE assignment.cell_id = ? OR EXISTS (SELECT 1 FROM migration_state)
          ), lease_state AS MATERIALIZED (
            SELECT lease.activity_kind, lease.cell_id
            FROM relay_assignment_activity_leases lease
@@ -3658,7 +3590,6 @@ export class RelayAssignmentStore {
         [
           identity.userId,
           identity.relayHostId,
-          ...retainedParams,
           identity.userId,
           identity.relayHostId,
           input.cellId,
@@ -3688,66 +3619,13 @@ export class RelayAssignmentStore {
 
   private async renewTransactionalControlActivity(
     identity: AssignmentIdentity,
-    input: {
-      activityId: string
-      cellId: string
-      expiresAt: number
-      retention?: RegionalRetention
-      restoration?: RegionRestored
-      cellIncarnation?: string
-    },
+    input: { activityId: string; cellId: string; expiresAt: number },
     now: number
   ): Promise<ControlRenewalOutcome> {
     // Bypass the process queue so a network-stalled activity call cannot suppress renewal.
     await this.database.transaction(async (transaction) => {
       const assignment = await this.assignmentRow(transaction, identity)
       if (!assignment) throw new Error('assignment_not_found')
-      const basis = input.retention ?? input.restoration
-      const restored = input.restoration
-      if (basis) {
-        const retained = (
-          await transaction.queryLocked(
-            `SELECT attempt.attempt_id FROM relay_region_rehome_attempts attempt
-           JOIN relay_region_retentions retention ON retention.attempt_id = attempt.attempt_id
-           WHERE attempt.user_id = ? AND attempt.relay_host_id = ? AND attempt.attempt_id = ?
-             AND attempt.source_cell_id = ? AND attempt.source_cell_incarnation = ?
-             AND attempt.previous_epoch = ? AND retention.source_generation = ?
-             AND retention.source_activity_id = ?
-             ${restored ? 'AND retention.rollback_epoch = ?' : 'AND retention.rollback_epoch IS NULL'}
-        AND EXISTS (
-          SELECT 1 FROM relay_control_capabilities capability
-          JOIN relay_cell_runtime runtime ON runtime.cell_id = capability.cell_id
-            AND runtime.cell_incarnation = capability.cell_incarnation
-          WHERE capability.user_id = attempt.user_id AND capability.relay_host_id = attempt.relay_host_id
-            AND capability.activity_id = retention.source_activity_id AND capability.cell_id = attempt.source_cell_id
-            AND capability.cell_incarnation = attempt.source_cell_incarnation
-            AND capability.assignment_epoch = ${restored ? 'retention.rollback_epoch' : 'attempt.previous_epoch'}
-            AND capability.generation = retention.source_generation AND capability.finish_existing = 1
-        )
-             AND ${restored ? 'retention.rollback_epoch' : 'attempt.assignment_epoch'} = ?
-             AND ${restored ? 'attempt.source_cell_id' : 'attempt.target_cell_id'} = ?
-             AND attempt.completed_at IS NULL AND attempt.aborted_at IS ${restored ? 'NOT NULL' : 'NULL'}`,
-            [
-              identity.userId,
-              identity.relayHostId,
-              basis.attemptId,
-              input.cellId,
-              input.cellIncarnation ?? '',
-              basis.sourceAssignmentEpoch,
-              basis.sourceGeneration,
-              input.activityId,
-              ...(restored ? [restored.assignmentEpoch] : []),
-              assignment.assignment_epoch,
-              assignment.cell_id
-            ]
-          )
-        )[0]
-        if (
-          !retained ||
-          (restored ? assignment.cell_id !== input.cellId : assignment.cell_id === input.cellId)
-        )
-          throw new Error('activity_cell_not_authoritative')
-      }
       const assignmentCellId = text(assignment, 'cell_id')
       if (input.cellId !== assignmentCellId) {
         const migration = (
@@ -3847,7 +3725,7 @@ export class RelayAssignmentStore {
       cellId: string
       assignmentEpoch: number
       generation: number
-      finishExistingRegionalRehome?: boolean
+      idleRegionalRehome?: boolean
       cellIncarnation?: string
       connectionInclusionWatermark?: number
     }
@@ -3940,11 +3818,11 @@ export class RelayAssignmentStore {
         )
         await transaction.query(
           `INSERT INTO relay_control_capabilities
-           (user_id, relay_host_id, activity_id, cell_id, cell_incarnation, assignment_epoch, generation, finish_existing)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+           (user_id, relay_host_id, activity_id, cell_id, cell_incarnation, assignment_epoch, generation, finish_existing, idle_regional_rehome)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT (user_id, relay_host_id, activity_id) DO UPDATE SET
              cell_incarnation = excluded.cell_incarnation, assignment_epoch = excluded.assignment_epoch,
-             generation = excluded.generation, finish_existing = excluded.finish_existing`,
+             generation = excluded.generation, finish_existing = excluded.finish_existing, idle_regional_rehome = excluded.idle_regional_rehome`,
           [
             identity.userId,
             identity.relayHostId,
@@ -3953,7 +3831,8 @@ export class RelayAssignmentStore {
             input.cellIncarnation ?? '',
             input.assignmentEpoch,
             input.generation,
-            input.finishExistingRegionalRehome && input.cellIncarnation ? 1 : 0
+            0,
+            input.idleRegionalRehome && input.cellIncarnation ? 1 : 0
           ]
         )
         return activityId
@@ -5446,354 +5325,6 @@ export class RelayAssignmentStore {
     }
   }
 
-  async claimRegionalRehome(
-    processSafety?: RegionalRehomeSafetySnapshot
-  ): Promise<RegionalRehomeAttempt | null> {
-    const now = this.now()
-    // Directors poll every second; avoid taking the global worker-row lock while disabled.
-    const control = (
-      await this.database.query(
-        `SELECT enabled, not_before
-         FROM relay_region_rehome_control
-         WHERE control_id = 'global'`
-      )
-    )[0]
-    if (!control) {
-      await this.initializeRegionalRehomeControl(this.database, now)
-      return null
-    }
-    if (integer(control, 'enabled') !== 1 || integer(control, 'not_before') > now) {
-      return null
-    }
-    this.pendingRegionalRehomeDisableLog = null
-    const candidateSkips: RegionalRehomeCandidateSkip[] = []
-    // A Postgres transaction is unusable after a NOWAIT abort, so a contended
-    // tick abandons the candidate it stopped on plus every one behind it.
-    let candidatesTotal = 0
-    let candidatesFinished = 0
-    const claimResult = await this.database
-      .transaction(async (transaction) => {
-        candidatesTotal = 0
-        candidatesFinished = 0
-        candidateSkips.length = 0
-        await this.initializeRegionalRehomeControl(transaction, now)
-        const control = (
-          await transaction.queryLocked(
-            `SELECT * FROM relay_region_rehome_control WHERE control_id = 'global'`
-          )
-        )[0]!
-        if (integer(control, 'enabled') !== 1 || integer(control, 'not_before') > now) {
-          return null
-        }
-        const intervalMs = Math.ceil(60_000 / integer(control, 'rate_per_minute'))
-        const preferenceCutoff = now - integer(control, 'preference_max_age_ms')
-        // A host that was rehomed recently is left alone whichever way its
-        // preference now points: a flapping region probe must not walk one host
-        // back and forth across an ocean.
-        const cooldownCutoff = now - integer(control, 'host_cooldown_ms')
-        await transaction.query(
-          `INSERT INTO relay_region_rehome_worker_state
-         (worker_id, next_dispatch_at, paused_until, consecutive_failures, updated_at)
-         VALUES ('global', 0, 0, 0, ?)
-         ON CONFLICT (worker_id) DO NOTHING`,
-          [now]
-        )
-        const worker = (
-          await transaction.queryLocked(
-            `SELECT * FROM relay_region_rehome_worker_state WHERE worker_id = 'global'`
-          )
-        )[0]!
-        if (integer(worker, 'paused_until') > now || integer(worker, 'next_dispatch_at') > now) {
-          return null
-        }
-        const effectiveProcessSafety = processSafety ?? cleanRegionalRehomeSafety(now)
-        const fleetSafety = await this.readRegionalRehomeFleetSafety(transaction, now)
-        if (
-          !(await this.regionalRehomeSafetyAllowsClaim(
-            transaction,
-            worker,
-            effectiveProcessSafety,
-            fleetSafety,
-            now
-          ))
-        ) {
-          return null
-        }
-        const retry = (
-          await transaction.queryLocked(
-            `SELECT attempt.*, (SELECT retention.source_generation FROM relay_region_retentions retention WHERE retention.attempt_id = attempt.attempt_id) AS source_generation, source.cell_url AS source_cell_url
-           FROM relay_region_rehome_attempts attempt
-           JOIN relay_cells source ON source.cell_id = attempt.source_cell_id
-           JOIN relay_cell_runtime runtime ON runtime.cell_id = attempt.source_cell_id
-           JOIN relay_cell_capabilities capability
-             ON capability.cell_id = runtime.cell_id
-            AND capability.cell_incarnation = runtime.cell_incarnation
-           JOIN relay_assignment_migrations migration
-             ON migration.user_id = attempt.user_id
-            AND migration.relay_host_id = attempt.relay_host_id
-            AND migration.assignment_epoch = attempt.assignment_epoch
-           WHERE attempt.drain_receipt_at IS NULL
-             AND attempt.completed_at IS NULL AND attempt.aborted_at IS NULL
-             AND attempt.send_attempts < 10
-             AND (attempt.last_send_attempt_at IS NULL OR attempt.last_send_attempt_at <= ?)
-             AND runtime.cell_incarnation = attempt.source_cell_incarnation
-             AND runtime.ready = 1 AND runtime.last_heartbeat_at > ?
-             AND capability.regional_rehome_protocol >= 1
-             AND migration.completed_at IS NULL AND migration.aborted_at IS NULL
-           ORDER BY attempt.created_at, attempt.attempt_id
-           LIMIT 1`,
-          [now - 30_000, now - this.heartbeatTtlMs]
-        )
-      )[0]
-      if (retry) {
-        candidatesTotal = 1
-        const fleetSafety = await this.lockedRegionalRehomeFleetSafety(transaction, now)
-        if (
-          !(await this.regionalRehomeSafetyAllowsClaim(
-            transaction,
-            worker,
-            effectiveProcessSafety,
-            fleetSafety,
-            now
-          ))
-        ) {
-          return null
-        }
-        await this.markRegionalRehomeDispatchClaimed(
-          transaction,
-          text(retry, 'attempt_id'),
-          now,
-          intervalMs
-        )
-        retry.send_attempts = integer(retry, 'send_attempts') + 1
-        return regionalRehomeAttempt(retry)
-      }
-
-      // A drain receipt is not convergence: grace enforcement lives only in
-      // source-cell session state, and attempts have been observed stalled
-      // dual-homed well past grace with source leases still renewing. Such
-      // attempts are re-dispatched with the remaining (zero) grace so the
-      // source force-closes and the host re-resolves onto its registered
-      // target.
-      const redrain = (
-        await transaction.queryLocked(
-          `SELECT attempt.*, source.cell_url AS source_cell_url
-           FROM relay_region_rehome_attempts attempt
-           JOIN relay_cells source ON source.cell_id = attempt.source_cell_id
-           JOIN relay_cell_runtime runtime ON runtime.cell_id = attempt.source_cell_id
-           JOIN relay_cell_capabilities capability
-             ON capability.cell_id = runtime.cell_id
-            AND capability.cell_incarnation = runtime.cell_incarnation
-           JOIN relay_assignment_migrations migration
-             ON migration.user_id = attempt.user_id
-            AND migration.relay_host_id = attempt.relay_host_id
-            AND migration.assignment_epoch = attempt.assignment_epoch
-           WHERE attempt.drain_receipt_at IS NOT NULL
-             AND NOT EXISTS (SELECT 1 FROM relay_region_retentions retained WHERE retained.attempt_id = attempt.attempt_id)
-             AND attempt.completed_at IS NULL AND attempt.aborted_at IS NULL
-             AND attempt.created_at + attempt.drain_grace_ms <= ?
-             AND attempt.send_attempts < ?
-             AND (attempt.last_send_attempt_at IS NULL OR attempt.last_send_attempt_at <= ?)
-             AND runtime.cell_incarnation = attempt.source_cell_incarnation
-             AND runtime.ready = 1 AND runtime.last_heartbeat_at > ?
-             AND capability.regional_rehome_protocol >= 1
-             AND migration.completed_at IS NULL AND migration.aborted_at IS NULL
-             AND migration.target_registered_at IS NOT NULL
-             AND EXISTS (
-               SELECT 1 FROM relay_assignment_activity_leases source_lease
-               WHERE source_lease.user_id = attempt.user_id
-                 AND source_lease.relay_host_id = attempt.relay_host_id
-                 AND source_lease.cell_id = attempt.source_cell_id
-             )
-           ORDER BY attempt.created_at, attempt.attempt_id
-           LIMIT 1`,
-            [
-              now,
-              REGIONAL_REHOME_REDRAIN_SEND_LIMIT,
-              now - REGIONAL_REHOME_REDRAIN_INTERVAL_MS,
-              now - this.heartbeatTtlMs
-            ]
-          )
-        )[0]
-        if (redrain) {
-          candidatesTotal = 1
-          const fleetSafety = await this.lockedRegionalRehomeFleetSafety(transaction, now)
-          if (
-            !(await this.regionalRehomeSafetyAllowsClaim(
-              transaction,
-              worker,
-              effectiveProcessSafety,
-              fleetSafety,
-              now
-            ))
-          ) {
-            return null
-          }
-          await this.markRegionalRehomeDispatchClaimed(
-            transaction,
-            text(redrain, 'attempt_id'),
-            now,
-            intervalMs
-          )
-          redrain.send_attempts = integer(redrain, 'send_attempts') + 1
-          redrain.drain_grace_ms = 0
-          return regionalRehomeAttempt(redrain)
-        }
-
-        const openCount = (
-          await transaction.query(
-            `SELECT COUNT(*) AS count FROM relay_assignment_migrations
-         WHERE completed_at IS NULL AND aborted_at IS NULL`
-          )
-        )[0]
-        if (Number(openCount?.count ?? 0) >= REGIONAL_REHOME_CONCURRENT_LIMIT) return null
-
-        const candidates = await transaction.query(
-          `SELECT preference.user_id, preference.relay_host_id,
-           preference.observed_at, assignment.cell_id AS source_cell_id,
-           assignment.assignment_epoch
-         FROM relay_region_decisions preference
-         JOIN relay_assignments assignment
-           ON assignment.user_id = preference.user_id
-          AND assignment.relay_host_id = preference.relay_host_id
-         JOIN relay_cell_regions region ON region.cell_id = assignment.cell_id
-         JOIN relay_cell_admission admission ON admission.cell_id = assignment.cell_id
-         JOIN relay_cell_runtime runtime ON runtime.cell_id = assignment.cell_id
-         JOIN relay_cell_capabilities capability
-           ON capability.cell_id = runtime.cell_id
-          AND capability.cell_incarnation = runtime.cell_incarnation
-         WHERE preference.preferred_region <> region.region
-           AND preference.outcome = 'conclusive' AND preference.expires_at > ?
-           AND preference.cohort_bucket < ?
-           AND preference.assignment_epoch = assignment.assignment_epoch
-           AND preference.incumbent_region = region.region AND preference.policy_version = 1
-           AND preference.observed_at >= ?
-           AND admission.admission_state = 'general'
-           AND runtime.ready = 1 AND runtime.last_heartbeat_at > ?
-           AND capability.regional_rehome_protocol >= 2
-           AND EXISTS (
-             SELECT 1 FROM relay_assignment_activity_leases control
-             WHERE control.user_id = assignment.user_id
-               AND control.relay_host_id = assignment.relay_host_id
-               AND control.cell_id = assignment.cell_id
-               AND control.activity_kind = 'control'
-               AND EXISTS (SELECT 1 FROM relay_control_capabilities host_capability
-                 WHERE host_capability.user_id = control.user_id
-                   AND host_capability.relay_host_id = control.relay_host_id
-                   AND host_capability.activity_id = control.activity_id
-                   AND host_capability.cell_id = control.cell_id
-                   AND host_capability.assignment_epoch = assignment.assignment_epoch
-                   AND host_capability.cell_incarnation = runtime.cell_incarnation
-                   AND host_capability.finish_existing = 1)
-               AND control.activity_id NOT LIKE 'control-pending:%'
-               AND control.expires_at > ?
-               AND control.updated_at >= runtime.started_at
-           )
-           AND NOT EXISTS (
-             SELECT 1 FROM relay_assignment_migrations migration
-             WHERE migration.user_id = assignment.user_id
-               AND migration.relay_host_id = assignment.relay_host_id
-               AND migration.completed_at IS NULL AND migration.aborted_at IS NULL
-           )
-           AND NOT EXISTS (
-             SELECT 1 FROM relay_region_rehome_attempts recent
-             WHERE recent.user_id = preference.user_id
-               AND recent.relay_host_id = preference.relay_host_id
-               AND recent.created_at > ?
-           )
-           AND EXISTS (
-             SELECT 1 FROM relay_cell_regions target_region
-             JOIN relay_cells target_cell ON target_cell.cell_id = target_region.cell_id
-             JOIN relay_cell_admission target_admission
-               ON target_admission.cell_id = target_region.cell_id
-             JOIN relay_cell_runtime target_runtime
-               ON target_runtime.cell_id = target_region.cell_id
-             JOIN relay_cell_capabilities target_capability
-               ON target_capability.cell_id = target_runtime.cell_id
-              AND target_capability.cell_incarnation = target_runtime.cell_incarnation
-             WHERE target_region.region = preference.preferred_region
-               AND target_cell.enabled = 1
-               AND target_admission.admission_state = 'general'
-               AND target_runtime.ready = 1
-               AND target_runtime.last_heartbeat_at > ?
-               AND target_capability.regional_rehome_protocol >= 2
-           )
-         ORDER BY preference.last_considered_at, preference.observed_at, preference.user_id, preference.relay_host_id
-         LIMIT 10`,
-          [
-            now,
-            this.regionalRehomeCohortPercent,
-            preferenceCutoff,
-            now - this.heartbeatTtlMs,
-            now,
-            cooldownCutoff,
-            now - this.heartbeatTtlMs
-          ]
-        )
-        candidatesTotal = candidates.length
-        for (const candidate of candidates) {
-          const claimed = await this.startRegionalRehomeCandidate(transaction, {
-            identity: {
-              userId: text(candidate, 'user_id'),
-              relayHostId: text(candidate, 'relay_host_id')
-            },
-            sourceCellId: text(candidate, 'source_cell_id'),
-            assignmentEpoch: integer(candidate, 'assignment_epoch'),
-            preferenceCutoff,
-            cooldownCutoff,
-            drainGraceMs: integer(control, 'drain_grace_ms'),
-            processSafety: effectiveProcessSafety,
-            worker,
-            now,
-            skips: candidateSkips
-          })
-          await transaction.query(
-            `UPDATE relay_region_decisions SET last_considered_at = ?
-          WHERE user_id = ? AND relay_host_id = ?`,
-            [now, candidate.user_id, candidate.relay_host_id]
-          )
-          candidatesFinished++
-          if (!claimed) continue
-          await this.markRegionalRehomeDispatchClaimed(
-            transaction,
-            claimed.attemptId,
-            now,
-            intervalMs
-          )
-          return { ...claimed, sendAttempts: 1 }
-        }
-        if (candidates.length > 0) {
-          // Skipped candidates still cost all-rows FOR UPDATE inventory scans;
-          // charge the dispatch interval so skips are rate-limited like claims.
-          await this.markRegionalRehomeTickSkipped(transaction, now, intervalMs)
-        }
-        return null
-      })
-      .catch((error: unknown): RegionalRehomeAttempt | null => {
-        // Only inventory contention is swallowed here; every other failure keeps
-        // its existing propagation and its dispatch-failure accounting.
-        if (!isDatabaseLockUnavailable(error)) throw error
-        // The dispatch tick runs every second; losing one to inventory contention
-        // costs a second of latency and never loses durable rehome state. The
-        // rolled-back transaction never disabled anything, so its pending disable
-        // log would describe a decision that did not happen.
-        candidateSkips.length = 0
-        this.pendingRegionalRehomeDisableLog = null
-        warnSweepCellInventoryBusy(
-          'claim-regional-rehome',
-          Math.max(1, candidatesTotal - candidatesFinished)
-        )
-        return null
-      })
-    const pendingDisableLog = this.pendingRegionalRehomeDisableLog
-    this.pendingRegionalRehomeDisableLog = null
-    if (pendingDisableLog) console.warn(JSON.stringify(pendingDisableLog))
-    if (claimResult === null && candidateSkips.length > 0) {
-      console.warn(JSON.stringify(aggregateRegionalRehomeCandidateSkips(candidateSkips)))
-    }
-    return claimResult
-  }
-
   private async startRegionalRehomeCandidate(
     transaction: RelayDatabase,
     input: {
@@ -5807,6 +5338,9 @@ export class RelayAssignmentStore {
       worker: SqlRow
       now: number
       skips: RegionalRehomeCandidateSkip[]
+      idleRequest: IdleRegionalRehomeRequest
+      cohortPercent: number
+      onSafetyDisabled: (event: Record<string, string | number> | null) => void
     }
   ): Promise<Omit<RegionalRehomeAttempt, 'sendAttempts'> | null> {
     const assignment = await this.assignmentRow(transaction, input.identity)
@@ -5830,9 +5364,10 @@ export class RelayAssignmentStore {
       integer(preference, 'observed_at') < input.preferenceCutoff ||
       Number(preference.expires_at) <= input.now ||
       preference.outcome !== 'conclusive' ||
+      Number(preference.policy_version) !== 1 ||
       Number(preference.assignment_epoch) !== input.assignmentEpoch ||
       !preference.preferred_region ||
-      Number(preference.cohort_bucket) >= this.regionalRehomeCohortPercent
+      Number(preference.cohort_bucket) >= input.cohortPercent
     ) {
       input.skips.push({ reason: 'candidate_stale' })
       return null
@@ -5905,13 +5440,13 @@ export class RelayAssignmentStore {
       input.now
     )
     if (safetyFailure) {
-      await this.pauseRegionalRehomeForSafety(
+      input.onSafetyDisabled(await this.pauseRegionalRehomeForSafety(
         transaction,
         input.worker,
         input.now,
         safetyFailure,
         fleetSafety
-      )
+      ))
       return null
     }
     // The preference read under lock can now agree with the cell the host is
@@ -5930,7 +5465,8 @@ export class RelayAssignmentStore {
       integer(sourceRuntime, 'last_heartbeat_at') <= input.now - this.heartbeatTtlMs ||
       !sourceCapability ||
       text(sourceCapability, 'cell_incarnation') !== text(sourceRuntime, 'cell_incarnation') ||
-      integer(sourceCapability, 'regional_rehome_protocol') < 2
+      integer(sourceCapability, 'regional_rehome_protocol') < 3 ||
+      sourceRuntime.cell_incarnation !== input.idleRequest.sourceCellIncarnation
     ) {
       input.skips.push({ reason: 'source_ineligible', cellId: input.sourceCellId })
       return null
@@ -5947,7 +5483,7 @@ export class RelayAssignmentStore {
         AND lease.activity_id = capability.activity_id
        WHERE capability.user_id = ? AND capability.relay_host_id = ?
          AND capability.cell_id = ? AND capability.assignment_epoch = ?
-         AND capability.cell_incarnation = ? AND capability.finish_existing = 1
+         AND capability.cell_incarnation = ? AND capability.idle_regional_rehome = 1
          AND lease.expires_at > ? AND lease.activity_kind = 'control'
        ORDER BY capability.generation DESC LIMIT 1`,
         [
@@ -5960,7 +5496,8 @@ export class RelayAssignmentStore {
         ]
       )
     )[0]
-    if (!hostCapability || preference.incumbent_region !== regions.get(input.sourceCellId)) {
+    if (!hostCapability || preference.incumbent_region !== regions.get(input.sourceCellId) ||
+        Number(hostCapability.generation) !== input.idleRequest.sourceGeneration) {
       input.skips.push({ reason: 'candidate_stale' })
       return null
     }
@@ -5995,7 +5532,8 @@ export class RelayAssignmentStore {
         integer(runtime, 'last_heartbeat_at') > input.now - this.heartbeatTtlMs &&
         capability !== undefined &&
         text(capability, 'cell_incarnation') === text(runtime, 'cell_incarnation') &&
-        integer(capability, 'regional_rehome_protocol') >= 2
+        integer(capability, 'regional_rehome_protocol') >= 3 &&
+        cellId === input.idleRequest.targetCellId
       )
     })
     const targetIsClean = (row: SqlRow): boolean => {
@@ -6142,7 +5680,7 @@ export class RelayAssignmentStore {
         text(targetRuntime, 'cell_incarnation')
       ]
     )
-    const attemptId = randomUUID()
+    const attemptId = input.idleRequest.attemptId
     await transaction.query(
       `INSERT INTO relay_region_rehome_attempts
        (attempt_id, user_id, relay_host_id, preferred_region,
@@ -6170,18 +5708,11 @@ export class RelayAssignmentStore {
       ]
     )
     await transaction.query(
-      `INSERT INTO relay_region_retentions (attempt_id, source_generation, source_activity_id)
-       VALUES (?, ?, ?)`,
-      [attemptId, hostCapability.generation, hostCapability.activity_id]
+      `UPDATE relay_region_rehome_attempts SET source_generation = ? WHERE attempt_id = ?`,
+      [input.idleRequest.sourceGeneration, attemptId]
     )
     return {
       ...input.identity,
-      retention: {
-        mode: 'finish-existing',
-        attemptId,
-        sourceGeneration: Number(hostCapability.generation),
-        sourceAssignmentEpoch: previousEpoch
-      },
       attemptId,
       preferredRegion,
       sourceCellId: input.sourceCellId,
@@ -6195,61 +5726,13 @@ export class RelayAssignmentStore {
     }
   }
 
-  private async lockedRegionalRehomeFleetSafety(
-    transaction: RelayDatabase,
-    now: number
-  ): Promise<RegionalRehomeFleetSafety> {
-    const cells = await this.lockCellInventory(transaction, 'nowait')
-    const admission = await cellAdmissionStates(transaction)
-    const regions = new Map(
-      (await transaction.query(`SELECT cell_id, region FROM relay_cell_regions`)).map((row) => [
-        text(row, 'cell_id'),
-        relayRegion(row, 'region')
-      ])
-    )
-    const runtimes = await transaction.queryLocked(
-      `SELECT * FROM relay_cell_runtime ORDER BY cell_id`
-    )
-    const capabilities = await transaction.queryLocked(
-      `SELECT * FROM relay_cell_capabilities ORDER BY cell_id`
-    )
-    const safetyRows = await transaction.queryLocked(
-      `SELECT * FROM relay_cell_rehome_safety ORDER BY cell_id`
-    )
-    return regionalRehomeFleetSafetyFromInventory({
-      cells,
-      admission,
-      regions,
-      runtimes,
-      capabilities,
-      safetyRows,
-      now,
-      heartbeatTtlMs: this.heartbeatTtlMs
-    })
-  }
-
-  private async regionalRehomeSafetyAllowsClaim(
-    transaction: RelayDatabase,
-    worker: SqlRow,
-    processSafety: RegionalRehomeSafetySnapshot,
-    fleetSafety: RegionalRehomeFleetSafety,
-    now: number
-  ): Promise<boolean> {
-    const failure = regionalRehomeFleetSafetyFailure(processSafety, fleetSafety, now)
-    if (!failure) {
-      return true
-    }
-    await this.pauseRegionalRehomeForSafety(transaction, worker, now, failure, fleetSafety)
-    return false
-  }
-
   private async pauseRegionalRehomeForSafety(
     transaction: RelayDatabase,
     worker: SqlRow,
     now: number,
     reason: string,
     fleetSafety: RegionalRehomeFleetSafety
-  ): Promise<void> {
+  ): Promise<Record<string, string | number> | null> {
     const disabled = await transaction.query(
       `UPDATE relay_region_rehome_control
        SET generation = generation + 1, enabled = 0, updated_at = ?
@@ -6260,8 +5743,9 @@ export class RelayAssignmentStore {
     // The durable disable is otherwise invisible: nothing else records why
     // claims stopped and inspection only shows enabled=false. Logged after
     // the transaction commits so a rollback cannot fabricate the record.
+    let event: Record<string, string | number> | null = null
     if (disabled.length > 0) {
-      this.pendingRegionalRehomeDisableLog = {
+      event = {
         event: 'orca_relay_regional_rehome_safety_disabled',
         reason,
         controlGeneration: integer(disabled[0]!, 'generation'),
@@ -6279,19 +5763,9 @@ export class RelayAssignmentStore {
       }
     }
     await this.incrementRegionalRehomeWorkerFailure(transaction, worker, now)
+    return event
   }
 
-  private async markRegionalRehomeTickSkipped(
-    transaction: RelayDatabase,
-    now: number,
-    intervalMs: number
-  ): Promise<void> {
-    await transaction.query(
-      `UPDATE relay_region_rehome_worker_state
-       SET next_dispatch_at = ?, updated_at = ? WHERE worker_id = 'global'`,
-      [now + intervalMs, now]
-    )
-  }
 
   private async markRegionalRehomeDispatchClaimed(
     transaction: RelayDatabase,
@@ -6310,74 +5784,6 @@ export class RelayAssignmentStore {
        SET next_dispatch_at = ?, updated_at = ? WHERE worker_id = 'global'`,
       [now + intervalMs, now]
     )
-  }
-
-  async recordRegionalRehomeDrainReceipt(
-    attemptId: string,
-    outcome: RegionalHostDrainOutcome
-  ): Promise<boolean> {
-    const now = this.now()
-    return await this.database.transaction(async (transaction) => {
-      const worker = (
-        await transaction.queryLocked(
-          `SELECT * FROM relay_region_rehome_worker_state WHERE worker_id = 'global'`
-        )
-      )[0]
-      const attempt = (
-        await transaction.queryLocked(
-          `SELECT * FROM relay_region_rehome_attempts WHERE attempt_id = ?`,
-          [attemptId]
-        )
-      )[0]
-      if (!attempt) throw new Error('regional_rehome_attempt_not_found')
-      // Any receipt proves the source cell answered: reset the failure budget
-      // even when a redrain repeats the stored outcome; otherwise a
-      // redrain-dominated stream lets scattered transient failures reach the
-      // durable three-failure disable.
-      if (worker) {
-        await transaction.query(
-          `UPDATE relay_region_rehome_worker_state
-           SET consecutive_failures = 0, paused_until = 0, updated_at = ?
-           WHERE worker_id = 'global'`,
-          [now]
-        )
-      }
-      const existingOutcome = optionalText(attempt, 'drain_outcome')
-      if (existingOutcome === outcome) return false
-      // Redrains produce one receipt per dispatch; the latest outcome wins.
-      await transaction.query(
-        `UPDATE relay_region_rehome_attempts
-         SET drain_receipt_at = ?, drain_outcome = ?, updated_at = ?
-         WHERE attempt_id = ?`,
-        [now, outcome, now, attemptId]
-      )
-      return true
-    })
-  }
-
-  async recordRegionalRehomeDispatchFailure(attemptId: string): Promise<void> {
-    const now = this.now()
-    const disableLog = await this.database.transaction(async (transaction) => {
-      // Match claim and enable ordering before a spent budget updates the control.
-      await transaction.queryLocked(
-        `SELECT * FROM relay_region_rehome_control WHERE control_id = 'global'`
-      )
-      const worker = (
-        await transaction.queryLocked(
-          `SELECT * FROM relay_region_rehome_worker_state WHERE worker_id = 'global'`
-        )
-      )[0]
-      const attempt = (
-        await transaction.queryLocked(
-          `SELECT attempt_id FROM relay_region_rehome_attempts WHERE attempt_id = ?`,
-          [attemptId]
-        )
-      )[0]
-      if (!worker || !attempt) return null
-      return await this.incrementRegionalRehomeWorkerFailure(transaction, worker, now)
-    })
-    // Logged after the commit so a rollback cannot fabricate the record.
-    if (disableLog) console.warn(JSON.stringify(disableLog))
   }
 
   // Returns the durable disable this failure caused, for the caller to log once
@@ -6570,13 +5976,7 @@ export class RelayAssignmentStore {
             return false
           }
           const attemptAgeMs = now - integer(attempt, 'created_at')
-          const retention = (
-            await transaction.query(
-              `SELECT attempt_id FROM relay_region_retentions WHERE attempt_id = ?`,
-              [attempt.attempt_id]
-            )
-          )[0]
-          if (!retention && attemptAgeMs >= REGIONAL_REHOME_MAX_REFRESH_MS) {
+          if (attemptAgeMs >= REGIONAL_REHOME_MAX_REFRESH_MS) {
             return false
           }
           if (
@@ -6609,18 +6009,6 @@ export class RelayAssignmentStore {
             return false
           }
           const leases = await this.lockAssignmentActivities(transaction, identity)
-          if (
-            retention &&
-            migration.target_registered_at != null &&
-            !leases.some(
-              (lease) =>
-                lease.cell_id === migration.target_cell_id &&
-                lease.activity_kind === 'control' &&
-                !String(lease.activity_id).startsWith('control-pending:') &&
-                Number(lease.expires_at) > now
-            )
-          )
-            return false
           const protectedIds = new Set([
             pendingControlActivityId(assignmentEpoch),
             migrationActivityId(assignmentEpoch)
@@ -6865,7 +6253,6 @@ export class RelayAssignmentStore {
       `SELECT attempt_id, user_id, relay_host_id, assignment_epoch
        FROM relay_region_rehome_attempts
        WHERE completed_at IS NULL AND aborted_at IS NULL
-         AND NOT EXISTS (SELECT 1 FROM relay_region_retentions retention WHERE retention.attempt_id = relay_region_rehome_attempts.attempt_id)
          AND created_at <= ?${exclusion}
        ORDER BY created_at, attempt_id LIMIT ?`,
       [now - REGIONAL_REHOME_MAX_REFRESH_MS, ...quarantined, limit]
@@ -7152,16 +6539,7 @@ export class RelayAssignmentStore {
             integer(targetCell, 'enabled') === 1 &&
             targetAdmission !== undefined &&
             ['migration-only', 'general'].includes(text(targetAdmission, 'admission_state'))
-          const retainedAttempt =
-            regionalAttempt &&
-            (
-              await transaction.query(
-                `SELECT attempt_id FROM relay_region_retentions WHERE attempt_id = ?`,
-                [regionalAttempt.attempt_id]
-              )
-            )[0]
           const rollbackReason =
-            (retainedAttempt !== undefined && !targetIsActive) ||
             !registered ||
             (targetCell !== undefined &&
               integer(targetCell, 'enabled') === 0 &&
@@ -7219,10 +6597,6 @@ export class RelayAssignmentStore {
           )
           if (regionalAttempt) {
             await transaction.query(
-              `UPDATE relay_region_retentions SET rollback_epoch = ? WHERE attempt_id = ?`,
-              [assignmentEpoch + 1, regionalAttempt.attempt_id]
-            )
-            await transaction.query(
               `UPDATE relay_region_rehome_attempts SET aborted_at = ?, updated_at = ? WHERE attempt_id = ?`,
               [now, now, regionalAttempt.attempt_id]
             )
@@ -7231,6 +6605,7 @@ export class RelayAssignmentStore {
         })
         .catch((error: unknown): boolean => {
           // Expiry is durable; another director settling this row is not a failure.
+          // Invariant failures remain fatal so operators see corrupt migration state.
           if (!isDatabaseLockUnavailable(error)) throw error
           inventoryBusy++
           return false
@@ -8646,34 +8021,6 @@ function noteRegionalRehomeActivityCountsRepaired(attemptId: string): void {
   )
 }
 
-function regionalRehomeAttempt(row: SqlRow): RegionalRehomeAttempt {
-  return {
-    ...(row.source_generation != null
-      ? {
-          retention: {
-            mode: 'finish-existing' as const,
-            attemptId: text(row, 'attempt_id'),
-            sourceGeneration: Number(row.source_generation),
-            sourceAssignmentEpoch: integer(row, 'previous_epoch')
-          }
-        }
-      : {}),
-    attemptId: text(row, 'attempt_id'),
-    userId: text(row, 'user_id'),
-    relayHostId: text(row, 'relay_host_id'),
-    preferredRegion: relayRegion(row, 'preferred_region'),
-    sourceCellId: text(row, 'source_cell_id'),
-    sourceCellUrl: text(row, 'source_cell_url'),
-    sourceCellIncarnation: text(row, 'source_cell_incarnation'),
-    targetCellId: text(row, 'target_cell_id'),
-    targetCellIncarnation: text(row, 'target_cell_incarnation'),
-    previousEpoch: integer(row, 'previous_epoch'),
-    assignmentEpoch: integer(row, 'assignment_epoch'),
-    drainGraceMs: integer(row, 'drain_grace_ms'),
-    sendAttempts: integer(row, 'send_attempts')
-  }
-}
-
 function regionalRehomeControl(row: SqlRow): RegionalRehomeControl {
   return {
     generation: integer(row, 'generation'),
@@ -8687,17 +8034,6 @@ function regionalRehomeControl(row: SqlRow): RegionalRehomeControl {
   }
 }
 
-function cleanRegionalRehomeSafety(now: number): RegionalRehomeSafetySnapshot {
-  return {
-    observedAt: now,
-    sqlFailures: 0,
-    reconnects: 0,
-    controlActivityRecoveryFailures: 0,
-    databasePoolWaiting: 0,
-    databasePoolWaitersMax: 0,
-    databasePoolWaitMsMax: 0
-  }
-}
 
 function regionalRehomeFleetSafetyFromInventory(input: {
   cells: SqlRow[]
@@ -8819,23 +8155,6 @@ function cellUncleanSkip(
 // Candidate skips are otherwise invisible: they neither latch the control off
 // nor produce attempts, so an operator cannot tell "skipping" from "idle".
 // Cell ids and counters only — never free-form error text.
-function aggregateRegionalRehomeCandidateSkips(
-  skips: readonly RegionalRehomeCandidateSkip[]
-): Record<string, unknown> {
-  // `candidates` counts skipped candidate iterations, not distinct cells: one
-  // unclean cell blocking six candidates reports candidates=6 on one cellId.
-  const aggregated = new Map<string, RegionalRehomeCandidateSkip & { candidates: number }>()
-  for (const skip of skips) {
-    const key = `${skip.reason}:${skip.cellId ?? ''}`
-    const entry = aggregated.get(key)
-    if (entry) entry.candidates += 1
-    else aggregated.set(key, { ...skip, candidates: 1 })
-  }
-  return {
-    event: 'orca_relay_regional_rehome_candidates_skipped',
-    skips: [...aggregated.values()]
-  }
-}
 
 function regionalRehomeCellSafetyIsClean(
   safety: SqlRow | undefined,

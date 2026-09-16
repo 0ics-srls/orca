@@ -178,7 +178,10 @@ async function probePath(
         redirect: 'error',
         signal: AbortSignal.timeout(8_000)
       })
-      return { ok: response.ok, latencyMs: Math.round(performance.now() - startedAt) }
+      const reading = { ok: response.ok, latencyMs: Math.round(performance.now() - startedAt) }
+      // Only headers decide health; release the body without delaying or replacing that verdict.
+      void response.body?.cancel().catch(() => {})
+      return reading
     } catch {
       return null
     }

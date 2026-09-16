@@ -75,25 +75,12 @@ describe('relay correction mixed-version wire contracts', () => {
       appVersion: 'test'
     }
     expect(BaselineHello.parse(HostHelloSchema.parse(hello))).toEqual(hello)
-    expect(BaselineHello.safeParse({ ...hello, finishExistingRegionalRehome: true }).success).toBe(
-      false
-    )
+    expect(BaselineHello.safeParse({ ...hello, idleRegionalRehome: true }).success).toBe(false)
   })
 
-  it('an old drain parser accepts maintenance frames but requires retention negotiation', () => {
-    const drain = { recovery: 'resolve-director', graceMs: 60_000 }
-    expect(BaselineDrain.safeParse(drain).success).toBe(true)
-    expect(
-      BaselineDrain.safeParse({
-        ...drain,
-        retention: {
-          mode: 'finish-existing',
-          attemptId: '33333333-3333-4333-8333-333333333333',
-          sourceGeneration: 1,
-          sourceAssignmentEpoch: 3
-        }
-      }).success
-    ).toBe(false)
+  it('the idle cutover uses a drain frame understood by the pinned old desktop', () => {
+    const drain = { recovery: 'resolve-director', graceMs: 0 }
+    expect(BaselineDrain.parse(drain)).toEqual(drain)
   })
 
   it.each([

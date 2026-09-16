@@ -9,7 +9,7 @@ const REHOME_CONFIG =
 
 // Only cells listed as regional rehome sources get rehome trust lines in their startup script.
 function rehomeProtocol({ regionalRehomeProtocol }) {
-  if (![0, 1, '0', '1'].includes(regionalRehomeProtocol)) {
+  if (![0, 1, 3, '0', '1', '3'].includes(regionalRehomeProtocol)) {
     throw new Error('same-cap Terraform plan has an invalid regional rehome protocol')
   }
   return Number(regionalRehomeProtocol)
@@ -26,8 +26,8 @@ export function parseCapacityPlanArguments(argv) {
   for (const key of ['mode', 'cell-id', 'hard-cap', 'unobserved-bound']) {
     if (!values[key]) throw new Error(`missing --${key}`)
   }
-  if (!['cell', 'bootstrap-cell', 'same-cap-cell', 'same-cap-image'].includes(values.mode)) {
-    throw new Error('--mode must be cell, bootstrap-cell, same-cap-cell, or same-cap-image')
+  if (!['cell', 'bootstrap-cell', 'same-cap-cell', 'same-cap-image', 'pool-canary-cell'].includes(values.mode)) {
+    throw new Error('--mode must be cell, bootstrap-cell, same-cap-cell, same-cap-image, or pool-canary-cell')
   }
   const integer = (key) => {
     const value = Number(values[key])
@@ -39,17 +39,25 @@ export function parseCapacityPlanArguments(argv) {
     throw new Error('missing --capacity-service-account')
   }
   if (
-    values.mode === 'same-cap-cell' &&
+    ['same-cap-cell', 'pool-canary-cell'].includes(values.mode) &&
     (!values['rollback-image'] ||
       !values['rehome-director-service-account'] ||
       !values['rehome-audience'] ||
-      !['0', '1'].includes(values['regional-rehome-protocol']))
-  ) throw new Error('same-cap validation requires rollback image and rehome trust config')
-  if (values.mode !== 'same-cap-cell' && values['regional-rehome-protocol'] !== undefined) {
+      !['0', '1', '3'].includes(values['regional-rehome-protocol']))
+  ) throw new Error('cell transition validation requires rollback image and rehome trust config')
+  if (!['same-cap-cell', 'pool-canary-cell'].includes(values.mode) && values['regional-rehome-protocol'] !== undefined) {
     throw new Error('--regional-rehome-protocol applies only to same-cap-cell validation')
   }
   if (values.mode === 'same-cap-image' && !values['rollback-image']) {
     throw new Error('same-cap image validation requires a rollback image')
+  }
+  if (values.mode === 'pool-canary-cell' && !values['rollback-image']) {
+    throw new Error('pool canary validation requires the rollback image')
+  }
+  const pool = values.mode === 'pool-canary-cell' ? integer('pool') : undefined
+  const rollbackPool = values.mode === 'pool-canary-cell' ? integer('rollback-pool') : undefined
+  if (values.mode === 'pool-canary-cell' && !((pool === 14 && rollbackPool === 10) || (pool === 10 && rollbackPool === 14))) {
+    throw new Error('pool canary must change exactly between 10 and 14')
   }
   if (
     values['capacity-service-account'] !== undefined &&
@@ -67,7 +75,9 @@ export function parseCapacityPlanArguments(argv) {
     rollbackImage: values['rollback-image'],
     rehomeDirectorServiceAccount: values['rehome-director-service-account'],
     rehomeAudience: values['rehome-audience'],
-    regionalRehomeProtocol: values['regional-rehome-protocol']
+    regionalRehomeProtocol: values['regional-rehome-protocol'],
+    pool,
+    rollbackPool
   }
 }
 
@@ -133,7 +143,7 @@ function canonicalResourcePaths(change, paths) {
 }
 
 function bootstrapRestartNormalizationPaths(change, mode) {
-  if (!['bootstrap-cell', 'same-cap-cell', 'same-cap-image'].includes(mode)) return []
+  if (!['bootstrap-cell', 'same-cap-cell', 'same-cap-image', 'pool-canary-cell'].includes(mode)) return []
   const policyMatches =
     valueAtPath(change.change.before, 'update_policy.0.minimal_action') === 'RESTART' &&
     valueAtPath(change.change.after, 'update_policy.0.minimal_action') === 'REPLACE'
@@ -182,7 +192,8 @@ function normalizedStartupScript(
   script,
   stripCapacityIdentity = false,
   stripRehomeConfig = false,
-  preserveCapacity = false
+  preserveCapacity = false,
+  stripPool = false
 ) {
   const image = relayImage(script)
   if (!image) throw new Error('cell plan startup script has no Relay image')
@@ -196,6 +207,7 @@ function normalizedStartupScript(
     .filter(
       (line) =>
         (preserveCapacity || !capacityAssignment.test(line)) &&
+        (!stripPool || !/^  printf 'ORCA_RELAY_DATABASE_POOL_MAX=%s\\n' '[0-9]+'$/.test(line)) &&
         (!stripCapacityIdentity || !capacityIdentity.test(line)) &&
         (!stripRehomeConfig || !REHOME_CONFIG.test(line))
     )
@@ -221,13 +233,17 @@ function requireDesiredStartupScript(script, config) {
       `  printf 'ORCA_RELAY_CELL_CONNECTION_UNOBSERVED_BOUND=%s\\n' '${config.unobservedBound}'`
     ]
   ]
+  if (config.mode === 'pool-canary-cell') expected.push([
+    /^  printf 'ORCA_RELAY_DATABASE_POOL_MAX=%s\\n' '[0-9]+'$/,
+    `  printf 'ORCA_RELAY_DATABASE_POOL_MAX=%s\\n' '${config.pool}'`
+  ])
   if (config.mode === 'bootstrap-cell') {
     expected.push([
       /^  printf 'ORCA_RELAY_CAPACITY_SERVICE_ACCOUNT=%s\\n' '[a-z][a-z0-9-]{4,28}[a-z0-9]@[a-z0-9-]+\.iam\.gserviceaccount\.com'$/,
       `  printf 'ORCA_RELAY_CAPACITY_SERVICE_ACCOUNT=%s\\n' '${config.capacityServiceAccount}'`
     ])
   }
-  const rehomeTrusted = config.mode === 'same-cap-cell' && rehomeProtocol(config) === 1
+  const rehomeTrusted = config.mode === 'same-cap-cell' && rehomeProtocol(config) >= 1
   if (rehomeTrusted) {
     expected.push(
       [
@@ -420,7 +436,15 @@ function cellPlan(plan, changes, config) {
   const beforeScript = template.change.before?.metadata_startup_script
   const script = template.change.after?.metadata_startup_script
   requireDesiredStartupScript(script, config)
-  const sameCap = ['same-cap-cell', 'same-cap-image'].includes(config.mode)
+  if (config.mode === 'pool-canary-cell') {
+    const predecessor = typeof beforeScript === 'string'
+      ? /^  printf 'ORCA_RELAY_DATABASE_POOL_MAX=%s\\n' '([0-9]+)'$/m.exec(beforeScript)?.[1]
+      : undefined
+    if (Number(predecessor) !== config.rollbackPool) {
+      throw new Error('pool canary plan does not contain the exact predecessor pool')
+    }
+  }
+  const sameCap = ['same-cap-cell', 'same-cap-image', 'pool-canary-cell'].includes(config.mode)
   if (
     typeof beforeScript !== 'string' ||
     (sameCap && relayImage(beforeScript) !== config.rollbackImage) ||
@@ -428,12 +452,14 @@ function cellPlan(plan, changes, config) {
       beforeScript,
       config.mode === 'bootstrap-cell',
       config.mode === 'same-cap-cell',
-      sameCap
+      sameCap,
+      config.mode === 'pool-canary-cell'
     ) !== normalizedStartupScript(
       script,
       config.mode === 'bootstrap-cell',
       config.mode === 'same-cap-cell',
-      sameCap
+      sameCap,
+      config.mode === 'pool-canary-cell'
     )
   ) {
     throw new Error('cell plan does not contain the reviewed image and capacity')
@@ -462,7 +488,7 @@ function convergenceCellPlan(plan, changes, config) {
 }
 
 export function validateCapacityPlan(plan, config) {
-  if (!['cell', 'bootstrap-cell', 'same-cap-cell', 'same-cap-image'].includes(config.mode)) {
+  if (!['cell', 'bootstrap-cell', 'same-cap-cell', 'same-cap-image', 'pool-canary-cell'].includes(config.mode)) {
     throw new Error('capacity Terraform plans may change only a cell')
   }
   if (
@@ -471,15 +497,20 @@ export function validateCapacityPlan(plan, config) {
   ) {
     throw new Error('capacity Terraform plan has an invalid service account')
   }
-  if (config.mode === 'same-cap-cell') {
+  if (['same-cap-cell', 'pool-canary-cell'].includes(config.mode)) {
     rehomeProtocol(config)
   }
   if (
-    config.mode === 'same-cap-cell' &&
+    ['same-cap-cell', 'pool-canary-cell'].includes(config.mode) &&
     (!SERVICE_ACCOUNT_EMAIL.test(config.rehomeDirectorServiceAccount ?? '') ||
       !/^https:\/\/[^/]+\/v1\/admin\/host-drain$/.test(config.rehomeAudience ?? '') ||
       !/^.+@sha256:[a-f0-9]{64}$/.test(config.rollbackImage ?? ''))
   ) throw new Error('same-cap Terraform plan has invalid rehome trust config')
+  if (config.mode === 'pool-canary-cell' &&
+      (!/^.+@sha256:[a-f0-9]{64}$/.test(config.rollbackImage ?? '') ||
+       !((config.pool === 14 && config.rollbackPool === 10) || (config.pool === 10 && config.rollbackPool === 14)))) {
+    throw new Error('pool canary Terraform plan has invalid pool or rollback image')
+  }
   if (
     config.mode === 'same-cap-image' &&
     !/^.+@sha256:[a-f0-9]{64}$/.test(config.rollbackImage ?? '')

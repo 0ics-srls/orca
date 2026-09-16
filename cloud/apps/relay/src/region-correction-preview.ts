@@ -47,7 +47,7 @@ export async function previewRegionalRehomeEligibility(input: {
          AND runtime.cell_incarnation = host_capability.cell_incarnation
        WHERE host_capability.user_id = assignment.user_id AND host_capability.relay_host_id = assignment.relay_host_id
          AND host_capability.cell_id = assignment.cell_id AND host_capability.assignment_epoch = assignment.assignment_epoch
-         AND host_capability.finish_existing = 1 AND lease.activity_kind = 'control'
+         AND host_capability.idle_regional_rehome = 1 AND lease.activity_kind = 'control'
          AND lease.activity_id NOT LIKE 'control-pending:%' AND lease.expires_at > ?
          AND lease.updated_at >= runtime.started_at) AS capable_controls
       FROM relay_assignments assignment LEFT JOIN relay_region_decisions decision
@@ -91,7 +91,7 @@ export async function previewRegionalRehomeEligibility(input: {
       Number(runtime.last_heartbeat_at) > now - input.heartbeatTtlMs &&
       capability !== undefined &&
       capability.cell_incarnation === runtime.cell_incarnation &&
-      Number(capability.regional_rehome_protocol) >= 2
+      Number(capability.regional_rehome_protocol) >= 3
     )
   }
   for (const host of hosts) {

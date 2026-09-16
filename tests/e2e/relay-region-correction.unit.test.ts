@@ -3,10 +3,14 @@ import { once } from 'node:events'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import nacl from 'tweetnacl'
 import WebSocket from 'ws'
-import { openInMemoryRelayDatabase } from '../../cloud/apps/relay/src/database'
+import type { IdleRegionalRehomeRequest } from '../../cloud/packages/relay-contract/src/idle-regional-rehome'
+import {
+  openInMemoryRelayDatabase,
+  readRelayDatabasePoolPressure
+} from '../../cloud/apps/relay/src/database'
 import { createRelayServer } from '../../cloud/apps/relay/src/relay-server'
 import type { RelayConfig } from '../../cloud/apps/relay/src/config'
-import type { RelayControlOrigin } from '../../src/main/runtime/relay/relay-control-origin'
+import type * as AdminTokenVerifier from '../../cloud/apps/relay/src/admin-token-verifier'
 import { RelayOriginPool } from '../../src/main/runtime/relay/relay-origin-pool'
 import { RELAY_HOST_CAPABILITY_HEADERS } from '../../src/main/runtime/relay/relay-control-protocol'
 import type { MobileSocketTransport } from '../../src/main/runtime/rpc/mobile-socket-wiring'
@@ -22,6 +26,11 @@ vi.mock('../../cloud/apps/relay/src/relay-token-verifier', () => ({
     exp: 4_102_444_800
   }),
   readBearer: (value: string | undefined) => value?.replace(/^Bearer /, '') ?? null
+}))
+
+vi.mock('../../cloud/apps/relay/src/admin-token-verifier', async (importOriginal) => ({
+  ...(await importOriginal<typeof AdminTokenVerifier>()),
+  createRegionalRehomeTokenVerifier: () => async (token: string) => token === 'test-director-token'
 }))
 
 const cleanups: (() => Promise<void>)[] = []
@@ -88,6 +97,8 @@ async function topology() {
         assignmentSigningKey: new Uint8Array(32),
         adminAudience: 'https://director.example.test/v1/admin/drain',
         deployServiceAccount: 'deploy@example.test',
+        rehomeAudience: 'https://director.example.test/v1/admin/host-drain',
+        rehomeDirectorServiceAccount: 'director@example.test',
         databasePoolMax: 1,
         publicAssignmentsEnabled: true,
         publicAssignmentConcurrency: 2,
@@ -126,8 +137,22 @@ async function topology() {
   })
   await source.assignments.reconcileCells(cells)
   const startedAt = clock - 1_000
+  const safety = () => ({
+    observedAt: clock,
+    sqlFailures: 0,
+    reconnects: 0,
+    controlActivityRecoveryFailures: 0,
+    databasePoolWaiting: 0,
+    databasePoolWaitersMax: 0,
+    databasePoolWaitMsMax: 0
+  })
   const heartbeat = async () => {
     for (const [index, cell] of cells.entries()) {
+      const relay = servers[index]!
+      relay.observability.flush({
+        ...relay.runtimeCounts(),
+        ...readRelayDatabasePoolPressure(database)
+      })
       await source.assignments.recordCellHeartbeat({
         cellId: cell.id,
         cellUrl: cell.url,
@@ -140,7 +165,7 @@ async function topology() {
       await source.assignments.recordCellRegionalRehomeStatus({
         cellId: cell.id,
         cellIncarnation: incarnations[index]!,
-        regionalRehomeProtocol: 2,
+        regionalRehomeProtocol: 3,
         safety: {
           observedAt: clock,
           sqlFailures: 0,
@@ -173,6 +198,7 @@ async function topology() {
   let pauseCorroboration = false
   let corroborationFailures = 0
   let rejectTargetControls = false
+  let targetControlFailures = 0
   const executionErrors: unknown[] = []
   let delayedReply: (() => void) | null = null
   const received: string[] = []
@@ -206,6 +232,7 @@ async function topology() {
     } as never,
     createControlSocket: (url, token) => {
       if (rejectTargetControls && new URL(url).host === new URL(cells[1]!.url).host) {
+        targetControlFailures++
         throw new Error('simulated_target_unavailable')
       }
       const socket = connect(url, {
@@ -277,7 +304,8 @@ async function topology() {
     expect(JSON.parse(raw.toString())).toMatchObject({ type: 'relay-hello', ok: true })
     return socket
   }
-  const move = async (expectTarget = true) => {
+  let candidate: (IdleRegionalRehomeRequest & { sourceCellUrl: string }) | undefined
+  const prepareMove = async () => {
     const issued = await source.assignments.exchangeRegionCorrection(
       identity,
       { v: 1, action: 'issue-window' },
@@ -296,56 +324,24 @@ async function topology() {
       },
       assignment.assignmentEpoch
     )
-    const attempt = await source.assignments.claimRegionalRehome()
-    expect(attempt?.retention).toBeDefined()
-    const outcome = await source.sessions.drainHost({
-      ...identity,
-      attemptId: attempt!.attemptId,
-      sourceAssignmentEpoch: assignment.assignmentEpoch,
-      sourceCellIncarnation: incarnations[0],
-      graceMs: 0,
-      retention: attempt!.retention
-    })
-    await source.assignments.recordRegionalRehomeDrainReceipt(attempt!.attemptId, outcome)
-    if (expectTarget) {
-      await expect.poll(() => pool.activeAssignment?.cellUrl).toBe(cells[1]!.url)
-    }
-    return attempt!
+    candidate = (await source.assignments.selectIdleRegionalRehomeCandidates(safety()))[0]
+    expect(candidate).toBeDefined()
+    return candidate!
   }
-  const tick = async (sourceOnly = false) => {
-    const desktop = pool as unknown as {
-      activeOrigin: RelayControlOrigin
-      rotation: { rebind(origin: RelayControlOrigin): Promise<void> }
+  const move = async () => {
+    if (!candidate) {
+      await prepareMove()
     }
-    if (!sourceOnly && desktop.activeOrigin.controlLeaseExpiresAt - clock < 60_000) {
-      // Advance the production rotation callback alongside the synthetic cell clock.
-      await desktop.rotation.rebind(desktop.activeOrigin)
-    }
-    clock += 30_000
-    for (const relay of sourceOnly ? [source] : servers) {
-      const session = relay.sessions.get(identity)
-      if (!session) {
-        continue
-      }
-      session.lastPongAt = clock
-      const authority = session.authorityRevision
-      ;(relay.sessions as unknown as { heartbeat(value: typeof session): void }).heartbeat(session)
-      const attempt = session.activityRenewalAttempt
-      await expect
-        .poll(
-          () =>
-            session.activityRenewalCompletedAttempt >= attempt ||
-            session.authorityRevision > authority,
-          { interval: 1 }
-        )
-        .toBe(true)
-      expect(session.state).not.toBe('closed')
-      expect(session.leaseExpiresAt).toBeGreaterThan(clock)
-    }
-    await heartbeat()
-    if (!sourceOnly) {
-      await source.assignments.refreshRegionalRehomeLeases()
-    }
+    const { sourceCellUrl, ...request } = candidate!
+    const address = endpoints.get(new URL(sourceCellUrl).host)!.replace('ws:', 'http:')
+    const response = await fetch(`${address}/v1/admin/host-idle-rehome`, {
+      method: 'POST',
+      headers: { authorization: 'Bearer test-director-token', 'content-type': 'application/json' },
+      body: JSON.stringify({ ...request, cohortPercent: 100, directorSafety: safety() })
+    })
+    const body = (await response.json()) as { v: number; outcome: string }
+    expect(response.status, JSON.stringify(body)).toBe(200)
+    return { outcome: body.outcome }
   }
   return {
     source,
@@ -355,8 +351,9 @@ async function topology() {
     database,
     cells,
     attachPhone,
+    connectDevice: () => connect(`${cells[0]!.url}/v1/connect/${hostId}`),
     move,
-    tick,
+    prepareMove,
     heartbeat,
     now: () => clock,
     advance: (ms: number) => {
@@ -370,6 +367,7 @@ async function topology() {
       pauseCorroboration = paused
     },
     corroborationFailures: () => corroborationFailures,
+    targetControlFailures: () => targetControlFailures,
     failTarget: () => {
       rejectTargetControls = true
       const session = target.sessions.get(identity)
@@ -397,125 +395,125 @@ async function echo(socket: WebSocket, value: string) {
   expect(raw.toString()).toBe(`host:${marker}`)
 }
 
-describe('region correction across real relay and desktop WebSockets', () => {
-  it('keeps quiet and active old connections while new connections use target, without replaying a mutation', async () => {
+describe('idle region correction across real relay and desktop WebSockets', () => {
+  it('releases the empty source and recovers normally when the target never registers', async () => {
     const context = await topology()
-    const first = await context.attachPhone(0, 'phone-one')
-    const quiet = await context.attachPhone(0, 'phone-two')
-    const sourceSession = context.source.sessions.get(context.identity)!
-    const originalSocket = sourceSession.socket
-    const generation = sourceSession.generation
-    await echo(first, 'before-move')
-    first.send('mutation-1')
-    await expect.poll(context.mutations).toBe(1)
-    await context.move()
-    expect(context.source.sessions.get(context.identity)).toBe(sourceSession)
-    expect(sourceSession.socket).toBe(originalSocket)
-    expect(sourceSession.generation).toBe(generation)
-    expect(sourceSession.activeSplices.size).toBe(2)
-    const initialLeaseExpiry = sourceSession.leaseExpiresAt
-    for (let index = 0; index < 782; index++) {
-      await context.tick()
-    }
-    expect(context.now()).toBeGreaterThan(initialLeaseExpiry)
-    expect(context.source.sessions.get(context.identity)).toBe(sourceSession)
-    expect(sourceSession.socket).toBe(originalSocket)
-    expect(sourceSession.generation).toBe(generation)
-    expect(sourceSession.leaseExpiresAt).toBeGreaterThan(context.now())
-    const third = await context.attachPhone(1, 'phone-three')
-    await echo(third, 'target-new-connection')
-    await echo(first, 'source-after-move')
-    const acknowledged = once(first, 'message')
-    context.reply()
-    expect((await acknowledged)[0].toString()).toBe('mutation-1-ack')
-    expect(await context.mutations()).toBe(1)
-    await echo(quiet, 'quiet-source-still-live')
-    first.close()
-    quiet.close()
+    await context.prepareMove()
+    context.failTarget()
+    expect(await context.move()).toEqual({ outcome: 'committed' })
+    await expect.poll(() => context.source.sessions.get(context.identity)).toBeNull()
     await expect
-      .poll(() => context.source.sessions.get(context.identity)?.activeSplices.size ?? 0)
-      .toBe(0)
-    await expect
-      .poll(
-        async () => {
-          const rows = await context.database.query(
-            'SELECT COUNT(*) AS count FROM relay_assignment_activity_leases WHERE cell_id = ? AND activity_kind = ?',
-            [context.cells[0]!.id, 'control']
-          )
-          return Number(rows[0]!.count)
-        },
-        { timeout: 35_000 }
+      .poll(async () =>
+        context.database.query(
+          `SELECT activity_id FROM relay_assignment_activity_leases
+       WHERE user_id = ? AND relay_host_id = ? AND cell_id = ?`,
+          [context.identity.userId, context.identity.relayHostId, context.cells[0]!.id]
+        )
       )
-      .toBe(0)
-    expect(await context.source.assignments.completeReadyRegionalRehomes()).toBe(1)
-    await echo(third, 'target-after-source-retired')
+      .toEqual([])
+    await expect.poll(context.targetControlFailures).toBeGreaterThan(0)
+    context.advance(15 * 60_000 + 1)
+    await context.heartbeat()
+    expect(await context.source.assignments.abortExpiredEvacuations()).toBe(1)
+    expect(await context.source.assignments.resolve(context.identity)).toMatchObject({
+      cellId: context.cells[0]!.id,
+      assignmentEpoch: 3
+    })
+    await expect
+      .poll(() => context.pool.activeAssignment?.cellUrl, { timeout: 15_000 })
+      .toBe(context.cells[0]!.url)
+    await expect
+      .poll(() => context.source.sessions.get(context.identity)?.state, { timeout: 15_000 })
+      .toBe('active')
+    const returning = await context.attachPhone(0, 'phone-after-target-failure')
+    await echo(returning, 'after-target-failure')
+    expect(await context.mutations()).toBe(0)
     expect(context.executionErrors).toEqual([])
-    expect(context.execution.sequence()).toBe(6)
-  }, 90_000)
-  it('restores the retained source after target failure despite the first failed director corroboration', async () => {
+  }, 30_000)
+
+  it('rejects an arrival during cutover and restores admissions after a definite failed commit', async () => {
     const context = await topology()
-    const phone = await context.attachPhone(0, 'rollback-phone')
+    await context.prepareMove()
+    const original = context.source.sessions.get(context.identity)!
+    let entered!: () => void
+    let release!: () => void
+    const committing = new Promise<void>((resolve) => {
+      entered = resolve
+    })
+    const gate = new Promise<void>((resolve) => {
+      release = resolve
+    })
+    vi.spyOn(context.source.assignments, 'commitIdleRegionalRehome').mockImplementationOnce(
+      async () => {
+        entered()
+        await gate
+        throw new Error('simulated_database_unavailable_before_commit')
+      }
+    )
+    const move = context.move()
+    await committing
+    try {
+      const invite = await context.source.store.createInvite(context.identity, 'racing-phone')
+      const arriving = context.connectDevice()
+      const rejected = once(arriving, 'close')
+      await once(arriving, 'open')
+      arriving.send(
+        JSON.stringify({
+          type: 'relay-auth',
+          v: 1,
+          mode: 'connect',
+          credential: invite.inviteToken
+        })
+      )
+      expect((await rejected)[0]).toBe(4409)
+      expect(context.source.sessions.get(context.identity)).toBe(original)
+    } finally {
+      release()
+      await move
+    }
+    expect(await move).toEqual({ outcome: 'deferred' })
+    expect(context.source.sessions.get(context.identity)).toBe(original)
+    const returning = await context.attachPhone(0, 'retrying-phone')
+    await echo(returning, 'after-definite-abort')
+    expect(await context.mutations()).toBe(0)
+    expect(context.executionErrors).toEqual([])
+  }, 30_000)
+
+  it('defers for either connected device, then moves after both disconnect without replaying work', async () => {
+    const context = await topology()
+    const phone = await context.attachPhone(0, 'phone')
+    const tablet = await context.attachPhone(0, 'tablet')
     const sourceSession = context.source.sessions.get(context.identity)!
-    const socket = sourceSession.socket
-    const generation = sourceSession.generation
+    await echo(phone, 'before-cutover')
     phone.send('mutation-1')
     await expect.poll(context.mutations).toBe(1)
-    await context.move()
-    const initialLeaseExpiry = sourceSession.leaseExpiresAt
-    for (let index = 0; index < 782; index++) {
-      await context.tick()
-    }
-    expect(context.now()).toBeGreaterThan(initialLeaseExpiry)
-    context.failTarget()
-    await expect
-      .poll(() => context.target.sessions.get(context.identity), { timeout: 35_000 })
-      .toBeNull()
-    for (let index = 0; index < 32; index++) {
-      await context.tick(true)
-    }
-    await context.source.assignments.refreshRegionalRehomeLeases()
-    expect(await context.source.assignments.abortExpiredEvacuations()).toBe(1)
-    expect(sourceSession.socket).toBe(socket)
-    context.failNextCorroboration()
-    context.pauseCorroboration(true)
-    await context.tick(true)
-    expect(sourceSession.regionalRestoration).not.toBeNull()
-    expect(sourceSession.assignmentEpoch).toBeGreaterThan(2)
-    await expect.poll(context.corroborationFailures, { timeout: 10_000 }).toBeGreaterThan(0)
-    const firstRestoredGrant = sourceSession.leaseExpiresAt
-    for (let index = 0; index < 5; index++) {
-      const failures = context.corroborationFailures()
-      await context.tick(true)
-      await expect
-        .poll(context.corroborationFailures, { timeout: 15_000 })
-        .toBeGreaterThan(failures)
-    }
-    expect(context.now()).toBeGreaterThan(firstRestoredGrant)
-    expect(sourceSession.regionalRestoration).not.toBeNull()
-    expect(sourceSession.socket).toBe(socket)
-    await echo(phone, 'source-awaiting-director-corroboration')
-    context.pauseCorroboration(false)
-    await context.tick(true)
-    await expect
-      .poll(() => context.pool.activeAssignment?.cellUrl, { timeout: 35_000 })
-      .toBe(context.cells[0]!.url)
+    expect(await context.move()).toEqual({ outcome: 'busy' })
     expect(context.source.sessions.get(context.identity)).toBe(sourceSession)
-    // Restoration schedules ordinary renewal, which replaces only the control socket.
-    await expect.poll(() => sourceSession.regionalRestoration, { timeout: 15_000 }).toBeNull()
-    expect(sourceSession.socket).not.toBe(socket)
-    expect(sourceSession.generation).toBe(generation)
-    expect(sourceSession.activeSplices.size).toBe(1)
-    for (let index = 0; index < 5; index++) {
-      await context.tick(true)
-    }
-    await echo(phone, 'source-after-rollback-and-old-short-grant')
+    expect((await context.source.assignments.resolve(context.identity))?.cellId).toBe(
+      context.cells[0]!.id
+    )
     const acknowledged = once(phone, 'message')
     context.reply()
     expect((await acknowledged)[0].toString()).toBe('mutation-1-ack')
+    const phoneClosed = once(phone, 'close')
+    phone.close()
+    await phoneClosed
+    await expect.poll(() => sourceSession.activeSplices.size).toBe(1)
+    expect(await context.move()).toEqual({ outcome: 'busy' })
+    await echo(tablet, 'quiet-tablet-still-connected')
+    const tabletClosed = once(tablet, 'close')
+    tablet.close()
+    await tabletClosed
+    await expect.poll(() => sourceSession.activeSplices.size).toBe(0)
+    expect(await context.move()).toEqual({ outcome: 'committed' })
+    await expect
+      .poll(() => context.pool.activeAssignment?.cellUrl, { timeout: 15_000 })
+      .toBe(context.cells[1]!.url)
+    await expect.poll(() => context.source.sessions.get(context.identity)).toBeNull()
+    const returning = await context.attachPhone(1, 'returning-phone')
+    await echo(returning, 'after-idle-cutover')
     expect(await context.mutations()).toBe(1)
-    const newPhone = await context.attachPhone(0, 'rollback-new-phone')
-    await echo(newPhone, 'new-source-admission-restored')
     expect(context.executionErrors).toEqual([])
     expect(context.execution.sequence()).toBe(4)
-  }, 120_000)
+  }, 30_000)
 })

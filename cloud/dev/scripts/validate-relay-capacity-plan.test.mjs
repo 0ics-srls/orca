@@ -756,6 +756,10 @@ test('the rehome protocol argument is required by same-cap-cell mode alone', () 
       .regionalRehomeProtocol,
     '0'
   )
+  assert.equal(
+    parseCapacityPlanArguments(sameCapArguments('--regional-rehome-protocol', '3')).regionalRehomeProtocol,
+    '3'
+  )
   assert.throws(
     () => parseCapacityPlanArguments(sameCapArguments()),
     /requires rollback image and rehome trust config/
@@ -778,4 +782,35 @@ test('the rehome protocol argument is required by same-cap-cell mode alone', () 
     ]),
     /applies only to same-cap-cell validation/
   )
+})
+
+test('pool-canary-cell requires exact predecessor and target pool assignments', () => {
+  const image = `us-docker.pkg.dev/project/relay/image@sha256:${'e'.repeat(64)}`
+  const rollbackImage = `us-docker.pkg.dev/project/relay/image@sha256:${'d'.repeat(64)}`
+  const startup = (pool, selectedImage) => [
+    `  printf 'ORCA_RELAY_CELL_CONNECTION_HARD_CAP=%s\\n' '3000'`,
+    `  printf 'ORCA_RELAY_CELL_CONNECTION_UNOBSERVED_BOUND=%s\\n' '60'`,
+    `  printf 'ORCA_RELAY_DATABASE_POOL_MAX=%s\\n' '${pool}'`,
+    'docker run --detach \\', '  --name orca-relay \\', `  '${selectedImage}'`
+  ].join('\n')
+  const template = {
+    address: 'google_compute_instance_template.relay_gce_cell["production-gce-c27"]',
+    change: { actions: ['create', 'delete'], before: { metadata_startup_script: startup(10, rollbackImage) },
+      after: { metadata_startup_script: startup(14, image), self_link: null }, after_unknown: { self_link: true } }
+  }
+  const manager = {
+    address: 'google_compute_instance_group_manager.relay_gce_cell["production-gce-c27"]',
+    change: { actions: ['update'], before: { target_size: 1, version: [{ instance_template: 'old' }] },
+      after: { target_size: 1, version: [{ instance_template: null }] }, after_unknown: { version: [{ instance_template: true }] } }
+  }
+  const config = { mode: 'pool-canary-cell', cellId: 'production-gce-c27', hardCap: 3000,
+    unobservedBound: 60, pool: 14, rollbackPool: 10, image, rollbackImage,
+    regionalRehomeProtocol: 0,
+    rehomeDirectorServiceAccount: 'relay-director@project.iam.gserviceaccount.com',
+    rehomeAudience: 'https://relay.example.com/v1/admin/host-drain' }
+  assert.deepEqual(validateCapacityPlan({ resource_changes: [template, manager] }, config),
+    { mode: 'pool-canary-cell', changes: 2 })
+  const wrong = structuredClone(template)
+  wrong.change.before.metadata_startup_script = startup(9, rollbackImage)
+  assert.throws(() => validateCapacityPlan({ resource_changes: [wrong, manager] }, config), /exact predecessor pool/)
 })

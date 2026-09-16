@@ -27,14 +27,17 @@ function cells(value) {
 }
 
 export function validateSameCapWave(input) {
-  if (!['verify', 'canary-apply', 'batch-apply', 'rollback'].includes(input.mode)) {
+  if (!['verify', 'canary-apply', 'batch-apply', 'rollback', 'pool-canary-apply', 'pool-canary-rollback'].includes(input.mode)) {
     throw new Error('same-cap wave mode is invalid')
   }
   const selected = cells(input.cellIds)
+  if (input.mode.startsWith('pool-canary-') && selected[0] !== 'production-gce-c27') {
+    throw new Error('pool canary is restricted to production-gce-c27')
+  }
   const targetDigest = digest(input.targetDigest, 'target digest')
   const rollbackDigest = digest(input.rollbackDigest, 'rollback digest')
   if (targetDigest === rollbackDigest) throw new Error('target and rollback digests must differ')
-  if (input.mode === 'canary-apply' && selected.length !== 1) {
+  if (['canary-apply', 'pool-canary-apply', 'pool-canary-rollback'].includes(input.mode) && selected.length !== 1) {
     throw new Error('canary mode requires exactly one cell')
   }
   if (input.mode === 'batch-apply' && (selected.length < 2 || selected.length > 4)) {
@@ -42,11 +45,11 @@ export function validateSameCapWave(input) {
   }
   // Later waves expect the selector to advance by exactly 2 per predecessor,
   // which a resumed rollback cell (isolate skipped, +1) violates.
-  if (input.mode === 'rollback' && selected.length !== 1) {
+  if (['rollback', 'pool-canary-rollback'].includes(input.mode) && selected.length !== 1) {
     throw new Error('rollback mode requires exactly one cell')
   }
   const mutation = input.mode !== 'verify'
-  const expectedConfirmation = input.mode === 'rollback'
+  const expectedConfirmation = ['rollback', 'pool-canary-rollback'].includes(input.mode)
     ? `ROLL_BACK_RELAY_SAME_CAP ${rollbackDigest} ${selected.join(',')}`
     : `ROLL_RELAY_SAME_CAP ${targetDigest} ${selected.join(',')}`
   if (mutation && input.confirmation !== expectedConfirmation) {
@@ -87,18 +90,21 @@ export function canaryAuthority(input) {
 }
 
 export function verifyCanaryAuthority(authority, expected, repositoryRoot) {
+  const selectorGeneration = Number(expected.selectorGeneration)
   if (
     authority?.v !== 1 ||
     !/^[0-9a-f]{40}$/.test(authority.commitSha ?? '') ||
     authority.runId !== expected.runId ||
     authority.targetDigest !== expected.targetDigest ||
     authority.rollbackDigest !== expected.rollbackDigest ||
-    authority.selectorGeneration !== Number(expected.selectorGeneration) ||
+    !Number.isSafeInteger(authority.selectorGeneration) ||
+    authority.selectorGeneration < 0 ||
+    !Number.isSafeInteger(selectorGeneration) ||
+    selectorGeneration < authority.selectorGeneration ||
     authority.rehomeGeneration !== Number(expected.rehomeGeneration) ||
     !SAME_CAP_CELLS.includes(authority.cellId)
   ) throw new Error('canary authority does not match this batch')
-  // The batch dispatch resolves main after the canary sealed, so bind to the same code, not the
-  // same SHA; every field above still pins this batch to that exact canary.
+  // Each cell checks exact live selector state; later batches may reuse this control epoch's canary.
   requireSameEvidenceCode({
     sealedSha: authority.commitSha,
     currentSha: expected.commitSha,

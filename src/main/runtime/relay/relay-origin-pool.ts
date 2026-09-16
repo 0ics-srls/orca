@@ -1,9 +1,8 @@
 import { RelayOriginRetirement } from './relay-origin-retirement'
-import { restoreRelayOrigin } from './relay-origin-restoration'
 import type { RelayOriginPoolOptions } from './relay-origin-pool-options'
 import { RelayControlOrigin } from './relay-control-origin'
 import type { RelayControlClient } from './relay-control-client'
-import type { RelayDrainMessage, RelayRegionRetention } from './relay-control-protocol'
+import type { RelayDrainMessage } from './relay-control-protocol'
 import type { RelayHostCloseReason } from '../../../shared/relay-host-close-reason'
 import { RelayDrainRetrySchedule } from './relay-drain-retry-schedule'
 import { RelayHttpError, requestRelayAssignment, type RelayAssignment } from './relay-http-client'
@@ -15,21 +14,17 @@ export class RelayOriginPool {
   private readonly retirement = new RelayOriginRetirement(
     () => this.activeOrigin,
     (origin) => {
-      this.retained.delete(origin)
       this.origins.delete(origin)
     }
   )
   private readonly drainingOrigins = this.retirement.draining
   private readonly basisOrigins = this.retirement.basis
-  private readonly retained = new Map<RelayControlOrigin, RelayRegionRetention>()
-  private authorityVersion = 0
   private assignment: RelayAssignment | null = null
   private deferredAssignment: RelayAssignment | null = null
   private relayJwt: string | null = null
   private readonly rotation: RelayControlRotation
   private rotationPromise: Promise<void> | null = null
   private readonly drainRetry: RelayDrainRetrySchedule
-  private readonly restoreRetry = new RelayDrainRetrySchedule()
   private closed = false
 
   constructor(private readonly options: RelayOriginPoolOptions) {
@@ -112,7 +107,6 @@ export class RelayOriginPool {
       origin.closeNow(hostCloseReason)
     }
     this.origins.clear()
-    this.retained.clear()
     this.activeOrigin = null
   }
 
@@ -134,22 +128,6 @@ export class RelayOriginPool {
       },
       onDrain: (origin, message) => this.handleDrain(origin, message),
       onPendingChanged: (origin) => this.retirement.maybeClose(origin),
-      onRegionRestored: (origin, message) =>
-        void restoreRelayOrigin(
-          {
-            ...this.options,
-            token: () => this.relayJwt,
-            assignment: () => this.assignment,
-            retained: this.retained,
-            retry: this.restoreRetry,
-            isCurrent: () => this.isCurrent(),
-            invalidateAuthority: () => ++this.authorityVersion,
-            authority: () => this.authorityVersion,
-            restore: (source, assignment) => this.restoreOrigin(source, assignment)
-          },
-          origin,
-          message
-        ),
       onClose: (origin) => {
         if (origin === this.activeOrigin && this.isCurrent()) {
           this.options.onStatus('offline')
@@ -167,7 +145,7 @@ export class RelayOriginPool {
     if (!this.isCurrent() || !this.origins.has(origin)) {
       return
     }
-    if (!this.retirement.adopt(origin, message, this.retained)) {
+    if (!this.retirement.adopt(origin, message)) {
       return
     }
     this.options.onStatus('draining')
@@ -182,7 +160,6 @@ export class RelayOriginPool {
     origin: RelayControlOrigin,
     message: RelayDrainMessage
   ): Promise<void> {
-    const authorityVersion = this.authorityVersion
     try {
       if (!this.relayJwt) {
         throw new Error('relay_authorization_unavailable')
@@ -202,9 +179,6 @@ export class RelayOriginPool {
         fetch: this.options.fetch
       })
       this.assertCurrent()
-      if (authorityVersion !== this.authorityVersion) {
-        return
-      }
       if (
         this.deferredAssignment &&
         this.deferredAssignment.assignmentEpoch > assignment.assignmentEpoch
@@ -213,9 +187,6 @@ export class RelayOriginPool {
       }
       this.deferredAssignment = null
       if (assignment.cellUrl === origin.cellUrl) {
-        if (this.retained.has(origin)) {
-          throw new Error('relay_retained_source_not_restored')
-        }
         let rebound = false
         try {
           await origin.rebind(this.relayJwt, assignment)
@@ -223,13 +194,7 @@ export class RelayOriginPool {
         } catch {
           // Why: a restarted cell cannot know the prior process's resume secret;
           // after rebind fails, a fresh generation is the only recoverable path.
-          await this.activateTarget(
-            origin,
-            assignment,
-            this.relayJwt,
-            message.graceMs,
-            authorityVersion
-          )
+          await this.activateTarget(origin, assignment, this.relayJwt, message.graceMs)
         }
         if (rebound) {
           this.assertCurrent()
@@ -238,13 +203,7 @@ export class RelayOriginPool {
           this.drainingOrigins.delete(origin)
         }
       } else {
-        await this.activateTarget(
-          origin,
-          assignment,
-          this.relayJwt,
-          message.graceMs,
-          authorityVersion
-        )
+        await this.activateTarget(origin, assignment, this.relayJwt, message.graceMs)
       }
       this.options.onStatus('registered')
       this.drainRetry.reset()
@@ -267,20 +226,13 @@ export class RelayOriginPool {
     origin: RelayControlOrigin,
     assignment: RelayAssignment,
     relayJwt: string,
-    graceMs: number,
-    authorityVersion = this.authorityVersion
+    graceMs: number
   ): Promise<void> {
-    if ([...this.retained.keys()].some((retained) => retained.cellUrl === assignment.cellUrl)) {
-      throw new Error('relay_retained_source_not_restored')
-    }
     const target = this.createOrigin(assignment, relayJwt)
     this.origins.add(target)
     try {
       await target.open()
       this.assertCurrent()
-      if (authorityVersion !== this.authorityVersion) {
-        throw new Error('stale_relay_target')
-      }
     } catch (error) {
       this.origins.delete(target)
       target.closeNow()
@@ -288,28 +240,8 @@ export class RelayOriginPool {
     }
     this.activeOrigin = target
     this.assignment = assignment
-    if (!this.retained.has(origin)) {
-      this.retirement.schedule(origin, graceMs)
-    }
+    this.retirement.schedule(origin, graceMs)
     this.retirement.maybeClose(origin)
-  }
-  private restoreOrigin(origin: RelayControlOrigin, assignment: RelayAssignment): void {
-    const target = this.activeOrigin
-    origin.updateAssignment(assignment)
-    this.activeOrigin = origin
-    this.assignment = assignment
-    this.retained.delete(origin)
-    this.drainRetry.cancel()
-    // A queued restoration callback can outlive the corroboration promise;
-    // cancel it before restoring the source authority.
-    this.restoreRetry.cancel()
-    this.drainingOrigins.delete(origin)
-    if (target && target !== origin) {
-      this.drainingOrigins.add(target)
-      this.retirement.maybeClose(target)
-    }
-    this.rotation.schedule()
-    this.options.onStatus('registered')
   }
   private assertCurrent(): void {
     if (!this.isCurrent()) {

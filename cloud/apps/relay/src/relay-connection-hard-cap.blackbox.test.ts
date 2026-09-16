@@ -212,6 +212,7 @@ describe('relay connection hard cap', () => {
     })
     expect(statusResponse.status).toBe(200)
     expect(await statusResponse.json()).toMatchObject({
+      databasePoolMax: 10,
       connectionCapacity: {
         hardCap: 600,
         controlRebindReserve: 100,

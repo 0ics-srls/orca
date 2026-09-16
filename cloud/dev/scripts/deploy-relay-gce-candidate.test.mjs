@@ -519,13 +519,22 @@ test('audits a partially committed migration without changing admission or compl
       targetEnabled: true,
       targetAssignments: 1,
       migrationInProgress: 2,
-      migrationTargetRegistered: 2
+      migrationTargetRegistered: 2,
+      selectorGeneration: 1
     })
     await runCandidateDeployment(config(file, 'audit'), overrides)
     assert.deepEqual(stateChanges, [])
     assert.deepEqual(events, [
       {
         event: 'candidate_audit',
+        selector: {
+          generation: 1,
+          membership: {
+            existingOnly: ['source'],
+            migrationOnly: ['target'],
+            general: []
+          }
+        },
         source: {
           cellId: 'source',
           enabled: false,

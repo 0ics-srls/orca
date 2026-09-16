@@ -8,7 +8,8 @@ on:
         required: true
         default: verify
         type: choice
-        options: [verify, canary-apply, batch-apply, rollback]
+        options:
+          [verify, canary-apply, batch-apply, rollback, pool-canary-apply, pool-canary-rollback]
       cell-ids:
         description: Ordered comma-separated serving cells; one canary or two to four batch cells
         required: true
@@ -24,15 +25,15 @@ on:
       target-rehome-protocol:
         description: Exact target regional-rehome protocol
         required: true
-        default: '1'
+        default: '3'
         type: choice
-        options: ['0', '1']
+        options: ['0', '1', '3']
       rollback-rehome-protocol:
         description: Exact rollback regional-rehome protocol
         required: true
         default: '0'
         type: choice
-        options: ['0', '1']
+        options: ['0', '1', '3']
       expected-selector-generation:
         description: Exact selector generation before the first cell
         required: true
@@ -62,11 +63,31 @@ on:
         required: false
         type: string
       canary-run-id:
-        description: Successful same-commit canary run required for batch-apply
+        description: Successful same-code canary in this rehome control generation; reusable across batches
         required: false
         type: string
       confirmation:
         description: Exact digest-and-cell-bound mutation confirmation
+        required: false
+        type: string
+      predecessor-pool:
+        description: Exact live c27 database pool before this transition
+        required: false
+        type: string
+      target-pool:
+        description: Exact c27 database pool to apply (10 to 14 only)
+        required: false
+        type: string
+      rollback-pool:
+        description: Exact c27 database pool for workflow-owned rollback
+        required: false
+        type: string
+      cloud-sql-backends:
+        description: Fresh Cloud SQL client backend count from the headroom capture
+        required: false
+        type: string
+      cloud-sql-waiting-backends:
+        description: Fresh Cloud SQL waiting backend count from the headroom capture
         required: false
         type: string
 
@@ -111,7 +132,35 @@ jobs:
           ROLLBACK_DIGEST: ${{ inputs.rollback-image-digest }}
           CONFIRMATION: ${{ inputs.confirmation }}
           CANARY_RUN_ID: ${{ inputs.canary-run-id }}
+          PREDECESSOR_POOL: ${{ inputs.predecessor-pool }}
+          TARGET_POOL: ${{ inputs.target-pool }}
+          ROLLBACK_POOL: ${{ inputs.rollback-pool }}
+          CLOUD_SQL_BACKENDS: ${{ inputs.cloud-sql-backends }}
+          CLOUD_SQL_WAITING_BACKENDS: ${{ inputs.cloud-sql-waiting-backends }}
+          EXPECTED_SELECTOR_GENERATION: ${{ inputs.expected-selector-generation }}
+          EXPECTED_REHOME_GENERATION: ${{ inputs.expected-rehome-generation }}
         run: |
+          if [[ "${MODE}" =~ ^pool-canary- ]] && [[ "${CELL_IDS}" != "production-gce-c27" ]]; then
+            echo 'pool canary is restricted to production-gce-c27' >&2; exit 1
+          fi
+          if [[ "${MODE}" =~ ^pool-canary-(apply|rollback)$ ]]; then
+            node dev/scripts/validate-relay-pool-canary.mjs --help >/dev/null 2>&1 || true
+            node --input-type=module - <<'NODE'
+            import { validateRelayPoolCanary } from './dev/scripts/validate-relay-pool-canary.mjs'
+            validateRelayPoolCanary({
+              mode: process.env.MODE.replace('pool-canary-', ''), cellId: process.env.CELL_IDS,
+              currentPool: Number(process.env.PREDECESSOR_POOL),
+              targetPool: Number(process.env.MODE.endsWith('rollback') ? process.env.ROLLBACK_POOL : process.env.TARGET_POOL),
+              rollbackPool: Number(process.env.ROLLBACK_POOL),
+              cloudSqlBackends: Number(process.env.CLOUD_SQL_BACKENDS),
+              cloudSqlWaitingBackends: Number(process.env.CLOUD_SQL_WAITING_BACKENDS), rehomeEnabled: false,
+              selectorGeneration: Number(process.env.EXPECTED_SELECTOR_GENERATION),
+              expectedSelectorGeneration: Number(process.env.EXPECTED_SELECTOR_GENERATION),
+              rehomeGeneration: Number(process.env.EXPECTED_REHOME_GENERATION),
+              expectedRehomeGeneration: Number(process.env.EXPECTED_REHOME_GENERATION)
+            })
+          NODE
+          fi
           CELLS="$(node dev/scripts/relay-production-same-cap-wave.mjs validate \
             --mode "${MODE}" --cell-ids "${CELL_IDS}" \
             --target-digest "${TARGET_DIGEST}" --rollback-digest "${ROLLBACK_DIGEST}" \
@@ -119,6 +168,8 @@ jobs:
           echo "cells=${CELLS}" >> "${GITHUB_OUTPUT}"
           if [[ "${MODE}" =~ ^(canary-apply|batch-apply)$ ]]; then
             echo 'job-mode=apply' >> "${GITHUB_OUTPUT}"
+          elif [[ "${MODE}" =~ ^pool-canary-(apply|rollback)$ ]]; then
+            echo "job-mode=${MODE}" >> "${GITHUB_OUTPUT}"
           else
             echo "job-mode=${MODE}" >> "${GITHUB_OUTPUT}"
           fi
@@ -189,6 +240,11 @@ jobs:
       monitor-run-id: ${{ inputs.monitor-run-id }}
       monitor-run-attempt: ${{ inputs.monitor-run-attempt }}
       wave-index: '0'
+      predecessor-pool: ${{ inputs.predecessor-pool }}
+      target-pool: ${{ inputs.target-pool }}
+      rollback-pool: ${{ inputs.rollback-pool }}
+      cloud-sql-backends: ${{ inputs.cloud-sql-backends }}
+      cloud-sql-waiting-backends: ${{ inputs.cloud-sql-waiting-backends }}
     secrets: inherit
 
   cell_2:
@@ -210,6 +266,11 @@ jobs:
       monitor-run-id: ${{ inputs.monitor-run-id }}
       monitor-run-attempt: ${{ inputs.monitor-run-attempt }}
       wave-index: '1'
+      predecessor-pool: ${{ inputs.predecessor-pool }}
+      target-pool: ${{ inputs.target-pool }}
+      rollback-pool: ${{ inputs.rollback-pool }}
+      cloud-sql-backends: ${{ inputs.cloud-sql-backends }}
+      cloud-sql-waiting-backends: ${{ inputs.cloud-sql-waiting-backends }}
     secrets: inherit
 
   cell_3:
@@ -231,6 +292,11 @@ jobs:
       monitor-run-id: ${{ inputs.monitor-run-id }}
       monitor-run-attempt: ${{ inputs.monitor-run-attempt }}
       wave-index: '2'
+      predecessor-pool: ${{ inputs.predecessor-pool }}
+      target-pool: ${{ inputs.target-pool }}
+      rollback-pool: ${{ inputs.rollback-pool }}
+      cloud-sql-backends: ${{ inputs.cloud-sql-backends }}
+      cloud-sql-waiting-backends: ${{ inputs.cloud-sql-waiting-backends }}
     secrets: inherit
 
   cell_4:
@@ -252,6 +318,11 @@ jobs:
       monitor-run-id: ${{ inputs.monitor-run-id }}
       monitor-run-attempt: ${{ inputs.monitor-run-attempt }}
       wave-index: '3'
+      predecessor-pool: ${{ inputs.predecessor-pool }}
+      target-pool: ${{ inputs.target-pool }}
+      rollback-pool: ${{ inputs.rollback-pool }}
+      cloud-sql-backends: ${{ inputs.cloud-sql-backends }}
+      cloud-sql-waiting-backends: ${{ inputs.cloud-sql-waiting-backends }}
     secrets: inherit
 
   seal_canary:

@@ -1,56 +1,213 @@
 # Relay region correction — idle cutover plan
 
-Status: **PROPOSED; NOT IMPLEMENTED OR DEPLOYABLE**
+Status: **REVISION 2 — DESIGN APPROVED; implementation and verification pending.**
 
-This plan narrows regional correction to the product requirement: move a host to a materially better relay region once its existing client connections have ended. It does not preserve active data sockets across the move. That removes the need for long-lived source retention and live splice transfer, but it does not remove the need for an atomic cutover.
+Independent GPT-6-astra low review found no remaining design blocker. Approval is
+conditional on the implementation gates below: pre-await ownership accounting,
+shared assignment-row serialization, locked ambiguous-outcome reconciliation,
+operation identity deduplication and late-callback fencing must be proven in tests.
+Four independent idle-scope audits have been counted conservatively (scope, plan v1,
+simplification, revision 2). If another plan revision fails review and a sixth cycle
+would be needed, stop for user re-evaluation. Approval does not mean the current
+live-retention PRs implement this design or are ready to merge.
 
-## User-visible behavior
+## Requirement and deliberate tradeoffs
 
-A phone or tablet that backgrounds may close its relay data connection after the existing background grace period. That timer is only an opportunity; operating-system suspension can delay it. The desktop control socket is separate and normally remains connected. When every client connection and pending admission is gone, the cloud may move the host to a better region. The next client connection resolves the new assignment. A client that remains connected can delay correction indefinitely without losing connectivity.
+Automatically improve the host's relay region when no relay clients are using it.
+A phone and iPad both disconnecting can create an opportunity. Continuous clients
+can postpone optimization indefinitely. Returning during a move may incur ordinary
+reconnect delay; zero-delay reconnect is NOT a requirement. Do not deliberately
+close an established client connection to optimize latency. Direct LAN sessions
+and running terminal processes do not themselves count as relay clients.
 
-“Better” keeps the existing evidence rules: a fresh server-issued measurement window, both regions measured, and the candidate at least 25 ms and 20% faster than the measured incumbent. Missing, stale, inconclusive, tied, unsupported, or mismatched evidence means no move.
+The mobile 30-second background grace is not a reliable scheduling event: the OS
+can delay it. Use actual source-cell connection state. Desktop control remains
+open without phones; do not wait for it to disappear naturally.
 
-## Safety invariant
+Keep fresh desktop measurements, incumbent-relative 25ms AND 20% improvement,
+cohort/enable controls, capacity checks and cooldown. Probe improvement is not
+proof of improved application latency. Cloud selects authoritative assignments;
+mobile reconnect reads an assignment, it does not choose a faster region.
 
-No connection may be silently attached to a retired source, and no live connection may be deliberately closed by optional correction. Emergency and maintenance drains retain their existing deadlines and authority.
+## Simplicity constraints
 
-The source cell is the authority for physical sockets and admission state. Durable cloud state is the authority for assignment, attempt generation, reservation, and fencing. Database activity leases are supporting evidence and cleanup state; an expired lease alone is never proof that a socket is gone.
+Reuse the regional worker, assignment transactions, reservations, request identity,
+cell admission registry and normal desktop reconnect. No live-source retention,
+splice transfer, recurring retained-control lease, new mobile protocol, global idle
+poller, or desktop background-disconnect timer. Existing data sockets are never
+copied or transferred (the former design did not transfer them either).
 
-## Ordered cutover
+Try an idle opportunity, immediately defer if busy; do not keep a gate waiting for
+users to leave. The gate exists only for a short attempted cutover. A retryable
+arrival may lose this race and reconnect normally. Do not count that as evidence
+of lost execution or replay a previously sent mutation.
 
-1. The director claims one eligible correction attempt under the existing assignment and migration locks, reserves target capacity, and records a monotonic assignment epoch and source cell incarnation.
-2. Before changing the assignment, the director asks the source cell to enter an **idle-cutover gate** for that exact host, epoch, and attempt. The source atomically marks the host as cutover-pending and rejects new client admissions with a retryable wrong-cell response. Existing emergency/auth behavior remains unchanged.
-3. The source drains only the admission pipeline: accepts already in progress finish or reject through the normal reservation cleanup path; pending attachments and control requests are allowed to finish or reach their bounded timeout. Existing data sockets are not closed by this optional gate.
-4. The source returns a snapshot containing its current control generation, active data socket count, pending admission count, pending control-work count, and the cutover attempt/epoch. The source returns **idle** only when all required counts are zero and the snapshot still belongs to the gate. A stale generation, changed attempt, or reopened admission invalidates the snapshot.
-5. The director rechecks the same attempt, assignment epoch, source incarnation, target reservation, capability, and safety state while holding the authoritative locks. It commits the new assignment and epoch in one transaction only after the source reports idle. The old assignment cannot win a concurrent update.
-6. The director tells the source to complete the gate. On success the source closes the desktop control socket cleanly; the desktop reconnects through the new assignment. On failure, timeout, source loss, or stale authority, the director aborts the attempt, releases target reservations, and tells the source to reopen admissions. A lost response is recovered by replaying the exact attempt, never by guessing.
-7. The desktop’s next control or client connection resolves the durable assignment. Older desktops do not advertise the correction capability and stay on the legacy path. A newer desktop talking to an older director uses the existing optional-field/HTTP-400 fallback and remains on the legacy path.
+Source cells already share the assignment database. Use one source-owned local
+barrier around a constrained assignment transaction; do NOT introduce a distributed
+prepare/commit protocol, a durable preparation table, or a second admission service.
+The director selects candidates; the source's transaction rechecks director policy.
 
-## Race and failure requirements
+## What is idle?
 
-- A new admission arriving during the gate is rejected or completes before the idle snapshot; it can never attach after the snapshot and before assignment commit.
-- A phone reconnecting during cutover retries against the director and receives either the old assignment after an abort or the new assignment after commit.
-- The desktop control socket is counted as cutover work until the source explicitly closes it; it is not treated as a client data socket.
-- Pending connection reservations, attachment timers, control RPCs, and cleanup callbacks are bounded and must release their ownership on every response, rejection, timeout, close, abort, and retry.
-- Source loss is reported as unavailable/unverifiable and follows ordinary recovery; it is not evidence that the user’s remote process exited.
-- One open correction attempt per host remains enforced. Concurrent director instances must claim and recheck idempotently.
-- Emergency drains, auth expiry, generation replacement, and capacity protection bypass optional idle correction and retain current behavior.
+The source owns one per-host/generation admission barrier covering every accept,
+attach and control replacement path. Inventory these paths before changing them.
+The quiescence predicate must require:
 
-## What is removed versus reused
+- `activeConnIds.size === 0` (includes attaches while persistence awaits).
+- `activeSplices.size === 0` and `pendingConns.size === 0`.
+- Zero accepts in flight before insertion in those maps. Track ownership before
+  the first asynchronous operation that can admit this host; every exit releases it.
+- Zero in-flight control operations that install credentials, mutate connection
+  basis or create admissions. Track actual server handlers; do not invent an
+  approximate count from RPC traffic or old database leases.
 
-Remove optional live-source retention, source splice preservation, multi-hour retained-control renewal, and rollback that restores a live generation after target activation. Reuse the existing assignment locks, attempt generations, target reservations, capability negotiation, source admission registry, assignment resolution, retry pacing, and emergency drain paths. Keep explicit attempt and epoch fences because they protect the cutover race even when no data socket is retained.
+An authenticated open desktop control socket, its ping/pong and activity renewal
+are NOT client work and NOT a reason to defer. They can remain until cutover closes
+the empty session. A desktop request arriving after the barrier gets a normal
+retryable transport failure; finish previously accepted state mutations before
+claiming idle. Reconnection must preserve pairing and not blindly replay mutations.
 
-## Validation before implementation review
+Missing/expired database activity leases are never proof of idle. Outstanding
+reservation cleanup remains owned and must be completed or safely fenced, but
+waiting for every lease to expire would wrongly wait on the healthy control lease.
 
-Add deterministic tests for: two clients becoming idle; a new admission during the gate; a control request completing during the gate; delayed and duplicate gate replies; target registration failure; source loss; director restart; stale assignment epoch; old desktop/new cloud; new desktop/old cloud; emergency drain during a pending cutover; and a client reconnecting immediately before and after assignment commit. Use real TCP WebSockets for at least the admission race and failed-cutover recovery. Prove that no data socket is duplicated, no mutation is replayed, and aborted attempts reopen admissions.
+## Source-owned try-cutover
 
-## Rollout gates
+1. The director selects candidates read-only, using existing eligibility and pacing.
+   It sends an authenticated idle-cutover request with stable operation ID, expected
+   source assignment epoch/incarnation/generation and candidate target. Selection
+   does not reserve capacity or change assignment. Repeat delivery uses the same ID.
+2. Source validates the request and current session. In one synchronous segment,
+   check all counters and install a per-host barrier. If busy, return `busy` without
+   closing sockets or holding a barrier. Busy is a deferral, not a dispatch failure.
+   The next worker pass must progress past busy candidates rather than starve others.
+3. While barred, reject new clients and any new source control activation/rebind.
+   Late asynchronous continuations must recheck barrier/session after awaits and
+   release abandoned reservations. Install this fence before the first await of
+   the cutover. No barrier timer may reopen admissions on its own.
+4. Source calls a constrained version of the existing assignment transaction. Reuse
+   its lock order, global rate/concurrency controls, cooldown, capacity reservation,
+   freshness and safety checks. Recheck exact source epoch/incarnation/generation,
+   target and operation identity. Reserve target, update assignment/epoch and record
+   the existing durable migration/attempt atomically. Do not call today's unrestricted
+   `claimRegionalRehome` and let it choose a different host. No network calls inside
+   DB locks. Zero sockets is established locally, not inferred from activity leases.
+5. If committed, retire the still-empty source session/control via the existing
+   resolve-director closure path and release its activity. Desktop uses normal
+   reconnect and registers on target. Reply with the durable operation outcome.
+6. If definitively not committed and source authority remains unchanged, remove the
+   barrier and continue on the original control. No target reservation survives a
+   rolled-back transaction. If authority changed, retire the obsolete source instead.
+   A timeout or transport error is NOT definitive rollback.
 
-Keep correction disabled by default. Before enabling, require cloud and cell revisions that implement the gate, packaged desktop compatibility checks, Linux/Windows and SSH transport checks, production preview and capacity evidence, and an approved bounded cohort. Measure reconnect errors, failed/aborted cutovers, time spent waiting for idle, source admission rejections, and actual application latency against an unchanged cohort. Disabling new claims must leave in-flight gates recoverable.
+## Ambiguous transactions, restarts and failures
 
-## Open decisions
+The request operation ID is known BEFORE the transaction and recorded as the
+existing attempt ID on commit. Duplicate calls return its outcome and never start
+another migration. A concurrent retry, cancellation or definitive-abort check must
+serialize under the same host lock as commit; an unlocked absent-row lookup is
+insufficient because the original transaction could still commit later.
 
-- Whether the desktop should proactively close its control socket after an idle signal or let the source close it as part of cutover.
-- The retryable response/status for admissions rejected during cutover.
-- Maximum gate wait and the policy for a host whose clients remain connected indefinitely.
-- Whether correction should be attempted only after a mobile-triggered disconnect or on the desktop’s normal measurement refresh cadence.
+Keep a barrier until the database transaction is known terminal and a locked
+reconciliation establishes the outcome. If the driver result is ambiguous, retry
+status through a per-attempt backoff callback, using the same identity. If durable
+access is unavailable, remain fenced; bounded availability cannot be promised
+while the assignment's authority is unknown. No timeout-only reopen. Use the
+existing DB transaction timeout and request timeout, not a new renewable gate lease.
+
+A lost director HTTP reply does not interrupt source-owned completion: source
+finishes its transaction, reads durable outcome and closes/reopens locally. A
+retry from any director sees the same operation. Director crashes do not strand
+preparations because no separate preparation exists.
+
+A source restart/replacement control is fenced by existing authoritative registration
+and activity validation. It must serialize against the cutover transaction under
+host locks, validate the current assignment and reject old source ownership if the
+commit won. If replacement won, the old transaction must fail its generation/
+incarnation recheck. This requires tracing current registration persistence and
+proving the shared serialization point, not relying solely on the in-memory fence.
+Late callbacks from a closed session cannot reopen admissions for its replacement.
+Emergency drain invalidates local authority and participates in this serialization;
+a cutover already committed follows its outcome, never reopens the emergency source.
+
+After commit, target registration failure uses ordinary bounded migration recovery.
+The old empty control must be released even if outcome delivery failed; otherwise
+current rollback refuses while source activity remains (`assignment-store.ts:6923`).
+Source process death is handled by normal activity expiry and cell incarnation
+fencing. No live clients were discarded, but a returning client may wait for recovery.
+Once clients attach at target, preserve them under ordinary assignment rules:
+initial source idleness never authorizes closing future target clients.
+
+## Compatibility and authority
+
+Mobile already re-resolves on `WRONG_CELL` (4409) through
+`dialRelayThroughDirectorFallback`; use that existing close code for arrivals at a
+gated source. Before commit, resolution can still return the old address: existing
+backoff must prevent tight retry loops. After commit it returns the target. Pin
+old parser/client fixtures and test the actual codes; do not assume every error is
+retryable. Do not introduce a new mobile close code or protocol message.
+
+Empty host control closure uses the existing `DRAINING` / resolve-director path;
+verify its reconnect behavior against the baseline desktop implementation.
+Negotiate a distinct idle-cutover capability for participating cells and updated
+desktops; do not reuse finish-existing capability to imply this new behavior.
+Unsupported participants skip optional correction. Preserve old-server HTTP-400
+fallback for measurement fields. Emergency drain/auth enforcement can invalidate
+any in-flight cutover; it must fence late commit and preserve existing hard deadlines.
+Disabling correction stops new attempts; existing ones still reconcile.
+
+## Review and implementation gates
+
+Review must verify the shared-store serialization and identify every admission and
+control mutation path before approving implementation. Minimum tests (red before
+green for new guarantees):
+
+1. Phone remains while iPad disconnects: no move. Both disconnect: move possible.
+   A quiet established socket or expired DB splice lease still prevents a move.
+2. Accept before/after barrier, accept awaiting activity persistence, attach awaiting
+   basis persistence, and credential mutation crossing the barrier. No late attach,
+   leaked reservation or interrupted established client.
+3. Busy attempt leaves source admissions usable; repeated busy hosts do not starve
+   idle candidates or consume dispatch-failure budget.
+4. Commit/replacement race; lost database/HTTP replies; timeout during transaction;
+   duplicate workers; director crash; source restart; replacement control; stale
+   epoch/incarnation; database outage and recovery. No timeout-only reopening.
+5. Target failure before registration and after new client attachment; source-control
+   release; ordinary recovery completes without retained-source restoration.
+6. Current/old mobile reconnect before and after commit, same-address retry pacing,
+   pairing preservation and no mutation replay. Old/new desktop/cloud combinations.
+7. Emergency drain/auth denial during the cutover; no altered hard-drain behavior.
+8. Real TCP WebSockets for two clients, admission race and failed cutover, independent
+   execution-process identity and append-once mutation evidence. Docker SSH and
+   folder workspace continuity. Tests use `ORCA_BACKGROUND_LAUNCH=1`.
+
+Keep tests proportional: deterministic component races first, then real transport,
+relevant cloud/desktop suites, types/lint and PR CI. PostgreSQL only on 55440 when
+validating authoritative transactions. Do not replace a failing oracle with a weaker
+assertion or accumulate tests mirroring implementation.
+
+After clean review, replace superseded feature code/tests/docs on the two draft PRs,
+preserving an immutable backup. Freshness and appropriate compatibility tests stay;
+retention-only mechanisms and release requirements must be removed if irrelevant.
+Do not claim readiness from tests of the superseded design.
+
+Release separately from merge readiness: packaged mixed versions, physical device
+background timing, Linux/Windows, bounded rollout and measured user benefit remain
+explicit evidence requirements. No deployment or enable is authorized by this plan.
+
+## Implementation notes — 2026-09-11
+
+The authenticated director command carries its configured cohort percentage and
+fresh process safety snapshot. A cell cannot use its own default-zero director
+cohort setting to authorize or reject a selected host; it validates the authenticated
+command, combines director/source safety, and rechecks durable policy, the host's
+cohort bucket, and fleet/target safety inside the existing transaction. These fields
+are on the internal admin endpoint, not the mobile or desktop protocol.
+
+Candidate selection is read-only and uses a rotating page offset to progress past
+busy hosts. A deterministic UUIDv5 derived from the exact source authority and target
+keeps operation identity stable across director retries/restarts. Both details still
+need final implementation audit and an explicit page-boundary fairness test.
+
+Current focused and real-transport results are recorded at the top of the acceptance
+document. They do not complete the remaining compatibility, cleanup and PR gates.

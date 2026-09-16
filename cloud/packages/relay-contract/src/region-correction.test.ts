@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { AssignmentRequestSchema, AssignmentResponseSchema } from './director-messages.js'
 import { DrainSchema } from './control-messages.js'
-import { RegionCorrectionRequestSchema, RegionRestoredSchema } from './region-correction.js'
+import { RegionCorrectionRequestSchema } from './region-correction.js'
 
 const report = {
   v: 1,
@@ -68,23 +68,9 @@ describe('region correction wire boundaries', () => {
     ).toBe(false)
   })
 
-  it('requires exact retained source authority while preserving ordinary drain', () => {
+  it('uses ordinary drain and rejects the superseded retention extension', () => {
     const ordinary = { graceMs: 0, recovery: 'resolve-director' }
     expect(DrainSchema.parse(ordinary)).toEqual(ordinary)
-    expect(DrainSchema.safeParse({ ...ordinary, retention }).success).toBe(true)
-    expect(
-      DrainSchema.safeParse({
-        ...ordinary,
-        retention: { ...retention, sourceGeneration: 0 }
-      }).success
-    ).toBe(false)
-    expect(
-      RegionRestoredSchema.safeParse({
-        attemptId: retention.attemptId,
-        sourceGeneration: 3,
-        sourceAssignmentEpoch: 7,
-        assignmentEpoch: 9
-      }).success
-    ).toBe(true)
+    expect(DrainSchema.safeParse({ ...ordinary, retention }).success).toBe(false)
   })
 })

@@ -17,6 +17,11 @@ on:
       monitor-run-id: { required: true, type: string }
       monitor-run-attempt: { required: true, type: string }
       wave-index: { required: true, type: string }
+      predecessor-pool: { required: false, type: string }
+      target-pool: { required: false, type: string }
+      rollback-pool: { required: false, type: string }
+      cloud-sql-backends: { required: false, type: string, default: '' }
+      cloud-sql-waiting-backends: { required: false, type: string, default: '' }
 
 permissions:
   actions: read
@@ -53,6 +58,11 @@ jobs:
       MONITOR_RUN_ID: ${{ inputs.monitor-run-id }}
       MONITOR_RUN_ATTEMPT: ${{ inputs.monitor-run-attempt }}
       OUTPUT_DIRECTORY: ${{ github.workspace }}/relay-monitor-evidence
+      PREDECESSOR_POOL: ${{ inputs.predecessor-pool }}
+      TARGET_POOL: ${{ inputs.target-pool }}
+      ROLLBACK_POOL: ${{ inputs.rollback-pool }}
+      CLOUD_SQL_BACKENDS: ${{ inputs.cloud-sql-backends }}
+      CLOUD_SQL_WAITING_BACKENDS: ${{ inputs.cloud-sql-waiting-backends }}
     steps:
       - name: Require exact reusable-workflow configuration
         working-directory: .
@@ -63,12 +73,12 @@ jobs:
           CAPACITY_SERVICE_ACCOUNT: ${{ vars.PRODUCTION_GCP_RELAY_CAPACITY_SERVICE_ACCOUNT }}
           DIRECTOR_RUNTIME_SERVICE_ACCOUNT: ${{ vars.PRODUCTION_GCP_RELAY_DIRECTOR_RUNTIME_SERVICE_ACCOUNT }}
         run: |
-          [[ "${DEPLOY_MODE}" =~ ^(verify|apply|rollback)$ ]]
+          [[ "${DEPLOY_MODE}" =~ ^(verify|apply|rollback|pool-canary-apply|pool-canary-rollback)$ ]]
           [[ "${TARGET_IMAGE_DIGEST}" =~ ^sha256:[a-f0-9]{64}$ ]]
           [[ "${ROLLBACK_IMAGE_DIGEST}" =~ ^sha256:[a-f0-9]{64}$ ]]
           test "${TARGET_IMAGE_DIGEST}" != "${ROLLBACK_IMAGE_DIGEST}"
-          [[ "${TARGET_REHOME_PROTOCOL}" =~ ^[01]$ ]]
-          [[ "${ROLLBACK_REHOME_PROTOCOL}" =~ ^[01]$ ]]
+          [[ "${TARGET_REHOME_PROTOCOL}" =~ ^(0|1|3)$ ]]
+          [[ "${ROLLBACK_REHOME_PROTOCOL}" =~ ^(0|1|3)$ ]]
           [[ "${EXPECTED_SELECTOR_GENERATION}" =~ ^(0|[1-9][0-9]*)$ ]]
           [[ "${EXPECTED_REHOME_GENERATION}" =~ ^(0|[1-9][0-9]*)$ ]]
           [[ "${WAVE_INDEX}" =~ ^[0-3]$ ]]
@@ -170,6 +180,16 @@ jobs:
 
       - uses: google-github-actions/setup-gcloud@v2
 
+      - name: Verify live Cloud SQL backend headroom for pool canary
+        if: ${{ startsWith(inputs.mode, 'pool-canary-') }}
+        run: |
+          # Monitoring aligns these gauges to one-minute buckets and may lag the current
+          # bucket; include two minutes while keeping the maximum one-minute aligned.
+          STARTED_AT="$(date -u -v-120S +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d '120 seconds ago' +%Y-%m-%dT%H:%M:%SZ)"
+          ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          node dev/scripts/verify-relay-pool-cloud-sql-headroom.mjs \
+            "${STARTED_AT}" "${ENDED_AT}" "${CLOUD_SQL_BACKENDS}" "${CLOUD_SQL_WAITING_BACKENDS}"
+
       - uses: ./.github/actions/cloud-sql-rollout-lease
         with:
           bucket: onorca-cloud-terraform-state
@@ -236,9 +256,19 @@ jobs:
           test "$(jq -r '.connection_hard_cap' <<< "${CURRENT_SHAPE}")" = "${EXPECTED_HARD_CAP}"
           test "$(jq -r '.connection_unobserved_bound' <<< "${CURRENT_SHAPE}")" = \
             "${EXPECTED_UNOBSERVED_BOUND}"
+          if [[ "${DEPLOY_MODE}" =~ ^pool-canary- ]]; then
+            test "${TARGET_CELL_ID}" = production-gce-c27
+            CONFIGURED_POOL="$(jq -r '.database_pool_max // 10' <<< "${CURRENT_SHAPE}")"
+            if test "${DEPLOY_MODE}" = pool-canary-rollback; then
+              # production.tfvars remains at the rollback value while live state is the predecessor.
+              test "${CONFIGURED_POOL}" = "${ROLLBACK_POOL}"
+            else
+              test "${CONFIGURED_POOL}" = "${PREDECESSOR_POOL}"
+            fi
+          fi
           TARGET_ZONE="$(jq -r '.zone' <<< "${CURRENT_SHAPE}")"
           MIG_NAME="orca-cloud-relay-gce-${TARGET_HOSTNAME}"
-          if test "${DEPLOY_MODE}" = rollback; then
+          if [[ "${DEPLOY_MODE}" =~ rollback$ ]]; then
             DESIRED_IMAGE_DIGEST="${ROLLBACK_IMAGE_DIGEST}"
             CURRENT_IMAGE_DIGEST="${TARGET_IMAGE_DIGEST}"
             DESIRED_REHOME_PROTOCOL="${ROLLBACK_REHOME_PROTOCOL}"
@@ -250,8 +280,17 @@ jobs:
             CURRENT_REHOME_PROTOCOL="${ROLLBACK_REHOME_PROTOCOL}"
           fi
           DESIRED_IMAGE="${IMAGE_REPOSITORY}@${DESIRED_IMAGE_DIGEST}"
+          if test "${DEPLOY_MODE}" = pool-canary-rollback; then
+            DESIRED_POOL="${ROLLBACK_POOL}"
+          elif test "${DEPLOY_MODE}" = pool-canary-apply; then
+            DESIRED_POOL="${TARGET_POOL}"
+          else
+            DESIRED_POOL="$(jq -er '.database_pool_max // 10' <<< "${CURRENT_SHAPE}")"
+          fi
           OVERRIDE_CELLS_JSON="$(jq -ce --arg cell "${TARGET_CELL_ID}" \
-            --arg image "${DESIRED_IMAGE}" '.[$cell].image = $image' <<< "${CELLS_JSON}")"
+            --arg image "${DESIRED_IMAGE}" --argjson pool "${DESIRED_POOL}" --arg mode "${DEPLOY_MODE}" \
+            'if ($cell == "production-gce-c27" and ($mode | startswith("pool-canary-"))) then .[$cell].image = $image | .[$cell].database_pool_max = $pool else .[$cell].image = $image end' \
+            <<< "${CELLS_JSON}")"
           jq -n --argjson cells "${OVERRIDE_CELLS_JSON}" \
             '{relay_gce_cells:$cells}' > "${RUNNER_TEMP}/relay-same-cap.tfvars.json"
           SERVED_DIGEST="$(gcloud artifacts docker images describe "${DESIRED_IMAGE}" \
@@ -270,6 +309,7 @@ jobs:
             echo "CURRENT_IMAGE_DIGEST=${CURRENT_IMAGE_DIGEST}"
             echo "DESIRED_REHOME_PROTOCOL=${DESIRED_REHOME_PROTOCOL}"
             echo "CURRENT_REHOME_PROTOCOL=${CURRENT_REHOME_PROTOCOL}"
+            echo "DESIRED_POOL=${DESIRED_POOL}"
           } >> "${GITHUB_ENV}"
 
       - name: Verify exact current generation, digest, cap, and rollback point
@@ -292,11 +332,15 @@ jobs:
           }
           CURRENT_RUNTIME="$(admin_post current-runtime \
             "${CELL_ORIGIN}/v1/admin/runtime-status" '{"v":1}')"
+          if [[ "${DEPLOY_MODE}" =~ ^pool-canary- ]]; then
+            jq -e --argjson pool "${PREDECESSOR_POOL}" '.databasePoolMax == $pool' \
+              <<< "${CURRENT_RUNTIME}" >/dev/null
+          fi
           # A rollback that failed between template apply and admission restore
           # leaves the cell already on the rollback image; resume from that
           # state instead of demanding the pre-rollback predecessor.
           LIVE_IMAGE_DIGEST="$(jq -r '.imageDigest' <<< "${CURRENT_RUNTIME}")"
-          if test "${DEPLOY_MODE}" = rollback \
+          if [[ "${DEPLOY_MODE}" =~ rollback$ ]] \
             && test "${LIVE_IMAGE_DIGEST}" = "${DESIRED_IMAGE_DIGEST}"; then
             ROLLBACK_RESUME=true
             PREDECESSOR_IMAGE_DIGEST="${DESIRED_IMAGE_DIGEST}"
@@ -346,7 +390,7 @@ jobs:
             --argjson hardCap "${EXPECTED_HARD_CAP}" \
             --argjson unobservedBound "${EXPECTED_UNOBSERVED_BOUND}" \
             --argjson protocol "${PREDECESSOR_REHOME_PROTOCOL}" \
-            --argjson drainingOk "$(test "${DEPLOY_MODE}" = rollback \
+            --argjson drainingOk "$([[ "${DEPLOY_MODE}" =~ rollback$ ]] \
               && test "${ROLLBACK_RESUME}" != true && echo true || echo false)" \
             '.role == "cell" and .cellId == $cell and .cellUrl == $origin and
              (.region == $region or
@@ -363,7 +407,7 @@ jobs:
               --argjson hardCap "${EXPECTED_HARD_CAP}" \
               --argjson unobservedBound "${EXPECTED_UNOBSERVED_BOUND}" \
               --argjson protocol "${PREDECESSOR_REHOME_PROTOCOL}" \
-              --argjson drainingOk "$(test "${DEPLOY_MODE}" = rollback \
+              --argjson drainingOk "$([[ "${DEPLOY_MODE}" =~ rollback$ ]] \
               && test "${ROLLBACK_RESUME}" != true && echo true || echo false)" \
               '[
                 if .role != "cell" then "role" else empty end,
@@ -403,7 +447,7 @@ jobs:
           # Rollback is the documented recovery from a failed canary, which
           # leaves the cell migration-only (and possibly still marked
           # draining); apply and verify still require a pristine general cell.
-          if test "${DEPLOY_MODE}" = rollback; then
+          if [[ "${DEPLOY_MODE}" =~ rollback$ ]]; then
             PRECHECK_ADMISSION=general-or-migration-only
             PRECHECK_DRAINING=either
           else
@@ -514,6 +558,12 @@ jobs:
           CAPACITY_SERVICE_ACCOUNT: ${{ vars.PRODUCTION_GCP_RELAY_CAPACITY_SERVICE_ACCOUNT }}
           DIRECTOR_RUNTIME_SERVICE_ACCOUNT: ${{ vars.PRODUCTION_GCP_RELAY_DIRECTOR_RUNTIME_SERVICE_ACCOUNT }}
         run: |
+          PLAN_MODE=same-cap-cell
+          PLAN_POOL_ARGS=()
+          if [[ "${DEPLOY_MODE}" =~ ^pool-canary- ]]; then
+            PLAN_MODE=pool-canary-cell
+            PLAN_POOL_ARGS=(--pool "${DESIRED_POOL}" --rollback-pool "${PREDECESSOR_POOL}")
+          fi
           terraform -chdir=infra/terraform plan \
             -var-file=environments/production.tfvars \
             -var-file="${RUNNER_TEMP}/relay-same-cap.tfvars.json" \
@@ -522,13 +572,14 @@ jobs:
             -out="${RUNNER_TEMP}/relay-same-cap.tfplan"
           terraform -chdir=infra/terraform show -json "${RUNNER_TEMP}/relay-same-cap.tfplan" \
             | node dev/scripts/validate-relay-capacity-plan.mjs \
-              --mode same-cap-cell --cell-id "${TARGET_CELL_ID}" \
+              --mode "${PLAN_MODE}" --cell-id "${TARGET_CELL_ID}" \
               --hard-cap "${EXPECTED_HARD_CAP}" \
               --unobserved-bound "${EXPECTED_UNOBSERVED_BOUND}" --image "${DESIRED_IMAGE}" \
               --rollback-image "${IMAGE_REPOSITORY}@${CURRENT_IMAGE_DIGEST}" \
               --rehome-director-service-account "${DIRECTOR_RUNTIME_SERVICE_ACCOUNT}" \
               --rehome-audience https://relay.onorca.dev/v1/admin/host-drain \
-              --regional-rehome-protocol "${DESIRED_REHOME_PROTOCOL}"
+              --regional-rehome-protocol "${DESIRED_REHOME_PROTOCOL}" \
+              "${PLAN_POOL_ARGS[@]}"
           terraform -chdir=infra/terraform apply -auto-approve \
             "${RUNNER_TEMP}/relay-same-cap.tfplan"
           gcloud compute instance-groups managed wait-until "${MIG_NAME}" --stable \
@@ -576,6 +627,10 @@ jobs:
             --argjson protocol "${DESIRED_REHOME_PROTOCOL}" \
             '.imageDigest == $digest and (.regionalRehomeProtocol // 0) == $protocol' \
             <<< "${TARGET_RUNTIME}" >/dev/null
+          if [[ "${DEPLOY_MODE}" =~ ^pool-canary- ]]; then
+            jq -e --argjson pool "${DESIRED_POOL}" '.databasePoolMax == $pool' \
+              <<< "${TARGET_RUNTIME}" >/dev/null
+          fi
           TARGET_DIRECTOR_STATUS="$(admin_post target-cell-status \
             "${DIRECTOR_ORIGIN}/v1/admin/cell-status" \
             "$(jq -cn --arg cell "${TARGET_CELL_ID}" '{v:1,cellId:$cell}')")"
@@ -599,13 +654,40 @@ jobs:
             | jq -e '.control.enabled == false' >/dev/null
 
       - name: Prove exact per-host trust and idempotent no-neighbor behavior
-        if: ${{ inputs.mode != 'verify' && ((inputs.mode == 'rollback' && inputs.rollback-rehome-protocol == '1') || (inputs.mode != 'rollback' && inputs.target-rehome-protocol == '1')) }}
+        if: ${{ inputs.mode != 'verify' && (((inputs.mode == 'rollback' || inputs.mode == 'pool-canary-rollback') && inputs.rollback-rehome-protocol != '0') || ((inputs.mode != 'rollback' && inputs.mode != 'pool-canary-rollback') && inputs.target-rehome-protocol != '0')) }}
         env:
           ORCA_RELAY_ADMIN_ID_TOKEN: ${{ steps.post-auth.outputs.id_token }}
         run: |
           node dev/scripts/probe-relay-rehome-trust.mjs \
             --director-origin "${DIRECTOR_ORIGIN}" --cell-id "${TARGET_CELL_ID}" \
             --cell-incarnation "${TARGET_INCARNATION}"
+
+      - name: Enforce bounded c27 pool-canary observation
+        if: ${{ startsWith(inputs.mode, 'pool-canary-') }}
+        run: |
+          STARTED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          sleep 300
+          ENDED_AT="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          C27_INSTANCE_ID="$(gcloud compute instances list --project "${GCP_PROJECT_ID}" \
+            --filter='name~^relay-c27- AND status=RUNNING' --format='value(id)')"
+          [[ "${C27_INSTANCE_ID}" =~ ^[0-9]+$ ]]
+          LOG_FILTER="resource.type=\"gce_instance\" AND resource.labels.instance_id=\"${C27_INSTANCE_ID}\" AND timestamp>=\"${STARTED_AT}\" AND timestamp<=\"${ENDED_AT}\" AND (jsonPayload.event=\"orca_relay_postgres_query_failed\" OR jsonPayload.event=\"orca_relay_postgres_transaction_retry\" OR jsonPayload.event=\"orca_relay_postgres_transaction_exhausted\" OR jsonPayload.event=\"orca_relay_runtime_metrics\")"
+          gcloud logging read "${LOG_FILTER}" --project "${GCP_PROJECT_ID}" \
+            --limit=10000 --format=json > "${RUNNER_TEMP}/c27-pool-entries.json"
+          ENTRY_COUNT="$(jq 'length' "${RUNNER_TEMP}/c27-pool-entries.json")"
+          # Cloud Logging caps a single read at 10,000 entries; an exact cap is
+          # ambiguous and must fail closed rather than silently undercounting.
+          test "${ENTRY_COUNT}" -lt 10000
+          jq -n --arg started "${STARTED_AT}" --arg ended "${ENDED_AT}" \
+            --slurpfile raw_entries "${RUNNER_TEMP}/c27-pool-entries.json" \
+            --arg ENV_POOL "${DESIRED_POOL}" \
+            '{cellId:"production-gce-c27",pool:($ENV_POOL|tonumber),startedAt:$started,endedAt:$ended,entries:($raw_entries[0] // [])}' \
+            > "${RUNNER_TEMP}/c27-pool-input.json"
+          node dev/scripts/collect-relay-pool-canary-observation.mjs \
+            < "${RUNNER_TEMP}/c27-pool-input.json" \
+            | node dev/scripts/validate-relay-pool-canary-observation.mjs \
+            | jq -e --argjson pool "${DESIRED_POOL}" \
+              '.cellId == "production-gce-c27" and .pool == $pool' >/dev/null
 
       - name: Restore only the verified selected cell to general admission
         if: ${{ inputs.mode != 'verify' }}
@@ -666,3 +748,34 @@ jobs:
             --expected-migration-only-cells "${ISOLATED_MIGRATION_CELLS}" \
             --expected-general-cells "${ISOLATED_GENERAL_CELLS}" \
             --expected-control-generation "${EXPECTED_REHOME_GENERATION}"
+
+      - name: Seal workflow-owned pool rollback authority
+        if: ${{ failure() && startsWith(inputs.mode, 'pool-canary-') }}
+        shell: bash
+        run: |
+          mkdir -p "${RUNNER_TEMP}/relay-pool-canary-rollback"
+          jq -n \
+            --arg cell "${TARGET_CELL_ID}" \
+            --arg targetImage "${TARGET_IMAGE_DIGEST}" \
+            --arg rollbackImage "${ROLLBACK_IMAGE_DIGEST}" \
+            --arg predecessorPool "${PREDECESSOR_POOL}" \
+            --arg targetPool "${TARGET_POOL}" \
+            --arg rollbackPool "${ROLLBACK_POOL}" \
+            --arg selectorGeneration "${EXPECTED_SELECTOR_GENERATION}" \
+            --arg rehomeGeneration "${EXPECTED_REHOME_GENERATION}" \
+            --arg runId "${GITHUB_RUN_ID}" \
+            '{v:1,action:"pool-canary-rollback-required",cellId:$cell,
+              targetImageDigest:$targetImage,rollbackImageDigest:$rollbackImage,
+              predecessorPool:$predecessorPool,targetPool:$targetPool,rollbackPool:$rollbackPool,
+              selectorGeneration:$selectorGeneration,rehomeGeneration:$rehomeGeneration,
+              sourceRunId:$runId,rehomeMustRemainDisabled:true}' \
+            > "${RUNNER_TEMP}/relay-pool-canary-rollback/rollback-authority.json"
+
+      - name: Upload workflow-owned pool rollback authority
+        if: ${{ failure() && startsWith(inputs.mode, 'pool-canary-') }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: relay-pool-canary-rollback-${{ github.run_id }}
+          path: ${{ runner.temp }}/relay-pool-canary-rollback/rollback-authority.json
+          retention-days: 14
+          if-no-files-found: error

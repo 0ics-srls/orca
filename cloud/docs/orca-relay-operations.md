@@ -466,11 +466,16 @@ After a deployment traffic shift, preserve the old revision/tag until metrics an
 
 ## Regional rehoming
 
-Rehoming moves a host to a general cell in the region its desktop last reported, in either
-direction. Both roles need the drain protocol: a cell without it can be neither a source nor a
-target, and it is not part of the fleet whose telemetry gates the worker. Until the asia-east2
-cells run `regionalRehomeProtocol` 1 they are none of the three, so no host is moved into or out
-of Asia and an Asia cell in distress does not pause the worker.
+Idle regional correction requires both source and target cells to advertise
+`regionalRehomeProtocol >= 3`. PR #20105 introduced this capability version with
+the idle handoff implementation. With that runtime, both rehome trust environment
+settings must be configured to advertise 3; otherwise the cell advertises 0.
+An older trusted runtime can advertise 1: configuring trust alone does not upgrade
+its implementation. The separate `connectionCapacityProtocol: 2` health field does
+not establish regional-correction readiness. Verify the live runtime version and
+image, not only instance-template configuration, before rollout or enablement.
+Incompatible cells are excluded from correction selection; enabling the cohort
+cannot override this check. Director and cell deployments are separate operations.
 
 `host-cooldown-ms` is the minimum gap between two rehomes of one host. It bounds the damage from
 a desktop whose region probe flips: without it the host would be dragged back across the ocean on
@@ -496,21 +501,22 @@ The served black-box relay suite validates the protocol/state transitions used b
 
 New optimization claims require both the durable regional-rehome control and
 `ORCA_RELAY_REGION_CORRECTION_COHORT_PERCENT` (integer 0–100, default **0**).
-Turning either gate off stops new optional moves; cleanup and authorized renewal of
-existing finish-existing attempts must continue. Legacy preferred-region hints do
-not certify a correction. Both cells must advertise regional protocol 2 and the
-source desktop's authenticated control must advertise finish-existing support.
+Turning either gate off stops new optional moves; ordinary migration cleanup and
+recovery continue. Legacy preferred-region hints do not certify a correction. Both
+cells must advertise regional protocol3 and the authenticated desktop control must
+advertise idle-regional-rehome-v1. The source must have no actual client sockets or
+pending admission/control work; a live control socket alone does not prevent a move.
 
 The monitor/deploy identity can read **GET `/v1/admin/regional-rehome-preview`**.
 It returns full-population eligibility/exclusion counts, open-migration capacity,
-process-safety gating and aggregate retained-attempt outcomes; it never claims a
+process-safety gating and aggregate migration outcomes; it never claims a
 host or changes the failure budget. This is advisory, with separately read state:
 concurrent assignments, capacity changes, rate pauses and control changes can make
 the next claim differ. Inspect the durable control separately before enabling.
 Do not treat an unavailable/failed preview as zero eligible hosts.
 
-`orca_relay_region_correction_outcomes` reports retained attempts by source/target,
-registration/completion/abort state, oldest open age, live source controls and target
+`orca_relay_region_correction_outcomes` reports attempts by source/target,
+registration/completion/abort state, oldest open age and target
 reservation units every five minutes. `orca_relay_region_comparison` samples a
 stable 10% of accepted reports (including unchanged hosts), keyed by host digest,
 assignment epoch and decision generation. Existing control RTT and client-accept
@@ -519,18 +525,18 @@ matched before/after and unchanged-cohort comparisons. Client accept latency is
 connection setup, not application command round trip. No application-latency
 improvement has been demonstrated by probe differences alone.
 
-Forced source closure logs distinguish drain mode and emergency drain. Quiet live
-connections count as work. A healthy retained source may remain for days; age alone
-is not an alert requiring forced closure. Investigate failed registration, missing
-authority, stuck reservations, growing retained counts, reconnects and forced-close
-rates against the rollout's agreed limits.
+Quiet live connections count as work and defer optional correction indefinitely.
+A returning client may race with the short admission gate and retry normally. No
+optimization timer may close an established client. Investigate failed registration,
+ambiguous authority, stuck reservations and reconnect/failure rates against agreed
+limits. A database outage can keep the source fenced until locked reconciliation
+establishes its authority; timeout alone is not permission to reopen admissions.
 
-All director processes and cleanup workers must understand durable retention and
-rollback before enabling a cohort. After a first retained attempt, rolling a worker
-back below that implementation is unsafe even if new claims are disabled. Record
-the actual tested immutable revision as this floor during authorized deployment.
-Deploying supporting cells/desktops and enabling a cohort require separate rollout
-authorization and explicit numerical stop criteria; this change enables neither.
+All directors must run the reviewed idle worker before enabling. Record the tested
+immutable source and rollback revisions, then verify the ordinary migration recovery
+path before rollout. There is no retained-source table or renewal protocol. Deploying
+supporting cells/desktops and enabling a cohort require separate rollout authorization
+and explicit numerical stop criteria; this change enables neither.
 
 ### Setting the correction cohort during a reviewed director rollout
 

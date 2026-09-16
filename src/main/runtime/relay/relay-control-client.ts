@@ -9,7 +9,6 @@ import {
   RelayHostChallengeMessageSchema,
   RelayHostHelloAckMessageSchema,
   RelayPingMessageSchema,
-  RelayRegionRestoredMessageSchema,
   RELAY_HOST_CAPABILITY_HEADERS,
   encodeRelayHostHello,
   parseRelayControlMessage,
@@ -209,12 +208,6 @@ export class RelayControlClient {
     if (drain.success) {
       this.state = 'draining'
       this.options.onDrain(drain.data)
-      return
-    }
-    const restored = RelayRegionRestoredMessageSchema.safeParse(message)
-    if (restored.success) {
-      this.state = 'active'
-      this.options.onRegionRestored?.(restored.data)
       return
     }
     if (this.requests.resolveMessage(message)) {

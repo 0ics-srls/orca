@@ -637,6 +637,10 @@ export async function runCandidateDeployment(config, overrides = {}) {
     // Forward recovery needs durable aggregate evidence without exposing assignment identities.
     deps.emit({
       event: 'candidate_audit',
+      selector: {
+        generation: selectorInspection.selector.generation,
+        membership: selectorInspection.selector.membership
+      },
       source: aggregateCellStatus(sourceStatus),
       target: aggregateCellStatus(targetStatus),
       migration

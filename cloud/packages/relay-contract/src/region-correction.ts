@@ -54,24 +54,7 @@ export const RegionCorrectionResponseSchema = z
   })
   .strict()
 
-export const RegionalRetentionSchema = z
-  .object({
-    mode: z.literal('finish-existing'),
-    attemptId: z.string().uuid(),
-    sourceGeneration: GenerationSchema.refine((value) => value > 0),
-    sourceAssignmentEpoch: GenerationSchema.refine((value) => value > 0)
-  })
-  .strict()
-
-export const RegionRestoredSchema = RegionalRetentionSchema.omit({ mode: true })
-  .extend({
-    assignmentEpoch: GenerationSchema.refine((value) => value > 0)
-  })
-  .strict()
-
 export type RegionMeasurements = z.infer<typeof RegionMeasurementsSchema>
 export type RegionMeasurementWindow = z.infer<typeof RegionMeasurementWindowSchema>
 export type RegionCorrectionRequest = z.infer<typeof RegionCorrectionRequestSchema>
 export type RegionCorrectionResponse = z.infer<typeof RegionCorrectionResponseSchema>
-export type RegionalRetention = z.infer<typeof RegionalRetentionSchema>
-export type RegionRestored = z.infer<typeof RegionRestoredSchema>

@@ -24,6 +24,7 @@ import { readRelayDatabasePoolPressure, type RelayDatabase } from './database.js
 import { HostSessionRegistry } from './host-session-registry.js'
 import { observeRelayDatabase } from './observed-relay-database.js'
 import { RelayObservability } from './relay-observability.js'
+import { combineRegionalRehomeSafety } from './regional-rehome-safety.js'
 import { RelayConnectionLedger, type RelayConnectionUpgrade } from './relay-connection-ledger.js'
 import { createRelayReadiness } from './relay-readiness.js'
 import { createRelayTokenVerifier, readBearer } from './relay-token-verifier.js'
@@ -133,6 +134,19 @@ export function createRelayServer(
     assignments,
     drain: (graceMs) => sessions.drain(graceMs),
     drainHost: (input) => sessions.drainHost(input),
+    idleRehome: (input) => {
+      const now = (options.now ?? Date.now)()
+      if (input.directorSafety.observedAt > now || now - input.directorSafety.observedAt > 60_000) {
+        return Promise.resolve({ outcome: 'deferred' })
+      }
+      return sessions.idleRehome(input,
+        () => assignments.commitIdleRegionalRehome(input, combineRegionalRehomeSafety(
+          input.directorSafety,
+          { ...observability.regionalRehomeRuntimeSafety(), ...readRelayDatabasePoolPressure(database) }
+        ), input.cohortPercent),
+        () => assignments.reconcileIdleRegionalRehome(input)
+      )
+    },
     regionalRehomeTrustProbeHostExists: (input) => sessions.get(input) !== null,
     cellIncarnation,
     isDraining: () => sessions.isDraining(),

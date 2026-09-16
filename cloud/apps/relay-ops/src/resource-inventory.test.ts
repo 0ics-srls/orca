@@ -49,6 +49,50 @@ const sleepingStagingFetch = (migOutcome: (migName: string) => MigOutcome): type
   }
 
 describe('readResourceInventory', () => {
+  it('cancels every probe body without letting cleanup failures change HTTP verdicts or retries', async () => {
+    for (const status of [200, 503]) {
+      let calls = 0
+      let cancellations = 0
+      const waits: number[] = []
+      const result = await probeEndpointHealth(
+        'https://c9.relay.onorca.dev',
+        async () => {
+          calls += 1
+          return new Response(new ReadableStream({
+            cancel() {
+              cancellations += 1
+              return Promise.reject(new Error('cleanup failed'))
+            }
+          }), { status })
+        },
+        { wait: async (ms) => { waits.push(ms) } }
+      )
+      expect(cancellations).toBe(status === 200 ? 2 : 4)
+      expect(calls).toBe(cancellations)
+      expect(result.health).toBe(status === 200)
+      expect(result.ready).toBe(status === 200)
+      expect(result.latencyMs).not.toBeNull()
+      expect(waits).toHaveLength(status === 200 ? 0 : 1)
+    }
+  })
+
+  it('returns a probe reading without waiting for body cancellation to finish', async () => {
+    let cancellations = 0
+    const result = await probeEndpointHealth(
+      'https://c9.relay.onorca.dev',
+      async () => new Response(new ReadableStream({
+        cancel() {
+          cancellations += 1
+          return new Promise<void>(() => {})
+        }
+      })),
+      { wait: async () => { throw new Error('healthy probe must not retry') } }
+    )
+    expect(cancellations).toBe(2)
+    expect(result.health).toBe(true)
+    expect(result.ready).toBe(true)
+  })
+
   it('does not delay a healthy endpoint sample', async () => {
     let calls = 0
     let waits = 0

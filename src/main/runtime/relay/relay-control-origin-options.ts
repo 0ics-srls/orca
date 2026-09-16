@@ -4,7 +4,7 @@ import type { MobileSocketWiring } from '../rpc/mobile-socket-wiring'
 import type { RelayIdentity } from './relay-session-broker-contract'
 import type { RelayAssignment } from './relay-http-client'
 import type { RelayControlOrigin } from './relay-control-origin'
-import type { RelayDrainMessage, RelayRegionRestoredMessage } from './relay-control-protocol'
+import type { RelayDrainMessage } from './relay-control-protocol'
 
 export type RelayControlOriginOptions = {
   assignment: RelayAssignment
@@ -21,5 +21,4 @@ export type RelayControlOriginOptions = {
   onDrain: (origin: RelayControlOrigin, message: RelayDrainMessage) => void
   onClose: (origin: RelayControlOrigin, code: number) => void
   onPendingChanged?: (origin: RelayControlOrigin) => void
-  onRegionRestored?: (origin: RelayControlOrigin, message: RelayRegionRestoredMessage) => void
 }

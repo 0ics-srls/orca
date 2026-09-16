@@ -1,7 +1,8 @@
 import {
   AssignmentRequestSchema,
-  RegionalRetentionSchema,
-  type RegionalRetention,
+  IdleRegionalRehomeRequestSchema,
+  type IdleRegionalRehomeRequest,
+  type IdleRegionalRehomeOutcome,
   type RegionCorrectionResponse,
   isRelayCellConnectionHardCap,
   RELAY_ADMISSION_BUDGETS,
@@ -71,6 +72,10 @@ export function createRelayApp(
     store: RelayCredentialStore
     assignments: RelayAssignmentStore
     drain: (graceMs: number) => void
+    idleRehome?: (input: IdleRegionalRehomeRequest & {
+      cohortPercent: number
+      directorSafety: RegionalRehomeSafetySnapshot
+    }) => Promise<{ outcome: IdleRegionalRehomeOutcome }>
     drainHost?: (input: {
       attemptId: string
       userId: string
@@ -78,7 +83,6 @@ export function createRelayApp(
       sourceAssignmentEpoch: number
       sourceCellIncarnation: string
       graceMs: number
-      retention?: RegionalRetention
     }) =>
       | 'accepted'
       | 'already-accepted'
@@ -464,6 +468,34 @@ export function createRelayApp(
     operations.drain(body.data.graceMs)
     return context.json({ ok: true })
   })
+  app.post('/v1/admin/host-idle-rehome', async (context) => {
+    if (config.role !== 'cell' || !operations.idleRehome) {
+      return context.json({ error: 'cell_only' }, 404)
+    }
+    const bearer = readBearer(context.req.header('authorization'))
+    if (!bearer || !(await verifyRegionalRehomeToken(bearer))) {
+      return context.json({ error: 'invalid_token' }, 401)
+    }
+    if (requestTooLarge(context.req.header('content-length'))) {
+      return context.json({ error: 'request_too_large' }, 413)
+    }
+    const body = IdleRegionalRehomeCommandSchema.safeParse(
+      await context.req.json().catch(() => null)
+    )
+    if (!body.success) return context.json({ error: 'invalid_request' }, 400)
+    if (
+      body.data.sourceCellId !== config.cellId ||
+      !operations.cellIncarnation ||
+      body.data.sourceCellIncarnation !== operations.cellIncarnation
+    ) {
+      return context.json({ error: 'regional_rehome_source_generation_mismatch' }, 409)
+    }
+    try {
+      return context.json({ v: 1, ...(await operations.idleRehome(body.data)) })
+    } catch (error) {
+      return context.json({ error: operationError(error) }, 409)
+    }
+  })
   app.post('/v1/admin/host-drain', async (context) => {
     if (config.role !== 'cell' || !operations.drainHost) {
       return context.json({ error: 'cell_only' }, 404)
@@ -533,7 +565,8 @@ export function createRelayApp(
       region: config.region ?? RELAY_DEFAULT_REGION,
       imageDigest: config.imageDigest ?? null,
       draining: operations.isDraining?.() ?? false,
-      regionalRehomeProtocol: config.rehomeAudience && config.rehomeDirectorServiceAccount ? 2 : 0,
+      regionalRehomeProtocol: config.rehomeAudience && config.rehomeDirectorServiceAccount ? 3 : 0,
+      databasePoolMax: config.databasePoolMax,
       connectionCapacity:
         config.connectionHardCap === undefined
           ? null
@@ -1337,6 +1370,11 @@ const RegionalRehomeSafetySchema = z
   })
   .strict()
 
+const IdleRegionalRehomeCommandSchema = IdleRegionalRehomeRequestSchema.extend({
+  cohortPercent: z.number().int().min(0).max(100),
+  directorSafety: RegionalRehomeSafetySchema
+})
+
 const CellHeartbeatSchema = z
   .object({
     v: z.literal(1),
@@ -1436,7 +1474,7 @@ const CellRegionalRehomeStatusSchema = z
     v: z.literal(1),
     cellId: z.string().min(1).max(128),
     cellIncarnation: z.string().uuid(),
-    regionalRehomeProtocol: z.number().int().min(0).max(2),
+    regionalRehomeProtocol: z.number().int().min(0).max(3),
     safety: RegionalRehomeSafetySchema
   })
   .strict()
@@ -1821,7 +1859,6 @@ const RegionalHostDrainSchema = z
     sourceCellId: z.string().min(1).max(128),
     sourceCellIncarnation: z.string().uuid(),
     sourceAssignmentEpoch: z.number().int().positive(),
-    retention: RegionalRetentionSchema.optional(),
     graceMs: z
       .number()
       .int()
