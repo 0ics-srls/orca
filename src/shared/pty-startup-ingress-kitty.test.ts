@@ -128,3 +128,42 @@ it('keeps ConPTY color authority after Kitty hands off', () => {
   expect(f.visible()).toBe('\x1b[?u')
   f.ingress.drainAndClose()
 })
+
+it.each([undefined, {}, { foreground: '#fff' }, { background: 'invalid' }])(
+  'answers a Kitty-only intent independently of colors %j',
+  (colors) => {
+    const intent = parsePtyStartupIngressIntent({
+      colors,
+      kittyKeyboardProtocol: true,
+      deadlineMs: 5000
+    })
+    expect(intent).toBeDefined()
+    const writes: string[] = []
+    const emissions: PtyIngressEmission[] = []
+    const ingress = new PtyStartupIngress({
+      intent,
+      write: (data) => writes.push(data),
+      onEmission: (span) => emissions.push(span)
+    })
+    ingress.accept('\x1b[?u\x1b[c')
+    ingress.drainAndClose()
+    expect(writes).toEqual(['\x1b[?0u'])
+    expect(emissions.map((span) => span.data).join('')).toBe('\x1b[c')
+  }
+)
+it.each([undefined, false, 'true', 1])(
+  'rejects colorless intents without explicit Kitty support: %j',
+  (kittyKeyboardProtocol) => {
+    expect(
+      parsePtyStartupIngressIntent({ kittyKeyboardProtocol, deadlineMs: 5000 })
+    ).toBeUndefined()
+  }
+)
+it.each([-1, 30001, Number.NaN, Infinity, '5000', undefined])(
+  'rejects an invalid Kitty-only deadline: %j',
+  (deadlineMs) => {
+    expect(
+      parsePtyStartupIngressIntent({ kittyKeyboardProtocol: true, deadlineMs })
+    ).toBeUndefined()
+  }
+)
