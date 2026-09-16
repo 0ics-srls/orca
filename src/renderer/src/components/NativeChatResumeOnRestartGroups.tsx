@@ -82,13 +82,7 @@ function ResumeCandidateRow({
       <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
         {formatShortTimeAgo(candidate.recordedAt, listedAt)}
       </span>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 shrink-0 gap-1 px-2"
-        disabled={busy}
-        onClick={onReconnect}
-      >
+      <Button variant="ghost" size="xs" className="shrink-0" disabled={busy} onClick={onReconnect}>
         <Play className="size-3" />
         {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
       </Button>

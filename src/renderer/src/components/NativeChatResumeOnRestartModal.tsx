@@ -94,20 +94,20 @@ function ContinuationExplainer(): React.JSX.Element {
           <Info className="size-3.5" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="end" className="w-96 text-xs">
-        <p className="font-semibold">
+      <PopoverContent align="end" className="w-96">
+        <p className="text-xs font-semibold">
           {translate(
             'auto.components.NativeChatResumeOnRestartModal.whatIsSentTitle',
             'What Orca sends'
           )}
         </p>
-        <p className="mt-1 text-muted-foreground">
+        <p className="mt-1 text-xs text-muted-foreground">
           {translate(
             'auto.components.NativeChatResumeOnRestartModal.whatIsSentBody',
             'Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.'
           )}
         </p>
-        <blockquote className="mt-2 rounded-md border bg-muted/40 p-2 text-muted-foreground">
+        <blockquote className="mt-2 rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
           {AGENT_SESSION_RESTART_CONTINUATION_MESSAGE}
         </blockquote>
       </PopoverContent>
@@ -248,12 +248,15 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           point, so the list scrolls inside the dialog while the header and primary action stay. */}
       <DialogContent className="grid-rows-[auto_minmax(0,1fr)_auto_auto] sm:max-w-xl max-h-[85vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <RotateCcw className="size-4 text-muted-foreground" />
-            {translate(
-              'auto.components.NativeChatResumeOnRestartModal.title',
-              'Reconnect interrupted chats?'
-            )}
+          <DialogTitle>
+            {/* Plain wrapper owns the icon spacing; DialogTitle owns its own. */}
+            <span className="flex items-center gap-2">
+              <RotateCcw className="size-4 text-muted-foreground" />
+              {translate(
+                'auto.components.NativeChatResumeOnRestartModal.title',
+                'Reconnect interrupted chats?'
+              )}
+            </span>
           </DialogTitle>
           <DialogDescription>
             {interruptedByUpdate
@@ -266,6 +269,15 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
                   'These chats were mid-turn when Orca closed. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.'
                 )}
           </DialogDescription>
+          {/* The true state of things is counterintuitive — the terminal sessions survived and the
+              chats did not — so say so where it frames the list, not as a footnote. "kept running"
+              rather than "were restored": nothing reconnected them, they never stopped. */}
+          <p className="text-xs text-muted-foreground">
+            {translate(
+              'auto.components.NativeChatResumeOnRestartModal.terminalSessionsUnaffected',
+              'Only chats are affected — your terminal sessions kept running and need nothing from you.'
+            )}
+          </p>
         </DialogHeader>
 
         <div

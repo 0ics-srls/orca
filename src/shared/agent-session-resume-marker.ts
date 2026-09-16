@@ -46,14 +46,16 @@ export function isAgentSessionResumeMarker(value: unknown): value is AgentSessio
   if (typeof value !== 'object' || value === null) {
     return false
   }
-  const marker = value as Partial<AgentSessionResumeMarker>
+  const recordedAt = Reflect.get(value, 'recordedAt')
+  const trigger = Reflect.get(value, 'trigger')
   return (
-    isMarkerField(marker.sessionId) &&
-    isMarkerField(marker.turnId) &&
-    isMarkerField(marker.providerHandleRoot) &&
-    Number.isSafeInteger(marker.recordedAt) &&
-    (marker.recordedAt as number) >= 0 &&
-    (marker.trigger === 'quit' || marker.trigger === 'update')
+    isMarkerField(Reflect.get(value, 'sessionId')) &&
+    isMarkerField(Reflect.get(value, 'turnId')) &&
+    isMarkerField(Reflect.get(value, 'providerHandleRoot')) &&
+    typeof recordedAt === 'number' &&
+    Number.isSafeInteger(recordedAt) &&
+    recordedAt >= 0 &&
+    (trigger === 'quit' || trigger === 'update')
   )
 }
 

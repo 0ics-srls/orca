@@ -96,12 +96,13 @@ async function resumeOne(
     })
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
-    const live = (error as { owner?: string }).owner
+    const owner =
+      typeof error === 'object' && error !== null ? Reflect.get(error, 'owner') : undefined
     return {
       sessionId,
       outcome: 'refused',
       reason,
-      ...(live === undefined ? {} : { owner: live })
+      ...(typeof owner === 'string' ? { owner } : {})
     }
   }
 }

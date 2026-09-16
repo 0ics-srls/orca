@@ -43,6 +43,7 @@ function turnItem(
 }
 
 function record(overrides: { chain?: AgentSessionRecord['providerHandleChain'] } = {}) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a literal fixture standing in for a durable record; the code under test reads only lease, provider, location and providerHandleChain.
   return {
     schemaVersion: 2,
     sessionId: SESSION,
@@ -110,6 +111,7 @@ function claudeRecord(
   leafUuid: string | null,
   providerSessionId = CLAUDE_PROVIDER_SESSION
 ): AgentSessionRecord {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; this only swaps the provider and its Claude handle chain.
   return {
     ...record(),
     provider: 'claude',
@@ -127,6 +129,7 @@ function claudeRecord(
 }
 
 function journal(items: AgentJournalRenderItem[], isReadOnly = false) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the code under test calls only isReadOnly and snapshot(); a real AgentSessionJournal needs an on-disk SQLite store.
   return { isReadOnly, snapshot: () => ({ items, submissions: [] }) } as never
 }
 
@@ -416,7 +419,9 @@ describe('the restart-resume surface', () => {
       ])
     return {
       restartResume: createStructuredAgentSessionRestartResume(
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the collaborator reads only getRecord and resumeMarkers from the store, and supportsCreate from the adapter.
         { store, adapter: { supportsCreate: () => true } } as never,
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the live-session map is read for journal, hasProviderChild and fence only.
         sessions as never,
         {
           revealSession: async () => ({ readable: true }),
@@ -429,6 +434,7 @@ describe('the restart-resume surface', () => {
           send: async ({ envelope, body }) => {
             sent.push({
               sessionId: envelope.sessionId,
+              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: restartContinuationBody builds exactly one text block, which is what this assertion reads.
               text: (body.blocks[0] as { text: string }).text
             })
             return { ok: true }
@@ -513,6 +519,7 @@ describe('the restart-resume surface', () => {
   // predicate drops the session. Reporting "nothing happened" would leave the user pressing a dead
   // button for a session that IS running.
   it('reports a session the chat pane already re-acquired as resumed, not as nothing', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; only claimStatus is overridden, to model a lease the pane re-took.
     const liveRecord = {
       ...record(),
       lease: { ...record().lease, claimStatus: 'live' }
@@ -537,6 +544,7 @@ describe('the restart-resume surface', () => {
   // Relaxing the lease clause must not relax the whole predicate. "Resume all" targets every
   // marker, so a held-but-ineligible session would otherwise be consumed and counted as resumed.
   it('refuses to settle an already-live session the predicate rejects', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; only claimStatus is overridden, to model a lease the pane re-took.
     const liveRecord = {
       ...record(),
       lease: { ...record().lease, claimStatus: 'live' }

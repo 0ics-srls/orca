@@ -102,6 +102,7 @@ function parseState(
   if (typeof parsed !== 'object' || parsed === null) {
     return null
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field is read back as `unknown` and validated below before use; adding `resumeMarkers` brought this long-standing assertion into the changed-code gate.
   const file = parsed as {
     schemaVersion?: unknown
     hostId?: unknown
@@ -110,6 +111,7 @@ function parseState(
     retiredClaimKeys?: unknown
     unusableRecords?: unknown
     visibleSessionIds?: unknown
+    resumeMarkers?: unknown
   }
   if (
     !Number.isSafeInteger(file.schemaVersion) ||
@@ -227,9 +229,7 @@ function parseState(
   }
   state.visibleSessionIdsIndexPresent = visibleSessionIds.present
   visibleSessionIds.ids.forEach((sessionId) => state.visibleSessionIds.add(sessionId))
-  state.resumeMarkers = parseAgentSessionResumeMarkers(
-    (parsed as { resumeMarkers?: unknown }).resumeMarkers
-  )
+  state.resumeMarkers = parseAgentSessionResumeMarkers(file.resumeMarkers)
   return { state, needsRewrite }
 }
 
