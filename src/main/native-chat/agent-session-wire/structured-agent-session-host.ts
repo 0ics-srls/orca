@@ -56,6 +56,7 @@ import {
   createStructuredAgentSessionRestartResume,
   type StructuredAgentSessionRestartResume
 } from './structured-agent-session-restart-resume-host'
+import { structuredAgentSessionRestartResumeSurfaces } from './structured-agent-session-restart-resume-wiring'
 export type { StructuredAgentSessionHostDeps } from './structured-agent-session-host-types'
 
 export class StructuredAgentSessionHost {
@@ -151,12 +152,11 @@ export class StructuredAgentSessionHost {
       attachContext: () => this.attachContext(),
       onBarrierError: (sessionId, error) => deps.onEventSinkError?.({ sessionId, error })
     })
-    this.restartResume = createStructuredAgentSessionRestartResume(deps, this.sessions, {
-      revealSession: this.revealSession,
-      hold: this.hold,
-      send: (params) => this.send({ callerKey: 'trusted-local:restart-continuation' }, params),
-      now: this.now
-    })
+    this.restartResume = createStructuredAgentSessionRestartResume(
+      deps,
+      this.sessions,
+      structuredAgentSessionRestartResumeSurfaces(this, this.now, deps.onEventSinkError)
+    )
     this.runtimeState.startLeaseRenewal()
   }
 

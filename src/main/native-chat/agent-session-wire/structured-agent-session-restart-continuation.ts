@@ -78,8 +78,22 @@ export type StructuredAgentSessionContinuationDeps = {
     /** The submission is where the provider's answer lives; the envelope only says Orca took it. */
     value?: { submission?: { dispatchState?: string; reason?: string | null } }
   }>
+  /**
+   * Waits for that send's dispatch to stop being `pending`, through the host's existing settlement
+   * waiter. Send RETURNS while the dispatch is still pending — that is the normal successful path —
+   * so the value on the send result is a starting state, not a verdict.
+   *
+   * Resolves undefined when nothing settled it in time, which is genuinely unverifiable.
+   */
+  awaitSettlement: (
+    sessionId: string,
+    clientMessageId: string
+  ) => Promise<{ dispatchState?: string; reason?: string | null } | undefined>
   /** Records the host-authored journal note that marks this send as Orca's, not the user's. */
   note: (sessionId: string, text: string) => Promise<void>
+  /** Reports a note that could not be written. The note is best effort, but its failure is not
+   *  allowed to be silent — a swallowed append is how this regressed unnoticed once already. */
+  onNoteFailed: (sessionId: string, error: unknown) => void
   now: () => number
 }
 
@@ -107,15 +121,22 @@ export async function continueStructuredAgentSessionAfterRestart(
       reason: sent.refusal?.code ?? 'agent_session_send_failed'
     }
   }
-  const dispatch = sent.value?.submission?.dispatchState
+  // The send result carries the dispatch as it stood when Orca took the message, which for a normal
+  // successful send is `pending`. Judging it here would report every delivered continuation as
+  // pending and never write the note, so the settled value is what decides.
+  const submission =
+    (await deps.awaitSettlement(sessionId, envelope.clientOperationId).catch(() => undefined)) ??
+    sent.value?.submission
+  const dispatch = submission?.dispatchState
   if (dispatch === 'rejected') {
     return {
       sessionId,
       outcome: 'refused',
-      reason: sent.value?.submission?.reason ?? 'agent_session_dispatch_rejected'
+      reason: submission?.reason ?? 'agent_session_dispatch_rejected'
     }
   }
   if (dispatch === 'pending') {
+    // Still pending after settlement gave up: handed off, never confirmed.
     return { sessionId, outcome: 'pending' }
   }
   if (dispatch !== 'accepted') {
@@ -125,7 +146,12 @@ export async function continueStructuredAgentSessionAfterRestart(
   }
   // Only an accepted dispatch gets the note: it is a durable claim that Orca asked this agent to
   // carry on, and it must not sit beside a message the provider refused or never confirmed. Best
-  // effort beyond that — losing the note must not turn a delivered continuation into a failure.
-  await deps.note(sessionId, AGENT_SESSION_RESTART_CONTINUATION_NOTE).catch(() => undefined)
+  // effort beyond that — losing the note must not turn a delivered continuation into a failure —
+  // but reported, never swallowed.
+  try {
+    await deps.note(sessionId, AGENT_SESSION_RESTART_CONTINUATION_NOTE)
+  } catch (error) {
+    deps.onNoteFailed(sessionId, error)
+  }
   return { sessionId, outcome: 'continued' }
 }

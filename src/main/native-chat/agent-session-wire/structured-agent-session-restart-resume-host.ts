@@ -23,7 +23,11 @@ import {
   newestStructuredAgentSessionTurn
 } from '../../../shared/structured-agent-session-projection'
 import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
-import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
+import type {
+  AgentSessionMutationEnvelope,
+  AgentSessionMutationResult,
+  AgentSessionSendResult
+} from '../../../shared/agent-session-wire'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { adapterSupportsRecord } from './structured-agent-session-provider-support'
@@ -45,16 +49,27 @@ import { structuredAgentSessionsWorkingAtTeardown } from './structured-agent-ses
 type LiveSession = { journal: AgentSessionJournal; hasProviderChild: boolean; fence: number }
 
 /** The host capabilities this needs, named so the collaborator cannot quietly grow more. */
-type RestartResumeSurfaces = {
+export type StructuredAgentSessionRestartResumeSurfaces = {
   revealSession: (sessionId: string) => Promise<{ readable: boolean }>
   /** The resume-capable hold; see the runner for why a hold and not a send. */
   hold: (sessionId: string, holderId: string) => Promise<void>
   /** The host's own send. Reached ONLY from `continueAfterRestart` — `resume` never calls it, which
-   *  is what makes "automatic reconnect can never continue" structural. */
+   *  is what makes "automatic reconnect can never continue" structural.
+   *
+   *  Typed against the wire result rather than a hand-written subset: an narrower local shape hid
+   *  `value.submission` here once, and the continuation reads it. */
   send: (input: {
     envelope: AgentSessionMutationEnvelope
     body: AgentJournalMessageItem
-  }) => Promise<{ ok: boolean; refusal?: { code: string } }>
+  }) => Promise<AgentSessionMutationResult<AgentSessionSendResult>>
+  /** The host's existing settlement waiter. A send resolves while its dispatch is still pending, so
+   *  this is what turns that starting state into a verdict. */
+  awaitSendSettlement: (
+    sessionId: string,
+    clientMessageId: string
+  ) => Promise<{ value: AgentSessionSendResult } | undefined>
+  /** Where a failed journal note is reported. */
+  onNoteFailed: (sessionId: string, error: unknown) => void
   now: () => number
 }
 
@@ -86,7 +101,7 @@ export function createStructuredAgentSessionRestartResume(
   },
   /** The host's LIVE session map — the only honest answer to "was this actually working". */
   sessions: ReadonlyMap<string, LiveSession>,
-  surfaces: RestartResumeSurfaces
+  surfaces: StructuredAgentSessionRestartResumeSurfaces
 ): StructuredAgentSessionRestartResume {
   const admission = new StructuredAgentSessionResumeAdmission()
   const itemsFor = (sessionId: string) => sessions.get(sessionId)?.journal.snapshot().items ?? []
@@ -235,6 +250,9 @@ export function createStructuredAgentSessionRestartResume(
           {
             currentFence: (sessionId) => sessions.get(sessionId)?.fence ?? null,
             send: surfaces.send,
+            awaitSettlement: async (sessionId, clientMessageId) =>
+              (await surfaces.awaitSendSettlement(sessionId, clientMessageId))?.value.submission,
+            onNoteFailed: surfaces.onNoteFailed,
             note: async (sessionId, text) => {
               const session = sessions.get(sessionId)
               if (!session) {

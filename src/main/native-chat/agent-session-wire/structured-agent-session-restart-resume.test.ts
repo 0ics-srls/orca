@@ -354,20 +354,70 @@ describe('the resumable set', () => {
     }
   )
 
-  // An accepted send BECAME a turn, and a rejected one never ran. Neither is interrupted work, and
-  // resuming on either hands a provider child to a conversation that does not owe one.
-  it.each(['accepted', 'rejected'] as const)(
-    'refuses a send that settled as %s',
-    (dispatchState) => {
-      expect(
-        resumableSet({
-          markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
-          items: [],
-          submissions: [submission('msg-1', dispatchState)]
-        })
-      ).toEqual([])
-    }
-  )
+  // A rejected send never ran at all, so there is no interrupted work to hand back.
+  it('refuses a send the provider rejected', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [],
+        submissions: [submission('msg-1', 'rejected')]
+      })
+    ).toEqual([])
+  })
+
+  // THE REGRESSION, replaying the sequence measured inside one teardown: the send is journaled,
+  // its dispatch settles to `accepted`, and the turn it opened is then cut off as `interrupted`.
+  // The window in which work is submission-shaped is exactly the window in which the dispatch is
+  // about to be accepted, so freezing judgement at the marker's shape refuses the very sessions
+  // this was built for. An accepted send must be FOLLOWED FORWARD to the turn it became.
+  it('offers a send that was accepted and whose turn was then interrupted', () => {
+    const candidates = resumableSet({
+      markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+      items: [turnItem('turn-1', 'interrupted', 'provider-item-1')],
+      submissions: [submission('msg-1', 'accepted', 'provider-item-1')]
+    })
+
+    expect(candidates).toHaveLength(1)
+    expect(candidates[0]?.work).toEqual({ kind: 'submission', id: 'msg-1' })
+  })
+
+  it('offers a send whose turn the host could not verify', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [turnItem('turn-1', 'unverifiable', 'provider-item-1')],
+        submissions: [submission('msg-1', 'accepted', 'provider-item-1')]
+      })
+    ).toHaveLength(1)
+  })
+
+  // Following forward must not become a way to resume finished work: the turn's own state still
+  // decides, exactly as it does for a turn-shaped marker.
+  it('refuses a send whose turn ran to completion', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [turnItem('turn-1', 'completed', 'provider-item-1')],
+        submissions: [submission('msg-1', 'accepted', 'provider-item-1')]
+      })
+    ).toEqual([])
+  })
+
+  // Accepted, but the journal cannot prove WHICH turn it became — an unrelated turn, or a host old
+  // enough not to record the link. Without that proof there is no second witness, so this refuses.
+  it.each([
+    ['the turn names a different user item', 'provider-item-other', 'provider-item-1'],
+    ['the turn records no user item at all', undefined, 'provider-item-1'],
+    ['the submission has no provider key', 'provider-item-1', null]
+  ])('refuses an accepted send when %s', (_label, userItemId, providerItemId) => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [turnItem('turn-1', 'interrupted', userItemId)],
+        submissions: [submission('msg-1', 'accepted', providerItemId)]
+      })
+    ).toEqual([])
+  })
 
   it('refuses a submission marker the journal has no record of', () => {
     expect(

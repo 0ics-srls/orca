@@ -7,7 +7,11 @@
 import { describe, expect, it } from 'vitest'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
-import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
+import type { AgentSessionWireRefusal } from '../../../shared/agent-session-wire'
+import {
+  AGENT_SESSION_RESTART_CONTINUATION_MESSAGE,
+  AGENT_SESSION_RESTART_CONTINUATION_NOTE
+} from '../../../shared/agent-session-restart-continuation'
 import { createStructuredAgentSessionRestartResume } from './structured-agent-session-restart-resume-host'
 import {
   HANDLE_ROOT,
@@ -19,6 +23,7 @@ import {
   NOW,
   record,
   SESSION,
+  submission,
   turnItem
 } from './structured-agent-session-restart-resume-test-harness'
 
@@ -30,12 +35,18 @@ function surface(input: {
   /** The launch generation the host reads. Absent means adjacent to the marker fixtures. */
   launchGeneration?: { current: string; previous: string | null }
   clearFails?: boolean
-  /** What the send layer answers. Defaults to the happy path: Orca took it, the provider accepted. */
-  sendResult?: {
-    ok: boolean
-    refusal?: { code: string }
-    value?: { submission?: { dispatchState?: string; reason?: string | null } }
-  }
+  /** Orca refused to take the message at all. */
+  sendRefusal?: AgentSessionWireRefusal
+  /**
+   * The dispatch state SETTLEMENT reports. The send itself always answers `pending`, because that
+   * is what the real host does: it resolves as soon as Orca owns the message, before the provider
+   * has answered. Defaults to the delivered case.
+   */
+  settledDispatch?: 'pending' | 'accepted' | 'rejected' | 'unknown'
+  settledReason?: string
+  /** Nothing settled the send in time, which the waiter reports by resolving undefined. */
+  settlementTimesOut?: boolean
+  noteFails?: boolean
 }) {
   const live = new Map((input.markers ?? [marker()]).map((entry) => [entry.sessionId, entry]))
   const recorded: AgentSessionResumeMarker[][] = []
@@ -76,10 +87,14 @@ function surface(input: {
     const target = Reflect.get(session, 'journal')
     if (target !== null && typeof target === 'object') {
       Reflect.set(target, 'appendItem', async (_envelope: unknown, body: unknown) => {
+        if (input.noteFails) {
+          throw new Error('journal refused the note')
+        }
         noted.push({ sessionId, text: String(Reflect.get(body ?? {}, 'text')) })
       })
     }
   }
+  const noteFailures: { sessionId: string; error: unknown }[] = []
   return {
     restartResume: createStructuredAgentSessionRestartResume(
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the collaborator reads only getRecord and resumeMarkers from the store, and supportsCreate from the adapter.
@@ -107,10 +122,35 @@ function surface(input: {
             // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: restartContinuationBody builds exactly one text block, which is what this assertion reads.
             text: (body.blocks[0] as { text: string }).text
           })
-          return (
-            input.sendResult ?? { ok: true, value: { submission: { dispatchState: 'accepted' } } }
-          )
+          if (input.sendRefusal) {
+            return { ok: false, refusal: input.sendRefusal }
+          }
+          // What the real send answers: Orca owns the message, the provider has not replied yet.
+          return {
+            ok: true,
+            replayed: false,
+            fence: 1,
+            cursor: { epoch: 'epoch-1', sequence: 1 },
+            value: {
+              clientMessageId: envelope.clientOperationId,
+              submission: submission(envelope.clientOperationId, 'pending')
+            }
+          }
         },
+        awaitSendSettlement: async (_sessionId: string, clientMessageId: string) =>
+          input.settlementTimesOut
+            ? undefined
+            : {
+                value: {
+                  clientMessageId,
+                  submission: {
+                    ...submission(clientMessageId, input.settledDispatch ?? 'accepted'),
+                    reason: input.settledReason ?? null
+                  }
+                }
+              },
+        onNoteFailed: (sessionId: string, error: unknown) =>
+          noteFailures.push({ sessionId, error }),
         now: () => NOW
       }
     ),
@@ -118,7 +158,8 @@ function surface(input: {
     recorded,
     held,
     sent,
-    noted
+    noted,
+    noteFailures
   }
 }
 
@@ -364,15 +405,28 @@ describe('the restart-resume surface', () => {
 })
 
 describe('reporting what the continuation actually did', () => {
-  // The defect this exists for: the send layer answers `ok: true` the moment ORCA owns the message,
-  // and the provider's own answer lives inside the submission. Reading only the envelope reports a
-  // rejected dispatch as continued and stamps the journal saying the agent was asked to carry on.
+  // THE REGRESSION. A send resolves as soon as Orca owns the message, while its dispatch is still
+  // `pending` — the ordinary successful path, not an edge case. Judging the dispatch on the send
+  // result therefore calls every delivered continuation `pending` and never writes the note. This
+  // fixture answers `pending` from send and `accepted` from settlement, exactly as the host does,
+  // so a version that reads the send result fails here.
+  it('waits for settlement before judging, so a delivered continuation is not read as pending', async () => {
+    const { restartResume, noted } = surface({ settledDispatch: 'accepted' })
+
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'continued' }])
+    expect(noted).toHaveLength(1)
+    expect(noted[0]?.sessionId).toBe(SESSION)
+    expect(noted[0]?.text).toBe(AGENT_SESSION_RESTART_CONTINUATION_NOTE)
+  })
+
+  // The provider's own answer lives inside the submission. Reading only the envelope reports a
+  // refused turn/start as continued and stamps the journal saying the agent was asked to carry on.
   it('reports a rejected dispatch as refused and writes no note', async () => {
     const { restartResume, noted } = surface({
-      sendResult: {
-        ok: true,
-        value: { submission: { dispatchState: 'rejected', reason: 'provider_turn_start_refused' } }
-      }
+      settledDispatch: 'rejected',
+      settledReason: 'provider_turn_start_refused'
     })
 
     const result = await restartResume.continueAfterRestart(undefined, 'modal')
@@ -385,21 +439,20 @@ describe('reporting what the continuation actually did', () => {
 
   it('reports a send Orca could not hand off as refused and writes no note', async () => {
     const { restartResume, noted } = surface({
-      sendResult: { ok: false, refusal: { code: 'agent_session_send_refused' } }
+      sendRefusal: { code: 'agent_session_conflict', message: 'the runtime moved on' }
     })
 
     const result = await restartResume.continueAfterRestart(undefined, 'modal')
 
     expect(result.continued).toEqual([
-      { sessionId: SESSION, outcome: 'refused', reason: 'agent_session_send_refused' }
+      { sessionId: SESSION, outcome: 'refused', reason: 'agent_session_conflict' }
     ])
     expect(noted).toEqual([])
   })
 
-  it('reports an unconfirmed dispatch as pending and writes no note', async () => {
-    const { restartResume, noted } = surface({
-      sendResult: { ok: true, value: { submission: { dispatchState: 'pending' } } }
-    })
+  // Settlement gave up and the dispatch is STILL pending: handed off, never confirmed.
+  it('reports a dispatch still pending after settlement as pending, with no note', async () => {
+    const { restartResume, noted } = surface({ settledDispatch: 'pending' })
 
     const result = await restartResume.continueAfterRestart(undefined, 'modal')
 
@@ -407,35 +460,36 @@ describe('reporting what the continuation actually did', () => {
     expect(noted).toEqual([])
   })
 
-  // Unverifiable delivery is neither success nor failure, and a peer that reports no state at all
-  // lands here too rather than defaulting into success.
   it('reports an unverifiable dispatch as unknown and writes no note', async () => {
-    const { restartResume, noted } = surface({
-      sendResult: { ok: true, value: { submission: { dispatchState: 'unknown' } } }
-    })
-    const silent = surface({ sendResult: { ok: true } })
+    const { restartResume, noted } = surface({ settledDispatch: 'unknown' })
 
-    expect((await restartResume.continueAfterRestart(undefined, 'modal')).continued).toEqual([
-      { sessionId: SESSION, outcome: 'unknown' }
-    ])
-    expect((await silent.restartResume.continueAfterRestart(undefined, 'modal')).continued).toEqual(
-      [{ sessionId: SESSION, outcome: 'unknown' }]
-    )
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'unknown' }])
     expect(noted).toEqual([])
-    expect(silent.noted).toEqual([])
   })
 
-  // Only an accepted dispatch earns the note, because the note is what tells the reader of the
-  // transcript that Orca, not the user, wrote the message above it.
-  it('writes the attribution note only when the dispatch was accepted', async () => {
-    const { restartResume, noted } = surface({
-      sendResult: { ok: true, value: { submission: { dispatchState: 'accepted' } } }
-    })
+  // A waiter that timed out answers undefined, leaving only the send's own `pending`. That is not
+  // proof of delivery either, so it must not fall through into success.
+  it('claims no delivery when nothing ever settled the send', async () => {
+    const { restartResume, noted } = surface({ settlementTimesOut: true })
+
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'pending' }])
+    expect(noted).toEqual([])
+  })
+
+  // The note stays best effort — a journal that refuses it must not turn a delivered continuation
+  // into a failure — but its failure is REPORTED. This is the second silent swallow on this feature.
+  it('reports a note it could not write instead of swallowing the failure', async () => {
+    const { restartResume, noted, noteFailures } = surface({ noteFails: true })
 
     const result = await restartResume.continueAfterRestart(undefined, 'modal')
 
     expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'continued' }])
-    expect(noted).toHaveLength(1)
-    expect(noted[0]?.sessionId).toBe(SESSION)
+    expect(noted).toEqual([])
+    expect(noteFailures).toHaveLength(1)
+    expect(noteFailures[0]?.sessionId).toBe(SESSION)
   })
 })

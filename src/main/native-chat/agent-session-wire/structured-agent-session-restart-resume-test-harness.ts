@@ -21,12 +21,15 @@ export const LAUNCH_CURRENT = 'launch-current'
 
 export function turnItem(
   turnId: string,
-  state: 'running' | 'completed' | 'interrupted' | 'unverifiable'
+  state: 'running' | 'completed' | 'interrupted' | 'unverifiable',
+  /** The provider key of the user item that opened this turn — how a submission is followed
+   *  forward to the turn it became. Absent models an older host that recorded no link. */
+  userItemId?: string
 ): AgentJournalRenderItem {
   return {
     itemId: `turn:${turnId}`,
     revision: 1,
-    body: { kind: 'turn', turnId, state },
+    body: { kind: 'turn', turnId, state, ...(userItemId === undefined ? {} : { userItemId }) },
     sequence: 1,
     observedAt: NOW
   }
@@ -158,14 +161,16 @@ export function marker(
 /** A journalled send, in whichever dispatch state the test needs. */
 export function submission(
   clientMessageId: string,
-  dispatchState: 'pending' | 'accepted' | 'rejected' | 'unknown'
+  dispatchState: 'pending' | 'accepted' | 'rejected' | 'unknown',
+  /** The provider's key for the sent message. A turn names the same key in `userItemId`. */
+  providerItemId: string | null = null
 ): AgentJournalSubmission {
   return {
     clientMessageId,
     fence: 1,
     payloadFingerprint: 'fp',
     dispatchState,
-    providerItemId: null,
+    providerItemId,
     reason: null,
     submittedAt: NOW,
     resolvedAt: null

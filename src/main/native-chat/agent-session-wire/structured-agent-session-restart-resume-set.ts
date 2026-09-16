@@ -57,16 +57,45 @@ export type StructuredAgentSessionResumeSetInput = {
   leaseState?: 'must-be-released' | 'may-be-held'
 }
 
+/** Eviction rewrites `running` -> `interrupted` and never -> `completed`, so a completed turn is
+ *  finished work and one still marked `running` was never settled by anyone. */
+function turnWasCutOff(turn: AgentJournalTurnLifecycle | null): boolean {
+  return turn !== null && (turn.state === 'interrupted' || turn.state === 'unverifiable')
+}
+
+/**
+ * The turn an accepted submission opened, or null when the journal cannot prove the link.
+ *
+ * A turn names the user item that opened it, and a submission the provider acknowledged is reached
+ * through that key — the same alias the turn-timing selector resolves. Without both halves there is
+ * no proof this turn is the marked work rather than an older one, so this refuses.
+ */
+function turnTheSubmissionOpened(
+  input: StructuredAgentSessionResumeSetInput,
+  sessionId: string,
+  submission: AgentJournalSubmission
+): AgentJournalTurnLifecycle | null {
+  const turn = input.journalTurn(sessionId)
+  if (!turn || turn.userItemId === undefined || submission.providerItemId === null) {
+    return null
+  }
+  return turn.userItemId === submission.providerItemId ? turn : null
+}
+
 /**
  * The journal's own answer about the marked work, which must agree it was CUT OFF rather than
  * finished. This is the second of the two independent records.
  *
- * A TURN: eviction rewrites `running` -> `interrupted` and never -> `completed`, so a completed
- * turn is finished work and one still marked `running` was never settled by anyone.
+ * A TURN is judged directly. A SUBMISSION is FOLLOWED FORWARD, because the window in which work is
+ * submission-shaped is precisely the window in which its dispatch is about to settle — the marker
+ * is written mid-flight and the dispatch can reach `accepted` before the process dies. Freezing
+ * judgement at the marker's shape would refuse exactly the sessions this exists to catch.
  *
- * A SUBMISSION never became a turn, so its dispatch state carries the same evidence — settled to
- * `unknown` by the close path, or still `pending` because nothing settled it. An `accepted` or
- * `rejected` submission is not interrupted work: the first became a turn, the second never ran.
+ *   pending / unknown -> never became a turn, and nothing settled it: cut off.
+ *   rejected          -> never ran at all.
+ *   accepted          -> it BECAME a turn, so the turn is the evidence, judged by the turn rule.
+ *                        Accepted alone proves only that the provider took the message; it is the
+ *                        turn's own state that says whether the work was interrupted or finished.
  */
 function journalAgreesWorkWasCutOff(
   input: StructuredAgentSessionResumeSetInput,
@@ -74,16 +103,19 @@ function journalAgreesWorkWasCutOff(
 ): boolean {
   if (marker.work.kind === 'turn') {
     const turn = input.journalTurn(marker.sessionId)
-    return (
-      turn?.turnId === marker.work.id &&
-      (turn.state === 'interrupted' || turn.state === 'unverifiable')
-    )
+    return turn?.turnId === marker.work.id && turnWasCutOff(turn)
   }
   const submission = input.journalSubmission(marker.sessionId, marker.work.id)
-  return (
-    submission?.clientMessageId === marker.work.id &&
-    (submission.dispatchState === 'unknown' || submission.dispatchState === 'pending')
-  )
+  if (submission?.clientMessageId !== marker.work.id) {
+    return false
+  }
+  if (submission.dispatchState === 'unknown' || submission.dispatchState === 'pending') {
+    return true
+  }
+  if (submission.dispatchState !== 'accepted') {
+    return false
+  }
+  return turnWasCutOff(turnTheSubmissionOpened(input, marker.sessionId, submission))
 }
 
 export function structuredAgentSessionResumableSet(
