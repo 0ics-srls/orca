@@ -114,7 +114,9 @@ export function decideWebSessionTabsSnapshot(
   }
   rememberHostTerminalTabCount(environmentId, snapshot)
   replayableSessionTabsSnapshotByWorktree.delete(key)
-  // A frame that affirms nothing about the worktree has not taken over publishing it.
+  // A frame that affirms nothing about the worktree has not taken over publishing it, so it must
+  // not be noted. It still applies: rejecting it outright would drop the terminal reconciliation
+  // that legitimately rides on it (host-session-snapshot-authority.ts).
   if (hostSnapshotAffirmsWorktreeContents(snapshot)) {
     noteSessionTabsPublicationEpoch(key, snapshot.publicationEpoch)
   }
