@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "651e75383caf1b30c329dec2d5d4f0da5358c410402d03cbb087f39600d7a4d2",
   "scenarioSha256": "7d5cad367e76767b039fc5ebc15837930f02c5e1bed33ae7ca4695bae56287bd",
   "platform": "darwin",
@@ -53,14 +53,15 @@
       },
       "outcome": "declined"
     },
+    "723e3af65fac": {
+      "name": "pairing.getEndpoints#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"pairing.getEndpoints\",\"params\":{\"installReqId\":\"install-fixture-1\"}}",
+      "sent": 1
+    },
     "8ea887e0fc46": {
       "name": "journal-cleared",
       "value": "upgrade",
       "sent": 1
-    },
-    "beafd16aeb22": {
-      "name": "pairing.getEndpoints#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"pairing.getEndpoints\",\"params\":{\"installReqId\":\"install-fixture-1\"}}"
     },
     "ee20a1dc39e7": {
       "status": "fulfilled",
@@ -78,7 +79,7 @@
         "id": "upgrade-declined",
         "observation": {
           "sender": ["55af89989a85"],
-          "payloads": ["beafd16aeb22"],
+          "payloads": ["723e3af65fac"],
           "settlements": {
             "upgrade": "ee20a1dc39e7"
           },
