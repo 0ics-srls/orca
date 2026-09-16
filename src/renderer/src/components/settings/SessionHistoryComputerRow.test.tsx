@@ -210,7 +210,7 @@ it('keeps an offline server dimmed, disabled and honest about its index', async 
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'false')
 })
 
-it('asks for consent naming the server before enabling it', async () => {
+it('turns a server on straight from its switch, with nothing to confirm', async () => {
   const confirm = vi.fn().mockResolvedValue(true)
   mocks.status.mockResolvedValue(unavailableSessionSearchStatus())
   serverRow(connectedDetails(), confirm)
@@ -218,28 +218,12 @@ it('asks for consent naming the server before enabling it', async () => {
   await act(async () => {
     fireEvent.click(serverSwitch())
   })
-  expect(confirm).toHaveBeenCalledWith(
-    expect.objectContaining({
-      title: 'Turn on session search on build-box?',
-      description: expect.stringContaining('results are sent to this computer'),
-      confirmLabel: 'Turn on'
-    })
-  )
+  expect(confirm).not.toHaveBeenCalled()
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:env-1', true)
   expect(screen.getByRole('status')).toHaveTextContent('4,880 sessions · 1.4M messages searchable')
 })
 
-it('leaves a server untouched when the consent is declined', async () => {
-  mocks.status.mockResolvedValue(unavailableSessionSearchStatus())
-  serverRow(connectedDetails(), vi.fn().mockResolvedValue(false))
-  await act(async () => {})
-  await act(async () => {
-    fireEvent.click(serverSwitch())
-  })
-  expect(mocks.setEnabled).not.toHaveBeenCalled()
-})
-
-it('turns a server off without asking again', async () => {
+it('turns a server off straight from its switch', async () => {
   const confirm = vi.fn().mockResolvedValue(true)
   serverRow(connectedDetails(), confirm)
   await act(async () => {})

@@ -156,7 +156,7 @@ afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-it('requires opt-in and saves the existing policy without touching transcripts or polling while off', async () => {
+it('turns search on from the switch alone, touching no transcript while it is off', async () => {
   const save = vi.fn().mockResolvedValue(undefined)
   const confirm = vi.fn().mockResolvedValue(true)
   pane(false, confirm, save)
@@ -169,13 +169,7 @@ it('requires opt-in and saves the existing policy without touching transcripts o
   await act(async () => {
     fireEvent.click(screen.getByRole('switch'))
   })
-  expect(confirm).toHaveBeenCalledWith(
-    expect.objectContaining({
-      title: 'Turn on session search?',
-      description: expect.stringContaining('It stays on this computer'),
-      confirmLabel: 'Turn on'
-    })
-  )
+  expect(confirm).not.toHaveBeenCalled()
   expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
 })
 
@@ -189,17 +183,7 @@ it('sends the user to the sidebar panel with one click', async () => {
   expect(mocks.closeSettingsPage).toHaveBeenCalledOnce()
 })
 
-it('leaves search off when the indexing consent is declined', async () => {
-  const save = vi.fn().mockResolvedValue(undefined)
-  pane(false, vi.fn().mockResolvedValue(false), save)
-  await act(async () => {
-    fireEvent.click(screen.getByRole('switch'))
-  })
-  expect(save).not.toHaveBeenCalled()
-  expect(screen.getByRole('switch')).toHaveAttribute('aria-checked', 'false')
-})
-
-it('turns search off without asking again', async () => {
+it('turns search off from the switch alone', async () => {
   const confirm = vi.fn().mockResolvedValue(true)
   const save = vi.fn().mockResolvedValue(undefined)
   pane(true, confirm, save)
@@ -437,9 +421,7 @@ it('turns on every reachable computer and skips the ones it cannot', async () =>
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
   })
-  expect(confirm).toHaveBeenCalledWith(
-    expect.objectContaining({ title: 'Turn on session search on every computer?' })
-  )
+  expect(confirm).not.toHaveBeenCalled()
   expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:off'])
   expect(save).toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
 })
