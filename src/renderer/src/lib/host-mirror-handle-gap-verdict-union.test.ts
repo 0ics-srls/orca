@@ -220,18 +220,22 @@ describe('handle-gap verdict map, all rules on one tree', () => {
     for (let round = 0; round < 300; round += 1) {
       const environmentId = [ENV_A, ENV_B, ENV_C][round % 3]!
       setRuntimeEnvironmentConnectionGenerationForTests(environmentId, round + 1)
-      // Bind each round's pane to the environment that is recording it. Falling back to env-a for
-      // every round would store `paneBinding: ''` on two rounds in three, which is the match value
-      // the read-time check refuses — two thirds of the churn would then be synthetic.
+      // Bind each round's pane to the environment that is recording it. No assertion here reads
+      // `paneBinding` and neither prune rule inspects it, so this changes no outcome — but falling
+      // back to env-a stored the empty match value on two rounds in three, and a fixture that
+      // models a state the production park path cannot reach is not churn worth running.
       setLiveTabs([`tab-${round}`], { [`tab-${round}`]: `remote:${environmentId}@@term_${round}` })
       parkAndExpire(environmentId, `tab-${round}`)
     }
 
     // The assertion the loop exists for, and it has to come BEFORE teardown: the clear below
     // deletes every key in the map by construction, so `toBe(0)` after it holds whether the drains
-    // work or are deleted outright. 300 expiries must leave one live verdict per environment —
-    // each environment's own generation bump retires its predecessors, and the two environments
-    // not recording keep exactly their latest row.
+    // work or are deleted outright. 300 expiries must leave one live verdict per environment.
+    // What this pins is that the prune loop runs AT ALL — without it the map holds 300. It does
+    // not isolate which rule prunes: with one tab live per round the generation rule and the
+    // tab-death rule each sweep the recording environment's predecessor on their own, so removing
+    // either alone still reads 3. The generation rule is separately isolated by the count in
+    // `handles all four orphan classes simultaneously`, where only it can retire env-c's row.
     expect(countHostMirrorHandleGapVerdictsForTests()).toBe(3)
 
     for (const environmentId of [ENV_A, ENV_B, ENV_C]) {

@@ -82,9 +82,11 @@ const waitersByPane = new Map<string, HandleGapWaiter>()
  * never fires, the retracted row can never publish a handle, and the tab-death rule only runs from
  * inside a later recording. That entry outlives the session, and because
  * `stopStoreSubscriptionIfIdle` counts verdicts, so does the store subscription — a no-op rescan on
- * every write to the two slices below. It cannot answer (a retracted row reads `paneBinding: ''`,
- * which the read below refuses), so it costs work, not correctness. The obvious drain — drop a
- * verdict whose binding no longer matches — is NOT safe: it would break the genuine reattach, where
+ * every write to the two `HandleGapStoreState` slices above. It cannot answer: the STORED binding is
+ * non-empty, so the `''` early return below does not catch it; what does is the compare against a
+ * fresh `paneBindingFor`, which reads '' for a row that is gone. So it costs work, not correctness.
+ * The obvious drain — drop a verdict whose binding no longer matches — is NOT safe: it would break
+ * the genuine reattach, where
  * the binding goes away and comes back and the verdict must still answer
  * (host-mirror-handle-gap-verdict-union.test.ts, "answers for a genuine reattach").
  *
@@ -265,16 +267,27 @@ function releaseDueWaiters(state: HandleGapStoreState): void {
       due.push([key, waiter])
     }
   }
+  // TWO guards, because a replay earlier in this loop reaches `createTab` and so re-enters this
+  // drain through zustand, which notifies with no queue. Each guard catches a different way the
+  // snapshot goes stale mid-loop, and neither covers the other.
   for (const [key, waiter] of due) {
-    // Why the snapshot holds the WAITER and not just its key: a replay earlier in this loop writes
-    // to the store (the sweep reaches `createTab` and `clearSleepingAgentSession`), and zustand
-    // notifies re-entrantly with no queue, so the nested pass can release and re-park a pane still
-    // queued here. Releasing by key would then find the re-park, clear its brand-new deadline and
-    // replay it a second time off one store write — handing that pane another full budget, which
-    // is exactly the extension `parkUntilHostMirrorHandleLands` refuses to grant a re-park.
-    if (waitersByPane.get(key) === waiter) {
-      releaseWaiter(key)
+    // ONE: the map no longer holds the waiter this entry is about. The nested pass released it and
+    // its replay re-parked, so the key names a NEW waiter that this store write never judged.
+    // Releasing by key would replay that pane a second time off a single write.
+    if (waitersByPane.get(key) !== waiter) {
+      continue
     }
+    // TWO: the same waiter, re-judged. `parkUntilHostMirrorHandleLands` re-parks a still-parked
+    // pane by MUTATING this object — `worktreeId` moves with `run` when adopting an orphaned
+    // terminal re-keys the rows — so identity survives and the snapshot's verdict can be about a
+    // workspace the waiter is no longer filed under. Releasing on it is retraction evidence about
+    // the wrong workspace, which is the defect that `existing.worktreeId` assignment exists to
+    // prevent. Re-read: a waiter that is no longer due just stays parked, bounded by its own
+    // deadline and re-judged on the next write.
+    if (!waiterIsReleased(waiter, useAppStore.getState())) {
+      continue
+    }
+    releaseWaiter(key)
   }
 }
 
