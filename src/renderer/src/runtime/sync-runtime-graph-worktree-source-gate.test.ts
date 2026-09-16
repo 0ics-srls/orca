@@ -79,7 +79,9 @@ function makeGateState(filler: number): {
     }
   })
   const tabsByWorktree: Record<string, TerminalTab[]> = {
-    [DIRTY_WT]: [countingTab('gate-dirty-term', DIRTY_WT)]
+    // The second tab has no layout, pane title or draft, so only the ambiguity set can witness a
+    // change of its ownership.
+    [DIRTY_WT]: [countingTab('gate-dirty-term', DIRTY_WT), countingTab('gate-bare-term', DIRTY_WT)]
   }
   const terminalLayoutsByTabId: Record<string, unknown> = {
     'gate-dirty-term': makeLayout('pty-gate-dirty')
@@ -314,6 +316,34 @@ const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
         settings: { ...state.settings, tabAutoGenerateTitle: true }
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
       }) as AppState
+  },
+  {
+    name: 'another worktree claiming a tab with no tab-keyed records',
+    apply: (state) => ({
+      ...state,
+      tabsByWorktree: {
+        ...state.tabsByWorktree,
+        'repo::/gate-bare-claimant': [makeTab('gate-bare-term', 'repo::/gate-bare-claimant')]
+      }
+    })
+  },
+  {
+    name: 'an open file',
+    apply: (state) =>
+      ({
+        ...state,
+        openFiles: [
+          {
+            id: 'gate-file',
+            worktreeId: DIRTY_WT,
+            path: '/gate/readme.md',
+            relativePath: 'readme.md',
+            content: '# gate',
+            isDirty: false
+          }
+        ]
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
+      }) as unknown as AppState
   },
   {
     name: 'another worktree claiming this tab id',
