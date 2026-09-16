@@ -23,6 +23,12 @@ export class StructuredConversationCommandController {
     private readonly host: Pick<StructuredAgentSessionHost, 'attach' | 'flushStreamedEvents'>
   ) {}
 
+  /** Read-only lane ownership for a control request that has not passed mutation admission yet. */
+  mainLaneParked(sessionId: string): boolean | undefined {
+    const entry = this.pending.get(sessionId)
+    return entry ? entry.command === 'compact' : undefined
+  }
+
   /** Resolve the lane synchronously with admission. False means the queued command will yield
    *  before provider execution; true means the provider call must be stopped from the control lane. */
   requestControl(sessionId: string, turnId?: string): boolean | undefined {

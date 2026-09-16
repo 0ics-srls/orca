@@ -1,4 +1,7 @@
-import type { AgentSessionPromptResult } from '../../../../shared/agent-session-wire'
+import type {
+  AgentSessionCancelResult,
+  AgentSessionPromptResult
+} from '../../../../shared/agent-session-wire'
 import { useStructuredAgentSessionOutbox } from './use-structured-agent-session-outbox'
 import type { AgentSessionConversationCommand } from '../../../../shared/agent-session-conversation-command'
 import type { AgentType } from '../../../../shared/agent-status-types'
@@ -98,15 +101,19 @@ export function useStructuredAgentSession(args: {
     backgroundTasks: transportState.backgroundTasks,
     turnId: transportState.turnId,
     cancel: async (turnId: string, prompt?: StructuredPromptCancelTarget) => {
-      conversationCommand.retire()
       // Capability negotiation must complete before mutate constructs the payload
       // fingerprint and operation id: older hosts reject the strict prompt field.
       const promptSupported =
         prompt !== undefined && (await supportsStructuredAgentSessionPromptCancel(target))
-      return mutate('agentSession.cancel', 'agentSession.cancel', {
-        turnId,
-        ...(promptSupported ? { prompt } : {})
-      })
+      const result = await mutate<AgentSessionCancelResult>(
+        'agentSession.cancel',
+        'agentSession.cancel',
+        { turnId, ...(promptSupported ? { prompt } : {}) }
+      )
+      if (result?.cancelled) {
+        conversationCommand.retire()
+      }
+      return result
     },
     stopBackgroundTask: (taskId?: string) =>
       mutate('agentSession.cancel', 'agentSession.cancel', {

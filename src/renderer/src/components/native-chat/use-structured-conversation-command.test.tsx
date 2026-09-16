@@ -87,6 +87,44 @@ describe('useStructuredConversationCommand', () => {
     await second
   })
 
+  it('retires an expired clear on its late reply and gives the next command a fresh identity', async () => {
+    vi.useFakeTimers()
+    const firstReply = Promise.withResolvers<{
+      ok: true
+      value: { command: 'clear'; state: 'completed' }
+    }>()
+    mocks.call
+      .mockImplementationOnce(() => firstReply.promise)
+      .mockImplementation(() => new Promise(() => {}))
+    const view = renderHook(() => useCommandHarness({ fence: 1, items: [] }))
+
+    let first!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      first = view.result.current.run('clear')
+    })
+    const firstOperationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
+    })
+    await expect(first).resolves.toMatchObject({ accepted: false })
+
+    await act(async () => {
+      firstReply.resolve({ ok: true, value: { command: 'clear', state: 'completed' } })
+      await firstReply.promise
+      await Promise.resolve()
+    })
+
+    let second!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      second = view.result.current.run('clear')
+    })
+    expect(mocks.call).toHaveBeenCalledTimes(2)
+    expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).not.toBe(firstOperationId)
+
+    act(() => view.unmount())
+    await second
+  })
+
   it('clears a late transport error after the journal already settled the command', async () => {
     let reject!: (error: Error) => void
     mocks.call.mockImplementation(

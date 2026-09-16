@@ -77,6 +77,12 @@ export function useStructuredConversationCommand(args: {
           command,
           operationId,
           blocked,
+          onLateReply: () => {
+            if (operationIds.current.get(command) === operationId) {
+              operationIds.current.delete(command)
+            }
+            onReconciled(operationId)
+          },
           send: async (): Promise<ConversationCommandReply> => {
             let unresolved = false
             const result = await mutate<AgentSessionConversationCommandResult>(

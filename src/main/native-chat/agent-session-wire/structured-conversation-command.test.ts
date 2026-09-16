@@ -270,6 +270,33 @@ describe('host conversation commands', () => {
     await running
   })
 
+  it('does not let a stale cancellation stop an admitted compaction', async () => {
+    const params = commandParams('compact')
+    const turnId = `compact:${params.envelope.clientOperationId}`
+    const running = host.conversationCommand(caller, params)
+    const staleFence = params.envelope.expectedRuntimeFence + 1
+    const cancellation = host.cancel(caller, {
+      turnId,
+      envelope: {
+        sessionId: HOST_TEST_SESSION,
+        clientOperationId: hostTestOperationId(),
+        expectedRuntimeFence: staleFence,
+        payloadFingerprint: computeAgentSessionPayloadFingerprint({
+          method: 'agentSession.cancel',
+          sessionId: HOST_TEST_SESSION,
+          fields: { turnId }
+        })
+      }
+    })
+
+    await expect(cancellation).resolves.toMatchObject({
+      ok: false,
+      refusal: { code: 'agent_session_checkpoint_stale' }
+    })
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'completed' } })
+    expect(compact).toHaveBeenCalledTimes(1)
+  })
+
   it('closes a session while a compaction still awaits its terminal frame', async () => {
     let finish!: (value: {}) => void
     compact.mockImplementation(

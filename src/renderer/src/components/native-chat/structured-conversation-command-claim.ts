@@ -44,6 +44,7 @@ type Obligation = {
 type LiveClaim = Obligation & {
   deadline: ReturnType<typeof setTimeout>
   settle: (outcome: ConversationCommandClaimOutcome) => void
+  onLateReply: () => void
 }
 
 const COMPACTION_COMPLETED = 'Conversation compacted.'
@@ -133,6 +134,7 @@ export class StructuredConversationCommandClaim {
     operationId: string
     blocked: boolean
     send: () => Promise<ConversationCommandReply>
+    onLateReply?: () => void
   }): Promise<ConversationCommandClaimOutcome> {
     if (this.live) {
       return Promise.resolve({ accepted: false, error: runningMessage() })
@@ -152,7 +154,8 @@ export class StructuredConversationCommandClaim {
           ? agentJournalSubmissionKey(`compact:${input.operationId}`)
           : null,
       deadline: setTimeout(() => this.expire(claim), this.deadlineMs),
-      settle: resolve
+      settle: resolve,
+      onLateReply: input.onLateReply ?? (() => {})
     }
     this.live = claim
     void input.send().then(
@@ -195,6 +198,11 @@ export class StructuredConversationCommandClaim {
     if (reply.unresolved || reply.result?.state === 'unknown') {
       // The host either never answered or answered that it cannot confirm. Either way the frame,
       // not the reply, decides.
+      return
+    }
+    if (this.unresolved?.operationId === claim.operationId) {
+      this.unresolved = null
+      claim.onLateReply()
       return
     }
     this.finish(

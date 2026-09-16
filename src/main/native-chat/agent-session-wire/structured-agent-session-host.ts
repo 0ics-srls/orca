@@ -278,6 +278,8 @@ export class StructuredAgentSessionHost {
       flushStreamedEvents: this.flushStreamedEvents,
       requireSession: (sessionId) => this.requireSession(sessionId),
       serialize: (sessionId, task) => this.serialize(sessionId, task),
+      conversationCommandMainLaneParked: (sessionId) =>
+        this.conversationCommands.mainLaneParked(sessionId),
       requestConversationCommandControl: (sessionId, turnId) =>
         this.conversationCommands.requestControl(sessionId, turnId),
       now: () => this.now()

@@ -41,6 +41,7 @@ export type StructuredAgentSessionMutationContext = {
   flushStreamedEvents: (sessionId: string) => Promise<void>
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
+  conversationCommandMainLaneParked: (sessionId: string) => boolean | undefined
   requestConversationCommandControl: (sessionId: string, turnId?: string) => boolean | undefined
   now: () => number
 }
@@ -116,10 +117,7 @@ export function cancelStructuredAgentSessionTurn(
     prompt?: { itemId: string; expectedRevision: number }
   }
 ): Promise<AgentSessionMutationResult<AgentSessionCancelResult>> {
-  const liveMainLaneParked = context.requestConversationCommandControl(
-    params.envelope.sessionId,
-    params.turnId
-  )
+  const liveMainLaneParked = context.conversationCommandMainLaneParked(params.envelope.sessionId)
   // Interrupts must reach a provider while a command awaits its terminal frame.
   const cancellationContext = {
     ...context,
@@ -133,7 +131,16 @@ export function cancelStructuredAgentSessionTurn(
         task
       )
   }
-  return mutate(cancellationContext, caller, params.envelope, cancelPlan(params))
+  const plan = cancelPlan(params)
+  return mutate(cancellationContext, caller, params.envelope, {
+    ...plan,
+    run: (ctx) => {
+      // Mutating the pending command before admission lets a stale or conflicting request cancel
+      // work even though the request itself is refused.
+      context.requestConversationCommandControl(params.envelope.sessionId, params.turnId)
+      return plan.run(ctx)
+    }
+  })
 }
 
 export function respondToStructuredAgentSessionPrompt(
