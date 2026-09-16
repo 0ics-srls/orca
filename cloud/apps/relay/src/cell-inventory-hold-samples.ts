@@ -5,10 +5,14 @@ export type CellInventoryHoldCounts = {
   cellInventoryHoldMsMax: number
   cellInventoryHoldMsP95: number
   cellInventoryHolds: number
-  // Why: NOWAIT acquisitions error instead of waiting, so a failed grab produces
-  // no hold sample. Without this counter the hold metrics read healthy while the
-  // lock is in a retry storm, which is how contention stayed invisible before.
+  // Why: a failed acquisition produces no hold sample, so the hold fields alone
+  // read healthy while the lock is saturated. The two failure modes are split
+  // because they mean opposite things: background sweeps take the inventory
+  // NOWAIT and re-derive a skipped candidate next tick, so deferrals are an
+  // ordinary by-design outcome, while a bounded request-path wait that expires
+  // is a user-visible stall.
   cellInventoryLockUnavailable: number
+  cellInventoryLockTimeouts: number
 }
 
 // Bounded so a flush interval with heavy assignment traffic cannot grow the array
@@ -20,13 +24,15 @@ export function emptyCellInventoryHoldCounts(): CellInventoryHoldCounts {
     cellInventoryHoldMsMax: 0,
     cellInventoryHoldMsP95: 0,
     cellInventoryHolds: 0,
-    cellInventoryLockUnavailable: 0
+    cellInventoryLockUnavailable: 0,
+    cellInventoryLockTimeouts: 0
   }
 }
 
 export class CellInventoryHoldSamples {
   private samples: number[] = []
   private unavailable = 0
+  private timeouts = 0
 
   record(holdMs: number): void {
     if (!Number.isFinite(holdMs) || holdMs < 0) return
@@ -40,23 +46,31 @@ export class CellInventoryHoldSamples {
     this.unavailable += count
   }
 
+  recordLockTimeout(count = 1): void {
+    if (!Number.isFinite(count) || count <= 0) return
+    this.timeouts += count
+  }
+
   consumeCounts(): CellInventoryHoldCounts {
     const counts = this.readCounts()
     this.samples = []
     this.unavailable = 0
+    this.timeouts = 0
     return counts
   }
 
   readCounts(): CellInventoryHoldCounts {
-    if (this.samples.length === 0) {
-      return { ...emptyCellInventoryHoldCounts(), cellInventoryLockUnavailable: this.unavailable }
+    const failures = {
+      cellInventoryLockUnavailable: this.unavailable,
+      cellInventoryLockTimeouts: this.timeouts
     }
+    if (this.samples.length === 0) return { ...emptyCellInventoryHoldCounts(), ...failures }
     const sorted = [...this.samples].sort((left, right) => left - right)
     return {
       cellInventoryHoldMsMax: round(sorted[sorted.length - 1]!),
       cellInventoryHoldMsP95: round(sorted[Math.ceil(0.95 * sorted.length) - 1] ?? 0),
       cellInventoryHolds: sorted.length,
-      cellInventoryLockUnavailable: this.unavailable
+      ...failures
     }
   }
 }

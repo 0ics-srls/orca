@@ -785,6 +785,7 @@ class PostgresTransaction implements RelayDatabase {
   readonly dialect = 'postgres' as const
   private heldFromMs: number | undefined
   private lockUnavailable = 0
+  private lockTimeouts = 0
 
   constructor(protected readonly client: pg.PoolClient) {}
 
@@ -800,6 +801,12 @@ class PostgresTransaction implements RelayDatabase {
   consumeLockUnavailable(): number {
     const count = this.lockUnavailable
     this.lockUnavailable = 0
+    return count
+  }
+
+  consumeLockTimeouts(): number {
+    const count = this.lockTimeouts
+    this.lockTimeouts = 0
     return count
   }
 
@@ -840,6 +847,11 @@ class PostgresTransaction implements RelayDatabase {
       ) {
         if (options.measureHoldMs) this.lockUnavailable += 1
         throw new Error('database_lock_unavailable')
+      }
+      // A bounded wait that expires raises the same 55P03 without NOWAIT. This is
+      // the request path, so it is counted apart from by-design sweep deferrals.
+      if (bounded && options.measureHoldMs && String((error as { code?: unknown }).code) === '55P03') {
+        this.lockTimeouts += 1
       }
       throw error
     } finally {
@@ -980,10 +992,12 @@ class PostgresDatabase implements RelayDatabase {
         await client.query('COMMIT')
         this.holds.record(measuredHoldMs(transaction) ?? Number.NaN)
         this.holds.recordUnavailable(transaction.consumeLockUnavailable())
+        this.holds.recordLockTimeout(transaction.consumeLockTimeouts())
         return result
       } catch (error) {
         await client.query('ROLLBACK').catch(() => undefined)
         this.holds.recordUnavailable(transaction.consumeLockUnavailable())
+        this.holds.recordLockTimeout(transaction.consumeLockTimeouts())
         if (!retryablePostgresTransactionError(error) || attempt === POSTGRES_TRANSACTION_ATTEMPTS) {
           if (retryablePostgresTransactionError(error) && options.reportRetries !== false) {
             console.warn(
