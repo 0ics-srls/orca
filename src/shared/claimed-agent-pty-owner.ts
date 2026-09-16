@@ -24,10 +24,10 @@ import {
 } from './claimed-agent-pty-owner-snapshot'
 import type { AgentStatusExecutionBinding } from './agent-status-run'
 import { findClaimedAgentStatusBinding } from './claimed-agent-pty-owner-status-binding'
+import { assertClaimedAgentPtyOwnerCapacity } from './claimed-agent-pty-owner-capacity'
 
 export { agentSessionOwnerBindingsEqual } from './claimed-agent-pty-owner-snapshot'
-
-export const MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES = 1024
+export { MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES } from './claimed-agent-pty-owner-capacity'
 
 type ReservedOwner = {
   claim: AgentSessionExecutionClaim
@@ -94,10 +94,13 @@ export class ClaimedAgentPtyOwnerRegistry {
         throw new Error('agent_session_conflict')
       }
       const result = await reserved.promise
-      return { disposition: 'adopted', owner: cloneAgentSessionOwner(result.owner as LiveOwner) }
+      if (result.owner.phase !== 'live') {
+        throw new Error('agent_session_ownership_unknown')
+      }
+      return { disposition: 'adopted', owner: cloneAgentSessionOwner(result.owner) }
     }
 
-    this.assertCapacityForNewOwner()
+    assertClaimedAgentPtyOwnerCapacity(this.live, this.conflicts, this.reserved.size)
     const generation = randomUUID()
     const statusBinding: AgentStatusExecutionBinding = {
       runId: randomUUID(),
@@ -210,7 +213,7 @@ export class ClaimedAgentPtyOwnerRegistry {
     if (!registered) {
       return
     }
-    this.assertCapacityForNewOwner()
+    assertClaimedAgentPtyOwnerCapacity(this.live, this.conflicts, this.reserved.size)
     this.live.set(key, registered)
     const keys = this.keysByPtyId.get(owner.ptyId) ?? new Set<string>()
     keys.add(key)
@@ -302,9 +305,7 @@ export class ClaimedAgentPtyOwnerRegistry {
       : null
   }
 
-  /** Resolve a hook claim while the owner transaction is still spawning.
-   * The reservation already owns the binding and surface; exposing it here
-   * prevents byte-zero hook reports from being downgraded before promotion. */
+  /** Resolve a hook claim during owner reservation/promotion. */
   findStatusBinding(args: {
     paneKey: string
     worktreeId?: string
@@ -318,14 +319,5 @@ export class ClaimedAgentPtyOwnerRegistry {
       ...args
     })
     return binding ? cloneAgentStatusExecutionBinding(binding) : null
-  }
-
-  private assertCapacityForNewOwner(): void {
-    if (
-      countClaimedAgentPtyOwners(this.live, this.conflicts) + this.reserved.size >=
-      MAX_CLAIMED_AGENT_PTY_OWNER_ENTRIES
-    ) {
-      throw new Error('execution_owner_unavailable')
-    }
   }
 }
