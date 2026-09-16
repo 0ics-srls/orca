@@ -14,6 +14,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AutomationRun } from '../../../../shared/automations-types'
 import { AutomationRunHistory } from './AutomationRunHistory'
 import { WORKSPACE_ID, makeRun, makeRunUsage, makeWorktree } from './automations-page-fixtures'
+import { VIRTUALIZER_STUB_WINDOW_SIZE } from './virtualizer-test-stub'
 
 vi.mock('@tanstack/react-virtual', async () => {
   const { createVirtualizerStub } = await import('./virtualizer-test-stub')
@@ -162,6 +163,49 @@ describe('AutomationRunHistory virtualization', () => {
     expect(container.querySelectorAll('button[data-automation-run-id]').length).toBeLessThan(50)
     // The count above the table still speaks for the whole history, not the window.
     expect(container.textContent).toContain('5000 runs')
+  })
+
+  it('scrolls a selected row below the fold into the window and then focuses it', async () => {
+    const runs = Array.from({ length: VIRTUALIZER_STUB_WINDOW_SIZE * 2 }, (_, index) =>
+      makeRun({ id: `run-${index}`, scheduledFor: FIRST + index })
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    roots.push(root)
+
+    await act(async () => {
+      root.render(
+        <AutomationRunHistory
+          runs={runs}
+          automationId="a-1"
+          worktreeMap={new Map()}
+          onOpenRun={vi.fn()}
+        />
+      )
+    })
+
+    const belowFold = `run-${VIRTUALIZER_STUB_WINDOW_SIZE}`
+    expect(container.querySelector(`[data-automation-run-id="${belowFold}"]`)).toBeNull()
+
+    // Selection starts on the first row, so this many moves lands one row past the
+    // window — the case where focus has to wait for the scroll to mount the row.
+    for (let move = 0; move < VIRTUALIZER_STUB_WINDOW_SIZE; move += 1) {
+      await act(async () => {
+        window.dispatchEvent(
+          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
+        )
+      })
+    }
+
+    const selected = container.querySelector<HTMLButtonElement>(
+      `[data-automation-run-id="${belowFold}"]`
+    )
+    expect(selected?.getAttribute('data-current')).toBe('true')
+    expect(document.activeElement).toBe(selected)
+    // The window moved rather than grew: the row it scrolled past is unmounted.
+    expect(container.querySelector('[data-automation-run-id="run-0"]')).toBeNull()
   })
 })
 

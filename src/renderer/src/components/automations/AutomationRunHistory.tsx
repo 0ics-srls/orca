@@ -14,7 +14,7 @@ import {
   formatAutomationTokens,
   getAutomationUsageStatusLabel
 } from './automation-usage-model'
-import { automationRunOccurrenceLabel } from './automation-run-occurrences'
+import { automationRunOccurrenceLabel, isAutomationRunFolded } from './automation-run-occurrences'
 import { getAutomationRunWorkspaceDisplay } from './automation-run-workspace-display'
 import { AutomationOwnerConflictNotice } from './AutomationOwnerConflictNotice'
 import type { AutomationActionNotice } from './automation-row-action-dispatch'
@@ -91,7 +91,9 @@ export function AutomationRunHistory({
   const estimateRunRowSize = useCallback(
     (index: number): number => {
       const run = runs[index]
-      return run && automationRunOccurrenceLabel(run)
+      // The predicate, not the label: estimateSize is asked for unmounted indexes too,
+      // and building the label there would translate and format a date per run.
+      return run && isAutomationRunFolded(run)
         ? RUN_ROW_HEIGHT_PX + RUN_ROW_OCCURRENCE_LINE_PX
         : RUN_ROW_HEIGHT_PX
     },
