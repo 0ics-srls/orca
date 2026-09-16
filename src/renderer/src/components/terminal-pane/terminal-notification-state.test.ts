@@ -100,6 +100,38 @@ describe('notification workspace labels', () => {
     }
   )
 
+  it.each([false, true])(
+    'qualifies project groups by the folder host (legacy SSH: %s)',
+    (legacy) => {
+      const state = stateWithWorkspace()
+      state.folderWorkspaces = [
+        makeFolderWorkspace({
+          id: 'remote-folder',
+          name: 'Remote folder',
+          projectGroupId: 'shared',
+          ...(legacy ? { connectionId: 'server' } : { executionHostId: 'ssh:server' as const })
+        })
+      ]
+      state.projectGroups = (['local', 'ssh:server'] as const).map((executionHostId) => ({
+        id: 'shared',
+        name: executionHostId === 'local' ? 'Local group' : 'Remote group',
+        executionHostId,
+        parentPath: null,
+        parentGroupId: null,
+        createdFrom: 'manual' as const,
+        tabOrder: 0,
+        isCollapsed: false,
+        color: null,
+        createdAt: 0,
+        updatedAt: 0
+      }))
+      expect(getNotificationWorkspaceLabels(state, 'folder:remote-folder')).toEqual({
+        repoLabel: 'Remote group',
+        worktreeLabel: 'Remote folder'
+      })
+    }
+  )
+
   it('does not pick an arbitrary folder when hosts have conflicting records', () => {
     const state = stateWithWorkspace()
     state.folderWorkspaces = (['ssh:a', 'ssh:b'] as const).map((executionHostId) =>

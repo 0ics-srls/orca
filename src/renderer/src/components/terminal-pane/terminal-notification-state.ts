@@ -2,7 +2,8 @@ import type { useAppStore } from '@/store'
 import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
 import {
   findIndexedFolderWorkspaceOwner,
-  findIndexedProjectGroupOwner
+  findIndexedProjectGroupOwner,
+  getCatalogOwnerHostId
 } from '@/lib/worktree-runtime-owner-index'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
@@ -155,11 +156,15 @@ export function getNotificationWorkspaceLabels(
   const scope = parseWorkspaceKey(workspaceId)
   const fallback = terminalTitle?.trim() || 'workspace'
   if (scope?.type === 'folder') {
-    const owner = findIndexedFolderWorkspaceOwner(state.folderWorkspaces, scope.folderWorkspaceId)
-    const folder = owner && state.folderWorkspaces.find((entry) => entry === owner)
-    const groupOwner =
-      folder && findIndexedProjectGroupOwner(state.projectGroups, folder.projectGroupId)
-    const group = groupOwner && state.projectGroups.find((entry) => entry === groupOwner)
+    const folder = findIndexedFolderWorkspaceOwner(state.folderWorkspaces, scope.folderWorkspaceId)
+    // The group ID is only unique per host, so qualify it with the folder's own host.
+    const group =
+      folder &&
+      findIndexedProjectGroupOwner(
+        state.projectGroups,
+        folder.projectGroupId,
+        getCatalogOwnerHostId(folder)
+      )
     return { repoLabel: group?.name, worktreeLabel: folder?.name || fallback }
   }
   const worktree = getWorktreeMapFromState(state).get(
