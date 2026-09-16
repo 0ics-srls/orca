@@ -175,21 +175,25 @@ export function getTerminalTabOwnershipIndex(
     return cached
   }
   const worktreeIdByTabId = new Map<string, string>()
+  const tabById = new Map<string, AppState['tabsByWorktree'][string][number]>()
   const ambiguousTabIds = new Set<string>()
   for (const [worktreeId, tabs] of Object.entries(tabsByWorktree)) {
     for (const tab of tabs) {
       if (worktreeIdByTabId.has(tab.id) || ambiguousTabIds.has(tab.id)) {
         worktreeIdByTabId.delete(tab.id)
+        tabById.delete(tab.id)
         ambiguousTabIds.add(tab.id)
         continue
       }
       worktreeIdByTabId.set(tab.id, worktreeId)
+      tabById.set(tab.id, tab)
     }
   }
   const previousAmbiguous = cached?.ambiguousTabIds
   const index: TerminalTabOwnershipIndex = {
     source: tabsByWorktree,
     worktreeIdByTabId,
+    tabById,
     // Why reuse the set object: one OSC title frame replaces `tabsByWorktree`, and a fresh set here
     // would make every worktree's source fingerprint differ even though ownership did not move.
     ambiguousTabIds: sameMembers(previousAmbiguous, ambiguousTabIds)

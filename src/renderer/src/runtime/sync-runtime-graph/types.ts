@@ -125,6 +125,7 @@ export type MobileSessionAgentStatusCache = {
 export type TerminalTabOwnershipIndex = {
   source: AppState['tabsByWorktree']
   worktreeIdByTabId: ReadonlyMap<string, string>
+  tabById: ReadonlyMap<string, AppState['tabsByWorktree'][string][number]>
   ambiguousTabIds: ReadonlySet<string>
 }
 /** One tab-keyed store record grouped by owning worktree; absent worktrees own nothing in it. */
