@@ -8,10 +8,8 @@ import { beginSshShutdown } from '../ipc/ssh-shutdown-drain'
 import { agentHookServer } from '../agent-hooks/server'
 import { wslHookRelayManager } from '../agent-hooks/wsl-hook-relay-manager'
 import { removeManagedAgentHooksAsync } from '../agent-hooks/managed-agent-hook-controls'
-import {
-  setStructuredAgentSessionTeardownTrigger,
-  stopStructuredAgentSessionRuntime
-} from '../runtime/structured-agent-session-runtime'
+import { stopStructuredAgentSessionRuntime } from '../runtime/structured-agent-session-runtime'
+import { setStructuredAgentSessionTeardownTrigger } from '../runtime/structured-agent-session-runtime-teardown'
 import { awaitRuntimeFileWatcherUnsubscribes } from '../runtime/orca-runtime-files'
 import { clearRuntimeMetadataIfOwned } from '../runtime/runtime-metadata'
 import { shutdownPairedRuntimeBrowserClientHosts } from '../browser/paired-runtime-browser-client-host-runtime'
