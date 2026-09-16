@@ -131,6 +131,7 @@ export async function signOutCurrentOrcaProfile(
   // Why: a Sign in click still waiting in the browser must not relink after
   // the user explicitly signed out.
   invalidateOutstandingCloudConnectAttempts()
+  const signOutEpoch = linkedCloudConnectAttempt
   const active = ensureActiveOrcaProfile(userDataPath)
   const configState = getOrcaCloudAuthConfig()
   const session = readOrcaCloudSession(active.profile.id, userDataPath)
@@ -144,6 +145,15 @@ export async function signOutCurrentOrcaProfile(
   }
   if (!isOrcaCloudDevAuthEnabled() && configState.configured && session.status === 'found') {
     await revokeOrcaCloudSession(configState.config, session.session).catch(() => undefined)
+  }
+  if (linkedCloudConnectAttempt > signOutEpoch) {
+    const current = ensureActiveOrcaProfile(userDataPath)
+    return {
+      status: 'signed-out',
+      auth: getCurrentOrcaProfileAuthStatus(userDataPath),
+      activeProfileId: current.index.activeProfileId,
+      profiles: current.index.profiles
+    }
   }
   clearOrcaCloudSession(active.profile.id, userDataPath)
   const list = unlinkOrcaProfileFromCloud(active.profile.id, userDataPath)
