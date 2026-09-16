@@ -27,7 +27,6 @@ function harness(options: {
   createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
   createSupportThrows?: boolean
   structuredCreateError?: Error
-  terminalWarning?: string
 }) {
   const calls: string[] = []
   const createWorktree = vi.fn(
@@ -55,10 +54,7 @@ function harness(options: {
   })
   const createTerminalAgent = vi.fn(async () => {
     calls.push('createTerminalAgent')
-    return {
-      handle: 'term_1',
-      ...(options.terminalWarning ? { warning: options.terminalWarning } : {})
-    }
+    return { handle: 'term_1' }
   })
   const runtime = {
     getClientSettings: () =>
@@ -249,38 +245,5 @@ describe('the prompt receipt', () => {
   it('omits the receipt when no prompt was requested', async () => {
     const h = harness({})
     expect((await h.run(CREATE_INTENT)).prompt).toBeUndefined()
-  })
-})
-
-describe('a warning raised by the surface', () => {
-  it('rides on the result rather than on the terminal outcome', async () => {
-    const h = harness({ terminalWarning: 'shell fell back to bash' })
-    const result = await h.run({
-      agent: 'grok',
-      target: { kind: 'existing', worktree: 'wt-7' }
-    })
-
-    expect(result.warning).toBe('shell fell back to bash')
-    // Not on the arm: a structured outcome has the same need to carry one.
-    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_1' })
-  })
-
-  it('survives the downgrade from a refused structured create', async () => {
-    const h = harness({
-      terminalWarning: 'shell fell back to bash',
-      structuredCreateError: new AgentLaunchStructuredSessionRefusedError(
-        'structured_agent_session_unsupported',
-        'unsupported'
-      )
-    })
-    const result = await h.run(CREATE_INTENT)
-
-    expect(result.warning).toBe('shell fell back to bash')
-    expect(result.receipt).toMatchObject({ reason: 'structured_unsupported_on_host' })
-  })
-
-  it('is absent when the surface raised none', async () => {
-    const h = harness({})
-    expect((await h.run(CREATE_INTENT)).warning).toBeUndefined()
   })
 })

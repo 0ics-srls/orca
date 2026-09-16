@@ -80,7 +80,12 @@ export type AgentLaunchWorkspaceFactory = {
      *  wait-for-setup gate for free. A structured launch has no startup command to sequence and
      *  must await that gate explicitly instead. */
     startupAgent: TuiAgent | undefined
-  }): Promise<{ worktreeId: string; startupTerminalHandle: string | undefined }>
+  }): Promise<{
+    worktreeId: string
+    startupTerminalHandle: string | undefined
+    /** Created, but incomplete — surfaced on the launch result rather than dropped. */
+    warning?: string
+  }>
 }
 
 export type AgentLaunchExecution = {
@@ -125,6 +130,7 @@ export async function executeAgentLaunch(
       outcome: { kind: 'terminal', handle: placed.startupTerminalHandle },
       worktreeId: placed.worktreeId,
       receipt: preflight,
+      ...(placed.warning ? { warning: placed.warning } : {}),
       ...promptReceipt(intent)
     }
   }
@@ -139,7 +145,7 @@ export async function executeAgentLaunch(
   )
 
   execution.onStage?.('surface_create')
-  let created: CreatedSurface
+  let created: { outcome: AgentLaunchResult['outcome']; warning?: string }
   try {
     created = await createSurface(execution, placed.worktreeId, settled)
   } catch (error) {
@@ -154,14 +160,34 @@ export async function executeAgentLaunch(
       throw error
     }
     settled = downgradeAgentLaunchModeForStructuredRefusal(settled, vocabulary)
-    created = await createTerminalSurface(execution, placed.worktreeId)
+    created = await execution.surfaces
+      .createTerminalAgent({
+        worktreeId: placed.worktreeId,
+        agent: intent.agent,
+        ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
+      })
+      .then((terminal) => ({
+        outcome: { kind: 'terminal' as const, handle: terminal.handle },
+        ...(terminal.warning ? { warning: terminal.warning } : {})
+      }))
   }
+  // Both CAN be set, so neither may be dropped. The create warns precisely when it produced no
+  // startup terminal — `didSpawnStartup` stays false when that spawn throws — and that is the same
+  // condition which skips the early return above, so the launch goes on to build a second surface,
+  // and that one can warn too. The other path is an untracked-copy warning followed by a structured
+  // refusal downgrading to a terminal that warns. `??` kept the first and lost the second silently.
+  //
+  // KNOWN GAP, deliberately not fixed here: a create warning about a FAILED startup terminal is
+  // stale once the launch recovers by building a working one, so the user can be told the agent did
+  // not start while looking at it. Telling those apart needs `createManagedWorktree` to stop
+  // multiplexing "couldn't copy untracked files" and "startup terminal failed" into one string.
+  const warning = combineLaunchWarnings(placed.warning, created.warning)
   return {
     outcome: created.outcome,
     worktreeId: placed.worktreeId,
     receipt: settled,
-    ...promptReceipt(intent),
-    ...(created.warning ? { warning: created.warning } : {})
+    ...(warning ? { warning } : {}),
+    ...promptReceipt(intent)
   }
 }
 
@@ -180,9 +206,14 @@ function downgradeAgentLaunchModeForStructuredRefusal(
 async function resolveWorkspace(
   execution: AgentLaunchExecution,
   preflight: AgentLaunchModeReceipt
-): Promise<{ worktreeId: string; startupTerminalHandle: string | undefined }> {
+): Promise<{
+  worktreeId: string
+  startupTerminalHandle: string | undefined
+  warning?: string
+}> {
   const { intent } = execution
   if (intent.target.kind === 'existing') {
+    // Nothing was created, so there is no create warning to carry.
     return { worktreeId: intent.target.worktree, startupTerminalHandle: undefined }
   }
   const workspaces = execution.workspaces
@@ -198,15 +229,11 @@ async function resolveWorkspace(
   })
 }
 
-/** A surface plus anything the user should be told about it; the warning rides on the result rather
- *  than on the terminal arm, so a structured surface can raise one too. */
-type CreatedSurface = { outcome: AgentLaunchResult['outcome']; warning?: string }
-
 async function createSurface(
   execution: AgentLaunchExecution,
   worktreeId: string,
   settled: AgentLaunchModeReceipt
-): Promise<CreatedSurface> {
+): Promise<{ outcome: AgentLaunchResult['outcome']; warning?: string }> {
   const { intent, surfaces } = execution
   if (settled.mode === 'structured' && isStructuredProvider(intent.agent)) {
     const session = await surfaces.createStructuredSession({
@@ -214,18 +241,8 @@ async function createSurface(
       agent: intent.agent,
       ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
     })
-    return {
-      outcome: { kind: 'structured', sessionId: session.sessionId, handle: session.handle }
-    }
+    return { outcome: { kind: 'structured', sessionId: session.sessionId, handle: session.handle } }
   }
-  return createTerminalSurface(execution, worktreeId)
-}
-
-async function createTerminalSurface(
-  execution: AgentLaunchExecution,
-  worktreeId: string
-): Promise<CreatedSurface> {
-  const { intent, surfaces } = execution
   const terminal = await surfaces.createTerminalAgent({
     worktreeId,
     agent: intent.agent,
@@ -235,6 +252,23 @@ async function createTerminalSurface(
     outcome: { kind: 'terminal', handle: terminal.handle },
     ...(terminal.warning ? { warning: terminal.warning } : {})
   }
+}
+
+/**
+ * Two warnings, both true, neither droppable.
+ *
+ * Mirrors how the create combines its own failures — `appendFailure` in
+ * runtime-local-worktree-terminal-startup.ts, and the startup-terminal catch in
+ * runtime-remote-managed-worktree-create.ts — which append rather than replace.
+ */
+function combineLaunchWarnings(
+  create: string | undefined,
+  surface: string | undefined
+): string | undefined {
+  if (!create || !surface) {
+    return create ?? surface
+  }
+  return `${create} Also ${surface[0].toLowerCase()}${surface.slice(1)}`
 }
 
 function isStructuredProvider(agent: TuiAgent): agent is 'claude' | 'codex' {
