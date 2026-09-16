@@ -214,6 +214,12 @@ function buildRepairScript(port: number, executablePath: string): string {
   // rules, so the user's repair action must remove exact-app conflicts first.
   // Removal deliberately ignores the Block rule's remote-address scope,
   // mirroring the fail-closed inspection (the phone address is unknown).
+  // `port` scopes only that removal. The Allow rule itself is written with
+  // `-LocalPort Any` because the desktop's listen port is not stable: a
+  // persisted fallback (mobile-ws-fallback-port.json), a pairing widen rebind,
+  // or an OS-assigned port all move it, and nothing reconciles a port-pinned
+  // rule with the new bind — which silently broke LAN pairing in STA-7672. The
+  // rule stays scoped to this program, Private profile, and no edge traversal.
   return `$ErrorActionPreference = 'Stop'
 $blockingRules = @(Get-NetFirewallApplicationFilter -Program ${quotePowerShell(executablePath)} -ErrorAction SilentlyContinue | Get-NetFirewallRule | Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Inbound' -and $_.Action -eq 'Block' })
 foreach ($rule in $blockingRules) {
@@ -226,7 +232,7 @@ foreach ($rule in $blockingRules) {
   }
 }
 Get-NetFirewallRule -Name ${quotePowerShell(FIREWALL_RULE_NAME)} -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-New-NetFirewallRule -Name ${quotePowerShell(FIREWALL_RULE_NAME)} -DisplayName ${quotePowerShell(FIREWALL_RULE_DISPLAY_NAME)} -Description 'Allows Orca Mobile to connect to this Orca desktop on private networks.' -Direction Inbound -Action Allow -Enabled True -Profile Private -Protocol TCP -LocalPort ${port} -Program ${quotePowerShell(executablePath)} -EdgeTraversalPolicy Block | Out-Null`
+New-NetFirewallRule -Name ${quotePowerShell(FIREWALL_RULE_NAME)} -DisplayName ${quotePowerShell(FIREWALL_RULE_DISPLAY_NAME)} -Description 'Allows Orca Mobile to connect to this Orca desktop on private networks.' -Direction Inbound -Action Allow -Enabled True -Profile Private -Protocol TCP -LocalPort Any -Program ${quotePowerShell(executablePath)} -EdgeTraversalPolicy Block | Out-Null`
 }
 
 // Why the elevated child keeps `-EncodedCommand` while the local runner does not: `Start-Process

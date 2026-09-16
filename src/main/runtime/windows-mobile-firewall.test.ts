@@ -178,9 +178,41 @@ describe('windows mobile firewall', () => {
     expect(repairScript).toContain('$rule | Remove-NetFirewallRule')
     expect(repairScript).toContain('-Profile Private')
     expect(repairScript).toContain('-Protocol TCP')
-    expect(repairScript).toContain('-LocalPort 6769')
     expect(repairScript).toContain("-Program 'C:\\Users\\O''Brien\\Orca\\Orca.exe'")
     expect(repairScript).toContain('-EdgeTraversalPolicy Block')
+  })
+
+  it('writes a port-agnostic allow rule so a drifting bind port cannot outrun it (STA-7672)', async () => {
+    const runPowerShell = vi.fn().mockResolvedValue('{"launched":true,"exitCode":0}')
+    await repairWindowsMobileFirewall(6769, environment(runPowerShell))
+
+    const outerScript = runPowerShell.mock.calls[0]![0] as string
+    const encoded = outerScript.match(/'-EncodedCommand', '([^']+)'/)?.[1]
+    const repairScript = Buffer.from(encoded!, 'base64').toString('utf16le')
+    const newRule = repairScript.split('New-NetFirewallRule')[1]!
+
+    // The desktop moves off 6768 on a persisted fallback, a pairing widen, or an
+    // OS-assigned port, and nothing reconciles a pinned rule with the new bind.
+    expect(newRule).toContain('-LocalPort Any')
+    expect(newRule).not.toContain('-LocalPort 6769')
+    // Still narrow where it matters: this program, private profile, no edge traversal.
+    expect(newRule).toContain('-Profile Private')
+    expect(newRule).toContain('-Protocol TCP')
+    expect(newRule).toContain('-EdgeTraversalPolicy Block')
+    // The port still scopes which conflicting Block rules the repair removes.
+    expect(repairScript.split('New-NetFirewallRule')[0]).toContain("-eq '6769'")
+  })
+
+  it('matches a port-agnostic rule whatever port the transport landed on', async () => {
+    // The repaired rule now carries LocalPort 'Any', so the inspection filter has
+    // to accept it for every bind the desktop can drift to (STA-7672).
+    for (const port of [6768, 6769, 51_234]) {
+      const runPowerShell = vi.fn().mockResolvedValue('{"privateFirewallEnabled":true}')
+      await inspectWindowsMobileFirewall(port, undefined, environment(runPowerShell))
+
+      const script = runPowerShell.mock.calls[0]![0] as string
+      expect(script).toContain(`[string]$_ -eq 'Any' -or [string]$_ -eq '${port}'`)
+    }
   })
 
   it('keeps the elevated child encoded because Start-Process re-splits its ArgumentList', async () => {
