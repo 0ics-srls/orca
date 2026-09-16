@@ -355,6 +355,33 @@ describe('tui-idle evidence ranking', () => {
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({ satisfied: true })
   })
+
+  it('rejects newer readiness evidence from a replacement attachment', () => {
+    const now = Date.now()
+    const cursor = captureTuiIdleEvidenceCursor({
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOscTitleObservedAt: now,
+      lastOutputAt: now,
+      attachmentId: 'inc-1'
+    })
+    expect(
+      observeTuiIdle({
+        record: {
+          lastAgentStatus: 'idle',
+          lastOscTitle: EXPLICIT_IDLE_TITLE,
+          lastOscTitleObservedAt: now + 1,
+          lastOutputAt: now + 1,
+          attachmentId: 'inc-2'
+        },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'unknown', agent: 'codex' })
+  })
 })
 
 const E2E_WORKTREE_ID = 'repo-1::/tmp/name-only-idle'
