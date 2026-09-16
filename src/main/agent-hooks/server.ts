@@ -47,6 +47,7 @@ export const _internals = {
   parseFormEncodedBody,
   resetCachesForTests: (): void => {
     clearAllListenerCaches(agentHookServer._getStateForTests())
+    agentHookServer._resetCanonicalStatusForTests()
     agentHookServer._resetRowOwnershipForTests()
     agentHookServer._resetPromptSentDedupeForTests()
     agentHookServer._resetConnectionTimestampWatermarksForTests()

@@ -10,6 +10,11 @@ import { INTERRUPTED_DONE_LATE_WORKING_SUPPRESSION_MS } from './server-constants
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import type { AgentStatusObservationOrigin } from '../../../shared/agent-status-observation'
+import { AGENT_STATUS_2A_CURRENT_PRODUCER_MODE } from '../../../shared/agent-status-legacy-adapter'
+import {
+  admitLegacyAgentStatus,
+  deleteLegacyAgentStatus
+} from '../../../shared/agent-hook-listener/listener-state'
 import {
   attachClaudeChildOnlyBoundary,
   attachClaudePermissionToolUseId,
@@ -28,7 +33,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     origin: AgentStatusObservationOrigin = 'hook',
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
-  ): EnrichedAgentHookEventPayload {
+  ): EnrichedAgentHookEventPayload | undefined {
     const binding = resolveAgentStatusBinding({
       payload,
       previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
@@ -38,10 +43,13 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       return binding.previous
     }
     payload = binding.payload
+    if (!this.canWriteLegacyStatusRow(payload)) {
+      return undefined
+    }
     const previousBeforeIdentity = binding.previous
     if (binding.replacement) {
       // A replacement run is a new subject even when the pane slot is reused.
-      this.state.lastStatusByPaneKey.delete(payload.paneKey)
+      deleteLegacyAgentStatus(this.state, payload.paneKey)
     }
     if (payload.hookEventName === 'UserPromptSubmit') {
       // Why: the prompt boundary is authoritative even when text is unchanged; its next OSC working row must not inherit the prior cron/background turn stamp.
@@ -85,7 +93,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
       }
       this.clearAssistantMessageRetry(enriched.paneKey)
       this.runtimeObservedStatusPaneKeys.delete(enriched.paneKey)
-      this.state.lastStatusByPaneKey.set(enriched.paneKey, enriched)
+      if (!this.writeLegacyStatusRow(enriched)) {
+        return undefined
+      }
       this.commitStatusRowMutation(rowBefore, enriched)
       this.scheduleStatusPersist()
       this.notifyStatusChangeListeners()
@@ -116,7 +126,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     if (boundaryReconciledPrevious !== previous) {
       previous = boundaryReconciledPrevious
       if (previous) {
-        this.state.lastStatusByPaneKey.set(previous.paneKey, previous)
+        if (!this.writeLegacyStatusRow(previous)) {
+          return undefined
+        }
         this.scheduleStatusPersist()
       }
     }
@@ -215,7 +227,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     } else {
       this.runtimeObservedStatusPaneKeys.add(enriched.paneKey)
     }
-    this.state.lastStatusByPaneKey.set(enriched.paneKey, enriched)
+    if (!this.writeLegacyStatusRow(enriched)) {
+      return undefined
+    }
     this.commitStatusRowMutation(rowBefore, enriched)
     // Why skipped for structured rows: the serializer drops them, so the whole walk and stringify
     // can only ever reproduce the last file — once per debounce window for a streaming chat.
@@ -232,6 +246,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     mutationBefore?: EnrichedAgentHookEventPayload,
     emitEnrichedStatus = false
   ): void {
+    if (!this.canWriteLegacyStatusRow(previous)) {
+      return
+    }
     const connectionClearWatermark = previous.connectionId
       ? this.connectionTimestampWatermarkById.get(previous.connectionId)
       : undefined
@@ -257,7 +274,9 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     }
     const firstRuntimeObservation = !this.runtimeObservedStatusPaneKeys.has(refreshed.paneKey)
     this.runtimeObservedStatusPaneKeys.add(refreshed.paneKey)
-    this.state.lastStatusByPaneKey.set(refreshed.paneKey, refreshed)
+    if (!this.writeLegacyStatusRow(refreshed)) {
+      return
+    }
     this.commitStatusRowMutation(mutationBefore ?? previous, refreshed)
     this.scheduleStatusPersist()
     // A dismissed row may retain only provider resume identity. Its preserved payload can still
@@ -282,16 +301,12 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     }
   }
 
-  // Why: every status emit must reach plugins too, so a new early-return path
-  // upstream cannot silently leave the plugin tap behind the main-window fanout.
-  protected emitEnrichedStatus(enriched: EnrichedAgentHookEventPayload): void {
-    this.onAgentStatus?.(enriched)
-    for (const listener of this.enrichedStatusListeners) {
-      try {
-        listener(enriched)
-      } catch (err) {
-        console.error('[agent-hooks] enriched status listener threw', err)
-      }
-    }
+  private writeLegacyStatusRow(entry: EnrichedAgentHookEventPayload): boolean {
+    return admitLegacyAgentStatus(
+      this.state,
+      'main-status-update',
+      entry,
+      AGENT_STATUS_2A_CURRENT_PRODUCER_MODE
+    )
   }
 }

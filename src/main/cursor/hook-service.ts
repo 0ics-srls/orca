@@ -170,13 +170,13 @@ export class CursorHookService {
       }
       const cleaned = removeManagedCommands(definitions, isManagedCommand)
       // Also strip entries with the command at the top level (Cursor schema).
-      const strippedCursorShape = cleaned.filter(
+      const strippedTopLevelCommands = cleaned.filter(
         (definition) => !isManagedCommand(definition.command)
       )
-      if (strippedCursorShape.length === 0) {
+      if (strippedTopLevelCommands.length === 0) {
         delete nextHooks[eventName]
       } else {
-        nextHooks[eventName] = strippedCursorShape
+        nextHooks[eventName] = strippedTopLevelCommands
       }
     }
 
