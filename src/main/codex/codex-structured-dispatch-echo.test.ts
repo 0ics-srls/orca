@@ -30,24 +30,79 @@ describe('codex dispatch echoes', () => {
     const echoes = createCodexDispatchEchoes()
     echoes.arm('client-1')
     echoes.arm('client-2')
-    expect(echoes.bindOwnerTurn('client-1', 'turn-1')).toBe(false)
-    expect(echoes.bindOwnerTurn('client-2', 'turn-2')).toBe(false)
+    expect(echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')).toBe(true)
+    expect(echoes.bindSteerResponse('client-2', 'turn-2', 'turn-2')).toBe(true)
 
-    expect(echoes.pendingForTurn('turn-1')).toEqual(['client-1'])
-    echoes.retireTurn('turn-1')
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
+    echoes.commitTerminal('turn-1')
 
     expect(echoes.settle('client-1')).toBe(true)
     expect(echoes.settle('client-2')).toBe(true)
   })
 
-  it('recognizes a response bound after its turn terminal notification', () => {
+  it('does not bind a steer response after its turn terminal notification', () => {
     const echoes = createCodexDispatchEchoes()
     echoes.arm('client-1')
 
-    echoes.retireTurn('turn-1')
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual([])
+    echoes.commitTerminal('turn-1')
 
-    expect(echoes.bindOwnerTurn('client-1', 'turn-1')).toBe(true)
+    expect(echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')).toBe(false)
+    expect(echoes.size).toBe(1)
+    expect(echoes.settle('client-1')).toBe(true)
+  })
+
+  it('binds a fresh start only after response and started evidence in either order', () => {
+    const responseFirst = createCodexDispatchEchoes()
+    responseFirst.arm('client-response-first')
+    responseFirst.recordStartResponse('client-response-first', 'turn-response-first')
+    expect(responseFirst.terminalOwnerIds('unrelated-turn')).toEqual([])
+    responseFirst.commitTerminal('unrelated-turn')
+    responseFirst.observeTurnStarted('turn-response-first')
+    expect(responseFirst.terminalOwnerIds('turn-response-first')).toEqual(['client-response-first'])
+
+    const startedFirst = createCodexDispatchEchoes()
+    startedFirst.arm('client-started-first')
+    startedFirst.observeTurnStarted('turn-started-first')
+    startedFirst.recordStartResponse('client-started-first', 'turn-started-first')
+    expect(startedFirst.terminalOwnerIds('turn-started-first')).toEqual(['client-started-first'])
+  })
+
+  it('leaves a response-only phantom start awaiting its echo', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('client-1')
+    echoes.recordStartResponse('client-1', 'phantom-turn')
+
+    expect(echoes.terminalOwnerIds('active-turn')).toEqual([])
+    echoes.commitTerminal('active-turn')
+    expect(echoes.terminalOwnerIds('phantom-turn')).toEqual([])
+    echoes.commitTerminal('phantom-turn')
+    expect(echoes.size).toBe(1)
+    expect(echoes.settle('client-1')).toBe(true)
+  })
+
+  it('keeps a terminal snapshot stable across a retried append', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('client-1')
+    echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')
+
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
+    echoes.commitTerminal('turn-1')
+
     expect(echoes.size).toBe(0)
+    expect(echoes.settle('client-1')).toBe(true)
+  })
+
+  it('releases a failed snapshot without losing exact ownership or echo recovery', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('client-1')
+    echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
+
+    echoes.abandonTerminal('turn-1')
+
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
     expect(echoes.settle('client-1')).toBe(true)
   })
 
@@ -102,15 +157,17 @@ describe('codex dispatch echoes', () => {
     const echoes = createCodexDispatchEchoes()
     for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
       echoes.arm(`old-${index}`)
-      echoes.bindOwnerTurn(`old-${index}`, 'turn-old')
+      echoes.bindSteerResponse(`old-${index}`, 'turn-old', 'turn-old')
     }
-    echoes.retireTurn('turn-old')
+    echoes.terminalOwnerIds('turn-old')
+    echoes.commitTerminal('turn-old')
 
     for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
       expect(echoes.arm(`new-${index}`)).toBe(true)
-      echoes.bindOwnerTurn(`new-${index}`, 'turn-new')
+      echoes.bindSteerResponse(`new-${index}`, 'turn-new', 'turn-new')
     }
-    echoes.retireTurn('turn-new')
+    echoes.terminalOwnerIds('turn-new')
+    echoes.commitTerminal('turn-new')
 
     expect(echoes.size).toBe(0)
     expect(echoes.settle('old-0')).toBe(false)

@@ -509,7 +509,7 @@ describe('codex journal translation', () => {
     const tap = recorder()
     const dispatchEchoes = createCodexDispatchEchoes()
     dispatchEchoes.arm('client-2')
-    dispatchEchoes.bindOwnerTurn('client-2', TURN_ID)
+    dispatchEchoes.bindSteerResponse('client-2', TURN_ID, TURN_ID)
     const batches: LifecycleBatch[] = []
     tap.sink.appendLifecycleBatch = (settlementId, mutations, options) => {
       batches.push({

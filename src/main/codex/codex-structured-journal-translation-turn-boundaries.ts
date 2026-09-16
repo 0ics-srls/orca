@@ -36,7 +36,10 @@ export class CodexJournalTurnBoundaries {
       activeTurns: CodexJournalActiveTurns
       items: Pick<CodexJournalItems, 'streams' | 'activeItems' | 'ordinals'>
       pendingPrompts: Map<string, CodexPendingJournalPrompt>
-      dispatchEchoes?: Pick<CodexDispatchEchoes, 'pendingForTurn' | 'retireTurn'>
+      dispatchEchoes?: Pick<
+        CodexDispatchEchoes,
+        'observeTurnStarted' | 'terminalOwnerIds' | 'commitTerminal' | 'abandonTerminal'
+      >
       clearPromptTurn?: (threadId: string, turnId: string) => void
       flushSuppression: () => CodexJournalTranslationAdmission
       resetActivity: (threadId: string) => void
@@ -64,6 +67,9 @@ export class CodexJournalTurnBoundaries {
     })
     if (admission.accepted) {
       this.deps.activeTurns.remember(event.threadId, turnId, startedAt)
+      if (event.threadId === this.deps.primaryThreadId()) {
+        this.deps.dispatchEchoes?.observeTurnStarted(turnId)
+      }
       this.deps.resetActivity(event.threadId)
     }
     return admission
@@ -84,8 +90,10 @@ export class CodexJournalTurnBoundaries {
     // write `unverifiable`.
     const isPrimaryTurn = event.threadId === this.deps.primaryThreadId()
     const ownerEndedClientMessageIds = isPrimaryTurn
-      ? (this.deps.dispatchEchoes?.pendingForTurn(turnId) ?? [])
+      ? (this.deps.dispatchEchoes?.terminalOwnerIds(turnId) ?? [])
       : []
+    const waitsForDurableOwnerSettlement =
+      isPrimaryTurn && this.deps.sink.durableLifecycleCallbacks === true
     const admission = settleCodexJournalTurn({
       sink: this.deps.sink,
       sessionId: event.sessionId,
@@ -104,15 +112,23 @@ export class CodexJournalTurnBoundaries {
       activeItems: this.deps.items.activeItems,
       pendingPrompts: this.deps.pendingPrompts,
       ownerEndedClientMessageIds,
+      ...(waitsForDurableOwnerSettlement
+        ? {
+            onOwnerSettlementCommitted: () => this.deps.dispatchEchoes?.commitTerminal(turnId),
+            onOwnerSettlementAbandoned: () => this.deps.dispatchEchoes?.abandonTerminal(turnId)
+          }
+        : {}),
       ...(this.deps.clearPromptTurn ? { clearPromptTurn: this.deps.clearPromptTurn } : {})
     })
     if (admission.accepted) {
-      if (isPrimaryTurn) {
-        this.deps.dispatchEchoes?.retireTurn(turnId)
+      if (isPrimaryTurn && !waitsForDurableOwnerSettlement) {
+        this.deps.dispatchEchoes?.commitTerminal(turnId)
       }
       this.deps.items.ordinals.forgetTurn(event.threadId, turnId)
       this.deps.activeTurns.forget(event.threadId, turnId)
       this.deps.resetActivity(event.threadId)
+    } else if (isPrimaryTurn && admission.reason !== 'backpressure') {
+      this.deps.dispatchEchoes?.abandonTerminal(turnId)
     }
     return admission
   }

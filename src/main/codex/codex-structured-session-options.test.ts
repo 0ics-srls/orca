@@ -223,6 +223,92 @@ describe('structured Codex session options', () => {
     })
   })
 
+  it('persists every active-turn override before steering without adding steer fields', async () => {
+    const requests: { method: string; params?: Record<string, unknown> }[] = []
+    const session = optionSession(
+      vi.fn(async (method: string, params?: Record<string, unknown>) => {
+        requests.push({ method, params })
+        return method === 'turn/steer' ? { turnId: 'turn-active' } : {}
+      })
+    )
+    session.activeTurnIds = new Set(['turn-active'])
+    session.options = new Map([
+      ['model', 'gpt-live'],
+      ['effort', 'high'],
+      ['approvalPolicy', 'on-request'],
+      ['approvalsReviewer', 'user'],
+      ['personality', 'pragmatic'],
+      ['fastMode', 'true']
+    ])
+    session.fastModeTierByModel = new Map([['gpt-live', 'priority-live']])
+
+    await startCodexTurn(session, {
+      clientMessageId: 'message-active',
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'continue' }] }
+    })
+
+    expect(requests).toEqual([
+      {
+        method: 'thread/settings/update',
+        params: {
+          threadId: 'thread-1',
+          model: 'gpt-live',
+          effort: 'high',
+          approvalPolicy: 'on-request',
+          approvalsReviewer: 'user',
+          personality: 'pragmatic',
+          serviceTier: 'priority-live'
+        }
+      },
+      {
+        method: 'turn/steer',
+        params: {
+          threadId: 'thread-1',
+          expectedTurnId: 'turn-active',
+          clientUserMessageId: 'message-active',
+          input: [{ type: 'text', text: 'continue' }]
+        }
+      }
+    ])
+  })
+
+  it('falls back to a full-options start when settings update is unavailable', async () => {
+    const requests: { method: string; params?: Record<string, unknown> }[] = []
+    const session = optionSession(
+      vi.fn(async (method: string, params?: Record<string, unknown>) => {
+        requests.push({ method, params })
+        if (method === 'thread/settings/update') {
+          throw new Error('method unavailable')
+        }
+        return { turn: { id: 'submission-1' } }
+      })
+    )
+    session.activeTurnIds = new Set(['turn-active'])
+    session.options = new Map([
+      ['model', 'gpt-live'],
+      ['effort', 'high'],
+      ['approvalPolicy', 'on-request'],
+      ['approvalsReviewer', 'user'],
+      ['personality', 'pragmatic'],
+      ['fastMode', 'false']
+    ])
+
+    await startCodexTurn(session, {
+      clientMessageId: 'message-fallback',
+      body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: 'continue' }] }
+    })
+
+    expect(requests.map(({ method }) => method)).toEqual(['thread/settings/update', 'turn/start'])
+    expect(requests[1]?.params).toMatchObject({
+      model: 'gpt-live',
+      effort: 'high',
+      approvalPolicy: 'on-request',
+      approvalsReviewer: 'user',
+      personality: 'pragmatic',
+      serviceTier: 'default'
+    })
+  })
+
   it('reports the current Fast value only when the opened thread tier matches the catalog', async () => {
     const connection = {
       request: vi.fn(async () => ({

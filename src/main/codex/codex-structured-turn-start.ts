@@ -9,15 +9,10 @@ import { isCodexAppServerUnsupportedError } from './codex-app-server-session'
 import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
 import { DISPATCH_REJECTED_CODEX_QUEUE_FULL } from '../../shared/structured-agent-session-dispatch-rejection'
 import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
-import { DISPATCH_DOUBT_TURN_SETTLED } from '../native-chat/agent-session-journal/journal-dispatch-doubt-reasons'
 import { readCodexTurnId } from './codex-structured-thread-facts'
 
-// Writing a Codex turn and learning which message landed where, which are not
-// the same event. `turn/start` answers as soon as Codex owns the message, but a
-// message issued while a turn is running is COALESCED into that turn. Across
-// supported app-server builds, the response id is not authoritative for that
-// steer, so ownership comes from the active lifecycle at write time. The user
-// message echo remains the final delivery proof.
+// Active-turn ownership is established by Codex atomically checking the expected
+// turn. A fresh start needs both its response id and matching started event.
 
 /** Keys Codex accepts as per-turn overrides. An unlisted key would otherwise
  *  become an arbitrary client-controlled `turn/start` parameter. */
@@ -95,26 +90,39 @@ function codexTurnOptions(host: CodexTurnHost): Record<string, string> {
   return { ...options, serviceTier: tierId }
 }
 
-/**
- * Hands one submission to Codex and binds its client id to the provider-owned turn.
- */
-export async function startCodexTurn(
+function steerProvesNoEnqueue(error: unknown): boolean {
+  return isCodexAppServerRequestError(error) && error.method === 'turn/steer'
+}
+
+async function applyActiveTurnSettings(
+  host: CodexTurnHost,
+  timeoutMs: number | undefined
+): Promise<boolean> {
+  const options = codexTurnOptions(host)
+  if (Object.keys(options).length === 0) {
+    return true
+  }
+  try {
+    await host.connection.request(
+      'thread/settings/update',
+      { threadId: host.threadId, ...options },
+      { timeoutMs }
+    )
+    return true
+  } catch {
+    // No user input is carried by this request, so a full-options start is safe.
+    return false
+  }
+}
+
+async function startFreshCodexTurn(
   host: CodexTurnHost,
   input: { clientMessageId: string; body: AgentJournalMessageItem; timeoutMs?: number }
-): Promise<'admitted' | 'owner-ended' | 'queue-full'> {
-  // Armed before the write: the echo can land while the response is in flight.
-  if (!host.dispatchEchoes.arm(input.clientMessageId)) {
-    return 'queue-full'
-  }
-  const expectedOwnerTurnId = currentActiveTurnId(host)
-  let ownerEnded = false
-  if (expectedOwnerTurnId) {
-    ownerEnded = host.dispatchEchoes.bindOwnerTurn(input.clientMessageId, expectedOwnerTurnId)
-  }
-  const bindResponseOwner = (result: unknown): void => {
-    const turnId = expectedOwnerTurnId ?? readCodexTurnId(result)
+): Promise<void> {
+  const recordResponse = (result: unknown): void => {
+    const turnId = readCodexTurnId(result)
     if (turnId) {
-      ownerEnded = host.dispatchEchoes.bindOwnerTurn(input.clientMessageId, turnId) || ownerEnded
+      host.dispatchEchoes.recordStartResponse(input.clientMessageId, turnId)
     }
   }
   const result = await host.connection.request(
@@ -125,18 +133,71 @@ export async function startCodexTurn(
       input: turnInputFor(input.body),
       ...codexTurnOptions(host)
     },
-    { timeoutMs: input.timeoutMs, onResult: bindResponseOwner }
+    { timeoutMs: input.timeoutMs, onResult: recordResponse }
   )
   // Also covers test and alternate connections that omit the synchronous observer.
-  bindResponseOwner(result)
-  return ownerEnded ? 'owner-ended' : 'admitted'
+  recordResponse(result)
+}
+
+async function steerActiveCodexTurn(
+  host: CodexTurnHost,
+  expectedTurnId: string,
+  input: { clientMessageId: string; body: AgentJournalMessageItem; timeoutMs?: number }
+): Promise<void> {
+  const bindResponse = (result: unknown): void => {
+    const turnId = readCodexTurnId(result)
+    if (turnId) {
+      host.dispatchEchoes.bindSteerResponse(input.clientMessageId, expectedTurnId, turnId)
+    }
+  }
+  const result = await host.connection.request(
+    'turn/steer',
+    {
+      threadId: host.threadId,
+      expectedTurnId,
+      clientUserMessageId: input.clientMessageId,
+      input: turnInputFor(input.body)
+    },
+    { timeoutMs: input.timeoutMs, onResult: bindResponse }
+  )
+  bindResponse(result)
+}
+
+/**
+ * Hands one submission to Codex and binds its client id to the provider-owned turn.
+ */
+export async function startCodexTurn(
+  host: CodexTurnHost,
+  input: { clientMessageId: string; body: AgentJournalMessageItem; timeoutMs?: number }
+): Promise<'admitted' | 'queue-full'> {
+  // Armed before the write: the echo can land while the response is in flight.
+  if (!host.dispatchEchoes.arm(input.clientMessageId)) {
+    return 'queue-full'
+  }
+  const expectedOwnerTurnId = currentActiveTurnId(host)
+  if (expectedOwnerTurnId) {
+    if (await applyActiveTurnSettings(host, input.timeoutMs)) {
+      try {
+        await steerActiveCodexTurn(host, expectedOwnerTurnId, input)
+        return 'admitted'
+      } catch (error) {
+        if (!steerProvesNoEnqueue(error) && !isCodexAppServerUnsupportedError(error)) {
+          throw error
+        }
+      }
+    }
+    // No user input was enqueued. Reuse its correlation for a full-options start.
+    host.dispatchEchoes.arm(input.clientMessageId)
+  }
+  await startFreshCodexTurn(host, input)
+  return 'admitted'
 }
 
 /**
  * One submission's outcome as the wire must read it: admitted means Codex owns
  * the message and its identity settles on the echo, rejected is Codex answering
  * and declining. Elapsed time is never evidence here, because the wait a
- * coalesced send would face is bounded only by the running turn.
+ * steered send would face is bounded only by the running turn.
  */
 export async function dispatchCodexTurn(
   session: CodexTurnHost,
@@ -147,13 +208,6 @@ export async function dispatchCodexTurn(
     const admission = await startCodexTurn(session, { ...input, timeoutMs })
     if (admission === 'queue-full') {
       return { state: 'rejected', reason: DISPATCH_REJECTED_CODEX_QUEUE_FULL }
-    }
-    if (admission === 'owner-ended') {
-      return {
-        state: 'unknown',
-        reason: DISPATCH_DOUBT_TURN_SETTLED,
-        recovered: true
-      }
     }
   } catch (error) {
     if (isCodexAppServerRequestError(error) || isCodexAppServerUnsupportedError(error)) {

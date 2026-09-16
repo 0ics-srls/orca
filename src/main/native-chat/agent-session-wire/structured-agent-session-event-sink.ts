@@ -31,6 +31,10 @@ export type StructuredAgentSessionAppendOptions = {
   observedAt?: number
   /** Exact sends whose provider ownership ends with this terminal lifecycle row. */
   ownerEndedClientMessageIds?: readonly string[]
+  /** Runs only after the queued lifecycle append is durable. */
+  onCommitted?: () => void
+  /** Releases in-memory bookkeeping if the queued lifecycle append is discarded. */
+  onAbandoned?: () => void
 }
 
 export type StructuredAgentSessionLifecycleJournal = Pick<
@@ -43,6 +47,8 @@ export type StructuredAgentSessionLifecycleIdentityResolver = (
 ) => AgentJournalItemIdentity | null
 
 export type StructuredAgentSessionEventSink = {
+  /** This sink invokes lifecycle callbacks at durable completion or abandonment. */
+  durableLifecycleCallbacks?: true
   appendItem(
     identity: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
@@ -150,9 +156,7 @@ export function createDeferredStructuredAgentSessionEventSink(
     mutations: readonly JournalLifecycleMutationInput[],
     options: StructuredAgentSessionAppendOptions = {}
   ): StructuredAgentSessionSinkAdmission => {
-    const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
-      ? [...options.ownerEndedClientMessageIds]
-      : undefined
+    const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds?.slice()
     return queue.submit(
       {
         bytes:
@@ -166,12 +170,18 @@ export function createDeferredStructuredAgentSessionEventSink(
           ) + 512,
         coalescingKey: `lifecycle:${settlementId}`,
         run: (bound) =>
-          bound.journal.appendLifecycleBatch({
-            settlementId,
-            mutations,
-            fence: bound.fence,
-            ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
-          })
+          bound.journal
+            .appendLifecycleBatch({
+              settlementId,
+              mutations,
+              fence: bound.fence,
+              ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
+            })
+            .then(options.onCommitted, (error: unknown) => {
+              options.onAbandoned?.()
+              throw error
+            }),
+        ...(options.onAbandoned ? { onDiscarded: options.onAbandoned } : {})
       },
       {
         ...options,
@@ -272,6 +282,7 @@ export function createDeferredStructuredAgentSessionEventSink(
         }
         return admission
       },
+      durableLifecycleCallbacks: true,
       tryAppendLifecycleBatch: appendLifecycleBatch,
       bindReadingControl: (control) => {
         return queue.bindReadingControl(control)

@@ -24,9 +24,9 @@ function send(
 }
 
 describe('codex dispatch admission', () => {
-  it('binds a steer to the active turn when the response uses a submission id', async () => {
+  it('settles a successful steer with its exact active turn', async () => {
     const codex = fakeCodexAppServer({
-      'turn/start': () => ({ turn: { id: 'submission-1', status: 'inProgress' } })
+      'turn/steer': () => ({ turnId: 'turn-1' })
     })
     const settlements: LateSettlement[] = []
     const ownerEnded: string[][] = []
@@ -52,15 +52,22 @@ describe('codex dispatch admission', () => {
     expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
   })
 
-  it('settles an active-turn send before the start response continuation runs', async () => {
+  it('does not late-settle when the terminal event precedes the steer response', async () => {
     let completeTurn: (() => void) | undefined
     const codex = fakeCodexAppServer({
-      'turn/start': () => {
+      'turn/steer': () => {
         completeTurn?.()
-        return { turn: { id: 'turn-1', status: 'completed' } }
+        return { turnId: 'turn-1' }
       }
     })
-    const adapter = await acquiredCodexAdapter({ codex, settlements: [] })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
     const connection = codex.connections[0]!
     startTurn(connection, 'turn-1')
     completeTurn = () =>
@@ -70,14 +77,194 @@ describe('codex dispatch admission', () => {
       })
 
     await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    expect(ownerEnded).toEqual([[]])
+
+    echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
+  })
+
+  it.each(['response-first', 'started-first'] as const)(
+    'requires a fresh-start response and started event (%s)',
+    async (ordering) => {
+      let connection: ReturnType<typeof fakeCodexAppServer>['connections'][number] | undefined
+      const codex = fakeCodexAppServer({
+        'turn/start': () => {
+          if (ordering === 'started-first' && connection) {
+            startTurn(connection, 'turn-new')
+          }
+          return { turn: { id: 'turn-new' } }
+        }
+      })
+      const ownerEnded: string[][] = []
+      const sink = recordingSink()
+      sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+        ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+        return { accepted: true }
+      }
+      const adapter = await acquiredCodexAdapter({ codex, settlements: [], sink })
+      connection = codex.connections[0]!
+
+      await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+      if (ordering === 'response-first') {
+        startTurn(connection, 'turn-new')
+      }
+      connection.handlers.onNotification?.('turn/completed', {
+        threadId: CODEX_TEST_THREAD_ID,
+        turn: { id: 'turn-new', status: 'completed' }
+      })
+
+      expect(ownerEnded).toEqual([['client-1']])
+    }
+  )
+
+  it('does not bind a stale active snapshot when the provider has advanced', async () => {
+    const { CodexAppServerRequestError } = await import('./codex-app-server-connection')
+    let connection: ReturnType<typeof fakeCodexAppServer>['connections'][number] | undefined
+    const codex = fakeCodexAppServer({
+      'turn/steer': () => {
+        connection?.handlers.onNotification?.('turn/completed', {
+          threadId: CODEX_TEST_THREAD_ID,
+          turn: { id: 'turn-a', status: 'completed' }
+        })
+        if (connection) {
+          startTurn(connection, 'turn-b')
+        }
+        throw new CodexAppServerRequestError(
+          'turn/steer',
+          -32602,
+          'expected active turn id turn-a but found turn-b'
+        )
+      },
+      // An older provider may answer this while keeping turn-b active. Without
+      // a matching started event, turn-submission is not proven ownership.
+      'turn/start': () => ({ turn: { id: 'turn-submission' } })
+    })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
+    connection = codex.connections[0]!
+    startTurn(connection, 'turn-a')
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-b', status: 'completed' }
+    })
+
+    expect(ownerEnded).toEqual([[], []])
+    echoUserMessage(connection, {
+      turnId: 'turn-b',
+      itemId: 'item-u1',
+      clientId: 'client-1'
+    })
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
+  })
+
+  it('falls back after a no-active steer and preserves exact fresh-turn ownership', async () => {
+    const { CodexAppServerRequestError } = await import('./codex-app-server-connection')
+    let connection: ReturnType<typeof fakeCodexAppServer>['connections'][number] | undefined
+    const codex = fakeCodexAppServer({
+      'turn/steer': () => {
+        throw new CodexAppServerRequestError('turn/steer', -32602, 'no active turn to steer')
+      },
+      'turn/start': () => {
+        if (connection) {
+          startTurn(connection, 'turn-new')
+        }
+        return { turn: { id: 'turn-new' } }
+      }
+    })
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements: [], sink })
+    connection = codex.connections[0]!
+    startTurn(connection, 'stale-local-turn')
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-new', status: 'completed' }
+    })
+
+    expect(ownerEnded).toEqual([['client-1']])
+    expect(connection.calls.map(({ method }) => method)).toContain('turn/steer')
+    expect(connection.calls.map(({ method }) => method)).toContain('turn/start')
+  })
+
+  it('keeps an unsupported-steer fallback pending when start returns only a phantom id', async () => {
+    const { CodexAppServerUnsupportedError } = await import('./codex-app-server-session')
+    const codex = fakeCodexAppServer({
+      'turn/steer': () => {
+        throw new CodexAppServerUnsupportedError('turn/steer: method not found')
+      },
+      'turn/start': () => ({ turn: { id: 'phantom-turn' } })
+    })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-active')
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-active', status: 'completed' }
+    })
+
+    expect(ownerEnded).toEqual([[]])
+    echoUserMessage(connection, {
+      turnId: 'turn-active',
+      itemId: 'item-u1',
+      clientId: 'client-1'
+    })
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
+  })
+
+  it('does not bind a successful steer response naming another turn', async () => {
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-other' }) })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-active')
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-active', status: 'completed' }
+    })
+
+    expect(ownerEnded).toEqual([[]])
+    echoUserMessage(connection, {
+      turnId: 'turn-active',
+      itemId: 'item-u1',
+      clientId: 'client-1'
+    })
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
   })
 
   it('admits a send queued behind a running turn and settles it when Codex echoes it', async () => {
-    // Measured on codex-cli 0.153.4: a `turn/start` issued while a turn runs is
-    // COALESCED into it -- same turn id back, no second `turn/started`, and the
-    // user message echoed only once the running turn reaches it.
     const codex = fakeCodexAppServer({
-      'turn/start': () => ({ turn: { id: 'turn-1', status: 'inProgress' } })
+      'turn/steer': () => ({ turnId: 'turn-1' })
     })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
@@ -110,7 +297,7 @@ describe('codex dispatch admission', () => {
   })
 
   it('correlates each send by client message id, not queue order', async () => {
-    const codex = fakeCodexAppServer({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
     const connection = codex.connections[0]!
@@ -150,7 +337,7 @@ describe('codex dispatch admission', () => {
   })
 
   it('settles nothing for a user message this session never sent', async () => {
-    const codex = fakeCodexAppServer({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
     const connection = codex.connections[0]!
@@ -167,10 +354,12 @@ describe('codex dispatch admission', () => {
 
   it('rejects only when Codex answered and declined, and arms nothing for it', async () => {
     const { CodexAppServerRequestError } = await import('./codex-app-server-connection')
+    const refuse = (method: string): never => {
+      throw new CodexAppServerRequestError(method, -32602, 'thread not found')
+    }
     const codex = fakeCodexAppServer({
-      'turn/start': () => {
-        throw new CodexAppServerRequestError('turn/start', -32602, 'thread not found')
-      }
+      'turn/steer': () => refuse('turn/steer'),
+      'turn/start': () => refuse('turn/start')
     })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
@@ -189,16 +378,27 @@ describe('codex dispatch admission', () => {
 
   it('retains correlation when a request fails after its write may have landed', async () => {
     const codex = fakeCodexAppServer({
-      'turn/start': () => {
+      'turn/steer': () => {
         throw new Error('request timed out after write')
       }
     })
     const settlements: LateSettlement[] = []
-    const adapter = await acquiredCodexAdapter({ codex, settlements })
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
     const connection = codex.connections[0]!
     startTurn(connection, 'turn-1')
 
     await expect(send(adapter, 'client-1')).rejects.toThrow('request timed out after write')
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-1', status: 'completed' }
+    })
+    expect(ownerEnded).toEqual([[]])
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
 
     expect(settlements).toEqual([
@@ -216,7 +416,7 @@ describe('codex dispatch admission', () => {
   })
 
   it('refuses overflow without discarding an older accepted send', async () => {
-    const codex = fakeCodexAppServer({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
     const connection = codex.connections[0]!
@@ -235,7 +435,7 @@ describe('codex dispatch admission', () => {
   })
 
   it('leaves no waiter behind when the session closes', async () => {
-    const codex = fakeCodexAppServer({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
     const connection = codex.connections[0]!
@@ -249,7 +449,7 @@ describe('codex dispatch admission', () => {
   })
 
   it('leaves no waiter behind when the child exits', async () => {
-    const codex = fakeCodexAppServer({ 'turn/start': () => ({ turn: { id: 'turn-1' } }) })
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
     const connection = codex.connections[0]!

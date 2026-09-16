@@ -28,16 +28,23 @@ export function appendCodexLifecycleMutations(
   sink: StructuredAgentSessionEventSink,
   settlementId: string,
   mutations: readonly JournalLifecycleMutationInput[],
-  options: { ownerEndedClientMessageIds?: readonly string[] } = {}
+  options: {
+    ownerEndedClientMessageIds?: readonly string[]
+    onCommitted?: () => void
+    onAbandoned?: () => void
+  } = {}
 ): StructuredAgentSessionSinkAdmission {
   const chunks = partitionJournalLifecycleMutations(settlementId, mutations)
   for (const { settlementId: id, mutations: chunk } of chunks) {
-    const ownerEndedClientMessageIds = chunk.some(isTerminalTurnMutation)
+    const containsTerminalTurn = chunk.some(isTerminalTurnMutation)
+    const ownerEndedClientMessageIds = containsTerminalTurn
       ? options.ownerEndedClientMessageIds
       : undefined
     const appendOptions = {
       lifecycle: true as const,
-      ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
+      ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {}),
+      ...(containsTerminalTurn && options.onCommitted ? { onCommitted: options.onCommitted } : {}),
+      ...(containsTerminalTurn && options.onAbandoned ? { onAbandoned: options.onAbandoned } : {})
     }
     let admission: StructuredAgentSessionSinkAdmission = ADMITTED
     if (sink.tryAppendLifecycleBatch) {

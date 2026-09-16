@@ -20,7 +20,10 @@ export type CodexJournalTranslatorDeps = {
   /** Settles a send's identity off the echoed user message, using the very
    *  identity the journal row carries so a replay computes the same key. */
   onUserMessageEcho?: (clientMessageId: string, identity: AgentJournalItemIdentity) => void
-  dispatchEchoes?: Pick<CodexDispatchEchoes, 'pendingForTurn' | 'retireTurn'>
+  dispatchEchoes?: Pick<
+    CodexDispatchEchoes,
+    'observeTurnStarted' | 'terminalOwnerIds' | 'commitTerminal' | 'abandonTerminal'
+  >
   primaryThreadId?: () => string | null
   subagentExecutions?: CodexSubagentExecutions
   coalesceMs?: number
