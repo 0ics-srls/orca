@@ -17,6 +17,7 @@ terminal output, and transport behavior do not change.
 ```sh
 ORCA_BACKGROUND_LAUNCH=1 node docs/audits/terminal-contrast-cache-retention/reproduce.mjs
 ORCA_BACKGROUND_LAUNCH=1 node docs/audits/terminal-contrast-cache-retention/reproduce-dom.mjs
+ORCA_BACKGROUND_LAUNCH=1 ORCA_AUDIT_MOBILE=1 node docs/audits/terminal-contrast-cache-retention/reproduce-dom.mjs
 ```
 
 Both scripts exercise the installed CJS and ESM bundles in headless Chromium.
@@ -49,6 +50,12 @@ produce the same computed CSS color and rendered row HTML as before.
 All 12 DOM cases pass across the baseline and both fixed module formats; samples
 reach the exact 4,096-entry cap. Every page and browser is closed after the run.
 
+The mobile mode loads the actual generated WebView engine after mobile's
+postinstall. `ORCA_AUDIT_MOBILE_BASELINE` accepts a pre-fix generated engine to
+include before cases. Its eight recorded dark/light and normal/dim cases also
+preserve the corrected CSS colors and row HTML after eviction and recalculation.
+The fixed engine stays within 4,096 entries; the baseline exceeds 10,000.
+
 ## Validation and limits
 
 - 122 tests pass across cache, regeneration, contrast, appearance, IME, and
@@ -59,8 +66,13 @@ reach the exact 4,096-entry cap. Every page and browser is closed after the run.
 - Full desktop typecheck, formatting/lint, and changed-code quality pass.
 - Captured browser: Chromium 147.0.7727.15 on macOS. Heap measurements include
   GC/allocator variation and other terminal state.
-- This is a desktop renderer fix. Mobile resolves its own unpatched xterm package
-  when generating its WebView engine; that separate bundle is not fixed here.
+- Mobile's separate package receives a contrast-only source patch, rebuilt
+  CJS/ESM bundles and source maps. The existing pinned generator verifies both
+  variants, and mobile's postinstall rebuilds its gitignored WebView engine.
+  Desktop IME and SortedList patches are not copied into mobile.
+- The mobile follow-up passes 90 generator/cache/CI-contract tests and 23 mobile
+  engine/theme tests, mobile typecheck, frozen install, and regeneration checks.
+  These counts overlap with the earlier desktop pass.
 - `v1.4.198` shipped the same xterm version and automatic 3/4.5 contrast settings.
   Its appearance path also skipped unchanged theme/ratio assignments, so ordinary
   reapplication did not periodically clear the cache. User contrast overrides were
