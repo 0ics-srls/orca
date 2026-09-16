@@ -252,7 +252,9 @@ export function BrowserPane({
         />
       ) : null}
 
-      {showUserAgent ? <BrowserUserAgentSetting hostId={settingsFocusedHostId} /> : null}
+      {showUserAgent ? (
+        <BrowserUserAgentSetting hostId={settingsFocusedHostId} />
+      ) : null}
 
       {showLinkRouting ? (
         <BrowserLinkRoutingSetting
