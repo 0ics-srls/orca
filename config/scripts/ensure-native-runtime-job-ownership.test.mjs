@@ -1,7 +1,7 @@
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { dirname, join } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import { peImage } from './windows-pe-image-fixture.mjs'
 
@@ -152,24 +152,26 @@ describe('assertNodePtyJobOwnership', () => {
 })
 
 describe('nodePtyAddonPath', () => {
+  // Built from segments rather than a POSIX string: on Windows `resolve` returns
+  // a drive letter and backslashes, so a literal only ever passed off Windows.
   it('resolves the addon against node-pty lib, which is the only base callers share', () => {
     expect(
       nodePtyAddonPath(
-        '/app/node_modules/node-pty/lib/utils.js',
+        resolve('/app/node_modules/node-pty/lib/utils.js'),
         { dir: '../build/Release/' },
         'conpty'
       )
-    ).toBe('/app/node_modules/node-pty/build/Release/conpty.node')
+    ).toBe(join(resolve('/app/node_modules/node-pty'), 'build', 'Release', 'conpty.node'))
   })
 
   it('handles the bundled layout, where the addon sits beside lib', () => {
     expect(
       nodePtyAddonPath(
-        '/app/resources/node-pty/lib/utils.js',
+        resolve('/app/resources/node-pty/lib/utils.js'),
         { dir: './build/Release/' },
         'conpty'
       )
-    ).toBe('/app/resources/node-pty/lib/build/Release/conpty.node')
+    ).toBe(join(resolve('/app/resources/node-pty/lib'), 'build', 'Release', 'conpty.node'))
   })
 })
 

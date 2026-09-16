@@ -14,6 +14,16 @@ import { fileURLToPath } from 'node:url'
 import { copyScriptWithLocalModules } from './script-module-dependencies.mjs'
 import { peImage } from './windows-pe-image-fixture.mjs'
 
+/**
+ * The wide literal `usesCygwinRuntime` holds, as it sits in a real addon. A
+ * fixture addon without it is a build that predates the MSYS breakaway denial,
+ * which is what these tests need to be able to represent.
+ *
+ * Taken from the gate itself: a re-typed copy agrees with a stale gate by
+ * construction, which is the one thing these fixtures must not do.
+ */
+const { CYGWIN_BREAKAWAY_MARKER } = createRequire(import.meta.url)('./node-pty-job-ownership.cjs')
+
 const sourceScriptPath = fileURLToPath(new URL('./rebuild-native-deps.mjs', import.meta.url))
 const sourceInstallScriptPath = fileURLToPath(
   new URL('./install-electron-package-binary.mjs', import.meta.url)
@@ -23,6 +33,11 @@ const sourceNodePtyJobOwnershipPath = fileURLToPath(
 )
 const sourceWindowsProcessTreeGypRebuildPath = fileURLToPath(
   new URL('./windows-process-tree-gyp-rebuild.mjs', import.meta.url)
+)
+// Reached through projectRequire, so the module walker cannot see it: that
+// specifier resolves against the project root, not against the script.
+const sourceWindowsProcessTreeCreationTimePath = fileURLToPath(
+  new URL('./windows-process-tree-creation-time.cjs', import.meta.url)
 )
 const sourceWindowsProcessTreePatchPath = fileURLToPath(
   new URL('../patches/@vscode__windows-process-tree@0.8.0.patch', import.meta.url)
@@ -93,6 +108,10 @@ export function mkTempProject() {
   copyFileSync(sourceScriptPath, join(projectDir, 'config', 'scripts', 'rebuild-native-deps.mjs'))
   copyScriptWithLocalModules(sourceInstallScriptPath, join(projectDir, 'config', 'scripts'))
   copyScriptWithLocalModules(sourceNodePtyJobOwnershipPath, join(projectDir, 'config', 'scripts'))
+  copyFileSync(
+    sourceWindowsProcessTreeCreationTimePath,
+    join(projectDir, 'config', 'scripts', 'windows-process-tree-creation-time.cjs')
+  )
   copyFileSync(
     sourceWindowsProcessTreeGypRebuildPath,
     join(projectDir, 'config', 'scripts', 'windows-process-tree-gyp-rebuild.mjs')
@@ -224,10 +243,33 @@ const FAKE_ADDON_BYTES = {
  * because "produced the upstream reader" and "produced nothing" are both real
  * outcomes that assertion has to tell apart.
  */
+/** What a real node-gyp Windows build leaves behind, per target arch. */
+const FAKE_CONPTY_BY_ARCH = Object.fromEntries(
+  ['x64', 'arm64'].map((arch) => [
+    arch,
+    Buffer.concat([peImage({ arch }), CYGWIN_BREAKAWAY_MARKER]).toString('base64')
+  ])
+)
+
 export function writeFakeElectronRebuild(projectDir, { logPathEnv = null, addon = 'clean' } = {}) {
   const rebuildDir = join(projectDir, 'node_modules', '@electron', 'rebuild')
   mkdirSync(rebuildDir, { recursive: true })
   writeFileSync(join(rebuildDir, 'package.json'), JSON.stringify({ type: 'module' }))
+  // A real Windows rebuild leaves conpty.node in build/Release; a fake one that
+  // does not makes the gates downstream see a tree that cannot happen.
+  const emitNodePty = `
+  const nodePtyDir = join('node_modules', 'node-pty')
+  if (
+    options.platform === 'win32' &&
+    (options.onlyModules ?? []).includes('node-pty') &&
+    existsSync(join(nodePtyDir, 'lib', 'utils.js'))
+  ) {
+    mkdirSync(join(nodePtyDir, 'build', 'Release'), { recursive: true })
+    writeFileSync(
+      join(nodePtyDir, 'build', 'Release', 'conpty.node'),
+      Buffer.from(${JSON.stringify(FAKE_CONPTY_BY_ARCH)}[options.arch] ?? '', 'base64')
+    )
+  }`
   const emitAddon =
     addon === 'none'
       ? ''
@@ -239,7 +281,7 @@ export function writeFakeElectronRebuild(projectDir, { logPathEnv = null, addon 
       join(packageDir, 'build', 'Release', 'windows_process_tree.node'),
       ${JSON.stringify(FAKE_ADDON_BYTES[addon])}
     )
-  }`
+  }${emitNodePty}`
   const emitImports =
     addon === 'none'
       ? ''
@@ -269,7 +311,7 @@ export async function rebuild(options) {${emitAddon}
 }
 `
       : `${emitImports}
-export async function rebuild() {${emitAddon}
+export async function rebuild(options) {${emitAddon}
 }
 `
   )
@@ -336,16 +378,6 @@ export function writeFakeNodePtyConptyPayload(
   writeFileSync(join(sourceDir, 'conpty.dll'), `conpty.dll ${arch}`)
   writeFileSync(join(sourceDir, 'OpenConsole.exe'), `OpenConsole.exe ${arch}`)
 }
-
-/**
- * The wide literal `usesCygwinRuntime` holds, as it sits in a real addon. A
- * fixture addon without it is a build that predates the MSYS breakaway denial,
- * which is what these tests need to be able to represent.
- *
- * Taken from the gate itself: a re-typed copy agrees with a stale gate by
- * construction, which is the one thing these fixtures must not do.
- */
-const { CYGWIN_BREAKAWAY_MARKER } = createRequire(import.meta.url)('./node-pty-job-ownership.cjs')
 
 function writeFakeNodePtyAddon(nodePtyDir, nativeDir, { cygwinBreakawayDenied }) {
   const addonDir = resolve(join(nodePtyDir, 'lib'), nativeDir)
