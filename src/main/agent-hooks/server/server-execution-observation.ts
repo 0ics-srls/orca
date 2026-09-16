@@ -4,7 +4,11 @@ import {
   type AgentExecutionObservation
 } from '../../../shared/agent-execution-observation'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
-import type { HookListenerState } from '../../../shared/agent-hook-listener/listener-state'
+import {
+  admitLegacyAgentStatus,
+  type HookListenerState
+} from '../../../shared/agent-hook-listener/listener-state'
+import { AGENT_STATUS_2A_CURRENT_PRODUCER_MODE } from '../../../shared/agent-status-legacy-adapter'
 import type {
   AgentHookStatusFreshnessObservation,
   EnrichedAgentHookEventPayload
@@ -94,7 +98,16 @@ export function publishExecutionObservationIntoStore({
     ...current,
     executionObservation: parsedObservation
   }
-  state.lastStatusByPaneKey.set(paneKey, enriched)
+  if (
+    !admitLegacyAgentStatus(
+      state,
+      'main-execution-observation',
+      enriched,
+      AGENT_STATUS_2A_CURRENT_PRODUCER_MODE
+    )
+  ) {
+    return false
+  }
   commitStatusRowMutation(current, enriched)
   emitEnrichedStatus(enriched)
   emitStatusFreshnessObservation({
