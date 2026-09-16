@@ -21,20 +21,63 @@ type CellRowLockViolation = {
   statement: string
 }
 
+type CellRowLockScopeOutcome = { checked: boolean; stoodDown: boolean; violations: number }
+
+// Why: `violations === 0` is only evidence if something was examined. Checked
+// counts transactions where at least one relay_cells write was evaluated, which
+// is the population a per-cell conversion moves; stoodDown counts the ones this
+// guard refused to reason about, and must read as a bug, not as a clean run.
+export type CellRowLockScopeCounts = {
+  cellRowLockScopesChecked: number
+  cellRowLockScopesStoodDown: number
+  cellRowLockScopeViolations: number
+}
+
+export function emptyCellRowLockScopeCounts(): CellRowLockScopeCounts {
+  return {
+    cellRowLockScopesChecked: 0,
+    cellRowLockScopesStoodDown: 0,
+    cellRowLockScopeViolations: 0
+  }
+}
+
+export class CellRowLockScopeSamples {
+  private counts = emptyCellRowLockScopeCounts()
+
+  record(outcome: CellRowLockScopeOutcome): void {
+    if (outcome.checked) this.counts.cellRowLockScopesChecked += 1
+    if (outcome.stoodDown) this.counts.cellRowLockScopesStoodDown += 1
+    this.counts.cellRowLockScopeViolations += outcome.violations
+  }
+
+  consumeCounts(): CellRowLockScopeCounts {
+    const counts = this.counts
+    this.counts = emptyCellRowLockScopeCounts()
+    return counts
+  }
+}
+
 // Every statement runs through observe(), so the pre-filter is a substring test
 // rather than a regex. Case-sensitive, like the census that ratchets these sites.
 const CELL_TABLE = 'relay_cells'
 const CELL_INSERT = /^\s*INSERT\s+INTO\s+relay_cells\s*\(([^)]*)\)\s*VALUES\s*\(/i
 const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
-const CELL_TABLE_READ = /\bFROM\s+relay_cells\b/i
+// The statement's own relation, not any mention of the table. A locked read of
+// another table that names relay_cells in a JOIN or an EXISTS locks no cell row,
+// and every one of those tables carries a cell_id column that would otherwise be
+// taken for a held row.
+const CELL_TABLE_READ = /^\s*SELECT\b[\s\S]*?\bFROM\s+([A-Za-z_]\w*)/i
 const CELL_ID_EQUALS = /\bcell_id\s*=\s*\?/gi
 const ORDERED_LOCK = /\bORDER\s+BY\s+cell_id\s+ASC\b/i
 
 export class CellRowLockScope {
   private readonly held = new Set<string>()
   // A locked read whose rows do not name their cell. Nothing produces one today;
-  // policing would then mean guessing, so the scope stands down instead.
+  // policing would then mean guessing, so the scope stands down instead -- but
+  // never silently, or its silence would read the same as a clean transaction.
   private opaque = false
+  private checked = false
+  private violations = 0
 
   observe(sql: string, params: readonly unknown[], lock: CellRowLockKind, rows: SqlRow[]): void {
     if (!sql.includes(CELL_TABLE)) return
@@ -47,10 +90,20 @@ export class CellRowLockScope {
     if (CELL_ROW_WRITE.test(sql)) {
       // A write blocks on a conflicting row lock, so it is always a wait. This is
       // how the release and acquire paths take one row late, and what bounds it.
+      if (!this.opaque) this.checked = true
       this.acquire(namedCellIds(sql, params), fingerprint(sql), 'wait')
       return
     }
-    if (lock !== 'none' && CELL_TABLE_READ.test(sql)) this.acquireRead(sql, lock, rows)
+    if (lock !== 'none' && CELL_TABLE_READ.exec(sql)?.[1] === CELL_TABLE) {
+      this.acquireRead(sql, lock, rows)
+    }
+  }
+
+  // Why: a guard that reports nothing is indistinguishable from a guard that was
+  // never reached or quietly stood down, and the deploy plan is to trust its
+  // silence. These give the silence a denominator.
+  outcome(): CellRowLockScopeOutcome {
+    return { checked: this.checked, stoodDown: this.opaque, violations: this.violations }
   }
 
   private acquireRead(sql: string, lock: CellRowLockKind, rows: SqlRow[]): void {
@@ -59,18 +112,26 @@ export class CellRowLockScope {
     // A multi-row lock without ORDER BY takes its rows in whatever order the plan
     // produces, so the acquisition order stops being a property of the code.
     if (rows.length > 1 && !ORDERED_LOCK.test(sql)) {
-      report({ reason: 'unordered-lock', cellIds: [], held: [...this.held], statement })
+      this.report({ reason: 'unordered-lock', cellIds: [], held: [...this.held], statement })
     }
     const cellIds: string[] = []
     for (const row of rows) {
       const cellId = row.cell_id
       if (typeof cellId !== 'string') {
         this.opaque = true
+        reportStandDown(statement)
         return
       }
       cellIds.push(cellId)
     }
     this.acquire(cellIds, statement, lock)
+  }
+
+  // Counted before it is thrown: in production report() only warns, so the count
+  // is what carries the magnitude the once-per-signature log deliberately drops.
+  private report(violation: CellRowLockViolation): void {
+    this.violations += 1
+    report(violation)
   }
 
   private acquire(
@@ -80,7 +141,7 @@ export class CellRowLockScope {
   ): void {
     if (this.opaque) return
     if (cellIds === undefined) {
-      report({ reason: 'unparsed-write', cellIds: [], held: [...this.held], statement })
+      this.report({ reason: 'unparsed-write', cellIds: [], held: [...this.held], statement })
       return
     }
     for (const cellId of cellIds) {
@@ -88,7 +149,7 @@ export class CellRowLockScope {
       const below =
         lock === 'nowait' ? [] : [...this.held].filter((held) => sortsBelow(cellId, held))
       if (below.length > 0) {
-        report({ reason: 'out-of-order', cellIds: [cellId], held: below, statement })
+        this.report({ reason: 'out-of-order', cellIds: [cellId], held: below, statement })
       }
       this.held.add(cellId)
     }
@@ -145,6 +206,18 @@ function fingerprint(sql: string): string {
 }
 
 const reported = new Set<string>()
+
+// Never throws: standing down is not a failed invariant, it is the guard
+// declining to judge a shape it cannot read. It still has to be visible, or the
+// counters would be the only trace and a silent scope would look like a clean one.
+function reportStandDown(statement: string): void {
+  const signature = `stood-down:${statement}`
+  if (reported.has(signature)) return
+  reported.add(signature)
+  console.warn(
+    JSON.stringify({ event: 'orca_relay_cell_row_lock_scope_stood_down', statement })
+  )
+}
 
 // Deliberately not a throw in production. This guard ships ahead of the per-cell
 // locking conversions it exists to police, so its first job is to be observed

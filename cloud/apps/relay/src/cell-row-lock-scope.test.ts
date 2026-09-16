@@ -1,5 +1,6 @@
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
+  consumeRelayCellRowLockScope,
   openInMemoryRelayDatabase,
   openRelayDatabase,
   type RelayDatabase
@@ -202,6 +203,38 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
     ).resolves.toBeUndefined()
   })
 
+  // Why: every table that joins relay_cells carries a cell_id of its own, so a
+  // locked read of one of those would otherwise be taken for a set of held cell
+  // rows the transaction does not hold.
+  it('declares nothing for a locked read whose own relation is another table', async () => {
+    await database.query(`INSERT INTO relay_cell_regions (cell_id, region) VALUES (?, ?)`, [
+      CELL_C,
+      'us-central1'
+    ])
+
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(
+          `SELECT * FROM relay_cell_regions WHERE EXISTS (
+             SELECT 1 FROM relay_cells WHERE relay_cells.cell_id = relay_cell_regions.cell_id
+           )`
+        )
+        await transaction.query(RESERVE, [1, 0, CELL_A])
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  // Why: a locking read is checked, not only recorded. Taking one row late and
+  // then taking the inventory ascending walks below the row already held.
+  it('catches an inventory lock taken after a row was locked late', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.query(RESERVE, [1, 0, CELL_C])
+        await transaction.queryLocked(INVENTORY_LOCK)
+      })
+    ).rejects.toThrow('out-of-order')
+  })
+
   // Nothing locks relay_cells without selecting cell_id today. If something does,
   // standing down beats guessing -- a spurious production warning on a shape the
   // guard cannot read would be indistinguishable from the real thing.
@@ -225,6 +258,61 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
         })
       ).resolves.toBeUndefined()
     }
+  })
+
+  // Why: the deploy plan is to ship warn-only and trust the guard's silence.
+  // Silence is only evidence next to a count of what was examined -- otherwise it
+  // reads the same whether the invariant holds, the guard stood down, or nothing
+  // ever reached it.
+  it('counts the transactions it examined', async () => {
+    consumeRelayCellRowLockScope(database)
+
+    await database.transaction(async (transaction) => {
+      await transaction.queryLocked(INVENTORY_LOCK)
+      await transaction.query(RESERVE, [1, 0, CELL_A])
+    })
+
+    expect(consumeRelayCellRowLockScope(database)).toEqual({
+      cellRowLockScopesChecked: 1,
+      cellRowLockScopesStoodDown: 0,
+      cellRowLockScopeViolations: 0
+    })
+  })
+
+  it('counts a stand-down instead of letting it read as a clean run', async () => {
+    consumeRelayCellRowLockScope(database)
+
+    await database.transaction(async (transaction) => {
+      await transaction.queryLocked(
+        `SELECT capacity_requests FROM relay_cells WHERE cell_id = ?`,
+        [CELL_C]
+      )
+      await transaction.query(RESERVE, [1, 0, CELL_A])
+    })
+
+    expect(consumeRelayCellRowLockScope(database)).toMatchObject({
+      cellRowLockScopesChecked: 0,
+      cellRowLockScopesStoodDown: 1
+    })
+  })
+
+  // Why: a violation throws in tests and rolls the transaction back, which is
+  // exactly the transaction whose count must not disappear with it.
+  it('counts a violation from the transaction that failed on it', async () => {
+    consumeRelayCellRowLockScope(database)
+
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.query(RESERVE, [1, 0, CELL_A])
+      })
+    ).rejects.toThrow(VIOLATION)
+
+    expect(consumeRelayCellRowLockScope(database)).toEqual({
+      cellRowLockScopesChecked: 1,
+      cellRowLockScopesStoodDown: 0,
+      cellRowLockScopeViolations: 1
+    })
   })
 
   // Autocommit statements each commit on their own, so there is no order to

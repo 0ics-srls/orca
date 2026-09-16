@@ -9,7 +9,13 @@ import {
   PostgresPoolPressure,
   type PostgresPoolPressureCounts
 } from './postgres-pool-pressure.js'
-import { CellRowLockScope, type CellRowLockKind } from './cell-row-lock-scope.js'
+import {
+  CellRowLockScope,
+  CellRowLockScopeSamples,
+  emptyCellRowLockScopeCounts,
+  type CellRowLockKind,
+  type CellRowLockScopeCounts
+} from './cell-row-lock-scope.js'
 import { applyPostgresSchema } from './postgres-schema-startup.js'
 import { POSTGRES_STATEMENT_STATS_MIGRATION } from './postgres-statement-stats.js'
 import { reportPostgresQueryFailure } from './postgres-query-failure.js'
@@ -766,9 +772,14 @@ class SqliteTransaction implements RelayDatabase {
 class SqliteDatabase extends SqliteTransaction {
   private tail: Promise<void> = Promise.resolve()
   private readonly holds = new CellInventoryHoldSamples()
+  private readonly cellLockScopes = new CellRowLockScopeSamples()
 
   consumeHoldCounts(): CellInventoryHoldCounts {
     return this.holds.consumeCounts()
+  }
+
+  consumeCellRowLockScopeCounts(): CellRowLockScopeCounts {
+    return this.cellLockScopes.consumeCounts()
   }
 
   override async query(sql: string, params: unknown[] = []): Promise<SqlRow[]> {
@@ -782,7 +793,8 @@ class SqliteDatabase extends SqliteTransaction {
     this.tail = new Promise((resolve) => (release = resolve))
     await previous
     this.database.exec('BEGIN IMMEDIATE')
-    const transaction = new SqliteTransaction(this.database, new CellRowLockScope())
+    const cellLocks = new CellRowLockScope()
+    const transaction = new SqliteTransaction(this.database, cellLocks)
     try {
       const result = await operation(transaction)
       this.database.exec('COMMIT')
@@ -792,6 +804,9 @@ class SqliteDatabase extends SqliteTransaction {
       this.database.exec('ROLLBACK')
       throw error
     } finally {
+      // Drained on the rollback path too: a violation throws in tests, and that
+      // transaction is exactly the one whose count must not disappear.
+      this.cellLockScopes.record(cellLocks.outcome())
       release()
     }
   }
@@ -951,9 +966,14 @@ class PostgresDatabase implements RelayDatabase {
   readonly dialect = 'postgres' as const
   private readonly pressure: PostgresPoolPressure
   private readonly holds = new CellInventoryHoldSamples()
+  private readonly cellLockScopes = new CellRowLockScopeSamples()
 
   consumeHoldCounts(): CellInventoryHoldCounts {
     return this.holds.consumeCounts()
+  }
+
+  consumeCellRowLockScopeCounts(): CellRowLockScopeCounts {
+    return this.cellLockScopes.consumeCounts()
   }
 
   constructor(private readonly pool: pg.Pool) {
@@ -1013,7 +1033,8 @@ class PostgresDatabase implements RelayDatabase {
   ): Promise<T> {
     for (let attempt = 1; attempt <= POSTGRES_TRANSACTION_ATTEMPTS; attempt++) {
       const client = await this.pressure.connect()
-      const transaction = new PostgresTransaction(client, new CellRowLockScope())
+      const cellLocks = new CellRowLockScope()
+      const transaction = new PostgresTransaction(client, cellLocks)
       try {
         await client.query('BEGIN')
         const result = await operation(transaction)
@@ -1050,6 +1071,8 @@ class PostgresDatabase implements RelayDatabase {
           )
         }
       } finally {
+        // Per attempt, like the lock counters above: a retry gets a fresh scope.
+        this.cellLockScopes.record(cellLocks.outcome())
         client.release()
       }
       // A PostgreSQL transaction is unusable after an abort, so retry all work
@@ -1085,6 +1108,13 @@ export function consumeRelayCellInventoryHold(
 ): CellInventoryHoldCounts {
   const holder = database as { consumeHoldCounts?: () => CellInventoryHoldCounts }
   return holder.consumeHoldCounts?.() ?? emptyCellInventoryHoldCounts()
+}
+
+export function consumeRelayCellRowLockScope(
+  database: RelayDatabase
+): CellRowLockScopeCounts {
+  const holder = database as { consumeCellRowLockScopeCounts?: () => CellRowLockScopeCounts }
+  return holder.consumeCellRowLockScopeCounts?.() ?? emptyCellRowLockScopeCounts()
 }
 
 export function readRelayDatabasePoolPressure(
