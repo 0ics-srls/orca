@@ -36,6 +36,9 @@ import { selectCloudOrgWithMutationFence } from './profile-cloud-org-selection'
 
 export { refreshCurrentOrcaProfileAuth } from './profile-cloud-capability-refresh'
 
+let nextCloudConnectAttempt = 0
+let linkedCloudConnectAttempt = 0
+
 function isUserCancelledAuthError(message: string): boolean {
   return message === 'orca_cloud_auth_timeout' || message === 'orca_cloud_auth_denied'
 }
@@ -73,14 +76,28 @@ export async function connectCurrentOrcaProfile(
     }
   }
 
+  const attempt = ++nextCloudConnectAttempt
   try {
     const code = await beginOrcaCloudPkceFlow(configState.config, active.profile.id)
+    if (attempt < linkedCloudConnectAttempt) {
+      return {
+        status: 'cancelled',
+        auth: getCurrentOrcaProfileAuthStatus(userDataPath)
+      }
+    }
     const exchange = await exchangeOrcaCloudAuthCode(configState.config, {
       ...code,
       localProfileId: active.profile.id
     })
+    if (attempt < linkedCloudConnectAttempt) {
+      return {
+        status: 'cancelled',
+        auth: getCurrentOrcaProfileAuthStatus(userDataPath)
+      }
+    }
     saveOrcaCloudSessionExchange(active.profile.id, userDataPath, exchange)
     const list = linkOrcaProfileToCloud(active.profile.id, exchange.cloud, userDataPath)
+    linkedCloudConnectAttempt = attempt
     return {
       status: 'connected',
       auth: getCurrentOrcaProfileAuthStatus(userDataPath),

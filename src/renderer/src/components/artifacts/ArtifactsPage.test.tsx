@@ -63,7 +63,6 @@ function storeState(): Record<string, unknown> {
     closeArtifactsPage: mocks.closePage,
     connectCurrentOrcaProfile: mocks.connect,
     orcaProfileAuthStatus: mocks.authStatus,
-
     refreshCurrentOrcaProfileAuth: mocks.refreshAuth,
     settings: mocks.settings,
     updateSettings: mocks.updateSettings,
