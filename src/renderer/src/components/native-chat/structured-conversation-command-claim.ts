@@ -1,13 +1,3 @@
-// One conversation command per session at a time, resolved against the command's own terminal frame.
-//
-// A conversation command runs on the host long after the request that started it; the reply is a
-// receipt, not a completion. So the claim below waits for the frame the host revises when the
-// command finishes -- carried on the session's own journal stream -- and treats the reply as one way
-// that frame can be learned rather than as the answer itself. When neither arrives inside the
-// deadline the claim does not disappear: it becomes a marker that refuses the next attempt, because
-// elapsed time is not evidence the first attempt stopped. The marker retires when the frame lands
-// late, when the session restarts, or when the user interrupts.
-
 import {
   isAgentSessionConversationCommandResult,
   type AgentSessionConversationCommand,
@@ -18,90 +8,47 @@ import type { AgentJournalRenderItem } from '../../../../shared/agent-session-jo
 import { readAgentJournalTurn } from '../../../../shared/agent-session-turn-record'
 import { translate } from '@/i18n/i18n'
 
-/** The host settles a compaction on the provider's terminal frame inside its own 180s window
- *  (`structured-session-compaction.ts`). A client that gave up sooner would call a command
- *  unresolved while the host still knew the answer. */
-export const CONVERSATION_COMMAND_DEADLINE_MS = 195_000
-
 export type ConversationCommandOutcome = { accepted: boolean; error: string | null }
-type ConversationCommandClaimOutcome = ConversationCommandOutcome & { retrySameOperation?: true }
-
-/** What the host said, as far as the client can tell. `unresolved` means the reply never arrived,
- *  which leaves the command possibly still running. */
+export type ConversationCommandClaimOutcome = ConversationCommandOutcome & {
+  retrySameOperation?: true
+}
 export type ConversationCommandReply = {
   result: AgentSessionConversationCommandResult | null
   unresolved: boolean
 }
 
-type Obligation = {
+type LiveClaim = {
   command: AgentSessionConversationCommand
   operationId: string
-  /** The journal item the host revises when the command reaches its terminal frame. Compaction
-   *  only: a clear writes no journal item, so it has nothing on the stream to wait for. */
-  terminalItemId: string | null
-}
-
-type LiveClaim = Obligation & {
-  deadline: ReturnType<typeof setTimeout>
   settle: (outcome: ConversationCommandClaimOutcome) => void
-  onLateReply: () => void
 }
 
-const COMPACTION_COMPLETED = 'Conversation compacted.'
-const COMPACTION_UNCONFIRMED = 'Compaction completion is unconfirmed.'
-
-function runningMessage(): string {
-  return translate(
-    'components.native-chat.conversationCommand.running',
-    'Wait for the conversation operation to finish.'
-  )
+function message(key: string, fallback: string): string {
+  return translate(`components.native-chat.conversationCommand.${key}`, fallback)
 }
 
-function unresolvedMessage(command: AgentSessionConversationCommand): string {
-  return translate(
-    'components.native-chat.conversationCommand.mayStillBeRunning',
-    'The previous /{{value0}} may still be running. Restart the session before running it again.',
-    { value0: command }
-  )
-}
-
-function pendingWorkMessage(): string {
-  return translate(
-    'components.native-chat.conversationCommand.pendingWork',
-    'Wait for pending work and messages to finish before using this command.'
-  )
-}
-
-function unconfirmedMessage(): string {
-  return translate(
-    'components.native-chat.conversationCommand.unconfirmed',
-    'Conversation operation was not confirmed.'
-  )
-}
-
-/** The command row is a keyed host projection. Keep old-host unconfirmed rows pending, and preserve
- *  provider failures instead of turning every non-running revision into success. */
 function terminalFrameOutcome(
   items: readonly AgentJournalRenderItem[],
-  itemId: string | null
+  claim: LiveClaim
 ): ConversationCommandOutcome | null {
-  if (itemId === null) {
+  const item = items.find(
+    (entry) => entry.itemId === agentJournalSubmissionKey(`${claim.command}:${claim.operationId}`)
+  )
+  if (item?.body.kind !== 'status') {
     return null
   }
-  const item = items.find((entry) => entry.itemId === itemId)
-  if (
-    item?.body.kind !== 'status' ||
-    readAgentJournalTurn(item.body)?.state === 'running' ||
-    item.body.text === COMPACTION_UNCONFIRMED
-  ) {
+  const lifecycle = readAgentJournalTurn(item.body)
+  if (lifecycle?.state === 'running' || lifecycle?.state === 'unverifiable') {
     return null
   }
-  return item.body.text === COMPACTION_COMPLETED
+  const completedText =
+    claim.command === 'compact' ? 'Conversation compacted.' : 'Conversation cleared.'
+  return (lifecycle === null || lifecycle.state === 'completed') && item.body.text === completedText
     ? { accepted: true, error: null }
     : { accepted: false, error: item.body.text }
 }
 
-/** A reply the host could not confirm; the operation id must stay reusable for the same attempt. */
+/** A reply the host could not confirm; retries must keep the same durable operation id. */
 export function isUnconfirmedConversationCommand(method: string, value: unknown): boolean {
   return (
     method === 'agentSession.conversationCommand' &&
@@ -110,23 +57,20 @@ export function isUnconfirmedConversationCommand(method: string, value: unknown)
   )
 }
 
+/** Correlates one in-flight request with host lifecycle. Durable ownership remains on the host. */
 export class StructuredConversationCommandClaim {
   private live: LiveClaim | null = null
-  private unresolved: Obligation | null = null
 
-  constructor(private readonly deadlineMs: number = CONVERSATION_COMMAND_DEADLINE_MS) {}
-
-  /** A command is outstanding; sends stay blocked until it settles. */
   get isRunning(): boolean {
     return this.live !== null
   }
 
   get hasObligation(): boolean {
-    return this.live !== null || this.unresolved !== null
+    return this.live !== null
   }
 
   isOperationOutstanding(operationId: string): boolean {
-    return this.live?.operationId === operationId || this.unresolved?.operationId === operationId
+    return this.live?.operationId === operationId
   }
 
   run(input: {
@@ -134,109 +78,80 @@ export class StructuredConversationCommandClaim {
     operationId: string
     blocked: boolean
     send: () => Promise<ConversationCommandReply>
-    onLateReply?: () => void
   }): Promise<ConversationCommandClaimOutcome> {
-    if (this.live) {
-      return Promise.resolve({ accepted: false, error: runningMessage() })
+    if (this.live || input.blocked) {
+      return Promise.resolve({
+        accepted: false,
+        error: message(
+          this.live ? 'running' : 'pendingWork',
+          this.live
+            ? 'Wait for the conversation operation to finish.'
+            : 'Wait for pending work and messages to finish before using this command.'
+        )
+      })
     }
-    if (this.unresolved) {
-      return Promise.resolve({ accepted: false, error: unresolvedMessage(this.unresolved.command) })
-    }
-    if (input.blocked) {
-      return Promise.resolve({ accepted: false, error: pendingWorkMessage() })
-    }
-    const { promise, resolve } = Promise.withResolvers<ConversationCommandClaimOutcome>()
+    const waiter = Promise.withResolvers<ConversationCommandClaimOutcome>()
     const claim: LiveClaim = {
       command: input.command,
       operationId: input.operationId,
-      terminalItemId:
-        input.command === 'compact'
-          ? agentJournalSubmissionKey(`compact:${input.operationId}`)
-          : null,
-      deadline: setTimeout(() => this.expire(claim), this.deadlineMs),
-      settle: resolve,
-      onLateReply: input.onLateReply ?? (() => {})
+      settle: waiter.resolve
     }
     this.live = claim
     void input.send().then(
       (reply) => this.applyReply(claim, reply),
-      // A thrown send is the same as no reply: the request may still be running.
-      () => {}
+      () => this.finishUnconfirmed(claim)
     )
-    return promise
+    return waiter.promise
   }
 
-  /** Fold in one snapshot of the session's own stream. Returns true when host truth retired work. */
   applyStreamSnapshot(items: readonly AgentJournalRenderItem[]): boolean {
-    const liveOutcome = this.live ? terminalFrameOutcome(items, this.live.terminalItemId) : null
-    if (this.live && liveOutcome) {
-      this.finish(this.live, liveOutcome)
-      return true
+    if (!this.live) {
+      return false
     }
-    if (this.unresolved && terminalFrameOutcome(items, this.unresolved.terminalItemId) !== null) {
-      this.unresolved = null
-      return true
+    const outcome = terminalFrameOutcome(items, this.live)
+    if (!outcome) {
+      return false
     }
-    return false
+    this.finish(this.live, outcome)
+    return true
   }
 
-  /** A restart or an interrupt supersedes the obligation: nothing is owed any more. */
-  reset(retryPreparedClear = false): void {
+  reset(): void {
     if (this.live) {
       this.finish(this.live, {
         accepted: false,
-        error: unconfirmedMessage(),
-        ...(retryPreparedClear && this.live.command === 'clear'
-          ? { retrySameOperation: true as const }
-          : {})
+        error: message('unconfirmed', 'Conversation operation was not confirmed.')
       })
     }
-    this.unresolved = null
   }
 
   private applyReply(claim: LiveClaim, reply: ConversationCommandReply): void {
-    if (reply.unresolved || reply.result?.state === 'unknown') {
-      // The host either never answered or answered that it cannot confirm. Either way the frame,
-      // not the reply, decides.
+    if (reply.result?.state === 'unknown') {
       return
     }
-    if (this.unresolved?.operationId === claim.operationId) {
-      this.unresolved = null
-      claim.onLateReply()
+    if (reply.unresolved || !reply.result) {
+      this.finishUnconfirmed(claim)
       return
     }
-    this.finish(
-      claim,
-      reply.result
-        ? { accepted: !reply.result.error, error: reply.result.error ?? null }
-        : { accepted: false, error: unconfirmedMessage() }
-    )
+    this.finish(claim, {
+      accepted: !reply.result.error,
+      error: reply.result.error ?? null
+    })
+  }
+
+  private finishUnconfirmed(claim: LiveClaim): void {
+    this.finish(claim, {
+      accepted: false,
+      error: message('unconfirmed', 'Conversation operation was not confirmed.'),
+      retrySameOperation: true
+    })
   }
 
   private finish(claim: LiveClaim, outcome: ConversationCommandClaimOutcome): void {
     if (this.live !== claim) {
       return
     }
-    clearTimeout(claim.deadline)
     this.live = null
-    this.unresolved = null
     claim.settle(outcome)
-  }
-
-  private expire(claim: LiveClaim): void {
-    if (this.live !== claim) {
-      return
-    }
-    this.live = null
-    this.unresolved = {
-      command: claim.command,
-      operationId: claim.operationId,
-      terminalItemId: claim.terminalItemId
-    }
-    claim.settle({
-      accepted: false,
-      error: unresolvedMessage(claim.command),
-      retrySameOperation: true
-    })
   }
 }

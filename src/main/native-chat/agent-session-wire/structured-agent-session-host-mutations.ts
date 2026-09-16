@@ -19,7 +19,6 @@ import type {
   AgentSessionPromptResult,
   AgentSessionSendResult
 } from '../../../shared/agent-session-wire'
-import { structuredAgentSessionControlLaneFor } from './structured-agent-session-control-lane'
 import { admitAndRunAgentSessionMutation } from './structured-agent-session-mutation-admission'
 import {
   cancelPlan,
@@ -41,8 +40,7 @@ export type StructuredAgentSessionMutationContext = {
   flushStreamedEvents: (sessionId: string) => Promise<void>
   requireSession: (sessionId: string) => StructuredAgentSessionHostSession
   serialize: <T>(sessionId: string, task: () => Promise<T>) => Promise<T>
-  conversationCommandMainLaneParked: (sessionId: string) => boolean | undefined
-  requestConversationCommandControl: (sessionId: string, turnId?: string) => boolean | undefined
+  abandonConversationCommand: (sessionId: string, turnId?: string) => Promise<void>
   now: () => number
 }
 
@@ -117,28 +115,15 @@ export function cancelStructuredAgentSessionTurn(
     prompt?: { itemId: string; expectedRevision: number }
   }
 ): Promise<AgentSessionMutationResult<AgentSessionCancelResult>> {
-  const liveMainLaneParked = context.conversationCommandMainLaneParked(params.envelope.sessionId)
-  // Interrupts must reach a provider while a command awaits its terminal frame.
-  const cancellationContext = {
-    ...context,
-    serialize: <T>(sessionId: string, task: () => Promise<T>) =>
-      context.serialize(
-        structuredAgentSessionControlLaneFor(
-          sessionId,
-          context.deps.store.getRecord(sessionId),
-          liveMainLaneParked
-        ),
-        task
-      )
-  }
   const plan = cancelPlan(params)
-  return mutate(cancellationContext, caller, params.envelope, {
+  return mutate(context, caller, params.envelope, {
     ...plan,
-    run: (ctx) => {
-      // Mutating the pending command before admission lets a stale or conflicting request cancel
-      // work even though the request itself is refused.
-      context.requestConversationCommandControl(params.envelope.sessionId, params.turnId)
-      return plan.run(ctx)
+    run: async (ctx) => {
+      const outcome = await plan.run(ctx)
+      if (outcome.ok) {
+        await context.abandonConversationCommand(params.envelope.sessionId, params.turnId)
+      }
+      return outcome
     }
   })
 }

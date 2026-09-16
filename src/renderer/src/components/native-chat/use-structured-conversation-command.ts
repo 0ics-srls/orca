@@ -48,8 +48,8 @@ export function useStructuredConversationCommand(args: {
     const current = claim.current
     const ids = operationIds.current
     return () => {
-      ids.delete('compact')
-      current.reset(true)
+      ids.clear()
+      current.reset()
     }
   }, [fence])
 
@@ -77,12 +77,6 @@ export function useStructuredConversationCommand(args: {
           command,
           operationId,
           blocked,
-          onLateReply: () => {
-            if (operationIds.current.get(command) === operationId) {
-              operationIds.current.delete(command)
-            }
-            onReconciled(operationId)
-          },
           send: async (): Promise<ConversationCommandReply> => {
             let unresolved = false
             const result = await mutate<AgentSessionConversationCommandResult>(

@@ -9,7 +9,6 @@ import type { AgentSessionExecutionLocation } from '../../../shared/agent-sessio
 import type * as SessionWire from '../../../shared/agent-session-wire'
 import type { AgentSessionAttachParams } from './structured-agent-session-attach'
 import { AGENT_SESSION_NOT_ATTACHED } from './structured-agent-session-mutation-admission'
-import { structuredAgentSessionControlLaneFor } from './structured-agent-session-control-lane'
 import { createRestartReconciler } from './structured-agent-session-restart-reconcile'
 import type { AgentSessionSubscribeInput } from './structured-agent-session-subscribers'
 import { StructuredAgentSessionTaskQueue } from './structured-agent-session-task-queue'
@@ -192,14 +191,8 @@ export class StructuredAgentSessionHost {
   /** Releases a session's resources without ending the conversation: the record and journal stay
    *  on disk, so the same session can be attached again. */
   close(sessionId: string): Promise<void> {
-    // Closing stops the provider child, which is what ends a command's wait for its terminal frame;
-    // it must not queue behind that wait.
-    const lane = structuredAgentSessionControlLaneFor(
-      sessionId,
-      this.deps.store.getRecord(sessionId),
-      this.conversationCommands.requestControl(sessionId)
-    )
-    return this.serialize(lane, async () => {
+    return this.serialize(sessionId, async () => {
+      await this.conversationCommands.abandon(sessionId)
       await this.handoffs.closeRetainedTuiOwner(sessionId)
       await evictHeldStructuredAgentSession(this.lifetimeContext(), sessionId)
       this.clientDelivery.closeSession(sessionId)
@@ -278,10 +271,8 @@ export class StructuredAgentSessionHost {
       flushStreamedEvents: this.flushStreamedEvents,
       requireSession: (sessionId) => this.requireSession(sessionId),
       serialize: (sessionId, task) => this.serialize(sessionId, task),
-      conversationCommandMainLaneParked: (sessionId) =>
-        this.conversationCommands.mainLaneParked(sessionId),
-      requestConversationCommandControl: (sessionId, turnId) =>
-        this.conversationCommands.requestControl(sessionId, turnId),
+      abandonConversationCommand: (sessionId, turnId) =>
+        this.conversationCommands.abandon(sessionId, turnId),
       now: () => this.now()
     }
   }

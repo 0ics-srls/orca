@@ -1,0 +1,300 @@
+import type {
+  AgentSessionConversationCommandRecord,
+  AgentSessionConversationCommandResult
+} from '../../../shared/agent-session-conversation-command'
+import type { AgentSessionMutationResult } from '../../../shared/agent-session-wire'
+import { attachConversationClearReplacement } from './structured-conversation-clear-replacement'
+import {
+  conversationCommandResult,
+  persistConversationCommandResult,
+  type ConversationCommandParams,
+  type PreparedConversationCommand
+} from './structured-conversation-command'
+import {
+  COMPACTION_UNCONFIRMED,
+  CONVERSATION_COMMAND_ABANDONED,
+  publishConversationCommandLifecycle
+} from './structured-conversation-command-lifecycle'
+import type { StructuredAgentSessionMutationContext } from './structured-agent-session-host-mutations'
+import type { StructuredAgentSessionHost } from './structured-agent-session-host'
+
+export type ConversationCommandResult =
+  AgentSessionMutationResult<AgentSessionConversationCommandResult>
+
+export type PendingConversationCommand = {
+  key: string
+  command: ConversationCommandParams['command']
+  operationId: string
+  execution: PreparedConversationCommand | null
+  promise: Promise<ConversationCommandResult>
+  resolve: (result: ConversationCommandResult) => void
+  waiterSettled: boolean
+}
+
+type ExecutionOwner = {
+  isCurrent: (entry: PendingConversationCommand) => boolean
+  finish: (entry: PendingConversationCommand, result: ConversationCommandResult) => void
+  settleWaiter: (entry: PendingConversationCommand, result: ConversationCommandResult) => void
+  report: (entry: PendingConversationCommand, error: unknown) => void
+}
+
+export class StructuredConversationCommandExecution {
+  constructor(
+    private readonly context: () => StructuredAgentSessionMutationContext,
+    private readonly host: Pick<
+      StructuredAgentSessionHost,
+      'attach' | 'close' | 'flushStreamedEvents'
+    >,
+    private readonly owner: ExecutionOwner
+  ) {}
+
+  async run(entry: PendingConversationCommand): Promise<void> {
+    const execution = entry.execution
+    if (!execution || !this.owner.isCurrent(entry)) {
+      return
+    }
+    try {
+      await this.publishLifecycle(entry, execution.prepared, 'running')
+      await this.host.flushStreamedEvents(execution.turn.sessionId)
+      if (!this.owner.isCurrent(entry)) {
+        return
+      }
+      await (entry.command === 'clear'
+        ? this.executeClear(entry, execution)
+        : this.executeCompact(entry, execution))
+    } catch (error) {
+      await this.markUnknown(entry, error)
+    }
+  }
+
+  async abandon(entry: PendingConversationCommand): Promise<ConversationCommandResult> {
+    const execution = entry.execution
+    if (!execution) {
+      throw new Error('Conversation command was not prepared.')
+    }
+    const value: AgentSessionConversationCommandRecord = {
+      ...execution.prepared,
+      phase: 'committed',
+      state: 'unknown',
+      error: CONVERSATION_COMMAND_ABANDONED,
+      ...(entry.command === 'clear' ? { replacementSessionId: undefined } : {})
+    }
+    try {
+      await persistConversationCommandResult(this.context(), execution, value)
+      await this.publishLifecycle(entry, value, 'interrupted')
+    } catch (error) {
+      this.owner.report(entry, error)
+    }
+    return conversationCommandResult(execution, value)
+  }
+
+  private async executeCompact(
+    entry: PendingConversationCommand,
+    execution: PreparedConversationCommand
+  ): Promise<void> {
+    const compact = execution.turn.adapter.compact
+    if (!compact) {
+      await this.complete(entry, 'Compaction is unavailable for this provider.')
+      return
+    }
+    const result = await compact({
+      turnId: `compact:${entry.operationId}`,
+      sessionId: execution.turn.sessionId,
+      fence: execution.turn.fence,
+      onLateResult: (late) => this.complete(entry, late.error)
+    })
+    await this.host.flushStreamedEvents(execution.turn.sessionId)
+    await this.complete(entry, result.error)
+  }
+
+  private async executeClear(
+    entry: PendingConversationCommand,
+    execution: PreparedConversationCommand
+  ): Promise<void> {
+    let effectiveOptions = execution.source.options
+    if (!execution.supersededOperation) {
+      try {
+        const options = await execution.turn.adapter.readOptions?.({
+          sessionId: execution.turn.sessionId,
+          fence: execution.turn.fence
+        })
+        effectiveOptions = {
+          ...effectiveOptions,
+          ...(options
+            ? {
+                model: options.current.model,
+                ...(options.current.effort ? { effort: options.current.effort } : {})
+              }
+            : {})
+        }
+      } catch {
+        await this.complete(
+          entry,
+          'Could not read the current session configuration. Try again when the provider is connected.',
+          true
+        )
+        return
+      }
+    }
+    if (!this.owner.isCurrent(entry)) {
+      return
+    }
+    if (effectiveOptions) {
+      await this.context().serialize(execution.turn.sessionId, async () => {
+        if (this.canSettle(entry, execution)) {
+          await execution.turn.persistOptions(effectiveOptions)
+        }
+      })
+    }
+    if (!this.owner.isCurrent(entry)) {
+      return
+    }
+    const replacementSessionId = execution.prepared.replacementSessionId!
+    let attachError: string | null
+    try {
+      attachError = await attachConversationClearReplacement({
+        host: this.host,
+        store: this.context().deps.store,
+        sourceSessionId: execution.turn.sessionId,
+        replacementSessionId,
+        callerKey: execution.supersededOperation?.callerKey ?? execution.prepared.callerKey,
+        operationId: execution.supersededOperation?.operationId ?? execution.prepared.operationId,
+        source: { ...execution.source, options: effectiveOptions }
+      })
+    } catch (error) {
+      const replacement = this.context().deps.store.getRecord(replacementSessionId)
+      if (!replacement || replacement.lease.claimStatus === 'released') {
+        throw error
+      }
+      attachError = null
+    }
+    if (!this.owner.isCurrent(entry)) {
+      if (!attachError) {
+        await this.host
+          .close(replacementSessionId)
+          .catch((error) => this.owner.report(entry, error))
+      }
+      return
+    }
+    await this.complete(entry, attachError ?? undefined, Boolean(attachError))
+  }
+
+  private async complete(
+    entry: PendingConversationCommand,
+    error?: string,
+    discardReplacement = false
+  ): Promise<void> {
+    const execution = entry.execution
+    if (!execution) {
+      return
+    }
+    await this.context().serialize(execution.turn.sessionId, async () => {
+      if (!this.canSettle(entry, execution)) {
+        return
+      }
+      const value: AgentSessionConversationCommandRecord = {
+        ...execution.prepared,
+        phase: 'committed',
+        state: 'completed',
+        ...(error ? { error: error.slice(0, 4096) } : {}),
+        ...(discardReplacement ? { replacementSessionId: undefined } : {})
+      }
+      try {
+        await persistConversationCommandResult(this.context(), execution, value)
+      } catch (cause) {
+        await this.markUnknownInLane(entry, cause, true)
+        return
+      }
+      try {
+        await this.publishLifecycle(entry, value, 'completed')
+      } catch (cause) {
+        this.owner.report(entry, cause)
+      }
+      this.owner.finish(entry, conversationCommandResult(execution, value))
+    })
+  }
+
+  private async markUnknown(entry: PendingConversationCommand, cause: unknown): Promise<void> {
+    const execution = entry.execution
+    if (!execution) {
+      return
+    }
+    await this.context().serialize(execution.turn.sessionId, () =>
+      this.markUnknownInLane(entry, cause)
+    )
+  }
+
+  private async markUnknownInLane(
+    entry: PendingConversationCommand,
+    cause: unknown,
+    retire = false
+  ): Promise<void> {
+    const execution = entry.execution
+    if (!execution || !this.ownsExecution(entry, execution)) {
+      return
+    }
+    const error = cause instanceof Error ? cause.message : COMPACTION_UNCONFIRMED
+    try {
+      await this.context().deps.store.recordOperationOutcome({
+        callerKey: execution.operationCallerKey,
+        operationId: execution.prepared.operationId,
+        outcome: { status: 'unknown' }
+      })
+      await this.publishLifecycle(entry, { ...execution.prepared, error }, 'unverifiable')
+    } catch (persistError) {
+      this.owner.report(entry, persistError)
+    }
+    const result = conversationCommandResult(execution, {
+      command: entry.command,
+      state: 'unknown',
+      error: entry.command === 'compact' ? COMPACTION_UNCONFIRMED : error
+    })
+    if (retire) {
+      this.owner.finish(entry, result)
+    } else {
+      this.owner.settleWaiter(entry, result)
+    }
+  }
+
+  private publishLifecycle(
+    entry: PendingConversationCommand,
+    value: AgentSessionConversationCommandResult,
+    state: Parameters<typeof publishConversationCommandLifecycle>[0]['state']
+  ): Promise<void> {
+    return publishConversationCommandLifecycle({
+      context: this.context,
+      command: entry.command,
+      operationId: entry.operationId,
+      execution: entry.execution!,
+      value,
+      state
+    })
+  }
+
+  private canSettle(
+    entry: PendingConversationCommand,
+    execution: PreparedConversationCommand
+  ): boolean {
+    const command = this.context().deps.store.getRecord(
+      execution.turn.sessionId
+    )?.conversationCommand
+    return this.ownsExecution(entry, execution) && command?.phase === 'prepared'
+  }
+
+  private ownsExecution(
+    entry: PendingConversationCommand,
+    execution: PreparedConversationCommand
+  ): boolean {
+    const sessionId = execution.turn.sessionId
+    const session = this.context().sessions.get(sessionId)
+    const command = this.context().deps.store.getRecord(sessionId)?.conversationCommand
+    return (
+      this.owner.isCurrent(entry) &&
+      session?.journal === execution.turn.journal &&
+      session.fence === execution.turn.fence &&
+      command?.runtimeFence === execution.turn.fence &&
+      command.operationId === execution.prepared.operationId &&
+      command.callerKey === execution.prepared.callerKey
+    )
+  }
+}

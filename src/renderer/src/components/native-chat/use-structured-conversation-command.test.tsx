@@ -2,7 +2,7 @@
 
 import { act, renderHook, waitFor } from '@testing-library/react'
 import { useEffect, useRef } from 'react'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { agentJournalSubmissionKey } from '../../../../shared/agent-session-journal-item-key'
 import type { AgentJournalRenderItem } from '../../../../shared/agent-session-journal-types'
 
@@ -12,7 +12,6 @@ vi.mock('@/runtime/structured-agent-session-client', () => ({
   callStructuredAgentSession: mocks.call
 }))
 
-import { CONVERSATION_COMMAND_DEADLINE_MS } from './structured-conversation-command-claim'
 import { useStructuredAgentSessionMutate } from './use-structured-agent-session-mutate'
 import { useStructuredConversationCommand } from './use-structured-conversation-command'
 
@@ -54,12 +53,7 @@ describe('useStructuredConversationCommand', () => {
     vi.clearAllMocks()
   })
 
-  afterEach(() => {
-    vi.useRealTimers()
-  })
-
-  it('reuses an unresolved clear identity after a host restart', async () => {
-    vi.useFakeTimers()
+  it('retires an unresolved clear identity after a host restart', async () => {
     mocks.call.mockRejectedValue(new Error('connection lost'))
     const initialProps: { fence: number; items: AgentJournalRenderItem[] } = {
       fence: 1,
@@ -69,50 +63,28 @@ describe('useStructuredConversationCommand', () => {
 
     let first!: Awaited<ReturnType<typeof view.result.current.run>>
     await act(async () => {
-      const pending = view.result.current.run('clear')
-      await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
-      first = await pending
+      first = await view.result.current.run('clear')
     })
     expect(first.accepted).toBe(false)
     const firstOperationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
 
     view.rerender({ fence: 2, items: [] })
-    let second!: Promise<unknown>
-    act(() => {
-      second = view.result.current.run('clear')
+    await act(async () => {
+      await view.result.current.run('clear')
     })
-    expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).toBe(firstOperationId)
-
-    act(() => view.result.current.retire())
-    await second
+    expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).not.toBe(firstOperationId)
   })
 
-  it('retires an expired clear on its late reply and gives the next command a fresh identity', async () => {
-    vi.useFakeTimers()
-    const firstReply = Promise.withResolvers<{
-      ok: true
-      value: { command: 'clear'; state: 'completed' }
-    }>()
+  it('retires a completed clear and gives the next command a fresh identity', async () => {
     mocks.call
-      .mockImplementationOnce(() => firstReply.promise)
+      .mockResolvedValueOnce({ ok: true, value: { command: 'clear', state: 'completed' } })
       .mockImplementation(() => new Promise(() => {}))
     const view = renderHook(() => useCommandHarness({ fence: 1, items: [] }))
 
-    let first!: ReturnType<typeof view.result.current.run>
-    act(() => {
-      first = view.result.current.run('clear')
+    await act(async () => {
+      await view.result.current.run('clear')
     })
     const firstOperationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
-    await act(async () => {
-      await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
-    })
-    await expect(first).resolves.toMatchObject({ accepted: false })
-
-    await act(async () => {
-      firstReply.resolve({ ok: true, value: { command: 'clear', state: 'completed' } })
-      await firstReply.promise
-      await Promise.resolve()
-    })
 
     let second!: ReturnType<typeof view.result.current.run>
     act(() => {

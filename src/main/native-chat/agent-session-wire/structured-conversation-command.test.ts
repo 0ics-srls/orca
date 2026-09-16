@@ -138,19 +138,22 @@ describe('host conversation commands', () => {
   it('keeps an unknown compaction from being executed again', async () => {
     compact.mockRejectedValue(new Error('connection lost'))
     const params = commandParams('compact')
-    await expect(host.conversationCommand(caller, params)).rejects.toThrow('connection lost')
     expect(await host.conversationCommand(caller, params)).toMatchObject({
-      ok: false,
-      refusal: { code: 'agent_session_operation_unknown' }
+      ok: true,
+      value: { state: 'unknown' }
+    })
+    expect(await host.conversationCommand(caller, params)).toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
     })
     expect(compact).toHaveBeenCalledTimes(1)
     const status = host
       .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
       .page.items.find((item) => item.body.kind === 'status')
     expect(status?.body).toMatchObject({
-      text: 'Compaction completion is unconfirmed.'
+      text: 'Compaction completion is unconfirmed.',
+      turnLifecycle: { state: 'unverifiable' }
     })
-    expect(status?.body).not.toHaveProperty('turnLifecycle')
   })
 
   /** The replacement seeds from what the provider reports now, not from what the
@@ -266,8 +269,8 @@ describe('host conversation commands', () => {
     })
     expect(cancel).toMatchObject({ ok: true, value: { cancelled: true } })
     expect(adapter.cancelTurn).toHaveBeenCalled()
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
     finish({})
-    await running
   })
 
   it('does not let a stale cancellation stop an admitted compaction', async () => {
@@ -297,14 +300,8 @@ describe('host conversation commands', () => {
     expect(compact).toHaveBeenCalledTimes(1)
   })
 
-  it('closes a session while a compaction still awaits its terminal frame', async () => {
-    let finish!: (value: {}) => void
-    compact.mockImplementation(
-      () =>
-        new Promise((resolve) => {
-          finish = resolve
-        })
-    )
+  it('closes and reattaches while a provider compaction never settles', async () => {
+    compact.mockImplementation(() => new Promise(() => {}))
     const running = host.conversationCommand(caller, commandParams('compact'))
     await vi.waitFor(() => expect(compact).toHaveBeenCalled())
 
@@ -319,25 +316,81 @@ describe('host conversation commands', () => {
 
     expect(outcome).toBe('closed')
     expect(host.hasSession(HOST_TEST_SESSION)).toBe(false)
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
 
-    finish({})
-    await running.catch(() => undefined)
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+    expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })
+    compact.mockResolvedValue({})
+    await expect(host.conversationCommand(caller, commandParams('compact'))).resolves.toMatchObject(
+      {
+        ok: true,
+        value: { state: 'completed' }
+      }
+    )
   })
 
-  it('cancels a compaction admitted immediately before close instead of parking close', async () => {
+  it('settles a compaction admitted immediately before close', async () => {
     const running = host.conversationCommand(caller, commandParams('compact'))
     const closed = host.close(HOST_TEST_SESSION)
 
     await expect(closed).resolves.toBeUndefined()
     await expect(running).resolves.toMatchObject({
-      ok: false,
-      refusal: { message: 'Conversation operation was cancelled before provider execution.' }
+      ok: true,
+      value: { state: 'unknown' }
     })
-    expect(compact).not.toHaveBeenCalled()
     expect(host.hasSession(HOST_TEST_SESSION)).toBe(false)
   })
 
-  it('finishes clear before a concurrent close retires the source session', async () => {
+  it('closes and reattaches when the pre-provider event drain never settles', async () => {
+    const flush = vi
+      .spyOn(host, 'flushStreamedEvents')
+      .mockImplementationOnce(() => new Promise<void>(() => {}))
+    const running = host.conversationCommand(caller, commandParams('compact'))
+    await vi.waitFor(() => expect(flush).toHaveBeenCalled())
+
+    await expect(host.close(HOST_TEST_SESSION)).resolves.toBeUndefined()
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(compact).not.toHaveBeenCalled()
+
+    flush.mockRestore()
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+    expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })
+    await expect(host.conversationCommand(caller, commandParams('compact'))).resolves.toMatchObject(
+      {
+        ok: true,
+        value: { state: 'completed' }
+      }
+    )
+  })
+
+  it('interrupts a command whose pre-provider event drain never settles', async () => {
+    const flush = vi
+      .spyOn(host, 'flushStreamedEvents')
+      .mockImplementationOnce(() => new Promise<void>(() => {}))
+    const params = commandParams('compact')
+    const running = host.conversationCommand(caller, params)
+    await vi.waitFor(() => expect(flush).toHaveBeenCalled())
+    const turnId = `compact:${params.envelope.clientOperationId}`
+
+    await expect(
+      host.cancel(caller, {
+        turnId,
+        envelope: {
+          ...params.envelope,
+          clientOperationId: hostTestOperationId(),
+          payloadFingerprint: computeAgentSessionPayloadFingerprint({
+            method: 'agentSession.cancel',
+            sessionId: HOST_TEST_SESSION,
+            fields: { turnId }
+          })
+        }
+      })
+    ).resolves.toMatchObject({ ok: true })
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(compact).not.toHaveBeenCalled()
+  })
+
+  it('abandons a blocked replacement attach and cleans up its stale late completion', async () => {
     let finishReplacement!: () => void
     const originalAcquire = vi.mocked(adapter.acquire).getMockImplementation()!
     vi.mocked(adapter.acquire).mockImplementation(async (input) => {
@@ -350,43 +403,85 @@ describe('host conversation commands', () => {
     })
     const running = host.conversationCommand(caller, commandParams('clear'))
     await vi.waitFor(() => expect(finishReplacement).toBeTypeOf('function'))
-    let closed = false
-    const close = host.close(HOST_TEST_SESSION).then(() => {
-      closed = true
-    })
-    await Promise.resolve()
-    expect(closed).toBe(false)
+    const replacementSessionId =
+      store.getRecord(HOST_TEST_SESSION)?.conversationCommand?.replacementSessionId
+    const close = host.close(HOST_TEST_SESSION)
 
+    await expect(close).resolves.toBeUndefined()
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
     finishReplacement()
-    const result = await running
-    expect(result).toMatchObject({ ok: true, value: { state: 'completed' } })
-    await close
+    await vi.waitFor(() => expect(host.hasSession(replacementSessionId!)).toBe(false))
     expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
       command: 'clear',
       phase: 'committed',
-      state: 'completed'
+      state: 'unknown',
+      replacementSessionId: undefined
     })
   })
 
-  it('reconstructs a committed replacement after the ledger settlement is lost', async () => {
+  it('does not publish terminal success before its durable command commit', async () => {
+    const persist = store.setConversationCommand.bind(store)
+    let failed = false
+    vi.spyOn(store, 'setConversationCommand').mockImplementation(async (...input) => {
+      if (!failed && input[2].phase === 'committed') {
+        failed = true
+        throw new Error('disk full')
+      }
+      return persist(...input)
+    })
+    const params = commandParams('compact')
+    expect(await host.conversationCommand(caller, params)).toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
+    const status = host
+      .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
+      .page.items.find((item) => item.body.kind === 'status')
+    expect(status?.body).toMatchObject({ turnLifecycle: { state: 'unverifiable' } })
+    expect(status?.body).not.toMatchObject({ turnLifecycle: { state: 'completed' } })
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
+      phase: 'prepared',
+      state: 'unknown'
+    })
+  })
+
+  it('does not publish terminal success before its durable operation outcome', async () => {
+    const params = commandParams('compact')
     const persist = store.recordOperationOutcome.bind(store)
+    let failed = false
     vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
-      if (input.outcome.status === 'succeeded' && input.outcome.conversationCommand) {
-        throw new Error('crash')
+      if (
+        !failed &&
+        input.operationId === params.envelope.clientOperationId &&
+        input.outcome.status === 'succeeded'
+      ) {
+        failed = true
+        throw new Error('ledger write failed')
       }
       return persist(input)
     })
-    const params = commandParams('clear')
-    await expect(host.conversationCommand(caller, params)).rejects.toThrow('crash')
+
+    expect(await host.conversationCommand(caller, params)).toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
+    const status = host
+      .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
+      .page.items.find((item) => item.body.kind === 'status')
+    expect(status?.body).toMatchObject({ turnLifecycle: { state: 'unverifiable' } })
+    expect(status?.body).not.toMatchObject({ turnLifecycle: { state: 'completed' } })
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
+      phase: 'committed',
+      state: 'completed'
+    })
     expect(await host.conversationCommand(caller, params)).toMatchObject({
       ok: true,
       replayed: true,
       value: { state: 'completed' }
     })
-    expect(acquisitions).toBe(2)
   })
 
-  it('adopts an interrupted clear under a fresh operation after verified reacquisition', async () => {
+  it('settles clear from the durable replacement when its attach reply is lost', async () => {
     const originalAttach = host.attach.bind(host)
     vi.spyOn(host, 'attach').mockImplementationOnce(async (...args) => {
       const attached = await originalAttach(...args)
@@ -396,28 +491,17 @@ describe('host conversation commands', () => {
       throw new Error('response lost after replacement attach')
     })
     const interrupted = commandParams('clear')
-    await expect(host.conversationCommand(caller, interrupted)).rejects.toThrow('response lost')
+    const result = await host.conversationCommand(caller, interrupted)
+    expect(result).toMatchObject({
+      ok: true,
+      value: { state: 'completed' }
+    })
     const replacementSessionId =
       store.getRecord(HOST_TEST_SESSION)?.conversationCommand?.replacementSessionId
     expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
-      phase: 'prepared',
+      phase: 'committed',
       operationId: interrupted.envelope.clientOperationId,
       replacementSessionId
-    })
-
-    await host.close(HOST_TEST_SESSION)
-    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
-    expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })
-    const recovery = commandParams('clear')
-    const recovered = await host.conversationCommand({ callerKey: 'mobile' }, recovery)
-
-    expect(recovered).toMatchObject({
-      ok: true,
-      value: {
-        phase: 'committed',
-        operationId: recovery.envelope.clientOperationId,
-        replacementSessionId
-      }
     })
     expect(await host.conversationCommand(caller, interrupted)).toMatchObject({
       ok: true,
@@ -429,7 +513,10 @@ describe('host conversation commands', () => {
   it('repairs an unknown receipt when the provider completes late', async () => {
     compact.mockRejectedValue(new Error('connection lost'))
     const params = commandParams('compact')
-    await expect(host.conversationCommand(caller, params)).rejects.toThrow()
+    await expect(host.conversationCommand(caller, params)).resolves.toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
     await compact.mock.calls[0]![0].onLateResult?.({})
     expect(await host.conversationCommand(caller, params)).toMatchObject({
       ok: true,
@@ -437,6 +524,33 @@ describe('host conversation commands', () => {
       value: { state: 'completed' }
     })
     expect(compact).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a stale late completion after close and a new generation', async () => {
+    compact.mockRejectedValueOnce(new Error('connection lost'))
+    const oldParams = commandParams('compact')
+    await expect(host.conversationCommand(caller, oldParams)).resolves.toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
+    const late = compact.mock.calls[0]![0].onLateResult!
+
+    await host.close(HOST_TEST_SESSION)
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+    expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })
+    compact.mockResolvedValue({})
+    const current = commandParams('compact')
+    await expect(host.conversationCommand(caller, current)).resolves.toMatchObject({
+      ok: true,
+      value: { state: 'completed' }
+    })
+
+    await late({ error: 'stale failure' })
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand).toMatchObject({
+      operationId: current.envelope.clientOperationId,
+      state: 'completed'
+    })
+    expect(store.getRecord(HOST_TEST_SESSION)?.conversationCommand?.error).toBeUndefined()
   })
 
   it('keeps explicitly revealed history and closed replacement tabs out of automatic restoration', async () => {
@@ -454,7 +568,10 @@ describe('host conversation commands', () => {
   it('keeps the old compact outcome unknown but restores usability after verified reacquisition', async () => {
     compact.mockRejectedValue(new Error('lost response'))
     const params = commandParams('compact')
-    await expect(host.conversationCommand(caller, params)).rejects.toThrow()
+    await expect(host.conversationCommand(caller, params)).resolves.toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
     await host.close(HOST_TEST_SESSION)
     const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
     expect(await host.attach(caller, hostTestAttachParams(fence))).toMatchObject({ ok: true })

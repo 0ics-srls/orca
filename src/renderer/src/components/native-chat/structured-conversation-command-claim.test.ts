@@ -1,36 +1,33 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { agentJournalSubmissionKey } from '../../../../shared/agent-session-journal-item-key'
 import type { AgentJournalRenderItem } from '../../../../shared/agent-session-journal-types'
 import {
-  CONVERSATION_COMMAND_DEADLINE_MS,
   StructuredConversationCommandClaim,
   type ConversationCommandReply
 } from './structured-conversation-command-claim'
 
 const OPERATION_ID = 'op-1'
 
-function compactItem(
-  operationId: string,
-  state: 'running' | 'completed' | 'unconfirmed' | 'failed'
+function lifecycleItem(
+  command: 'clear' | 'compact',
+  state: 'running' | 'completed' | 'unverifiable',
+  text?: string
 ): AgentJournalRenderItem {
   return {
-    itemId: agentJournalSubmissionKey(`compact:${operationId}`),
+    itemId: agentJournalSubmissionKey(`${command}:${OPERATION_ID}`),
     revision: state === 'running' ? 1 : 2,
     sequence: 1,
     observedAt: 1,
     body: {
       kind: 'status',
       text:
-        state === 'running'
-          ? 'Compacting conversation…'
-          : state === 'completed'
+        text ??
+        (state === 'running'
+          ? `${command === 'compact' ? 'Compacting' : 'Clearing'} conversation…`
+          : command === 'compact'
             ? 'Conversation compacted.'
-            : state === 'unconfirmed'
-              ? 'Compaction completion is unconfirmed.'
-              : 'Provider refused compaction.',
-      ...(state === 'running'
-        ? { turnLifecycle: { turnId: `compact:${operationId}`, state: 'running' as const } }
-        : {})
+            : 'Conversation cleared.'),
+      turnLifecycle: { turnId: `${command}:${OPERATION_ID}`, state }
     }
   }
 }
@@ -39,191 +36,88 @@ function neverReplies(): Promise<ConversationCommandReply> {
   return new Promise<ConversationCommandReply>(() => {})
 }
 
-type TrackedOutcome = { settled: boolean; accepted: boolean; error: string | null }
-
-function track(promise: Promise<{ accepted: boolean; error: string | null }>): TrackedOutcome {
-  const outcome: TrackedOutcome = { settled: false, accepted: false, error: null }
-  void promise.then((value) => {
-    outcome.settled = true
-    outcome.accepted = value.accepted
-    outcome.error = value.error
-  })
-  return outcome
-}
-
-beforeEach(() => {
-  vi.useFakeTimers()
-})
-
-afterEach(() => {
-  vi.useRealTimers()
-})
-
 describe('StructuredConversationCommandClaim', () => {
-  it('settles a compaction on its terminal frame even when no reply ever arrives', async () => {
-    const claim = new StructuredConversationCommandClaim()
-
-    const outcome = track(
-      claim.run({
-        command: 'compact',
+  it.each(['compact', 'clear'] as const)(
+    'settles %s from typed host lifecycle when the reply is lost',
+    async (command) => {
+      const claim = new StructuredConversationCommandClaim()
+      const outcome = claim.run({
+        command,
         operationId: OPERATION_ID,
         blocked: false,
         send: neverReplies
       })
-    )
-    await vi.advanceTimersByTimeAsync(1)
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'running')])
-    expect(outcome.settled).toBe(false)
+      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'running')])).toBe(false)
+      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'completed')])).toBe(true)
+      await expect(outcome).resolves.toEqual({ accepted: true, error: null })
+    }
+  )
+
+  it('keeps an unverifiable host lifecycle pending until interrupt or restart', async () => {
+    const claim = new StructuredConversationCommandClaim()
+    const outcome = claim.run({
+      command: 'compact',
+      operationId: OPERATION_ID,
+      blocked: false,
+      send: async () => ({ result: { command: 'compact', state: 'unknown' }, unresolved: false })
+    })
+    await Promise.resolve()
+    expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'unverifiable')])).toBe(false)
     expect(claim.isRunning).toBe(true)
 
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'completed')])
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(outcome).toMatchObject({ settled: true, accepted: true })
-    expect(claim.isRunning).toBe(false)
-  })
-
-  it('refuses a second attempt after the deadline instead of racing the first', async () => {
-    const claim = new StructuredConversationCommandClaim()
-    const send = vi.fn(neverReplies)
-
-    const first = track(
-      claim.run({ command: 'compact', operationId: OPERATION_ID, blocked: false, send })
-    )
-    await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
-
-    expect(first).toMatchObject({ settled: true, accepted: false })
-    expect(first.error).toContain('may still be running')
-    expect(claim.isRunning).toBe(false)
-
-    const second = track(
-      claim.run({ command: 'compact', operationId: 'op-2', blocked: false, send })
-    )
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(second).toMatchObject({ settled: true, accepted: false })
-    expect(second.error).toContain('may still be running')
-    // The refusal is the point: only one attempt ever reached the host.
-    expect(send).toHaveBeenCalledTimes(1)
-  })
-
-  it('retires the marker when the terminal frame lands late', async () => {
-    const claim = new StructuredConversationCommandClaim()
-    const send = vi.fn(neverReplies)
-
-    track(claim.run({ command: 'compact', operationId: OPERATION_ID, blocked: false, send }))
-    await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'completed')])
-
-    track(claim.run({ command: 'compact', operationId: 'op-2', blocked: false, send }))
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(send).toHaveBeenCalledTimes(2)
-  })
-
-  it('retires the marker on a restart or an interrupt', async () => {
-    const claim = new StructuredConversationCommandClaim()
-    const send = vi.fn(neverReplies)
-
-    track(claim.run({ command: 'compact', operationId: OPERATION_ID, blocked: false, send }))
-    await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1)
     claim.reset()
-
-    track(claim.run({ command: 'compact', operationId: 'op-2', blocked: false, send }))
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(send).toHaveBeenCalledTimes(2)
+    await expect(outcome).resolves.toMatchObject({ accepted: false })
   })
 
-  it('keeps waiting on a reply the host could not confirm', async () => {
+  it('preserves a provider failure carried by terminal lifecycle', async () => {
     const claim = new StructuredConversationCommandClaim()
+    const outcome = claim.run({
+      command: 'compact',
+      operationId: OPERATION_ID,
+      blocked: false,
+      send: neverReplies
+    })
+    claim.applyStreamSnapshot([
+      lifecycleItem('compact', 'completed', 'Provider refused compaction.')
+    ])
+    await expect(outcome).resolves.toEqual({
+      accepted: false,
+      error: 'Provider refused compaction.'
+    })
+  })
 
-    const outcome = track(
+  it('retains the operation id for retry when transport returns no reply', async () => {
+    const claim = new StructuredConversationCommandClaim()
+    await expect(
       claim.run({
         command: 'compact',
         operationId: OPERATION_ID,
         blocked: false,
-        send: async () => ({ result: { command: 'compact', state: 'unknown' }, unresolved: false })
+        send: async () => ({ result: null, unresolved: true })
       })
-    )
-    await vi.advanceTimersByTimeAsync(1)
-
-    expect(outcome.settled).toBe(false)
-
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'completed')])
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(outcome).toMatchObject({ settled: true, accepted: true })
+    ).resolves.toMatchObject({ accepted: false, retrySameOperation: true })
+    expect(claim.isRunning).toBe(false)
   })
 
-  it('settles a clear on its committed reply', async () => {
+  it('uses replies from older hosts that publish no typed lifecycle', async () => {
     const claim = new StructuredConversationCommandClaim()
-
-    const outcome = track(
+    await expect(
       claim.run({
         command: 'clear',
         operationId: OPERATION_ID,
         blocked: false,
         send: async () => ({ result: { command: 'clear', state: 'completed' }, unresolved: false })
       })
-    )
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(outcome).toMatchObject({ settled: true, accepted: true, error: null })
-    expect(claim.isRunning).toBe(false)
+    ).resolves.toEqual({ accepted: true, error: null })
   })
 
-  it('keeps an unconfirmed host frame pending until the client deadline', async () => {
-    const claim = new StructuredConversationCommandClaim()
-    const outcome = track(
-      claim.run({
-        command: 'compact',
-        operationId: OPERATION_ID,
-        blocked: false,
-        send: neverReplies
-      })
-    )
-
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'unconfirmed')])
-    await vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS - 1)
-    expect(outcome.settled).toBe(false)
-
-    await vi.advanceTimersByTimeAsync(2)
-    expect(outcome).toMatchObject({ settled: true, accepted: false })
-    expect(outcome.error).toContain('may still be running')
-  })
-
-  it('preserves a provider failure carried by the terminal frame', async () => {
-    const claim = new StructuredConversationCommandClaim()
-    const outcome = track(
-      claim.run({
-        command: 'compact',
-        operationId: OPERATION_ID,
-        blocked: false,
-        send: neverReplies
-      })
-    )
-
-    claim.applyStreamSnapshot([compactItem(OPERATION_ID, 'failed')])
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(outcome).toMatchObject({
-      settled: true,
-      accepted: false,
-      error: 'Provider refused compaction.'
-    })
-  })
-
-  it('refuses a concurrent command while one is still outstanding', async () => {
+  it('refuses a concurrent command without sending it', async () => {
     const claim = new StructuredConversationCommandClaim()
     const send = vi.fn(neverReplies)
-
-    track(claim.run({ command: 'compact', operationId: OPERATION_ID, blocked: false, send }))
-    const second = track(claim.run({ command: 'clear', operationId: 'op-2', blocked: false, send }))
-    await vi.advanceTimersByTimeAsync(0)
-
-    expect(second).toMatchObject({ settled: true, accepted: false })
-    expect(second.error).toContain('Wait for the conversation operation to finish')
+    void claim.run({ command: 'compact', operationId: OPERATION_ID, blocked: false, send })
+    await expect(
+      claim.run({ command: 'clear', operationId: 'op-2', blocked: false, send })
+    ).resolves.toMatchObject({ accepted: false })
     expect(send).toHaveBeenCalledTimes(1)
   })
 })
