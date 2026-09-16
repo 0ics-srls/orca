@@ -144,7 +144,12 @@ export function isCurrentKnownPaneKey(
   return ptyHints.length === 0 || ptyHints.some((ptyId) => !isSuppressedPtyHint(state, ptyId))
 }
 
-function hasActiveWorktreeState(state: StoreSnapshot, worktreeId: string): boolean {
+function hasActiveWorktreeState(
+  state: StoreSnapshot,
+  worktreeId: string,
+  activeAgentTabIds: ReadonlySet<string>,
+  retainedAgentWorktreeIds: ReadonlySet<string>
+): boolean {
   if (hasLivePtyForWorktree(state, worktreeId)) {
     return true
   }
@@ -158,29 +163,12 @@ function hasActiveWorktreeState(state: StoreSnapshot, worktreeId: string): boole
     return true
   }
 
-  if (
-    Object.values(state.retainedAgentsByPaneKey ?? {}).some(
-      (agent) => agent.worktreeId === worktreeId
-    )
-  ) {
+  if (retainedAgentWorktreeIds.has(worktreeId)) {
     return true
   }
 
   const tabs = state.tabsByWorktree[worktreeId] ?? []
-  const tabIds = new Set(tabs.map((tab) => tab.id))
-  if (tabIds.size === 0) {
-    return false
-  }
-
-  const now = Date.now()
-  return Object.values(state.agentStatusByPaneKey ?? {}).some((entry) => {
-    const tabId = getPaneKeyTabId(entry.paneKey)
-    return (
-      tabId !== null &&
-      tabIds.has(tabId) &&
-      isExplicitAgentStatusFresh(entry, now, AGENT_STATUS_STALE_AFTER_MS)
-    )
-  })
+  return tabs.some((tab) => activeAgentTabIds.has(tab.id))
 }
 
 function countReposWithWorktrees(state: StoreSnapshot): number {
@@ -196,8 +184,22 @@ function countReposWithWorktrees(state: StoreSnapshot): number {
 export function countReposNeedingNotificationDisambiguation(state: StoreSnapshot): number {
   const activeRepoIds = new Set<string>()
   const worktreeMap = getWorktreeMapFromState(state)
+  // Index each agent once per dispatch, not once per accumulated workspace.
+  const activeAgentTabIds = new Set<string>()
+  const now = Date.now()
+  for (const entry of Object.values(state.agentStatusByPaneKey ?? {})) {
+    const tabId = getPaneKeyTabId(entry.paneKey)
+    if (tabId !== null && isExplicitAgentStatusFresh(entry, now, AGENT_STATUS_STALE_AFTER_MS)) {
+      activeAgentTabIds.add(tabId)
+    }
+  }
+  const retainedAgentWorktreeIds = new Set(
+    Object.values(state.retainedAgentsByPaneKey ?? {}).map((agent) => agent.worktreeId)
+  )
+  const hasActiveState = (worktreeId: string): boolean =>
+    hasActiveWorktreeState(state, worktreeId, activeAgentTabIds, retainedAgentWorktreeIds)
   for (const worktreeId of Object.keys(state.tabsByWorktree)) {
-    if (!hasActiveWorktreeState(state, worktreeId)) {
+    if (!hasActiveState(worktreeId)) {
       continue
     }
     const repoId = worktreeMap.get(worktreeId)?.repoId
@@ -209,7 +211,7 @@ export function countReposNeedingNotificationDisambiguation(state: StoreSnapshot
     if (activeRepoIds.has(repoId)) {
       continue
     }
-    if (worktrees.some((worktree) => hasActiveWorktreeState(state, worktree.id))) {
+    if (worktrees.some((worktree) => hasActiveState(worktree.id))) {
       activeRepoIds.add(repoId)
     }
   }
