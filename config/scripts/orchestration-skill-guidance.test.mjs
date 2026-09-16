@@ -51,15 +51,12 @@ describe('orchestration skill routing', () => {
     }
   })
 
-  it('keeps external browser routing at the OS/page boundary', () => {
+  it('does not advertise Computer Use or page automation from orchestration discovery', () => {
     const description = readDescription()
 
-    expect(description).toContain(
-      'Use Computer Use only when a visible window needs GUI control that a CLI, filesystem, or API cannot do.'
-    )
-    expect(description).toContain(
-      "`orca-cli` for Orca's embedded pages and a page-automation tool such as Playwright or CDP for external pages."
-    )
+    expect(description).not.toMatch(/Computer Use/iu)
+    expect(description).not.toMatch(/Playwright/iu)
+    expect(description).not.toContain('embedded pages')
   })
 })
 

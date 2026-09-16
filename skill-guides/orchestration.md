@@ -7,10 +7,7 @@ description: >-
   ownership handoffs — "hand off", "handoff", "handover", "give this to another
   agent", "another worktree" — unless asked to supervise, monitor, or coordinate
   a DAG, and for terminal control, lightweight terminal prompts, shell commands,
-  Orca worktree management, and reading or waiting on terminals. Use Computer
-  Use only when a visible window needs GUI control that a CLI, filesystem, or API
-  cannot do. Use `orca-cli` for Orca's embedded pages and a page-automation
-  tool such as Playwright or CDP for external pages.
+  Orca worktree management, and reading or waiting on terminals.
 ---
 
 # Orca orchestration

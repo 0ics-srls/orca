@@ -131,17 +131,17 @@
       "name": "orchestration",
       "sourcePath": "skills/orchestration",
       "releaseRevision": 29,
-      "packageDigest": "ac40e549fa0835111637a878451ebffff520f1778778053a3ee9b675fda1d5cc",
-      "gitTreeSha": "94fad0d1c18de7aeffc46a8a612d5fa365e16e3a",
+      "packageDigest": "00d30c68d91693b6210e43c1fca9ba8b8711e31b4d76d1fcbeaa6257209d569f",
+      "gitTreeSha": "23bc2ff6bb9f6e7d17f41734709ac951dbe3ee80",
       "files": [
         {
           "path": "SKILL.md",
-          "size": 3734,
+          "size": 3510,
           "executable": false,
           "classification": "text",
-          "exactSha256": "82a22a8402f5b72caf4c8fc900631a66fefaf062b04a3689ec320fdfa8a7832b",
-          "textNormalizedSha256": "82a22a8402f5b72caf4c8fc900631a66fefaf062b04a3689ec320fdfa8a7832b",
-          "identitySha256": "82a22a8402f5b72caf4c8fc900631a66fefaf062b04a3689ec320fdfa8a7832b"
+          "exactSha256": "36bc32f022447418b566db35f9ffcff75113eb023e37d06fd1bd609c5dd173ef",
+          "textNormalizedSha256": "36bc32f022447418b566db35f9ffcff75113eb023e37d06fd1bd609c5dd173ef",
+          "identitySha256": "36bc32f022447418b566db35f9ffcff75113eb023e37d06fd1bd609c5dd173ef"
         }
       ]
     }
