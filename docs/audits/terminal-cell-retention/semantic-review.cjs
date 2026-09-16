@@ -1,7 +1,8 @@
 const fs = require('node:fs')
 const path = require('node:path')
+const { tmpdir } = require('node:os')
 const assert = require('node:assert/strict')
-const { transformSync } = require('esbuild')
+const { build } = require('esbuild')
 const { applyPatch } = require('diff')
 
 if (process.env.ORCA_BACKGROUND_LAUNCH !== '1') {
@@ -30,54 +31,69 @@ assert.equal(
   'Baseline source is already patched or differs; set ORCA_AUDIT_HEADLESS_BASELINE to the pristine pinned headless bundle'
 )
 
-function modules(variant) {
-  const cache = new Map()
-  function load(name) {
-    name = `${name.replace(/\.ts$/, '')}.ts`
-    if (cache.has(name)) {
-      return cache.get(name).exports
-    }
-    let source = sources.get(name)
-    if (name === linePath) {
-      if (variant === 'patched') {
-        source = patched
+async function bundle(variant) {
+  const result = await build({
+    stdin: {
+      contents:
+        "export * from 'common/buffer/BufferLine'; export { CellData } from 'common/buffer/CellData';"
+    },
+    bundle: true,
+    write: false,
+    platform: 'node',
+    format: 'cjs',
+    target: 'es2022',
+    tsconfigRaw: { compilerOptions: { experimentalDecorators: true } },
+    plugins: [
+      {
+        name: 'captured-sourcemap',
+        setup(builder) {
+          builder.onResolve({ filter: /.*/ }, (args) => ({
+            path: `${(args.path.startsWith('.')
+              ? path.posix.join(path.posix.dirname(args.importer), args.path)
+              : args.path
+            ).replace(/\.ts$/, '')}.ts`,
+            namespace: 'mapped'
+          }))
+          builder.onLoad({ filter: /.*/, namespace: 'mapped' }, (args) => {
+            let contents = sources.get(args.path)
+            if (args.path === linePath) {
+              if (variant === 'patched') {
+                contents = patched
+              }
+              contents +=
+                '\nexport function auditScratchChars() { return $workCell.combinedData.length; }\n'
+            }
+            assert.equal(typeof contents, 'string', `missing mapped source: ${args.path}`)
+            return { contents, loader: 'ts' }
+          })
+        }
       }
-      source += '\nexport function auditScratchChars() { return $workCell.combinedData.length; }\n'
+    ]
+  })
+  return result.outputFiles[0].text
+}
+
+function fixture(code, cols = 16) {
+  const scratch = fs.mkdtempSync(path.join(tmpdir(), 'orca-cell-semantic-proof-'))
+  let moduleId
+  try {
+    const bundlePath = path.join(scratch, 'buffer-line.cjs')
+    fs.writeFileSync(bundlePath, code)
+    moduleId = require.resolve(bundlePath)
+    const exports = require(moduleId)
+    const blank = exports.CellData.fromCharData([0, '', 1, 0])
+    return { ...exports, blank, line: new exports.BufferLine(cols, blank) }
+  } finally {
+    if (moduleId) {
+      delete require.cache[moduleId]
     }
-    assert.equal(typeof source, 'string', `missing mapped source: ${name}`)
-    const module = { exports: {} }
-    cache.set(name, module)
-    const output = transformSync(source, {
-      loader: 'ts',
-      format: 'cjs',
-      target: 'es2022',
-      tsconfigRaw: { compilerOptions: { experimentalDecorators: true } }
-    }).code
-    new Function('require', 'module', 'exports', output)(
-      (specifier) =>
-        load(
-          specifier.startsWith('.')
-            ? path.posix.join(path.posix.dirname(name), specifier)
-            : specifier
-        ),
-      module,
-      module.exports
-    )
-    return module.exports
+    fs.rmSync(scratch, { recursive: true, force: true })
   }
-  return load
 }
 
-function fixture(variant, cols = 16) {
-  const load = modules(variant)
-  const exports = load(linePath)
-  const blank = load('common/buffer/CellData').CellData.fromCharData([0, '', 1, 0])
-  return { ...exports, blank, line: new exports.BufferLine(cols, blank) }
-}
-
-function semanticCheck(variant) {
-  const A = fixture('baseline')
-  const B = fixture(variant)
+function semanticCheck(baseline, fixed) {
+  const A = fixture(baseline)
+  const B = fixture(fixed)
   const a = A.line
   const b = B.line
   let state = 72651
@@ -134,13 +150,13 @@ function semanticCheck(variant) {
       assert.ok(b.isCombined(Number(key)))
     }
   }
-  return { variant, matchedMutations: 25000 }
+  return { variant: 'patched', matchedMutations: 25000 }
 }
 
-function retentionCheck(variant) {
+function retentionCheck(variant, code) {
   const result = { variant }
   for (const shift of ['delete', 'insert']) {
-    const f = fixture(variant, 4)
+    const f = fixture(code, 4)
     f.line.set(shift === 'delete' ? 3 : 0, [0, `a${'\u0301'.repeat(100000)}`, 1, 769])
     if (shift === 'delete') {
       f.line.deleteCells(0, 1, f.blank)
@@ -151,7 +167,7 @@ function retentionCheck(variant) {
     assert.equal(f.line.translateToString(true), '')
     result[`${shift}ScratchCharsAfterErase`] = f.auditScratchChars()
   }
-  const f = fixture(variant, 4)
+  const f = fixture(code, 4)
   f.line.set(0, [0, `a${'\u0301'.repeat(100000)}`, 1, 769])
   f.line.translateToString(true)
   f.line.setCellFromCodepoint(0, 90, 1, f.blank)
@@ -166,19 +182,27 @@ function retentionCheck(variant) {
   return result
 }
 
-console.log(
-  JSON.stringify(
-    {
-      node: process.version,
-      baselineBundleSha256: hash(baselineBytes),
-      baselineBufferLineSha256: hash(sources.get(linePath)),
-      patchedBufferLineSha256: hash(patched),
-      semanticChecks: [semanticCheck('patched')],
-      retentionChecks: ['baseline', 'patched'].map(retentionCheck),
-      limits:
-        'Actual mapped BufferLine source with a test-only scratch inspection export; patch applied in memory. All visible cell/translation comparisons use the unmodified baseline.'
-    },
-    null,
-    2
+async function main() {
+  const [baseline, fixed] = await Promise.all(['baseline', 'patched'].map(bundle))
+  console.log(
+    JSON.stringify(
+      {
+        node: process.version,
+        baselineBundleSha256: hash(baselineBytes),
+        baselineBufferLineSha256: hash(sources.get(linePath)),
+        patchedBufferLineSha256: hash(patched),
+        semanticChecks: [semanticCheck(baseline, fixed)],
+        retentionChecks: [retentionCheck('baseline', baseline), retentionCheck('patched', fixed)],
+        limits:
+          'Actual mapped BufferLine source with a test-only scratch inspection export; patch applied in memory. All visible cell/translation comparisons use the unmodified baseline.'
+      },
+      null,
+      2
+    )
   )
-)
+}
+
+main().catch((error) => {
+  console.error(error)
+  process.exitCode = 1
+})

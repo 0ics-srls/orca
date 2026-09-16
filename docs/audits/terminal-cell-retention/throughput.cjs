@@ -1,5 +1,6 @@
 const fs = require('node:fs')
 const path = require('node:path')
+const { tmpdir } = require('node:os')
 const assert = require('node:assert/strict')
 const { build } = require('esbuild')
 const { applyPatch } = require('diff')
@@ -78,13 +79,19 @@ async function bundle(variant) {
       }
     ]
   })
-  const module = { exports: {} }
-  new Function('module', 'exports', 'require', result.outputFiles[0].text)(
-    module,
-    module.exports,
-    require
-  )
-  return module.exports
+  const scratch = fs.mkdtempSync(path.join(tmpdir(), 'orca-cell-throughput-proof-'))
+  let moduleId
+  try {
+    const bundlePath = path.join(scratch, 'terminal.cjs')
+    fs.writeFileSync(bundlePath, result.outputFiles[0].text)
+    moduleId = require.resolve(bundlePath)
+    return require(moduleId)
+  } finally {
+    if (moduleId) {
+      delete require.cache[moduleId]
+    }
+    fs.rmSync(scratch, { recursive: true, force: true })
+  }
 }
 async function main() {
   const variants = ['baseline', 'patched']

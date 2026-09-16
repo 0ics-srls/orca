@@ -1,6 +1,8 @@
 import { createHash } from 'node:crypto'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 
@@ -46,13 +48,20 @@ async function loadHolds(withPostResumeCheck) {
       }
     ]
   })
-  const loaded = { exports: {} }
-  new Function('module', 'exports', 'require', result.outputFiles[0].text)(
-    loaded,
-    loaded.exports,
-    createRequire(import.meta.url)
-  )
-  return loaded.exports.StructuredAgentSessionHolds
+  const scratch = await mkdtemp(join(tmpdir(), 'orca-structured-hold-proof-'))
+  const require = createRequire(import.meta.url)
+  let moduleId
+  try {
+    const bundlePath = join(scratch, 'holds.cjs')
+    await writeFile(bundlePath, result.outputFiles[0].text)
+    moduleId = require.resolve(bundlePath)
+    return require(moduleId).StructuredAgentSessionHolds
+  } finally {
+    if (moduleId) {
+      delete require.cache[moduleId]
+    }
+    await rm(scratch, { recursive: true, force: true })
+  }
 }
 
 async function reproduce(Holds) {
