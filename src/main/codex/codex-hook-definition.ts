@@ -74,7 +74,7 @@ export function getManagedCommand(scriptPath: string): string {
   if (process.platform !== 'win32') {
     return wrapPosixHookCommand(scriptPath)
   }
-  // Codex already hosts Windows hooks in PowerShell; a second interpreter only adds startup cost.
+  // Codex's default native Windows hook host is PowerShell; reuse it to avoid a second interpreter.
   return WINDOWS_CMD_SAFE_PATH.test(scriptPath)
     ? scriptPath
     : buildWindowsHookPowerShellCommand(scriptPath)

@@ -17,7 +17,11 @@ vi.mock('os', async (importOriginal) => ({
 import { CodexHookService } from './hook-service'
 import { CODEX_EVENTS, CODEX_EVENT_LABEL, getManagedCommand } from './codex-hook-definition'
 import { readHooksJson, wrapWindowsHookCommand } from '../agent-hooks/installer-utils'
-import { getCodexExplicitHomeHookSourcePath, upsertHookTrustEntries } from './config-toml-trust'
+import {
+  computeTrustedHash,
+  getCodexExplicitHomeHookSourcePath,
+  upsertHookTrustEntries
+} from './config-toml-trust'
 
 const homes = setupCodexHookHomes(homedirMock, getPathMock)
 
@@ -57,27 +61,36 @@ describe.skipIf(process.platform !== 'win32')('Unicode Windows hook upgrade', ()
         groupIndex: 0,
         handlerIndex: 0,
         command: oldCommand,
-        timeout: 10
+        timeoutSec: 10
       }))
     )
-    const oldTrust = readFileSync(tomlPath, 'utf8')
     const service = new CodexHookService()
     expect(service.getStatus().state).not.toBe('installed')
     for (let pass = 0; pass < 2; pass++) {
       expect((await service.install()).state).toBe('installed')
       expect(service.getStatus().state).toBe('installed')
       const hooks = readHooksJson(configPath)?.hooks
+      const trust = readFileSync(tomlPath, 'utf8')
       for (const event of CODEX_EVENTS) {
         const commands = hooks?.[event]?.flatMap((group) => group.hooks ?? []) ?? []
         expect(
           commands.filter((hook) => hook.command === getManagedCommand(scriptPath))
         ).toHaveLength(1)
         expect(commands.some((hook) => hook.command === oldCommand)).toBe(false)
+        const entry = {
+          sourcePath: getCodexExplicitHomeHookSourcePath(configPath),
+          eventLabel: CODEX_EVENT_LABEL[event],
+          groupIndex: 0,
+          handlerIndex: 0,
+          command: getManagedCommand(scriptPath),
+          timeoutSec: 10
+        }
+        expect(trust).toContain(computeTrustedHash(entry))
+        expect(trust).not.toContain(computeTrustedHash({ ...entry, command: oldCommand }))
       }
       expect(
         hooks?.Stop?.some((group) => group.hooks?.some((hook) => hook.command === 'user-hook'))
       ).toBe(true)
-      expect(readFileSync(tomlPath, 'utf8')).not.toBe(oldTrust)
       expect(readFileSync(join(userHome, 'hooks.json'), 'utf8')).toBe(userConfig)
     }
   })
