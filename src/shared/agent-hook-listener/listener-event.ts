@@ -6,7 +6,8 @@ import type {
   AgentStatusExecutionId,
   AgentStatusProviderAlias,
   AgentStatusReportedExecutionBinding,
-  AgentStatusRunId
+  AgentStatusRunId,
+  AgentStatusRunRole
 } from '../agent-status-run'
 
 export type AgentHookEventPayload = {
@@ -17,6 +18,8 @@ export type AgentHookEventPayload = {
   launchToken?: string
   /** Untrusted emitter claim. Main resolves it against the committed execution owner. */
   reportedExecutionBinding?: AgentStatusReportedExecutionBinding
+  /** Source-level emitter role; child claims cannot authorize the root attachment. */
+  emitterRole?: Exclude<AgentStatusRunRole, 'unresolved'>
   /** Host-verified run identity; never copied directly from an emitter. */
   runId?: AgentStatusRunId
   /** Host-verified attachment identity; never copied directly from an emitter. */

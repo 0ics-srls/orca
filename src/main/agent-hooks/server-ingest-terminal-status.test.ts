@@ -79,6 +79,46 @@ describe('AgentHookServer ingestTerminalStatus', () => {
     })
   })
 
+  it('suppresses an inherited child claim instead of mutating the confirmed root attachment', () => {
+    const server = new AgentHookServer()
+    server.setExecutionBindingResolver((candidate) =>
+      candidate.emitterRole === 'root' &&
+      candidate.reported.runId === 'run-a' &&
+      candidate.reported.executionId === 'execution-a'
+        ? { runId: 'run-a', attachment: { executionId: 'execution-a' }, role: 'root' }
+        : null
+    )
+
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'codex',
+        worktreeId: 'repo::/tmp/worktree',
+        emitterRole: 'root',
+        reportedExecutionBinding: { runId: 'run-a', executionId: 'execution-a' },
+        payload: { state: 'working', prompt: 'root turn', agentType: 'codex' }
+      },
+      'conn-1'
+    )
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'codex',
+        worktreeId: 'repo::/tmp/worktree',
+        emitterRole: 'child',
+        reportedExecutionBinding: { runId: 'run-a', executionId: 'execution-a' },
+        payload: { state: 'working', prompt: 'child progress', agentType: 'codex' }
+      },
+      'conn-1'
+    )
+
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      runId: 'run-a',
+      executionId: 'execution-a',
+      prompt: 'root turn'
+    })
+  })
+
   it('keeps hook monitoring mode across an equivalent OSC ping until a hook clears it', () => {
     const server = new AgentHookServer()
 

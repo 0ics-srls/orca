@@ -27,7 +27,7 @@ import { createHash } from 'node:crypto'
 import type { AgentSubagentSnapshot, ParsedAgentStatusPayload } from './agent-status-types'
 import type { AgentProviderSessionMetadata } from './agent-session-resume'
 import type { AgentHookTarget } from './agent-hook-types'
-import type { AgentStatusReportedExecutionBinding } from './agent-status-run'
+import type { AgentStatusReportedExecutionBinding, AgentStatusRunRole } from './agent-status-run'
 
 // Why: the local hook server knows the discriminator from URL pathname routing
 // (`/hook/<source>`); the relay equally must tag each forwarded notification
@@ -76,6 +76,8 @@ export type AgentHookRelayEnvelope = {
   launchToken?: string
   /** Untrusted emitter claim; the receiving execution host validates it against ownership. */
   reportedExecutionBinding?: AgentStatusReportedExecutionBinding
+  /** Source-level emitter role; child claims cannot authorize the root attachment. */
+  emitterRole?: Exclude<AgentStatusRunRole, 'unresolved'>
   tabId?: string
   worktreeId?: string
   /** Always `null` on the wire — relay does not know Orca's local connectionId. */

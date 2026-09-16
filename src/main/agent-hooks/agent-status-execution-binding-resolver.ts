@@ -9,6 +9,7 @@ export type AgentStatusExecutionBindingCandidate = {
   paneKey: string
   worktreeId?: string
   source?: AgentHookSource
+  emitterRole?: 'root' | 'child'
   reported: AgentStatusReportedExecutionBinding
 }
 
@@ -25,6 +26,7 @@ export function createAgentStatusExecutionBindingResolver(
       paneKey: candidate.paneKey,
       ...(candidate.worktreeId ? { worktreeId: candidate.worktreeId } : {}),
       ...(candidate.source ? { agent: candidate.source } : {}),
+      ...(candidate.emitterRole ? { role: candidate.emitterRole } : {}),
       runId: candidate.reported.runId,
       executionId: candidate.reported.executionId
     })

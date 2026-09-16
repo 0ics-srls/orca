@@ -36,6 +36,7 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerLaunchM
       version?: string
       launchToken?: string
       reportedExecutionBinding?: AgentHookEventPayload['reportedExecutionBinding']
+      emitterRole?: AgentHookEventPayload['emitterRole']
       hasExplicitPrompt?: boolean
       promptInteractionKey?: string
       hookEventName?: string
@@ -272,6 +273,11 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerLaunchM
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
       reportedExecutionBinding: envelope.reportedExecutionBinding,
+      emitterRole:
+        envelope.emitterRole ??
+        (toolAgentId !== undefined || (source === 'claude' && hookEventName === 'TeammateIdle')
+          ? 'child'
+          : undefined),
       tabId,
       worktreeId,
       connectionId: trimmedConnectionId,

@@ -101,10 +101,13 @@ import type { PtySourceReceivingActivation } from '../shared/pty-source-receivin
 import {
   AGENT_SESSION_CREATE_OPERATION_PROTOCOL_VERSION,
   AGENT_SESSION_EXECUTION_OWNER_PROTOCOL_VERSION,
+  AGENT_SESSION_FRESH_CLAIM_PROTOCOL_VERSION,
   isAgentSessionExecutionClaim,
   isAgentSessionSurfaceBinding,
   type AgentSessionOwnerBinding
 } from '../shared/agent-session-host-authority'
+import type { AgentSessionClaimSigner } from '../main/runtime/agent-session-claim-identity'
+import { isResumableTuiAgent } from '../shared/agent-session-resume'
 import { readPtySlavePath } from '../shared/pty-slave-line-discipline-echo'
 import { chargedPtyRetainedStringBytes } from '../shared/pty-retained-string-memory'
 import {
@@ -556,15 +559,18 @@ export class PtyHandler {
     string,
     Promise<RelayAgentSessionCreateResult>
   >()
+  private readonly agentSessionClaimSigner: AgentSessionClaimSigner | null
 
   constructor(
     dispatcher: RelayDispatcher,
     graceTimeMs = DEFAULT_GRACE_TIME_MS,
-    ptyIdMintEpoch: string = randomUUID()
+    ptyIdMintEpoch: string = randomUUID(),
+    agentSessionClaimSigner: AgentSessionClaimSigner | null = null
   ) {
     this.dispatcher = dispatcher
     this.graceTimeMs = graceTimeMs
     this.ptyIdMintEpoch = ptyIdMintEpoch
+    this.agentSessionClaimSigner = agentSessionClaimSigner
     this.registerHandlers()
     this.removeLegacyCapacityListener =
       this.dispatcher.onLegacyPtyCapacity?.(() => this.handleLegacyCapacity()) ?? null
@@ -1082,6 +1088,38 @@ export class PtyHandler {
     }
   }
 
+  private async issueAgentSessionClaim(params: Record<string, unknown>): Promise<unknown> {
+    const worktreeId = typeof params.worktreeId === 'string' ? params.worktreeId.trim() : ''
+    const launchIdentity =
+      typeof params.launchIdentity === 'string' ? params.launchIdentity.trim() : ''
+    const agent = params.agent
+    if (
+      !this.agentSessionClaimSigner ||
+      worktreeId.length === 0 ||
+      worktreeId.length > 4096 ||
+      launchIdentity.length === 0 ||
+      launchIdentity.length > 512 ||
+      !isResumableTuiAgent(agent)
+    ) {
+      throw new Error('agent_session_claim_unavailable')
+    }
+    const principal =
+      typeof process.getuid === 'function'
+        ? `uid:${process.getuid()}`
+        : `user:${process.env.USERNAME ?? process.env.USER ?? ''}`
+    return this.agentSessionClaimSigner.createFreshClaim({
+      namespace: {
+        machine: `relay:${process.platform}:${process.arch}`,
+        principal,
+        container: 'native',
+        providerRoot: `profile-default:${agent}`
+      },
+      agent,
+      launchIdentity,
+      canonicalWorktreeId: worktreeId
+    })
+  }
+
   private registerHandlers(): void {
     this.dispatcher.onRequest('pty.spawn', (p, context) => this.spawn(p, context))
     this.dispatcher.onRequest('pty.attach', (p, context) => this.attach(p, context))
@@ -1098,10 +1136,16 @@ export class PtyHandler {
       startupIngressVersion: PTY_STARTUP_INGRESS_VERSION,
       agentSessionClaimVersion: AGENT_SESSION_EXECUTION_OWNER_PROTOCOL_VERSION,
       agentSessionCreateOperationVersion: AGENT_SESSION_CREATE_OPERATION_PROTOCOL_VERSION,
+      ...(this.agentSessionClaimSigner
+        ? { agentSessionFreshClaimVersion: AGENT_SESSION_FRESH_CLAIM_PROTOCOL_VERSION }
+        : {}),
       // Additive capability: clients may request the no-process-table inventory
       // projection and consume fenced inspect evidence on this host.
       foregroundProcessEvidenceVersion: 1
     }))
+    this.dispatcher.onRequest('pty.issueAgentSessionClaim', (params) =>
+      this.issueAgentSessionClaim(params)
+    )
     this.dispatcher.onRequest('pty.listProcesses', (params) => this.listProcesses(params))
     this.dispatcher.onRequest('pty.getDefaultShell', async () => resolveDefaultShell())
     this.dispatcher.onRequest('pty.serialize', (p) => this.serialize(p))

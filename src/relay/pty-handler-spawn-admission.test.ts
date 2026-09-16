@@ -38,12 +38,15 @@ vi.mock('../main/shell-prompt-readiness-probe', () => ({
 }))
 
 import { MAX_RELAY_PTY_SESSIONS, PtyHandler } from './pty-handler'
+import { createEphemeralAgentSessionClaimSigner } from '../main/runtime/agent-session-claim-identity'
+import { isAgentSessionExecutionClaim } from '../shared/agent-session-host-authority'
 import type { RelayDispatcher } from './dispatcher'
 import {
   beginPtyHandlerTest,
   createMockDispatcher,
   createPtyRequestHelpers,
   createTestPtyHandler,
+  TEST_PTY_ID_MINT_EPOCH,
   testPtyId,
   endPtyHandlerTest
 } from './pty-handler-test-harness'
@@ -90,6 +93,35 @@ describe('PtyHandler', () => {
     // register a no-op here, which survived only because the consumer session adapter was
     // constructed later and overwrote it (STA-4571).
     expect(notifMethods).not.toContain('pty.ackData')
+  })
+
+  it('issues fresh claims from the execution host when the capability is enabled', async () => {
+    await handler.dispose({ waitForPhysicalExit: false })
+    dispatcher = createMockDispatcher()
+    handler = new PtyHandler(
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mock dispatcher implements the RelayDispatcher request surface used by this test.
+      dispatcher as unknown as RelayDispatcher,
+      undefined,
+      TEST_PTY_ID_MINT_EPOCH,
+      createEphemeralAgentSessionClaimSigner('relay-test')
+    )
+
+    await expect(dispatcher.callRequest('pty.getCapabilities')).resolves.toMatchObject({
+      agentSessionFreshClaimVersion: 1
+    })
+    const claim = await dispatcher.callRequest('pty.issueAgentSessionClaim', {
+      worktreeId: 'remote-worktree::/srv/project',
+      agent: 'codex',
+      launchIdentity: 'launch-remote-1'
+    })
+    expect(isAgentSessionExecutionClaim(claim)).toBe(true)
+    await expect(
+      dispatcher.callRequest('pty.issueAgentSessionClaim', {
+        worktreeId: '',
+        agent: 'codex',
+        launchIdentity: 'launch-remote-1'
+      })
+    ).rejects.toThrow('agent_session_claim_unavailable')
   })
 
   it('rescans the process table for a close decision but not for a poll', async () => {

@@ -118,6 +118,37 @@ describe('agent status PTY run records', () => {
     )
   })
 
+  it('retains one attachment while appending a provider alias after reset', () => {
+    const before = runRecord({
+      providerSessions: [
+        { provider: 'claude', sessionKeyKind: 'session_id', providerId: 'session-before-reset' }
+      ]
+    })
+    const after = {
+      ...before,
+      providerSessions: [
+        ...before.providerSessions,
+        {
+          provider: 'claude' as const,
+          sessionKeyKind: 'session_id' as const,
+          providerId: 'session-after-reset',
+          resetBoundary: true as const
+        }
+      ],
+      verdict: 'exited' as const
+    }
+    expect(after.runId).toBe(before.runId)
+    expect(after.attachment).toEqual(before.attachment)
+    expect(after.providerSessions).toHaveLength(2)
+    expect(after.providerSessions[1]).toMatchObject({
+      providerId: 'session-after-reset',
+      resetBoundary: true
+    })
+    expect(deserializeAgentStatusPtyRunRecord(serializeAgentStatusPtyRunRecord(after))).toEqual(
+      after
+    )
+  })
+
   it.each([
     { provider: 'unknown', sessionKeyKind: 'session_id', providerId: 'session-a' },
     { provider: 'claude', sessionKeyKind: 'thread_id', providerId: 'session-a' },

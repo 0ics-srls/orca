@@ -18,6 +18,7 @@ export function findClaimedAgentStatusBinding(args: {
   paneKey: string
   worktreeId?: string
   agent?: string
+  role?: 'root' | 'child'
   runId: string
   executionId: string
 }): AgentStatusExecutionBinding | null {
@@ -28,6 +29,7 @@ export function findClaimedAgentStatusBinding(args: {
       (args.worktreeId !== undefined &&
         !worktreeIdsEqual(owner.surface.worktreeId, args.worktreeId)) ||
       (args.agent !== undefined && owner.claim.agent !== args.agent) ||
+      (args.role !== undefined && owner.statusBinding.role !== args.role) ||
       owner.statusBinding.runId !== args.runId ||
       owner.statusBinding.attachment.executionId !== args.executionId
     ) {

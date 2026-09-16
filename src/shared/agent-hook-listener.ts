@@ -148,6 +148,10 @@ export function normalizeHookPayload(
     source,
     launchToken,
     reportedExecutionBinding,
+    ...(readString(hookPayloadRecord, 'agent_id') !== undefined ||
+    (source === 'claude' && eventName === 'TeammateIdle')
+      ? { emitterRole: 'child' as const }
+      : {}),
     tabId,
     worktreeId,
     // Normalization is transport-agnostic; only ingestRemote knows the mux identity to stamp.

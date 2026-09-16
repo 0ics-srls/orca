@@ -69,6 +69,15 @@ describe('agent status execution binding resolver', () => {
         reported: { runId: 'run-a', executionId: 'execution-a' }
       })
     ).toBeNull()
+    expect(
+      resolve({
+        paneKey: PANE_KEY,
+        worktreeId: WORKTREE_ID,
+        source: 'codex',
+        emitterRole: 'child',
+        reported: { runId: 'run-a', executionId: 'execution-a' }
+      })
+    ).toBeNull()
   })
 
   it('accepts a matching claim while the owner transaction is still reserved', async () => {

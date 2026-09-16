@@ -10,6 +10,7 @@ import type {
   RuntimeEnsureAgentSessionResult
 } from '../../shared/agent-session-host-authority'
 import { canonicalizeAgentSessionIdentity } from './agent-session-claim-identity'
+import { isResumableTuiAgent } from '../../shared/agent-session-resume'
 import { isTuiAgentEnabled } from '../../shared/tui-agent-selection'
 import { resolveLocalWindowsAgentStartupShell } from '../../shared/windows-terminal-shell'
 import { buildAgentResumeStartupPlan } from '../../shared/tui-agent-startup'
@@ -91,6 +92,22 @@ export class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntim
       return null
     }
     const workspace = await this.resolveTerminalWorkspaceLaunchScope(`id:${args.worktreeId}`)
+    if (workspace.connectionId) {
+      const provider = this.getSshProviderFn?.(workspace.connectionId)
+      if (!provider?.createFreshAgentSessionClaim) {
+        return null
+      }
+      try {
+        // The execution host mints this claim. Client-side keys must never authorize a remote PTY.
+        return await provider.createFreshAgentSessionClaim({
+          worktreeId: workspace.id,
+          agent: args.agent,
+          launchIdentity: args.launchIdentity
+        })
+      } catch {
+        return null
+      }
+    }
     const namespace = this.getAgentSessionExecutionNamespace(workspace, args.agent)
     if (
       !namespace ||

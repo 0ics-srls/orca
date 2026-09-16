@@ -37,10 +37,16 @@ export function resolveAgentStatusBinding(args: {
           paneKey: payload.paneKey,
           worktreeId: payload.worktreeId,
           source: payload.source,
+          emitterRole: payload.emitterRole,
           reported
         })
       : null
   if (reported && !resolved && previous?.runId && previous.executionId) {
+    if (args.payload.emitterRole === 'child') {
+      // A nested emitter may inherit the root env claim. It must not mutate the
+      // root row; a verified child-work admission owns that progress instead.
+      return { payload, previous, suppress: true, replacement: false }
+    }
     // A delayed prior owner or inherited claim cannot rewrite the confirmed subject.
     return { payload, previous, suppress: true, replacement: false }
   }
