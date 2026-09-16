@@ -354,14 +354,16 @@ module.exports = {
     const hostArchEnum = archEnumByNodeArch[process.arch]
     const canExecuteTargetArch = context.arch === hostArchEnum || context.arch === 4
     if (context.electronPlatformName === 'win32') {
+      // The marker sweep is a file read, so it runs for every Windows slice. The
+      // export check has to load the addon, and skipping THAT is how a Windows
+      // release built on another host or for another arch could ship the orphan bug.
+      verifyPackagedConptyBreakawayMarker(resourcesDir, context.arch)
       if (process.platform === 'win32' && canExecuteTargetArch) {
         verifyPackagedNodePtyJobOwnership(resourcesDir)
       } else {
-        // The export check needs to load the addon, so it cannot run here. The
-        // MSYS breakaway marker is a file read, and skipping it is how a
-        // cross-host Windows release could ship the orphan bug.
-        console.log('[verify-packaged-node-pty] skipped cross-platform or cross-arch package')
-        verifyPackagedConptyBreakawayMarker(resourcesDir)
+        console.log(
+          '[verify-packaged-node-pty] skipped the export check on a cross-platform or cross-arch package'
+        )
       }
     }
     verifySkillsCliRuntime(join(resourcesDir, 'app.asar.unpacked', 'out'), resourcesDir, {

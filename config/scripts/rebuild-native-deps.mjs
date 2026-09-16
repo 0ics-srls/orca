@@ -240,31 +240,39 @@ function assertWindowsProcessTreeAddonIsPatched() {
  * path" is not "this path checks". Reading the binary needs neither a loadable
  * Electron nor an executable target arch, so it runs here regardless.
  *
- * Absent rather than unmarked warns: a cross-platform rebuild does not
- * necessarily leave a win32 addon on this disk, and that must not fail an
- * install that was working. A binary that IS there and predates the denial is
- * fatal -- it is the one that ships.
+ * Absent is fatal on the host that will run this install: loadNativeModule
+ * falls through to prebuilds/win32-<arch>, and the published prebuild predates
+ * the denial, so the app would load it with nothing said. A cross-host rebuild
+ * does not necessarily leave a win32 addon on this disk, and that must not fail
+ * an install that was working.
  */
 function assertNodePtyConptyDeniesMsysBreakaway() {
   if (rebuildPlatform !== 'win32' || !modulesToRebuild.includes('node-pty')) {
     return
   }
-  const { assertCygwinBreakawayDenied } = requireLocal('./node-pty-job-ownership.cjs')
-  const addonPath = resolve(
-    projectDir,
-    'node_modules',
-    'node-pty',
-    'build',
-    'Release',
-    'conpty.node'
+  const { assertCygwinBreakawayDenied, conptyAddonMayBeAbsent } = requireLocal(
+    './node-pty-job-ownership.cjs'
   )
-  if (!existsSync(addonPath)) {
+  const nodePtyDir = resolve(projectDir, 'node_modules', 'node-pty')
+  const addonPath = join(nodePtyDir, 'build', 'Release', 'conpty.node')
+  if (existsSync(addonPath)) {
+    assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+    return
+  }
+  const crossHost = rebuildPlatform !== osPlatform() || rebuildArch !== process.arch
+  if (conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled: existsSync(nodePtyDir) })) {
     console.warn(
       `[rebuild] no addon at ${addonPath}; could not check the MSYS job-breakaway denial.`
     )
     return
   }
-  assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+  const prebuildPath = join(nodePtyDir, 'prebuilds', `win32-${rebuildArch}`, 'conpty.node')
+  throw new Error(
+    `the rebuild reported success but ${addonPath} is not there, so node-pty would load ` +
+      `${prebuildPath} instead. That published prebuild predates the Cygwin/MSYS ` +
+      'job-breakaway denial: every Git Bash pane child would be created outside its job and ' +
+      'survive terminatePtyJob.'
+  )
 }
 
 function restoreNodePtyWindowsConptyRuntime() {

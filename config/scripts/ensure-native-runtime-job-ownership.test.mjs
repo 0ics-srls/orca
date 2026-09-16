@@ -5,11 +5,19 @@ import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { assertNodePtyJobOwnership, nodePtyAddonPath } = require('./node-pty-job-ownership.cjs')
+const {
+  CYGWIN_BREAKAWAY_MARKER,
+  CYGWIN_BREAKAWAY_MARKER_TEXT,
+  assertNodePtyJobOwnership,
+  conptyAddonMayBeAbsent,
+  nodePtyAddonPath
+} = require('./node-pty-job-ownership.cjs')
 const NODE_PTY_PATCH = readFileSync(
   new URL('../patches/node-pty@1.1.0.patch', import.meta.url),
   'utf8'
 )
+
+const DIFF_HEADER = '\ndiff --git '
 
 const JOB_EXPORTS = {
   listJobProcessIds: () => [],
@@ -26,7 +34,7 @@ function writeAddon(name, { cygwinBreakawayDenied }) {
     path,
     Buffer.concat([
       Buffer.from('MZ fake addon '),
-      cygwinBreakawayDenied ? Buffer.from('msys-2.0.dll', 'utf16le') : Buffer.alloc(0)
+      cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
     ])
   )
   return path
@@ -64,6 +72,26 @@ describe('assertNodePtyJobOwnership', () => {
   it('leaves the unchanged Windows helper and fallback on their upstream prebuilds', () => {
     expect(NODE_PTY_PATCH).toContain("-          'target_name': 'conpty_console_list'")
     expect(NODE_PTY_PATCH).toContain("-          'target_name': 'pty'")
+  })
+
+  // The gate's whole case rests on this literal, and nothing else ties the
+  // constant to the C++ that compiles it in. Drift either way has to fail HERE:
+  // otherwise it fails every correctly rebuilt addon, and no rebuild can fix it.
+  it('sniffs for a literal the patch really adds to conpty.cc', () => {
+    const conptyHunk = NODE_PTY_PATCH.split(DIFF_HEADER).find((section) =>
+      section.startsWith('a/src/win/conpty.cc ')
+    )
+    expect(conptyHunk, 'the patch no longer touches src/win/conpty.cc').toBeDefined()
+    const addedCode = conptyHunk
+      .split('\n')
+      .filter((line) => line.startsWith('+') && !/^\+\s*(\/\/|\*)/.test(line))
+    expect(addedCode.some((line) => line.includes(`L"${CYGWIN_BREAKAWAY_MARKER_TEXT}"`))).toBe(true)
+  })
+
+  // MSVC compiles L"" to UTF-16LE; reading the addon as anything else finds nothing.
+  it('looks for that literal in the encoding the compiler stores it in', () => {
+    expect(CYGWIN_BREAKAWAY_MARKER.toString('utf16le')).toBe(CYGWIN_BREAKAWAY_MARKER_TEXT)
+    expect(CYGWIN_BREAKAWAY_MARKER.length).toBe(CYGWIN_BREAKAWAY_MARKER_TEXT.length * 2)
   })
 
   it('rejects the prebuild that shipped without the job exports', () => {
@@ -106,11 +134,21 @@ describe('assertNodePtyJobOwnership', () => {
     )
   })
 
+  // Passing the conpty name and no readable addon: on win32 every remaining
+  // branch throws, so only the platform gate can keep these quiet. The MSYS
+  // breakaway denial is a Windows concern and must cost other hosts nothing.
   it.each([
-    ['non-Windows hosts', { platform: 'darwin', nativeName: 'pty' }],
+    ['non-Windows hosts', { platform: 'darwin', nativeName: 'conpty' }],
+    ['non-Windows hosts building for one', { platform: 'linux', nativeName: 'conpty' }],
     ['the pre-ConPTY winpty backend', { platform: 'win32', nativeName: 'pty' }]
   ])('stays out of the way on %s', (_case, spec) => {
     expect(() => assertNodePtyJobOwnership({ ...spec, native: PREBUILD })).not.toThrow()
+  })
+
+  it('would have thrown on Windows for the very same input', () => {
+    expect(() =>
+      assertNodePtyJobOwnership({ platform: 'win32', nativeName: 'conpty', native: PREBUILD })
+    ).toThrow()
   })
 })
 
@@ -133,5 +171,21 @@ describe('nodePtyAddonPath', () => {
         'conpty'
       )
     ).toBe('/app/resources/node-pty/lib/build/Release/conpty.node')
+  })
+})
+
+describe('conptyAddonMayBeAbsent', () => {
+  // The rebuild path's verdict, split out so the host that will run the install
+  // is a value rather than the platform the test happens to run on.
+  it('refuses to shrug at a missing addon on the host that will run this install', () => {
+    expect(conptyAddonMayBeAbsent({ crossHost: false, nodePtyInstalled: true })).toBe(false)
+  })
+
+  it.each([
+    ['a cross-host rebuild need not leave a win32 addon here', true, true],
+    ['no node-pty installed is not a bad build', false, false],
+    ['neither', true, false]
+  ])('lets it go: %s', (_case, crossHost, nodePtyInstalled) => {
+    expect(conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled })).toBe(true)
   })
 })

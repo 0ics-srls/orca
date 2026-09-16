@@ -448,9 +448,10 @@ describe('rebuild-native-deps patched node-pty rebuild', () => {
     }
   })
 
-  // A cross-platform rebuild does not necessarily leave a win32 addon on this
-  // disk. That must warn, not fail an install that was working.
-  it('warns rather than fails a Windows rebuild that produced no addon here', () => {
+  // A cross-host rebuild does not necessarily leave a win32 addon on this disk,
+  // and neither does a tree with no node-pty in it. That must warn, not fail an
+  // install that was working.
+  it('warns rather than fails when no addon is expected on this disk', () => {
     const projectDir = mkTempProject()
 
     try {
@@ -470,4 +471,34 @@ describe('rebuild-native-deps patched node-pty rebuild', () => {
       removeTreeSync(projectDir)
     }
   })
+
+  // The other half: on the host that will run this install, a missing addon is
+  // not an absence to shrug at. loadNativeModule falls through to the published
+  // prebuild, which is the binary that leaks every MSYS pane child.
+  // Runs only on Windows -- nothing else can make a win32 rebuild same-host.
+  it.skipIf(process.platform !== 'win32')(
+    'fails a same-host Windows rebuild that left no addon, naming the prebuild that would load',
+    () => {
+      const projectDir = mkTempProject()
+
+      try {
+        writeFakeUsableElectronPackage(projectDir, { platform: 'win32' })
+        writeFakeElectronRebuild(projectDir)
+        writeFakeWindowsProcessTreeWithNodeAddonApi(projectDir)
+        writeFakeLoadableNodePty(projectDir, { nativeDir: `prebuilds/win32-${process.arch}` })
+
+        const result = runRebuildScript(
+          projectDir,
+          { npm_config_platform: 'win32', npm_config_arch: process.arch },
+          ['--platform=win32', `--arch=${process.arch}`, '--force']
+        )
+
+        expect(result.status).not.toBe(0)
+        expect(result.stderr).toContain(join('build', 'Release', 'conpty.node'))
+        expect(result.stderr).toContain(join('prebuilds', `win32-${process.arch}`, 'conpty.node'))
+      } finally {
+        removeTreeSync(projectDir)
+      }
+    }
+  )
 })

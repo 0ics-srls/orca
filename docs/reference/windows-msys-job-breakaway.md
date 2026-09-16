@@ -94,7 +94,32 @@ Note that a git worktree sharing `node_modules` with its main checkout shares
 that checkout's `build/Release/conpty.node`, so pinning the _source_ to a commit
 does not pin the _addon_.
 
-The gate should assert the same marker, the way `stagedRelayAddonIsUnpatched()`
-in `src/main/windows/windows-process-table.ts` already sniffs a patched addon by
-a binary import name. Symbol presence cannot distinguish patch revisions; a
-marker or an exported revision number can.
+The gate asserts that marker, the way `stagedRelayAddonIsUnpatched()` in
+`src/main/windows/windows-process-table.ts` already sniffs a patched addon by a
+binary import name. Symbol presence cannot distinguish patch revisions; a marker
+can.
+
+Because the marker is a literal in `conpty.cc` and the gate's copy of it is a
+separate constant, `ensure-native-runtime-job-ownership.test.mjs` asserts the
+patch still adds `L"msys-2.0.dll"` to that file. Without that, editing the patch
+would turn the gate into a permanent false positive that fails every correctly
+rebuilt addon and tells the developer to do the one thing that cannot help.
+
+## Every path the loader can fall through to
+
+`loadNativeModule` tries `build/Release`, then `build/Debug`, then
+`prebuilds/win32-<arch>`, swallowing each failure. The published prebuild is
+always the last candidate and never carries the patch, so checking only
+`build/Release` is not enough:
+
+| package             | `build/Release`        | prebuild pruned? | what the app loads |
+| ------------------- | ---------------------- | ---------------- | ------------------ |
+| same host, same arch | patched                | yes              | `build/Release`    |
+| cross host          | absent (no cross-compile) | no            | the prebuild       |
+| cross arch          | the host's, unloadable | no               | the prebuild       |
+
+`prunePackagedNodePty` drops the prebuild only when a same-arch
+`build/Release/conpty.node` exists to replace it, so in the last two rows the
+unpatched fallback ships. `verifyPackagedConptyBreakawayMarker` therefore checks
+every candidate present for the target arch rather than one path, and refuses a
+package with no candidate at all — that package has no ConPTY backend to load.

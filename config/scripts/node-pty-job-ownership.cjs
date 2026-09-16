@@ -22,7 +22,26 @@ const NODE_PTY_JOB_EXPORTS = ['listJobProcessIds', 'terminateJob', 'assignCurren
  * src/main/windows/windows-process-table.ts, which already tells a patched
  * addon from a published one by a binary import name.
  */
-const CYGWIN_BREAKAWAY_MARKER = Buffer.from('msys-2.0.dll', 'utf16le')
+const CYGWIN_BREAKAWAY_MARKER_TEXT = 'msys-2.0.dll'
+const CYGWIN_BREAKAWAY_MARKER = Buffer.from(CYGWIN_BREAKAWAY_MARKER_TEXT, 'utf16le')
+
+/** True when the addon carries the denial. Read errors propagate: callers that cannot read it must not pass. */
+function conptyDeniesCygwinBreakaway(addonPath) {
+  return readFileSync(addonPath).includes(CYGWIN_BREAKAWAY_MARKER)
+}
+
+/**
+ * Whether a rebuild that left no conpty.node in build/Release may be let go.
+ *
+ * On the host that will run this install it may not: `loadNativeModule` falls
+ * through to prebuilds/win32-<arch>, and the published prebuild predates the
+ * denial, so the app would load it with nothing said. A cross-host rebuild need
+ * not leave a win32 addon on this disk, and node-pty may not be installed at
+ * all -- neither is evidence of a bad build.
+ */
+function conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled }) {
+  return crossHost || !nodePtyInstalled
+}
 
 /**
  * Absolute path of the addon `loadNativeModule` just resolved.
@@ -87,13 +106,19 @@ function assertCygwinBreakawayDenied(addonPath, native) {
       'terminatePtyJob reports "terminated" and leaves the tree running.',
       'Rebuild node-pty from source so the current config/patches/node-pty@1.1.0.patch applies',
       '(a worktree sharing node_modules with its main checkout shares that stale addon).',
+      `If that patch no longer adds L"${CYGWIN_BREAKAWAY_MARKER_TEXT}" to conpty.cc then this marker is`,
+      'stale, not the addon, and no rebuild can satisfy it.',
       'See docs/reference/windows-msys-job-breakaway.md.'
     ].join(' ')
   )
 }
 
 module.exports = {
+  CYGWIN_BREAKAWAY_MARKER,
+  CYGWIN_BREAKAWAY_MARKER_TEXT,
   assertNodePtyJobOwnership,
   assertCygwinBreakawayDenied,
+  conptyAddonMayBeAbsent,
+  conptyDeniesCygwinBreakaway,
   nodePtyAddonPath
 }

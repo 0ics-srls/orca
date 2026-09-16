@@ -7,6 +7,7 @@ import {
   readFileSync,
   writeFileSync
 } from 'node:fs'
+import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -342,8 +343,11 @@ export function writeFakeNodePtyConptyPayload(
  * The wide literal `usesCygwinRuntime` holds, as it sits in a real addon. A
  * fixture addon without it is a build that predates the MSYS breakaway denial,
  * which is what these tests need to be able to represent.
+ *
+ * Taken from the gate itself: a re-typed copy agrees with a stale gate by
+ * construction, which is the one thing these fixtures must not do.
  */
-const CYGWIN_BREAKAWAY_MARKER = Buffer.from('msys-2.0.dll', 'utf16le')
+const { CYGWIN_BREAKAWAY_MARKER } = createRequire(import.meta.url)('./node-pty-job-ownership.cjs')
 
 function writeFakeNodePtyAddon(nodePtyDir, nativeDir, { cygwinBreakawayDenied }) {
   const addonDir = resolve(join(nodePtyDir, 'lib'), nativeDir)
