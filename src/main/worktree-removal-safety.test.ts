@@ -4,6 +4,7 @@ import type { GitWorktreeInfo } from '../shared/worktree/types'
 import {
   canCleanupUnregisteredOrcaLeftoverDirectory,
   canSafelyRemoveOrphanedWorktreeDirectory,
+  findRegisteredDeletableWorktree,
   getRegisteredDeletableWorktree,
   isDangerousWorktreeRemovalPath
 } from './worktree-removal-safety'
@@ -561,6 +562,42 @@ describe('isDangerousWorktreeRemovalPath on an execution host', () => {
     expect(isDangerousWorktreeRemovalPath(worktreePath, repoPath, CLIENT_REMOVAL_HOME)).toBe(
       expected
     )
+  })
+
+  it('refuses a registered worktree while the execution host home is unanswered', () => {
+    // `git worktree add` accepts a pre-existing empty directory, and that directory can afterwards
+    // be somebody's `$HOME` (a build account's home, a container's `HOME=/workspace`). So the
+    // host's own Git registry proves provenance, not "this is not a home" — and `git worktree
+    // remove --force` deletes the checkout. With the host's answer the path is caught by
+    // containment; without it there is nothing left to catch a non-standard home shape.
+    const registered = [makeGitWorktree('/opt/src/repo', true), makeGitWorktree('/srv/homes/alice')]
+
+    expect(() =>
+      findRegisteredDeletableWorktree(
+        '/opt/src/repo',
+        '/srv/homes/alice',
+        registered,
+        executionHostRemovalHome(null)
+      )
+    ).toThrow('Refusing to delete protected worktree path: /srv/homes/alice')
+    expect(() =>
+      findRegisteredDeletableWorktree(
+        '/opt/src/repo',
+        '/srv/homes/alice',
+        registered,
+        executionHostRemovalHome('/srv/homes/alice')
+      )
+    ).toThrow('Refusing to delete protected worktree path: /srv/homes/alice')
+    // An answering host whose home is elsewhere still deletes it: the refusals above are the
+    // missing answer and the matching answer, not the path.
+    expect(
+      findRegisteredDeletableWorktree(
+        '/opt/src/repo',
+        '/srv/homes/alice',
+        registered,
+        executionHostRemovalHome('/srv/homes/bob')
+      )
+    ).toEqual(registered[1])
   })
 
   it('refuses a home the host reported even when no path rule recognises it', () => {

@@ -11,7 +11,7 @@ import { resetSshProviderAuthorities } from '../ssh/ssh-provider-authority'
 import { createWorktreeRuntimeStub, type WorktreeRuntimeStub } from './worktrees-test-runtime-stub'
 import { handlers, mainWindow, store } from './worktrees-test-ipc-surface'
 import { configureMetadataPruningStoreMocks } from './worktrees-test-metadata-pruning-store'
-import { resetWorktreeTestSshHostHome } from './worktrees-test-ssh-host-home'
+import { resetWorktreeTestSshHostHome } from '../worktree-removal-test-ssh-host-home'
 import {
   ORIGINAL_PLATFORM,
   setPlatform,

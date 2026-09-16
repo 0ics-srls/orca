@@ -103,7 +103,11 @@ export function findRegisteredDeletableWorktree(
   if (!worktree) {
     return null
   }
-  if (worktree.isMainWorktree || isDangerousWorktreeRemovalPath(worktree.path, repoPath, home)) {
+  if (
+    !isRemovalHomeAuthorityResolved(home) ||
+    worktree.isMainWorktree ||
+    isDangerousWorktreeRemovalPath(worktree.path, repoPath, home)
+  ) {
     throw new Error(`Refusing to delete protected worktree path: ${worktree.path}`)
   }
   assertWorktreeDoesNotContainRegisteredWorktree(worktree.path, worktrees)

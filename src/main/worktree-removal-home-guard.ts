@@ -40,13 +40,19 @@ export function executionHostRemovalHome(
 /**
  * Whether the host that executes the removal actually named its home directory.
  *
- * `false` is `unverifiable`, not "no home here" (docs/reference/ssh-execution-boundary.md). The
- * recursive-directory gates in `worktree-removal-safety.ts` require `true`, because there the home
- * guard is the only evidence standing between an `rm -rf` and somebody's `$HOME` — a bare-repo
- * dotfiles checkout puts a real `.git` file at the top of a home directory, which is exactly the
- * orphan proof those gates accept. `git worktree remove` does not require it: the execution host's
- * own Git registry already established that the path is a linked worktree of that repo, and a
- * missing second opinion does not retract that.
+ * `false` is `unverifiable`, not "no home here" (docs/reference/ssh-execution-boundary.md). Every
+ * gate in `worktree-removal-safety.ts` that authorises a delete requires `true`, because nothing
+ * else in reach rules out a home directory:
+ *
+ *   - The orphan gates accept a `.git` file at the top of a directory as proof, which is also what
+ *     a bare-repo dotfiles `$HOME` looks like.
+ *   - The registry does not help either. `git worktree add` takes a pre-existing empty directory,
+ *     and that directory can afterwards be somebody's `$HOME` — a build account's home, a
+ *     container's `HOME=/workspace`. Being a linked worktree of the repo proves provenance, not
+ *     that the path is not a home, and `git worktree remove --force` deletes the checkout.
+ *
+ * With the host's answer both are caught by containment. Without it only the path shapes remain,
+ * and a home at a non-standard location has no shape to match.
  */
 export function isRemovalHomeAuthorityResolved(home: WorktreeRemovalHomeAuthority): boolean {
   return home.kind === 'client' || !!home.homePath

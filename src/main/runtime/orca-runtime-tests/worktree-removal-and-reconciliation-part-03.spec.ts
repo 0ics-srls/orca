@@ -1,4 +1,6 @@
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { resetWorktreeTestSshHostHome } from '../../worktree-removal-test-ssh-host-home'
+
 import {
   OrcaRuntimeService,
   assertWorktreeCleanForRemoval,
@@ -24,7 +26,6 @@ import {
   writeFile
 } from '../orca-runtime-test-mocks.spec'
 import type { WorktreeMeta } from '../orca-runtime-test-mocks.spec'
-import { setWorktreeRemovalSshHostHomeResolver } from '../../worktree-removal-execution-host-route'
 import {
   TEST_REPO_ID,
   TEST_REPO_PATH,
@@ -36,6 +37,10 @@ import {
   store
 } from '../orca-runtime-test-fixtures.spec'
 import { createWorktreeRemovalRuntime } from '../orca-runtime-test-scenario-builders.spec'
+
+// Why: these fixtures register an SSH provider, which models a connected relay session — and a
+// connected session has always read the host's `$HOME`. The removal guards refuse without it.
+beforeEach(resetWorktreeTestSshHostHome)
 
 describe('OrcaRuntimeService', () => {
   it('force-deletes a preserved branch on the qualified host when repo ids collide', async () => {
@@ -463,9 +468,6 @@ describe('OrcaRuntimeService', () => {
     }
     registerSshGitProvider(repo.connectionId, gitProvider as never)
     registerSshFilesystemProvider(repo.connectionId, fsProvider as never)
-    // Why: the orphan-directory gate is a recursive delete, so it refuses until the host names its
-    // own home. A connected relay session always has, which is what this fixture stands for.
-    setWorktreeRemovalSshHostHomeResolver(() => '/home/remote-user')
     const runtime = new OrcaRuntimeService(runtimeStore as never, undefined, {
       getSshProvider: () => ptyProvider as never
     })
@@ -475,7 +477,6 @@ describe('OrcaRuntimeService', () => {
         runtime.removeManagedWorktree(`id:${worktreeId}`, { force: true })
       ).resolves.toEqual({})
     } finally {
-      setWorktreeRemovalSshHostHomeResolver(() => null)
       unregisterSshGitProvider(repo.connectionId)
       unregisterSshFilesystemProvider(repo.connectionId)
     }
