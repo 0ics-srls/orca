@@ -3,7 +3,7 @@ import { Button } from './ui/button'
 import { RepoIconGlyph } from '@/components/repo/repo-icon'
 import { CompactAgentExpansion } from '@/components/sidebar/worktree-card-compact-agents'
 import { AgentIcon } from '@/lib/agent-catalog'
-import { agentTypeToIconAgent } from '@/lib/agent-status'
+import { agentTypeToIconAgent, formatAgentTypeLabel } from '@/lib/agent-status'
 import { formatShortTimeAgo } from '@/lib/short-time-ago'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '../store'
@@ -69,9 +69,14 @@ function ResumeCandidateRow({
   busy: boolean
   onReconnect: () => void
 }): React.JSX.Element {
+  const agentLabel = formatAgentTypeLabel(candidate.agent)
   return (
     <li className="flex items-center gap-2 py-0.5">
-      <AgentIcon agent={agentTypeToIconAgent(candidate.agent)} size={14} />
+      {/* AgentIcon carries no label of its own, so the provider was invisible to assistive tech and
+          two rows in one worktree read identically. Named the way NativeChatSupportedAgents does. */}
+      <span role="img" aria-label={agentLabel} className="inline-flex shrink-0">
+        <AgentIcon agent={agentTypeToIconAgent(candidate.agent)} size={14} />
+      </span>
       <div className="min-w-0 flex-1">
         <p className="truncate text-xs font-medium">
           {candidate.latestPrompt.trim() ||
@@ -82,7 +87,20 @@ function ResumeCandidateRow({
       <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
         {formatShortTimeAgo(candidate.recordedAt, listedAt)}
       </span>
-      <Button variant="ghost" size="xs" className="shrink-0" disabled={busy} onClick={onReconnect}>
+      {/* Names which agent this button acts on: several rows otherwise expose an identical
+          "Reconnect". Keeps the visible word first, so the accessible name still contains it. */}
+      <Button
+        variant="ghost"
+        size="xs"
+        className="shrink-0"
+        disabled={busy}
+        onClick={onReconnect}
+        aria-label={translate(
+          'auto.components.NativeChatResumeOnRestartModal.reconnectAgent',
+          'Reconnect {{value0}} chat',
+          { value0: agentLabel }
+        )}
+      >
         <Play className="size-3" />
         {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
       </Button>

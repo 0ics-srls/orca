@@ -1925,6 +1925,7 @@
         "updateBody": "These chats were mid-turn when Orca installed an update. Reconnecting restores each one where it stopped, with its full context and without re-sending your prompt — the interrupted reply will not continue on its own.",
         "terminalSessionsUnaffected": "Only chats are affected — your terminal sessions kept running and need nothing from you.",
         "resume": "Reconnect",
+        "reconnectAgent": "Reconnect {{value0}} chat",
         "resumeAll": "Reconnect all",
         "resuming": "Reconnecting…",
         "notNow": "Not now",
