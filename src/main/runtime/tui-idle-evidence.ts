@@ -143,12 +143,7 @@ function hasEvidenceAfter(
   cursor: TuiIdleEvidenceCursor,
   source: 'title' | 'screen'
 ): boolean {
-  if (
-    cursor.attachmentId !== null &&
-    record.attachmentId !== undefined &&
-    record.attachmentId !== null &&
-    cursor.attachmentId !== record.attachmentId
-  ) {
+  if (cursor.attachmentId !== null && record.attachmentId !== cursor.attachmentId) {
     return false
   }
   if (source === 'title') {
@@ -183,9 +178,7 @@ function hasEvidenceAfterFirstPartyStatus(
   if (
     status.attachmentId !== undefined &&
     status.attachmentId !== null &&
-    record.attachmentId !== undefined &&
-    record.attachmentId !== null &&
-    status.attachmentId !== record.attachmentId
+    record.attachmentId !== status.attachmentId
   ) {
     return false
   }

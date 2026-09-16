@@ -122,12 +122,14 @@ describe('tui-idle evidence ranking', () => {
     })
   })
 
-  it('settles an explicit idle title immediately, without an elapsed-silence delay', async () => {
-    const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitle: EXPLICIT_IDLE_TITLE })
+  it('settles an explicit idle title after a new observation, without an elapsed-silence delay', async () => {
+    const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitle: NAME_ONLY_TITLE })
     const { wait } = createWait({ pty, agent: 'codex' })
-    await expect(
-      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    ).resolves.toMatchObject({ satisfied: true })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    pty.lastOscTitle = EXPLICIT_IDLE_TITLE
+    pty.lastOutputAt = Date.now() + 1
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await expect(result).resolves.toMatchObject({ satisfied: true })
   })
 
   it('reports an explicit provider working title as busy instead of unknown', async () => {
@@ -143,29 +145,30 @@ describe('tui-idle evidence ranking', () => {
   })
 
   it('accepts a provider-specific ready screen when launch metadata is absent', async () => {
-    const pty = makeTuiIdlePty({
-      preview: 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'
-    })
+    const pty = makeTuiIdlePty()
     const { wait } = createWait({ pty, agent: null })
-    await expect(
-      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    ).resolves.toMatchObject({
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    pty.preview = 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'
+    pty.lastOutputAt = Date.now() + 1
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await expect(result).resolves.toMatchObject({
       satisfied: true,
       readiness: { state: 'ready', source: 'screen', agent: 'codex' }
     })
   })
 
   it('accepts an adopted provider title when PTY launch metadata is absent', async () => {
-    const pty = makeTuiIdlePty({ lastAgentStatus: 'idle' })
+    const pty = makeTuiIdlePty({ lastAgentStatus: 'idle', lastOscTitleEpochMs: null })
     const { wait } = createWait({
       pty,
       agent: null,
       adoptedIdleStatus: 'idle',
       adoptedTitle: 'OMP ready'
     })
-    await expect(
-      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    ).resolves.toMatchObject({
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    pty.lastOscTitleEpochMs = Date.now() + 1
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await expect(result).resolves.toMatchObject({
       satisfied: true,
       readiness: { state: 'ready', source: 'title', agent: 'omp' }
     })
@@ -193,9 +196,10 @@ describe('tui-idle evidence ranking', () => {
       paneTitle: null
     })
     const { wait } = createWait({ leaf, agent: 'codex', tabTitle: null })
-    await expect(
-      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    ).resolves.toMatchObject({ satisfied: true })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
+    leaf.lastOutputAt = Date.now() + 1
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await expect(result).resolves.toMatchObject({ satisfied: true })
   })
 
   it('lets the agent own status stream veto an otherwise-quiet name-only idle', async () => {
@@ -333,6 +337,23 @@ describe('tui-idle evidence ranking', () => {
         readPositiveBodyEvidence: () => false
       })
     ).toMatchObject({ state: 'ready', source: 'title', agent: 'codex' })
+  })
+
+  it('does not let a retained explicit title satisfy a new wait operation', async () => {
+    const pty = makeTuiIdlePty({
+      lastAgentStatus: 'idle',
+      lastOscTitle: EXPLICIT_IDLE_TITLE
+    })
+    const { wait } = createWait({ pty, agent: 'codex' })
+    const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 5_000 })
+    const settled = watch(result)
+
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    expect(settled).not.toHaveBeenCalled()
+
+    pty.lastOutputAt = Date.now()
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
+    await expect(result).resolves.toMatchObject({ satisfied: true })
   })
 })
 

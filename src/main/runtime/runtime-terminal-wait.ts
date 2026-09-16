@@ -59,6 +59,8 @@ export class RuntimeTerminalWait {
     const condition = options?.condition ?? 'exit'
     const pty = this.deps.getLivePty(handle)
     if (pty) {
+      const ptyEvidenceCursor =
+        condition === 'tui-idle' ? this.evidence.capturePty(pty.pty) : undefined
       if (condition === 'exit' && !pty.pty.connected) {
         return buildPtyTerminalWaitResult(handle, condition, pty.pty)
       }
@@ -71,12 +73,15 @@ export class RuntimeTerminalWait {
       if (condition === 'tui-idle' && ptyBlockedReason) {
         return buildPtyTerminalWaitBlockedResult(handle, condition, pty.pty, ptyBlockedReason)
       }
-      if (condition === 'tui-idle' && this.evidence.isPtySatisfied(pty.pty, ptyWaitText)) {
+      if (
+        condition === 'tui-idle' &&
+        this.evidence.isPtySatisfied(pty.pty, ptyWaitText, ptyEvidenceCursor)
+      ) {
         return buildPtyTerminalWaitResult(
           handle,
           condition,
           pty.pty,
-          this.evidence.result(this.evidence.observePty(pty.pty, ptyWaitText))
+          this.evidence.result(this.evidence.observePty(pty.pty, ptyWaitText, ptyEvidenceCursor))
         )
       }
       return await new Promise<RuntimeTerminalWaitResult>((resolve, reject) => {
@@ -89,9 +94,7 @@ export class RuntimeTerminalWait {
         const waiter: TerminalWaiter = {
           handle,
           processIncarnation: this.deps.getTerminalProcessIncarnation(handle),
-          ...(condition === 'tui-idle'
-            ? { evidenceCursor: this.evidence.capturePty(pty.pty) }
-            : {}),
+          ...(ptyEvidenceCursor ? { evidenceCursor: ptyEvidenceCursor } : {}),
           condition,
           resolve,
           reject,
@@ -148,7 +151,9 @@ export class RuntimeTerminalWait {
                 handle,
                 condition,
                 live.pty,
-                this.evidence.result(this.evidence.observePty(live.pty, livePtyWaitText))
+                this.evidence.result(
+                  this.evidence.observePty(live.pty, livePtyWaitText, waiter.evidenceCursor)
+                )
               )
             )
           } else {
@@ -176,12 +181,17 @@ export class RuntimeTerminalWait {
     // detection that powers the renderer's "Task complete" notifications.
     // Why: only 'idle' satisfies tui-idle, not 'permission'. Permission means the
     // agent is blocked on user approval, not finished with its task.
-    if (condition === 'tui-idle' && this.evidence.isLeafSatisfied(leaf, leafWaitText)) {
+    const leafEvidenceCursor =
+      condition === 'tui-idle' ? this.evidence.captureLeaf(leaf) : undefined
+    if (
+      condition === 'tui-idle' &&
+      this.evidence.isLeafSatisfied(leaf, leafWaitText, leafEvidenceCursor)
+    ) {
       return buildTerminalWaitResult(
         handle,
         condition,
         leaf,
-        this.evidence.result(this.evidence.observeLeaf(leaf, leafWaitText))
+        this.evidence.result(this.evidence.observeLeaf(leaf, leafWaitText, leafEvidenceCursor))
       )
     }
 
@@ -199,7 +209,7 @@ export class RuntimeTerminalWait {
       const waiter: TerminalWaiter = {
         handle,
         processIncarnation: this.deps.getTerminalProcessIncarnation(handle),
-        ...(condition === 'tui-idle' ? { evidenceCursor: this.evidence.captureLeaf(leaf) } : {}),
+        ...(leafEvidenceCursor ? { evidenceCursor: leafEvidenceCursor } : {}),
         condition,
         resolve,
         reject,
@@ -258,7 +268,9 @@ export class RuntimeTerminalWait {
                 handle,
                 condition,
                 live.leaf,
-                this.evidence.result(this.evidence.observeLeaf(live.leaf, liveLeafWaitText))
+                this.evidence.result(
+                  this.evidence.observeLeaf(live.leaf, liveLeafWaitText, waiter.evidenceCursor)
+                )
               )
             )
           } else {
