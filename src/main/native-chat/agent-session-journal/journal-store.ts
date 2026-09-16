@@ -37,12 +37,12 @@ import type {
   JournalAppendResult,
   JournalItemAppendOptions,
   JournalLifecycleBatchInput,
-  JournalOrderedAppendResult,
   JournalReadSince,
   JournalSubmissionInput,
   JournalTombstoneInput,
   ResolveDispatchInput
 } from './journal-store-contracts'
+import { MAX_OWNER_ENDED_DISPATCHES_PER_APPEND } from './journal-store-contracts'
 import type { AgentJournalEpochReason, JournalRow } from './journal-row-schema'
 import { AgentSessionJournalError } from './journal-write-guards'
 import type { JournalRowWriter } from './journal-row-writer'
@@ -111,7 +111,8 @@ export class AgentSessionJournal {
         this.malformedRows = count
       },
       journal: () => this,
-      enqueue: (build) => this.enqueue(build)
+      enqueue: (build) => this.enqueue(build),
+      enqueueMany: (build) => this.enqueueMany(build)
     })
     this.rowWriter = collaborators.rowWriter
     this.epochController = collaborators.epochController
@@ -219,8 +220,12 @@ export class AgentSessionJournal {
     body: AgentJournalItemBody,
     options: JournalItemAppendOptions = { fence: 0 }
   ): Promise<JournalAppendResult> {
-    return this.appendWithTurnSettlement([body], options.fence, (capture) =>
-      this.itemAppender.append(identity, body, options, capture)
+    return this.appendWithDispatchOwnerSettlement(
+      [body],
+      options.fence,
+      options.ownerEndedClientMessageIds ?? [],
+      (ownerEndedDispatches) =>
+        this.itemAppender.append(identity, body, options, ownerEndedDispatches)
     )
   }
 
@@ -238,8 +243,11 @@ export class AgentSessionJournal {
     const bodies = input.mutations.flatMap((mutation) =>
       mutation.kind === 'item' ? [mutation.body] : []
     )
-    return this.appendWithTurnSettlement(bodies, input.fence, (capture) =>
-      this.lifecycleBatchAppender.append(input, capture)
+    return this.appendWithDispatchOwnerSettlement(
+      bodies,
+      input.fence,
+      input.ownerEndedClientMessageIds ?? [],
+      (ownerEndedDispatches) => this.lifecycleBatchAppender.append(input, ownerEndedDispatches)
     )
   }
 
@@ -310,55 +318,53 @@ export class AgentSessionJournal {
     return this.rowWriter.enqueue(build)
   }
 
-  private async appendWithTurnSettlement<T>(
+  private enqueueMany(
+    build: (seq: number, ts: number) => readonly JournalRow[]
+  ): Promise<JournalRow[]> {
+    return this.rowWriter.enqueueMany(build)
+  }
+
+  private appendWithDispatchOwnerSettlement<T>(
     bodies: readonly AgentJournalItemBody[],
     fence: number,
-    append: (
-      capturePrecedingPendingSubmissions: () => string[]
-    ) => Promise<JournalOrderedAppendResult<T>>
+    ownerEndedClientMessageIds: readonly string[],
+    append: (ownerEndedDispatches: () => ResolveDispatchInput[]) => Promise<T>
   ): Promise<T> {
-    const terminalTurnIds = new Set(
-      bodies.flatMap((body) => {
-        const turn = readAgentJournalTurn(body)
-        return turn !== null && turn.state !== 'running' ? [turn.turnId] : []
-      })
-    )
-    const capturePrecedingPendingSubmissions = (): string[] => {
-      if (terminalTurnIds.size === 0) {
+    if (ownerEndedClientMessageIds.length > MAX_OWNER_ENDED_DISPATCHES_PER_APPEND) {
+      return Promise.reject(new Error('journal_owner_ended_dispatch_bound_exceeded'))
+    }
+    const hasTerminalTurn =
+      ownerEndedClientMessageIds.length > 0
+        ? bodies.some((body) => {
+            const turn = readAgentJournalTurn(body)
+            return turn !== null && turn.state !== 'running'
+          })
+        : false
+    const ownerEndedDispatches = (): ResolveDispatchInput[] => {
+      if (!hasTerminalTurn) {
         return []
       }
-      const activeTurnId = this.activeTurnId()
-      if (activeTurnId === null || !terminalTurnIds.has(activeTurnId)) {
-        return []
-      }
-      return this.submissions()
-        .filter(
-          (submission) => submission.dispatchState === 'pending' && submission.fence === fence
-        )
-        .map((submission) => submission.clientMessageId)
-    }
-    const result = await append(capturePrecedingPendingSubmissions)
-    if (!result.appended || result.precedingPendingSubmissionIds.length === 0) {
-      return result.value
-    }
-    await Promise.all(
-      result.precedingPendingSubmissionIds.map(async (clientMessageId) => {
-        try {
-          await this.resolveDispatch({
+      const exactClientMessageIds = new Set(ownerEndedClientMessageIds)
+      return [...exactClientMessageIds].flatMap((clientMessageId) => {
+        const submission = this.state.submissions.get(clientMessageId)
+        if (
+          !submission ||
+          submission.fence !== fence ||
+          (submission.dispatchState !== 'pending' && submission.dispatchState !== 'unknown')
+        ) {
+          return []
+        }
+        return [
+          {
             clientMessageId,
-            state: 'unknown',
+            state: 'unknown' as const,
             reason: DISPATCH_DOUBT_TURN_SETTLED,
             fence,
-            recovered: true
-          })
-        } catch (error) {
-          console.warn(
-            `[agent-session-journal] could not settle submission ${clientMessageId} after its turn ended`,
-            error
-          )
-        }
+            recovered: true as const
+          }
+        ]
       })
-    )
-    return result.value
+    }
+    return append(ownerEndedDispatches)
   }
 }

@@ -10,6 +10,8 @@ import type {
 import type { JournalLifecycleBatchInput } from './journal-store-contracts'
 import type { AgentSessionJournal } from './journal-store'
 import { createTrackedJournalOpener } from './journal-store-test-open'
+import { openJournalDatabase } from './journal-database'
+import { journalDatabaseFile } from './journal-paths'
 
 const IDENTITY: AgentSessionJournalIdentity = {
   sessionId: 'session-1',
@@ -53,11 +55,13 @@ function userMessage(text: string): AgentJournalMessageItem {
 function terminalTurn(
   turnId: string,
   state: 'completed' | 'interrupted',
+  ownerEndedClientMessageIds: readonly string[],
   settlementId = `${state}:${turnId}`
 ): JournalLifecycleBatchInput {
   return {
     settlementId,
     fence: 1,
+    ownerEndedClientMessageIds,
     mutations: [
       {
         kind: 'item',
@@ -115,7 +119,9 @@ describe('turn settlement dispatch resolution', () => {
     await openTurn(journal, 'turn-1')
     await appendPending(journal, 'message-1')
 
-    const settlement = await journal.appendLifecycleBatch(terminalTurn('turn-1', 'interrupted'))
+    const settlement = await journal.appendLifecycleBatch(
+      terminalTurn('turn-1', 'interrupted', ['message-1'])
+    )
 
     expect(journal.submissions()).toEqual([
       expect.objectContaining({
@@ -139,6 +145,7 @@ describe('turn settlement dispatch resolution', () => {
     await journal.appendLifecycleBatch({
       settlementId: 'completed:turn-2',
       fence: 1,
+      ownerEndedClientMessageIds: ['message-2'],
       mutations: [
         {
           kind: 'item',
@@ -159,7 +166,7 @@ describe('turn settlement dispatch resolution', () => {
     })
   })
 
-  it('settles preceding submissions when Claude appends a terminal turn item', async () => {
+  it('preserves a provider-owned queued send across Claude turn completion', async () => {
     const journal = await open()
     const identity = claudeTurnIdentity('claude-turn')
     await journal.appendItem(
@@ -186,8 +193,8 @@ describe('turn settlement dispatch resolution', () => {
     ).toEqual([
       {
         clientMessageId: 'claude-before-settlement',
-        dispatchState: 'unknown',
-        reason: 'turn_settled_before_acknowledgement'
+        dispatchState: 'pending',
+        reason: null
       },
       {
         clientMessageId: 'claude-after-settlement',
@@ -195,6 +202,26 @@ describe('turn settlement dispatch resolution', () => {
         reason: null
       }
     ])
+
+    await journal.resolveDispatch({
+      clientMessageId: 'claude-before-settlement',
+      state: 'accepted',
+      providerIdentity: {
+        provider: 'legacy',
+        agent: 'claude',
+        sessionId: IDENTITY.sessionId,
+        recordId: 'message:claude-echo'
+      },
+      fence: 1
+    })
+    expect(journal.submissions()[0]).toMatchObject({ dispatchState: 'accepted' })
+
+    await journal.markPendingSubmissionsUnknown(1, 'provider_exited_before_acknowledgement')
+    expect(journal.submissions()[1]).toMatchObject({
+      dispatchState: 'unknown',
+      reason: 'provider_exited_before_acknowledgement',
+      recovered: true
+    })
   })
 
   it('does not settle a submission appended after the settlement row', async () => {
@@ -202,7 +229,9 @@ describe('turn settlement dispatch resolution', () => {
     await openTurn(journal, 'turn-3')
     await appendPending(journal, 'before-settlement')
 
-    const settlement = journal.appendLifecycleBatch(terminalTurn('turn-3', 'completed'))
+    const settlement = journal.appendLifecycleBatch(
+      terminalTurn('turn-3', 'completed', ['before-settlement'])
+    )
     const laterSubmission = appendPending(journal, 'after-settlement')
     await Promise.all([settlement, laterSubmission])
 
@@ -217,11 +246,30 @@ describe('turn settlement dispatch resolution', () => {
     ])
   })
 
+  it('settles only the exact provider-owned submission', async () => {
+    const journal = await open()
+    await openTurn(journal, 'turn-exact')
+    await appendPending(journal, 'owned-by-turn')
+    await appendPending(journal, 'owned-elsewhere')
+
+    await journal.appendLifecycleBatch(terminalTurn('turn-exact', 'completed', ['owned-by-turn']))
+
+    expect(
+      journal.submissions().map(({ clientMessageId, dispatchState }) => ({
+        clientMessageId,
+        dispatchState
+      }))
+    ).toEqual([
+      { clientMessageId: 'owned-by-turn', dispatchState: 'unknown' },
+      { clientMessageId: 'owned-elsewhere', dispatchState: 'pending' }
+    ])
+  })
+
   it('does not settle later submissions when a settlement id is replayed', async () => {
     const journal = await open()
     await openTurn(journal, 'turn-4')
     await appendPending(journal, 'original')
-    const input = terminalTurn('turn-4', 'completed', 'stable-settlement')
+    const input = terminalTurn('turn-4', 'completed', ['original'], 'stable-settlement')
     await journal.appendLifecycleBatch(input)
     await appendPending(journal, 'later')
     const beforeReplay = journal.cursor()
@@ -235,21 +283,25 @@ describe('turn settlement dispatch resolution', () => {
     })
   })
 
-  it('does not let a terminal record for another turn settle the active turn submission', async () => {
+  it('settles an exact send for a delayed terminal while preserving the newer active turn', async () => {
     const journal = await open()
     await openTurn(journal, 'old-turn')
-    await journal.appendLifecycleBatch(terminalTurn('old-turn', 'completed'))
+    await appendPending(journal, 'old-message')
     await openTurn(journal, 'active-turn')
     await appendPending(journal, 'active-message')
 
-    await journal.appendItem(
-      turnIdentity('old-turn'),
-      { kind: 'turn', turnId: 'old-turn', state: 'completed' },
-      { fence: 1 }
-    )
+    await journal.appendLifecycleBatch(terminalTurn('old-turn', 'completed', ['old-message']))
 
     expect(journal.activeTurnId()).toBe('active-turn')
-    expect(journal.submissions()[0]).toMatchObject({ dispatchState: 'pending' })
+    expect(
+      journal.submissions().map(({ clientMessageId, dispatchState }) => ({
+        clientMessageId,
+        dispatchState
+      }))
+    ).toEqual([
+      { clientMessageId: 'old-message', dispatchState: 'unknown' },
+      { clientMessageId: 'active-message', dispatchState: 'pending' }
+    ])
   })
 
   it('does not let a repeated direct terminal record settle a later submission', async () => {
@@ -262,10 +314,16 @@ describe('turn settlement dispatch resolution', () => {
       turnId: 'turn-repeated',
       state: 'completed' as const
     }
-    await journal.appendItem(identity, completed, { fence: 1 })
+    await journal.appendItem(identity, completed, {
+      fence: 1,
+      ownerEndedClientMessageIds: ['original']
+    })
     await appendPending(journal, 'later')
 
-    await journal.appendItem(identity, completed, { fence: 1 })
+    await journal.appendItem(identity, completed, {
+      fence: 1,
+      ownerEndedClientMessageIds: ['original']
+    })
 
     expect(journal.submissions().find((entry) => entry.clientMessageId === 'later')).toMatchObject({
       dispatchState: 'pending'
@@ -278,7 +336,9 @@ describe('turn settlement dispatch resolution', () => {
       const journal = await open()
       await openTurn(journal, `turn-late-${state}`)
       await appendPending(journal, `late-${state}`)
-      await journal.appendLifecycleBatch(terminalTurn(`turn-late-${state}`, 'completed'))
+      await journal.appendLifecycleBatch(
+        terminalTurn(`turn-late-${state}`, 'completed', [`late-${state}`])
+      )
 
       await journal.resolveDispatch(
         state === 'accepted'
@@ -306,11 +366,33 @@ describe('turn settlement dispatch resolution', () => {
     }
   )
 
+  it('retires an exact live unknown when its owner turn ends', async () => {
+    const journal = await open()
+    await openTurn(journal, 'turn-live-unknown')
+    await appendPending(journal, 'live-unknown')
+    await journal.resolveDispatch({
+      clientMessageId: 'live-unknown',
+      state: 'unknown',
+      reason: 'provider response timed out',
+      fence: 1
+    })
+
+    await journal.appendLifecycleBatch(
+      terminalTurn('turn-live-unknown', 'completed', ['live-unknown'])
+    )
+
+    expect(journal.submissions()[0]).toMatchObject({
+      dispatchState: 'unknown',
+      reason: 'turn_settled_before_acknowledgement',
+      recovered: true
+    })
+  })
+
   it('does not settle a pending submission from another fence', async () => {
     const journal = await open()
     await openTurn(journal, 'turn-fenced')
     await appendPending(journal, 'older-owner')
-    const input = terminalTurn('turn-fenced', 'interrupted')
+    const input = terminalTurn('turn-fenced', 'interrupted', ['older-owner'])
 
     await journal.appendLifecycleBatch({ ...input, fence: 2 })
 
@@ -334,7 +416,7 @@ describe('turn settlement dispatch resolution', () => {
       fence: 1
     })
 
-    await journal.appendLifecycleBatch(terminalTurn('turn-5', 'completed'))
+    await journal.appendLifecycleBatch(terminalTurn('turn-5', 'completed', ['accepted']))
 
     expect(journal.submissions()[0]).toMatchObject({
       dispatchState: 'accepted',
@@ -342,43 +424,50 @@ describe('turn settlement dispatch resolution', () => {
     })
   })
 
-  it('reports dispatch settlement failure without rejecting turn settlement', async () => {
+  it('rolls back the terminal row when an exact dispatch row cannot be persisted', async () => {
     const journal = await open()
     await openTurn(journal, 'turn-6')
     await appendPending(journal, 'write-fails')
-    const failure = new Error('disk unavailable')
-    vi.spyOn(journal, 'resolveDispatch').mockRejectedValue(failure)
-    const warning = vi.spyOn(console, 'warn').mockImplementation(() => undefined)
+    const before = journal.cursor()
+    const setup = openJournalDatabase(journalDatabaseFile(root))
+    setup.db.exec(`CREATE TRIGGER reject_dispatch_row
+      BEFORE INSERT ON journal_rows
+      WHEN instr(NEW.row_json, '"kind":"dispatch"') > 0
+      BEGIN SELECT RAISE(ABORT, 'dispatch write failed'); END`)
+    setup.db.close()
 
     await expect(
-      journal.appendLifecycleBatch(terminalTurn('turn-6', 'interrupted'))
-    ).resolves.toBeDefined()
-    expect(warning).toHaveBeenCalledWith(
-      expect.stringContaining('could not settle submission write-fails'),
-      failure
-    )
+      journal.appendLifecycleBatch(terminalTurn('turn-6', 'interrupted', ['write-fails']))
+    ).rejects.toThrow('dispatch write failed')
+    expect(journal.cursor()).toEqual(before)
+    expect(journal.activeTurnId()).toBe('turn-6')
+    expect(journal.submissions()[0]).toMatchObject({ dispatchState: 'pending' })
+
+    const cleanup = openJournalDatabase(journalDatabaseFile(root))
+    cleanup.db.exec('DROP TRIGGER reject_dispatch_row')
+    cleanup.db.close()
+    await journal.appendLifecycleBatch(terminalTurn('turn-6', 'interrupted', ['write-fails']))
     expect(journal.activeTurnId()).toBeNull()
-    await expect(appendPending(journal, 'next-send')).resolves.toBeUndefined()
+    expect(journal.submissions()[0]).toMatchObject({
+      dispatchState: 'unknown',
+      recovered: true
+    })
   })
 
-  it('retires the crash window through the existing next-attach reconciliation', async () => {
+  it('replays the terminal row and its exact dispatch outcome together', async () => {
     const journal = await open()
     await openTurn(journal, 'turn-crash-window')
     await appendPending(journal, 'unwritten-settlement')
-    const resolution = vi
-      .spyOn(journal, 'resolveDispatch')
-      .mockRejectedValueOnce(new Error('process exited before dispatch row'))
-    vi.spyOn(console, 'warn').mockImplementation(() => undefined)
-    await journal.appendLifecycleBatch(terminalTurn('turn-crash-window', 'completed'))
-    resolution.mockRestore()
+    await journal.appendLifecycleBatch(
+      terminalTurn('turn-crash-window', 'completed', ['unwritten-settlement'])
+    )
     await journal.close()
 
     const restarted = await open()
-    expect(restarted.submissions()[0]).toMatchObject({ dispatchState: 'pending' })
-    await restarted.markPendingSubmissionsUnknown(2)
-
+    expect(restarted.activeTurnId()).toBeNull()
     expect(restarted.submissions()[0]).toMatchObject({
       dispatchState: 'unknown',
+      reason: 'turn_settled_before_acknowledgement',
       recovered: true
     })
   })

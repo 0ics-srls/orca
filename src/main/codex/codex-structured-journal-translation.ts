@@ -85,6 +85,7 @@ export function createCodexJournalTranslator(
     activeTurns,
     items,
     pendingPrompts: prompts.pending,
+    ...(deps.dispatchEchoes ? { dispatchEchoes: deps.dispatchEchoes } : {}),
     ...(deps.clearPromptTurn ? { clearPromptTurn: deps.clearPromptTurn } : {}),
     flushSuppression: () => genericFrames.flush(),
     resetActivity,

@@ -39,13 +39,15 @@ export type JournalAppendResult = {
   revision: number
 }
 
-export type JournalOrderedAppendResult<T> = {
-  value: T
-  appended: boolean
-  precedingPendingSubmissionIds: string[]
-}
+export const MAX_OWNER_ENDED_DISPATCHES_PER_APPEND = 256
 
-export type JournalItemAppendOptions = { fence: number; observedAt?: number; recovered?: true }
+export type JournalItemAppendOptions = {
+  fence: number
+  observedAt?: number
+  recovered?: true
+  /** Exact sends whose provider ownership ends with this terminal lifecycle row. */
+  ownerEndedClientMessageIds?: readonly string[]
+}
 export type JournalTombstoneInput = { fence: number }
 
 export type JournalLifecycleBatchInput = {
@@ -53,6 +55,8 @@ export type JournalLifecycleBatchInput = {
   mutations: readonly JournalLifecycleMutationInput[]
   fence: number
   recovered?: true
+  /** Exact sends whose provider ownership ends with this terminal lifecycle row. */
+  ownerEndedClientMessageIds?: readonly string[]
 }
 
 export type JournalSubmissionInput = {

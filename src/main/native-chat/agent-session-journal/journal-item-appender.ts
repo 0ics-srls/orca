@@ -3,18 +3,24 @@ import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity
 } from '../../../shared/agent-session-journal-types'
-import { journalItemRowBuilder } from './journal-row-builders'
+import { journalDispatchRowBuilder, journalItemRowBuilder } from './journal-row-builders'
 import type { JournalReducerState } from './journal-reducer'
-import type { JournalAppendResult, JournalOrderedAppendResult } from './journal-store-contracts'
+import type { JournalAppendResult, ResolveDispatchInput } from './journal-store-contracts'
 import type { JournalRow } from './journal-row-schema'
 
-type ItemAppendOptions = { fence: number; observedAt?: number; recovered?: true }
+type ItemAppendOptions = {
+  fence: number
+  observedAt?: number
+  recovered?: true
+}
 
 export class JournalItemAppender {
   constructor(
     private readonly deps: {
       state: () => JournalReducerState
-      enqueue: (build: (seq: number, ts: number) => JournalRow) => Promise<JournalRow>
+      enqueueMany: (
+        build: (seq: number, ts: number) => readonly JournalRow[]
+      ) => Promise<JournalRow[]>
     }
   ) {}
 
@@ -22,28 +28,30 @@ export class JournalItemAppender {
     identity: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
     options: ItemAppendOptions,
-    capturePrecedingPendingSubmissions: () => string[]
-  ): Promise<JournalOrderedAppendResult<JournalAppendResult>> {
+    ownerEndedDispatches: () => ResolveDispatchInput[]
+  ): Promise<JournalAppendResult> {
     const itemId = agentJournalItemKey(identity)
-    let precedingPendingSubmissionIds: string[] = []
     const build = journalItemRowBuilder(this.deps.state, identity, body, options)
     return this.deps
-      .enqueue((seq, ts) => {
-        precedingPendingSubmissionIds = capturePrecedingPendingSubmissions()
-        return build(seq, ts)
+      .enqueueMany((seq, ts) => {
+        const item = build(seq, ts)
+        const dispatches = ownerEndedDispatches()
+        return [
+          item,
+          ...dispatches.map((input, index) =>
+            journalDispatchRowBuilder(this.deps.state, input)(seq + index + 1, ts)
+          )
+        ]
       })
-      .then((row) => {
-        if (row.kind !== 'item') {
+      .then((rows) => {
+        const row = rows[0]
+        if (!row || row.kind !== 'item') {
           throw new Error('journal_item_append_returned_non_item_row')
         }
         return {
-          value: {
-            cursor: { epoch: row.epoch, sequence: row.seq },
-            itemId,
-            revision: row.revision
-          },
-          appended: true,
-          precedingPendingSubmissionIds
+          cursor: { epoch: row.epoch, sequence: row.seq },
+          itemId,
+          revision: row.revision
         }
       })
   }

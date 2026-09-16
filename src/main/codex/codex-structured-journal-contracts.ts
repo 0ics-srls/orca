@@ -3,6 +3,7 @@ import type { AgentSessionDeltaCoalescerDeps } from '../native-chat/agent-sessio
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { CodexStructuredSessionEvent } from './codex-structured-session-adapter'
 import type { CodexSubagentExecutions } from './codex-subagent-executions'
+import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
 
 export type CodexJournalTranslatorDeps = {
   sink: StructuredAgentSessionEventSink
@@ -19,6 +20,7 @@ export type CodexJournalTranslatorDeps = {
   /** Settles a send's identity off the echoed user message, using the very
    *  identity the journal row carries so a replay computes the same key. */
   onUserMessageEcho?: (clientMessageId: string, identity: AgentJournalItemIdentity) => void
+  dispatchEchoes?: Pick<CodexDispatchEchoes, 'pendingForTurn' | 'retireTurn'>
   primaryThreadId?: () => string | null
   subagentExecutions?: CodexSubagentExecutions
   coalesceMs?: number

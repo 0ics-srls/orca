@@ -42,16 +42,18 @@ export function fakeCodexAppServer(routes: Record<string, CodexTestRoute> = {}):
   routes: Record<string, CodexTestRoute>
 } {
   const connections: FakeConnection[] = []
-  const openConnection = (async (launch, handlers = {}) => {
+  const openConnection: typeof openCodexAppServerConnection = async (launch, handlers = {}) => {
     const connection: FakeConnection = {
       launch,
       handlers,
       calls: [],
       pid: 4321,
       closed: false,
-      request: async (method, params) => {
+      request: async (method, params, options) => {
         connection.calls.push({ method, params })
-        return routes[method]?.(params) ?? {}
+        const result = routes[method]?.(params) ?? {}
+        options?.onResult?.(result)
+        return result
       },
       notify: () => {},
       respond: () => {},
@@ -63,7 +65,7 @@ export function fakeCodexAppServer(routes: Record<string, CodexTestRoute> = {}):
     }
     connections.push(connection)
     return connection
-  }) as typeof openCodexAppServerConnection
+  }
   routes['thread/start'] ??= () => ({
     thread: { id: CODEX_TEST_THREAD_ID, path: '/rollouts/abc.jsonl' }
   })

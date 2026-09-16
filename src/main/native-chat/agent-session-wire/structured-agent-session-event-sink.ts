@@ -29,6 +29,8 @@ export type StructuredAgentSessionAppendOptions = {
   lifecycle?: boolean
   /** Host clock to stamp on the row instead of its append time. */
   observedAt?: number
+  /** Exact sends whose provider ownership ends with this terminal lifecycle row. */
+  ownerEndedClientMessageIds?: readonly string[]
 }
 
 export type StructuredAgentSessionLifecycleJournal = Pick<
@@ -147,20 +149,37 @@ export function createDeferredStructuredAgentSessionEventSink(
     settlementId: string,
     mutations: readonly JournalLifecycleMutationInput[],
     options: StructuredAgentSessionAppendOptions = {}
-  ): StructuredAgentSessionSinkAdmission =>
-    queue.submit(
+  ): StructuredAgentSessionSinkAdmission => {
+    const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
+      ? [...options.ownerEndedClientMessageIds]
+      : undefined
+    return queue.submit(
       {
-        bytes: Buffer.byteLength(JSON.stringify({ settlementId, mutations }), 'utf8') + 512,
+        bytes:
+          Buffer.byteLength(
+            JSON.stringify({
+              settlementId,
+              mutations,
+              ownerEndedClientMessageIds
+            }),
+            'utf8'
+          ) + 512,
         coalescingKey: `lifecycle:${settlementId}`,
         run: (bound) =>
           bound.journal.appendLifecycleBatch({
             settlementId,
             mutations,
-            fence: bound.fence
+            fence: bound.fence,
+            ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
           })
       },
-      { ...options, lifecycle: true }
+      {
+        ...options,
+        lifecycle: true,
+        ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
+      }
     )
+  }
 
   const publish = (
     options: StructuredAgentSessionAppendOptions = {}
@@ -177,32 +196,49 @@ export function createDeferredStructuredAgentSessionEventSink(
   return {
     sink: {
       appendItem: (identity, body, options = {}) => {
+        const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
+          ? [...options.ownerEndedClientMessageIds]
+          : undefined
         queue.submit(
           {
-            bytes: estimateStructuredAgentSessionItemBytes(identity, body),
+            bytes:
+              estimateStructuredAgentSessionItemBytes(identity, body) +
+              (ownerEndedClientMessageIds
+                ? Buffer.byteLength(JSON.stringify(ownerEndedClientMessageIds), 'utf8')
+                : 0),
             coalescingKey: options.coalescingKey,
             run: (bound) =>
               bound.journal.appendItem(identity, body, {
                 fence: bound.fence,
-                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt })
+                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt }),
+                ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
               })
           },
-          options
+          { ...options, ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {}) }
         )
       },
-      tryAppendItem: (identity, body, options = {}) =>
-        queue.submit(
+      tryAppendItem: (identity, body, options = {}) => {
+        const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
+          ? [...options.ownerEndedClientMessageIds]
+          : undefined
+        return queue.submit(
           {
-            bytes: estimateStructuredAgentSessionItemBytes(identity, body),
+            bytes:
+              estimateStructuredAgentSessionItemBytes(identity, body) +
+              (ownerEndedClientMessageIds
+                ? Buffer.byteLength(JSON.stringify(ownerEndedClientMessageIds), 'utf8')
+                : 0),
             coalescingKey: options.coalescingKey,
             run: (bound) =>
               bound.journal.appendItem(identity, body, {
                 fence: bound.fence,
-                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt })
+                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt }),
+                ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
               })
           },
-          options
-        ),
+          { ...options, ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {}) }
+        )
+      },
       tryAppendLifecycleTransition: (identitySizeBound, body, resolveIdentity) => {
         const bytes = estimateStructuredAgentSessionItemBytes(identitySizeBound, body)
         return queue.submit(

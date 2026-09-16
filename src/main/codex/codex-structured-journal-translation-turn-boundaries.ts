@@ -18,6 +18,7 @@ import {
   readCodexTurnId,
   readCodexTurnStatus
 } from './codex-structured-thread-facts'
+import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
 
 type TurnBoundaryEvent = {
   sessionId: string
@@ -35,6 +36,7 @@ export class CodexJournalTurnBoundaries {
       activeTurns: CodexJournalActiveTurns
       items: Pick<CodexJournalItems, 'streams' | 'activeItems' | 'ordinals'>
       pendingPrompts: Map<string, CodexPendingJournalPrompt>
+      dispatchEchoes?: Pick<CodexDispatchEchoes, 'pendingForTurn' | 'retireTurn'>
       clearPromptTurn?: (threadId: string, turnId: string) => void
       flushSuppression: () => CodexJournalTranslationAdmission
       resetActivity: (threadId: string) => void
@@ -80,27 +82,34 @@ export class CodexJournalTurnBoundaries {
     // the turn that spawned them and go on reporting into the same group, so a
     // turn boundary is no evidence contact was lost. Only `settleSession` may
     // write `unverifiable`.
+    const isPrimaryTurn = event.threadId === this.deps.primaryThreadId()
+    const ownerEndedClientMessageIds = isPrimaryTurn
+      ? (this.deps.dispatchEchoes?.pendingForTurn(turnId) ?? [])
+      : []
     const admission = settleCodexJournalTurn({
       sink: this.deps.sink,
       sessionId: event.sessionId,
       threadId: event.threadId,
       turnId,
-      turnLifecycle:
-        event.threadId === this.deps.primaryThreadId()
-          ? this.settled(
-              event.threadId,
-              turnId,
-              codexTurnLifecycleState(readCodexTurnStatus(event.params)),
-              this.receiptTime(event),
-              readCodexTurnDurationMs(event.params)
-            )
-          : null,
+      turnLifecycle: isPrimaryTurn
+        ? this.settled(
+            event.threadId,
+            turnId,
+            codexTurnLifecycleState(readCodexTurnStatus(event.params)),
+            this.receiptTime(event),
+            readCodexTurnDurationMs(event.params)
+          )
+        : null,
       streams: this.deps.items.streams,
       activeItems: this.deps.items.activeItems,
       pendingPrompts: this.deps.pendingPrompts,
+      ownerEndedClientMessageIds,
       ...(this.deps.clearPromptTurn ? { clearPromptTurn: this.deps.clearPromptTurn } : {})
     })
     if (admission.accepted) {
+      if (isPrimaryTurn) {
+        this.deps.dispatchEchoes?.retireTurn(turnId)
+      }
       this.deps.items.ordinals.forgetTurn(event.threadId, turnId)
       this.deps.activeTurns.forget(event.threadId, turnId)
       this.deps.resetActivity(event.threadId)

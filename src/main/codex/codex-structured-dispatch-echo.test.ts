@@ -26,6 +26,31 @@ describe('codex dispatch echoes', () => {
     expect(echoes.size).toBe(0)
   })
 
+  it('retires only sends bound to the terminal turn', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('client-1')
+    echoes.arm('client-2')
+    expect(echoes.bindOwnerTurn('client-1', 'turn-1')).toBe(false)
+    expect(echoes.bindOwnerTurn('client-2', 'turn-2')).toBe(false)
+
+    expect(echoes.pendingForTurn('turn-1')).toEqual(['client-1'])
+    echoes.retireTurn('turn-1')
+
+    expect(echoes.settle('client-1')).toBe(true)
+    expect(echoes.settle('client-2')).toBe(true)
+  })
+
+  it('recognizes a response bound after its turn terminal notification', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('client-1')
+
+    echoes.retireTurn('turn-1')
+
+    expect(echoes.bindOwnerTurn('client-1', 'turn-1')).toBe(true)
+    expect(echoes.size).toBe(0)
+    expect(echoes.settle('client-1')).toBe(true)
+  })
+
   it('refuses an echo this session never armed', () => {
     const echoes = createCodexDispatchEchoes()
     echoes.arm('client-1')
@@ -71,6 +96,25 @@ describe('codex dispatch echoes', () => {
     expect(echoes.size).toBe(MAX_CODEX_PENDING_DISPATCH_ECHOES)
     expect(echoes.settle('client-0')).toBe(true)
     expect(echoes.settle(`client-${MAX_CODEX_PENDING_DISPATCH_ECHOES}`)).toBe(false)
+  })
+
+  it('bounds retired late-echo correlations without consuming live capacity', () => {
+    const echoes = createCodexDispatchEchoes()
+    for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
+      echoes.arm(`old-${index}`)
+      echoes.bindOwnerTurn(`old-${index}`, 'turn-old')
+    }
+    echoes.retireTurn('turn-old')
+
+    for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
+      expect(echoes.arm(`new-${index}`)).toBe(true)
+      echoes.bindOwnerTurn(`new-${index}`, 'turn-new')
+    }
+    echoes.retireTurn('turn-new')
+
+    expect(echoes.size).toBe(0)
+    expect(echoes.settle('old-0')).toBe(false)
+    expect(echoes.settle('new-0')).toBe(true)
   })
 })
 

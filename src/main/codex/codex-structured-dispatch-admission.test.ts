@@ -4,6 +4,7 @@ import {
   acquiredCodexAdapter,
   echoUserMessage,
   fakeCodexAppServer,
+  recordingSink,
   startTurn,
   CODEX_TEST_THREAD_ID,
   CODEX_TEST_USER_MESSAGE,
@@ -23,6 +24,54 @@ function send(
 }
 
 describe('codex dispatch admission', () => {
+  it('binds a steer to the active turn when the response uses a submission id', async () => {
+    const codex = fakeCodexAppServer({
+      'turn/start': () => ({ turn: { id: 'submission-1', status: 'inProgress' } })
+    })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      if (options?.ownerEndedClientMessageIds) {
+        ownerEnded.push([...options.ownerEndedClientMessageIds])
+      }
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-1', status: 'completed' }
+    })
+    echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
+
+    expect(ownerEnded).toEqual([['client-1']])
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
+  })
+
+  it('settles an active-turn send before the start response continuation runs', async () => {
+    let completeTurn: (() => void) | undefined
+    const codex = fakeCodexAppServer({
+      'turn/start': () => {
+        completeTurn?.()
+        return { turn: { id: 'turn-1', status: 'completed' } }
+      }
+    })
+    const adapter = await acquiredCodexAdapter({ codex, settlements: [] })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+    completeTurn = () =>
+      connection.handlers.onNotification?.('turn/completed', {
+        threadId: CODEX_TEST_THREAD_ID,
+        turn: { id: 'turn-1', status: 'completed' }
+      })
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+  })
+
   it('admits a send queued behind a running turn and settles it when Codex echoes it', async () => {
     // Measured on codex-cli 0.153.4: a `turn/start` issued while a turn runs is
     // COALESCED into it -- same turn id back, no second `turn/started`, and the

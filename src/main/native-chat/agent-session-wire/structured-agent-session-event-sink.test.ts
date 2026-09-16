@@ -27,6 +27,7 @@ type Recorded = {
   ordinal?: number
   settlementId?: string
   activity?: AgentSessionTurnActivity | null
+  ownerEndedClientMessageIds?: readonly string[]
 }
 
 function target(
@@ -51,14 +52,25 @@ function target(
       })
       return { epoch: 'e', sequence: 0 }
     }),
-    appendLifecycleBatch: vi.fn(async (input: { settlementId: string }) => {
-      log.push({ call: 'appendLifecycleBatch', fence, settlementId: input.settlementId })
-      return { epoch: 'e', sequence: 0 }
-    }),
+    appendLifecycleBatch: vi.fn(
+      async (input: { settlementId: string; ownerEndedClientMessageIds?: readonly string[] }) => {
+        log.push({
+          call: 'appendLifecycleBatch',
+          fence,
+          settlementId: input.settlementId,
+          ...(input.ownerEndedClientMessageIds
+            ? { ownerEndedClientMessageIds: input.ownerEndedClientMessageIds }
+            : {})
+        })
+        return { epoch: 'e', sequence: 0 }
+      }
+    ),
     latestItemMatching: vi.fn(() => null)
-  } as unknown as AgentSessionJournal
+  }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This focused sink fake implements only the journal methods the queued operations call.
+  const sinkJournal = journal as unknown as AgentSessionJournal
   return {
-    journal,
+    journal: sinkJournal,
     fence,
     publish: (activity) =>
       log.push({ call: 'publish', fence, ...(activity !== undefined ? { activity } : {}) })
@@ -272,7 +284,7 @@ describe('deferred structured agent-session event sink', () => {
     deferred.sink.appendLifecycleBatch?.(
       'settlement-1',
       [{ kind: 'item', identity: identity(0), body: BODY }],
-      { lifecycle: true }
+      { lifecycle: true, ownerEndedClientMessageIds: ['client-1'] }
     )
     expect(deferred.sink.tryPublish?.({ lifecycle: true })).toEqual({
       accepted: false,
@@ -284,7 +296,14 @@ describe('deferred structured agent-session event sink', () => {
     deferred.bind(target(8, log))
     await expect(deferred.lifecycleBarrier()).resolves.toEqual({ ok: true })
 
-    expect(log).toEqual([{ call: 'appendLifecycleBatch', fence: 8, settlementId: 'settlement-1' }])
+    expect(log).toEqual([
+      {
+        call: 'appendLifecycleBatch',
+        fence: 8,
+        settlementId: 'settlement-1',
+        ownerEndedClientMessageIds: ['client-1']
+      }
+    ])
   })
 
   it('ignores stale reading-control cleanup after a newer provider stream binds', async () => {

@@ -9,13 +9,15 @@ import { isCodexAppServerUnsupportedError } from './codex-app-server-session'
 import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
 import { DISPATCH_REJECTED_CODEX_QUEUE_FULL } from '../../shared/structured-agent-session-dispatch-rejection'
 import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
+import { DISPATCH_DOUBT_TURN_SETTLED } from '../native-chat/agent-session-journal/journal-dispatch-doubt-reasons'
+import { readCodexTurnId } from './codex-structured-thread-facts'
 
 // Writing a Codex turn and learning which message landed where, which are not
 // the same event. `turn/start` answers as soon as Codex owns the message, but a
-// message issued while a turn is running is COALESCED into that turn: the same
-// turn id comes back, no second `turn/started` fires, and the user message is
-// echoed only when the running turn reaches it. So the response proves
-// admission and nothing about identity, which the echo settles later.
+// message issued while a turn is running is COALESCED into that turn. Across
+// supported app-server builds, the response id is not authoritative for that
+// steer, so ownership comes from the active lifecycle at write time. The user
+// message echo remains the final delivery proof.
 
 /** Keys Codex accepts as per-turn overrides. An unlisted key would otherwise
  *  become an arbitrary client-controlled `turn/start` parameter. */
@@ -41,6 +43,15 @@ export type CodexTurnHost = {
   reportedOptions?: { model?: string }
   fastModeTierByModel: ReadonlyMap<string, string>
   dispatchEchoes: CodexDispatchEchoes
+  activeTurnIds?: ReadonlySet<string>
+}
+
+function currentActiveTurnId(host: CodexTurnHost): string | null {
+  let current: string | null = null
+  for (const turnId of host.activeTurnIds ?? []) {
+    current = turnId
+  }
+  return current
 }
 
 function turnInputFor(body: AgentJournalMessageItem): Record<string, unknown>[] {
@@ -85,18 +96,28 @@ function codexTurnOptions(host: CodexTurnHost): Record<string, string> {
 }
 
 /**
- * Hands one submission to Codex. False means the bounded correlation window
- * refused it before the write; otherwise resolves when Codex has taken it.
+ * Hands one submission to Codex and binds its client id to the provider-owned turn.
  */
 export async function startCodexTurn(
   host: CodexTurnHost,
   input: { clientMessageId: string; body: AgentJournalMessageItem; timeoutMs?: number }
-): Promise<boolean> {
+): Promise<'admitted' | 'owner-ended' | 'queue-full'> {
   // Armed before the write: the echo can land while the response is in flight.
   if (!host.dispatchEchoes.arm(input.clientMessageId)) {
-    return false
+    return 'queue-full'
   }
-  await host.connection.request(
+  const expectedOwnerTurnId = currentActiveTurnId(host)
+  let ownerEnded = false
+  if (expectedOwnerTurnId) {
+    ownerEnded = host.dispatchEchoes.bindOwnerTurn(input.clientMessageId, expectedOwnerTurnId)
+  }
+  const bindResponseOwner = (result: unknown): void => {
+    const turnId = expectedOwnerTurnId ?? readCodexTurnId(result)
+    if (turnId) {
+      ownerEnded = host.dispatchEchoes.bindOwnerTurn(input.clientMessageId, turnId) || ownerEnded
+    }
+  }
+  const result = await host.connection.request(
     'turn/start',
     {
       threadId: host.threadId,
@@ -104,9 +125,11 @@ export async function startCodexTurn(
       input: turnInputFor(input.body),
       ...codexTurnOptions(host)
     },
-    { timeoutMs: input.timeoutMs }
+    { timeoutMs: input.timeoutMs, onResult: bindResponseOwner }
   )
-  return true
+  // Also covers test and alternate connections that omit the synchronous observer.
+  bindResponseOwner(result)
+  return ownerEnded ? 'owner-ended' : 'admitted'
 }
 
 /**
@@ -121,8 +144,16 @@ export async function dispatchCodexTurn(
   timeoutMs: number | undefined
 ): Promise<AgentSessionDispatchOutcome> {
   try {
-    if (!(await startCodexTurn(session, { ...input, timeoutMs }))) {
+    const admission = await startCodexTurn(session, { ...input, timeoutMs })
+    if (admission === 'queue-full') {
       return { state: 'rejected', reason: DISPATCH_REJECTED_CODEX_QUEUE_FULL }
+    }
+    if (admission === 'owner-ended') {
+      return {
+        state: 'unknown',
+        reason: DISPATCH_DOUBT_TURN_SETTLED,
+        recovered: true
+      }
     }
   } catch (error) {
     if (isCodexAppServerRequestError(error) || isCodexAppServerUnsupportedError(error)) {
