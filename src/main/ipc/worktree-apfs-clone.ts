@@ -105,7 +105,9 @@ export async function cloneWorktreePathWithApfs(
     await lstat(target)
     throw new WorktreeLinkedPathTargetExistsError(target)
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if (
+      !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
+    ) {
       throw error
     }
   }

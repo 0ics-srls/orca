@@ -103,7 +103,19 @@ describe('registerWorktreeHandlers', () => {
 
   it('preserves the created workspace but does not prepare setup after an unverifiable clone', async () => {
     listWorktreesMock.mockResolvedValue(createdWorktreeList)
-    const repo = { ...(store.getRepo('repo-1') as Repo), symlinkPaths: ['deps'] }
+    const existingRepo = store.getRepo('repo-1')
+    if (!existingRepo) {
+      throw new Error('Missing fixture repository')
+    }
+    const repo: Repo = {
+      id: 'repo-1',
+      path: '/workspace/repo',
+      displayName: 'Repo',
+      badgeColor: '#000000',
+      addedAt: 1,
+      ...existingRepo,
+      symlinkPaths: ['deps']
+    }
     store.getRepo.mockReturnValue(repo)
     store.getRepos.mockReturnValue([repo])
     shouldRunSetupForCreateMock.mockReturnValue(true)

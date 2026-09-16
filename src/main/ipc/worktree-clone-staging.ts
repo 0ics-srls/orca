@@ -12,8 +12,7 @@ export async function removeWorktreeCloneStaging(staging: string): Promise<void>
 
 async function removeOwnedStaging(staging: string): Promise<void> {
   const pending = [staging]
-  while (pending.length > 0) {
-    const directory = pending.pop() as string
+  for (let directory = pending.pop(); directory !== undefined; directory = pending.pop()) {
     // Only directories: staged regular files may already be linked into the destination.
     await chmod(directory, 0o700)
     for (const entry of await readdir(directory, { withFileTypes: true })) {

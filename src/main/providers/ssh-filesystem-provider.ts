@@ -45,12 +45,9 @@ import { requestSshWorktreeMaterialization } from './ssh-worktree-materializatio
 const WORKSPACE_SPACE_SCAN_TIMEOUT_MS = 130_000
 export class SshFilesystemProvider implements IFilesystemProvider {
   materializeWorktreePaths(
-    source: string,
-    target: string,
-    linkedPaths: readonly string[],
-    copyPaths?: readonly string[]
+    ...args: Parameters<NonNullable<IFilesystemProvider['materializeWorktreePaths']>>
   ) {
-    return requestSshWorktreeMaterialization(this.mux, source, target, linkedPaths, copyPaths)
+    return requestSshWorktreeMaterialization(this.mux, ...args)
   }
   private watchListeners = new Map<string, WatchRegistration>()
   private unsubscribeNotifications: (() => void) | null = null

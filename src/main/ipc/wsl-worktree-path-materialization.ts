@@ -21,7 +21,9 @@ export async function readWslWorktreeMaterializationBundle(): Promise<string> {
     try {
       return await readFile(join(root, 'wsl', 'worktree-materialization.js'), 'utf8')
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (
+        !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
+      ) {
         throw error
       }
     }
@@ -96,7 +98,12 @@ async function requestWslWorktreePaths(
   ) {
     throw new Error('Invalid WSL workspace materialization response; completion is unverifiable')
   }
-  return response as { warning?: string; paths?: string[] }
+  return {
+    ...('warning' in response && typeof response.warning === 'string'
+      ? { warning: response.warning }
+      : {}),
+    ...('paths' in response && Array.isArray(response.paths) ? { paths: response.paths } : {})
+  }
 }
 
 export async function materializeWslWorktreePaths(

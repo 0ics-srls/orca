@@ -20,7 +20,7 @@ import type { RuntimeStore } from './runtime-store-contract'
 export async function materializeRuntimeLocalWorktree<T>(args: {
   request: RuntimeManagedWorktreeCreateArgs
   repo: Repo
-  store: RuntimeStore
+  store: Pick<RuntimeStore, 'setWorktreeMeta' | 'getProjectHostSetups'>
   settings: Parameters<typeof getWorktreeCreationLayout>[1]
   created: GitWorktreeInfo
   remoteTrackingBase: RemoteTrackingBase | null

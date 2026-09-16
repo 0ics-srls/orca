@@ -61,8 +61,8 @@ async function materializeSelectedWorktreePaths(
   time: WorktreeCreateTimingRecorder['time']
 ): Promise<string | undefined> {
   const [selection, sharedPaths] = await Promise.all([
-    resolveWorktreeCopySelection(source, personalPaths),
-    resolveWorktreeSharedDirectories(source)
+    time('resolve_worktreeinclude', () => resolveWorktreeCopySelection(source, personalPaths)),
+    time('resolve_shared_directories', () => resolveWorktreeSharedDirectories(source))
   ])
   const linkSources = await Promise.all(
     [...sharedPaths, ...legacyPaths].map(async (path) => ({

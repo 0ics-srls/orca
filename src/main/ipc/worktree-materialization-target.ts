@@ -19,7 +19,9 @@ export async function assertWorktreeMaterializationTarget(
         throw new Error('Materialization target has a linked or non-directory ancestor')
       }
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (
+        !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
+      ) {
         throw error
       }
     }

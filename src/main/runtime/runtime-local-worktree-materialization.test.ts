@@ -43,7 +43,8 @@ describe('materializeRuntimeLocalWorktree', () => {
 
     await expect(
       materializeRuntimeLocalWorktree({
-        request: {},
+        request: { repoSelector: 'repo-1', name: 'app' },
+        displayNameKind: undefined,
         repo: {
           id: 'repo-1',
           path: '/repo',
@@ -73,7 +74,7 @@ describe('materializeRuntimeLocalWorktree', () => {
           order.push('metadata')
           return null
         }
-      } as never)
+      })
     ).rejects.toThrow('link failed')
 
     expect(order).toEqual(['metadata', 'filesystem'])

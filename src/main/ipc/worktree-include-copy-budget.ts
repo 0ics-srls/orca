@@ -130,8 +130,7 @@ async function measureCopySize(
   }
 
   const pending: string[] = [source]
-  while (pending.length > 0) {
-    const directory = pending.pop() as string
+  for (let directory = pending.pop(); directory !== undefined; directory = pending.pop()) {
     let dirents: Dirent[]
     try {
       dirents = await readdir(directory, { withFileTypes: true })

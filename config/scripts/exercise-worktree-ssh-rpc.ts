@@ -15,7 +15,7 @@ async function main(): Promise<void> {
       '-o',
       'BatchMode=yes',
       host,
-      `ORCA_BACKGROUND_LAUNCH=1 HOME=${root} ORCA_USER_DATA_PATH=${root} exec /usr/local/bin/node ${root}/relay.js --sock-path ${root}/relay.sock --grace-time 1`
+      `ORCA_BACKGROUND_LAUNCH=1 ORCA_USER_DATA_PATH=${root} exec /usr/local/bin/node ${root}/relay.js --sock-path ${root}/relay.sock --grace-time 1`
     ]
   })
   const closed = once(child, 'close')
@@ -75,7 +75,10 @@ async function main(): Promise<void> {
     const git = new SshGitProvider('cow-exercise', mux)
     const source = `${root}/source`,
       target = `${root}/target`
-    const status = (await mux.request('relay.status', {})) as { pid: number }
+    const status = await mux.request('relay.status', {})
+    assert.ok(
+      status && typeof status === 'object' && 'pid' in status && typeof status.pid === 'number'
+    )
     const materialized = await fs.materializeWorktreePaths(source, target, [])
     assert.equal(materialized.supported, true)
     assert.equal(materialized.warning, undefined)

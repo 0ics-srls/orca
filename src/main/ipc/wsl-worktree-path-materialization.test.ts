@@ -4,6 +4,7 @@ import {
   buildWslWorktreeMaterializationScript,
   materializeWslWorktreePaths
 } from './wsl-worktree-path-materialization'
+import type { runWslProcess } from '../wsl/wsl-runner'
 import { runProcess } from '../../shared/child-process/run-process'
 
 const result = {
@@ -16,7 +17,7 @@ const result = {
 
 describe('WSL materialization routing', () => {
   it('dispatches converted paths and personal copies on the selected distro', async () => {
-    const run = vi.fn().mockResolvedValue(result)
+    const run = vi.fn<typeof runWslProcess>().mockResolvedValue(result)
     await expect(
       materializeWslWorktreePaths(
         'Ubuntu',
@@ -33,7 +34,10 @@ describe('WSL materialization routing', () => {
     expect(run).toHaveBeenCalledWith(
       expect.objectContaining({ distro: 'Ubuntu', loginPath: 'preferred', timeoutMs: 300_000 })
     )
-    const script = run.mock.calls[0][0].script as string
+    const script = run.mock.calls[0][0].script
+    if (typeof script !== 'string') {
+      throw new Error('Expected inline guest script')
+    }
     const encoded = script.match(/ORCA_WORKTREE_REQUEST = '([^']+)'/)![1]
     expect(JSON.parse(Buffer.from(encoded, 'base64').toString())).toEqual({
       source: '/mnt/c/repo',
@@ -98,7 +102,7 @@ describe('WSL materialization routing', () => {
   )
   it.each([false, true])('routes guest link inspection/removal (remove=%s)', async (remove) => {
     const run = vi
-      .fn()
+      .fn<typeof runWslProcess>()
       .mockResolvedValue({ ...result, stdout: '{"supported":true,"paths":["deps"]}' })
     expect(
       await inspectWslWorktreeSharedLinks('Ubuntu', '/source', '/target', ['deps'], remove, {
@@ -106,7 +110,10 @@ describe('WSL materialization routing', () => {
         run
       })
     ).toEqual(['deps'])
-    const script = run.mock.calls[0][0].script as string
+    const script = run.mock.calls[0][0].script
+    if (typeof script !== 'string') {
+      throw new Error('Expected inline guest script')
+    }
     const encoded = script.match(/ORCA_WORKTREE_REQUEST = '([^']+)'/)![1]
     expect(JSON.parse(Buffer.from(encoded, 'base64').toString()).operation).toBe(
       remove ? 'remove-links' : 'inspect-links'

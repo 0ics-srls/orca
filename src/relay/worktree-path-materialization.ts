@@ -37,7 +37,7 @@ export async function materializeRelayWorktreePaths(
     targetPath,
     linkedPaths,
     undefined,
-    copyPaths as string[] | undefined
+    copyPaths
   )
   return { supported: true, ...(warning ? { warning } : {}) }
 }

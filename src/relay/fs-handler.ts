@@ -1,4 +1,5 @@
 import { pathsExistOnRelay } from './fs-path-existence'
+import { materializeRelayWorktreePaths } from './worktree-path-materialization'
 import { tmpdir } from 'node:os'
 import type { RelayDispatcher, RequestContext } from './dispatcher'
 import type { RelayContext } from './context'
@@ -79,6 +80,7 @@ export class FsHandler {
   }
 
   private registerHandlers(): void {
+    this.dispatcher.onRequest('fs.materializeWorktreePaths', materializeRelayWorktreePaths)
     this.dispatcher.onRequest('fs.readDir', (p) => readRelayDir(p))
     this.dispatcher.onRequest('fs.readFile', (p) => this.readFile(p))
     this.dispatcher.onRequest('fs.readFileStream', (p, c) => this.readFileStream(p, c))

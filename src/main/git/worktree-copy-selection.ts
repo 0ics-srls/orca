@@ -42,7 +42,9 @@ export async function resolveWorktreeCopySelection(
     }
     project = parseWorktreeIncludeFile(await readFile(file, 'utf8'))
   } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    if (
+      !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
+    ) {
       throw error
     }
   }
@@ -59,7 +61,9 @@ export async function resolveWorktreeCopySelection(
       await lstat(join(source, path))
       return path
     } catch (error) {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+      if (
+        !(typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT')
+      ) {
         throw error
       }
       return null

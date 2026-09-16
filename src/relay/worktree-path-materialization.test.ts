@@ -1,7 +1,11 @@
 import { mkdir, mkdtemp, readFile, lstat, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { FsHandler } from './fs-handler'
+import { RelayDispatcher } from './dispatcher'
+import { RelayContext } from './context'
+import { encodeJsonRpcFrame } from './protocol'
 import { runProcess } from '../shared/child-process/run-process'
 import { materializeRelayWorktreePaths } from './worktree-path-materialization'
 
@@ -27,9 +31,34 @@ describe('host-owned worktree path materialization', () => {
     await writeFile(join(source, 'shared', 'marker'), 'shared')
     await writeFile(join(source, 'orca.yaml'), 'worktree:\n  sharedDirectories:\n    - shared\n')
 
-    expect(await materializeRelayWorktreePaths({ source, target, linkedPaths: [] })).toEqual({
-      supported: true
+    const frames: Buffer[] = []
+    const dispatcher = new RelayDispatcher((frame) => {
+      frames.push(Buffer.from(frame))
+      return true
     })
+    const handler = new FsHandler(dispatcher, new RelayContext())
+    try {
+      dispatcher.feed(
+        encodeJsonRpcFrame(
+          {
+            jsonrpc: '2.0',
+            id: 1,
+            method: 'fs.materializeWorktreePaths',
+            params: { source, target, linkedPaths: [] }
+          },
+          1,
+          0
+        )
+      )
+      await vi.waitFor(() => expect(frames).toHaveLength(1))
+      expect(JSON.parse(frames[0].subarray(13).toString())).toMatchObject({
+        id: 1,
+        result: { supported: true }
+      })
+    } finally {
+      handler.dispose()
+      dispatcher.dispose()
+    }
     expect(await readFile(join(target, '.env'), 'utf8')).toBe('host-owned value')
     await writeFile(join(target, '.env'), 'private edit')
     expect(await readFile(join(source, '.env'), 'utf8')).toBe('host-owned value')

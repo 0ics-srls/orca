@@ -1,15 +1,16 @@
+import { SshChannelMultiplexer } from '../ssh/ssh-channel-multiplexer'
 import { describe, expect, it, vi } from 'vitest'
 import { SshFilesystemProvider } from './ssh-filesystem-provider'
 import { materializeSshWorktreePaths } from '../ipc/ssh-worktree-path-materialization'
 
 function providerWithCapabilities(capabilities: Record<string, unknown>) {
-  const mux = {
-    onNotification: vi.fn().mockReturnValue(() => {}),
-    request: vi.fn(async (method: string) =>
+  const mux = new SshChannelMultiplexer({ write: vi.fn(), onData: vi.fn(), onClose: vi.fn() })
+  const request = vi
+    .spyOn(mux, 'request')
+    .mockImplementation(async (method) =>
       method === 'fs.getCapabilities' ? capabilities : { supported: true }
     )
-  }
-  return { mux, provider: new SshFilesystemProvider('test-host', mux as never) }
+  return { mux: { request }, provider: new SshFilesystemProvider('test-host', mux) }
 }
 
 describe('SSH worktree materialization compatibility', () => {

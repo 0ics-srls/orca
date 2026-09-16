@@ -107,19 +107,31 @@ export class SshGitWorktreeProvider extends SshGitReviewHeadProvider {
     return this.worktreeIsCleanCapabilityCache.runWithFallback(
       WORKTREE_IS_CLEAN_CAPABILITY,
       async () => {
-        const result = (await this.mux.request('git.worktreeIsClean', {
+        const result = await this.mux.request('git.worktreeIsClean', {
           worktreePath,
           ...(options.includeUntracked === false ? { includeUntracked: false } : {}),
           ...(options.sharedLinks ? { sharedLinks: options.sharedLinks } : {})
-        })) as { clean: boolean; stdout?: string }
+        })
+        if (
+          !result ||
+          typeof result !== 'object' ||
+          !('clean' in result) ||
+          typeof result.clean !== 'boolean' ||
+          ('stdout' in result && result.stdout !== undefined && typeof result.stdout !== 'string')
+        ) {
+          throw new Error('Invalid host worktree cleanliness response')
+        }
+        const stdout =
+          'stdout' in result && typeof result.stdout === 'string' ? result.stdout : undefined
+        const cleanResult = { clean: result.clean, ...(stdout !== undefined ? { stdout } : {}) }
         if (options.includeUntracked === false) {
-          if (!result.clean && result.stdout === undefined) {
-            return result
+          if (!cleanResult.clean && cleanResult.stdout === undefined) {
+            return cleanResult
           }
-          const trackedStdout = filterUntrackedPorcelainStatus(result.stdout)
+          const trackedStdout = filterUntrackedPorcelainStatus(cleanResult.stdout)
           return { clean: !trackedStdout, ...(trackedStdout ? { stdout: trackedStdout } : {}) }
         }
-        return result
+        return cleanResult
       },
       async () => {
         if (!this.loggedWorktreeIsCleanFallback) {
