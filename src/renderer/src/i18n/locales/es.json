@@ -5820,8 +5820,8 @@
           "8a9b784c60": "desactualizado",
           "d363e5929b": "Comprobando registro de CLI...",
           "6f894ef9c2": "Mostrar en Finder",
-          "cbe55e4d48": "Mostrar en Explorer",
-          "9fd4023db0": "Mostrar en Gestor de archivos",
+          "cbe55e4d48": "Mostrar en el Explorador",
+          "9fd4023db0": "Mostrar en el administrador de archivos",
           "installFailureUnknownReason": "Orca no pudo completar el registro de CLI y no reportó ninguna razón.",
           "installFailureConflictRemedy": "Elimina {{value0}} y regístrate nuevamente si ya no es necesario."
         },
