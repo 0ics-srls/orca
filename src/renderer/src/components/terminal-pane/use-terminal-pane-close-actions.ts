@@ -13,6 +13,7 @@ import {
 } from './terminal-pane-tab-detach'
 import { clearPaneTerminalError } from './terminal-error-accumulation'
 import type { TerminalPaneBindingController } from './use-terminal-pane-layout-bindings'
+import { retireUnboundIpcTerminalPane } from './retire-unbound-ipc-terminal-pane'
 
 export function useTerminalPaneCloseActions(controller: TerminalPaneBindingController) {
   const {
@@ -46,6 +47,13 @@ export function useTerminalPaneCloseActions(controller: TerminalPaneBindingContr
         clearSessionRestoredBannerForPane(paneId)
         const leafId = manager.getLeafId(paneId)
         if (leafId) {
+          retireUnboundIpcTerminalPane({
+            getState: useAppStore.getState,
+            tabId,
+            leafId,
+            transport: paneTransportsRef.current.get(paneId),
+            getTransports: () => paneTransportsRef.current
+          })
           useAppStore.getState().setCacheTimerStartedAt(makePaneKey(tabId, leafId), null)
           useAppStore.getState().dropAgentStatus(makePaneKey(tabId, leafId), { paneRemoved: true })
         }
