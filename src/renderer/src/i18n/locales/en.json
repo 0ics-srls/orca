@@ -17322,12 +17322,7 @@
         "cancel": "Cancel",
         "reason": "Reason",
         "blockedPath": "Blocked path",
-        "askRule": "Ask rule",
-        "plan": {
-          "collapse": "Collapse plan",
-          "expand": "Expand plan",
-          "file": "Plan file"
-        }
+        "askRule": "Ask rule"
       },
       "launchPromptNotDelivered": "Not delivered — check the terminal",
       "structuredSessionCloseFailed": "Could not close this chat session",

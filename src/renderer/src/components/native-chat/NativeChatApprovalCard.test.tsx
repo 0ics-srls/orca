@@ -60,15 +60,19 @@ describe('NativeChatApprovalCard', () => {
     outside.remove()
   })
 
-  it('renders provider context and keeps oversized generic detail in a bounded scroller', () => {
+  it('keeps all oversized provider context in one bounded scroller above the actions', () => {
+    const description = `Read access outside the workspace ${'description '.repeat(400)}`
+    const decisionReason = `The path is outside the allowed root. ${'reason '.repeat(400)}`
+    const blockedPath = `/repo/${'nested/'.repeat(400)}secrets.txt`
+    const ruleContent = `/repo/${'**/'.repeat(400)}`
     render(
       <NativeChatApprovalCard
         approval={{
-          title: 'Claude wants to read secrets.txt',
-          description: 'Read access outside the workspace',
-          decisionReason: 'The path is outside the allowed root.',
-          blockedPath: '/repo/secrets.txt',
-          matchedAskRule: { source: 'project', toolName: 'Read', ruleContent: '/repo/**' },
+          title: 'Claude wants to read secrets.txt '.repeat(400),
+          description,
+          decisionReason,
+          blockedPath,
+          matchedAskRule: { source: 'project', toolName: 'Read', ruleContent },
           detail: 'x'.repeat(4_000),
           options: [{ label: 'Allow', send: 'allow' }]
         }}
@@ -76,13 +80,24 @@ describe('NativeChatApprovalCard', () => {
       />
     )
 
-    expect(screen.getByText('Read access outside the workspace')).toBeTruthy()
-    expect(screen.getByText(/The path is outside the allowed root/)).toBeTruthy()
-    expect(screen.getByText('/repo/secrets.txt')).toBeTruthy()
-    expect(screen.getByText(/\/repo\/\*\*/)).toBeTruthy()
+    const card = document.querySelector('[data-native-chat-approval-card="true"]')
+    const content = document.querySelector('[data-native-chat-approval-content="true"]')
     const detail = document.querySelector('[data-native-chat-approval-detail="true"]')
-    expect(detail?.classList.contains('max-h-72')).toBe(true)
-    expect(detail?.classList.contains('overflow-auto')).toBe(true)
-    expect(detail?.getAttribute('tabindex')).toBe('0')
+    const actions = document.querySelector('[data-native-chat-approval-actions="true"]')
+    const allow = screen.getByRole('button', { name: 'Allow' })
+
+    expect(card?.classList.contains('min-h-0')).toBe(true)
+    expect(card?.classList.contains('overflow-hidden')).toBe(true)
+    expect(content?.classList.contains('max-h-72')).toBe(true)
+    expect(content?.classList.contains('overflow-auto')).toBe(true)
+    expect(content?.getAttribute('tabindex')).toBe('0')
+    expect(content?.textContent).toContain(description.trim())
+    expect(content?.textContent).toContain(decisionReason.trim())
+    expect(content?.textContent).toContain(blockedPath)
+    expect(content?.textContent).toContain(ruleContent)
+    expect(content?.contains(detail)).toBe(true)
+    expect(content?.contains(allow)).toBe(false)
+    expect(actions?.contains(allow)).toBe(true)
+    expect(actions?.classList.contains('shrink-0')).toBe(true)
   })
 })

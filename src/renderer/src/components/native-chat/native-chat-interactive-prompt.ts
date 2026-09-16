@@ -1,4 +1,5 @@
 import { translate } from '@/i18n/i18n'
+import type { AgentJournalApprovalMatchedAskRule } from '../../../../shared/agent-session-journal-types'
 import {
   buildAskAnswerKeys,
   buildCodexAskAnswerKeys,
@@ -35,11 +36,7 @@ export type ChatApproval = {
   description?: string
   decisionReason?: string
   blockedPath?: string
-  matchedAskRule?: {
-    source: string
-    toolName: string
-    ruleContent?: string
-  }
+  matchedAskRule?: AgentJournalApprovalMatchedAskRule
   detail?: string
   options: { label: string; send: string }[]
 }
