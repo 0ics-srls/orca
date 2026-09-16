@@ -7,7 +7,20 @@ if (process.env.ORCA_BACKGROUND_LAUNCH !== '1' || typeof global.gc !== 'function
   throw new Error('Run with ORCA_BACKGROUND_LAUNCH=1 node --expose-gc')
 }
 const root = fileURLToPath(new URL('../../../', import.meta.url))
-const replacement = 'return flattenRetainedSlice(buildCheckLogTail(logText))'
+const replacements = {
+  'check-job-log-tail-slice.ts': [
+    'return flattenRetainedSlice(buildCheckLogTail(logText))',
+    'return buildCheckLogTail(logText)'
+  ],
+  'workspace-session-terminal-buffers.ts': [
+    'return flattenRetainedSlice(\n    clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text\n  )',
+    'return clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text'
+  ],
+  'pty-eager-buffer-clamp.ts': [
+    'data: tail.text.length < data.length ? flattenRetainedSlice(tail.text) : tail.text',
+    'data: tail.text'
+  ]
+}
 const results = []
 const bundles = {}
 const parentChars = 2 * 1024 * 1024
@@ -36,6 +49,8 @@ for (const fixed of [false, true]) {
       contents: `
         export { sliceCheckLogTail } from './src/shared/check-job-log-tail-slice'
         export { gitLabJobTraceToLogExcerpt } from './src/shared/gitlab-job-log-excerpt'
+        export { capTerminalScrollbackSessionBuffer } from './src/shared/workspace-session-terminal-buffers'
+        export { clampUtf8Tail } from './src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp'
       `,
       resolveDir: root,
       loader: 'ts'
@@ -48,27 +63,39 @@ for (const fixed of [false, true]) {
       ? []
       : [
           {
-            name: 'baseline-without-excerpt-copy',
+            name: 'baseline-without-retained-tail-copy',
             setup(builder) {
-              builder.onLoad({ filter: /check-job-log-tail-slice\.ts$/ }, async ({ path }) => {
-                const source = await readFile(path, 'utf8')
-                if (!source.includes(replacement)) {
-                  throw new Error('The collector boundary changed; update the baseline transform')
+              builder.onLoad(
+                {
+                  filter:
+                    /(?:check-job-log-tail-slice|workspace-session-terminal-buffers|pty-eager-buffer-clamp)\.ts$/
+                },
+                async ({ path }) => {
+                  const source = await readFile(path, 'utf8')
+                  const replacement = Object.entries(replacements).find(([name]) =>
+                    path.endsWith(name)
+                  )?.[1]
+                  if (!replacement || !source.includes(replacement[0])) {
+                    throw new Error('The copy boundary changed; update the baseline transform')
+                  }
+                  return {
+                    contents: source.replace(...replacement),
+                    loader: 'ts'
+                  }
                 }
-                return {
-                  contents: source.replace(replacement, 'return buildCheckLogTail(logText)'),
-                  loader: 'ts'
-                }
-              })
+              )
             }
           }
         ]
   })
   const bundle = result.outputFiles[0].text
   bundles[fixed ? 'after' : 'before'] = createHash('sha256').update(bundle).digest('hex')
-  const { sliceCheckLogTail, gitLabJobTraceToLogExcerpt } = await import(
-    `data:text/javascript;base64,${Buffer.from(bundle).toString('base64')}`
-  )
+  const {
+    sliceCheckLogTail,
+    gitLabJobTraceToLogExcerpt,
+    capTerminalScrollbackSessionBuffer,
+    clampUtf8Tail
+  } = await import(`data:text/javascript;base64,${Buffer.from(bundle).toString('base64')}`)
   for (const [kind, makeLog, excerpt] of [
     ['github-long-line', (i) => `${i}:${'x'.repeat(parentChars)}`, sliceCheckLogTail],
     [
@@ -76,7 +103,17 @@ for (const fixed of [false, true]) {
       (i) => `error: ${i}:${'界'.repeat(parentChars)}\n${'recent\n'.repeat(100)}`,
       sliceCheckLogTail
     ],
-    ['gitlab-long-line', (i) => `${i}:${'x'.repeat(parentChars)}`, gitLabJobTraceToLogExcerpt]
+    ['gitlab-long-line', (i) => `${i}:${'x'.repeat(parentChars)}`, gitLabJobTraceToLogExcerpt],
+    [
+      'terminal-session-buffer',
+      (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
+      capTerminalScrollbackSessionBuffer
+    ],
+    [
+      'terminal-eager-buffer',
+      (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
+      (text) => clampUtf8Tail(text, 512 * 1024).data
+    ]
   ]) {
     results.push({ kind, fixed, ...measure(excerpt, makeLog) })
   }
