@@ -38,9 +38,12 @@ const MANUAL_POLICY = { approvalPolicy: 'on-request', sandbox: 'workspace-write'
  * that goes unsaid is the one a resume silently inherits from the other.
  */
 export function codexStructuredPermissionPolicyForSettings(
-  settings: Partial<Pick<GlobalSettings, 'agentDefaultArgs'>> | null | undefined
+  settings:
+    | Partial<Pick<GlobalSettings, 'agentDefaultArgs' | 'terminalWindowsShell'>>
+    | null
+    | undefined
 ): CodexStructuredPermissionPolicy {
-  return resolvedTuiAgentArgsBypassPermissions('codex', settings?.agentDefaultArgs)
+  return resolvedTuiAgentArgsBypassPermissions('codex', settings, process.platform)
     ? BYPASS_POLICY
     : MANUAL_POLICY
 }

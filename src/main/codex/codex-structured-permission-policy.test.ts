@@ -30,6 +30,18 @@ describe('codexStructuredPermissionPolicyForSettings', () => {
     }
   })
 
+  it('keeps quoted mentions and operands after -- in Manual', () => {
+    for (const codex of [
+      '--config "note=--dangerously-bypass-approvals-and-sandbox only as text"',
+      '-- --dangerously-bypass-approvals-and-sandbox'
+    ]) {
+      expect(
+        codexStructuredPermissionPolicyForSettings({ agentDefaultArgs: { codex } }),
+        codex
+      ).toEqual(MANUAL)
+    }
+  })
+
   // Why an explicit policy rather than nothing: the thread-open path spreads this, so nothing
   // means the fields are ABSENT, and absent is not a reset. A session flipped Yolo → Manual
   // resumed with the Yolo thread's `approvalPolicy: never` still in force and escalated with no
