@@ -273,7 +273,11 @@ export function retireClaudeDispatchWaiters(session: ClaudeSession): void {
 
 export async function dispatchClaudeTurn(
   session: ClaudeSession,
-  input: { clientMessageId?: string; body: AgentJournalMessageItem }
+  input: {
+    clientMessageId?: string
+    providerMessageUuid?: string
+    body: AgentJournalMessageItem
+  }
 ): Promise<AgentSessionDispatchOutcome> {
   let content: unknown[]
   try {
@@ -288,7 +292,7 @@ export async function dispatchClaudeTurn(
   // Read the sent content, not the journal blocks: only the mapped trailing prompt decides
   // whether Claude runs a command, so the two cannot disagree about which frame settles this.
   const acceptsResult = claudeDispatchInvokesSlashCommand(content)
-  const sentUuid = randomUUID()
+  const sentUuid = input.providerMessageUuid ?? randomUUID()
   const replay = waitForReplay(
     session,
     acceptsResult,

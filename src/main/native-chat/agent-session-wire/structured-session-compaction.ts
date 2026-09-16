@@ -2,6 +2,8 @@ type PendingCompaction = {
   identity: string
   commandTurnId?: string
   turnId?: string
+  claudeLifecycleExpected: boolean
+  claudeLifecycleObserved: boolean
   error?: string
   compacted: boolean
   interrupted: boolean
@@ -45,6 +47,8 @@ export class StructuredSessionCompaction {
     const pending: PendingCompaction = {
       identity,
       commandTurnId,
+      claudeLifecycleExpected: false,
+      claudeLifecycleObserved: false,
       compacted: false,
       interrupted: false,
       finish: (result) => {
@@ -114,6 +118,20 @@ export class StructuredSessionCompaction {
     return this.ownsTurn(sessionId, turnId) ? this.pending.get(sessionId)?.turnId : turnId
   }
 
+  bindClaudeCommand(
+    sessionId: string,
+    commandTurnId: string,
+    providerCommandId: string,
+    lifecycleExpected: boolean
+  ): void {
+    const pending = this.pending.get(sessionId)
+    if (!pending || pending.commandTurnId !== commandTurnId || pending.turnId !== undefined) {
+      return
+    }
+    pending.turnId = providerCommandId
+    pending.claudeLifecycleExpected = lifecycleExpected
+  }
+
   ended(sessionId: string): void {
     this.pending.get(sessionId)?.finish({ error: 'The provider exited during compaction.' })
   }
@@ -152,6 +170,21 @@ export class StructuredSessionCompaction {
     if (!pending || message.session_id !== pending.identity) {
       return
     }
+    if (message.type === 'command_lifecycle') {
+      if (message.command_uuid !== pending.turnId) {
+        return
+      }
+      pending.claudeLifecycleObserved = true
+      if (message.state === 'cancelled') {
+        pending.finish({ error: 'Compaction was interrupted.' })
+      } else if (message.state === 'completed') {
+        const error =
+          pending.error ??
+          (pending.compacted ? undefined : 'Compaction was not confirmed by the provider.')
+        pending.finish(error ? { error } : {})
+      }
+      return
+    }
     if (message.compact_result === 'failed') {
       pending.error =
         typeof message.compact_error === 'string' ? message.compact_error : 'Compaction failed.'
@@ -160,6 +193,11 @@ export class StructuredSessionCompaction {
       pending.compacted = true
     }
     if (message.type === 'result') {
+      // Lifecycle-capable Claude versions identify the exact queued command. Their result frame
+      // does not, so wait for the matching command terminal instead of consuming a later turn.
+      if (pending.claudeLifecycleExpected || pending.claudeLifecycleObserved) {
+        return
+      }
       if (
         message.is_error === true ||
         (typeof message.subtype === 'string' && message.subtype.startsWith('error'))

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import type { ClaudeSession, ClaudeStructuredSessionEvent } from './claude-structured-session-state'
 import type { StructuredSessionCompaction } from '../native-chat/agent-session-wire/structured-session-compaction'
 import { dispatchClaudeTurn } from './claude-structured-dispatch'
@@ -10,11 +11,19 @@ export function compactClaudeSession(
   compactions: StructuredSessionCompaction,
   input: Parameters<NonNullable<StructuredAgentSessionAdapter['compact']>>[0]
 ): Promise<{ error?: string }> {
+  const providerCommandId = randomUUID()
   return compactions.run(
     input.sessionId,
     session.providerSessionId,
     async () => {
+      compactions.bindClaudeCommand(
+        input.sessionId,
+        input.turnId,
+        providerCommandId,
+        session.capabilities.includes('msg_lifecycle_v1')
+      )
       const result = await dispatchClaudeTurn(session, {
+        providerMessageUuid: providerCommandId,
         body: { kind: 'message', role: 'user', blocks: [{ type: 'text', text: '/compact' }] }
       })
       if (result.state === 'rejected') {
