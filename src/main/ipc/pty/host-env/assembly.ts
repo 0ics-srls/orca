@@ -4,11 +4,9 @@ import {
   isPiCompatibleAgentType
 } from '../../../../shared/pi-agent-kind'
 import { applyTerminalGitCredentialPromptGuard } from '../../terminal-git-credential-guard'
-import { openCodeHookService } from '../../../opencode/hook-service'
-import { mimoCodeHookService } from '../../../mimo/hook-service'
+import { agentOverlayRegistry } from '../../../agent-hooks/overlay-registry'
 import { agentHookServer } from '../../../agent-hooks/server'
 import { wslHookRelayManager } from '../../../agent-hooks/wsl-hook-relay-manager'
-import { piTitlebarExtensionService } from '../../../pi/titlebar-extension-service'
 import { hermesHookService } from '../../../hermes/hook-service'
 import { prependOrcaCliDirToChildPath } from '../../../cli/orca-cli-child-path'
 import { stripLegacyTerminalShimEnv } from '../../../pty/legacy-terminal-shim-dir'
@@ -100,7 +98,7 @@ export function buildPtyHostEnv(
       }
     }
     // Why: OPENCODE_CONFIG_DIR is a single path, not a colon-list; mirror the user's value into an overlay so their plugins and Orca's status plugin coexist. See docs/opencode-config-dir-collision.md.
-    Object.assign(baseEnv, openCodeHookService.buildPtyEnv(id, preexistingOpenCodeConfigDir))
+    Object.assign(baseEnv, agentOverlayRegistry.buildOpenCodeEnv(id, preexistingOpenCodeConfigDir))
     if (baseEnv.OPENCODE_CONFIG_DIR) {
       // Why: ~/.zshrc can re-export the user's default after spawn; shell-ready wrappers restore this PTY-scoped value.
       baseEnv.ORCA_OPENCODE_CONFIG_DIR = baseEnv.OPENCODE_CONFIG_DIR
@@ -113,7 +111,7 @@ export function buildPtyHostEnv(
     }
     if (isMimoLaunchCommand(launchCommandHint)) {
       const preexistingMimocodeHome = resolveMimocodeSourceHome(baseEnv)
-      Object.assign(baseEnv, mimoCodeHookService.buildPtyEnv(id, preexistingMimocodeHome))
+      Object.assign(baseEnv, agentOverlayRegistry.buildMimoCodeEnv(id, preexistingMimocodeHome))
       if (baseEnv.MIMOCODE_HOME) {
         baseEnv.ORCA_MIMOCODE_HOME = baseEnv.MIMOCODE_HOME
         if (preexistingMimocodeHome) {
@@ -176,7 +174,7 @@ export function buildPtyHostEnv(
     // otherwise install only into an existing agent dir (or userData for OMP
     // status so a typed `omp` still gets the shell wrapper extension).
     if (piAgentKind === 'pi') {
-      const piEnv = piTitlebarExtensionService.buildPtyEnv(id, preexistingPiAgentDir, 'pi', {
+      const piEnv = agentOverlayRegistry.buildPiEnv(id, preexistingPiAgentDir, 'pi', {
         materializeDefaultHome: explicitPiAgentKind === 'pi'
       })
       Object.assign(baseEnv, piEnv)
@@ -184,7 +182,7 @@ export function buildPtyHostEnv(
     }
 
     if (shouldPrepareOmpShadow) {
-      const ompEnv = piTitlebarExtensionService.buildPtyEnv(id, preexistingOmpAgentDir, 'omp', {
+      const ompEnv = agentOverlayRegistry.buildPiEnv(id, preexistingOmpAgentDir, 'omp', {
         materializeDefaultHome: explicitPiAgentKind === 'omp'
       })
       Object.assign(baseEnv, ompEnv)
@@ -192,7 +190,7 @@ export function buildPtyHostEnv(
     }
 
     if (piAgentKind === 'prime-agent' && !opts.isWsl) {
-      const primeEnv = piTitlebarExtensionService.buildPtyEnv(
+      const primeEnv = agentOverlayRegistry.buildPiEnv(
         id,
         preexistingPrimeAgentDir,
         'prime-agent',

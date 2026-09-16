@@ -30,7 +30,11 @@ describe('OpenCode status plugin module contract', () => {
     dispose?: () => Promise<void>
   }
   type PluginModule = {
-    default?: { id?: unknown; server?: (ctx: unknown) => Promise<PluginHooks> }
+    default?: {
+      id?: unknown
+      setup?: (ctx: unknown) => Promise<void>
+      server?: (ctx: unknown) => Promise<PluginHooks>
+    }
     OrcaOpenCodeStatusPlugin?: (ctx: unknown) => Promise<PluginHooks>
   }
 
@@ -79,6 +83,7 @@ describe('OpenCode status plugin module contract', () => {
       `orca-opencode-status-${Math.random().toString(36).slice(2)}.mjs`
     )
     writeFileSync(pluginPath, _internals.getOpenCodePluginSource())
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: generated module is intentionally validated through the runtime assertions below.
     return (await import(pathToFileURL(pluginPath).href)) as PluginModule
   }
 
@@ -89,6 +94,33 @@ describe('OpenCode status plugin module contract', () => {
     expect(typeof module.default?.id).toBe('string')
     expect(module.default?.id).toBe('orca-opencode-status')
     expect(module.default?.server).toBeTypeOf('function')
+    expect(module.default?.setup).toBeTypeOf('function')
+  })
+
+  it('accepts V2 data-envelope events through the setup adapter when event streams are available', async () => {
+    process.env.ORCA_PANE_KEY = 'tab-v2:leaf-1'
+    const posts: unknown[] = []
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: test double matches fetch's callable shape for this contract test.
+    globalThis.fetch = vi.fn(async (_input: unknown, init?: { body?: unknown }) => {
+      posts.push(JSON.parse(String(init?.body ?? '{}')))
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: fetch mock only needs the Response.ok field consumed by generated plugin.
+      return { ok: true } as Response
+    }) as unknown as typeof globalThis.fetch
+    const module = await loadPluginModule()
+    let callback: ((value: unknown) => unknown) | undefined
+    await module.default?.setup?.({
+      event: {
+        subscribe: () => (next: (value: unknown) => unknown) => {
+          callback = next
+        }
+      }
+    })
+    await callback?.({
+      type: 'session.status',
+      data: { session_id: 'ses-v2', status: { type: 'busy' } }
+    })
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(posts.some((body) => JSON.stringify(body).includes('SessionBusy'))).toBe(true)
   })
 
   it('rejects the shape OpenCode refuses: a default export without server()', async () => {

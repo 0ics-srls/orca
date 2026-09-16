@@ -1,0 +1,196 @@
+import { existsSync, readFileSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, posix as pathPosix } from 'node:path'
+import type { SFTPWrapper } from 'ssh2'
+import {
+  buildPosixHookPayloadCapture,
+  buildPosixHookSpoolLines,
+  POSIX_HOOK_BOUNDED_JSON_STDIN
+} from '../agent-hooks/hook-stdin-contract'
+import {
+  createManagedCommandMatcher,
+  getSharedManagedScriptPath,
+  wrapPosixHookCommand,
+  writeHooksJson,
+  writeManagedScript
+} from '../agent-hooks/installer-utils'
+import {
+  readTextFileRemote,
+  writeHooksJsonRemote,
+  writeManagedScriptRemote
+} from '../agent-hooks/installer-utils-remote'
+import {
+  applyAuggieManagedHooks,
+  AUGGIE_HOOK_EVENTS,
+  readAuggieManagedEvents,
+  removeAuggieManagedHooks
+} from './hook-config'
+import type { HooksConfig } from '../agent-hooks/installer-utils'
+import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
+
+const SCRIPT_NAME = 'aug-hook.sh'
+const isManagedCommand = createManagedCommandMatcher(SCRIPT_NAME)
+
+export type AuggieInstallState = 'installed' | 'not_installed' | 'partial' | 'error'
+export type AuggieInstallStatus = {
+  agent: 'auggie'
+  state: AuggieInstallState
+  configPath: string
+  managedHooksPresent: boolean
+  detail: string | null
+}
+
+function getAuggieHome(): string {
+  return process.env.AUGMENT_HOME?.trim() || join(homedir(), '.augment')
+}
+
+function getConfigPath(): string {
+  return join(getAuggieHome(), 'settings.json')
+}
+function getScriptPath(): string {
+  return getSharedManagedScriptPath(SCRIPT_NAME)
+}
+
+export function buildAuggieManagedScript(target: 'local' | 'posix' = 'local'): string {
+  void target
+  const endpoint = [
+    'if [ -n "$ORCA_AGENT_HOOK_ENDPOINT" ] && [ -r "$ORCA_AGENT_HOOK_ENDPOINT" ]; then',
+    '  . "$ORCA_AGENT_HOOK_ENDPOINT" 2>/dev/null || :',
+    'fi',
+    'if [ -z "$ORCA_AGENT_HOOK_PORT" ] || [ -z "$ORCA_AGENT_HOOK_TOKEN" ] || [ -z "$ORCA_PANE_KEY" ]; then',
+    '  spool_hook_event',
+    '  exit 0',
+    'fi'
+  ]
+  return [
+    '#!/bin/sh',
+    ...buildPosixHookPayloadCapture('exit', POSIX_HOOK_BOUNDED_JSON_STDIN),
+    ...buildPosixHookSpoolLines('auggie'),
+    ...endpoint,
+    'printf \'%s\' "$payload" | curl -sS -X POST "http://127.0.0.1:${ORCA_AGENT_HOOK_PORT}/hook/aug" \\',
+    '  --connect-timeout 0.5 --max-time 1.5 \\',
+    '  -H "Content-Type: application/x-www-form-urlencoded" \\',
+    '  -H "X-Orca-Agent-Hook-Token: ${ORCA_AGENT_HOOK_TOKEN}" \\',
+    '  --data-urlencode "paneKey=${ORCA_PANE_KEY}" \\',
+    '  --data-urlencode "tabId=${ORCA_TAB_ID}" \\',
+    '  --data-urlencode "launchToken=${ORCA_AGENT_LAUNCH_TOKEN}" \\',
+    '  --data-urlencode "worktreeId=${ORCA_WORKTREE_ID}" \\',
+    '  --data-urlencode "env=${ORCA_AGENT_HOOK_ENV}" \\',
+    '  --data-urlencode "version=${ORCA_AGENT_HOOK_VERSION}" \\',
+    '  --data-urlencode "payload@-" >/dev/null 2>&1 || spool_hook_event',
+    'exit 0',
+    ''
+  ].join('\n')
+}
+
+function readConfig(path: string): HooksConfig | null {
+  if (!existsSync(path)) {
+    return {}
+  }
+  try {
+    const parsed: unknown = JSON.parse(readFileSync(path, 'utf8'))
+    if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+      return null
+    }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: JSON object shape is validated above; hook fields are validated by installer utils.
+    return parsed as HooksConfig
+  } catch {
+    return null
+  }
+}
+
+function status(configPath: string, config: HooksConfig | null): AuggieInstallStatus {
+  if (!config) {
+    return {
+      agent: 'auggie',
+      state: 'error',
+      configPath,
+      managedHooksPresent: false,
+      detail: 'Could not parse Auggie settings.json'
+    }
+  }
+  const present = readAuggieManagedEvents(config, isManagedCommand)
+  const missing = AUGGIE_HOOK_EVENTS.filter((event) => !present.has(event))
+  return {
+    agent: 'auggie',
+    state: missing.length === 0 ? 'installed' : present.size === 0 ? 'not_installed' : 'partial',
+    configPath,
+    managedHooksPresent: present.size > 0,
+    detail:
+      missing.length === 0 || present.size === 0
+        ? null
+        : `Managed hook missing for events: ${missing.join(', ')}`
+  }
+}
+
+export class AuggieHookService {
+  getStatus(): AuggieInstallStatus {
+    const path = getConfigPath()
+    return status(path, readConfig(path))
+  }
+  install(): AuggieInstallStatus {
+    const path = getConfigPath()
+    const config = readConfig(path)
+    if (!config) {
+      return status(path, null)
+    }
+    const command = wrapPosixHookCommand(getScriptPath())
+    writeManagedScript(getScriptPath(), buildAuggieManagedScript())
+    writeHooksJson(path, applyAuggieManagedHooks(config, command))
+    createIntegrationHealthStore(
+      join(homedir(), '.orca', 'agent-hooks', 'integration-health.json')
+    ).recordArtifact({
+      integration: 'auggie',
+      host: 'local',
+      scope: path,
+      bytes: buildAuggieManagedScript(),
+      version: '1'
+    })
+    return this.getStatus()
+  }
+  remove(): AuggieInstallStatus {
+    const path = getConfigPath()
+    const config = readConfig(path)
+    if (!config) {
+      return status(path, null)
+    }
+    writeHooksJson(path, removeAuggieManagedHooks(config))
+    return this.getStatus()
+  }
+  async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AuggieInstallStatus> {
+    const path = pathPosix.join(remoteHome, '.augment', 'settings.json')
+    const script = pathPosix.join(remoteHome, '.orca', 'agent-hooks', SCRIPT_NAME)
+    try {
+      const raw = await readTextFileRemote(sftp, path)
+      const parsed: unknown = raw ? JSON.parse(raw) : {}
+      if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
+        throw new Error('Could not parse remote Auggie settings.json')
+      }
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: remote JSON object shape is checked before hook normalization.
+      const config = parsed as HooksConfig
+      await writeManagedScriptRemote(sftp, script, buildAuggieManagedScript('posix'))
+      await writeHooksJsonRemote(
+        sftp,
+        path,
+        applyAuggieManagedHooks(config, wrapPosixHookCommand(script))
+      )
+      return {
+        agent: 'auggie',
+        state: 'installed',
+        configPath: path,
+        managedHooksPresent: true,
+        detail: null
+      }
+    } catch (error) {
+      return {
+        agent: 'auggie',
+        state: 'error',
+        configPath: path,
+        managedHooksPresent: false,
+        detail: error instanceof Error ? error.message : String(error)
+      }
+    }
+  }
+}
+
+export const auggieHookService = new AuggieHookService()

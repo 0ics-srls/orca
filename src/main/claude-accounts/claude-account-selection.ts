@@ -18,6 +18,15 @@ import {
   type ClaudeAccountSelectionTarget
 } from './runtime-selection'
 
+export type ClaudeAccountSwitchResult =
+  | { state: 'succeeded'; accountId: string | null; previousAccountId: string | null }
+  | {
+      state: 'rolled_back'
+      accountId: string | null
+      previousAccountId: string | null
+      error: string
+    }
+
 export class ClaudeAccountSelection {
   constructor(
     private readonly store: Store,
@@ -112,6 +121,26 @@ export class ClaudeAccountSelection {
       this.restoreSettings(previousSettings)
       await this.runtimeAuth.forceMaterializeCurrentSelectionForRollback()
       throw error
+    }
+  }
+
+  /** Explicit transition result for callers that must render switch progress without
+   * treating a failed persistence/auth sync as a successful account hot-switch. */
+  async selectWithTransition(
+    accountId: string | null,
+    target?: ClaudeAccountSelectionTarget
+  ): Promise<ClaudeAccountSwitchResult> {
+    const previousAccountId = getSelectedClaudeAccountIdForTarget(this.store.getSettings(), target)
+    try {
+      await this.select(accountId, target)
+      return { state: 'succeeded', accountId, previousAccountId }
+    } catch (error) {
+      return {
+        state: 'rolled_back',
+        accountId,
+        previousAccountId,
+        error: error instanceof Error ? error.message : String(error)
+      }
     }
   }
 

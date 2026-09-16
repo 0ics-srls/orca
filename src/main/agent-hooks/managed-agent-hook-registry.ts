@@ -28,6 +28,8 @@ export type ManagedAgentHookInstallOptions = ManagedAgentHookScope & {
   cliVersion?: string
 }
 export type ManagedAgentRemoteInstallOptions = {
+  /** Explicit profile selected for this launch; never infer from a mutable global after launch. */
+  profile?: string
   codexHomeDir?: string
   deferTrustUntilConfigToml?: boolean
   grokHomeDir?: string
@@ -180,7 +182,7 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
       hermesHookService.install({ env: options?.env, launchCommand: options?.launchCommand }),
     installRemote: (sftp, remoteHome, options) =>
       hermesHookService.installRemote(sftp, remoteHome, {
-        profile: options?.hermesProfile
+        profile: options?.profile ?? options?.hermesProfile
       }),
     remove: (scope) => hermesHookService.remove(scope),
     getStatus: (scope) => hermesHookService.getStatus(scope)

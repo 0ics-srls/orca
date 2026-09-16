@@ -21,6 +21,7 @@ import { getStatusPluginDeliverySource } from './status-plugin-delivery-source'
 import { getStatusPluginOwnershipSource } from './status-plugin-ownership-source'
 import { getStatusPluginLifecycleSource } from './status-plugin-lifecycle-source'
 import { getStatusPluginFactorySource } from './status-plugin-factory-source'
+import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
 
 const ORCA_OPENCODE_PLUGIN_FILE = 'orca-opencode-status.js'
 const OPENCODE_LEGACY_HOOKS_DIR = 'opencode-hooks'
@@ -83,6 +84,15 @@ export class OpenCodeHookService {
       if (!configDir) {
         return {}
       }
+      createIntegrationHealthStore(
+        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
+      ).recordArtifact({
+        integration: 'opencode',
+        host: 'local',
+        scope: configDir,
+        bytes: getOpenCodePluginSource(),
+        version: 'v1-v2'
+      })
       return { OPENCODE_CONFIG_DIR: configDir }
     }
 
@@ -97,6 +107,15 @@ export class OpenCodeHookService {
       mkdirSync(overlayDir, { recursive: true })
       this.mirrorUserConfig(existingConfigDir, overlayDir)
       this.writePluginIntoOverlay(overlayDir)
+      createIntegrationHealthStore(
+        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
+      ).recordArtifact({
+        integration: 'opencode',
+        host: 'local',
+        scope: overlayDir,
+        bytes: getOpenCodePluginSource(),
+        version: 'v1-v2'
+      })
     } catch {
       // Why: best-effort — symlink creation needs Windows developer mode (else EPERM) and userData may be read-only; preserve the user's config over dropping their auth/models/keymap.
       return { OPENCODE_CONFIG_DIR: existingConfigDir }
