@@ -1,0 +1,25 @@
+{
+  "node": "v26.6.0",
+  "sources": {
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts": "2d0dc6dcfbfba666a0bdebb229b78706c8a137b8427aa2a8b8bc679f0d43749b",
+    "src/main/native-chat/agent-session-wire/structured-agent-session-task-queue.ts": "31c0de89121c538e168d85a22dbc173904a9baf475c01c6844a7f87821a868a1",
+    "src/main/cli/keyed-promise-queue.ts": "2a0cf5fe7274b906483b324ef1ca9b63bbdcc9c6ff7f4a6857103c58ef4bbf2c"
+  },
+  "inputBytes": 26214400,
+  "before": {
+    "heapUsed": 5498768,
+    "liveMessages": 0
+  },
+  "queued": {
+    "heapUsed": 31964552,
+    "liveMessages": 200
+  },
+  "stopped": {
+    "heapUsed": 31967408,
+    "liveMessages": 200
+  },
+  "drained": {
+    "heapUsed": 5542392,
+    "liveMessages": 0
+  }
+}

@@ -1,0 +1,2143 @@
+{
+  "observedAt": "2026-09-16T08:50:22.192446+00:00",
+  "scope": "Published memory-audit PRs; statuses are a timestamped observation, not a claim that all CI is green.",
+  "pullRequests": [
+    {
+      "number": 20903,
+      "base": "main",
+      "head": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20904,
+      "base": "main",
+      "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20905,
+      "base": "main",
+      "head": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20906,
+      "base": "main",
+      "head": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20908,
+      "base": "main",
+      "head": "04a81de660dba6595c047b152f4da97a660f031c",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20909,
+      "base": "main",
+      "head": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20910,
+      "base": "main",
+      "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20924,
+      "base": "main",
+      "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20941,
+      "base": "main",
+      "head": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20946,
+      "base": "main",
+      "head": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20947,
+      "base": "main",
+      "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20949,
+      "base": "main",
+      "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20955,
+      "base": "main",
+      "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20960,
+      "base": "main",
+      "head": "8d599520e44654a5c28e9930e3070c00d6499931",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20963,
+      "base": "main",
+      "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20965,
+      "base": "main",
+      "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20976,
+      "base": "main",
+      "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20978,
+      "base": "main",
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20980,
+      "base": "main",
+      "head": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20981,
+      "base": "main",
+      "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20986,
+      "base": "main",
+      "head": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "state": "FAILURE"
+    },
+    {
+      "number": 20992,
+      "base": "np-oom-scan-contrast-cache",
+      "head": "ccac7bb908ef74856a9f51973faffc9204f085ff",
+      "state": "SUCCESS"
+    },
+    {
+      "number": 20996,
+      "base": "main",
+      "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21000,
+      "base": "main",
+      "head": "d17bfb4650c32ad6b81ab5f3d9ee4e5a8050b868",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21001,
+      "base": "main",
+      "head": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21002,
+      "base": "main",
+      "head": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21005,
+      "base": "np-oom-scan-pending-split-close",
+      "head": "9effc47aacec86d2be4a44c94249073ac5adda09",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21006,
+      "base": "main",
+      "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "state": "FAILURE"
+    }
+  ],
+  "correctedPatchFailures": [
+    {
+      "prs": [20941, 20986, 20992],
+      "cause": "Regression tests used Reflect.get, forbidden by anti-slop.",
+      "action": "Typed private-field access or a documented pinned-terminal test assertion; focused tests and full local anti-slop pass."
+    },
+    {
+      "prs": [20955, 20981, 20992],
+      "cause": "Generated mobile WebView payload changed without updating its length/hash guard.",
+      "action": "Verified each branch-specific emitted document and updated exact expected values; primary combined engine has its own expectation."
+    },
+    {
+      "prs": [20978, 20992],
+      "cause": "Proof scripts loaded locally bundled code with new Function, rejected by standalone React Doctor.",
+      "action": "Normal isolated CommonJS module loading with cleanup; proof results/source hashes unchanged; standalone React Doctor passes locally."
+    }
+  ],
+  "inheritedMainFailure": {
+    "mainCommit": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "blob": "e95f6cfb4061b1e1faabe77220c65bc4466ffb0d",
+    "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+    "line": 12,
+    "reason": "Unused NativeChatMessage type import after #20898 extracted its typed helper functions. Static analysis and web typecheck fail on the merge tree.",
+    "comparison": "Primary worktree and original topic base retain legitimate type uses; memory patches do not touch this file. A main refresh alone does not fix this regression."
+  },
+  "additionalUntouchedTestFailures": [
+    {
+      "pr": 20906,
+      "job": "https://github.com/stablyai/orca/actions/runs/35070398651/job/104710545230",
+      "path": "src/main/native-chat/transcript-watch.test.ts",
+      "details": "Same-size replacement wait timed out; a later watcher-count assertion saw one remaining watcher. Earlier failing test unsubscribes only after the awaited condition, so a timeout leaves its watcher alive. This PR changes only EphemeralVmsPane.tsx."
+    },
+    {
+      "pr": 20981,
+      "job": "https://github.com/stablyai/orca/actions/runs/35070307981/job/104711654658",
+      "path": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx",
+      "details": "All 1,090 test files passed, but a scheduled React callback raised window-is-not-defined after environment teardown. This PR does not modify that component or fixture; exact asynchronous source not attributed."
+    }
+  ],
+  "failedCheckAnnotations": [
+    {
+      "pr": 20906,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070398651/job/104710543526",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070398651/job/104710543585",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070398651/job/104710545230",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/main/native-chat/transcript-watch.test.ts",
+                "message": "AssertionError: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n \u276f src/main/native-chat/transcript-watch.test.ts:724:47\n\n",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/main/native-chat/transcript-watch.test.ts",
+                "message": "Error: timed out waiting for condition\n \u276f waitFor src/main/native-chat/transcript-watch.test.ts:76:13\n \u276f src/main/native-chat/transcript-watch.test.ts:602:5\n\n",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20908,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070406135/job/104711135956",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070406135/job/104711135952",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20909,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661980",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661987",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20910,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547782",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547780",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20955,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578593",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578631",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20960,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070806813/job/104712022419",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070806813/job/104712022307",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "pr": 20981,
+      "checks": [
+        {
+          "name": "static analysis",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070307981/job/104710384934",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              },
+              {
+                "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                "annotationLevel": "WARNING"
+              }
+            ]
+          }
+        },
+        {
+          "name": "typecheck",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070307981/job/104710384943",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              },
+              {
+                "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                "message": "'NativeChatMessage' is declared but never used.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070307981/job/104711654658",
+          "annotations": {
+            "nodes": [
+              {
+                "path": ".github",
+                "message": "Process completed with exit code 1.",
+                "annotationLevel": "FAILURE"
+              }
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "mobilePayloadVerification": [
+    {
+      "label": "20981-contrast",
+      "branch": "np-oom-scan-contrast-cache",
+      "guardAssertionsPassed": true,
+      "engineSourceSha256": "7fe7ab53c3d047cddba0523f4b816b0d937c9f0cfed7df89cf7adf8d612b9c69",
+      "coreModuleSha256": "2e203f6b798715d68e99c62a8035abba3278fb228d0b27740a031e03228bb04a",
+      "htmlLength": 730693,
+      "htmlSha256": "bdd9b21a9fafc4ab08caa4ba52062965483ebd95be8c3c00ddd65cedb82e3fc5"
+    },
+    {
+      "label": "20955-osc",
+      "branch": "np-oom-scan-osc-link-retirement",
+      "guardAssertionsPassed": true,
+      "engineSourceSha256": "12fadada97e57ad87f19006d09edcdebfe64a925c74f5ae6999a4b2e25e4e8b9",
+      "coreModuleSha256": "0913c97b405a314bf49bf42849256fc5c3ff13a31ff020390bf66c99ebd61951",
+      "htmlLength": 731858,
+      "htmlSha256": "6f285f972758c234339d4c0145b05678a9f7712c77385b048fe495d70f881776"
+    },
+    {
+      "label": "20992-cell",
+      "branch": "np-oom-scan-terminal-cell-retention",
+      "guardAssertionsPassed": true,
+      "engineSourceSha256": "0a86e010677f5ca031c7ae85c2bcd201b16a034cf93bfafa8e548bdfe6c3b06b",
+      "coreModuleSha256": "23c6267d7eeb60735b6264e866d05df9f03ce74eeb3d7619764878c3f8111c8d",
+      "htmlLength": 731258,
+      "htmlSha256": "241cb37743b519d67f53f4f807b17a90d2810b53dcff9fd0113f06a07e486bb4"
+    },
+    {
+      "label": "primary-combined",
+      "branch": "HEAD",
+      "guardAssertionsPassed": true,
+      "engineSourceSha256": "c141b18bd3fe93f7fd03a156783e35967fe5c55257533e50762e39eaaa6c3564",
+      "coreModuleSha256": "23c6267d7eeb60735b6264e866d05df9f03ce74eeb3d7619764878c3f8111c8d",
+      "htmlLength": 732644,
+      "htmlSha256": "942889f8127b6f61e43eaa1c1273d67fcc62c5f58c7a66a7209348815d050d3d"
+    }
+  ],
+  "lifecycleFollowupFailures": [
+    {
+      "number": 20978,
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "failures": [
+        {
+          "name": "static analysis",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830087",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            }
+          ]
+        },
+        {
+          "name": "typecheck",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830254",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "'NativeChatMessage' is declared but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        },
+        {
+          "name": "verify",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104716902040",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 20996,
+      "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "failures": [
+        {
+          "name": "static analysis",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647880",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        },
+        {
+          "name": "typecheck",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104712647912",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "'NativeChatMessage' is declared but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        },
+        {
+          "name": "verify",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070909557/job/104716859397",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "number": 21000,
+      "head": "d17bfb4650c32ad6b81ab5f3d9ee4e5a8050b868",
+      "failures": [
+        {
+          "name": "static analysis",
+          "url": "https://github.com/stablyai/orca/actions/runs/35073056773/job/104718996803",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            },
+            {
+              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+              "annotationLevel": "WARNING"
+            }
+          ]
+        },
+        {
+          "name": "typecheck",
+          "url": "https://github.com/stablyai/orca/actions/runs/35073056773/job/104718996874",
+          "annotations": [
+            {
+              "path": ".github",
+              "message": "Process completed with exit code 1.",
+              "annotationLevel": "FAILURE"
+            },
+            {
+              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+              "message": "'NativeChatMessage' is declared but never used.",
+              "annotationLevel": "FAILURE"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "laterLifecycleFailures": {
+    "observedAt": "2026-09-16T08:51:22.999999+00:00",
+    "summary": "All observed failing leaf checks for 21001, 21002, 21005, and 21006 report the same unused NativeChatMessage import from main #20898. Verify failures aggregate those gates; no patch-specific failure was reported in these annotations. Some remaining checks were still pending.",
+    "pullRequests": {
+      "p21001": {
+        "number": 21001,
+        "headRefOid": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "detect code-relevant changes",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724087292",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test vs non-test LoC",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203136/job/104722578172",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "root directory guard",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724087672",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "static analysis",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228369",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "typecheck",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228459",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "'NativeChatMessage' is declared but never used.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Git compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230540",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Codex index-heal contract",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230047",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "xterm patch sync",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229901",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "shell contracts",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230405",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "prepare test native cache node 24",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229580",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "orcad browser provider",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230672",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "cross-version wire compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230919",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "managed hooks on Node 18",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229890",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228426",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package (windows)",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228497",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / build e2e app",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228636",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / prepare Electron native cache",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724228642",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / ssh browser network route",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724231180",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / e2e ${{ matrix.shard_name }}",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724537046",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / changed e2e specs",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724535964",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / ssh docker watcher isolation",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724535860",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e / localhost SSH terminal and hooks",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724537168",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real IME",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230398",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real WSL terminal",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724230788",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 1/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229510",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 2/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229474",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 3/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229457",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 4/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229514",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 5/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229527",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 6/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229513",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 7/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229498",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 8/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104724229676",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "verify",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35074203101/job/104726450181",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p21002": {
+        "number": 21002,
+        "headRefOid": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "detect code-relevant changes",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721124156",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test vs non-test LoC",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073753926/job/104721121911",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "track-community-pr",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073753956/job/104721121347",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "root directory guard",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721123901",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "static analysis",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271942",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "typecheck",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271888",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "'NativeChatMessage' is declared but never used.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Git compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273288",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Codex index-heal contract",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273806",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "xterm patch sync",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273512",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "shell contracts",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273103",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "prepare test native cache node 24",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273870",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "orcad browser provider",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273432",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "cross-version wire compatibility",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272119",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "managed hooks on Node 18",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273392",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272079",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package (windows)",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721271962",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273159",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real IME",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273550",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real WSL terminal",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721273200",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 1/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272962",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 2/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272884",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 3/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272827",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 4/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272847",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 5/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272843",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 6/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272867",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 7/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272913",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 8/8",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104721272878",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "verify",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073754497/job/104723338437",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "pullfrog",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35073758121",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p21005": {
+        "number": 21005,
+        "headRefOid": "9effc47aacec86d2be4a44c94249073ac5adda09",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "detect code-relevant changes",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104727926629",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test vs non-test LoC",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838368/job/104727925069",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "track-community-pr",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838358/job/104727924492",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "root directory guard",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104727926849",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "static analysis",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728079502",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "typecheck",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728079575",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "'NativeChatMessage' is declared but never used.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Git compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081166",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Codex index-heal contract",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080969",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "xterm patch sync",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080794",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "shell contracts",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081159",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "prepare test native cache node 24",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080782",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "orcad browser provider",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081291",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "cross-version wire compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081330",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "managed hooks on Node 18",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081313",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728079728",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package (windows)",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728079927",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080755",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real IME",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728081402",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real WSL terminal",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080852",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 1/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080485",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 2/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080423",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 3/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080450",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 4/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080487",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 5/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080433",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 6/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080566",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 7/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080477",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 8/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075838728/job/104728080398",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "pullfrog",
+                        "conclusion": null,
+                        "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu3uzgh400050agmkb5j7gdt",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      "p21006": {
+        "number": 21006,
+        "headRefOid": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+        "commits": {
+          "nodes": [
+            {
+              "commit": {
+                "statusCheckRollup": {
+                  "contexts": {
+                    "nodes": [
+                      {
+                        "__typename": "CheckRun",
+                        "name": "detect code-relevant changes",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104727928984",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test vs non-test LoC",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839244/job/104727927387",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "track-community-pr",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839253/job/104727927027",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": ".github",
+                              "message": "Input 'app-id' has been deprecated with message: Use 'client-id' instead.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "root directory guard",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104727929253",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "static analysis",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051579",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                              "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            },
+                            {
+                              "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                              "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                              "annotationLevel": "WARNING"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "typecheck",
+                        "conclusion": "FAILURE",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051501",
+                        "annotations": {
+                          "nodes": [
+                            {
+                              "path": ".github",
+                              "message": "Process completed with exit code 1.",
+                              "annotationLevel": "FAILURE"
+                            },
+                            {
+                              "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                              "message": "'NativeChatMessage' is declared but never used.",
+                              "annotationLevel": "FAILURE"
+                            }
+                          ]
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Git compatibility",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052611",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "Codex index-heal contract",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052744",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "xterm patch sync",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053051",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "shell contracts",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052453",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "prepare test native cache node 24",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053548",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "orcad browser provider",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053440",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "cross-version wire compatibility",
+                        "conclusion": "SUCCESS",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051453",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "managed hooks on Node 18",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053308",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051633",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "package (windows)",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051482",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "e2e",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053538",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real IME",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053145",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "real WSL terminal",
+                        "conclusion": "SKIPPED",
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053550",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 1/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052476",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 2/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052603",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 3/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052461",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 4/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052647",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 5/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052502",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 6/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052487",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 7/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052590",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "test / tests node 24 8/8",
+                        "conclusion": null,
+                        "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052588",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      },
+                      {
+                        "__typename": "CheckRun",
+                        "name": "pullfrog",
+                        "conclusion": null,
+                        "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu3uzgsl00020agm7j796ove",
+                        "annotations": {
+                          "nodes": []
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,97 @@
+{
+  "sourceSha256ByPath": {
+    "src/renderer/src/store/terminals/terminal-tab-creation.ts": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+    "src/renderer/src/store/terminals/terminal-tab-close.ts": "b299252be75b2612fefd753807703863cd3e3984b9a72976b3d861557ce8f9c3",
+    "src/renderer/src/store/terminals/terminal-tab-close-providers.ts": "66f5853c4dc1a14bee7b630a2d868ae3432a8d4870b3e5022a4a7138469d6579",
+    "src/renderer/src/lib/workspace-session-patch.ts": "d9e2a91cd24ba9555fc5c470db41b7ddcdea7c7359501703d587dc41c55a0880",
+    "src/renderer/src/hooks/ipc-events/mobile-terminal-close-ipc-bridge.ts": "5197908bce78e62756d9cc734e2b689d4a2ab5c359bdc6f4bc5a42db80225ee8",
+    "src/renderer/src/runtime/sync-runtime-graph.ts": "62cd791ad0911559de3bacdab7d608180af695a6957bb64f547d38995f9e0ce2",
+    "src/renderer/src/runtime/sync-runtime-graph/graph-publication.ts": "0ab36a4a6da29cf0760a0c51fedcb7aa6968af40ac6c7419a7ae1faef7de139c",
+    "src/main/persistence/loading-store/session-snapshot-operations.ts": "a4853339e8484ea2d7346481027bd232730fc0a1f7f759d0caa1d3920c2b06e6",
+    "src/main/persistence/loading-store/workspace-session-snapshot-publication.ts": "e476dfd4f4e6ab984cbeda73ac6953cc6a4972baf8fe451d8c10c93bd4667d3b",
+    "src/main/runtime/workspace-session-terminal-membership-authority.ts": "265f047f9f0dedfcbff978446c4111860f2f50817a1b59f65633149659ffbd24",
+    "src/main/runtime/mobile-session-terminal-persistence-retirement.ts": "5e736a944a6d78a8e93ffeea18d58bf3d6035f71afcc4b96c1c02a411cf7f31f",
+    "src/main/runtime/orca-runtime-close-mobile-session-tab.ts": "fcf1a22bc7aa72af40593c00008a83695fc3ebd78b76a6707ecca300beaedece",
+    "src/main/runtime/orca-runtime-build-headless-mobile-session-browser-tabs.ts": "9e81df267d2f2dd1a854ed571531c9e81374f1b65000726cea4a5bd85284eaf2",
+    "docs/audits/local-tab-close-rebase/fixture.test.ts": "0e6c9f26dc3f90f3c1e0c6a8847d02e789f2e33d9e81e4c06f79af0f99a18296"
+  },
+  "reportedVersion": "v1.4.192",
+  "versionScope": "Critical create/close/rebase paths inspected in reported tag; executable proof uses current checkout only.",
+  "samples": [
+    {
+      "scenario": "revision-zero",
+      "priorRevision": 0,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": false,
+      "diskHasTab": false,
+      "rehydratedHasTab": false,
+      "closedTombstones": {}
+    },
+    {
+      "scenario": "sibling-exited",
+      "priorRevision": 1,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": true,
+      "diskHasTab": true,
+      "rehydratedHasTab": true,
+      "closedTombstones": {}
+    },
+    {
+      "scenario": "target-retired",
+      "priorRevision": 2,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": false,
+      "diskHasTab": false,
+      "rehydratedHasTab": false,
+      "closedTombstones": {}
+    },
+    {
+      "scenario": "runtime-headless-close",
+      "runtimeResult": {
+        "closed": true
+      },
+      "priorRevision": 1,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": false,
+      "diskHasTab": false,
+      "rehydratedHasTab": false,
+      "closedTombstones": {}
+    },
+    {
+      "scenario": "runtime-renderer-close",
+      "runtimeResult": {
+        "closed": true
+      },
+      "priorRevision": 1,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": false,
+      "diskHasTab": false,
+      "rehydratedHasTab": false,
+      "closedTombstones": {}
+    },
+    {
+      "scenario": "runtime-renderer-late-graph",
+      "runtimeResult": {
+        "closed": true
+      },
+      "priorRevision": 1,
+      "killRequests": 0,
+      "rendererHasTab": false,
+      "patchHasTab": false,
+      "mainHasTab": true,
+      "diskHasTab": true,
+      "rehydratedHasTab": true,
+      "closedTombstones": {}
+    }
+  ]
+}

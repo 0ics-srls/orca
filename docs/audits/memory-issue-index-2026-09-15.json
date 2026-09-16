@@ -506,7 +506,15 @@
       "openTitleMatchAtRecheck": true
     }
   ],
-  "recheckedAtUtc": "2026-09-16T04:44:51.161979+00:00",
+  "recheckedAtUtc": "2026-09-16T07:20:41.163620+00:00",
   "recheckTitleMatches": 57,
-  "recheckHasNextPage": false
+  "recheckHasNextPage": false,
+  "recheckQueryCounts": {
+    "memory": 12,
+    "oom": 5,
+    "leak": 26,
+    "orphan": 19,
+    "RAM": 6,
+    "growth": 3
+  }
 }

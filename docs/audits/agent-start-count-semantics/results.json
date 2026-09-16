@@ -1,0 +1,35 @@
+{
+  "scope": "Actual transition recorder; synthetic hook statuses on one unchanged pane. No process is spawned by these operations.",
+  "source": "src/main/stats/agent-session-transition-recorder.ts",
+  "sourceSha256": "c0d9f8a64ec906c8b45ec8a6666ad3c502db59797a9db084a771bce31ee972c2",
+  "bundleSha256": "c2f13c958c224f814fac8fae07a3611ea41a20c3833aa8f784430fe24a920684",
+  "cases": [
+    {
+      "name": "44 working/done turns on one unchanged pane",
+      "inputEvents": 88,
+      "starts": 44,
+      "stops": 44,
+      "trackedPanesBeforeClear": 1,
+      "uniquePaneKeys": 1,
+      "trackedPanesAfterClear": 0
+    },
+    {
+      "name": "44 identical live working refreshes",
+      "inputEvents": 44,
+      "starts": 1,
+      "stops": 0,
+      "trackedPanesBeforeClear": 1,
+      "uniquePaneKeys": 1,
+      "trackedPanesAfterClear": 0
+    },
+    {
+      "name": "44 replayed working refreshes",
+      "inputEvents": 44,
+      "starts": 0,
+      "stops": 0,
+      "trackedPanesBeforeClear": 1,
+      "uniquePaneKeys": 0,
+      "trackedPanesAfterClear": 0
+    }
+  ]
+}

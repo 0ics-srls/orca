@@ -29,25 +29,25 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25482,
-  "matchingFiles": 7765,
+  "sourceFilesSearched": 25538,
+  "matchingFiles": 7782,
   "counts": {
     "addEventListener": 1554,
     "removeEventListener": 1203,
-    "setTimeout": 3936,
-    "clearTimeout": 1849,
+    "setTimeout": 3938,
+    "clearTimeout": 1850,
     "setInterval": 383,
     "clearInterval": 218,
-    "requestAnimationFrame": 584,
+    "requestAnimationFrame": 586,
     "cancelAnimationFrame": 381,
     "subscribe(": 738,
-    "unsubscribe": 3285,
+    "unsubscribe": 3289,
     "DisposableStore": 7,
     "MutableDisposable": 1,
     "onWillDispose": 1,
     "onDidDispose": 17,
-    "new Map": 7545,
-    "new Set": 7250,
+    "new Map": 7560,
+    "new Set": 7259,
     "Buffer.concat": 274
   },
   "files": {
@@ -987,6 +987,9 @@
     "config/scripts/rebuild-native-deps-windows-process-tree.test.mjs": {
       "setInterval": 1
     },
+    "config/scripts/regenerate-xterm-patches-mobile.test.mjs": {
+      "new Set": 2
+    },
     "config/scripts/regenerate-xterm-patches.mjs": {
       "new Set": 4
     },
@@ -1252,12 +1255,21 @@
       "Buffer.concat": 2,
       "setTimeout": 1
     },
+    "config/scripts/xterm-sourcemap-source.mjs": {
+      "new Set": 1
+    },
     "config/scripts/zustand-selector-fanout-benchmark.mjs": {
       "subscribe(": 1,
       "unsubscribe": 2
     },
+    "docs/audits/agent-start-count-semantics/reproduce.cjs": {
+      "new Set": 1
+    },
     "docs/audits/daemon-stream-retention/reproduce.mjs": {
       "setTimeout": 1
+    },
+    "docs/audits/legacy-import-source-budget/reproduce.mjs": {
+      "new Map": 1
     },
     "docs/audits/refresh-memory-scan.py": {
       "Buffer.concat": 1,
@@ -1277,6 +1289,25 @@
       "setTimeout": 1,
       "subscribe(": 1,
       "unsubscribe": 1
+    },
+    "docs/audits/structured-hold-retention/reproduce.mjs": {
+      "setTimeout": 1
+    },
+    "docs/audits/structured-tui-catchup-queue/reproduce.mjs": {
+      "unsubscribe": 1
+    },
+    "docs/audits/terminal-cell-retention/semantic-review.cjs": {
+      "new Map": 1
+    },
+    "docs/audits/terminal-cell-retention/throughput.cjs": {
+      "new Map": 1
+    },
+    "docs/audits/terminal-contrast-cache-retention/reproduce-dom.mjs": {
+      "new Map": 1,
+      "requestAnimationFrame": 1
+    },
+    "docs/audits/terminal-contrast-cache-retention/reproduce.mjs": {
+      "requestAnimationFrame": 1
     },
     "docs/audits/webgl-empty-glyph-retention/reproduce.mjs": {
       "requestAnimationFrame": 1
@@ -3848,6 +3879,9 @@
     },
     "src/main/ai-vault/session-scanner-scope-discovery.ts": {
       "new Map": 2,
+      "new Set": 2
+    },
+    "src/main/ai-vault/session-scanner-service-cancellation.test.ts": {
       "new Set": 2
     },
     "src/main/ai-vault/session-scanner-service-client-state.ts": {
@@ -7451,6 +7485,11 @@
     "src/main/ipc/pty-startup-barrier-and-listing.test.ts": {
       "new Set": 1
     },
+    "src/main/ipc/pty/daemon-late-exit-test-fixture.ts": {
+      "clearTimeout": 1,
+      "new Set": 1,
+      "unsubscribe": 1
+    },
     "src/main/ipc/pty/delivery/accept.ts": {
       "clearTimeout": 1
     },
@@ -8638,6 +8677,14 @@
       "new Map": 1,
       "new Set": 2,
       "unsubscribe": 2
+    },
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-ownership.test.ts": {
+      "new Set": 1,
+      "unsubscribe": 1
+    },
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown.test.ts": {
+      "new Set": 1,
+      "unsubscribe": 1
     },
     "src/main/native-chat/session-file-resolver-wsl.test.ts": {
       "new Set": 1
@@ -11107,7 +11154,7 @@
       "unsubscribe": 1
     },
     "src/main/runtime/rpc/methods/structured-agent-session-hold.test.ts": {
-      "setTimeout": 3,
+      "setTimeout": 4,
       "unsubscribe": 2
     },
     "src/main/runtime/rpc/methods/structured-agent-session-rpc.test-fixture.ts": {
@@ -20134,6 +20181,15 @@
       "setTimeout": 4,
       "unsubscribe": 2
     },
+    "src/renderer/src/components/terminal-pane/pending-runtime-pane-close.test.ts": {
+      "new Map": 1
+    },
+    "src/renderer/src/components/terminal-pane/pending-split-close-test-fixture.ts": {
+      "new Map": 10
+    },
+    "src/renderer/src/components/terminal-pane/pending-split-close.test.ts": {
+      "new Map": 1
+    },
     "src/renderer/src/components/terminal-pane/pty-buffer-serializer.ts": {
       "new Map": 2
     },
@@ -27167,7 +27223,6 @@
       "setTimeout": 1
     },
     "tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts": {
-      "new Map": 1,
       "new Set": 1,
       "unsubscribe": 2
     },
