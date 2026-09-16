@@ -115,7 +115,7 @@ it('declines a behind cursor in beginRead before it ever reaches the store', () 
     indexedFile: () => ({ byteOffset: 100, mtimeMs: 1, sizeBytes: 1 }),
     beginWrite: (_candidate: unknown, _mode: unknown, previousByteOffset: number) => {
       attempted.push(previousByteOffset)
-      return { add: () => undefined, commit: () => true }
+      return { add: () => undefined, commit: () => true, discard: () => undefined }
     },
     setFileState: () => undefined
   } as unknown as SessionSearchStore
@@ -151,7 +151,7 @@ it("hands the read's identity accessor to the store", () => {
       identity: unknown
     ) => {
       captured.push(identity)
-      return { add: () => undefined, commit: () => true }
+      return { add: () => undefined, commit: () => true, discard: () => undefined }
     },
     setFileState: () => undefined
   } as unknown as SessionSearchStore
