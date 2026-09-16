@@ -1,0 +1,46 @@
+{
+  "comparison": "Actual structured host teardown, record store, journal, and transcript watcher; baseline reverses catchup/forward/restart behavior through a temporary Vite transform",
+  "sourceHashes": {
+    "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts": {
+      "before": "c9bb6fbf8ca3fc3fad815f35a21c73e392dd6be267335984deb0b5c9319210f1",
+      "after": "89e1b6769dafde03be5de24f8a2e08b48a490527cab7568b9a5ec4a97a0593ea"
+    },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts": {
+      "before": "8f2dc4f31fd2f96f3e9393afcc0826b712591c5d3bfa80965113e63be65f69ab",
+      "after": "03b76c1e3ba2389154f3fba4971fc17fbf3ba4ccde471f309e80f67134091d90"
+    },
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts": {
+      "before": "36085d52e44152c7d8906ac2691242e8e31e54511fc908510c0d3aee10615973",
+      "after": "2d0dc6dcfbfba666a0bdebb229b78706c8a137b8427aa2a8b8bc679f0d43749b"
+    },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-types.ts": {
+      "current": "225283eaf80f976fcad35554b330ad24e81cd4c1dd275996dc471c53de46ba67"
+    },
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown.test.ts": {
+      "current": "cc8be5277db229dcf52d1c72bfddfc86b2f07fd2f77eba3f11af01d1877f2604"
+    },
+    "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown-test-fixture.ts": {
+      "current": "d186aeab78e31f0aa493f92d5f472708e81791670e82637e37481ebca9918756"
+    }
+  },
+  "before": {
+    "exitCode": 1,
+    "passed": 1,
+    "failed": 6,
+    "failedCases": [
+      "cancels transcript acquisition during host teardown at resolve",
+      "cancels transcript acquisition during host teardown at subscribe",
+      "cancels transcript acquisition during host teardown at initial-ready",
+      "cancels transcript acquisition during host teardown at before-prepare",
+      "cancels transcript acquisition during host teardown at after-prepare",
+      "cancels recovered TUI catchup without relabeling the live owner or retrying"
+    ]
+  },
+  "after": {
+    "exitCode": 0,
+    "passed": 7,
+    "failed": 0,
+    "failedCases": []
+  },
+  "passed": true
+}

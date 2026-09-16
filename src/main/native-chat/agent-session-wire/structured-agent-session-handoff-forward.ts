@@ -12,7 +12,10 @@ import type {
   StructuredAgentSessionHandoffFlowContext,
   StructuredTuiOwner
 } from './structured-agent-session-handoff-types'
-import { StructuredTuiLaunchCleanupError } from './structured-agent-session-handoff-types'
+import {
+  StructuredTuiCatchupStoppedError,
+  StructuredTuiLaunchCleanupError
+} from './structured-agent-session-handoff-types'
 
 export async function handoffStructuredSessionToTui(
   context: StructuredAgentSessionHandoffFlowContext,
@@ -75,7 +78,8 @@ export async function handoffStructuredSessionToTui(
   let owner: StructuredTuiOwner | null = null
   let processIdentityCommitted = false
   try {
-    await deps.prepareTuiHistoryCatchup?.(sessionId, record.lease.runtimeFence)
+    const prepared = await deps.prepareTuiHistoryCatchup?.(sessionId, record.lease.runtimeFence)
+    prepared?.throwIfAborted()
     owner = await deps.transport!.launchTui({
       record,
       fence: record.lease.runtimeFence,
@@ -107,6 +111,16 @@ export async function handoffStructuredSessionToTui(
     })
   } catch (error) {
     deps.stopTuiHistoryCatchup?.(sessionId)
+    if (!owner && !processIdentityCommitted && error instanceof StructuredTuiCatchupStoppedError) {
+      await abandonStoredAgentSessionHandoffAttempt(deps.store, {
+        sessionId,
+        expectedFence: record.lease.runtimeFence,
+        operationId,
+        recoverableRuntimeKind: 'native',
+        now: deps.now()
+      })
+      throw error
+    }
     if (!owner && error instanceof StructuredTuiLaunchCleanupError) {
       await markStructuredHandoffManualRecovery(context, sessionId, operationId)
       throw error
