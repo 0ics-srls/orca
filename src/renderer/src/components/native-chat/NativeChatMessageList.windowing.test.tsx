@@ -9,7 +9,6 @@ import type {
   AgentJournalRenderItem
 } from '../../../../shared/agent-session-journal-types'
 import { projectStructuredItemsToNativeChat } from '../../../../shared/structured-agent-session-projection'
-import type { NativeChatMessage } from '../../../../shared/native-chat-types'
 import { NativeChatMessageList } from './NativeChatMessageList'
 import {
   NATIVE_CHAT_BOTTOM_THRESHOLD_PX,
@@ -256,7 +255,7 @@ describe('transcript follow ownership across growth and appends', () => {
 
   const transcript = Array.from({ length: TRANSCRIPT_LENGTH }, (_, index) => marker(index))
 
-  function appendedTranscript(count: number): NativeChatMessage[] {
+  function appendedTranscript(count: number) {
     return [
       ...transcript,
       ...Array.from({ length: count }, (_, index) => marker(TRANSCRIPT_LENGTH + index))
@@ -267,7 +266,7 @@ describe('transcript follow ownership across growth and appends', () => {
     return Math.max(ROW_PX, (1 + step * LINES_PER_STEP) * STREAM_LINE_PX)
   }
 
-  function transcriptAt(step: number): NativeChatMessage[] {
+  function transcriptAt(step: number) {
     const lines = Array.from(
       { length: step * LINES_PER_STEP },
       (_, index) => `streamed line ${index}`
