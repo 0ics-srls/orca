@@ -93,6 +93,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Verify mobile xterm patch matches the pinned upstream build
+        run: node ../config/scripts/regenerate-xterm-patches-mobile.mjs --check
+
       - name: Typecheck
         run: pnpm typecheck
 

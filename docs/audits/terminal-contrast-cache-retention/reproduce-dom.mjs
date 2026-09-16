@@ -2,19 +2,26 @@ import assert from 'node:assert/strict'
 import { createHash } from 'node:crypto'
 import { readFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { chromium } from 'playwright'
 
 if (process.env.ORCA_BACKGROUND_LAUNCH !== '1') {
   throw new Error('Run with ORCA_BACKGROUND_LAUNCH=1')
 }
 
+const mobile = process.env.ORCA_AUDIT_MOBILE === '1'
 const installed = resolve('node_modules/@xterm/xterm/lib/xterm.js')
-const bundles = [
-  ['after', installed],
-  ['after', installed.replace(/\.js$/, '.mjs')]
-]
-if (process.env.ORCA_AUDIT_XTERM_BASELINE) {
-  bundles.unshift(['before', resolve(process.env.ORCA_AUDIT_XTERM_BASELINE)])
+const bundles = mobile
+  ? [['after', resolve('mobile/src/terminal/terminal-webview-engine.generated.ts')]]
+  : [
+      ['after', installed],
+      ['after', installed.replace(/\.js$/, '.mjs')]
+    ]
+const baseline = mobile
+  ? process.env.ORCA_AUDIT_MOBILE_BASELINE
+  : process.env.ORCA_AUDIT_XTERM_BASELINE
+if (baseline) {
+  bundles.unshift(['before', resolve(baseline)])
 }
 const browser = await chromium.launch({
   executablePath: process.env.ORCA_AUDIT_CHROMIUM,
@@ -27,7 +34,9 @@ let pagesOpened = 0
 let pagesClosed = 0
 try {
   for (const [phase, bundle] of bundles) {
-    const source = await readFile(bundle, 'utf8')
+    const source = mobile
+      ? (await import(pathToFileURL(bundle).href)).XTERM_ENGINE_JS
+      : await readFile(bundle, 'utf8')
     const sha256 = createHash('sha256').update(source).digest('hex')
     for (const theme of ['dark', 'light']) {
       for (const mode of ['normal', 'dim']) {
@@ -43,7 +52,7 @@ try {
                 },
                 `data:text/javascript;base64,${Buffer.from(source).toString('base64')}`
               )
-            : page.addScriptTag({ path: bundle }))
+            : page.addScriptTag({ content: source }))
           const initial = await page.evaluate(
             async ({ theme, mode }) => {
               const terminal = new Terminal({
@@ -181,7 +190,7 @@ try {
           }
           results.push({
             phase,
-            format: bundle.endsWith('.mjs') ? 'esm' : 'cjs',
+            format: mobile ? 'mobile-webview' : bundle.endsWith('.mjs') ? 'esm' : 'cjs',
             theme,
             mode,
             sha256,
@@ -212,6 +221,7 @@ console.log(
       browser: browserVersion,
       headless: true,
       renderer: 'DOM',
+      mobile,
       pagesOpened,
       pagesClosed,
       browserClosed: !browser.isConnected(),
