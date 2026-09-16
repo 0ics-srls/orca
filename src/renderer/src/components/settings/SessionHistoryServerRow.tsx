@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { PublicKnownRuntimeEnvironment } from '../../../../shared/runtime-environments'
 import { toRuntimeExecutionHostId } from '../../../../shared/execution-host'
-import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { useMountedRef } from '@/hooks/useMountedRef'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
@@ -39,7 +38,6 @@ export function SessionHistoryServerRow({
   onUserToggle?: (environmentId: string, enabled: boolean) => void
 }): React.JSX.Element {
   const hostId = toRuntimeExecutionHostId(environment.id)
-  const confirm = useConfirmationDialog()
   const mounted = useMountedRef()
   const openSettingsPage = useAppStore((state) => state.openSettingsPage)
   const openSettingsTarget = useAppStore((state) => state.openSettingsTarget)
@@ -94,37 +92,9 @@ export function SessionHistoryServerRow({
     }
   }
 
-  async function toggle(): Promise<void> {
+  function toggle(): Promise<void> {
     onUserToggle?.(environment.id, !enabled)
-    if (enabled) {
-      await setEnabled(false)
-      return
-    }
-    setBusy(true)
-    let accepted = false
-    try {
-      accepted = await confirm({
-        title: translate(
-          'sessionHistory.settings.serverEnableTitle',
-          'Turn on session search on {{host}}?',
-          { host: environment.name }
-        ),
-        description: translate(
-          'sessionHistory.settings.serverEnableConsent',
-          'Orca will make the agent conversations and tool output on {{host}} searchable from Agent Session History. The searchable copy stays on {{host}}; results are sent to this computer when you search. The first pass runs in the background and can take a few minutes.',
-          { host: environment.name }
-        ),
-        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Turn on')
-      })
-    } finally {
-      if (mounted.current) {
-        setBusy(false)
-      }
-    }
-    if (!accepted || !mounted.current) {
-      return
-    }
-    await setEnabled(true)
+    return setEnabled(!enabled)
   }
 
   function openServerSettings(): void {

@@ -11,7 +11,6 @@ import {
 } from '../../../../shared/execution-host'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
 import { isWebClientLocation } from '@/lib/web-client-location'
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
@@ -48,7 +47,6 @@ export function SessionHistorySettingsPane({
   const policy = resolveAiVaultSearchSettings(settings)
   const autoEnableNewComputers = settings.aiVaultSearchAutoEnableNewComputers === true
   const isWebClient = isWebClientLocation()
-  const confirm = useConfirmationDialog()
   const closeSettingsPage = useAppStore((state) => state.closeSettingsPage)
   const showAiVaultSearch = useAppStore((state) => state.showAiVaultSearch)
   const [busy, setBusy] = useState(false)
@@ -128,31 +126,8 @@ export function SessionHistorySettingsPane({
     }
   }
 
-  async function toggleEnabled(): Promise<void> {
-    if (policy.enabled) {
-      await save({ enabled: false })
-      return
-    }
-    setBusy(true)
-    let accepted = false
-    try {
-      accepted = await confirm({
-        title: translate('sessionHistory.settings.enableTitle', 'Turn on session search?'),
-        description: translate(
-          'sessionHistory.settings.enableConsent',
-          'Orca will make your past agent conversations and tool output on this computer searchable from Agent Session History. It stays on this computer. The first pass runs in the background and can take a few minutes.'
-        ),
-        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Turn on')
-      })
-    } finally {
-      if (mounted.current) {
-        setBusy(false)
-      }
-    }
-    if (!accepted || !mounted.current) {
-      return
-    }
-    await save({ enabled: true })
+  function toggleEnabled(): Promise<void> {
+    return save({ enabled: !policy.enabled })
   }
 
   /** A hand-off the user made themselves overrides the standing "turn on new computers" consent. */
@@ -171,28 +146,6 @@ export function SessionHistorySettingsPane({
   }
 
   async function turnOnEveryComputer(): Promise<void> {
-    setBusy(true)
-    let accepted = false
-    try {
-      accepted = await confirm({
-        title: translate(
-          'sessionHistory.settings.enableAllTitle',
-          'Turn on session search on every computer?'
-        ),
-        description: translate(
-          'sessionHistory.settings.enableAllConsent',
-          'Orca will make the agent conversations and tool output on this computer and on every reachable paired server searchable from Agent Session History. Each searchable copy stays on the computer that made it; results are sent here when you search. Offline servers and servers that need an update are skipped. The first pass runs in the background and can take a few minutes.'
-        ),
-        confirmLabel: translate('sessionHistory.settings.enableConfirm', 'Turn on')
-      })
-    } finally {
-      if (mounted.current) {
-        setBusy(false)
-      }
-    }
-    if (!accepted || !mounted.current) {
-      return
-    }
     setBusy(true)
     setError(null)
     let failed = false
