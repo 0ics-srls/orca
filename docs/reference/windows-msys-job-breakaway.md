@@ -75,12 +75,13 @@ to retry for it. That needs a helper that calls `CreateProcess` with the flag;
 
 ## A stale addon looks exactly like the bug
 
-`config/scripts/node-pty-job-ownership.cjs` asserts only that `terminateJob`,
-`listJobProcessIds` and `assignCurrentProcessToJob` are exported. All three
-predate #19068, so a `conpty.node` built before it passes every gate,
-`isPtyJobOwnershipAvailable()` returns true, `windows-pty-job.win32.test.ts`
-passes 6/6 — and `windows-msys-job.win32.test.ts` fails with a two-pid job list
-that reads as a source defect rather than a build-freshness one.
+`config/scripts/node-pty-job-ownership.cjs` used to assert only that
+`terminateJob`, `listJobProcessIds` and `assignCurrentProcessToJob` are
+exported. All three predate #19068, so a `conpty.node` built before it passed
+every gate: `isPtyJobOwnershipAvailable()` returned true and
+`windows-pty-job.win32.test.ts` passed 6/6, while
+`windows-msys-job.win32.test.ts` failed with a two-pid job list that read as a
+source defect rather than a build-freshness one.
 
 When that test fails, check the binary before the code:
 
