@@ -1,0 +1,140 @@
+import { describe, expect, it } from 'vitest'
+import { Terminal as HeadlessTerminal } from '@xterm/headless'
+import { Terminal as RendererTerminal } from '@xterm/xterm'
+import {
+  createTerminalOscLinkRetirement,
+  TerminalOscLinkRetirementAddon
+} from './terminal-osc-link-retirement'
+
+const URL = 'https://example.test/link'
+const OPEN = `\x1b]8;;${URL}\x1b\\`
+const CLOSE = '\x1b]8;;\x1b\\'
+const REDRAW = `\r\x1b[2K${OPEN}x${CLOSE}`
+
+function record(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function linkRegistry(terminal: unknown): Map<unknown, unknown> {
+  if (
+    !record(terminal) ||
+    !record(terminal._core) ||
+    !record(terminal._core._oscLinkService) ||
+    !(terminal._core._oscLinkService._dataByLinkId instanceof Map)
+  ) {
+    throw new Error('Installed xterm link registry changed')
+  }
+  return terminal._core._oscLinkService._dataByLinkId
+}
+
+function cellUri(
+  terminal: HeadlessTerminal | RendererTerminal,
+  buffer: 'normal' | 'alternate',
+  row: number,
+  column: number
+): unknown {
+  const cell = terminal.buffer[buffer].getLine(row)?.getCell(column)
+  if (!record(cell) || !record(cell.extended)) {
+    return undefined
+  }
+  const entry = linkRegistry(terminal).get(cell.extended.urlId)
+  return record(entry) && record(entry.data) ? entry.data.uri : undefined
+}
+
+function write(terminal: HeadlessTerminal | RendererTerminal, data: string): Promise<void> {
+  return new Promise((resolve) => terminal.write(data, resolve))
+}
+
+describe.each([
+  ['headless', HeadlessTerminal],
+  ['renderer', RendererTerminal]
+] as const)('%s OSC link retirement', (_kind, Terminal) => {
+  function createTerminal(): HeadlessTerminal | RendererTerminal {
+    return new Terminal({
+      cols: 80,
+      rows: 24,
+      scrollback: 1500,
+      allowProposedApi: true,
+      logLevel: 'off'
+    })
+  }
+
+  it.each(['overwrite', 'erase-line', 'alternate'] as const)(
+    'bounds %s redraws without losing the live link or unrelated markers',
+    async (mode) => {
+      const terminal = createTerminal()
+      const retirement = createTerminalOscLinkRetirement(terminal)
+      try {
+        if (mode === 'alternate') {
+          await write(terminal, '\x1b[?1049h')
+        }
+        const marker = terminal.registerMarker(0)
+        const redraw = mode === 'overwrite' ? `\r${OPEN}x${CLOSE}` : REDRAW
+        for (let batch = 0; batch < 16; batch++) {
+          await write(terminal, redraw.repeat(256))
+          retirement()
+        }
+        expect(terminal.buffer.active.length).toBe(24)
+        expect(linkRegistry(terminal).size).toBeLessThanOrEqual(1024)
+        expect(terminal.markers.length).toBeLessThanOrEqual(1025)
+        expect(marker?.isDisposed).toBe(false)
+        expect(cellUri(terminal, mode === 'alternate' ? 'alternate' : 'normal', 0, 0)).toBe(URL)
+      } finally {
+        terminal.dispose()
+      }
+    }
+  )
+
+  it('keeps every scrollback link while the alternate screen is repainted', async () => {
+    const terminal = createTerminal()
+    terminal.loadAddon(new TerminalOscLinkRetirementAddon())
+    try {
+      for (let row = 0; row < 1100; row++) {
+        await write(terminal, `\x1b]8;id=row-${row};https://example.test/${row}\x1b\\x${CLOSE}\r\n`)
+      }
+      await write(terminal, '\x1b[?1049h\x1b[H')
+      for (let batch = 0; batch < 16; batch++) {
+        await write(terminal, REDRAW.repeat(256))
+      }
+      expect(linkRegistry(terminal).size).toBeLessThanOrEqual(1100 + 1024)
+      for (let row = 0; row < 1100; row++) {
+        expect(cellUri(terminal, 'normal', row, 0)).toBe(`https://example.test/${row}`)
+      }
+      expect(cellUri(terminal, 'alternate', 0, 0)).toBe(URL)
+    } finally {
+      terminal.dispose()
+    }
+  })
+
+  it('keeps an open link whose text arrives in a later write', async () => {
+    const terminal = createTerminal()
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    try {
+      await write(terminal, `${REDRAW.repeat(1024)}\r\x1b[2K\x1b]8;;${URL}/pending\x1b\\`)
+      expect(retirement()).toBeGreaterThan(1000)
+      await write(terminal, `pending${CLOSE}`)
+      expect(cellUri(terminal, 'normal', 0, 0)).toBe(`${URL}/pending`)
+    } finally {
+      terminal.dispose()
+    }
+  })
+
+  it('preserves partially overwritten and reflowed links, then permits reuse of a retired explicit id', async () => {
+    const terminal = createTerminal()
+    const retirement = createTerminalOscLinkRetirement(terminal)
+    try {
+      await write(terminal, `\x1b]8;id=stable;${URL}/kept\x1b\\${'x'.repeat(160)}${CLOSE}\r `)
+      terminal.resize(40, 24)
+      await write(terminal, `\x1b[10;1H${REDRAW.repeat(1024)}`)
+      retirement()
+      expect(cellUri(terminal, 'normal', 0, 0)).toBe(`${URL}/kept`)
+      await write(terminal, `\x1b[10;1H\x1b]8;id=retired;${URL}/old\x1b\\x${CLOSE}`)
+      await write(terminal, REDRAW.repeat(2048))
+      retirement()
+      await write(terminal, `\r\x1b]8;id=retired;${URL}/old\x1b\\x${CLOSE}`)
+      expect(cellUri(terminal, 'normal', 9, 0)).toBe(`${URL}/old`)
+    } finally {
+      terminal.dispose()
+    }
+  })
+})
