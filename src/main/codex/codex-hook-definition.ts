@@ -1,8 +1,9 @@
 import { join } from 'node:path'
 import {
   getSharedManagedScriptPath,
+  buildWindowsHookPowerShellCommand,
   wrapPosixHookCommand,
-  wrapWindowsCmdHookCommand,
+  WINDOWS_CMD_SAFE_PATH,
   writeHooksJson,
   type HookDefinition
 } from '../agent-hooks/installer-utils'
@@ -70,9 +71,13 @@ export function getManagedScriptPath(): string {
 }
 
 export function getManagedCommand(scriptPath: string): string {
-  return process.platform === 'win32'
-    ? wrapWindowsCmdHookCommand(scriptPath)
-    : wrapPosixHookCommand(scriptPath)
+  if (process.platform !== 'win32') {
+    return wrapPosixHookCommand(scriptPath)
+  }
+  // Codex already hosts Windows hooks in PowerShell; a second interpreter only adds startup cost.
+  return WINDOWS_CMD_SAFE_PATH.test(scriptPath)
+    ? scriptPath
+    : buildWindowsHookPowerShellCommand(scriptPath)
 }
 
 export type CodexManagedHookInstallMaterial = {
