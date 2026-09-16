@@ -229,6 +229,9 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
         store,
         resolveWorkspacePath: deps.resolveWorkspacePath,
         resolveEnvironment: resolveCodexEnvironment,
+        ...(deps.resolveCodexPermissionArgs
+          ? { resolvePermissionArgs: deps.resolveCodexPermissionArgs }
+          : {}),
         ...(deps.resolveCodexCommand ? { resolveCommand: deps.resolveCodexCommand } : {})
       }),
       ...(deps.openCodexConnection ? { openConnection: deps.openCodexConnection } : {}),
@@ -266,6 +269,9 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
         ? { resolveClaudeLaunchEnv: deps.resolveClaudeLaunchEnv }
         : {}),
       resolveClaudeAuthPolicy: deps.resolveClaudeAuthPolicy,
+      ...(deps.resolveClaudePermissionMode
+        ? { resolveClaudePermissionMode: deps.resolveClaudePermissionMode }
+        : {}),
       ...(deps.getClaudeManagedAccountGateSettings
         ? {
             readClaudeManagedAccountGate: () =>
