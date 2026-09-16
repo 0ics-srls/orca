@@ -30,7 +30,7 @@ import type {
   AgentLaunchResult,
   AgentLaunchTarget
 } from '../../shared/agent-launch-intent'
-import { withoutReservedLaunchCreateFields } from '../../shared/agent-launch-intent'
+import { withoutReservedAgentCreateFields } from '../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { isDefinitiveAgentSessionCreateRefusal } from '../../shared/agent-session-definitive-refusal'
@@ -113,7 +113,6 @@ export async function executeAgentLaunch(
     return {
       outcome: { kind: 'terminal', handle: intent.reuseTerminal.handle },
       worktreeId: existingWorktreeId(intent.target),
-      disposition: 'created',
       receipt: preflight,
       ...promptReceipt(intent)
     }
@@ -125,7 +124,6 @@ export async function executeAgentLaunch(
     return {
       outcome: { kind: 'terminal', handle: placed.startupTerminalHandle },
       worktreeId: placed.worktreeId,
-      disposition: 'created',
       receipt: preflight,
       ...promptReceipt(intent)
     }
@@ -161,7 +159,6 @@ export async function executeAgentLaunch(
   return {
     outcome: created.outcome,
     worktreeId: placed.worktreeId,
-    disposition: 'created',
     receipt: settled,
     ...promptReceipt(intent),
     ...(created.warning ? { warning: created.warning } : {})
@@ -196,7 +193,7 @@ async function resolveWorkspace(
   return workspaces.createWorktree({
     // A caller migrating from `worktree.create` passes its existing params; a stale `startupAgent`
     // in there would re-create the agent-first path this executor exists to replace.
-    create: withoutReservedLaunchCreateFields(intent.target.create),
+    create: withoutReservedAgentCreateFields(intent.target.create),
     startupAgent: preflight.mode === 'structured' ? undefined : intent.agent
   })
 }

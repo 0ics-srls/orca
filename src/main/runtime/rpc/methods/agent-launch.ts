@@ -23,7 +23,7 @@ import { agentLaunchSurfaceFactory } from './agent-launch-surfaces'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
 
 /**
- * Advertising `agent.launch.v1` is a client's statement that it understands EITHER outcome — a
+ * Advertising `agent.launch.v2` is a client's statement that it understands EITHER outcome — a
  * structured session it can open, or a terminal agent. A client that can only render one of the
  * two must keep using the surface-specific methods instead. In-process callers are the same build
  * as the host and negotiate nothing.
@@ -61,7 +61,6 @@ async function agentLaunchIntent(
   return {
     agent: params.agent,
     target: await agentLaunchTarget(params, runtime),
-    clientOperationId: params.clientOperationId,
     ...(params.prompt ? { prompt: params.prompt } : {}),
     ...(params.sessionOptions ? { sessionOptions: params.sessionOptions } : {}),
     ...(params.reuseTerminal ? { reuseTerminal: params.reuseTerminal } : {})
@@ -104,15 +103,12 @@ export const AGENT_LAUNCH_METHODS = [
           surfaces: agentLaunchSurfaceFactory(context),
           workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
         })
-      // Keyed on the attempt id the contract requires, not on the create payload's own
-      // `clientMutationId`: that one is optional, so keying on it left a launch that omitted it
-      // with no idempotency at all. A launch into an existing workspace is not deduped here —
-      // `dedupeWorktreeCreate` is scoped by repo selector, and closing that half is the ledger's
-      // job, not a second cache beside this one.
-      if (params.target.kind === 'create-worktree') {
+      // Preserve the existing bounded create guard. Complete launch replay needs durable operation
+      // identity, caller scope and a host-computed payload fingerprint; this cache has none of them.
+      if (params.target.kind === 'create-worktree' && params.target.create.clientMutationId) {
         return context.runtime.dedupeWorktreeCreate(
           params.target.create.repo,
-          `agent.launch:${params.clientOperationId}`,
+          `agent.launch:${params.target.create.clientMutationId}`,
           execute
         )
       }

@@ -249,7 +249,8 @@ export const NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY = 'notifications.remot
  * picks: a structured session it can open, or a terminal agent. A client that renders only one of
  * the two keeps using the surface-specific methods.
  */
-export const AGENT_LAUNCH_RUNTIME_CAPABILITY = 'agent.launch.v1' as const
+// v2 changes the result shape: prompt delivery is an outcome union and warnings are top-level.
+export const AGENT_LAUNCH_RUNTIME_CAPABILITY = 'agent.launch.v2' as const
 
 // Generic native clients include the CLI and must not claim Electron-only page
 // placement support.

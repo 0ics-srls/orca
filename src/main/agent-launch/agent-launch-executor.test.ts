@@ -81,11 +81,8 @@ function harness(options: {
   }
 }
 
-const CLIENT_OPERATION_ID = '1758000000000-0123456789abcdef0123456789abcdef'
-
 const CREATE_INTENT: AgentLaunchIntent = {
   agent: 'claude',
-  clientOperationId: CLIENT_OPERATION_ID,
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
 }
 
@@ -177,29 +174,19 @@ describe('a structured launch that creates its own worktree', () => {
     ])
   })
 
-  it('strips the fields the launch owns out of a migrated create payload', async () => {
+  it('strips a stale startupAgent out of a migrated create payload', async () => {
     const h = harness({})
     await h.run({
       agent: 'claude',
-      clientOperationId: CLIENT_OPERATION_ID,
       target: {
         kind: 'create-worktree',
         // Exactly what mobile sends `worktree.create` today.
-        create: {
-          repo: 'id:repo-1',
-          name: 'task',
-          startupAgent: 'claude',
-          startupDraft: 'url',
-          clientMutationId: 'mobile-retry-1'
-        }
+        create: { repo: 'id:repo-1', name: 'task', startupAgent: 'claude', startupDraft: 'url' }
       }
     })
     const passed = h.createWorktree.mock.calls[0]?.[0]
     expect(passed?.create).not.toHaveProperty('startupAgent')
     expect(passed?.create).not.toHaveProperty('startupDraft')
-    // `clientOperationId` names the attempt; this one is inert below here and would only read as a
-    // guarantee the forwarded payload no longer carries.
-    expect(passed?.create).not.toHaveProperty('clientMutationId')
     expect(passed?.create).toMatchObject({ repo: 'id:repo-1', name: 'task' })
   })
 })
@@ -220,11 +207,7 @@ describe('a launch the user did not ask to be structured', () => {
 describe('a launch into a workspace that already exists', () => {
   it('opens a session without creating anything', async () => {
     const h = harness({})
-    const result = await h.run({
-      agent: 'codex',
-      clientOperationId: CLIENT_OPERATION_ID,
-      target: { kind: 'existing', worktree: 'wt-7' }
-    })
+    const result = await h.run({ agent: 'codex', target: { kind: 'existing', worktree: 'wt-7' } })
     expect(h.calls).toEqual(['createSupport', 'createStructuredSession'])
     expect(h.createWorktree).not.toHaveBeenCalled()
     expect(result.worktreeId).toBe('wt-7')
@@ -234,7 +217,6 @@ describe('a launch into a workspace that already exists', () => {
     const h = harness({})
     const result = await h.run({
       agent: 'claude',
-      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' },
       reuseTerminal: { handle: 'term_live' }
     })
@@ -247,11 +229,7 @@ describe('a launch into a workspace that already exists', () => {
 describe('an agent with no structured session', () => {
   it('stays a terminal without asking the host', async () => {
     const h = harness({})
-    const result = await h.run({
-      agent: 'grok',
-      clientOperationId: CLIENT_OPERATION_ID,
-      target: { kind: 'existing', worktree: 'wt-7' }
-    })
+    const result = await h.run({ agent: 'grok', target: { kind: 'existing', worktree: 'wt-7' } })
     expect(h.calls).toEqual(['createTerminalAgent'])
     expect(result.receipt).toMatchObject({ reason: 'agent_without_structured_session' })
   })
@@ -279,7 +257,6 @@ describe('a warning raised by the surface', () => {
     const h = harness({ terminalWarning: 'shell fell back to bash' })
     const result = await h.run({
       agent: 'grok',
-      clientOperationId: CLIENT_OPERATION_ID,
       target: { kind: 'existing', worktree: 'wt-7' }
     })
 

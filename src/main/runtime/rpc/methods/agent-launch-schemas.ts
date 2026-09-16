@@ -1,14 +1,13 @@
 /**
  * The wire shape of `agent.launch`, mirroring `AgentLaunchIntent`.
  *
- * A caller states WHERE the agent lands, WHAT it should say, and WHICH attempt this is; it never
- * names a mode. There is deliberately no `structured` / `terminal` field and no startup-agent field
- * on the create payload — the host decides, and `withoutReservedLaunchCreateFields` strips a stale
- * one out of a payload a caller migrated over from `worktree.create`.
+ * A caller states WHERE the agent lands and WHAT it should say; it never names a mode. There is
+ * deliberately no `structured` / `terminal` field and no startup-agent field on the create
+ * payload — the host decides, and `withoutReservedAgentCreateFields` strips a stale one out of a
+ * payload a caller migrated over from `worktree.create`.
  */
 
 import { z } from 'zod'
-import { parseAgentSessionOperationTimestamp } from '../../../../shared/agent-session-host-authority'
 import { isTuiAgent } from '../../../../shared/tui-agent-config'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import { WorktreeCreate } from './worktree-create-schemas'
@@ -25,15 +24,6 @@ const LaunchAgent = z
 
 export const AgentLaunch = z.object({
   agent: LaunchAgent,
-  /** Names this launch attempt. Required, and admitted by the same parser `CreateAgentSessionParams`
-   *  uses rather than a second copy of its pattern: the embedded timestamp decides admission, so an
-   *  id the host cannot parse is refused here rather than stored and found unusable later. */
-  clientOperationId: z
-    .string()
-    .refine(
-      (value) => parseAgentSessionOperationTimestamp(value) !== null,
-      'Invalid agent operation ID'
-    ),
   target: z.discriminatedUnion('kind', [
     z.object({
       kind: z.literal('existing'),
@@ -43,7 +33,7 @@ export const AgentLaunch = z.object({
     z.object({
       kind: z.literal('create-worktree'),
       /** The `worktree.create` request verbatim, so a caller migrating to this method keeps its
-       *  existing payload; the fields the launch owns are stripped rather than honoured. */
+       *  existing payload; the agent fields in it are stripped rather than honoured. */
       create: WorktreeCreate
     })
   ]),

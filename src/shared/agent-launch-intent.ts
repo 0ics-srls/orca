@@ -40,9 +40,8 @@ export type AgentLaunchPrompt = {
 export type AgentLaunchTarget =
   /** A workspace that already exists, addressed by any selector the runtime resolves. */
   | { kind: 'existing'; worktree: string }
-  /** A worktree this launch creates. `create` is the `worktree.create` request minus
-   *  `AGENT_LAUNCH_RESERVED_CREATE_FIELDS`, so a caller can neither set a startup agent behind the
-   *  router nor leave a key in the payload that nothing downstream honours. */
+  /** A worktree this launch creates. `create` is the `worktree.create` request minus its agent
+   *  fields — the launch owns those, so a caller cannot set a startup agent behind the router. */
   | { kind: 'create-worktree'; create: Readonly<Record<string, unknown>> }
 
 /** An existing terminal the caller wants reused rather than a fresh surface. Always resolves to a
@@ -52,23 +51,6 @@ export type AgentLaunchReusedTerminal = { handle: string }
 export type AgentLaunchIntent = {
   agent: TuiAgent
   target: AgentLaunchTarget
-  /**
-   * The caller's name for this launch attempt, carried so a retry of an interrupted launch is
-   * recognisable as the same attempt rather than a second one.
-   *
-   * Flat and spelled exactly as `terminal.createAgentSession` and the structured mutation envelope
-   * already spell it, so a caller that mints one id for a session and a launch spells it once.
-   *
-   * The id's shape is the contract, not an opaque token: it is the shipped
-   * `createStructuredAgentSessionOperationId` mint (`<13-digit ms timestamp>-<32 lowercase hex>`).
-   * A host reads that timestamp back to decide whether an attempt is still young enough to admit,
-   * so an id in any other shape is unusable and is rejected at the wire rather than stored.
-   *
-   * Deliberately no caller-supplied fingerprint of the request: a digest a caller computes is a
-   * channel for claiming two different launches are the same one, and it would freeze the host's
-   * canonicalisation into the wire contract. The host derives its own from the params it parsed.
-   */
-  clientOperationId: string
   prompt?: AgentLaunchPrompt
   /** Seeded launch options, narrowed by the host to what a structured create accepts. */
   sessionOptions?: Readonly<Record<string, unknown>>
@@ -79,20 +61,6 @@ export type AgentLaunchIntent = {
 export type AgentLaunchOutcome =
   | { kind: 'structured'; sessionId: string; handle: string }
   | { kind: 'terminal'; handle: string }
-
-/**
- * Whether this launch produced the agent or reported an earlier attempt's. Same vocabulary as
- * `RuntimeCreateAgentSessionResult`, because it is the same distinction: a caller that retried must
- * be able to tell "I started it" from "it was already started".
- *
- * Two-valued deliberately, and only while it can be: every launch here is settled before it
- * returns, so both answers are knowable. Whoever admits launches through the operation ledger owns
- * re-reading this — a durable ledger has a state the host genuinely cannot resolve (an attempt
- * whose outcome was never recorded), and neither word above can say "I cannot tell you". A caller
- * handed `created` for an unresolved attempt starts a second agent. Add the third member with the
- * ledger, not after it.
- */
-export type AgentLaunchDisposition = 'created' | 'replayed'
 
 /**
  * What became of the launch text.
@@ -122,7 +90,6 @@ export type AgentLaunchResult = {
   outcome: AgentLaunchOutcome
   /** The workspace the agent runs in, resolved or created. */
   worktreeId: string
-  disposition: AgentLaunchDisposition
   /** Why the outcome is what it is — always populated, so a downgrade is never silent. */
   receipt: AgentLaunchModeReceipt
   prompt?: AgentLaunchPromptReceipt
@@ -165,18 +132,8 @@ export function agentLaunchTargetIsCreate(
   return target.kind === 'create-worktree'
 }
 
-/**
- * The create fields the launch owns rather than the caller.
- *
- * Every `startup*` field is placement: a caller that set one would route itself around the host's
- * mode decision. `clientMutationId` is there for a different reason: `agent.launch` dedupes on
- * `clientOperationId`, and `createManagedWorktree` never reads `clientMutationId` at all, so a copy
- * left in the forwarded payload is an inert field that still reads as an idempotency guarantee.
- * Stripping it makes the payload say what is true.
- *
- * `createdWithAgent` is deliberately absent: it records which agent a workspace was made for, which
- * is provenance rather than placement, and the launch overwrites it with its own agent anyway.
- */
+/** The agent fields a create payload must not carry: the launch owns placement, and a caller that
+ *  sets one of these would route itself around the host's decision. */
 export const AGENT_LAUNCH_RESERVED_CREATE_FIELDS = [
   'startupAgent',
   'startupCommand',
@@ -184,14 +141,13 @@ export const AGENT_LAUNCH_RESERVED_CREATE_FIELDS = [
   'startupDraft',
   'startupLaunchConfig',
   'startupEnv',
-  'startupCommandDelivery',
-  'clientMutationId'
+  'startupCommandDelivery'
 ] as const
 
-/** Strips the reserved fields from a create payload. Callers migrating from `worktree.create` pass
- *  their existing params; this keeps a stale `startupAgent` from re-creating the agent-first path
- *  the router exists to replace. */
-export function withoutReservedLaunchCreateFields(
+/** Strips the reserved agent fields from a create payload. Callers migrating from
+ *  `worktree.create` pass their existing params; this keeps a stale `startupAgent` from
+ *  re-creating the agent-first path the router exists to replace. */
+export function withoutReservedAgentCreateFields(
   create: Readonly<Record<string, unknown>>
 ): Record<string, unknown> {
   const stripped: Record<string, unknown> = { ...create }

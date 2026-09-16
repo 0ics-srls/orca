@@ -3,7 +3,6 @@ import {
   navigationTargetsHost,
   resolveRuntimeNavigationTarget
 } from '../../../../../shared/runtime-navigation'
-import { rpcCallerKey } from '../../rpc-caller-key'
 import { withTerminalCloseAttribution } from '../../terminal-close-attribution'
 import {
   AgentTeamsPrepareLaunch,
@@ -47,7 +46,7 @@ export const TERMINAL_LIFECYCLE_METHODS = [
         pairedViewer && params.presentation === 'focused' ? 'background' : params.presentation
       return {
         terminal: await runtime.dedupeTerminalCreate(
-          rpcCallerKey({ pairedDeviceId, clientId }),
+          pairedDeviceId ?? clientId ?? 'local',
           params.worktree,
           params.clientMutationId,
           params.reconcileExisting === true,
