@@ -31,6 +31,7 @@ Findings:
 - Main/relay abort listeners are one-shot or explicitly removed on settlement.
 - Browser grab overlays remove listeners in `freezeHighlight`/`cleanup`; repeated arming tears down the prior overlay.
 - Module-level listeners (input quiet scheduler, crash diagnostics, activity pagehide, keyboard-layout cache) are intentional process/renderer singletons and are installed at most once.
+- The hidden-worktree retention pass found a deliberate fail-open exemption: local PTYs with unknown or unrestorable snapshot capability keep their mounted xterm panes through force-park. This can retain full scrollback without a finite pane bound; force-unmounting is unsafe until those PTYs are reattachable.
 
 The reproducible tracked-file inventory is [memory-leak-file-inventory-2026-09-15.tsv](./memory-leak-file-inventory-2026-09-15.tsv). It was generated from `git ls-files`, reads and SHA-256 hashes every path, and classifies every file as `source`, `config`, `documentation`, or `asset-or-other`:
 

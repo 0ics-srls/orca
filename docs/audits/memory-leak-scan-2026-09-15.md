@@ -46,6 +46,7 @@ alive for a scenario were reviewed separately from application code.
 | ML-008 | `src/main/hang-watchdog/main-thread-hang-watchdog.ts` | Repeated watchdog lifecycles retained the app `will-quit` stop listener after manual stop/worker exit. | Remove the app listener whenever the watchdog stops. | Hang watchdog tests: 8 passed; oxlint passed. |
 | ML-002 | `src/preload/preload-runtime-support.ts` | Installation functions could add duplicate global listeners if setup ran repeatedly, retaining closures and processing each drop more than once. | Added idempotent guards to native drop and browser-find listener installation. | Native chat drop scope test: 10 passed; oxlint passed. |
 | ML-010 | `src/renderer/src/components/terminal-pane/terminal-parked-watcher-registry.ts` | Parked panes bypass the normal close teardown; their keyed scroll-intent records stayed in strong Maps after tab close or worktree removal. | Release captured leaf keys during parked-tab retirement and worktree pruning. | Parked-watcher reconciliation tests: 6 passed; PR #20924. |
+| ML-011 | `src/renderer/src/components/terminal-pane/terminal-hidden-worktree-retention.ts`, `terminal-eviction-exempt-tabs.ts`, `src/renderer/src/lib/pane-manager/pane-manager-registry.ts` | Fail-open, foreign-worktree, and capability-unknown PTYs are intentionally exempt from force-parking, so their mounted xterm panes can retain rows × columns of scrollback indefinitely; `pane-manager-registry` estimates 16 bytes per cell. | Kept as an unresolved safety tradeoff: force-unmounting these panes can orphan a live shell. The safe fix is to make the PTY classes reattachable or add authoritative capability resolution, then bound the exemption. | Source retaining-path review; existing eviction-exempt and pane-memory census instrumentation. |
 
 ## GitHub memory-issue correlation
 
@@ -56,7 +57,7 @@ an Orca heap leak.
 
 | Issue | Current-code explanation |
 |---|---|
-| [#19831](https://github.com/stablyai/orca/issues/19831) | **Partially explained, no single root proven.** Local-only scope rules out the SSH parking report. Candidate contributors are retained PTY/process trees, unbounded one-shot/headless automation terminals, protected `reuseSession` terminals, and the daemon stream write-through path when a renderer stops reading. The small parked scroll-intent leak is real but cannot account for gigabytes. The report's second post-relaunch growth episode still needs a main-process heap/profile capture. |
+| [#19831](https://github.com/stablyai/orca/issues/19831) | **Partially explained, no single root proven.** Local-only scope rules out the SSH parking report. The strongest renderer candidate is the deliberate eviction exemption in `terminal-hidden-worktree-retention.ts`: fail-open/capability-unknown local PTYs keep their mounted xterm panes through force-park, so a fleet-wide daemon capability failure can retain full scrollback per pane without a population bound. Other candidates are retained PTY/process trees, unbounded one-shot/headless automation terminals, protected `reuseSession` terminals, local PTYs waiting for physical-exit confirmation, and the daemon stream write-through path when a renderer stops reading. The small parked scroll-intent leak is real but cannot account for gigabytes. The report's second post-relaunch growth episode still needs a main-process heap/profile capture. |
 | [#19768](https://github.com/stablyai/orca/issues/19768) | **First burst explained by lifecycle policy.** `startLocalWorker` creates a terminal, readiness failure enters `tearDownFailedWorkerStart`, and that function deliberately leaves the created PTY for a later manual `worker-release`. Repeated readiness respawns therefore retain one terminal/process tree per attempt. The later 17 GB growth with no active dispatch is not explained by this path. |
 | [#19193](https://github.com/stablyai/orca/issues/19193) | **Explained by an unbounded retention policy.** A reuse miss launches a fresh session and immediately releases ownership so the old session remains protected. There is no cap on protected reuse seeds when the status gate keeps missing; 101 misses can therefore leave 101 live terminals. |
 | [#9479](https://github.com/stablyai/orca/issues/9479), [#13047](https://github.com/stablyai/orca/issues/13047) | **Explained for headless/legacy paths.** Headless one-shot automation returns after output/settlement without closing its launched terminal. Legacy `legacy_ambiguous` worker rows are intentionally retained and require `worker-release`; they have no automatic reaper. |
@@ -79,6 +80,15 @@ backlog-pacer callback. If a renderer stops reading while a local PTY emits
 continuously, Node's socket writable buffer can grow outside the batcher's queue.
 This is a strong candidate for the large-output portions of #19831/#18839 and
 needs a protocol-preserving backpressure/drop design rather than a guessed cap.
+
+The renderer retention path is similarly deliberate rather than an accidental
+listener leak. `isEvictionExemptTerminalPty` treats a missing session separator,
+foreign worktree id, or unknown snapshot capability as unrestorable; the tab
+therefore stays mounted so force-parking cannot orphan its shell. The comments
+and memory census quantify the cost (rows × columns, roughly 16 bytes per cell),
+but there is no safe finite cap while those PTYs cannot be reattached. This is a
+direct local-only explanation candidate for #19831's gradual growth, pending a
+field count of exempt routes and a renderer heap census over time.
 
 The ledger is updated as each agent returns a concrete finding or a verified
 no-finding result. A fix gets its own commit so it can be proposed as a separate
