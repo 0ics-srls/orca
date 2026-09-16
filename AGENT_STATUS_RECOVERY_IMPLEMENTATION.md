@@ -5,14 +5,14 @@
 This change integrates execution identity and committed launch membership in one
 host-owned transaction. The pinned upstream base is
 `b5a99462bced6871b8a1c711222bc58cff938b9f`; the branch was reconciled through
-merge `2227d85138eb19bf4b2256233ea21acc7276d5b3`; the implementation tip is
-`8b1d78d87ea5029d25539e929bad3685d355a641` (foundation commit
-`165851414dde2cf4801b5d60b60553e7cefc5cf9`, parent
-`0561ac9ff02f6d9e76c3ac0ef0980bee6d4b41f5`; the tip adds only bounded-owner
-lint/type-boundary refactoring). The earlier identity source was
-tree-equivalent to `22f80ab284`; the valid amend chain was inspected before
+merge `2227d85138eb19bf4b2256233ea21acc7276d5b3` and later upstream merge
+`4f51c3815fdafbadfa736ec04e22d79c9b76bdfc`. The exact implementation HEAD is
+`ee2ef2b6f4f6b8798a5e1e01e50e7a0f3caab3f7` (parent
+`4f51c3815fdafbadfa736ec04e22d79c9b76bdfc`). The foundation commit
+`165851414dde2cf4801b5d60b60553e7cefc5cf9` consumes the tree-equivalent C5
+identity source (`22f80ab284`); the valid C5 amend chain was inspected before
 integration. The unrelated dirty `pnpm-lock.yaml` was preserved and is not in
-the implementation commit.
+the implementation commits.
 
 ## Failure mechanism and owner contract
 
@@ -52,9 +52,9 @@ dismissal are not blocked.
 | Hook claim is resolved only against matching owner, surface, agent and binding | **Passed** | Resolver tests cover live owners and reservations during promotion; untrusted claims are suppressed. |
 | Hook arrives before promotion completes | **Passed** | Reservation retains surface and binding; resolver attaches the event without downgrading it. |
 | Legacy emitters without a claim retain the known subject but cannot replace it | **Passed** | Status-binding compatibility path and ingress tests. |
-| Provider reset/alias chain and retained alias delta | **Partial** | Existing alias/reset machinery is preserved; an explicit retained-alias regression is still required for the complete C5 plan. |
-| Nested/child emitter ancestry proof | **Gap** | Child-work contract is upstream, but this foundation does not prove ancestry for every nested emitter. |
-| Manual/tmux/cron/Telegram discovery | **Gap** | No discovery producer was added; token/launch identity is not treated as emitter proof. |
+| Provider reset/alias chain and retained alias delta | **Passed at store seam** | Canonical-store regression proves pre-reset and post-reset aliases remain on one run/attachment, including delayed exit settlement; provider-specific alias discovery remains follow-on. |
+| Nested/child emitter attribution | **Partial** | Child emitter metadata is carried and inherited claims cannot re-key the confirmed root; host ancestry proof for every vendor/manual nested process remains C5 follow-on. |
+| Manual/tmux/cron/Telegram discovery | **Partial / producer gap** | A reusable `VerifiedAgentDiscovery` parser/admission contract now requires host-owned live process, PTY incarnation, POSIX fence, complete ancestry and independent process/provider identity, and local/headless reconciliation consumes it through the existing owner transaction. No local/daemon/SSH/relay provider currently emits that proof for a manual process, so cwd/title/token remain rejected and these scenarios are not closed. |
 | Subject-keyed store and all-reader cutover | **Gap** | Compatibility projection remains pane-keyed pending the host/replica cutover batch. |
 
 ### C10 — committed launch membership and recovery
@@ -66,7 +66,7 @@ dismissal are not blocked.
 | Headless/runtime controller fresh launch uses the same transaction | **Passed** | Runtime spawn/commit path and terminal creation characterization tests. |
 | Daemon adoption returns the existing owner and canonical surface | **Passed** | Daemon owner-adoption and IPC recovery tests. |
 | WSL/relay propagation of binding env and reported claim | **Passed at bounded seam** | Relay/provider tests cover env and envelope fields; full remote process fixture remains absent. |
-| SSH/direct relay fresh claim | **Accepted gap** | Claim derivation fails closed until an attested route/host identity exists; no unsafe client-minted identity is used. |
+| SSH/direct relay fresh claim | **Passed at negotiated host seam** | SSH capability negotiation requests `pty.issueAgentSessionClaim`; the relay signs with a persistent execution-host key and the client never mints a remote claim. Old/no-capability relays retain legacy launch behavior without claiming process death. |
 | Silent startup is visible without fabricated Working/ready/done completion | **Passed** | Membership facet plus compatibility boundary row and worktree projection tests. |
 | Bare create-operation replay stays membership-free | **Passed** | Server admission test and runtime replay characterization. |
 | Spawn failure, cancellation and exit-before-registration | **Passed at ownership fence** | Registration-fence and provider exit tests release reservations and reject admission; full end-to-end vendor fixtures remain a gap. |
@@ -78,10 +78,10 @@ dismissal are not blocked.
 | Host replica epochs/cursors and mixed-version session-tab negotiation | **Gap** | Optional fields are wired, but publication-content negotiation and final reader cutover belong to the host composition batch. |
 
 The matrix is intentionally not a claim that the complete C5 or C10 plans are
-closed. Manual discovery, full alias/ancestry reconciliation, direct SSH
-attested identity, vendor delivery/readiness, and replica negotiation remain
-unimplemented follow-on work; this foundation must not be marked as a full
-batch acceptance.
+closed. Manual discovery producers, full alias/ancestry reconciliation, direct
+SSH attested identity, vendor delivery/readiness, and replica negotiation
+remain unimplemented follow-on work; this foundation must not be marked as a
+full batch acceptance.
 
 ## Judgments
 
@@ -169,6 +169,10 @@ Passed:
 - `pnpm run check:code-quality:changed` (0 new findings)
 - `pnpm exec oxfmt --check` on all changed TypeScript/TSX files
 - `git diff --check`
+- Focused C5/C10 suite: 4 files, 31 tests passed (child first-event
+  suppression, verified discovery validation/adoption/replacement, inventory
+  admission and reconciliation forwarding).
+- Agent-hook regression suite: 89 files, 926 tests passed, 9 skipped.
 - Foundation suite: 7 files, 51 tests passed
 - Provider/runtime suite: 10 files, 112 tests passed
 - Status/relay suite: 15 files, 225 tests passed with one pre-existing expected failure
@@ -177,13 +181,14 @@ Passed:
 - Hook transport/status suite: 3 files, 52 tests passed
 
 No Electron app was launched and no native-focus or visible-window validation
-was attempted. Full end-to-end daemon/SSH vendor fixtures, manual discovery,
-replica negotiation, and the remaining C1/C2/C3/C4/C6/C7 behavior are not
-covered by this implementation commit.
+was attempted. Full end-to-end daemon/SSH vendor fixtures, manual discovery
+producer output, replica negotiation, and the remaining C1/C2/C3/C4/C6/C7
+behavior are not covered by this implementation commit.
 
 ## Remaining work and disposition
 
-This commit is a reusable C5/C10 foundation for dependent batches, not full
+Commit `ee2ef2b6f4f6b8798a5e1e01e50e7a0f3caab3f7` is a reusable C5/C10
+foundation for dependent batches, not full
 closure of both architecture plans. Dependents should consume
 `owner.statusBinding` and `agentSessionEnsure` from implementation commits
 `165851414dde2cf4801b5d60b60553e7cefc5cf9` and

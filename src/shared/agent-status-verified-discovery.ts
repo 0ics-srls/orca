@@ -134,6 +134,10 @@ function validateDiscovery(discoveryValue: unknown): VerifiedAgentDiscoveryAdmis
     chain.at(-1)?.pid !== discovery.ancestry.parent.pid ||
     chain.at(-1)?.startTime !== discovery.ancestry.parent.startTime ||
     discovery.process.parentPid !== discovery.ancestry.parent.pid ||
+    ((discovery.ancestry.relation === 'multiplexer-child' ||
+      discovery.ancestry.relation === 'automation-child' ||
+      discovery.ancestry.relation === 'descendant') &&
+      chain.length < 2) ||
     !['direct-child', 'descendant', 'multiplexer-child', 'automation-child'].includes(
       discovery.ancestry.relation
     )
