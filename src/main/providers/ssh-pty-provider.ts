@@ -281,12 +281,21 @@ export class SshPtyProvider implements IPtyProvider {
   async listProcesses(opts?: {
     deadlineMs?: number
     includeForegroundProcessEvidence?: boolean
+    includeVerifiedAgentDiscoveries?: boolean
   }): Promise<PtyProcessInfo[]> {
+    const includeVerifiedAgentDiscoveries =
+      opts?.includeVerifiedAgentDiscoveries === true &&
+      (await this.agentSessionCapabilities.supportsVerifiedAgentDiscoveries())
     const result = await this.mux.request(
       'pty.listProcesses',
-      opts?.includeForegroundProcessEvidence === undefined
+      opts?.includeForegroundProcessEvidence === undefined && !includeVerifiedAgentDiscoveries
         ? undefined
-        : { includeForegroundProcessEvidence: opts.includeForegroundProcessEvidence },
+        : {
+            ...(opts?.includeForegroundProcessEvidence === undefined
+              ? {}
+              : { includeForegroundProcessEvidence: opts.includeForegroundProcessEvidence }),
+            ...(includeVerifiedAgentDiscoveries ? { includeVerifiedAgentDiscoveries: true } : {})
+          },
       relayTimeoutOptions(opts?.deadlineMs)
     )
     const processes = mapSshPtyProcessList(result as PtyProcessInfo[], (id) => this.toAppPtyId(id))

@@ -76,7 +76,12 @@ export abstract class AgentHookServerStatusRetries extends AgentHookServerStatus
     }
     const subagentsChanged =
       JSON.stringify(normalized.payload.subagents) !== JSON.stringify(original.payload.subagents)
-    const next = subagentsChanged ? (this.applyNormalizedStatus(normalized) ?? original) : original
+    const next = subagentsChanged
+      ? (this.applyNormalizedStatus({
+          ...normalized,
+          ...(original.emitterProcess ? { emitterProcess: original.emitterProcess } : {})
+        }) ?? original)
+      : original
     this.scheduleCodexSubagentPoll(source, body, next)
   }
 
@@ -150,6 +155,12 @@ export abstract class AgentHookServerStatusRetries extends AgentHookServerStatus
       return
     }
     // Why: some agents POST Stop before their transcript line is flushed; discovery is event-driven, later content retries stay timed.
-    this.applyNormalizedStatus(normalized.event, normalized.onAccepted)
+    this.applyNormalizedStatus(
+      {
+        ...normalized.event,
+        ...(original.emitterProcess ? { emitterProcess: original.emitterProcess } : {})
+      },
+      normalized.onAccepted
+    )
   }
 }

@@ -16,10 +16,24 @@ import type {
 import { toAgentStatusIpcPayload } from './server-status-identity'
 import { AgentHookServerState } from './server-state'
 import type { AgentStatusExecutionBindingResolver } from '../agent-status-execution-binding-resolver'
+import { isResumableTuiAgent } from '../../../shared/agent-session-resume'
+import type { VerifiedAgentDiscovery } from '../../../shared/agent-status-verified-discovery'
+import type { AgentHookEmitterProcessResolver } from '../../../shared/agent-hook-emitter-process'
+import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
+
+function isEnrichedAgentHookEventPayload(
+  value: AgentHookEventPayload | undefined
+): value is EnrichedAgentHookEventPayload {
+  return Boolean(value && 'receivedAt' in value && 'stateStartedAt' in value)
+}
 
 export abstract class AgentHookServerListeners extends AgentHookServerState {
   setExecutionBindingResolver(resolver: AgentStatusExecutionBindingResolver | null): void {
     this.executionBindingResolver = resolver
+  }
+
+  setEmitterProcessResolver(resolver: AgentHookEmitterProcessResolver): void {
+    this.emitterProcessResolver = resolver
   }
 
   /**
@@ -171,6 +185,42 @@ export abstract class AgentHookServerListeners extends AgentHookServerState {
   getStatusSnapshotForPane(paneKey: string): AgentStatusIpcPayload[] {
     const entry = this.state.lastStatusByPaneKey.get(paneKey)
     return entry ? [toAgentStatusIpcPayload(entry as EnrichedAgentHookEventPayload)] : []
+  }
+
+  /** Current-runtime provider subject proof for host process discovery. */
+  getVerifiedAgentDiscoveryProviderIdentityForPane(
+    paneKey: string,
+    connectionId: string | null
+  ): VerifiedAgentDiscovery['providerIdentity'] | null {
+    const candidate = this.state.lastStatusByPaneKey.get(paneKey)
+    const entry = isEnrichedAgentHookEventPayload(candidate) ? candidate : undefined
+    const source = entry?.source
+    const observation = entry?.observation
+    if (
+      !entry ||
+      entry.connectionId !== connectionId ||
+      entry.isReplay === true ||
+      entry.restoredUnconfirmed === true ||
+      entry.emitterRole === 'child' ||
+      !isResumableTuiAgent(source) ||
+      entry.payload.agentType !== source ||
+      !entry.providerSession ||
+      observation?.origin !== 'hook' ||
+      !entry.emitterProcess
+    ) {
+      return null
+    }
+    return {
+      agent: source,
+      source: 'provider-session',
+      session: { ...entry.providerSession },
+      observation: {
+        authorityId: observation.authorityId,
+        incarnation: observation.incarnation,
+        revision: observation.revision,
+        process: { ...entry.emitterProcess }
+      }
+    }
   }
 
   getHydratedAuthorityCommitments(): readonly AgentHookAuthorityEvidence[] {

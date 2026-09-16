@@ -43,7 +43,25 @@ function retainedOwnerBytes(owner: unknown, ptyId: string): number | null {
     owner.statusBinding.runId,
     owner.statusBinding.attachment.executionId,
     owner.statusBinding.role,
-    ...(owner.statusBinding.continuityOf ? [owner.statusBinding.continuityOf] : [])
+    ...(owner.statusBinding.continuityOf ? [owner.statusBinding.continuityOf] : []),
+    ...(owner.discoveryProcess
+      ? [
+          owner.discoveryProcess.ptyIncarnationId,
+          String(owner.discoveryProcess.pid),
+          owner.discoveryProcess.startTime,
+          owner.discoveryProcess.authorityGeneration,
+          String(owner.discoveryProcess.observationEpoch),
+          ...(owner.discoveryProcess.providerObservation
+            ? [
+                owner.discoveryProcess.providerObservation.authorityId,
+                String(owner.discoveryProcess.providerObservation.incarnation),
+                String(owner.discoveryProcess.providerObservation.revision),
+                String(owner.discoveryProcess.providerObservation.process.pid),
+                owner.discoveryProcess.providerObservation.process.startTime
+              ]
+            : [])
+        ]
+      : [])
   ].reduce((total, value) => total + Buffer.byteLength(value, 'utf8'), 0)
 }
 

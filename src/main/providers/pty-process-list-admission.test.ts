@@ -68,7 +68,17 @@ describe('PtyProcessListAdmission', () => {
           process: { pid: 200, startTime: 'agent-start-1' }
         }
       },
-      providerIdentity: { agent: 'codex', source: 'process' },
+      providerIdentity: {
+        agent: 'codex',
+        source: 'provider-session',
+        session: { key: 'session_id', id: 'codex-session-1' },
+        observation: {
+          authorityId: 'hooks-1',
+          incarnation: 1,
+          revision: 1,
+          process: { pid: 200, startTime: 'agent-start' }
+        }
+      },
       ancestry: {
         parent: { pid: 100, startTime: 'shell-start-1' },
         chain: [{ pid: 100, startTime: 'shell-start-1' }],

@@ -257,6 +257,10 @@ async function startOrcadRuntime(
     getAgentProviderSessionSnapshot: () => agentHookServer.getStatusSnapshot(),
     getAgentProviderSessionRowsForPane: (paneKey) =>
       agentHookServer.getStatusSnapshotForPane(paneKey),
+    getAgentDiscoveryProviderIdentityForPane: (paneKey) =>
+      agentHookServer.getVerifiedAgentDiscoveryProviderIdentityForPane(paneKey, null),
+    invalidateAgentDiscoveryProviderIdentityForPane: (paneKey) =>
+      agentHookServer.dropStatusEntry(paneKey, { preserveResumeIdentity: false }),
     // Why captured rather than resolved at read: the fleet snapshot remints cached rows on every
     // read, so a row observed under one process otherwise acquires whatever process owns the pane now.
     readObservedAgentStatusPaneIdentity: (paneKey) => observedPaneIdentities.read(paneKey),

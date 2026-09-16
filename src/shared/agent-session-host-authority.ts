@@ -8,6 +8,7 @@ import type { RuntimeTerminalCreate, RuntimeTerminalPresentation } from './runti
 import { isTerminalLeafId } from './stable-pane-id'
 import { isValidTerminalTabId } from './terminal-tab-id'
 import type { TuiAgent } from './tui-agent'
+import { isPtyIncarnationId, type PtyIncarnationId } from './pty-incarnation'
 import {
   parseAgentStatusExecutionBinding,
   type AgentStatusExecutionBinding
@@ -90,6 +91,21 @@ export type AgentSessionOwnerBinding = {
   ptyId: string
   surface: AgentSessionSurfaceBinding
   statusBinding: AgentStatusExecutionBinding
+  /** Exact host process admitted through discovery rather than an Orca launch. */
+  discoveryProcess?: {
+    ptyIncarnationId: PtyIncarnationId
+    pid: number
+    startTime: string
+    authorityGeneration: string
+    observationEpoch: number
+    /** Provider-session observation independently joined to this process. */
+    providerObservation?: {
+      authorityId: string
+      incarnation: number
+      revision: number
+      process: { pid: number; startTime: string }
+    }
+  }
 }
 
 export type AgentSessionClaimedSpawnResult = {
@@ -196,13 +212,39 @@ export function isAgentSessionOwnerBinding(value: unknown): value is AgentSessio
     return false
   }
   const owner = value as Partial<AgentSessionOwnerBinding>
+  const discoveryProcess = owner.discoveryProcess
+  const discoveryProcessValid =
+    discoveryProcess === undefined ||
+    (typeof discoveryProcess === 'object' &&
+      discoveryProcess !== null &&
+      isPtyIncarnationId(discoveryProcess.ptyIncarnationId) &&
+      Number.isSafeInteger(discoveryProcess.pid) &&
+      Number(discoveryProcess.pid) > 0 &&
+      isBoundedWireString(discoveryProcess.startTime, 256) &&
+      isBoundedWireString(discoveryProcess.authorityGeneration, 256) &&
+      Number.isSafeInteger(discoveryProcess.observationEpoch) &&
+      Number(discoveryProcess.observationEpoch) >= 0 &&
+      (discoveryProcess.providerObservation === undefined ||
+        (typeof discoveryProcess.providerObservation === 'object' &&
+          discoveryProcess.providerObservation !== null &&
+          isBoundedWireString(discoveryProcess.providerObservation.authorityId, 256) &&
+          Number.isSafeInteger(discoveryProcess.providerObservation.incarnation) &&
+          discoveryProcess.providerObservation.incarnation >= 0 &&
+          Number.isSafeInteger(discoveryProcess.providerObservation.revision) &&
+          discoveryProcess.providerObservation.revision > 0 &&
+          typeof discoveryProcess.providerObservation.process === 'object' &&
+          discoveryProcess.providerObservation.process !== null &&
+          Number.isSafeInteger(discoveryProcess.providerObservation.process.pid) &&
+          discoveryProcess.providerObservation.process.pid > 0 &&
+          isBoundedWireString(discoveryProcess.providerObservation.process.startTime, 256))))
   return (
     isAgentSessionExecutionClaim(owner.claim) &&
     isBoundedWireString(owner.generation, 128) &&
     (owner.phase === 'reserved' || owner.phase === 'live') &&
     isBoundedWireString(owner.ptyId, 4096) &&
     isAgentSessionSurfaceBinding(owner.surface) &&
-    parseAgentStatusExecutionBinding(owner.statusBinding) !== null
+    parseAgentStatusExecutionBinding(owner.statusBinding) !== null &&
+    discoveryProcessValid
   )
 }
 

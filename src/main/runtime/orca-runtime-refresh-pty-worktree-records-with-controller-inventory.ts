@@ -13,8 +13,7 @@ import { withTimeoutResult } from './runtime-async-boundaries'
 import { getPtyExecutionHost } from '../../shared/terminal-execution-host'
 import {
   createIncrementalResolvedWorktreeLookup,
-  findResolvedWorktreeIdForPath,
-  inferWorktreeIdFromPtyId,
+  resolveInventoryPtyWorktreeId,
   runtimeWorktreeIdsEqual
 } from './runtime-worktree-path-identity'
 import { parseAppSshPtyId } from '../../shared/ssh-pty-id'
@@ -26,6 +25,11 @@ import {
   getPersistedPtyIndexes,
   type RuntimePersistedPtyIndexes
 } from './runtime-persisted-pty-indexes'
+import {
+  appendRuntimeAgentProcessDiscoveryCandidate,
+  startRuntimeAgentProcessDiscoveries,
+  type RuntimeAgentProcessDiscoveryCandidate
+} from './runtime-agent-process-discovery'
 
 export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory extends OrcaRuntimeWithRefreshPtyWorktreeRecordsFromController {
   protected async refreshPtyWorktreeRecordsWithControllerInventory(
@@ -34,7 +38,10 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
     deadline?: number,
     connectionId?: string | null,
     retryStale = false,
-    inventoryOptions?: { includeForegroundProcessEvidence?: boolean }
+    inventoryOptions?: {
+      includeForegroundProcessEvidence?: boolean
+      includeVerifiedAgentDiscoveries?: boolean
+    }
   ): Promise<PtyControllerInventory | null> {
     if (targetWorktreeId === FLOATING_TERMINAL_WORKTREE_ID) {
       const targetedLiveness = this.refreshFloatingWorkspacePtyLiveness()
@@ -70,7 +77,8 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
       deadlineMs: Date.now() + Math.max(1, listBudgetMs - PTY_CONTROLLER_LIST_PROVIDER_MARGIN_MS),
       ...(inventoryOptions?.includeForegroundProcessEvidence === undefined
         ? {}
-        : { includeForegroundProcessEvidence: inventoryOptions.includeForegroundProcessEvidence })
+        : { includeForegroundProcessEvidence: inventoryOptions.includeForegroundProcessEvidence }),
+      includeVerifiedAgentDiscoveries: inventoryOptions?.includeVerifiedAgentDiscoveries ?? true
     }
     const processInventory =
       connectionId === undefined && this.ptyController.listProcessesWithHostScope
@@ -113,6 +121,7 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
       return null
     }
     const sessions = sessionsResult.value.processes
+    const localDiscoveryCandidates: RuntimeAgentProcessDiscoveryCandidate[] = []
     const queriedHostIds = new Set<ExecutionHostId>(sessionsResult.value.hostIds)
     reconcileRuntimeAgentSessionInventory({
       sessions,
@@ -143,28 +152,13 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
       })
       const controllerIdentity = controllerIdentityByPtyId.get(session.id)
       const persistedWorktreeId = persistedIndexes.worktreeIdByPtyId.get(session.id)
-      const providerWorktree = session.worktreeId
-        ? findResolvedWorktree(session.worktreeId)
-        : undefined
-      const inferredWorktreeId = inferWorktreeIdFromPtyId(session.id)
-      const persistedWorktree = persistedWorktreeId
-        ? findResolvedWorktree(persistedWorktreeId)
-        : undefined
-      const hasMigrationEvidence =
-        Boolean(session.worktreeId) &&
-        !providerWorktree &&
-        Boolean(persistedWorktree) &&
-        Boolean(inferredWorktreeId) &&
-        runtimeWorktreeIdsEqual(session.worktreeId as string, inferredWorktreeId as string)
-      // Why: an unresolved explicit provider owner remains authoritative unless the session id proves it was frozen before a persisted rename migration.
-      const worktreeId = providerWorktree
-        ? providerWorktree.id
-        : hasMigrationEvidence
-          ? (persistedWorktree?.id ?? null)
-          : (session.worktreeId ??
-            persistedWorktree?.id ??
-            inferredWorktreeId ??
-            findResolvedWorktreeIdForPath(resolvedWorktrees, session.cwd, targetWorktreeId))
+      const worktreeId = resolveInventoryPtyWorktreeId({
+        session,
+        persistedWorktreeId,
+        resolvedWorktrees,
+        targetWorktreeId,
+        findResolvedWorktree
+      })
       const persistedSurface = persistedIndexes.surfaceByPtyId.get(session.id)
       const restoresExactSurface =
         persistedSurface &&
@@ -218,6 +212,24 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
         }
         pty.controllerTitle = session.title?.trim() || null
         this.reconcileSubscriberDrivenProviderAttach(session.id)
+        appendRuntimeAgentProcessDiscoveryCandidate({
+          candidates: localDiscoveryCandidates,
+          ptyId: session.id,
+          connectionId: pty.connectionId,
+          wslDistro: pty.wslDistro,
+          paneKey: pty.paneKey,
+          terminalHandle: controllerIdentity?.handle,
+          ptyIncarnationId: session.incarnationId,
+          rootProcessId: session.rootProcessId,
+          worktreeId,
+          readObserved: this.readObservedAgentStatusPaneIdentityFn,
+          readProviderIdentity: (paneKey) =>
+            this.getAgentDiscoveryProviderIdentityForPaneFn?.(paneKey) ?? null,
+          invalidateProviderIdentity: (paneKey) =>
+            this.invalidateAgentDiscoveryProviderIdentityForPaneFn?.(paneKey),
+          readCurrentPty: (ptyId) => this.ptysById.get(ptyId),
+          readTerminalHandles: (ptyId) => this.getExistingTerminalHandlesForPtyId(ptyId)
+        })
       }
       // Why: fire-and-forget so this listing hot path doesn't serialize a relay round-trip per session and a throw can't abort the sweep below.
       this.refreshPtyForegroundAgent(session.id)
@@ -292,6 +304,14 @@ export class OrcaRuntimeWithRefreshPtyWorktreeRecordsWithControllerInventory ext
       connectionId
     })
     this.pruneDisconnectedPtyRecords()
+    startRuntimeAgentProcessDiscoveries({
+      candidates: localDiscoveryCandidates,
+      authorityGeneration: this.runtimeId,
+      observationEpoch: inventoryGeneration,
+      claimSigner: this.agentSessionClaimSigner,
+      onCommitted: this.onAgentSessionCommitted,
+      onReconciled: this.onAgentSessionInventoryReconciled
+    })
     return {
       livePtyIds: targetWorktreeId ? selectedLivePtyIds : allLivePtyIds,
       allLivePtyIds,

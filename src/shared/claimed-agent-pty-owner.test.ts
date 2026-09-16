@@ -160,6 +160,119 @@ describe('ClaimedAgentPtyOwnerRegistry', () => {
     expect(replacement.owner.statusBinding.continuityOf).toBe(first.owner.statusBinding.runId)
   })
 
+  it('rejects a delayed discovery promotion after a newer host observation wins', async () => {
+    const registry = new ClaimedAgentPtyOwnerRegistry()
+    const first = await registry.ensure({
+      claim: claim('a'.repeat(43)),
+      surface,
+      discoveryProcess: {
+        ptyIncarnationId: '11111111-1111-4111-8111-111111111111',
+        pid: 100,
+        startTime: 'process-1',
+        authorityGeneration: 'host-1',
+        observationEpoch: 1,
+        providerObservation: {
+          authorityId: 'hooks-1',
+          incarnation: 1,
+          revision: 1,
+          process: { pid: 201, startTime: 'old-start' }
+        }
+      },
+      replaceDiscoveredPtyId: 'pty-1',
+      spawn: async () => ({ ptyId: 'pty-1' })
+    })
+    let finishSecond!: (result: { ptyId: string }) => void
+    let finishThird!: (result: { ptyId: string }) => void
+    const second = registry.ensure({
+      claim: claim('c'.repeat(43)),
+      surface,
+      discoveryProcess: {
+        ptyIncarnationId: '11111111-1111-4111-8111-111111111111',
+        pid: 101,
+        startTime: 'process-2',
+        authorityGeneration: 'host-1',
+        observationEpoch: 2,
+        providerObservation: {
+          authorityId: 'hooks-1',
+          incarnation: 1,
+          revision: 2,
+          process: { pid: 202, startTime: 'new-start' }
+        }
+      },
+      replaceDiscoveredPtyId: 'pty-1',
+      spawn: () =>
+        new Promise((resolve) => {
+          finishSecond = resolve
+        })
+    })
+    const third = registry.ensure({
+      claim: claim('d'.repeat(43)),
+      surface,
+      discoveryProcess: {
+        ptyIncarnationId: '11111111-1111-4111-8111-111111111111',
+        pid: 102,
+        startTime: 'process-3',
+        authorityGeneration: 'host-1',
+        observationEpoch: 3,
+        providerObservation: {
+          authorityId: 'hooks-1',
+          incarnation: 1,
+          revision: 3,
+          process: { pid: 203, startTime: 'newest-start' }
+        }
+      },
+      replaceDiscoveredPtyId: 'pty-1',
+      spawn: () =>
+        new Promise((resolve) => {
+          finishThird = resolve
+        })
+    })
+
+    finishThird({ ptyId: 'pty-1' })
+    const promotedThird = await third
+    finishSecond({ ptyId: 'pty-1' })
+
+    await expect(second).rejects.toThrow('agent_session_observation_stale')
+    expect(promotedThird.owner.statusBinding.continuityOf).toBe(first.owner.statusBinding.runId)
+    expect(registry.listForPty('pty-1')).toEqual([promotedThird.owner])
+    registry.release('pty-1', first.owner.generation)
+    expect(registry.listForPty('pty-1')).toEqual([promotedThird.owner])
+  })
+
+  it('does not promote a discovery over a managed owner registered during admission', async () => {
+    const registry = new ClaimedAgentPtyOwnerRegistry()
+    let finishDiscovery!: (result: { ptyId: string }) => void
+    const pending = registry.ensure({
+      claim: claim('c'.repeat(43)),
+      surface,
+      discoveryProcess: {
+        ptyIncarnationId: '11111111-1111-4111-8111-111111111111',
+        pid: 101,
+        startTime: 'process-2',
+        authorityGeneration: 'host-1',
+        observationEpoch: 2
+      },
+      replaceDiscoveredPtyId: 'pty-1',
+      spawn: () =>
+        new Promise((resolve) => {
+          finishDiscovery = resolve
+        })
+    })
+    const managed = {
+      claim: claim('d'.repeat(43)),
+      generation: 'managed-generation',
+      phase: 'live' as const,
+      ptyId: 'pty-1',
+      surface,
+      statusBinding: statusBinding('managed')
+    }
+    registry.register(managed)
+    finishDiscovery({ ptyId: 'pty-1' })
+
+    await expect(pending).rejects.toThrow('managed_owner_present')
+    expect(registry.listForPty('pty-1')).toEqual([managed])
+  })
+
   it('uses the lower execution host binding when it adopts an owner', async () => {
     const registry = new ClaimedAgentPtyOwnerRegistry()
     const canonicalBinding = statusBinding('host')

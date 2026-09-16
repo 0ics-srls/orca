@@ -25,6 +25,7 @@ export type SpoolRecord = {
   launchToken?: string
   runId?: string
   executionId?: string
+  emitterProcessId?: string
   hookEventName?: string
   source: string
   payload: unknown
@@ -43,6 +44,7 @@ export function buildSpoolHookBody(record: SpoolRecord): Record<string, unknown>
     launchToken: record.launchToken,
     runId: record.runId,
     executionId: record.executionId,
+    emitterProcessId: record.emitterProcessId,
     hookEventName: record.hookEventName,
     payload: record.payload
   }

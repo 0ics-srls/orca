@@ -45,15 +45,49 @@ function parseProviderIdentity(value: unknown): VerifiedAgentDiscovery['provider
     !('agent' in value) ||
     !isResumableTuiAgent(value.agent) ||
     !('source' in value) ||
-    (value.source !== 'process' && value.source !== 'provider-session')
+    value.source !== 'provider-session' ||
+    !('session' in value) ||
+    !('observation' in value) ||
+    typeof value.observation !== 'object' ||
+    value.observation === null ||
+    Array.isArray(value.observation) ||
+    !('authorityId' in value.observation) ||
+    !validProcessMarker(value.observation.authorityId) ||
+    !('incarnation' in value.observation) ||
+    !Number.isSafeInteger(value.observation.incarnation) ||
+    Number(value.observation.incarnation) < 0 ||
+    !('revision' in value.observation) ||
+    !Number.isSafeInteger(value.observation.revision) ||
+    Number(value.observation.revision) <= 0 ||
+    !('process' in value.observation) ||
+    typeof value.observation.process !== 'object' ||
+    value.observation.process === null ||
+    Array.isArray(value.observation.process) ||
+    !('pid' in value.observation.process) ||
+    !Number.isSafeInteger(value.observation.process.pid) ||
+    Number(value.observation.process.pid) <= 0 ||
+    !('startTime' in value.observation.process) ||
+    !validProcessMarker(value.observation.process.startTime)
   ) {
     return null
   }
-  if (!('session' in value) || value.session === undefined) {
-    return value.source === 'process' ? { agent: value.agent, source: value.source } : null
-  }
   const session = normalizeAgentProviderSession(value.session)
-  return session ? { agent: value.agent, source: value.source, session } : null
+  return session
+    ? {
+        agent: value.agent,
+        source: value.source,
+        session,
+        observation: {
+          authorityId: value.observation.authorityId,
+          incarnation: Number(value.observation.incarnation),
+          revision: Number(value.observation.revision),
+          process: {
+            pid: Number(value.observation.process.pid),
+            startTime: value.observation.process.startTime
+          }
+        }
+      }
+    : null
 }
 
 function parseAncestry(value: unknown): VerifiedAgentDiscovery['ancestry'] | null {

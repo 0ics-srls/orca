@@ -63,7 +63,22 @@ export function cloneAgentSessionOwnerBinding(
     phase: owner.phase,
     ptyId: owner.ptyId,
     surface: cloneAgentSessionSurface(owner.surface),
-    statusBinding: cloneAgentStatusExecutionBinding(owner.statusBinding)
+    statusBinding: cloneAgentStatusExecutionBinding(owner.statusBinding),
+    ...(owner.discoveryProcess
+      ? {
+          discoveryProcess: {
+            ...owner.discoveryProcess,
+            ...(owner.discoveryProcess.providerObservation
+              ? {
+                  providerObservation: {
+                    ...owner.discoveryProcess.providerObservation,
+                    process: { ...owner.discoveryProcess.providerObservation.process }
+                  }
+                }
+              : {})
+          }
+        }
+      : {})
   }
 }
 
@@ -115,7 +130,41 @@ export function agentSessionOwnerBindingsEqual(
     left.ptyId === right.ptyId &&
     agentStatusExecutionBindingsEqual(left.statusBinding, right.statusBinding) &&
     scopedAgentSessionClaimsEqual(left.claim, right.claim) &&
-    agentSessionSurfacesEqual(left.surface, right.surface)
+    agentSessionSurfacesEqual(left.surface, right.surface) &&
+    discoveredProcessesEqual(left.discoveryProcess, right.discoveryProcess)
+  )
+}
+
+function discoveredProcessesEqual(
+  left: AgentSessionOwnerBinding['discoveryProcess'],
+  right: AgentSessionOwnerBinding['discoveryProcess']
+): boolean {
+  if (!left || !right) {
+    return left === right
+  }
+  return (
+    left.ptyIncarnationId === right.ptyIncarnationId &&
+    left.pid === right.pid &&
+    left.startTime === right.startTime &&
+    left.authorityGeneration === right.authorityGeneration &&
+    left.observationEpoch === right.observationEpoch &&
+    providerObservationsEqual(left.providerObservation, right.providerObservation)
+  )
+}
+
+function providerObservationsEqual(
+  left: NonNullable<AgentSessionOwnerBinding['discoveryProcess']>['providerObservation'],
+  right: NonNullable<AgentSessionOwnerBinding['discoveryProcess']>['providerObservation']
+): boolean {
+  if (!left || !right) {
+    return left === right
+  }
+  return (
+    left.authorityId === right.authorityId &&
+    left.incarnation === right.incarnation &&
+    left.revision === right.revision &&
+    left.process.pid === right.process.pid &&
+    left.process.startTime === right.process.startTime
   )
 }
 

@@ -48,7 +48,17 @@ function discovery(overrides: Partial<VerifiedAgentDiscovery> = {}): VerifiedAge
         process: { pid: 200, startTime: 'agent-start-1' }
       }
     },
-    providerIdentity: { agent: 'codex', source: 'process' },
+    providerIdentity: {
+      agent: 'codex',
+      source: 'provider-session',
+      session: { key: 'session_id', id: 'codex-session-1' },
+      observation: {
+        authorityId: 'hooks-1',
+        incarnation: 1,
+        revision: 1,
+        process: { pid: 200, startTime: 'agent-start-1' }
+      }
+    },
     ancestry: {
       parent: { pid: 100, startTime: 'shell-start-1' },
       chain: [{ pid: 100, startTime: 'shell-start-1' }],
@@ -75,6 +85,19 @@ describe('verified agent discovery admission', () => {
     expect(result.owner.ptyId).toBe('pty-1')
     expect(result.owner.surface).toEqual(surface)
     expect(result.owner.statusBinding.role).toBe('root')
+    expect(result.owner.discoveryProcess).toEqual({
+      ptyIncarnationId: '22222222-2222-4222-8222-222222222222',
+      pid: 200,
+      startTime: 'agent-start-1',
+      authorityGeneration: 'host-generation-1',
+      observationEpoch: 7,
+      providerObservation: {
+        authorityId: 'hooks-1',
+        incarnation: 1,
+        revision: 1,
+        process: { pid: 200, startTime: 'agent-start-1' }
+      }
+    })
     expect(owners.find(claim)?.statusBinding).toEqual(result.owner.statusBinding)
   })
 
@@ -131,6 +154,39 @@ describe('verified agent discovery admission', () => {
     expect(owners.list()).toEqual([])
   })
 
+  it('does not replace a managed launch owner with process discovery', async () => {
+    const owners = new ClaimedAgentPtyOwnerRegistry()
+    const managedClaim = signer.createFreshClaim({
+      namespace: {
+        machine: 'native:darwin',
+        principal: 'uid:1',
+        container: 'native',
+        providerRoot: 'profile-default:codex'
+      },
+      agent: 'codex',
+      launchIdentity: 'managed-launch',
+      canonicalWorktreeId: surface.worktreeId
+    })
+    owners.register({
+      claim: managedClaim,
+      generation: 'managed-generation',
+      phase: 'live',
+      ptyId: 'pty-1',
+      surface,
+      statusBinding: {
+        runId: 'managed-run',
+        attachment: { executionId: 'managed-execution' },
+        role: 'root'
+      }
+    })
+
+    await expect(
+      admitVerifiedAgentDiscovery({ owners, discovery: discovery() })
+    ).resolves.toMatchObject({ admitted: false, reason: 'managed_owner_present' })
+    expect(owners.listForPty('pty-1')).toHaveLength(1)
+    expect(owners.find(managedClaim)?.statusBinding.runId).toBe('managed-run')
+  })
+
   it('preserves unverifiable and exited verdicts instead of admitting them', async () => {
     const owners = new ClaimedAgentPtyOwnerRegistry()
     const unverifiable = discovery({
@@ -177,6 +233,17 @@ describe('verified agent discovery admission', () => {
       throw new Error('expected posix fixture')
     }
     const replacement = discovery({
+      claim: signer.createFreshClaim({
+        namespace: {
+          machine: 'native:darwin',
+          principal: 'uid:1',
+          container: 'native',
+          providerRoot: 'profile-default:codex'
+        },
+        agent: 'codex',
+        launchIdentity: 'manual-process-2',
+        canonicalWorktreeId: 'repo::/tmp/worktree'
+      }),
       evidence: {
         ...liveEvidence,
         ptyIncarnationId: '33333333-3333-4333-8333-333333333333',
@@ -185,24 +252,70 @@ describe('verified agent discovery admission', () => {
           process: { pid: 200, startTime: 'agent-start-2' }
         }
       },
+      providerIdentity: {
+        ...discovery().providerIdentity,
+        observation: {
+          authorityId: 'hooks-1',
+          incarnation: 1,
+          revision: 2,
+          process: { pid: 200, startTime: 'agent-start-2' }
+        }
+      },
       process: { pid: 200, startTime: 'agent-start-2', parentPid: 100 }
     })
     const second = await admitVerifiedAgentDiscovery({
       owners,
       discovery: replacement,
-      isLive: (() => {
-        let checks = 0
-        return () => {
-          checks += 1
-          return checks > 1
-        }
-      })()
+      isLive: () => true
     })
     if (!second.admitted) {
       throw new Error('expected replacement admission')
     }
     expect(second.owner.generation).not.toBe(first.owner.generation)
+    expect(second.owner.discoveryProcess?.startTime).toBe('agent-start-2')
+    expect(second.owner.statusBinding.continuityOf).toBe(first.owner.statusBinding.runId)
     owners.release(first.owner.ptyId, first.owner.generation)
-    expect(owners.find(claim)?.generation).toBe(second.owner.generation)
+    expect(owners.find(replacement.claim)?.generation).toBe(second.owner.generation)
+  })
+
+  it('refuses to attach a cached provider observation to a replacement process', async () => {
+    const owners = new ClaimedAgentPtyOwnerRegistry()
+    const first = await admitVerifiedAgentDiscovery({ owners, discovery: discovery() })
+    if (!first.admitted) {
+      throw new Error('expected first admission')
+    }
+    const liveEvidence = discovery().evidence
+    if (liveEvidence.verdict !== 'live' || liveEvidence.fence.platform !== 'posix') {
+      throw new Error('expected posix live fixture')
+    }
+    const replacement = discovery({
+      claim: signer.createFreshClaim({
+        namespace: {
+          machine: 'native:darwin',
+          principal: 'uid:1',
+          container: 'native',
+          providerRoot: 'profile-default:codex'
+        },
+        agent: 'codex',
+        launchIdentity: 'manual-process-stale-provider',
+        canonicalWorktreeId: 'repo::/tmp/worktree'
+      }),
+      evidence: {
+        ...liveEvidence,
+        fence: {
+          ...liveEvidence.fence,
+          process: { pid: 201, startTime: 'agent-start-2' }
+        }
+      },
+      process: { pid: 201, startTime: 'agent-start-2', parentPid: 100 }
+    })
+
+    await expect(
+      admitVerifiedAgentDiscovery({ owners, discovery: replacement })
+    ).resolves.toMatchObject({
+      admitted: false,
+      reason: 'agent_session_observation_stale'
+    })
+    expect(owners.listForPty('pty-1')).toEqual([first.owner])
   })
 })

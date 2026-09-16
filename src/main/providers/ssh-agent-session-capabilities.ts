@@ -8,6 +8,7 @@ export class SshAgentSessionCapabilities {
   private claimSupported = false
   private createOperationProbe: Promise<boolean> | null = null
   private foregroundEvidenceProbe: Promise<boolean> | null = null
+  private verifiedDiscoveryProbe: Promise<boolean> | null = null
   private freshClaimProbe: Promise<boolean> | null = null
 
   constructor(private readonly mux: SshChannelMultiplexer) {}
@@ -108,6 +109,38 @@ export class SshAgentSessionCapabilities {
     } catch {
       if (!options.signal?.aborted && this.foregroundEvidenceProbe === probe) {
         this.foregroundEvidenceProbe = null
+      }
+      return false
+    }
+  }
+
+  async supportsVerifiedAgentDiscoveries(options: { signal?: AbortSignal } = {}): Promise<boolean> {
+    const probe =
+      this.verifiedDiscoveryProbe ??
+      this.mux
+        .request('pty.getCapabilities', undefined, {
+          signal: options.signal,
+          timeoutMs: 5_000
+        })
+        .then((value) => {
+          return (
+            typeof value === 'object' &&
+            value !== null &&
+            'verifiedAgentDiscoveryVersion' in value &&
+            value.verifiedAgentDiscoveryVersion === 1
+          )
+        })
+        .catch(() => false)
+    this.verifiedDiscoveryProbe = probe
+    try {
+      const supported = await waitForSshCapabilityProbe(probe, options.signal)
+      if (!supported && this.verifiedDiscoveryProbe === probe) {
+        this.verifiedDiscoveryProbe = null
+      }
+      return supported
+    } catch {
+      if (!options.signal?.aborted && this.verifiedDiscoveryProbe === probe) {
+        this.verifiedDiscoveryProbe = null
       }
       return false
     }

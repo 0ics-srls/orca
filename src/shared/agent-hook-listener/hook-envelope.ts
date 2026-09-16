@@ -44,6 +44,7 @@ type HookMetadata = {
   version?: string
   runId?: string
   executionId?: string
+  emitterProcessId?: string
 }
 
 function readPackedHookMetadata(
@@ -80,11 +81,17 @@ export function mergeAgentHookRequestHeaders(body: unknown, headers: IncomingHtt
     'x-orca-agent-status-execution-id',
     metadataEncoding
   )
+  const emitterProcessId = readHookMetadataHeader(
+    headers,
+    'x-orca-agent-hook-emitter-pid',
+    metadataEncoding
+  )
   const metadata = packedMetadata
     ? {
         ...packedMetadata,
         runId: runId ?? packedMetadata.runId,
-        executionId: executionId ?? packedMetadata.executionId
+        executionId: executionId ?? packedMetadata.executionId,
+        emitterProcessId
       }
     : {
         paneKey: readHookMetadataHeader(headers, 'x-orca-pane-key', metadataEncoding) ?? '',
@@ -94,7 +101,8 @@ export function mergeAgentHookRequestHeaders(body: unknown, headers: IncomingHtt
         env: readHookMetadataHeader(headers, 'x-orca-agent-hook-env', metadataEncoding),
         version: readHookMetadataHeader(headers, 'x-orca-agent-hook-version', metadataEncoding),
         runId,
-        executionId
+        executionId,
+        emitterProcessId
       }
   if (!metadata.paneKey) {
     return body
@@ -123,6 +131,12 @@ export type ParsedHookEnvelope = {
   reportedExecutionBinding?: NonNullable<
     ReturnType<typeof parseAgentStatusReportedExecutionBinding>
   >
+  reportedEmitterProcessId?: number
+}
+
+function parseEmitterProcessId(value: unknown): number | undefined {
+  const parsed = typeof value === 'string' && /^\d+$/.test(value) ? Number(value) : Number.NaN
+  return Number.isSafeInteger(parsed) && parsed > 0 ? parsed : undefined
 }
 
 /** Validates the transport envelope while preserving warning-before-tab-rejection order. */
@@ -183,6 +197,7 @@ export function parseHookEnvelope(
       parseAgentStatusReportedExecutionBinding({
         runId: readEnvelopeString(record, 'runId'),
         executionId: readEnvelopeString(record, 'executionId')
-      }) ?? undefined
+      }) ?? undefined,
+    reportedEmitterProcessId: parseEmitterProcessId(record.emitterProcessId)
   }
 }

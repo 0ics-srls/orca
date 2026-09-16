@@ -22,6 +22,10 @@ import type { AgentStatusClearIpcPayload } from '../../../shared/agent-status-ty
 import type { LegacyPaneKeyAliasEntry } from '../../../shared/persisted-state-types'
 import type { SpoolRecord } from '../../../shared/agent-hook-spool'
 import type { AgentStatusExecutionBindingResolver } from '../agent-status-execution-binding-resolver'
+import {
+  resolveAgentHookEmitterProcess,
+  type AgentHookEmitterProcessResolver
+} from '../../../shared/agent-hook-emitter-process'
 import type {
   AgentHookAuthorityEvidence,
   AgentHookProviderSessionIdentity,
@@ -78,6 +82,7 @@ export abstract class AgentHookServerState {
   protected onTransportInterference: ((report: HookTransportInterferenceReport) => void) | null =
     null
   protected executionBindingResolver: AgentStatusExecutionBindingResolver | null = null
+  protected emitterProcessResolver: AgentHookEmitterProcessResolver = resolveAgentHookEmitterProcess
   protected transportInterference = createHookTransportInterferenceTracker(
     (report: HookTransportInterferenceReport) => {
       console.warn(describeHookTransportInterference(report))

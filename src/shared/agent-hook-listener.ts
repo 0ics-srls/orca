@@ -38,7 +38,8 @@ export function normalizeHookPayload(
     tabId,
     worktreeId,
     launchToken,
-    reportedExecutionBinding
+    reportedExecutionBinding,
+    reportedEmitterProcessId
   } = envelope
   if (source === 'claude') {
     state.claudeUnconfirmedRestoredStatusPaneKeys.delete(paneKey)
@@ -148,6 +149,7 @@ export function normalizeHookPayload(
     source,
     launchToken,
     reportedExecutionBinding,
+    reportedEmitterProcessId,
     ...(readString(hookPayloadRecord, 'agent_id') !== undefined ||
     (source === 'claude' && eventName === 'TeammateIdle')
       ? { emitterRole: 'child' as const }

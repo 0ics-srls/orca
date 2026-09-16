@@ -132,6 +132,10 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     getAgentProviderSessionSnapshot: () => agentHookServer.getStatusSnapshot(),
     getAgentProviderSessionRowsForPane: (paneKey) =>
       agentHookServer.getStatusSnapshotForPane(paneKey),
+    getAgentDiscoveryProviderIdentityForPane: (paneKey) =>
+      agentHookServer.getVerifiedAgentDiscoveryProviderIdentityForPane(paneKey, null),
+    invalidateAgentDiscoveryProviderIdentityForPane: (paneKey) =>
+      agentHookServer.dropStatusEntry(paneKey, { preserveResumeIdentity: false }),
     attestAgentHookCompatibilityAuthority: (candidate) =>
       agentHookServer.attestCompatibilityAuthority(candidate),
     retireAgentHookCompatibilityAuthority: (paneKey) =>

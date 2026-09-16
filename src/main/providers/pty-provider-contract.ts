@@ -244,6 +244,7 @@ export type IPtyProvider = {
   listProcesses(opts?: {
     deadlineMs?: number
     includeForegroundProcessEvidence?: boolean
+    includeVerifiedAgentDiscoveries?: boolean
   }): Promise<PtyProcessInfo[]>
   getDefaultShell(): Promise<string>
   getProfiles(): Promise<{ name: string; path: string }[]>

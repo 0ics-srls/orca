@@ -35,6 +35,8 @@ export type PersistedAgentHookEventPayload = Omit<
   | 'claudeRunningNonAgentTask'
   | 'launchToken'
   | 'reportedExecutionBinding'
+  | 'reportedEmitterProcessId'
+  | 'emitterProcess'
   | 'promptInteractionKey'
   | 'restoredUnconfirmed'
   // Why: revision counters are in-memory and the authority id is regenerated per process, so

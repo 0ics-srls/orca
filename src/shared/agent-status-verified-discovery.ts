@@ -26,8 +26,14 @@ export type VerifiedAgentDiscovery = {
   evidence: RemoteForegroundEvidence
   providerIdentity: {
     agent: ResumableTuiAgent
-    source: 'process' | 'provider-session'
-    session?: AgentProviderSessionMetadata
+    source: 'provider-session'
+    session: AgentProviderSessionMetadata
+    observation: {
+      authorityId: string
+      incarnation: number
+      revision: number
+      process: { pid: number; startTime: string }
+    }
   }
   ancestry: {
     /** The final parent in the host-owned process chain. */
@@ -56,6 +62,24 @@ export type VerifiedAgentDiscoveryAdmission =
     }
 
 const MAX_REASON_LENGTH = 256
+
+export function verifiedAgentProviderIdentitiesEqual(
+  left: VerifiedAgentDiscovery['providerIdentity'],
+  right: VerifiedAgentDiscovery['providerIdentity'] | null
+): boolean {
+  return Boolean(
+    right &&
+    left.agent === right.agent &&
+    left.session.key === right.session.key &&
+    left.session.id === right.session.id &&
+    left.session.transcriptPath === right.session.transcriptPath &&
+    left.observation.authorityId === right.observation.authorityId &&
+    left.observation.incarnation === right.observation.incarnation &&
+    left.observation.revision === right.observation.revision &&
+    left.observation.process.pid === right.observation.process.pid &&
+    left.observation.process.startTime === right.observation.process.startTime
+  )
+}
 
 function invalid(reason: string): VerifiedAgentDiscoveryAdmission {
   return {
@@ -148,10 +172,7 @@ function validateDiscovery(discoveryValue: unknown): VerifiedAgentDiscoveryAdmis
   if (!processIdentity || processIdentity.agent !== discovery.providerIdentity.agent) {
     return invalid('provider_identity_mismatch')
   }
-  if (
-    discovery.providerIdentity.source === 'provider-session' &&
-    (!discovery.providerIdentity.session || discovery.providerIdentity.session.id.length === 0)
-  ) {
+  if (!discovery.providerIdentity.session || discovery.providerIdentity.session.id.length === 0) {
     return invalid('provider_session_identity_missing')
   }
   if (discovery.claim.agent !== discovery.providerIdentity.agent) {
@@ -199,9 +220,11 @@ export function cloneVerifiedAgentDiscovery(
     },
     providerIdentity: {
       ...discovery.providerIdentity,
-      ...(discovery.providerIdentity.session
-        ? { session: { ...discovery.providerIdentity.session } }
-        : {})
+      session: { ...discovery.providerIdentity.session },
+      observation: {
+        ...discovery.providerIdentity.observation,
+        process: { ...discovery.providerIdentity.observation.process }
+      }
     },
     ancestry: {
       ...discovery.ancestry,
@@ -235,10 +258,32 @@ export async function admitVerifiedAgentDiscovery(args: {
   ) {
     return invalid('owner_surface_conflict')
   }
+  const foreignManagedOwner = args.owners
+    .listForPty(discovery.evidence.ptyId)
+    .find(
+      (owner) =>
+        owner.discoveryProcess === undefined &&
+        owner.claim.identityDigest !== discovery.claim.identityDigest
+    )
+  if (foreignManagedOwner) {
+    return invalid('managed_owner_present')
+  }
   try {
     const result = await args.owners.ensure({
       claim: discovery.claim,
       surface: discovery.surface,
+      discoveryProcess: {
+        ptyIncarnationId: discovery.evidence.ptyIncarnationId,
+        pid: discovery.process.pid,
+        startTime: discovery.process.startTime,
+        authorityGeneration: discovery.evidence.authorityGeneration,
+        observationEpoch: discovery.evidence.observationEpoch,
+        providerObservation: {
+          ...discovery.providerIdentity.observation,
+          process: { ...discovery.providerIdentity.observation.process }
+        }
+      },
+      replaceDiscoveredPtyId: discovery.evidence.ptyId,
       spawn: async () => ({ ptyId: discovery.evidence.ptyId, disposition: 'adopted' as const }),
       isLive: async (owner) => {
         if (owner.ptyId !== discovery.evidence.ptyId) {

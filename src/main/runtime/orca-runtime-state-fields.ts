@@ -20,6 +20,7 @@ import type {
 import type { RuntimeDesktopWindowStatus } from '../../shared/runtime-types'
 import type { AgentSessionClaimSigner } from './agent-session-claim-identity'
 import type { OrchestrationEnvironmentTransport } from './orchestration/environment-transport'
+import type { VerifiedAgentDiscovery } from '../../shared/agent-status-verified-discovery'
 import type { RuntimeCommandSurfaceHost } from './orca-runtime-core'
 import { installRuntimeFileCommandSurface } from './runtime-file-command-surface'
 import { installRuntimeGitCommandSurface } from './runtime-git-command-surface'
@@ -70,6 +71,10 @@ export class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
        *  only carrier of the provider session a transcript is addressed by. */
       getAgentProviderSessionSnapshot?: () => AgentStatusIpcPayload[]
       getAgentProviderSessionRowsForPane?: (paneKey: string) => AgentStatusIpcPayload[]
+      getAgentDiscoveryProviderIdentityForPane?: (
+        paneKey: string
+      ) => VerifiedAgentDiscovery['providerIdentity'] | null
+      invalidateAgentDiscoveryProviderIdentityForPane?: (paneKey: string) => void
       attestAgentHookCompatibilityAuthority?: (candidate: {
         paneKey: string
         launchTokenHash: string
@@ -206,6 +211,10 @@ export class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCommands {
     this.getAgentProviderSessionSnapshotFn =
       deps?.getAgentProviderSessionSnapshot ?? deps?.getAgentStatusSnapshot ?? null
     this.getAgentProviderSessionRowsForPaneFn = deps?.getAgentProviderSessionRowsForPane ?? null
+    this.getAgentDiscoveryProviderIdentityForPaneFn =
+      deps?.getAgentDiscoveryProviderIdentityForPane ?? null
+    this.invalidateAgentDiscoveryProviderIdentityForPaneFn =
+      deps?.invalidateAgentDiscoveryProviderIdentityForPane ?? null
     this.attestAgentHookCompatibilityAuthorityFn =
       deps?.attestAgentHookCompatibilityAuthority ?? null
     this.retireAgentHookCompatibilityAuthorityFn =

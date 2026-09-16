@@ -18,6 +18,10 @@ export type AgentHookEventPayload = {
   launchToken?: string
   /** Untrusted emitter claim. Main resolves it against the committed execution owner. */
   reportedExecutionBinding?: AgentStatusReportedExecutionBinding
+  /** Untrusted parent pid reported by the POSIX hook process. */
+  reportedEmitterProcessId?: number
+  /** Execution-host proof of the provider process that spawned this hook. */
+  emitterProcess?: { pid: number; startTime: string }
   /** Source-level emitter role; child claims cannot authorize the root attachment. */
   emitterRole?: Exclude<AgentStatusRunRole, 'unresolved'>
   /** Host-verified run identity; never copied directly from an emitter. */
