@@ -317,12 +317,18 @@ export class AgentSessionJournal {
       capturePrecedingPendingSubmissions: () => string[]
     ) => Promise<JournalOrderedAppendResult<T>>
   ): Promise<T> {
-    const settlesTurn = bodies.some((body) => {
-      const turn = readAgentJournalTurn(body)
-      return turn !== null && turn.state !== 'running'
-    })
+    const terminalTurnIds = new Set(
+      bodies.flatMap((body) => {
+        const turn = readAgentJournalTurn(body)
+        return turn !== null && turn.state !== 'running' ? [turn.turnId] : []
+      })
+    )
     const capturePrecedingPendingSubmissions = (): string[] => {
-      if (!settlesTurn) {
+      if (terminalTurnIds.size === 0) {
+        return []
+      }
+      const activeTurnId = this.activeTurnId()
+      if (activeTurnId === null || !terminalTurnIds.has(activeTurnId)) {
         return []
       }
       return this.submissions()
@@ -332,7 +338,7 @@ export class AgentSessionJournal {
         .map((submission) => submission.clientMessageId)
     }
     const result = await append(capturePrecedingPendingSubmissions)
-    if (!result.appended || !settlesTurn) {
+    if (!result.appended || result.precedingPendingSubmissionIds.length === 0) {
       return result.value
     }
     await Promise.all(
@@ -342,7 +348,8 @@ export class AgentSessionJournal {
             clientMessageId,
             state: 'unknown',
             reason: DISPATCH_DOUBT_TURN_SETTLED,
-            fence
+            fence,
+            recovered: true
           })
         } catch (error) {
           console.warn(
