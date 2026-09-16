@@ -1,4 +1,8 @@
-import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { emptyCellRowLockScopeCounts } from './cell-row-lock-scope.js'
 import {
   consumeRelayCellRowLockScope,
   openInMemoryRelayDatabase,
@@ -47,7 +51,7 @@ afterAll(async () => {
   for (const database of opened.splice(0)) await database.close()
 })
 
-describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
+describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
   let database: RelayDatabase
 
   // The Postgres backend is one shared CI database, so these rows are scoped by
@@ -320,5 +324,145 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
   it('leaves statements outside a transaction alone', async () => {
     await expect(database.query(RESERVE, [1, 0, CELL_C])).resolves.toBeDefined()
     await expect(database.query(RESERVE, [1, 0, CELL_A])).resolves.toBeDefined()
+  })
+
+  // Why: `checked` is the denominator the warn-only deploy rests on -- silence is
+  // only evidence if a write was judged. A read-only transaction inflates it into
+  // meaning less than it claims. The test that names this property used to hold a
+  // read AND a write, so it stayed green when reads began counting.
+  it('does not count a transaction that only read', async () => {
+    consumeRelayCellRowLockScope(database)
+
+    await database.transaction(async (transaction) => {
+      await transaction.queryLocked(LOCK_ONE, [CELL_A])
+    })
+
+    expect(consumeRelayCellRowLockScope(database)).toEqual({
+      cellRowLockScopesChecked: 0,
+      cellRowLockScopesStoodDown: 0,
+      cellRowLockScopeViolations: 0
+    })
+  })
+
+  // Why: standing down silently reads exactly like a clean transaction, which is
+  // the failure this guard's own comment forbids. The counter alone is not enough
+  // -- an operator reading logs must see it.
+  // The distinct column list is load-bearing: warnings dedupe once per signature
+  // for the life of the process, so a statement another test already reported
+  // would warn nowhere here. Recurrence is carried by the counter, not the log.
+  // The distinct column list is load-bearing: warnings dedupe once per signature
+  // for the life of the process, so a statement another test already reported
+  // would warn nowhere here. Recurrence is carried by the counter, not the log.
+  it('warns when it stands down, not only counts', async () => {
+    const events: string[] = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((line: unknown) => {
+      events.push(String(line))
+    })
+    try {
+      await database.transaction(async (transaction) => {
+        await transaction.queryLocked(`SELECT enabled FROM relay_cells WHERE cell_id = ?`, [
+          CELL_B
+        ])
+      })
+    } finally {
+      warn.mockRestore()
+    }
+
+    expect(consumeRelayCellRowLockScope(database).cellRowLockScopesStoodDown).toBe(1)
+    expect(events.some((line) => line.includes('orca_relay_cell_row_lock_scope_stood_down'))).toBe(
+      true
+    )
+  })
+
+  // Why: after standing down the scope has an incomplete picture, so judging
+  // anything further would be guessing. Without this the suppression can be
+  // deleted and no test notices, because the stand-down cases hold nothing yet.
+  it('judges nothing further once it has stood down', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.queryLocked(
+          `SELECT capacity_requests FROM relay_cells WHERE cell_id = ?`,
+          [CELL_B]
+        )
+        await transaction.query(RESERVE, [1, 0, CELL_A])
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  // Why: production is the configuration that actually ships. "Tests throw,
+  // production warns" was half-tested -- nothing exercised the warn, nor the
+  // once-per-signature dedupe that bounds it.
+  it('warns instead of throwing when it is not running under test', async () => {
+    const previous = process.env.NODE_ENV
+    process.env.NODE_ENV = 'production'
+    const events: string[] = []
+    const warn = vi.spyOn(console, 'warn').mockImplementation((line: unknown) => {
+      events.push(String(line))
+    })
+    try {
+      await expect(
+        database.transaction(async (transaction) => {
+          await transaction.queryLocked(LOCK_ONE, [CELL_C])
+          // The backend name is in the statement on purpose, and early in it.
+          // Warnings dedupe by statement for the life of the process, and this
+          // write's text is identical on both dialects -- unlike a locked read,
+          // which Postgres rewrites with FOR UPDATE -- so the second backend
+          // would otherwise assert on a warning the first one consumed. The
+          // dedupe key is the first 80 characters, so the marker has to fit
+          // inside them.
+          await transaction.query(
+            `UPDATE relay_cells SET observed_requests = ? WHERE cell_id = ? AND '${name}'='${name}'`,
+            [1, CELL_A]
+          )
+        })
+      ).resolves.toBeUndefined()
+    } finally {
+      warn.mockRestore()
+      process.env.NODE_ENV = previous
+    }
+
+    expect(
+      events.some((line) => line.includes('orca_relay_cell_row_lock_scope_violation'))
+    ).toBe(true)
+    expect(consumeRelayCellRowLockScope(database).cellRowLockScopeViolations).toBe(1)
+  })
+})
+
+// Why a source assertion: deleting the drain from the runtime-metrics snapshot
+// left every other test green. The whole warn-only deploy rests on reading these
+// counters from a live log line, so "the counters are computed correctly" is not
+// the property that matters -- "the counters reach the event" is.
+describe('cell row lock scope counters reach production', () => {
+  const sourceDirectory = fileURLToPath(new URL('.', import.meta.url))
+  const counterNames = Object.keys(emptyCellRowLockScopeCounts())
+  const terraform = () =>
+    readFileSync(join(sourceDirectory, '../../../infra/terraform/relay-observability.tf'), 'utf8')
+  const declaredFields = () =>
+    [...terraform().matchAll(/field\s*=\s*"([^"]+)"/g)].map((match) => match[1])
+
+  it('drains the scope counters into the runtime metrics snapshot', () => {
+    const entry = readFileSync(join(sourceDirectory, 'index.ts'), 'utf8')
+    const start = entry.indexOf('observability.start(')
+    expect(start).toBeGreaterThan(-1)
+    const snapshot = entry.slice(start, entry.indexOf('}))', start))
+    expect(snapshot).toContain('consumeRelayCellRowLockScope(database)')
+  })
+
+  // Why: a field name is the contract between the emitter and Cloud Monitoring,
+  // and a typo on either side yields no metric and no failure anywhere. That is
+  // how cellInventoryHold* shipped log-only and unalertable for weeks.
+  it('declares every counter as a Terraform log metric field', () => {
+    const declared = declaredFields()
+    for (const name of counterNames) expect(declared).toContain(name)
+  })
+
+  // Why: an HCL object constructor silently keeps the last duplicate, and fmt,
+  // validate and plan all report success. The count is the only assertion.
+  it('declares each counter exactly once', () => {
+    const declared = declaredFields()
+    for (const name of counterNames) {
+      expect(declared.filter((field) => field === name)).toHaveLength(1)
+    }
   })
 })

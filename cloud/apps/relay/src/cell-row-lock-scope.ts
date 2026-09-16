@@ -79,7 +79,26 @@ export class CellRowLockScope {
   private checked = false
   private violations = 0
 
+  // Why the wrapper: this runs inside the caller's try, so anything thrown here
+  // escapes as that statement's failure and is mislabelled with its SQL phase on
+  // the way out. A warn-only observer must be structurally unable to fail a
+  // request, not merely unable in the shapes reachable today.
   observe(sql: string, params: readonly unknown[], lock: CellRowLockKind, rows: SqlRow[]): void {
+    try {
+      this.inspect(sql, params, lock, rows)
+    } catch (error) {
+      if (error instanceof CellRowLockScopeViolationError) throw error
+      this.opaque = true
+      reportStandDown(`unreadable:${fingerprint(sql)}`)
+    }
+  }
+
+  private inspect(
+    sql: string,
+    params: readonly unknown[],
+    lock: CellRowLockKind,
+    rows: SqlRow[]
+  ): void {
     if (!sql.includes(CELL_TABLE)) return
     // An insert adds a row nobody could have locked before it existed, so it
     // extends what the transaction holds and takes no place in the order.
@@ -223,9 +242,13 @@ function reportStandDown(statement: string): void {
 // locking conversions it exists to police, so its first job is to be observed
 // firing nowhere -- taking the fleet down to prove a hypothesis is the wrong
 // trade. Tests throw, so a real violation still cannot land green.
+// Distinct from an unreadable statement so observe()'s catch can tell a real
+// violation apart from the guard's own failure and rethrow only the former.
+export class CellRowLockScopeViolationError extends Error {}
+
 function report(violation: CellRowLockViolation): void {
   if (process.env.NODE_ENV === 'test') {
-    throw new Error(
+    throw new CellRowLockScopeViolationError(
       `cell_row_lock_scope_violation ${violation.reason}` +
         ` cells=[${violation.cellIds.join(', ')}]` +
         ` held=[${violation.held.join(', ')}] sql=${violation.statement}`
