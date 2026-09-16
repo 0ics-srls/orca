@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => {
   const anim = () => ({ start: vi.fn(), stop: vi.fn() })
   return {
     reducedMotion: true,
+    reducedMotionResult: null as Promise<boolean> | null,
     timing: vi.fn(anim),
     loop: vi.fn(anim)
   }
@@ -23,7 +24,9 @@ vi.mock('react-native', async () => {
   return {
     AccessibilityInfo: {
       addEventListener: vi.fn(() => ({ remove: vi.fn() })),
-      isReduceMotionEnabled: vi.fn(() => Promise.resolve(mocks.reducedMotion))
+      isReduceMotionEnabled: vi.fn(
+        () => mocks.reducedMotionResult ?? Promise.resolve(mocks.reducedMotion)
+      )
     },
     Animated: {
       Value: AnimatedValue,
@@ -51,6 +54,7 @@ describe('NotificationOnboardingPreview', () => {
     act(() => renderer?.unmount())
     renderer = null
     mocks.reducedMotion = true
+    mocks.reducedMotionResult = null
     mocks.timing.mockClear()
     mocks.loop.mockClear()
     vi.restoreAllMocks()
@@ -93,5 +97,20 @@ describe('NotificationOnboardingPreview', () => {
     await renderPreview(true)
     expect(mocks.loop).toHaveBeenCalledOnce()
     expect(mocks.loop.mock.results[0]?.value.start).toHaveBeenCalledOnce()
+  })
+
+  it('does not start the loop until reduced-motion is known', async () => {
+    let resolvePreference: (enabled: boolean) => void = () => {}
+    mocks.reducedMotionResult = new Promise((resolve) => {
+      resolvePreference = resolve
+    })
+
+    await renderPreview(true)
+    expect(mocks.loop).not.toHaveBeenCalled()
+
+    await act(async () => {
+      resolvePreference(false)
+    })
+    expect(mocks.loop).toHaveBeenCalledOnce()
   })
 })

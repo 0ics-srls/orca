@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { AccessibilityInfo, Animated, Easing, StyleSheet, Text, View } from 'react-native'
+import { useEffect, useRef } from 'react'
+import { Animated, Easing, StyleSheet, Text, View } from 'react-native'
 import { OrcaLogo } from '../components/OrcaLogo'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
+import { useReducedMotionEnabled } from './use-reduced-motion'
 
 const SAMPLE_NOTIFICATIONS = [
   { title: 'Codex finished', body: 'Tests are passing.' },
@@ -21,12 +22,12 @@ type Props = {
 
 /** Decorative banners; the surrounding copy is the accessible explanation. */
 export function NotificationOnboardingPreview({ active }: Props) {
-  const reduceMotion = usePrefersReducedMotion()
-  const first = useRef(new Animated.Value(active && reduceMotion ? 1 : 0)).current
-  const second = useRef(new Animated.Value(active && reduceMotion ? 1 : 0)).current
+  const reduceMotion = useReducedMotionEnabled()
+  const first = useRef(new Animated.Value(0)).current
+  const second = useRef(new Animated.Value(0)).current
 
   useEffect(() => {
-    if (!active) {
+    if (!active || reduceMotion === null) {
       first.setValue(0)
       second.setValue(0)
       return
@@ -118,28 +119,6 @@ function bannerMotion(progress: Animated.Value) {
       }
     ]
   }
-}
-
-function usePrefersReducedMotion(): boolean {
-  const [enabled, setEnabled] = useState(false)
-
-  useEffect(() => {
-    let mounted = true
-    void AccessibilityInfo.isReduceMotionEnabled()
-      .then((nextEnabled) => {
-        if (mounted) {
-          setEnabled(nextEnabled)
-        }
-      })
-      .catch(() => undefined)
-    const subscription = AccessibilityInfo.addEventListener('reduceMotionChanged', setEnabled)
-    return () => {
-      mounted = false
-      subscription.remove()
-    }
-  }, [])
-
-  return enabled
 }
 
 const styles = StyleSheet.create({
