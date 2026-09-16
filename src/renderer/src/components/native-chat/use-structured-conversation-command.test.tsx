@@ -191,5 +191,6 @@ describe('useStructuredConversationCommand', () => {
       resolveCommand({ ok: true, value: { command: 'compact', state: 'completed' } })
       await Promise.resolve()
     })
+    expect(view.result.current.writeError).toBe('option failed')
   })
 })

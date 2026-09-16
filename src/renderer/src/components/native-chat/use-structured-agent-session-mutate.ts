@@ -42,7 +42,9 @@ export function useStructuredAgentSessionMutate(args: {
 } {
   const { enabled = true, sessionId, stateRef, target } = args
   const [writeError, setWriteError] = useState<string | null>(null)
-  const writeErrorOperationId = useRef<string | null>(null)
+  const writeErrorOwner = useRef<{ operationId: string; sequence: number } | null>(null)
+  const nextMutationSequence = useRef(0)
+  const latestSettledSequence = useRef(0)
   const operationIds = useRef(new Map<string, string>())
   const enabledRef = useRef(enabled)
   useEffect(() => {
@@ -65,6 +67,7 @@ export function useStructuredAgentSessionMutate(args: {
       const clientOperationId =
         options?.operationId ?? operationIds.current.get(key) ?? structuredSessionOperationId()
       operationIds.current.set(key, clientOperationId)
+      const sequence = ++nextMutationSequence.current
       let result: AgentSessionMutationResult<T>
       try {
         result = await callStructuredAgentSession<AgentSessionMutationResult<T>>(target, method, {
@@ -82,8 +85,13 @@ export function useStructuredAgentSessionMutate(args: {
         })
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Request was not sent'
-        if (enabledRef.current && stateRef.current.fence === targetFence) {
-          writeErrorOperationId.current = clientOperationId
+        if (
+          enabledRef.current &&
+          stateRef.current.fence === targetFence &&
+          sequence >= latestSettledSequence.current
+        ) {
+          latestSettledSequence.current = sequence
+          writeErrorOwner.current = { operationId: clientOperationId, sequence }
           setWriteError(message)
         }
         options?.onUnresolved?.(message)
@@ -96,8 +104,13 @@ export function useStructuredAgentSessionMutate(args: {
         ) {
           operationIds.current.delete(key)
         }
-        if (enabledRef.current && stateRef.current.fence === targetFence) {
-          writeErrorOperationId.current = clientOperationId
+        if (
+          enabledRef.current &&
+          stateRef.current.fence === targetFence &&
+          sequence >= latestSettledSequence.current
+        ) {
+          latestSettledSequence.current = sequence
+          writeErrorOwner.current = { operationId: clientOperationId, sequence }
           setWriteError(result.refusal.message)
         }
         return null
@@ -108,18 +121,21 @@ export function useStructuredAgentSessionMutate(args: {
       if (!isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {
         operationIds.current.delete(key)
       }
-      writeErrorOperationId.current = null
-      setWriteError(null)
+      if (sequence >= latestSettledSequence.current) {
+        latestSettledSequence.current = sequence
+        writeErrorOwner.current = null
+        setWriteError(null)
+      }
       return result.value
     },
     [enabled, sessionId, stateRef, target]
   )
 
   const clearWriteError = useCallback((operationId: string) => {
-    if (writeErrorOperationId.current !== operationId) {
+    if (writeErrorOwner.current?.operationId !== operationId) {
       return
     }
-    writeErrorOperationId.current = null
+    writeErrorOwner.current = null
     setWriteError(null)
   }, [])
   return { mutate, writeError, clearWriteError }
