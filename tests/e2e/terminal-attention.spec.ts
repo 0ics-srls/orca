@@ -310,7 +310,7 @@ test.describe('Terminal attention', () => {
     // Focused BEL owns the tab indicator; seed pane attention separately so the
     // Escape path proves it clears both store surfaces that pty-connection owns.
     await orcaPage.evaluate((paneKey) => {
-      window.__store?.getState().markTerminalPaneUnread(paneKey)
+      window.__store?.getState().markTerminalPaneUnread(paneKey, 'terminal-bell')
     }, activePaneKey)
     await expect
       .poll(async () => (await getUnreadTerminalPaneKeys(orcaPage)).includes(activePaneKey), {
