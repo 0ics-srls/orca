@@ -1,9 +1,9 @@
 # Memory leak audit (2026-09-15)
 
-The audit produced **15 separate PRs**, each based on `main`. The largest new
+The audit produced **16 separate PRs**, each based on `main`. The largest new
 reproduced mechanisms are terminal hyperlink metadata retention, stalled daemon
 output, stalled CDP delivery, oversized strings retained by small text tails,
-and unbounded transcript record assembly. They establish real defects in code paths that
+unbounded transcript record assembly, and invisible WebGL glyph caches. They establish real defects in code paths that
 can consume large amounts of memory; **they do not prove the cause of #19831 or
 #19768**. Affected-host data is unavailable, and the issue map keeps that limit
 explicit.
@@ -17,6 +17,7 @@ explicit.
 | CDP client stops reading | The baseline retains 133,177,280 queued bytes after a 128 MiB burst. The fix bounds backlog with the existing outbound queue and terminates overflowing clients. [#20949](https://github.com/stablyai/orca/pull/20949), [reproduction](./cdp-stream-retention/README.md). |
 | Small CI/terminal tails retain oversized parents | Eight capped CI excerpts retained 16–32 MiB; eight error strings totaling 32,000 characters retained 32 MiB; terminal tails reporting 4 MiB retained 32 MiB. Copying at retention boundaries reduces them to about 0.1–0.15 MiB, 33 KiB, and 4 MiB. [#20960](https://github.com/stablyai/orca/pull/20960), [reproduction](./retained-text-slices/README.md). |
 | AI Vault assembles an oversized transcript record | A 64 MiB record peaks near 248 MiB RSS despite the child’s 384 MiB old-space setting. Reusing the remote 10 MiB record cap stops at the cap plus one input chunk and peaks near 62 MiB. Failed scans preserve their previous resume point. [#20963](https://github.com/stablyai/orca/pull/20963), [reproduction](./transcript-record-retention/README.md). |
+| Invisible WebGL variants bypass texture-page eviction | 100,000 colored-space redraws keep 100,093 entries and about 13.6 MB heap growth on one texture page. A separate 4,096-entry cap leaves 1,789 entries and about 0.2–0.4 MB growth in the reproduction, preserving shared terminals’ pixels. [#20965](https://github.com/stablyai/orca/pull/20965), [reproduction](./webgl-empty-glyph-retention/README.md). |
 | Stats persistence stalls | The live event array exceeded its serialize-time cap. It now retains the newest 10,000 events on append. [#20941](https://github.com/stablyai/orca/pull/20941). |
 | Process-table ancestry cycle | A two-row cycle exhausts an isolated 32 MiB heap in about 0.15 seconds. Existing [#20715](https://github.com/stablyai/orca/pull/20715) covers the shared walker; [#20946](https://github.com/stablyai/orca/pull/20946) fixes the independent relay walker. |
 | Smaller lifecycle leaks | Eight PRs cover editor/diff/auth/prompt timers, renderer HMR listeners, main IPC relay/preload cleanup, watchdog listeners, and parked scroll-intent records. These are not gigabyte explanations. [Full PR list](./memory-leak-scan-2026-09-15.md#pull-requests). |
@@ -24,12 +25,13 @@ explicit.
 Risks differ by change. Hyperlink collection uses tested private xterm fields and
 scans both buffers after registry growth; its CPU cost scales with scrollback.
 Daemon backpressure depends on producer pause support. CDP overflow disconnects
-the stalled client. String copying costs scale with the retained caps and does
+the stalled client. Evicted invisible WebGL variants need rasterization when
+revisited, while visible glyphs and texture pages stay intact. String copying costs scale with the retained caps and does
 not reduce temporary original-input allocations. The transcript cap turns a
 legitimate record over 10 MiB into a per-session scan issue and covers the
 resumable JSONL route, not every whole-document/import reader. The timer/listener changes have smaller behavioral scope.
 An unsafe legacy-daemon shutdown proposal was closed and reverted after review
-found a race that could kill live work; it is excluded from the 15 fixes.
+found a race that could kill live work; it is excluded from the 16 fixes.
 
 ## Issue correlation
 
@@ -61,20 +63,20 @@ because the retaining path crosses that boundary.
 
 | Category | Inventoried files |
 | --- | ---: |
-| Source | 25,481 |
-| Config | 780 |
-| Documentation | 246 |
+| Source | 25,482 |
+| Config | 781 |
+| Documentation | 247 |
 | Asset/other | 200 |
-| **Total rows** | **26,707** |
+| **Total rows** | **26,710** |
 
 The [file inventory](./memory-leak-file-inventory-2026-09-15.tsv) records size and
 SHA-256 for every tracked path except the inventory itself. That self-exclusion
-avoids a circular hash; symlinks are hashed as link text. Thus 26,707 rows plus
-the inventory account for 26,708 tracked paths. Hashes describe the final
+avoids a circular hash; symlinks are hashed as link text. Thus 26,710 rows plus
+the inventory account for 26,711 tracked paths. Hashes describe the final
 worktree contents, including staged evidence files, rather than only HEAD.
 
 The [mechanical search results](./memory-pattern-scan-2026-09-15.json) record
-25,481 source files searched and per-file hits for listener, timer,
+25,482 source files searched and per-file hits for listener, timer,
 subscription, disposal, Map/Set, and buffer-concatenation signals. Zero-hit source
 files remain represented in the inventory. These searches include comments and
 tests; unequal add/remove counts do not establish a leak. Candidate review traced
@@ -101,6 +103,8 @@ formatting, and changed-code quality passed. The final hyperlink pass included
 62 desktop tests and 15 mobile engine/init tests. The retained-string passes ran
 41 CI/provider/helper tests, 69 terminal-buffer tests, and 28 error/reattach/heap
 tests, followed by a final 63-test run. Transcript verification ran 71 tests
-and a ten-test reader/recovery pass; these per-run counts overlap. Reproduction artifacts retain
+and a ten-test reader/recovery pass. WebGL cache verification adds 86 tests and
+six 100,000-redraw runs against actual bundles in headless Chromium, including
+shared-terminal pixel checks; these per-run test counts overlap. Reproduction artifacts retain
 before/after samples and source bundle hashes. No affected-host heap capture was
 available, and no application windows were opened.

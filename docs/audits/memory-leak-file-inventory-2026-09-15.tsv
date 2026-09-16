@@ -622,13 +622,13 @@ asset-or-other	18354	e66202cc623996d02040c93449eb9ae353fddadf426cb53202a59ee710e
 asset-or-other	703	47405b9994b5acf1b4e90b49250358c1ca03649854d59560e7732b72fe336920	config/patches/@xterm__addon-ligatures@0.11.0-beta.300.patch
 asset-or-other	386305	eee5338dd2621ece46e79c61ec06766cd7fadaf79ffdb24e2a8ab68e97ef31f0	config/patches/@xterm__addon-search@0.17.0-beta.300.patch
 asset-or-other	403222	851eac3d75e6d8c013b9f4c053e61d824b23965cb19ecc28e335e05059f3a294	config/patches/@xterm__addon-serialize@0.15.0-beta.300.patch
-asset-or-other	3650258	94687e89a0115e6e6aa102837f986debdc029c091527ee5eb4a4e17ceaf9473e	config/patches/@xterm__addon-webgl@0.20.0-beta.299.patch
+asset-or-other	3667247	023a26cbe215df764d841484cb7b0c81d97d9405587eec4b9446d9d06d4e762c	config/patches/@xterm__addon-webgl@0.20.0-beta.299.patch
 asset-or-other	7367970	1f36ce689bc50c703ae09aeda0e064f107e18e4a5ecba19e746fa5edc4b02ef4	config/patches/@xterm__xterm@6.1.0-beta.303.patch
 asset-or-other	5160	7333b3837f80a7fbd045964db6d76ba4fc118e49134bdbabb00585b6b7b60673	config/patches/lint-staged@16.4.0.patch
 asset-or-other	55888	346cb29d33dd6eeb14910ff411c7584b0b2ff9a4b271c4b6d23c3b48e6548f74	config/patches/node-pty@1.1.0.patch
 asset-or-other	12000	2bbc6c4ddd4a1ecece5a7622c35fb6bccecf4e3d0441ab6324bc07047349618c	config/patches/xterm-src/@xterm__addon-search@0.17.0-beta.300.src.patch
 asset-or-other	9775	4a68716032cc96e991e56b846b7e20ab17b3bdb49a2dc8dccbe821ba847d1272	config/patches/xterm-src/@xterm__addon-serialize@0.15.0-beta.300.src.patch
-asset-or-other	6598	313853551578ac1938c761e9ae8f4d9fb3acfcb65f497b8f82a612f6ac65aa86	config/patches/xterm-src/@xterm__addon-webgl@0.20.0-beta.299.src.patch
+asset-or-other	10576	efd57c589762d3d8435723ff27955031fb58df9b3625e3389e4cb4ddbbc95c9d	config/patches/xterm-src/@xterm__addon-webgl@0.20.0-beta.299.src.patch
 asset-or-other	50212	1dd399ad8c537b2f2c12da3978e09f4b0269dec38554cf017f26bbfa26a63dbb	config/patches/xterm-src/@xterm__xterm@6.1.0-beta.303.src.patch
 config	5456	fb4b137d4ff659b87da863f85269657a38e8fb58430e9596d29c5626865e44ea	config/patches/xterm-upstream.json
 documentation	2481	9b64ae88056d142b230f7f63262f1e0f4546527c2508dc73e0c52a95b79e6076	config/performance-audit.md
@@ -1221,9 +1221,9 @@ config	923	36732bc76eaad9c73183c179002d6e519aa51103f5647fdea013930accbf4253	docs
 config	2267	2fd5d3859552d3b761ccbf6d65c41e8196d592292ca317b556687a6e05179179	docs/audits/daemon-stream-retention/before-64kib-chunks.json
 source	3370	ebdd0feda03e6553861a06ba9a459c95718d1354a064b22c9aa34679606a9ef7	docs/audits/daemon-stream-retention/reproduce.mjs
 config	23798	f1d64b857c7abd7c401711f872c91f1225650b32a2ce180c179bb3acfc229039	docs/audits/memory-issue-index-2026-09-15.json
-documentation	7941	aae1114527fddd55b452fbfa670b7f634279708fd73a8318b82eba680c20ef73	docs/audits/memory-leak-audit-2026-09-15.md
-documentation	38959	e5e1409d1106e3fd94ff90ce34b15555bf762fe8df7dc45dbc7281d5b475bfd6	docs/audits/memory-leak-scan-2026-09-15.md
-config	869083	c40cd4800342d953acfb6f0f1dbf0b092098bc2d8afc99512b7972a6031724bf	docs/audits/memory-pattern-scan-2026-09-15.json
+documentation	8660	75d30483f6a3657628a2f1d22bdb45b1d2d8e564899500c140763f9a460c577c	docs/audits/memory-leak-audit-2026-09-15.md
+documentation	40519	2704e7b7b38d8c1297d158050528515175ea5ce7e1172bd2476187df7609b48b	docs/audits/memory-leak-scan-2026-09-15.md
+config	869186	7bdad2fcb4c183e942727d0068418f1685f0a6db2b466500ffe226354f41bc59	docs/audits/memory-pattern-scan-2026-09-15.json
 documentation	3881	5d183f0d648e7000ff23feb3204643af7834a5a4e48fbdde125f5f7357b9e57e	docs/audits/osc-link-retention/README.md
 source	3137	9bce6c3e0e2b5bc7a08f6f4b38c8bcafa39f13830d953c9da6fe43d95a836129	docs/audits/osc-link-retention/reproduce.mjs
 config	9348	c159ed5cd448dcc153f258025424081c1e25e662ff4efbda9f73b88ed99b7a60	docs/audits/osc-link-retention/results.json
@@ -1234,6 +1234,9 @@ config	3165	3c493185f0f245676c46b9beaa9b1efa40ea99969445ab8083daf85ce48fbbba	doc
 documentation	3201	f8861803ffe27466a24391cb982fe77c5d8df4c5e38aef9712a46d36357115e2	docs/audits/transcript-record-retention/README.md
 source	5112	79c4ae8ef2694041043125b344a1acf0f49cd5d9d2909843d5fc0d97c5849887	docs/audits/transcript-record-retention/reproduce.mjs
 config	1587	585f4942c6049ebaa62d3825e2f5b53dbb910c1cc090120d6a3f892ba6480f8f	docs/audits/transcript-record-retention/results.json
+documentation	3323	166d3345cae5cdc623b13404911d2cbb23af03400bcb3db6ce0d7f649354e3b1	docs/audits/webgl-empty-glyph-retention/README.md
+source	7836	806e02588764f4ac0ed6f7d1e9bc816e4de7a72208e4908a449076a251e4aa70	docs/audits/webgl-empty-glyph-retention/reproduce.mjs
+config	14780	b2926c2e7688e6001c9992b96994be15e08d69741d6062a4a0e2981aca24440c	docs/audits/webgl-empty-glyph-retention/results.json
 documentation	16278	d46e61474e517d45e7b850ddda79dfbb8bcff536b5c15ed218951cfa282f2ef6	docs/readme/README.es.md
 documentation	18020	fe3f7e08f45db7e78c3a8bbb36e264c1309e95a20605d9d752e15c35b1c97543	docs/readme/README.fr.md
 documentation	17842	1f86343a6b0f300bd923570e3074d5fbbc10026d4760f6c55c4115d2e6be168f	docs/readme/README.ja.md
@@ -3852,7 +3855,7 @@ config	385	26b9a77e4a6bc5770bdf99ac02ea3c31a31f369f02f9e24fb8a16d47f6a42137	nati
 source	4680	119566a5341079586b9f6492472856daafc6ea2081da2c22100b4d9c7269e7d4	native/windows-registry/src/addon.cc
 config	88	51bc9c91c586be3943ba3aa4d44bcd3a2eb412b5c663d54b33686007285ee949	orca.yaml
 config	26270	039a5464a296a1ad4cd0456154da71843e1bd3c63337e24c3767119f44a573ec	package.json
-config	529481	759c01a2687e953a9adc5c09332bafa193471ba6ec4875468565abb4ddf0d498	pnpm-lock.yaml
+config	529481	9fb0aa726d3b760b79ac49c78ba3a10ec69c8acd1a6168066514a4583c20cc32	pnpm-lock.yaml
 config	3029	d047a14eb71fd1093ef64c9579dd2c178c6eaaca239f66d7cd1c078833bdc914	pnpm-workspace.yaml
 asset-or-other	361210	7e9d10147477115ee06812a5f358e5551bba2df8f09f45fe7227d084ede3626a	resources/app-icons/orca-blue.png
 asset-or-other	1111773	43af0935a18c32e372bd0b22406a4f61b7b2e809c3c6d2062bec87b7e6b474ed	resources/app-icons/orca-watercolor.png

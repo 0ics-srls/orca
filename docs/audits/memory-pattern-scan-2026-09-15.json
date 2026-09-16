@@ -29,8 +29,8 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25481,
-  "matchingFiles": 7764,
+  "sourceFilesSearched": 25482,
+  "matchingFiles": 7765,
   "counts": {
     "addEventListener": 1554,
     "removeEventListener": 1203,
@@ -38,7 +38,7 @@
     "clearTimeout": 1849,
     "setInterval": 383,
     "clearInterval": 218,
-    "requestAnimationFrame": 583,
+    "requestAnimationFrame": 584,
     "cancelAnimationFrame": 381,
     "subscribe(": 738,
     "unsubscribe": 3285,
@@ -1277,6 +1277,9 @@
       "setTimeout": 1,
       "subscribe(": 1,
       "unsubscribe": 1
+    },
+    "docs/audits/webgl-empty-glyph-retention/reproduce.mjs": {
+      "requestAnimationFrame": 1
     },
     "docs/site/src/components/AutoplayClip.tsx": {
       "addEventListener": 1,

@@ -16,7 +16,7 @@ or that every field incident has a demonstrated root cause.
 | `mobile` | tracked TS/TSX/JS/JSX | root | scanned; shared xterm hyperlink fix now covers its WebView |
 | `cloud` | tracked TS/TSX/JS/JSX | root | scanned; no valuable leaks found |
 | `tests` | tracked TS/TSX/JS/JSX | root + area owners | scanned; fixtures classified |
-| `config` | tracked TS/TSX/JS/JSX | root | scanned; build/test lifecycle only |
+| `config` | tracked TS/TSX/JS/JSX | root | scanned; build/test lifecycle and vendored xterm patches |
 | `native`, `src/cli`, `src/relay`, `src/types` | tracked source | root | scanned; targeted lifecycle search and manual review |
 | docs, skills, resources, examples, scripts, packaging | non-runtime/support files | root | scanned; no production leak candidates |
 
@@ -55,10 +55,9 @@ alive for a scenario were reviewed separately from application code.
 | ML-015 | `src/main/daemon/daemon-stream-data-batcher.ts` and stream/PTY pause ownership | The 32 MiB held-queue valve transfers excess output into an unbounded socket queue when a reader stalls; small writes bypassed the held-queue valve too. | Backpressure visible producers, preserve hidden keep-tail shedding, and fence attachment handoffs; [#20947](https://github.com/stablyai/orca/pull/20947). | 163 tests in 11 suites; real paused-reader experiments demonstrate producer pause, bounded queues and complete drain. [Artifacts](./daemon-stream-retention/README.md). |
 | ML-016 | `src/main/browser/cdp-client-response-writer.ts`, `cdp-debugger-channel.ts` | CDP events and responses accumulate in WebSocket buffers behind an unread client. A 128 MiB experiment retained 133,177,280 queued bytes. | Reuse the existing bounded outbound queue and terminate stalled clients on overflow, preserving single large healthy replies; [#20949](https://github.com/stablyai/orca/pull/20949). | 66 tests; real WebSocket before/after reproduction. [Artifacts](./cdp-stream-retention/README.md). |
 | ML-017 | `src/shared/terminal-osc-link-retirement.ts`, headless/renderer/mobile terminal integrations | OSC 8 link entries and marker listeners survive overwritten cells. 10,000 redraws retain about 20.5–20.9 MB after GC with only 24 rows. | Collect entries unreferenced by either buffer or active attributes after registry growth; [#20955](https://github.com/stablyai/orca/pull/20955). | Real installed headless and renderer builds retain about 1.6–1.7 MB after the fix; snapshot/fidelity/pane regressions and 15 mobile tests pass. Private xterm fields and buffer-size-dependent sweep cost are explicit limitations. [Artifacts](./osc-link-retention/README.md). |
-
 | ML-018 | CI excerpts, main/relay recent output, terminal session/eager/shutdown/reattach tails, and terminal error surfaces | Capped V8 slices pin oversized inputs. Eight 16 KiB CI excerpts retained 16–32 MiB; eight 4,000-character errors retained 32 MiB; eight terminal tails reporting 4 MiB retained 32 MiB. | Reuse the existing shared and renderer string copiers at six retention boundaries; [#20960](https://github.com/stablyai/orca/pull/20960). | Real-function after-GC measurements fall to about 0.1–0.15 MiB, 33 KiB, and 4 MiB respectively. CI/provider/content and retained state/queue tests pass. [Artifacts](./retained-text-slices/README.md). |
-
 | ML-019 | `src/main/ai-vault/session-scanner-jsonl-reader.ts` | Incremental JSONL framing retained an entire newline-free record and then allocated concatenated/decoded copies. A 64 MiB record peaks near 248 MiB RSS despite the scanner child’s 384 MiB V8 old-space setting. | Share the existing streamed remote 10 MiB record budget and reject before retaining/concatenating/decoding oversized records; [#20963](https://github.com/stablyai/orca/pull/20963). | Real-file reproduction peaks near 62 MiB RSS and stops at 10 MiB plus one input chunk; 71 reader/cache/WSL tests and ten reader/recovery tests pass (nine overlap). Valid larger records now produce a session scan issue; whole-document readers are outside this fix. [Artifacts](./transcript-record-retention/README.md). |
+| ML-020 | Vendored xterm WebGL `TextureAtlas` | Invisible glyph variants occupied no texture pixels but each added cache metadata, so page eviction never bounded them. 100,000 colored-space redraws retained 100,093 entries and about 13.5–13.7 MB of V8 heap growth on one texture page. | Separate invisible caches with a shared 4,096-entry cap, preserving visible glyphs and pages; regenerated CJS/ESM/source maps and lockfile hashes in [#20965](https://github.com/stablyai/orca/pull/20965). | Actual installed CJS and ESM bundles retain 1,789 entries and about 0.2–0.4 MB heap growth; shared-terminal pixel hashes, cache hits, empty-only clear, 86 tests, and pinned regeneration checks pass. [Artifacts](./webgl-empty-glyph-retention/README.md). |
 
 ## GitHub memory-issue correlation
 
@@ -76,8 +75,8 @@ body searches supplied additional reports.
 
 | Issue | Current-code explanation |
 |---|---|
-| [#19831](https://github.com/stablyai/orca/issues/19831) | **Code mechanisms reproduced; incident attribution remains unproven.** ML-017 can grow main/daemon/renderer heaps during local hyperlink redraws even with fixed pane and row counts. ML-015 reproduces unbounded daemon buffering behind a stalled reader. The local eviction exemption and failed PTY teardown can retain mounted buffers or child processes. Existing [#16963](https://github.com/stablyai/orca/pull/16963) covers Linux descriptor/shared-memory inheritance into detached daemons. ML-012 can cause a late sharp allocation ramp; ML-016 requires a stalled CDP client. ML-018 reproduces parent-string retention after CI-log viewing or oversized terminal payloads despite small logical caps. ML-019 adds unbounded external allocation while a scanner child assembles an oversized transcript record. The report establishes none of those specific triggers. Its 16.2 GB memory and 15.2 GB swap peaks are separate maxima, not a contemporaneous 31.4 GB allocation; the later kill was roughly 4h42m after the first and about three minutes into its own launch. No affected-host data is available. Small listener/scroll-intent fixes cannot explain the reported scale. |
-| [#19768](https://github.com/stablyai/orca/issues/19768) | **PTY accumulation explained; main-process incident not attributed.** Readiness failure enters `tearDownFailedWorkerStart`, which leaves the created PTY for manual `worker-release`; repeated respawns retain terminals/process trees. That does not explain the separately measured main PID. ML-017 supplies a reproduced main-mirror retaining path, and the cyclic process walk in ML-012 runs during foreground polling after dispatches stop. ML-018 adds retained CI/terminal backing strings. Neither the necessary hyperlink/oversized-input traffic nor a cyclic field process table is established. ML-019 normally runs in a scanner child, so it does not explain the separately measured main PID. Main renderer-delivery data has ACK/backlog caps, and synchronous headless parsing rules out an indefinite parser stall in the tested build. |
+| [#19831](https://github.com/stablyai/orca/issues/19831) | **Code mechanisms reproduced; incident attribution remains unproven.** ML-017 can grow main/daemon/renderer heaps during local hyperlink redraws even with fixed pane and row counts. ML-015 reproduces unbounded daemon buffering behind a stalled reader. The local eviction exemption and failed PTY teardown can retain mounted buffers or child processes. Existing [#16963](https://github.com/stablyai/orca/pull/16963) covers Linux descriptor/shared-memory inheritance into detached daemons. ML-012 can cause a late sharp allocation ramp; ML-016 requires a stalled CDP client. ML-018 reproduces parent-string retention after CI-log viewing or oversized terminal payloads despite small logical caps. ML-019 adds unbounded external allocation while a scanner child assembles an oversized transcript record. ML-020 adds renderer cache growth from distinct invisible glyph/color variants. The report establishes none of those specific triggers. Its 16.2 GB memory and 15.2 GB swap peaks are separate maxima, not a contemporaneous 31.4 GB allocation; the later kill was roughly 4h42m after the first and about three minutes into its own launch. No affected-host data is available. Small listener/scroll-intent fixes cannot explain the reported scale. |
+| [#19768](https://github.com/stablyai/orca/issues/19768) | **PTY accumulation explained; main-process incident not attributed.** Readiness failure enters `tearDownFailedWorkerStart`, which leaves the created PTY for manual `worker-release`; repeated respawns retain terminals/process trees. That does not explain the separately measured main PID. ML-017 supplies a reproduced main-mirror retaining path, and the cyclic process walk in ML-012 runs during foreground polling after dispatches stop. ML-018 adds retained CI/terminal backing strings. Neither the necessary hyperlink/oversized-input traffic nor a cyclic field process table is established. ML-019 normally runs in a scanner child and ML-020 is renderer-only, so neither explains the separately measured main PID. Main renderer-delivery data has ACK/backlog caps, and synchronous headless parsing rules out an indefinite parser stall in the tested build. |
 | [#19193](https://github.com/stablyai/orca/issues/19193) | **Explained by an unbounded retention policy.** A reuse miss launches a fresh session and immediately releases ownership so the old session remains protected. There is no cap on protected reuse seeds when the status gate keeps missing; 101 misses can therefore leave 101 live terminals. |
 | [#9479](https://github.com/stablyai/orca/issues/9479), [#13047](https://github.com/stablyai/orca/issues/13047) | **Explained for headless/legacy paths.** Headless one-shot automation returns after output/settlement without closing its launched terminal. Legacy `legacy_ambiguous` worker rows are intentionally retained and require `worker-release`; they have no automatic reaper. |
 | [#18789](https://github.com/stablyai/orca/issues/18789) | **Explained by a durable-handle/volatile-table gap.** Worker release/stop can report `release_unknown` or `terminal_handle_stale` after a renderer epoch change and skip `runtime.closeTerminal`, leaving the PTY in the host cgroup. |
@@ -167,7 +166,8 @@ stats cap, both unguarded process walkers, and the affected xterm package versio
 already existed in the reported build. The six capped-string retention boundaries
 in ML-018 also exist in that tag. The unbounded AI Vault reader and its scanner
 child’s 384 MiB old-space setting in ML-019 are present too; the newer per-record
-copy optimization did not add a record limit. Main headless models already had 5,000-row scrollback, synchronous parsing,
+copy optimization did not add a record limit. The WebGL addon version in ML-020
+also matches that tag, whose source patch lacked an invisible-entry cap. Main headless models already had 5,000-row scrollback, synchronous parsing,
 the 750 ms renderer timeout, and normal-exit disposal. Later stream scan/encoding
 optimizations did not fix the retention mechanism. The historical agent-row store
 removed by [#19785](https://github.com/stablyai/orca/pull/19785) held one bounded
@@ -210,8 +210,12 @@ that store to explain gigabytes.
 - The installed terminal parser caps OSC/DCS payloads, title stacks, and Kitty
   keyboard stacks. Its per-cell combined-character and extended-attribute tables
   are keyed by buffer position; this review did not identify a second ordinary
-  redraw leak there. WebGL’s empty-glyph cache is a separate candidate requiring
-  a rendered workload before attribution or a patch.
+  redraw leak there. WebGL’s empty-glyph cache was then independently reproduced
+  with actual rendered terminal output (ML-020) and fixed in #20965. One hundred
+  thousand unique colored-space variants add metadata without filling even one
+  texture page; a shared invisible-entry cap now bounds that cache. Both generated
+  module formats preserve sibling terminals’ rendered pixels and ordinary cache
+  hits. This is a separate renderer path, not a main-PID explanation.
 - The AI Vault child’s V8 heap setting does not bound external Buffer storage.
   Its local JSONL reader now shares the streamed remote record cap (ML-019).
   Mainline scanning surfaces oversized records as a per-session issue, preserves
@@ -244,6 +248,7 @@ that affected-host data is unavailable.
 - [#20955 — terminal hyperlink metadata retirement](https://github.com/stablyai/orca/pull/20955)
 - [#20960 — retained CI and terminal string tails](https://github.com/stablyai/orca/pull/20960)
 - [#20963 — AI Vault transcript record allocation cap](https://github.com/stablyai/orca/pull/20963)
+- [#20965 — invisible WebGL glyph cache cap](https://github.com/stablyai/orca/pull/20965)
 
 Validation: the initial lifecycle pass ran 27 focused tests. Subsequent fixes ran
 24 stats tests, 42 relay foreground tests, 163 daemon stream tests, and 66 CDP tests.
@@ -253,7 +258,8 @@ ran 41 CI/provider/helper tests, 69 terminal-buffer tests, and a further 28
 error/reattach/retained-heap tests. A final seven-suite run passed 63 tests
 covering the main/relay buffer and existing shared copier. Transcript validation
 ran 71 reader/remote/cache/WSL tests and ten reader/recovery tests (nine overlap).
-These are per-run counts,
+WebGL cache validation adds 86 tests and six headless Chromium runs of 100,000
+redraws each, including both installed bundle formats. These are per-run counts,
 not a sum of unique tests. Full `pnpm tc`, mobile typecheck, oxlint/formatting and
 the changed-code quality gate passed. Mobile's pre-existing frozen-lock/patch
 configuration mismatch required dependency setup with the original lockfile
@@ -262,6 +268,6 @@ window was opened.
 
 The first daemon-idle cleanup proposal (#20925) was closed and reverted after a
 race review showed that pre-v24 `listSessions` followed by `shutdown` could kill
-new live work. It is not counted among the 15 published fixes. Fan-out was used
+new live work. It is not counted among the 16 published fixes. Fan-out was used
 for the initial audit and issue passes; later follow-up agents hit the service
-usage limit, so the later hyperlink, retained-string, and transcript work was reviewed and validated locally.
+usage limit, so the later hyperlink, retained-string, transcript, and WebGL work was reviewed and validated locally.
