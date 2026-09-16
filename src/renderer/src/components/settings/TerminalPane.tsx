@@ -25,7 +25,6 @@ import { TerminalRenderingSection } from './TerminalRenderingSection'
 import { TerminalSetupScriptSection } from './TerminalSetupScriptSection'
 import { TerminalWindowsShellSection } from './TerminalWindowsShellSection'
 import { SettingsRow, SettingsSubsectionHeader } from './SettingsFormControls'
-import { SearchableSetting } from './SearchableSetting'
 
 type TerminalPaneProps = {
   settings: GlobalSettings
@@ -67,33 +66,33 @@ export function TerminalPane({
     !showWindowsHostSettings &&
     matchesSettingsSearch(searchQuery, {
       title: 'Default shell',
-      description: 'Shell executable for new terminal panes',
+      description: 'Shell used for new terminal panes',
       keywords: ['shell', 'terminal', 'fish', 'zsh', 'bash', 'nushell', 'default']
     }) ? (
       <section key="default-shell" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Terminal shell"
-          description="Choose the shell Orca opens for new terminal panes. Leave blank to follow your system default."
-        />
-        <SearchableSetting
           title="Default shell"
-          description="Supports shells such as fish, nushell, zsh, or an absolute executable path."
-          keywords={['shell', 'terminal', 'fish', 'nushell', 'zsh', 'bash', 'default']}
-        >
-          <SettingsRow
-            label="Default shell"
-            description="Takes effect for new terminals. Existing panes keep their current shell."
-            control={
-              <Input
-                value={settings.terminalDefaultShell ?? ''}
-                placeholder={isMac ? '/bin/zsh' : '/bin/bash'}
-                onChange={(event) => updateSettings({ terminalDefaultShell: event.target.value })}
-                className="w-full max-w-64"
-                aria-label="Default shell"
-              />
-            }
-          />
-        </SearchableSetting>
+          description="Choose what Orca opens for new terminal panes."
+        />
+        <SettingsRow
+          label="Shell executable"
+          description={
+            settings.terminalDefaultShell?.trim()
+              ? 'Custom shell active for new terminals. Existing panes are unchanged.'
+              : 'System default active. Enter a command or path such as fish, nu, or /bin/zsh.'
+          }
+          control={
+            <Input
+              value={settings.terminalDefaultShell ?? ''}
+              placeholder="System default"
+              onChange={(event) =>
+                updateSettings({ terminalDefaultShell: event.target.value.trimStart() })
+              }
+              className="w-full max-w-64"
+              aria-label="Default shell executable"
+            />
+          }
+        />
       </section>
     ) : null
 

@@ -239,7 +239,7 @@ export function createLocalPtyLaunchPlan(
   }
   const shellPath =
     args.shellOverride ||
-    getOptions().getDefaultShell?.() ||
+    getOptions().getDefaultShell?.()?.trim() ||
     args.env?.SHELL ||
     process.env.SHELL ||
     '/bin/zsh'
