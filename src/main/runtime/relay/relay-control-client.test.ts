@@ -674,7 +674,7 @@ describe('RelayControlClient half-open recovery', () => {
 
     // The request deadline alone must not close the control — a close would have
     // rejected as relay_control_closed_<code> instead.
-    expect(await invite).toContain('relay_control_request_timeout')
+    expect(await invite).toBe('relay_control_request_timeout')
     expect(socket.pings).toBe(1)
     expect(socket.readyState).toBe(1)
 
@@ -750,7 +750,7 @@ describe('RelayControlClient half-open recovery', () => {
 
     // A reply running past its deadline under relay DB load is not a dead
     // socket; tearing this control down would strand every phone on the cell.
-    expect(await invite).toContain('relay_control_request_timeout')
+    expect(await invite).toBe('relay_control_request_timeout')
     expect(socket.pings).toBe(0)
     expect(client.isLive()).toBe(true)
   })
@@ -768,19 +768,26 @@ describe('RelayControlClient half-open recovery', () => {
     expect(socket.pings).toBe(2)
   })
 
-  it('names the cell and the silence in the timeout error', async () => {
+  it('logs the cell and the silence without altering the rejection', async () => {
     vi.useFakeTimers()
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const { client } = scriptedControl()
     await client.connect()
     const invite = client.createInvite('device-1').catch((error: Error) => error.message)
 
     await vi.advanceTimersByTimeAsync(10_000)
 
-    const message = await invite
-    expect(message).toContain('reqKind=invite')
-    expect(message).toContain('cell=http://relay.test')
-    expect(message).toContain('socketAgeMs=10000')
-    expect(message).toContain('sinceInboundMs=10000')
-    expect(message).toContain('probe=armed')
+    // The message is a classification key: mobile-relay-mint-failure.ts matches
+    // it against an anchored /^relay_[a-z0-9_]{1,74}$/, so a diagnostic suffix
+    // silently downgrades this to the generic relay_mint_failed fallback.
+    expect(await invite).toBe('relay_control_request_timeout')
+
+    const logged = warn.mock.calls.map((call) => String(call[0])).join('\n')
+    expect(logged).toContain('reqKind=invite')
+    expect(logged).toContain('cell=http://relay.test')
+    expect(logged).toContain('socketAgeMs=10000')
+    expect(logged).toContain('sinceInboundMs=10000')
+    expect(logged).toContain('probe=armed')
+    warn.mockRestore()
   })
 })

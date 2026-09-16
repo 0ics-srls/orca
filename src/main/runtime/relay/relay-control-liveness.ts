@@ -86,7 +86,7 @@ export class RelayControlLiveness {
    * load. Probe now instead of waiting out the 75s silence bound, which on
    * Windows let a user burn every pairing attempt against an already-dead socket.
    */
-  describeTimeout(timeout: RelayControlRequestTimeout, live: boolean): string {
+  noteRequestTimeout(timeout: RelayControlRequestTimeout, live: boolean): void {
     const now = Date.now()
     const lastInboundAt = this.watchdog.lastInboundTime
     const diagnostics = [
@@ -98,7 +98,10 @@ export class RelayControlLiveness {
     if (live && lastInboundAt <= timeout.sentAt) {
       diagnostics.push(this.armProbe() ? 'probe=armed' : `probe=in-flight/${this.missedProbes}`)
     }
-    return diagnostics.join(' ')
+    // Logged rather than appended to the rejection: the error message is a
+    // classification key for consumers, and the pairing flow discards the
+    // rejection's text entirely, so this was the only place the detail survives.
+    console.warn(`[relay] control request timed out ${diagnostics.join(' ')}`)
   }
 
   private armProbe(): boolean {

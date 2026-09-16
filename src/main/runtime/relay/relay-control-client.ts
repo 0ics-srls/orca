@@ -42,9 +42,9 @@ export class RelayControlClient {
 
   constructor(options: RelayControlClientOptions) {
     this.options = options
-    this.requests = new RelayControlRequests(options.onPendingChanged, (timeout) =>
-      this.liveness.describeTimeout(timeout, this.isLive())
-    )
+    this.requests = new RelayControlRequests(options.onPendingChanged, (timeout) => {
+      this.liveness.noteRequestTimeout(timeout, this.isLive())
+    })
     const endpoint = controlWebSocketUrl(options.cellUrl)
     this.relayOrigin = endpoint.origin
     this.controlUrl = endpoint.url
