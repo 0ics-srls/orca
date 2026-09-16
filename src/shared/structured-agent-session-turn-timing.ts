@@ -21,7 +21,7 @@ export type StructuredAgentTurnTiming = {
   requestedAt?: number
   /** Host clock at the terminal provider event; absent while running or unverifiable. */
   completedAt?: number
-  /** The provider's own measured duration; outranks the host interval. */
+  /** The provider's own measurement; used when exact host endpoints are unavailable. */
   durationMs?: number
   /** Host clock when the lifecycle row was appended; with `startedAt` it gives
    *  the host-side lag a client must subtract to anchor a live counter. */
@@ -128,6 +128,10 @@ export function completedStructuredAgentTurnSeconds(
 ): number | null {
   if (!timing || (timing.state !== 'completed' && timing.state !== 'interrupted')) {
     return null
+  }
+  // Provider durations may begin at turn-open, so exact host endpoints preserve the live origin.
+  if (timing.requestedAt !== undefined && timing.completedAt !== undefined) {
+    return Math.max(0, Math.floor((timing.completedAt - timing.requestedAt) / 1000))
   }
   if (timing.durationMs !== undefined) {
     return Math.floor(timing.durationMs / 1000)

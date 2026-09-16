@@ -177,12 +177,24 @@ describe('structured agent turn origin', () => {
     expect(settled).toBe(26)
   })
 
-  it('leaves the provider-reported duration outranking the host interval', () => {
+  it('does not let a provider start-scoped duration undercut an exact request origin', () => {
     const settled = completedStructuredAgentTurnSeconds({
       state: 'completed',
       startedAt: HOST_START + 25_000,
       requestedAt: HOST_START,
       completedAt: HOST_START + 26_000,
+      durationMs: 7_612,
+      observedAt: HOST_START + 25_000
+    })
+
+    expect(settled).toBe(26)
+  })
+
+  it('falls back to the provider duration when the host did not observe completion', () => {
+    const settled = completedStructuredAgentTurnSeconds({
+      state: 'completed',
+      startedAt: HOST_START + 25_000,
+      requestedAt: HOST_START,
       durationMs: 7_612,
       observedAt: HOST_START + 25_000
     })
