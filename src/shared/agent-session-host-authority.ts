@@ -39,7 +39,9 @@ export const AGENT_SESSION_MAX_NEW_OPERATION_AGE_MS = 24 * 60 * 60 * 1000
 export const AGENT_SESSION_MAX_OPERATION_REPLAY_AGE_MS =
   AGENT_SESSION_MAX_NEW_OPERATION_AGE_MS * 2 + AGENT_SESSION_OPERATION_FUTURE_SKEW_MS
 
-const AGENT_SESSION_OPERATION_ID_PATTERN = /^(\d{13})-[0-9a-f]{32}$/
+/** The shipped mint's shape. Exported so a wire schema pins the same pattern this file parses:
+ *  a caller whose id passes validation is one whose timestamp the ledger can read back. */
+export const AGENT_SESSION_OPERATION_ID_PATTERN = /^(\d{13})-[0-9a-f]{32}$/
 
 export function parseAgentSessionOperationTimestamp(operationId: string): number | null {
   const match = AGENT_SESSION_OPERATION_ID_PATTERN.exec(operationId)

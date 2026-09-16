@@ -8,8 +8,10 @@
  * must be observably untouched by any of it.
  */
 
+import { randomUUID } from 'node:crypto'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
+import { createStructuredAgentSessionOperationId } from '../../../../shared/structured-agent-session-mutation'
 import type { RpcContext } from '../core'
 
 const createStructuredSession = vi.fn(async (_args: Record<string, unknown>) => ({
@@ -139,13 +141,17 @@ async function launch(
   return AGENT_LAUNCH.handler(parsed.data, rpcContext(runtime, context))
 }
 
+const OPERATION = { id: '1758000000000-0123456789abcdef0123456789abcdef' }
+
 const CREATE_LAUNCH = {
   agent: 'claude',
+  operation: OPERATION,
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
 }
 
 const IDEMPOTENT_CREATE_LAUNCH = {
   agent: 'claude',
+  operation: OPERATION,
   target: {
     kind: 'create-worktree' as const,
     create: { repo: 'id:repo-1', name: 'task', clientMutationId: 'launch-1' }
@@ -188,19 +194,28 @@ describe('what agent.launch accepts', () => {
   })
 
   it('rejects a target that names neither an existing workspace nor a create', () => {
-    expect(parseLaunch({ agent: 'claude', target: { kind: 'somewhere' } }).success).toBe(false)
+    expect(
+      parseLaunch({ agent: 'claude', operation: OPERATION, target: { kind: 'somewhere' } }).success
+    ).toBe(false)
   })
 
   it('rejects an existing target with no selector', () => {
     expect(
-      parseLaunch({ agent: 'claude', target: { kind: 'existing', worktree: '' } }).success
+      parseLaunch({
+        agent: 'claude',
+        operation: OPERATION,
+        target: { kind: 'existing', worktree: '' }
+      }).success
     ).toBe(false)
   })
 
   it('rejects a create payload with no repo, the same as worktree.create does', () => {
     expect(
-      parseLaunch({ agent: 'claude', target: { kind: 'create-worktree', create: { name: 'x' } } })
-        .success
+      parseLaunch({
+        agent: 'claude',
+        operation: OPERATION,
+        target: { kind: 'create-worktree', create: { name: 'x' } }
+      }).success
     ).toBe(false)
   })
 
@@ -208,6 +223,7 @@ describe('what agent.launch accepts', () => {
     expect(
       parseLaunch({
         agent: 'codex',
+        operation: OPERATION,
         target: { kind: 'existing', worktree: 'id:wt-1' },
         prompt: { text: 'do the thing', delivery: 'draft' },
         sessionOptions: { model: 'gpt-5', effort: 'high' },
@@ -221,6 +237,7 @@ describe('what agent.launch accepts', () => {
     const result = await launch(
       {
         agent: 'claude',
+        operation: OPERATION,
         target: { kind: 'existing', worktree: 'id:wt-7' },
         reuseTerminal: { handle: 'term_live' }
       },
@@ -240,6 +257,7 @@ describe('what agent.launch accepts', () => {
       launch(
         {
           agent: 'claude',
+          operation: OPERATION,
           target: { kind: 'existing', worktree: 'id:wt-7' },
           reuseTerminal: { handle: 'term_live' }
         },
@@ -256,6 +274,30 @@ describe('what agent.launch accepts', () => {
     ).rejects.toThrow('agent_launch_reuse_requires_existing_workspace')
     expect(runtime.showTerminal).not.toHaveBeenCalled()
     expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
+  })
+})
+
+describe('the launch operation id', () => {
+  it('is required, so no launch is anonymous', () => {
+    const { operation: _omitted, ...withoutOperation } = CREATE_LAUNCH
+    expect(parseLaunch(withoutOperation).success).toBe(false)
+  })
+
+  it('accepts what the shipped mint produces', () => {
+    const minted = createStructuredAgentSessionOperationId(randomUUID)
+    expect(parseLaunch({ ...CREATE_LAUNCH, operation: { id: minted } }).success).toBe(true)
+  })
+
+  it.each([
+    ['an opaque token', 'launch-1'],
+    ['a uuid with no timestamp', '0123456789abcdef0123456789abcdef'],
+    ['a short timestamp', '175800000000-0123456789abcdef0123456789abcdef'],
+    ['uppercase entropy', '1758000000000-0123456789ABCDEF0123456789ABCDEF'],
+    ['trailing text', '1758000000000-0123456789abcdef0123456789abcdef!']
+    // Why: the host reads the leading timestamp back to decide admission, so an id it cannot parse
+    // is refused at the wire rather than accepted and found unusable once it matters.
+  ])('refuses %s', (_label, id) => {
+    expect(parseLaunch({ ...CREATE_LAUNCH, operation: { id } }).success).toBe(false)
   })
 })
 
@@ -376,6 +418,7 @@ describe('the worktree factory', () => {
     await launch(
       {
         agent: 'claude',
+        operation: OPERATION,
         target: {
           kind: 'create-worktree',
           create: {
@@ -410,6 +453,8 @@ describe('the structured session factory', () => {
       sessionId: 'sess-1',
       handle: 'structured-agent-session-sess-1'
     })
+    // This call produced the agent; `replayed` is reserved for answering an earlier attempt.
+    expect(result.disposition).toBe('created')
     expect(runtime.createTerminal).not.toHaveBeenCalled()
   })
 
@@ -443,7 +488,7 @@ describe('the terminal factory', () => {
   it('takes an existing workspace without creating one', async () => {
     const runtime = runtimeStub()
     const result = await launch(
-      { agent: 'grok', target: { kind: 'existing', worktree: 'id:wt-7' } },
+      { agent: 'grok', operation: OPERATION, target: { kind: 'existing', worktree: 'id:wt-7' } },
       runtime
     )
 

@@ -61,6 +61,7 @@ async function agentLaunchIntent(
   return {
     agent: params.agent,
     target: await agentLaunchTarget(params, runtime),
+    operation: params.operation,
     ...(params.prompt ? { prompt: params.prompt } : {}),
     ...(params.sessionOptions ? { sessionOptions: params.sessionOptions } : {}),
     ...(params.reuseTerminal ? { reuseTerminal: params.reuseTerminal } : {})

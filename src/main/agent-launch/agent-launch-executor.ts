@@ -30,7 +30,7 @@ import type {
   AgentLaunchResult,
   AgentLaunchTarget
 } from '../../shared/agent-launch-intent'
-import { withoutReservedAgentCreateFields } from '../../shared/agent-launch-intent'
+import { withoutReservedLaunchCreateFields } from '../../shared/agent-launch-intent'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { isDefinitiveAgentSessionCreateRefusal } from '../../shared/agent-session-definitive-refusal'
@@ -113,6 +113,7 @@ export async function executeAgentLaunch(
     return {
       outcome: { kind: 'terminal', handle: intent.reuseTerminal.handle },
       worktreeId: existingWorktreeId(intent.target),
+      disposition: 'created',
       receipt: preflight,
       ...promptReceipt(intent)
     }
@@ -124,6 +125,7 @@ export async function executeAgentLaunch(
     return {
       outcome: { kind: 'terminal', handle: placed.startupTerminalHandle },
       worktreeId: placed.worktreeId,
+      disposition: 'created',
       receipt: preflight,
       ...promptReceipt(intent)
     }
@@ -139,9 +141,9 @@ export async function executeAgentLaunch(
   )
 
   execution.onStage?.('surface_create')
-  let outcome: AgentLaunchResult['outcome']
+  let created: CreatedSurface
   try {
-    outcome = await createSurface(execution, placed.worktreeId, settled)
+    created = await createSurface(execution, placed.worktreeId, settled)
   } catch (error) {
     // The structured create path distinguishes a definitive pre-commit refusal from an unknown
     // outcome. Only the former is safe to replace with a terminal in the same workspace; retrying
@@ -154,23 +156,15 @@ export async function executeAgentLaunch(
       throw error
     }
     settled = downgradeAgentLaunchModeForStructuredRefusal(settled, vocabulary)
-    outcome = await execution.surfaces
-      .createTerminalAgent({
-        worktreeId: placed.worktreeId,
-        agent: intent.agent,
-        ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
-      })
-      .then((terminal) => ({
-        kind: 'terminal' as const,
-        handle: terminal.handle,
-        ...(terminal.warning ? { warning: terminal.warning } : {})
-      }))
+    created = await createTerminalSurface(execution, placed.worktreeId)
   }
   return {
-    outcome,
+    outcome: created.outcome,
     worktreeId: placed.worktreeId,
+    disposition: 'created',
     receipt: settled,
-    ...promptReceipt(intent)
+    ...promptReceipt(intent),
+    ...(created.warning ? { warning: created.warning } : {})
   }
 }
 
@@ -202,16 +196,20 @@ async function resolveWorkspace(
   return workspaces.createWorktree({
     // A caller migrating from `worktree.create` passes its existing params; a stale `startupAgent`
     // in there would re-create the agent-first path this executor exists to replace.
-    create: withoutReservedAgentCreateFields(intent.target.create),
+    create: withoutReservedLaunchCreateFields(intent.target.create),
     startupAgent: preflight.mode === 'structured' ? undefined : intent.agent
   })
 }
+
+/** A surface plus anything the user should be told about it; the warning rides on the result rather
+ *  than on the terminal arm, so a structured surface can raise one too. */
+type CreatedSurface = { outcome: AgentLaunchResult['outcome']; warning?: string }
 
 async function createSurface(
   execution: AgentLaunchExecution,
   worktreeId: string,
   settled: AgentLaunchModeReceipt
-): Promise<AgentLaunchResult['outcome']> {
+): Promise<CreatedSurface> {
   const { intent, surfaces } = execution
   if (settled.mode === 'structured' && isStructuredProvider(intent.agent)) {
     const session = await surfaces.createStructuredSession({
@@ -219,16 +217,25 @@ async function createSurface(
       agent: intent.agent,
       ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
     })
-    return { kind: 'structured', sessionId: session.sessionId, handle: session.handle }
+    return {
+      outcome: { kind: 'structured', sessionId: session.sessionId, handle: session.handle }
+    }
   }
+  return createTerminalSurface(execution, worktreeId)
+}
+
+async function createTerminalSurface(
+  execution: AgentLaunchExecution,
+  worktreeId: string
+): Promise<CreatedSurface> {
+  const { intent, surfaces } = execution
   const terminal = await surfaces.createTerminalAgent({
     worktreeId,
     agent: intent.agent,
     ...(intent.sessionOptions ? { options: intent.sessionOptions } : {})
   })
   return {
-    kind: 'terminal',
-    handle: terminal.handle,
+    outcome: { kind: 'terminal', handle: terminal.handle },
     ...(terminal.warning ? { warning: terminal.warning } : {})
   }
 }
@@ -243,10 +250,10 @@ function existingWorktreeId(target: AgentLaunchTarget): string {
 
 /** Prompt delivery is the caller's, not the executor's: a PTY paste is observed by whoever owns
  *  the pane, and a structured first turn is sent through the session. The executor reports the
- *  requested delivery back undelivered so a caller cannot mistake silence for delivery. */
+ *  requested delivery back as not delivered so a caller cannot mistake silence for delivery. */
 function promptReceipt(intent: AgentLaunchIntent): Pick<AgentLaunchResult, 'prompt'> {
   if (!intent.prompt) {
     return {}
   }
-  return { prompt: { delivery: intent.prompt.delivery, delivered: false } }
+  return { prompt: { delivery: intent.prompt.delivery, outcome: 'not-delivered' } }
 }

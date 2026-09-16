@@ -27,6 +27,7 @@ function harness(options: {
   createSupport?: { supported: boolean; reason?: 'agent' | 'remote' | 'wsl' }
   createSupportThrows?: boolean
   structuredCreateError?: Error
+  terminalWarning?: string
 }) {
   const calls: string[] = []
   const createWorktree = vi.fn(
@@ -54,7 +55,10 @@ function harness(options: {
   })
   const createTerminalAgent = vi.fn(async () => {
     calls.push('createTerminalAgent')
-    return { handle: 'term_1' }
+    return {
+      handle: 'term_1',
+      ...(options.terminalWarning ? { warning: options.terminalWarning } : {})
+    }
   })
   const runtime = {
     getClientSettings: () =>
@@ -77,8 +81,11 @@ function harness(options: {
   }
 }
 
+const OPERATION = { id: '1758000000000-0123456789abcdef0123456789abcdef' }
+
 const CREATE_INTENT: AgentLaunchIntent = {
   agent: 'claude',
+  operation: OPERATION,
   target: { kind: 'create-worktree', create: { repo: 'id:repo-1', name: 'task' } }
 }
 
@@ -170,19 +177,28 @@ describe('a structured launch that creates its own worktree', () => {
     ])
   })
 
-  it('strips a stale startupAgent out of a migrated create payload', async () => {
+  it('strips the fields the launch owns out of a migrated create payload', async () => {
     const h = harness({})
     await h.run({
       agent: 'claude',
+      operation: OPERATION,
       target: {
         kind: 'create-worktree',
         // Exactly what mobile sends `worktree.create` today.
-        create: { repo: 'id:repo-1', name: 'task', startupAgent: 'claude', startupDraft: 'url' }
+        create: {
+          repo: 'id:repo-1',
+          name: 'task',
+          startupAgent: 'claude',
+          startupDraft: 'url',
+          clientMutationId: 'mobile-retry-1'
+        }
       }
     })
     const passed = h.createWorktree.mock.calls[0]?.[0]
     expect(passed?.create).not.toHaveProperty('startupAgent')
     expect(passed?.create).not.toHaveProperty('startupDraft')
+    // `operation.id` names the attempt now; a second dedupe key below it would file one launch twice.
+    expect(passed?.create).not.toHaveProperty('clientMutationId')
     expect(passed?.create).toMatchObject({ repo: 'id:repo-1', name: 'task' })
   })
 })
@@ -203,7 +219,11 @@ describe('a launch the user did not ask to be structured', () => {
 describe('a launch into a workspace that already exists', () => {
   it('opens a session without creating anything', async () => {
     const h = harness({})
-    const result = await h.run({ agent: 'codex', target: { kind: 'existing', worktree: 'wt-7' } })
+    const result = await h.run({
+      agent: 'codex',
+      operation: OPERATION,
+      target: { kind: 'existing', worktree: 'wt-7' }
+    })
     expect(h.calls).toEqual(['createSupport', 'createStructuredSession'])
     expect(h.createWorktree).not.toHaveBeenCalled()
     expect(result.worktreeId).toBe('wt-7')
@@ -213,6 +233,7 @@ describe('a launch into a workspace that already exists', () => {
     const h = harness({})
     const result = await h.run({
       agent: 'claude',
+      operation: OPERATION,
       target: { kind: 'existing', worktree: 'wt-7' },
       reuseTerminal: { handle: 'term_live' }
     })
@@ -225,24 +246,63 @@ describe('a launch into a workspace that already exists', () => {
 describe('an agent with no structured session', () => {
   it('stays a terminal without asking the host', async () => {
     const h = harness({})
-    const result = await h.run({ agent: 'grok', target: { kind: 'existing', worktree: 'wt-7' } })
+    const result = await h.run({
+      agent: 'grok',
+      operation: OPERATION,
+      target: { kind: 'existing', worktree: 'wt-7' }
+    })
     expect(h.calls).toEqual(['createTerminalAgent'])
     expect(result.receipt).toMatchObject({ reason: 'agent_without_structured_session' })
   })
 })
 
 describe('the prompt receipt', () => {
-  it('reports a requested prompt as undelivered rather than omitting it', async () => {
+  it('reports a requested prompt as not delivered rather than omitting it', async () => {
     const h = harness({})
     const result = await h.run({
       ...CREATE_INTENT,
       prompt: { text: 'do the thing', delivery: 'draft' }
     })
-    expect(result.prompt).toEqual({ delivery: 'draft', delivered: false })
+    // The executor delivers nothing, so the only honest outcome is the one that under-claims.
+    expect(result.prompt).toEqual({ delivery: 'draft', outcome: 'not-delivered' })
   })
 
   it('omits the receipt when no prompt was requested', async () => {
     const h = harness({})
     expect((await h.run(CREATE_INTENT)).prompt).toBeUndefined()
+  })
+})
+
+describe('a warning raised by the surface', () => {
+  it('rides on the result rather than on the terminal outcome', async () => {
+    const h = harness({ terminalWarning: 'shell fell back to bash' })
+    const result = await h.run({
+      agent: 'grok',
+      operation: OPERATION,
+      target: { kind: 'existing', worktree: 'wt-7' }
+    })
+
+    expect(result.warning).toBe('shell fell back to bash')
+    // Not on the arm: a structured outcome has the same need to carry one.
+    expect(result.outcome).toEqual({ kind: 'terminal', handle: 'term_1' })
+  })
+
+  it('survives the downgrade from a refused structured create', async () => {
+    const h = harness({
+      terminalWarning: 'shell fell back to bash',
+      structuredCreateError: new AgentLaunchStructuredSessionRefusedError(
+        'structured_agent_session_unsupported',
+        'unsupported'
+      )
+    })
+    const result = await h.run(CREATE_INTENT)
+
+    expect(result.warning).toBe('shell fell back to bash')
+    expect(result.receipt).toMatchObject({ reason: 'structured_unsupported_on_host' })
+  })
+
+  it('is absent when the surface raised none', async () => {
+    const h = harness({})
+    expect((await h.run(CREATE_INTENT)).warning).toBeUndefined()
   })
 })
