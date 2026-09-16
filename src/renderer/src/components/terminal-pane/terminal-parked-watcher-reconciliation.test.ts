@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   captureParkedTerminalPaneCandidates,
+  pruneParkedTerminalWatchers,
   retireParkedTerminalTab
 } from './terminal-parked-watcher-registry'
 import {
@@ -104,6 +105,23 @@ it('releases captured scroll-intent keys when a parked tab is closed', () => {
 
   expect(readTerminalScrollIntentKeyRetention().intents).toBe(1)
   retireParkedTerminalTab(TAB_ID)
+  expect(readTerminalScrollIntentKeyRetention().intents).toBe(0)
+})
+
+it('releases captured scroll-intent keys when a parked worktree is removed', () => {
+  writeKeyedTerminalScrollIntent(SECOND_LEAF_ID, {
+    kind: 'pinnedViewport',
+    bufferType: 'normal',
+    viewportY: 8,
+    baseY: 16,
+    revision: 1
+  })
+  captureParkedTerminalPaneCandidates(TAB_ID, WORKTREE_ID, [
+    { ptyId: FIRST_PTY_ID, paneId: 1, leafId: SECOND_LEAF_ID, drivesTabTitle: true }
+  ])
+
+  pruneParkedTerminalWatchers(new Set())
+
   expect(readTerminalScrollIntentKeyRetention().intents).toBe(0)
 })
 
