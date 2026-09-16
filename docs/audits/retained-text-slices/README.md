@@ -56,3 +56,12 @@ the CI-log viewing or oversized terminal inputs required for incident attributio
 Copying costs scale with retained caps: 16 KiB per CI excerpt, 4,000 characters
 per error, 512 KiB for the largest byte-capped buffer, and 512 Ki characters for
 deferred reattach. The change does not reduce temporary original-input allocation.
+
+The follow-up [PTY detector reproduction](../pty-detector-retention/README.md)
+adds three boundaries in the same PR: advertised-URL carries, output waiting for
+workspace binding, and Command Code status carries used by ordinary PTYs too.
+Thirty-two production-sized 64 Ki-character inputs retain about 2.1 MB in each
+isolated baseline. Owned carries reduce that to about 41 KB, 204 KB, or 575 KB,
+including the different owner objects. These per-owner costs are not an
+unbounded growth curve, and readers of the same input can share its parent.
+The follow-up adds 164 passing tests across five detector/URL/copier suites.
