@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useEffectEvent, useState } from 'react'
 import { useAppStore } from '@/store'
 
 /**
@@ -12,14 +12,13 @@ export function useAiVaultSearchFocusRequest(onRequest: () => void): number {
   const [focusRequestId, setFocusRequestId] = useState(0)
   const requested = useAppStore((state) => state.aiVaultSearchFocusRequested)
   const clearRequest = useAppStore((state) => state.clearAiVaultSearchFocusRequest)
-  const latestOnRequest = useRef(onRequest)
-  latestOnRequest.current = onRequest
+  const runRequest = useEffectEvent(onRequest)
 
   useEffect(() => {
     if (!requested) {
       return
     }
-    latestOnRequest.current()
+    runRequest()
     setFocusRequestId((value) => value + 1)
     clearRequest()
   }, [clearRequest, requested])
