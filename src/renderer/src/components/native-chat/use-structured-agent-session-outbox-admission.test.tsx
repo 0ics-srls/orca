@@ -32,9 +32,9 @@ function deferred<T>() {
   return { promise, resolve }
 }
 
-type SendRequestShape = { body?: { blocks?: { text?: string }[] } }
+type SendRequest = { body?: { blocks?: { text?: string }[] } }
 
-function requestText(params: SendRequestShape | undefined): string | undefined {
+function requestText(params: SendRequest | undefined): string | undefined {
   return params?.body?.blocks?.[0]?.text
 }
 
