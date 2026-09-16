@@ -139,16 +139,11 @@ describe('AutomationRunHistory unanswered history', () => {
 })
 
 describe('AutomationRunHistory virtualization', () => {
-  it('keeps a long history to a bounded number of mounted rows', async () => {
-    const runs = Array.from({ length: 5_000 }, (_, index) =>
-      makeRun({ id: `run-${index}`, scheduledFor: FIRST + index })
-    )
-
+  async function renderRuns(runs: AutomationRun[]): Promise<HTMLDivElement> {
     const container = document.createElement('div')
     document.body.appendChild(container)
     const root = createRoot(container)
     roots.push(root)
-
     await act(async () => {
       root.render(
         <AutomationRunHistory
@@ -159,6 +154,25 @@ describe('AutomationRunHistory virtualization', () => {
         />
       )
     })
+    return container
+  }
+
+  async function pressArrow(key: 'ArrowDown' | 'ArrowUp', times: number): Promise<void> {
+    for (let move = 0; move < times; move += 1) {
+      await act(async () => {
+        window.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true }))
+      })
+    }
+  }
+
+  function makeRuns(count: number): AutomationRun[] {
+    return Array.from({ length: count }, (_, index) =>
+      makeRun({ id: `run-${index}`, scheduledFor: FIRST + index })
+    )
+  }
+
+  it('keeps a long history to a bounded number of mounted rows', async () => {
+    const container = await renderRuns(makeRuns(5_000))
 
     expect(container.querySelectorAll('button[data-automation-run-id]').length).toBeLessThan(50)
     // The count above the table still speaks for the whole history, not the window.
@@ -166,38 +180,14 @@ describe('AutomationRunHistory virtualization', () => {
   })
 
   it('scrolls a selected row below the fold into the window and then focuses it', async () => {
-    const runs = Array.from({ length: VIRTUALIZER_STUB_WINDOW_SIZE * 2 }, (_, index) =>
-      makeRun({ id: `run-${index}`, scheduledFor: FIRST + index })
-    )
-
-    const container = document.createElement('div')
-    document.body.appendChild(container)
-    const root = createRoot(container)
-    roots.push(root)
-
-    await act(async () => {
-      root.render(
-        <AutomationRunHistory
-          runs={runs}
-          automationId="a-1"
-          worktreeMap={new Map()}
-          onOpenRun={vi.fn()}
-        />
-      )
-    })
+    const container = await renderRuns(makeRuns(VIRTUALIZER_STUB_WINDOW_SIZE * 2))
 
     const belowFold = `run-${VIRTUALIZER_STUB_WINDOW_SIZE}`
     expect(container.querySelector(`[data-automation-run-id="${belowFold}"]`)).toBeNull()
 
     // Selection starts on the first row, so this many moves lands one row past the
     // window — the case where focus has to wait for the scroll to mount the row.
-    for (let move = 0; move < VIRTUALIZER_STUB_WINDOW_SIZE; move += 1) {
-      await act(async () => {
-        window.dispatchEvent(
-          new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true, cancelable: true })
-        )
-      })
-    }
+    await pressArrow('ArrowDown', VIRTUALIZER_STUB_WINDOW_SIZE)
 
     const selected = container.querySelector<HTMLButtonElement>(
       `[data-automation-run-id="${belowFold}"]`
@@ -206,6 +196,20 @@ describe('AutomationRunHistory virtualization', () => {
     expect(document.activeElement).toBe(selected)
     // The window moved rather than grew: the row it scrolled past is unmounted.
     expect(container.querySelector('[data-automation-run-id="run-0"]')).toBeNull()
+  })
+
+  it('scrolls a selected row above the fold back into the window and then focuses it', async () => {
+    const container = await renderRuns(makeRuns(VIRTUALIZER_STUB_WINDOW_SIZE * 2))
+
+    await pressArrow('ArrowDown', VIRTUALIZER_STUB_WINDOW_SIZE)
+    expect(container.querySelector('[data-automation-run-id="run-0"]')).toBeNull()
+
+    // Back to the top: the window now has to move the other way before focus can land.
+    await pressArrow('ArrowUp', VIRTUALIZER_STUB_WINDOW_SIZE)
+
+    const selected = container.querySelector<HTMLButtonElement>('[data-automation-run-id="run-0"]')
+    expect(selected?.getAttribute('data-current')).toBe('true')
+    expect(document.activeElement).toBe(selected)
   })
 })
 
