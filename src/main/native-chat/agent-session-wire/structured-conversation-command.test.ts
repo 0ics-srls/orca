@@ -6,6 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { computeAgentSessionPayloadFingerprint } from '../../../shared/agent-session-mutation-envelope'
 import type { AgentSessionConversationCommand } from '../../../shared/agent-session-conversation-command'
 import { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
+import { reserveRequestFor } from './structured-agent-session-attach'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import {
@@ -679,6 +680,36 @@ describe('host conversation commands', () => {
       replayed: true,
       value: { replacementSessionId }
     })
+  })
+
+  it('does not commit clear when replacement attachment stops at a reservation', async () => {
+    vi.spyOn(host, 'attach').mockImplementationOnce(async (replacementCaller, params) => {
+      await store.reserveOwner(
+        reserveRequestFor({
+          sessionId: params.envelope.sessionId,
+          params,
+          authority: {
+            spawnToken: 'reserved-replacement',
+            claimKeyId: 'key',
+            handoffOperationId: params.envelope.clientOperationId,
+            probe: { outcome: 'reservation-unused' }
+          },
+          callerKey: replacementCaller.callerKey,
+          fingerprint: params.envelope.payloadFingerprint,
+          now: HOST_TEST_NOW
+        })
+      )
+      throw new Error('replacement owner was not proved')
+    })
+
+    await expect(host.conversationCommand(caller, commandParams('clear'))).resolves.toMatchObject({
+      ok: true,
+      value: { state: 'unknown' }
+    })
+    const command = store.getRecord(HOST_TEST_SESSION)?.conversationCommand
+    expect(command).toMatchObject({ command: 'clear', phase: 'prepared', state: 'unknown' })
+    expect(store.getRecord(command!.replacementSessionId!)?.lease.claimStatus).toBe('reserved')
+    expect(store.listVisibleSessionIds()).toEqual([HOST_TEST_SESSION])
   })
 
   it('retires a failed clear that has no provider callback to settle it later', async () => {

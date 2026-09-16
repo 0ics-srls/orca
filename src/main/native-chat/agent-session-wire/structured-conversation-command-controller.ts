@@ -16,7 +16,10 @@ export class StructuredConversationCommandController {
 
   constructor(
     private readonly context: () => StructuredAgentSessionMutationContext,
-    host: Pick<StructuredAgentSessionHost, 'attach' | 'close' | 'flushStreamedEvents'>
+    host: Pick<
+      StructuredAgentSessionHost,
+      'attach' | 'close' | 'flushStreamedEvents' | 'hasSession'
+    >
   ) {
     this.execution = new StructuredConversationCommandExecution(context, host, {
       isCurrent: (entry) => this.isCurrent(entry),

@@ -178,6 +178,9 @@ export class StructuredConversationCommandClaim {
   }
 
   private applyReply(claim: LiveClaim, reply: ConversationCommandReply): void {
+    if (claim.generation !== this.generation) {
+      return
+    }
     if (this.live !== claim) {
       if (reply.status === 'unresolved') {
         return

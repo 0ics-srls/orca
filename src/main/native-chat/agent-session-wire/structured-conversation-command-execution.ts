@@ -30,7 +30,7 @@ export class StructuredConversationCommandExecution {
     private readonly context: () => StructuredAgentSessionMutationContext,
     private readonly host: Pick<
       StructuredAgentSessionHost,
-      'attach' | 'close' | 'flushStreamedEvents'
+      'attach' | 'close' | 'flushStreamedEvents' | 'hasSession'
     >,
     private readonly owner: ExecutionOwner
   ) {}
@@ -157,7 +157,11 @@ export class StructuredConversationCommandExecution {
       })
     } catch (error) {
       const replacement = this.context().deps.store.getRecord(replacementSessionId)
-      if (!replacement || replacement.lease.claimStatus === 'released') {
+      // A reservation proves intent, not that this host can serve the replacement.
+      if (
+        replacement?.lease.claimStatus !== 'live' ||
+        !this.host.hasSession(replacementSessionId)
+      ) {
         throw error
       }
       attachError = null

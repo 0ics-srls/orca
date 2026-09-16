@@ -85,6 +85,47 @@ describe('useStructuredConversationCommand', () => {
     expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).toBe(firstOperationId)
   })
 
+  it('keeps the replay identity when an old-fence reply arrives during recovery', async () => {
+    const firstReply = Promise.withResolvers<unknown>()
+    const replayReply = Promise.withResolvers<unknown>()
+    mocks.call
+      .mockReturnValueOnce(firstReply.promise)
+      .mockReturnValueOnce(replayReply.promise)
+      .mockImplementation(() => new Promise(() => {}))
+    const initialProps: { fence: number; items: AgentJournalRenderItem[] } = {
+      fence: 1,
+      items: []
+    }
+    const view = renderHook((props) => useCommandHarness(props), { initialProps })
+
+    let first!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      first = view.result.current.run('clear')
+    })
+    const operationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
+
+    view.rerender({ fence: 2, items: [] })
+    await expect(first).resolves.toMatchObject({ accepted: false })
+    let replay!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      replay = view.result.current.run('clear')
+    })
+    expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).toBe(operationId)
+
+    await act(async () => {
+      firstReply.resolve({ ok: true, value: { command: 'clear', state: 'completed' } })
+      await Promise.resolve()
+      replayReply.resolve({ ok: true, value: { command: 'clear', state: 'unknown' } })
+    })
+    await expect(replay).resolves.toMatchObject({ accepted: false })
+
+    act(() => {
+      void view.result.current.run('clear')
+    })
+    expect(mocks.call.mock.calls[2]![2].envelope.clientOperationId).toBe(operationId)
+    view.unmount()
+  })
+
   it('retires a command when the hook switches sessions at the same fence', async () => {
     mocks.call.mockImplementation(() => new Promise(() => {}))
     const initialProps: {
