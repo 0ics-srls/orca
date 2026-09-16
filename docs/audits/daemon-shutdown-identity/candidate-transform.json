@@ -1,0 +1,26 @@
+{
+  "path": "src/main/daemon/daemon-pty-session-control.ts",
+  "sha256": "5fd2e9ad493e0b89cf1c2d18d546e820bdcc863f6c4ba7e95b1dd77f5cea48b8",
+  "changes": [
+    {
+      "before": "import type { ColdRestorePayload } from './cold-restore-payload-cache'\nimport { isUnknownRequestTypeError } from './daemon-endpoint-errors'\nimport { GET_SIZE_PROTOCOL_VERSION } from './daemon-protocol-version'\n",
+      "after": "import { sameEndpointIdentity } from './daemon-endpoint-incarnation'\nimport type { DaemonEndpointIdentity } from './daemon-hello-protocol'\nimport type { ColdRestorePayload } from './cold-restore-payload-cache'\nimport { isUnknownRequestTypeError } from './daemon-endpoint-errors'\nimport { GET_SIZE_PROTOCOL_VERSION } from './daemon-protocol-version'\n"
+    },
+    {
+      "before": "    if (opts.keepHistory && this.disconnectOnlyPromise) {\n      throw new Error('Cannot keep history after daemon disconnect has started')\n    }\n    const shutdown = this.withHistorySpawnLock(id, () => this.shutdownWithHistoryLock(id, opts))\n    if (!opts.keepHistory) {\n      await shutdown\n      return\n",
+      "after": "    if (opts.keepHistory && this.disconnectOnlyPromise) {\n      throw new Error('Cannot keep history after daemon disconnect has started')\n    }\n    const expectedIdentity = this.getLastAuthenticatedDaemonIdentity()\n    const shutdown = this.withHistorySpawnLock(id, () => this.shutdownWithHistoryLock(id, opts, expectedIdentity))\n    if (!opts.keepHistory) {\n      await shutdown\n      return\n"
+    },
+    {
+      "before": "\n  protected async shutdownWithHistoryLock(\n    id: string,\n    opts: { immediate?: boolean; keepHistory?: boolean; deadlineMs?: number }\n  ): Promise<void> {\n    // Why: shutdown can be the first lazy-client operation after restart; connect\n    // before killing so a healthy daemon session is not orphaned (#7742). Connect,\n",
+      "after": "\n  protected async shutdownWithHistoryLock(\n    id: string,\n    opts: { immediate?: boolean; keepHistory?: boolean; deadlineMs?: number },\n    expectedIdentity: DaemonEndpointIdentity | null\n  ): Promise<void> {\n    // Why: shutdown can be the first lazy-client operation after restart; connect\n    // before killing so a healthy daemon session is not orphaned (#7742). Connect,\n"
+    },
+    {
+      "before": "    // the whole teardown budget before the kill even starts. Only the waits are\n    // bounded \u2014 the checkpoint itself stays deadline-free and lossless (STA-4228).\n    await this.ensureConnected(opts.deadlineMs)\n    // Why: sleep/exact-stop kills the live PTY before the periodic checkpoint may run.\n    // Force a final snapshot so wake can restore the pane users left.\n    if (opts.keepHistory) {\n",
+      "after": "    // the whole teardown budget before the kill even starts. Only the waits are\n    // bounded \u2014 the checkpoint itself stays deadline-free and lossless (STA-4228).\n    await this.ensureConnected(opts.deadlineMs)\n    const shutdownIdentity = expectedIdentity ?? this.getLastAuthenticatedDaemonIdentity()\n    const assertShutdownIdentity = (): void => {\n      const currentIdentity = this.getLastAuthenticatedDaemonIdentity()\n      if (shutdownIdentity && (!currentIdentity || !sameEndpointIdentity(shutdownIdentity, currentIdentity))) {\n        throw new Error('terminal_shutdown_daemon_identity_changed')\n      }\n    }\n    assertShutdownIdentity()\n    // Why: sleep/exact-stop kills the live PTY before the periodic checkpoint may run.\n    // Force a final snapshot so wake can restore the pane users left.\n    if (opts.keepHistory) {\n"
+    },
+    {
+      "before": "        this.historyManager?.suspendSession(id)\n      }\n    }\n    await this.client.request(\n      'kill',\n      { sessionId: id, immediate: opts.immediate ?? false },\n",
+      "after": "        this.historyManager?.suspendSession(id)\n      }\n    }\n    assertShutdownIdentity()\n    await this.client.request(\n      'kill',\n      { sessionId: id, immediate: opts.immediate ?? false },\n"
+    }
+  ]
+}

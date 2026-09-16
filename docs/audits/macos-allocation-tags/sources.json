@@ -1,0 +1,240 @@
+{
+  "reviewed_at": "2026-09-16",
+  "reported_version_sources": {
+    "electron": "43.4.1",
+    "chromium": "150.0.7871.224",
+    "node": "24.18.1",
+    "v8": "15.0.245.28",
+    "release_url": "https://releases.electronjs.org/release/v43.4.1"
+  },
+  "binary_experiment": "Installed Electron 43.7.0 RUN_AS_NODE; see results.json for exact runtime and OS. Not an exact-version or browser-main incident reproduction.",
+  "hash_encoding": "SHA-256 of fetched raw source bytes; full upstream sources remain untracked and are not required by probe.",
+  "limits": [
+    "Apple main is mutable; recorded hash identifies the read snapshot and is not a claim to match the incident macOS SDK build.",
+    "Electron upstream dependencies are interpreted together with its listed patches.",
+    "Memory tags describe mappings, not complete allocation ownership. Configurable-pool reuse can retag pages.",
+    "Binary experiment reports DIRTY columns separately from RSS, physical footprint and virtual reservations."
+  ],
+  "sources": [
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "DEPS",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/DEPS",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/DEPS",
+      "sha256": "adfcd998ea94be0a462ba714b01cdf027cd92338cd40aa7e22df9d9b7f601af9",
+      "bytes": 8121,
+      "purpose": "Chromium and Node version pins"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/browser/electron_browser_main_parts.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/browser/electron_browser_main_parts.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/browser/electron_browser_main_parts.cc",
+      "sha256": "5b5108df7e47b476531afc05cf936ecfa18f93842cf46c04b65acdfa5f4a81cf",
+      "bytes": 24939,
+      "purpose": "Browser constructs JavascriptEnvironment"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/app/node_main.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/app/node_main.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/app/node_main.cc",
+      "sha256": "361cbc4d4f1775ffae5a0bc465dd3cc00c01ea4258b2f3161e8cb42e6e427dbe",
+      "bytes": 12402,
+      "purpose": "RUN_AS_NODE constructs JavascriptEnvironment; optional Node allocator omitted"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/browser/javascript_environment.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/browser/javascript_environment.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/browser/javascript_environment.cc",
+      "sha256": "81474283bfe3590c25750af115e3f1c823af57e824296cbbc716e492f5b72bfa",
+      "bytes": 10613,
+      "purpose": "gin ArrayBuffer allocator installation and RUN_AS_NODE snapshot exclusion"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/common/node_bindings.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/common/node_bindings.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/common/node_bindings.cc",
+      "sha256": "5edd1b74b9824ababd773b88cafa0a6a5f127070334806619c3d15583fbcc129",
+      "bytes": 45855,
+      "purpose": "Browser CreateIsolateData has null Node allocator"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "gin/array_buffer.cc",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/gin/array_buffer.cc",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/gin/array_buffer.cc",
+      "sha256": "99d1680d38d20983f65bd6f538465ab5c161444db7540643673a32b8f8a29ff8",
+      "bytes": 8009,
+      "purpose": "ArrayBuffer PartitionRoot with configurable pool allowed"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "gin/v8_initializer.cc",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/gin/v8_initializer.cc",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/gin/v8_initializer.cc",
+      "sha256": "62f173e51905621f3130ed1745339a11657b187c94ee3e768a2a7d4c79460484",
+      "bytes": 27915,
+      "purpose": "PartitionAlloc configurable pool allocated inside V8 sandbox"
+    },
+    {
+      "repository": "v8/v8",
+      "ref": "15.0.245.28",
+      "path": "src/base/platform/platform-posix.cc",
+      "url": "https://github.com/v8/v8/blob/15.0.245.28/src/base/platform/platform-posix.cc",
+      "raw_url": "https://raw.githubusercontent.com/v8/v8/15.0.245.28/src/base/platform/platform-posix.cc",
+      "sha256": "d562a80a43530f91b4ba14db838347fbb2d0dc027cd17b85b4ed33bb2feda37c",
+      "bytes": 47394,
+      "purpose": "VM_MAKE_TAG(255); existing reservation allocation changes permissions"
+    },
+    {
+      "repository": "v8/v8",
+      "ref": "15.0.245.28",
+      "path": "src/base/virtual-address-space.cc",
+      "url": "https://github.com/v8/v8/blob/15.0.245.28/src/base/virtual-address-space.cc",
+      "raw_url": "https://raw.githubusercontent.com/v8/v8/15.0.245.28/src/base/virtual-address-space.cc",
+      "sha256": "f937da2eb97d5af1edbd70a221c5f8cda914b13147aecdc4e273ac2a65d0b628",
+      "bytes": 19127,
+      "purpose": "VirtualAddressSubspace allocates within reservation"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "base/allocator/partition_allocator/src/partition_alloc/page_allocator.h",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/page_allocator.h",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/page_allocator.h",
+      "sha256": "2ef57bd01707f69865a055297e6d9ef3c7f1d111d2867c9d04fcfddaf077ec99",
+      "bytes": 20357,
+      "purpose": "253 PartitionAlloc and 255 V8 page labels"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_posix.h",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_posix.h",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/page_allocator_internals_posix.h",
+      "sha256": "df914b097c66328d069305a3a581f0e23ae7697a48cca77d751a36505d6f9e26",
+      "bytes": 13241,
+      "purpose": "Darwin VM tags and MAP_FIXED decommit/zero remapping"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "base/allocator/partition_allocator/src/partition_alloc/partition_page.cc",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/partition_page.cc",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/partition_page.cc",
+      "sha256": "e4d1cef3a94acaf87b0f63312bd51466b638db7efec701c1987ae0d3b4eb34e2",
+      "bytes": 15903,
+      "purpose": "Direct-map release supports configurable pool and unreserve/decommit"
+    },
+    {
+      "repository": "chromium/chromium",
+      "ref": "150.0.7871.224",
+      "path": "base/allocator/partition_allocator/src/partition_alloc/address_pool_manager.cc",
+      "url": "https://github.com/chromium/chromium/blob/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/address_pool_manager.cc",
+      "raw_url": "https://raw.githubusercontent.com/chromium/chromium/150.0.7871.224/base/allocator/partition_allocator/src/partition_alloc/address_pool_manager.cc",
+      "sha256": "2c2c1f1483df6e276ff58417f9095f212034652e7c1c2f43cc86bc064cd7bd32",
+      "bytes": 19440,
+      "purpose": "Pool decommit uses kPartitionAlloc for every pool"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "patches/node/support_v8_sandboxed_pointers.patch",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/patches/node/support_v8_sandboxed_pointers.patch",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/patches/node/support_v8_sandboxed_pointers.patch",
+      "sha256": "1460d6a1a335b3d29ddfca3123d2c4ad35f221e99475db3b2657d53b020aa5e7",
+      "bytes": 14077,
+      "purpose": "Unsafe Buffer/serializer/crypto allocation routes through V8 default allocator"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "patches/node/.patches",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/patches/node/.patches",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/patches/node/.patches",
+      "sha256": "a1683bb5f829d2aa7905094b787d041e1ea0e5652e0f0423df4be5b2642dd785",
+      "bytes": 2935,
+      "purpose": "Patch application list includes sandbox patch"
+    },
+    {
+      "repository": "nodejs/node",
+      "ref": "v24.18.1",
+      "path": "lib/buffer.js",
+      "url": "https://github.com/nodejs/node/blob/v24.18.1/lib/buffer.js",
+      "raw_url": "https://raw.githubusercontent.com/nodejs/node/v24.18.1/lib/buffer.js",
+      "sha256": "85699dbf250b11767414f73c8912ef5b5578ae8f361730cdb2331763efa29ef7",
+      "bytes": 42310,
+      "purpose": "Buffer zero-fill/nonzero-fill/unsafe/pool selection"
+    },
+    {
+      "repository": "nodejs/node",
+      "ref": "v24.18.1",
+      "path": "src/node_buffer.cc",
+      "url": "https://github.com/nodejs/node/blob/v24.18.1/src/node_buffer.cc",
+      "raw_url": "https://raw.githubusercontent.com/nodejs/node/v24.18.1/src/node_buffer.cc",
+      "sha256": "374613185d873bed83ce3667c271011b3f8db8ae6340d54052b98e8360664402",
+      "bytes": 59463,
+      "purpose": "Native Buffer copy/new isolate-backed stores before Electron patch"
+    },
+    {
+      "repository": "v8/v8",
+      "ref": "15.0.245.28",
+      "path": "src/api/api.cc",
+      "url": "https://github.com/v8/v8/blob/15.0.245.28/src/api/api.cc",
+      "raw_url": "https://raw.githubusercontent.com/v8/v8/15.0.245.28/src/api/api.cc",
+      "sha256": "28c17ea3a6895b392dd8176f09fa90c53b1c03f04a4f7455e9da54aadaf2f685",
+      "bytes": 502820,
+      "purpose": "Default allocator uses sandbox allocator when sandbox enabled"
+    },
+    {
+      "repository": "nodejs/node",
+      "ref": "v24.18.1",
+      "path": "src/node_process_methods.cc",
+      "url": "https://github.com/nodejs/node/blob/v24.18.1/src/node_process_methods.cc",
+      "raw_url": "https://raw.githubusercontent.com/nodejs/node/v24.18.1/src/node_process_methods.cc",
+      "sha256": "6f2d27513a933dd3d076c0ffe2f95a1846ba1d1060f7ccfbc6eb2df6692a34eb",
+      "bytes": 28892,
+      "purpose": "arrayBuffers zero when Node allocator is absent; external comes from V8"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/common/v8_util.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/common/v8_util.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/common/v8_util.cc",
+      "sha256": "f89d5bf3864909ed47f910c6dc02b4a087edb0d716b9674537bdf5b8b0f7a13a",
+      "bytes": 11154,
+      "purpose": "IPC serializer native vector grows and moves into outgoing message"
+    },
+    {
+      "repository": "electron/electron",
+      "ref": "v43.4.1",
+      "path": "shell/common/api/electron_api_native_image.cc",
+      "url": "https://github.com/electron/electron/blob/v43.4.1/shell/common/api/electron_api_native_image.cc",
+      "raw_url": "https://raw.githubusercontent.com/electron/electron/v43.4.1/shell/common/api/electron_api_native_image.cc",
+      "sha256": "5f9332d522c797539309a57776c30e442a715a5a8f6ede54e66f498580e641d7",
+      "bytes": 23237,
+      "purpose": "Native bitmap/encoding to Buffer copy paths"
+    },
+    {
+      "repository": "apple-oss-distributions/xnu",
+      "ref": "main",
+      "path": "osfmk/mach/vm_statistics.h",
+      "url": "https://github.com/apple-oss-distributions/xnu/blob/main/osfmk/mach/vm_statistics.h",
+      "raw_url": "https://raw.githubusercontent.com/apple-oss-distributions/xnu/main/osfmk/mach/vm_statistics.h",
+      "sha256": "834b85450d28b76b657f451c9e3eadb35b39a561e269023dadf9e29ca51fd329",
+      "bytes": 35904,
+      "purpose": "Application-specific tag14=253 and tag16=255; mutable reference captured by hash"
+    }
+  ]
+}

@@ -1,0 +1,173 @@
+{
+  "comparison": "Actual current inline replay methods; baseline restores historical fatal response admission, not a full historical binary. Controlled async sink, no native PTYs or network.",
+  "provenance": {
+    "node": "v26.6.0",
+    "platform": "darwin",
+    "arch": "arm64"
+  },
+  "sources": {
+    "src/relay/dispatcher-rpc-routing.ts": "c11b3ff9096bd4877bba0ebc8a70a63092a00015fde3d8f81f3b8fb54087479b",
+    "src/relay/pty-handler.ts": "25c60e7d4fcf4e81015a90cc338465c37f044480a2c2cb957831b2967e1f94b6",
+    "src/relay/dispatcher-notification-publication.ts": "d21c8575f5f4694a806b0e05cce4a1595f7116220f48d9068eba7c23aed7a546",
+    "src/relay/dispatcher-writer-admission.ts": "12e05ba04de5687c0a0db1e44eddf342cb0c21b9653eef2aeff7b5ccd2039797",
+    "src/relay/dispatcher-client-writer.ts": "9ed3ee7ad2758f2d10cd0a0ba06bf77dc3318317b8e24f0eaa6cfe235fd34be4",
+    "src/main/providers/ssh-pty-provider.ts": "7bf1a9e41b606dcfd73bd2a4aa9d9aa185b12f18f9beb027b640fe10cf360123",
+    "src/main/ssh/ssh-relay-session.ts": "3c0ac729f47f7f21687c55e64dfa4764b0dcd6ea6d02f91ceb3b13bd6db2ad54",
+    "src/main/ssh/ssh-channel-multiplexer.ts": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108",
+    "src/main/runtime/recent-pty-output-buffer.ts": "3c02b54567850b4f94a25e06142eef247c383a74fb702fe8f45fbfeb1a2488b8",
+    "docs/audits/relay-replay-overflow/replay-fixture.test.ts": "38c6d8a2c63607625db323631955d602cf0d244ac9464a952ab4cf95f87324cc"
+  },
+  "baselineSourceHash": "3e2fa04f222dc18d0289043c5a2a54c5acf41f9e3f0fd009f3b7c312bac3978a",
+  "historicalVersion": "v1.4.163",
+  "historicalSources": {
+    "src/relay/dispatcher.ts": "737d0ae6d763ca04ab9d92a0ab498673afe5c121459f06bbaf70adc04ebdebfe",
+    "src/relay/dispatcher-writer-admission.ts": "5e8698925de2a6434e66d0ba9a3fed3149a6ad7be55753ba53d18f46b62b8ef8",
+    "src/relay/pty-handler.ts": "97650d8ad455db1a43bda072d47fb6145992bb0bf62fe2e5e5904425e5015270",
+    "src/main/providers/ssh-pty-provider.ts": "9b448a96f1a474806552fa27dde65e4568f9293505eedfbe8127cbceef43f004",
+    "src/main/ssh/ssh-relay-session.ts": "72a7fa79bde1c2790cb491c60df06bb01e2c4eaad6d17317695e86ec76e9777c",
+    "src/main/ssh/ssh-channel-multiplexer.ts": "da0aac5020368d781935d851f57c6e772f47a637e532c6dd61f26e4e8f5b232e"
+  },
+  "historicalChecks": {
+    "cappedReplay": true,
+    "suppressionSupported": true,
+    "reconnectSuppressesNotification": true,
+    "eightReconnectWorkers": true,
+    "fatalResponseAdmission": true,
+    "oneMiBControlBudget": true,
+    "transportCloseMeansConnectionLost": true
+  },
+  "existingFix": {
+    "pr": 17968,
+    "commit": "99d9111653d27621b36e00b4e2c79009952a342a"
+  },
+  "phases": [
+    {
+      "phase": "before",
+      "passed": 3,
+      "failed": 0,
+      "observations": [
+        {
+          "scenario": "8 ASCII RPC replies",
+          "result": {
+            "closes": 0,
+            "ptys": 8,
+            "successfulReplays": 8,
+            "capacityErrors": 0,
+            "replayNotifications": 0,
+            "frames": 8,
+            "bytes": 819872
+          }
+        },
+        {
+          "scenario": "8 ANSI RPC replies, three independent reconnect attempts",
+          "payloadCodeUnits": 102400,
+          "results": [
+            {
+              "closes": 1,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 0,
+              "replayNotifications": 0,
+              "frames": 5,
+              "bytes": 1024420
+            },
+            {
+              "closes": 1,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 0,
+              "replayNotifications": 0,
+              "frames": 5,
+              "bytes": 1024420
+            },
+            {
+              "closes": 1,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 0,
+              "replayNotifications": 0,
+              "frames": 5,
+              "bytes": 1024420
+            }
+          ]
+        },
+        {
+          "scenario": "11 legacy unsuppressed notifications",
+          "result": {
+            "closes": 1,
+            "ptys": 11,
+            "successfulReplays": 0,
+            "capacityErrors": 0,
+            "replayNotifications": 10,
+            "frames": 10,
+            "bytes": 1024881
+          }
+        }
+      ]
+    },
+    {
+      "phase": "after",
+      "passed": 3,
+      "failed": 0,
+      "observations": [
+        {
+          "scenario": "8 ASCII RPC replies",
+          "result": {
+            "closes": 0,
+            "ptys": 8,
+            "successfulReplays": 8,
+            "capacityErrors": 0,
+            "replayNotifications": 0,
+            "frames": 8,
+            "bytes": 819872
+          }
+        },
+        {
+          "scenario": "8 ANSI RPC replies, three independent reconnect attempts",
+          "payloadCodeUnits": 102400,
+          "results": [
+            {
+              "closes": 0,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 3,
+              "replayNotifications": 0,
+              "frames": 8,
+              "bytes": 1024804
+            },
+            {
+              "closes": 0,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 3,
+              "replayNotifications": 0,
+              "frames": 8,
+              "bytes": 1024804
+            },
+            {
+              "closes": 0,
+              "ptys": 8,
+              "successfulReplays": 5,
+              "capacityErrors": 3,
+              "replayNotifications": 0,
+              "frames": 8,
+              "bytes": 1024804
+            }
+          ]
+        },
+        {
+          "scenario": "11 legacy unsuppressed notifications",
+          "result": {
+            "closes": 1,
+            "ptys": 11,
+            "successfulReplays": 0,
+            "capacityErrors": 0,
+            "replayNotifications": 10,
+            "frames": 10,
+            "bytes": 1024881
+          }
+        }
+      ]
+    }
+  ]
+}

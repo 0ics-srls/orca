@@ -1,0 +1,206 @@
+{
+  "sourceHashes": {
+    "src/main/daemon/daemon-pty-session-control.ts": {
+      "baseline": "5fd2e9ad493e0b89cf1c2d18d546e820bdcc863f6c4ba7e95b1dd77f5cea48b8",
+      "candidate": "f3008b9c37370fbfa5a678f3225deab06485020ab52b99c22f89b9178614dc67"
+    },
+    "adapter.test.ts": "e43cc12d8dfad691a91a0cfba85063b665861335246265ccf630f44ea62bbbc5",
+    "close-retry.test.ts": "b50ae40fd4bd7c4b932193ad074e3924cc0b4182c4340aafbcc512b92091c6da"
+  },
+  "phases": [
+    {
+      "phase": "baseline",
+      "adapter": [
+        {
+          "scenario": "healthy-immediate",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "healthy-checkpoint",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "same-daemon-reconnect",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "lazy-shutdown",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": true,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "restart-before-connect",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 1,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "restart-during-checkpoint",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 1,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "restart-while-queued",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 1,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "same-daemon-replacement",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 1,
+          "identityChanged": false,
+          "replacementIncarnationChanged": true
+        }
+      ],
+      "closeRetry": {
+        "close": {
+          "ptyKilled": true
+        },
+        "fallbackKills": 0,
+        "forceKills": 1,
+        "gracefulKills": 0,
+        "remaining": 0,
+        "identityRefusal": false
+      }
+    },
+    {
+      "phase": "candidate",
+      "adapter": [
+        {
+          "scenario": "healthy-immediate",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "healthy-checkpoint",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "same-daemon-reconnect",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": false,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "lazy-shutdown",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 0,
+          "identityChanged": true,
+          "replacementIncarnationChanged": false
+        },
+        {
+          "scenario": "restart-before-connect",
+          "result": {
+            "status": "rejected",
+            "reason": "terminal_shutdown_daemon_identity_changed"
+          },
+          "remaining": 1,
+          "replacementForceKills": 0,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "restart-during-checkpoint",
+          "result": {
+            "status": "rejected",
+            "reason": "terminal_shutdown_daemon_identity_changed"
+          },
+          "remaining": 1,
+          "replacementForceKills": 0,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "restart-while-queued",
+          "result": {
+            "status": "rejected",
+            "reason": "terminal_shutdown_daemon_identity_changed"
+          },
+          "remaining": 1,
+          "replacementForceKills": 0,
+          "identityChanged": true,
+          "replacementIncarnationChanged": true
+        },
+        {
+          "scenario": "same-daemon-replacement",
+          "result": {
+            "status": "fulfilled"
+          },
+          "remaining": 0,
+          "replacementForceKills": 1,
+          "identityChanged": false,
+          "replacementIncarnationChanged": true
+        }
+      ],
+      "closeRetry": {
+        "close": {
+          "ptyKilled": false,
+          "verdict": "unverifiable"
+        },
+        "fallbackKills": 1,
+        "forceKills": 0,
+        "gracefulKills": 1,
+        "remaining": 0,
+        "identityRefusal": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,55 @@
+{
+  "scope": "Current watcher controls; no proof of historical watcher-to-EPIPE causation",
+  "passed": 23,
+  "failed": 0,
+  "pending": 33,
+  "sourceHashes": {
+    "src/main/ipc/parcel-watcher-process.test.ts": "675167320449bf7e331af1135328e24d6f650cf4afaed58ccf8126f54ffce77b",
+    "src/main/ipc/parcel-watcher-process-entry.test.ts": "87e2d5da6005960d498df1424e9f6b9824705280fccdb0bac15216c576a09102",
+    "src/main/ipc/parcel-watcher-crash-fuse.test.ts": "84c45e12b10e0fa7fa82f08f03d8255b435a9f5a338e9066864c3b5740037566",
+    "src/main/ipc/parcel-watcher-child-recovery.ts": "3691b7f81b67612938d8fecf7ca616ca296097174d974f9220589697ba23068f",
+    "src/main/ipc/parcel-watcher-process-entry.ts": "bdb63ffc4fa6bfecc0742c605cd79d1415b95af07b8f6bc23a13a9af20d64ffb",
+    "src/main/ipc/parcel-watcher-crash-fuse.ts": "8d066631249c328c60f0ea4c06f6b5a294a1fee932887c8ab1f3addbe38b695f",
+    "src/main/ipc/parcel-watcher-event-delivery.ts": "c5258521495a921a1bd5b03ea110477d248acfcba7c957c6c01e3704890348ad"
+  },
+  "passedCases": [
+    {
+      "file": "src/main/ipc/parcel-watcher-crash-fuse.test.ts",
+      "tests": [
+        "opens after three crashes at the watcher restart cadence",
+        "stays open until explicitly reset",
+        "expires crashes outside the two-minute window"
+      ]
+    },
+    {
+      "file": "src/main/ipc/parcel-watcher-process-entry.test.ts",
+      "tests": [
+        "fails the shallow subscribe when the host never delivers fs.watch events",
+        "hosts shallow subscriptions without invoking the recursive native watcher",
+        "does not restart while a native subscription is still crawling",
+        "invalidates an outstanding probe when another subscription starts crawling",
+        "still restarts when unsubscribe deadlocks while another root remains live",
+        "drains active crawls before starting teardown deadlock detection",
+        "keeps later crawls queued behind teardown deadlock detection",
+        "reserves teardown order while its subscription is still crawling",
+        "removes a cancelled queued crawl before it reaches Parcel",
+        "unsubscribes a late cancel after the crawl already finished",
+        "reports native unsubscribe rejection without acknowledging handle release",
+        "asks the host to restart when an active crawl is cancelled",
+        "still restarts after consecutive missed events once every subscription is live",
+        "collapses and enriches runtime batches before they cross child IPC",
+        "reports an FSEvents overflow and keeps delivering later events",
+        "bounds pending event batches while child IPC reports backpressure",
+        "drops queued event work when the subscription is removed"
+      ]
+    },
+    {
+      "file": "src/main/ipc/parcel-watcher-process.test.ts",
+      "tests": [
+        "respawns after a crash, resubscribes, and reports the interruption",
+        "disables watching after repeated crashes instead of fork-bombing",
+        "starts without a canary when the diagnostic temp directory is unavailable"
+      ]
+    }
+  ]
+}

@@ -1,5 +1,5 @@
 {
-  "observedAt": "2026-09-16T08:50:22.192446+00:00",
+  "observedAt": "2026-09-16T10:30:00.481357+00:00",
   "scope": "Published memory-audit PRs; statuses are a timestamped observation, not a claim that all CI is green.",
   "pullRequests": [
     {
@@ -143,7 +143,7 @@
     {
       "number": 21000,
       "base": "main",
-      "head": "d17bfb4650c32ad6b81ab5f3d9ee4e5a8050b868",
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
       "state": "FAILURE"
     },
     {
@@ -168,6 +168,66 @@
       "number": 21006,
       "base": "main",
       "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21009,
+      "base": "main",
+      "head": "8da602c7e3a74655f98039705bbfede174078e79",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21010,
+      "base": "main",
+      "head": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21011,
+      "base": "np-oom-scan-daemon-late-exit",
+      "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21012,
+      "base": "main",
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21014,
+      "base": "main",
+      "head": "099f3396524554fc6725a7f0b727434dc7369527",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21018,
+      "base": "main",
+      "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21019,
+      "base": "np-oom-scan-daemon-late-exit",
+      "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21020,
+      "base": "main",
+      "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21021,
+      "base": "main",
+      "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "state": "FAILURE"
+    },
+    {
+      "number": 21022,
+      "base": "main",
+      "head": "97338c35d95151b744cc653f328a1180f17dd182",
       "state": "FAILURE"
     }
   ],
@@ -2138,6 +2198,807 @@
           ]
         }
       }
+    }
+  },
+  "watcherAndGuestFailures": {
+    "observedAt": "2026-09-16T09:12:42.676954+00:00",
+    "failures": [
+      {
+        "number": 21009,
+        "head": "8da602c7e3a74655f98039705bbfede174078e79",
+        "check": "static analysis",
+        "url": "https://github.com/stablyai/orca/actions/runs/35077649975/job/104733889882",
+        "annotations": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      },
+      {
+        "number": 21009,
+        "head": "8da602c7e3a74655f98039705bbfede174078e79",
+        "check": "typecheck",
+        "url": "https://github.com/stablyai/orca/actions/runs/35077649975/job/104733889981",
+        "annotations": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      },
+      {
+        "number": 21010,
+        "head": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
+        "check": "static analysis",
+        "url": "https://github.com/stablyai/orca/actions/runs/35077651745/job/104733964695",
+        "annotations": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      },
+      {
+        "number": 21010,
+        "head": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
+        "check": "typecheck",
+        "url": "https://github.com/stablyai/orca/actions/runs/35077651745/job/104733964486",
+        "annotations": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    ]
+  },
+  "graphAndRegistrationFailures": [
+    {
+      "number": 21011,
+      "head": "33cdcb5ddbc2c6af62892aaf995d134e5bd188b9",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079308754/job/104739343165",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21011,
+      "head": "33cdcb5ddbc2c6af62892aaf995d134e5bd188b9",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079308754/job/104739343094",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21012,
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524211",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21012,
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524270",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    }
+  ],
+  "staleInventoryFailures": [
+    {
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35080286353/job/104742535409",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      }
+    },
+    {
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35080286353/job/104742535429",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    }
+  ],
+  "localCombinedGraphInventoryProof": {
+    "passed": true,
+    "sources": {
+      "src/main/runtime/orca-runtime-sync-window-graph.ts": "e9527f5964af3ed93ec4815096ebdcc181118f9edc76f34e1cc25d1fa67a5fb4",
+      "src/main/runtime/orca-runtime-mark-pty-liveness-unverifiable.ts": "ff5433a848e43f22560234c98e25122237f16bcda7668603dd2640eb86cec315",
+      "src/main/runtime/orca-runtime-on-pty-exit.ts": "75f108950c55d77d5e2b4ee89fb677ae9be2bb6b94d62a3085996cb201259db2"
+    },
+    "variants": [
+      {
+        "phase": "before",
+        "runtimeCases": 4,
+        "preservedHistoryControl": true
+      },
+      {
+        "phase": "guard-only",
+        "runtimeCases": 4,
+        "preservedHistoryControl": true
+      },
+      {
+        "phase": "after",
+        "runtimeCases": 4,
+        "preservedHistoryControl": true
+      }
+    ],
+    "note": "Reran the portable queued-graph proof after commit9558152a04; original checked-in graph results remain the earlier isolated run."
+  },
+  "terminalFollowupFailures": [
+    {
+      "number": 21000,
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419289",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21000,
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104746419305",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21000,
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
+      "__typename": "CheckRun",
+      "name": "verify",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081479771/job/104748546880",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21011,
+      "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114479",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21011,
+      "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35081983514/job/104748114466",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21018,
+      "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105066",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21018,
+      "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082012087/job/104748105054",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21019,
+      "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "__typename": "CheckRun",
+      "name": "static analysis",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158064",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+            "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+            "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+            "annotationLevel": "WARNING"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    },
+    {
+      "number": 21019,
+      "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "__typename": "CheckRun",
+      "name": "typecheck",
+      "conclusion": "FAILURE",
+      "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35082018829/job/104748158071",
+      "annotations": {
+        "nodes": [
+          {
+            "path": ".github",
+            "message": "Process completed with exit code 1.",
+            "annotationLevel": "FAILURE"
+          },
+          {
+            "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+            "message": "'NativeChatMessage' is declared but never used.",
+            "annotationLevel": "FAILURE"
+          }
+        ]
+      }
+    }
+  ],
+  "quotaAndQueueFollowupFailures": {
+    "observation": "All three PRs fail static/typecheck on the inherited main unused import. #21022 additionally fails untouched transcript watcher liveness and browser-history performance tests; these failures are recorded separately and are not claimed resolved.",
+    "pullRequests": [
+      {
+        "number": 21020,
+        "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+        "failedChecks": [
+          {
+            "name": "static analysis",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35083446799/job/104752784668",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "eslint(no-unused-vars)",
+                  "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                },
+                {
+                  "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                }
+              ]
+            }
+          },
+          {
+            "name": "typecheck",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35083446799/job/104752784637",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "",
+                  "message": "'NativeChatMessage' is declared but never used.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          },
+          {
+            "name": "verify",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35083446799/job/104754849463",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "number": 21021,
+        "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+        "failedChecks": [
+          {
+            "name": "static analysis",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233198",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "eslint(no-unused-vars)",
+                  "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                },
+                {
+                  "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                }
+              ]
+            }
+          },
+          {
+            "name": "typecheck",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233231",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "",
+                  "message": "'NativeChatMessage' is declared but never used.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          },
+          {
+            "name": "verify",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104758172123",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "number": 21022,
+        "head": "97338c35d95151b744cc653f328a1180f17dd182",
+        "failedChecks": [
+          {
+            "name": "static analysis",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697205",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "eslint(no-unused-vars)",
+                  "message": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx:12:15: Type 'NativeChatMessage' is imported but never used.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/NotificationOnboardingPreview.test.ts:78:18: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                },
+                {
+                  "path": "mobile/src/onboarding/MobileOnboardingPage.test.ts",
+                  "title": "unicorn(prefer-array-flat-map)",
+                  "message": "mobile/src/onboarding/MobileOnboardingPage.test.ts:90:12: `Array.flatMap` performs `Array.map` and `Array.flat` in one step.",
+                  "annotationLevel": "WARNING"
+                }
+              ]
+            }
+          },
+          {
+            "name": "typecheck",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697107",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+                  "title": "",
+                  "message": "'NativeChatMessage' is declared but never used.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          },
+          {
+            "name": "test / tests node 24 1/8",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701211",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/main/native-chat/transcript-watch-liveness.test.ts",
+                  "title": "src/main/native-chat/transcript-watch-liveness.test.ts > native chat transcript watcher liveness > replaces a same-size prefix rewrite with an unchanged trailing boundary",
+                  "message": "AssertionError: expected \"vi.fn()\" to be called once, but got 2 times\n \u276f src/main/native-chat/transcript-watch-liveness.test.ts:183:26\n\n",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          },
+          {
+            "name": "test / tests node 24 4/8",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701210",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                },
+                {
+                  "path": "src/renderer/src/lib/browser-history-match.performance.test.ts",
+                  "title": "src/renderer/src/lib/browser-history-match.performance.test.ts > browser history match performance budget > prepares a cold corpus within budget",
+                  "message": "AssertionError: expected 2.711498000000006 to be less than 2\n \u276f src/renderer/src/lib/browser-history-match.performance.test.ts:50:35\n\n",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          },
+          {
+            "name": "verify",
+            "conclusion": "FAILURE",
+            "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104759725492",
+            "annotations": {
+              "nodes": [
+                {
+                  "path": ".github",
+                  "title": "",
+                  "message": "Process completed with exit code 1.",
+                  "annotationLevel": "FAILURE"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ],
+    "untouchedFailingTestBlobs": {
+      "comparisonBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "topicHead": "97338c35d95151b744cc653f328a1180f17dd182",
+      "files": {
+        "src/main/native-chat/transcript-watch-liveness.test.ts": "8667f58af08b6eaf95b9e75d6bef89ed6ea6ebf3",
+        "src/renderer/src/lib/browser-history-match.performance.test.ts": "7a99c2ad49df25f4ebd4cca6fa2c1812f345b959"
+      },
+      "interpretation": "Each file has the same blob on main and this topic; this is not proof of why the tests failed."
     }
   }
 }

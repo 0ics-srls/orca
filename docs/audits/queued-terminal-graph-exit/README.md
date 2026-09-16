@@ -48,3 +48,11 @@ This proves stale runtime/pane ownership, not a measured native-process or heap 
 The existing register retains at most 256 unowned verdicts; PTY/handle/leaf owners keep their verdicts until their own lifecycle ends. The disconnected PTY archive is capped at 128. After both a record and its bounded verdict are evicted, the graph has no remaining per-ID certificate; this change does not add permanent tombstones. Later loss-of-contact writes can still replace an exit verdict with `unverifiable`; a stale positive inventory can separately write a connected record. Those paths are not exercised or fixed by this local queued-publication proof.
 
 A separate audit found that an unreachable unrelated legacy daemon can make aggregate exact-stop verification fail despite absence on the target's own daemon. That is excluded from this fix and from the proof's healthy target-inventory assertion.
+
+## Recorded run provenance
+
+`results.json` records the graph fix before the separate provider-inventory lifecycle fence in #21014. Its source hashes identify that earlier run; they are not a claim that every later audit commit has the same bytes. The reproduction can be rerun against the combined worktree.
+
+## Pull request dependency
+
+The graph PR is stacked on #21000, reusing its daemon socket fixture and physical-exit delivery contract. The graph mechanism is separate; the stack makes the executable proof dependencies explicit.

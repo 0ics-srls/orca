@@ -1,0 +1,106 @@
+{
+  "scope": "Tracked main/shared .ts files, excluding test/spec, fixture, harness and generated names. Exact receiver spelling only; no alias or interprocedural analysis.",
+  "parserVersion": "6.0.3",
+  "files": 6239,
+  "loops": 3876,
+  "hits": [
+    {
+      "path": "src/main/claude/claude-subagent-roster.ts",
+      "sourceHash": "b9bf1f817f46a394a9901eabe4b64cd4c026e3d40c088a21f7873b5f53f29c12",
+      "line": 206,
+      "iterated": "group.entries",
+      "call": "group.entries.set(id, {\n        ...tracked,\n        entry: { ...tracked.entry, state: 'unverifiable', settledAt: this.now() }\n      })"
+    },
+    {
+      "path": "src/main/codex/codex-subagent-roster.ts",
+      "sourceHash": "bafd291665fb178b0912bd2a2723910c00890f0766aae7f70f8bed5d417542b1",
+      "line": 248,
+      "iterated": "group.entries",
+      "call": "group.entries.set(id, { ...entry, state: 'unverifiable', settledAt: this.now() })"
+    },
+    {
+      "path": "src/main/ipc/ssh-pty-projection-terminality.ts",
+      "sourceHash": "2be250d064c906c7d9af66a337958c2876df75cdf441cfd0101ce37e6147d1f3",
+      "line": 98,
+      "iterated": "this.waitersByPty",
+      "call": "this.waitersByPty.set(ptyId, pending)"
+    },
+    {
+      "path": "src/main/ipc/ssh-pty-source-obligation-state.ts",
+      "sourceHash": "360aec60a1ab6b3488488c1680d8a2d682f8dde42b870bf474dcc33c9b4eb15b",
+      "line": 167,
+      "iterated": "record.obligations",
+      "call": "record.obligations.set(consumer, Object.freeze({ state: 'canceled', reason }))"
+    },
+    {
+      "path": "src/main/ipc/worktree-base-directory-marker-poller.ts",
+      "sourceHash": "7bf1c768af0688d152e38f0d7da23fd09e008ee92eab60fe37ea224fcd83c8aa",
+      "line": 190,
+      "iterated": "markerProbeStartedAt",
+      "call": "markerProbeStartedAt.set(dir, null)"
+    },
+    {
+      "path": "src/main/ipc/worktree-head-identity-reader.ts",
+      "sourceHash": "0f5c750c5351d932cab7ff7fae7973c22530cf456cb821c7a151d30aa67f6f6b",
+      "line": 247,
+      "iterated": "cache.entries",
+      "call": "cache.entries.set(name, next)"
+    },
+    {
+      "path": "src/main/runtime/agent-session-backup-recovery-fence.ts",
+      "sourceHash": "963b8f41120d0e52a32e91dbfdbcce5f42cbfc68674292eacb5da3f6fa177ba0",
+      "line": 30,
+      "iterated": "state.records",
+      "call": "state.records.set(sessionId, {\n      ...record,\n      lease: {\n        ...record.lease,\n        minimumNextFence: floor\n      }\n    })"
+    },
+    {
+      "path": "src/main/runtime/agent-session-store-transaction-queue.ts",
+      "sourceHash": "5919575bf0d4778484203a94d313305717cbe83b30855b1a4b07ee75350d7031",
+      "line": 15,
+      "iterated": "state.records",
+      "call": "state.records.set(sessionId, {\n      ...record,\n      lease: { ...record.lease, unreconciled: true }\n    })"
+    },
+    {
+      "path": "src/main/runtime/remote-desktop-terminal-floor.ts",
+      "sourceHash": "4e800e043fe5b297ba5634725921f6b2e696629d01194c118c49526457a9969f",
+      "line": 237,
+      "iterated": "viewers",
+      "call": "viewers.set(subscriptionKey, { ...viewer, ...viewport, activity })"
+    },
+    {
+      "path": "src/main/runtime/runtime-browser-page-registry.ts",
+      "sourceHash": "114de916a5244f9f62700faf4cefc57a99e24199885f57bb0f80aa5747a79a13",
+      "line": 203,
+      "iterated": "this.pages",
+      "call": "this.pages.set(\n          browserPageId,\n          freezePage({ ...page, active: false, placement: page.placement })\n        )"
+    },
+    {
+      "path": "src/main/ssh/ssh-channel-multiplexer.ts",
+      "sourceHash": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108",
+      "line": 676,
+      "iterated": "this.unackedTimestamps",
+      "call": "this.unackedTimestamps.set(seq, now)"
+    },
+    {
+      "path": "src/main/ssh/ssh-relay-session.ts",
+      "sourceHash": "3c0ac729f47f7f21687c55e64dfa4764b0dcd6ea6d02f91ceb3b13bd6db2ad54",
+      "line": 1325,
+      "iterated": "recovery.modelMigrationsByAppPtyId",
+      "call": "recovery.modelMigrationsByAppPtyId.set(\n        ptyId,\n        migration.then(() =>\n          Object.freeze({\n            status: 'checkpoint-unavailable' as const,\n            reason: 'completion-failed' as const\n          })\n        )\n      )"
+    },
+    {
+      "path": "src/shared/claimed-agent-pty-owner.ts",
+      "sourceHash": "6c49c9b4649559a45149a3118a3560a7c724d9b06fd9b57182f5b880b4fd77c1",
+      "line": 252,
+      "iterated": "this.conflicts",
+      "call": "this.conflicts.set(key, remaining)"
+    },
+    {
+      "path": "src/shared/plugins/plugin-extension-registry.ts",
+      "sourceHash": "eda4cce418ccff2ae36735bfac06ca887e124024ae0eef5bdbcacc37ff269f36",
+      "line": 90,
+      "iterated": "byPoint",
+      "call": "byPoint.set(\n          key,\n          registrations.filter((registration) => registration.pluginId !== pluginId)\n        )"
+    }
+  ]
+}

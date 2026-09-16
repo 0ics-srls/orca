@@ -1,0 +1,50 @@
+{
+  "scope": "Actual detection loop with a deterministic clock and actual marker write/consume. No Electron app or worker is launched.",
+  "timeoutMs": 45000,
+  "checkIntervalMs": 5000,
+  "observations": [
+    {
+      "atMs": 25000,
+      "detections": 0
+    },
+    {
+      "atMs": 45000,
+      "detections": 0
+    },
+    {
+      "atMs": 50000,
+      "detections": 1
+    },
+    {
+      "atMs": 100000,
+      "detections": 1
+    }
+  ],
+  "events": [
+    {
+      "kind": "detected",
+      "unresponsiveMs": 50000
+    },
+    {
+      "kind": "resolved",
+      "unresponsiveMs": 100000
+    }
+  ],
+  "delayedWorker": {
+    "elapsedMs": 200000,
+    "tickGapMs": 20000,
+    "detections": 0
+  },
+  "marker": {
+    "unresponsiveMs": 50000,
+    "selfRecovered": false,
+    "consumed": true
+  },
+  "sources": {
+    "src/main/hang-watchdog/hang-watchdog-detection-loop.ts": "e6609bab17f8a60c1541a1ae791102b49020b7b9f49fa02b4b93395267643473",
+    "src/main/hang-watchdog/hang-watchdog-worker-protocol.ts": "d5d19a7d0411180e2290135efbd7b1a56fd89371bdb635fe8222d547725c0c55",
+    "src/main/hang-watchdog/main-thread-hang-watchdog-entry.ts": "68146bd31848d2d6e86d65456f6b88fe2b67ec0b9a276d7c00c20c0e976a8acc",
+    "src/main/hang-watchdog/hang-detection-marker.ts": "4e10bc9661b163603eb7d5f40d86f184171074c22f13bf4a589947ea95302f76"
+  },
+  "bundleSha256": "2c5ff9c09626d8c7c88b5672cddbc721140cedc4da668d758bee7f7931bf5325"
+}

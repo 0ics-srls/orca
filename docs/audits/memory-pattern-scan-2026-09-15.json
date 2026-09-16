@@ -29,13 +29,13 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25538,
-  "matchingFiles": 7782,
+  "sourceFilesSearched": 25579,
+  "matchingFiles": 7798,
   "counts": {
-    "addEventListener": 1554,
-    "removeEventListener": 1203,
-    "setTimeout": 3938,
-    "clearTimeout": 1850,
+    "addEventListener": 1555,
+    "removeEventListener": 1204,
+    "setTimeout": 3942,
+    "clearTimeout": 1851,
     "setInterval": 383,
     "clearInterval": 218,
     "requestAnimationFrame": 586,
@@ -46,9 +46,9 @@
     "MutableDisposable": 1,
     "onWillDispose": 1,
     "onDidDispose": 17,
-    "new Map": 7560,
-    "new Set": 7259,
-    "Buffer.concat": 274
+    "new Map": 7581,
+    "new Set": 7271,
+    "Buffer.concat": 275
   },
   "files": {
     ".github/actions/cloud-sql-rollout-lease/renew.mjs": {
@@ -1265,10 +1265,32 @@
     "docs/audits/agent-start-count-semantics/reproduce.cjs": {
       "new Set": 1
     },
+    "docs/audits/daemon-shutdown-identity/close-retry.test.ts": {
+      "new Map": 2
+    },
+    "docs/audits/daemon-stop-owner-authority/authority.test.ts": {
+      "new Map": 2
+    },
+    "docs/audits/daemon-stop-owner-authority/shutdown-gap.test.ts": {
+      "new Map": 6
+    },
     "docs/audits/daemon-stream-retention/reproduce.mjs": {
       "setTimeout": 1
     },
     "docs/audits/legacy-import-source-budget/reproduce.mjs": {
+      "new Map": 1
+    },
+    "docs/audits/macos-allocation-tags/probe.cjs": {
+      "clearTimeout": 1,
+      "setTimeout": 2
+    },
+    "docs/audits/nested-repo-processed-queue/reproduce.cjs": {
+      "new Set": 1
+    },
+    "docs/audits/posix-command-row-framing/reproduce.cjs": {
+      "setTimeout": 1
+    },
+    "docs/audits/queued-terminal-graph-exit/preserved-history-fixture.ts": {
       "new Map": 1
     },
     "docs/audits/refresh-memory-scan.py": {
@@ -1289,6 +1311,9 @@
       "setTimeout": 1,
       "subscribe(": 1,
       "unsubscribe": 1
+    },
+    "docs/audits/relay-replay-overflow/replay-fixture.test.ts": {
+      "Buffer.concat": 1
     },
     "docs/audits/structured-hold-retention/reproduce.mjs": {
       "setTimeout": 1
@@ -4303,6 +4328,10 @@
     "src/main/browser/browser-manager-auth-user-agent.test.ts": {
       "new Map": 1
     },
+    "src/main/browser/browser-manager-destroyed-guest.test.ts": {
+      "new Map": 1,
+      "new Set": 2
+    },
     "src/main/browser/browser-manager-guest-lifecycle.test.ts": {
       "new Map": 1
     },
@@ -7217,12 +7246,17 @@
     "src/main/ipc/linear-issue-handlers.ts": {
       "new Set": 1
     },
+    "src/main/ipc/local-log-tail-lifetime.test.ts": {
+      "new Map": 1
+    },
     "src/main/ipc/local-log-tail.test.ts": {
       "new Map": 1
     },
     "src/main/ipc/local-log-tail.ts": {
-      "new Map": 1,
-      "new Set": 1
+      "addEventListener": 1,
+      "new Map": 3,
+      "new Set": 1,
+      "removeEventListener": 1
     },
     "src/main/ipc/local-network-connection-test.ts": {
       "setTimeout": 1
@@ -10794,6 +10828,12 @@
     "src/main/runtime/pty-exit-per-pty-map-reaper-ratchet.test.ts": {
       "new Set": 2
     },
+    "src/main/runtime/pty-inventory-lifecycle-admission.test.ts": {
+      "new Set": 3
+    },
+    "src/main/runtime/pty-inventory-lifecycle-scope.test.ts": {
+      "new Set": 5
+    },
     "src/main/runtime/pty-shell-ownership-mirror.ts": {
       "clearTimeout": 2,
       "setTimeout": 2
@@ -10814,6 +10854,9 @@
       "new Map": 1
     },
     "src/main/runtime/push/push-register-throttle.ts": {
+      "new Map": 1
+    },
+    "src/main/runtime/queued-terminal-graph-exit.test.ts": {
       "new Map": 1
     },
     "src/main/runtime/relay/desktop-relay-service.ts": {
@@ -11857,6 +11900,9 @@
     "src/main/runtime/structured-worker-mail-routing.test.ts": {
       "new Map": 3
     },
+    "src/main/runtime/terminal-close-observed-exit-test-fixture.ts": {
+      "new Map": 2
+    },
     "src/main/runtime/terminal-focus-navigation-coalescer.test.ts": {
       "setTimeout": 1
     },
@@ -11920,6 +11966,10 @@
     "src/main/runtime/workspace-session-terminal-membership-authority.ts": {
       "new Map": 1,
       "new Set": 11
+    },
+    "src/main/runtime/workspace-session-terminal-tab-retirement-identity.ts": {
+      "new Map": 3,
+      "new Set": 1
     },
     "src/main/runtime/worktree-listing-host-scope.ts": {
       "new Set": 2
@@ -14893,6 +14943,9 @@
     },
     "src/renderer/src/components/browser-pane/host-guest/browser-page-mount-admission.ts": {
       "new Set": 2
+    },
+    "src/renderer/src/components/browser-pane/host-guest/browser-page-registration-ownership.test.ts": {
+      "setTimeout": 1
     },
     "src/renderer/src/components/browser-pane/host-guest/browser-page-viewport.test.ts": {
       "unsubscribe": 3

@@ -1,0 +1,387 @@
+{
+  "sourceHashes": {
+    "src/main/daemon/daemon-session-owner-resolution.ts": {
+      "baseline": "4a69ddc724e58ab9eb7607a7ed1f740c5a69b0f809148c03a59f623f275fbe62",
+      "candidate": "681a1a7bcb9f366ed0fc24f318c0d4d9f24d29a07b8e2332b2194484812c6a0a"
+    },
+    "src/main/daemon/daemon-pty-router.ts": {
+      "baseline": "9e15ed368d97a5fe9f37ef27fc8f49bc547a3b5281cf3e6ece879cc7c05208d8",
+      "candidate": "1334be4038a998d7ad4c7fea6d911943042994b9fbc3d5b6742bee99fab47bcc"
+    },
+    "src/main/ipc/pty/runtime/kill.ts": {
+      "baseline": "0b2079548645f817ed0c69677dc04edc2dbba1e7902074ca54a3910d144429d2",
+      "candidate": "764921dc53783c715cfe3e00cdeb1e4314023626ddd4ab5a693b374ea1faa3fa"
+    },
+    "authority.test.ts": "c3699d6f496851a736eb6371c812f36366d1ad2e2e9dc14bd311364e81f67a5f",
+    "shutdown-gap.test.ts": "0ba555b6d942b08da6036adef2ea95ee6112d7fad33e13e22216b72381261660"
+  },
+  "phases": [
+    {
+      "phase": "baseline",
+      "verification": [
+        {
+          "scenario": "healthy",
+          "stopped": true,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": false,
+          "globalPresent": false,
+          "state": {
+            "connected": false,
+            "exitCause": {
+              "kind": "operator_close"
+            },
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "exited"
+          }
+        },
+        {
+          "scenario": "unrelated-down",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "known-collision",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "live"
+          }
+        },
+        {
+          "scenario": "unknown-owner",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "replacement-after-shutdown",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "foreign": [],
+          "globalStillOriginal": false,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "live"
+          }
+        },
+        {
+          "scenario": "target-identity-changed",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "target-restarted",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": true,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "other-adapter-replacement",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "globalStillOriginal": false,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "live"
+          }
+        }
+      ],
+      "reconnectGap": {
+        "stopped": true,
+        "daemonIdentityChanged": true,
+        "replacementIncarnationChanged": true,
+        "replacementForceKills": 1,
+        "remainingProcesses": 0,
+        "ownerChangeRejectedAtCompletion": false
+      },
+      "unknownOwnerGap": {
+        "stopped": false,
+        "wrongCurrentForceKills": 1,
+        "currentRemaining": 0,
+        "intendedLegacyRemaining": 1
+      },
+      "sameDaemonGap": {
+        "stopped": true,
+        "daemonIdentityChanged": false,
+        "replacementIncarnationChanged": true,
+        "replacementForceKills": 1,
+        "remainingProcesses": 0
+      }
+    },
+    {
+      "phase": "candidate",
+      "verification": [
+        {
+          "scenario": "healthy",
+          "stopped": true,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": false,
+          "globalPresent": false,
+          "state": {
+            "connected": false,
+            "exitCause": {
+              "kind": "operator_close"
+            },
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "exited"
+          }
+        },
+        {
+          "scenario": "unrelated-down",
+          "stopped": true,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": false,
+          "globalPresent": false,
+          "state": {
+            "connected": false,
+            "exitCause": {
+              "kind": "operator_close"
+            },
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "exited"
+          }
+        },
+        {
+          "scenario": "known-collision",
+          "stopped": true,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "globalStillOriginal": false,
+          "globalPresent": false,
+          "state": {
+            "connected": false,
+            "exitCause": {
+              "kind": "operator_close"
+            },
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "exited"
+          }
+        },
+        {
+          "scenario": "unknown-owner",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "replacement-after-shutdown",
+          "stopped": false,
+          "ownerChangedWarning": false,
+          "daemonIdentityChanged": false,
+          "target": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "foreign": [],
+          "globalStillOriginal": false,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": "live"
+          }
+        },
+        {
+          "scenario": "target-identity-changed",
+          "stopped": false,
+          "ownerChangedWarning": true,
+          "daemonIdentityChanged": false,
+          "target": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": true
+            }
+          ],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "target-restarted",
+          "stopped": false,
+          "ownerChangedWarning": true,
+          "daemonIdentityChanged": true,
+          "target": [],
+          "foreign": [],
+          "globalStillOriginal": true,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        },
+        {
+          "scenario": "other-adapter-replacement",
+          "stopped": false,
+          "ownerChangedWarning": true,
+          "daemonIdentityChanged": false,
+          "target": [],
+          "foreign": [
+            {
+              "id": "repo::/tmp/late-exit-audit@@terminal",
+              "isOriginal": false
+            }
+          ],
+          "globalStillOriginal": false,
+          "globalPresent": true,
+          "state": {
+            "connected": true,
+            "exitCause": null,
+            "headlessModelRetained": false,
+            "titleTrackerRetained": false,
+            "liveness": null
+          }
+        }
+      ],
+      "reconnectGap": {
+        "stopped": false,
+        "daemonIdentityChanged": true,
+        "replacementIncarnationChanged": true,
+        "replacementForceKills": 1,
+        "remainingProcesses": 0,
+        "ownerChangeRejectedAtCompletion": true
+      },
+      "unknownOwnerGap": {
+        "stopped": false,
+        "wrongCurrentForceKills": 1,
+        "currentRemaining": 0,
+        "intendedLegacyRemaining": 1
+      },
+      "sameDaemonGap": {
+        "stopped": true,
+        "daemonIdentityChanged": false,
+        "replacementIncarnationChanged": true,
+        "replacementForceKills": 1,
+        "remainingProcesses": 0
+      }
+    }
+  ]
+}

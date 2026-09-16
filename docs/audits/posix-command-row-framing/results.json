@@ -1,0 +1,14 @@
+{
+  "sourceHashes": {
+    "src/shared/process-table-snapshot.ts": "fe423af1745925a52b5d205a3cb20325220c39996e1c065d56fe2af1e69182e9",
+    "src/shared/child-process/run-process.ts": "ae4dad239273351ce61269cd7f7abb8325f3f620be600fa9c0ae760c1dd7cbad"
+  },
+  "platform": "darwin",
+  "node": "v26.6.0",
+  "columnShape": "pid=,ppid=,pgid=,tpgid=,stat=,tty=,lstart=,command=",
+  "inputContainsNewline": true,
+  "physicalOutputLines": 1,
+  "parsedRows": 1,
+  "syntheticRowsAdmitted": 0,
+  "argumentSuffix": "first\\012999999901 999999902 1 -1 S ?? 0 row-one\\012999999902 999999901 1 -1 S ?? 0 row-two carriage^Mreturn tab\\011value"
+}

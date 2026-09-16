@@ -1,0 +1,44 @@
+[
+  {
+    "path": "src/main/daemon/daemon-session-owner-resolution.ts",
+    "sha256": "4a69ddc724e58ab9eb7607a7ed1f740c5a69b0f809148c03a59f623f275fbe62",
+    "changes": [
+      {
+        "before": "      }\n      throw error\n    }\n  }\n\n  async probe(sessionId: string): Promise<boolean | null> {\n",
+        "after": "      }\n      throw error\n    }\n  }\n\n  establishedOwner(sessionId: string, expectedIncarnationId?: string): T | undefined {\n    if (!expectedIncarnationId || this.routeIncarnations.get(sessionId) !== expectedIncarnationId) {\n      return undefined\n    }\n    return this.providers.find((provider) => provider === this.routes.get(sessionId))\n  }\n\n  async probe(sessionId: string): Promise<boolean | null> {\n"
+      }
+    ]
+  },
+  {
+    "path": "src/main/daemon/daemon-pty-router.ts",
+    "sha256": "9e15ed368d97a5fe9f37ef27fc8f49bc547a3b5281cf3e6ece879cc7c05208d8",
+    "changes": [
+      {
+        "before": "import type { DaemonPtyAdapter } from './daemon-pty-adapter'\nimport { DaemonPtyAdapterSubscriptionFanout } from './daemon-pty-adapter-subscription-fanout'\nimport type {\n",
+        "after": "import { sameEndpointIdentity } from './daemon-endpoint-incarnation'\nimport type { DaemonPtyAdapter } from './daemon-pty-adapter'\nimport { DaemonPtyAdapterSubscriptionFanout } from './daemon-pty-adapter-subscription-fanout'\nimport type {\n"
+      },
+      {
+        "before": "    return this.current.hasPty(id) || this.legacy.some((adapter) => adapter.hasPty(id))\n  }\n\n  async probePtyLiveness(id: string): Promise<boolean | null> {\n    return await this.ownerResolver.probe(id)\n  }\n",
+        "after": "    return this.current.hasPty(id) || this.legacy.some((adapter) => adapter.hasPty(id))\n  }\n\n  capturePtyStopVerification(id: string, expectedIncarnationId?: string): Pick<IPtyProvider, 'listProcesses'> | undefined {\n    const owner = this.ownerResolver.establishedOwner(id, expectedIncarnationId)\n    const identity = owner?.getLastAuthenticatedDaemonIdentity()\n    if (!owner || !identity) return undefined\n    const assertCompletionCurrent = () => {\n      const currentIdentity = owner.getLastAuthenticatedDaemonIdentity()\n      const routed = this.sessionAdapters.get(id)\n      if (!currentIdentity || !sameEndpointIdentity(identity, currentIdentity) ||\n          (routed && this.ownerResolver.establishedOwner(id, expectedIncarnationId) !== owner)) {\n        throw new Error('terminal_stop_owner_changed')\n      }\n    }\n    return {\n      assertShutdownTarget: () => {\n        assertCompletionCurrent()\n        if (this.ownerResolver.establishedOwner(id, expectedIncarnationId) !== owner) {\n          throw new Error('terminal_stop_owner_changed')\n        }\n      },\n      assertCompletionCurrent,\n      listProcesses: async (opts) => {\n        const sessions = await owner.listProcesses(opts)\n        assertCompletionCurrent()\n        return sessions\n      }\n    }\n  }\n\n  async probePtyLiveness(id: string): Promise<boolean | null> {\n    return await this.ownerResolver.probe(id)\n  }\n"
+      }
+    ]
+  },
+  {
+    "path": "src/main/ipc/pty/runtime/kill.ts",
+    "sha256": "0b2079548645f817ed0c69677dc04edc2dbba1e7902074ca54a3910d144429d2",
+    "changes": [
+      {
+        "before": "    }\n    return false\n  }\n  let providerExitObserved = false\n  try {\n    providerExitObserved = await shutdownProviderAndDetectExit(provider, ptyId, {\n      immediate: true,\n      keepHistory: opts?.keepHistory ?? false,\n",
+        "after": "    }\n    return false\n  }\n  const expectedIncarnationId = ptyIncarnationById.get(ptyId)\n  const expectedOwnerConnectionId = ptyOwnership.get(ptyId)\n  const verificationProvider = provider.capturePtyStopVerification?.(ptyId, expectedIncarnationId) ?? provider\n  let providerExitObserved = false\n  try {\n    verificationProvider.assertShutdownTarget?.()\n    providerExitObserved = await shutdownProviderAndDetectExit(provider, ptyId, {\n      immediate: true,\n      keepHistory: opts?.keepHistory ?? false,\n"
+      },
+      {
+        "before": "    }\n  }\n  try {\n    if (!(await verifyPtyStopped(provider, ptyId, opts))) {\n      runtime?.markPtyLivenessLive?.(ptyId)\n      return false\n    }\n  } catch (err) {\n",
+        "after": "    }\n  }\n  try {\n    if (!(await verifyPtyStopped(verificationProvider, ptyId, opts))) {\n      runtime?.markPtyLivenessLive?.(ptyId)\n      return false\n    }\n    verificationProvider.assertCompletionCurrent?.()\n    const currentIncarnationId = ptyIncarnationById.get(ptyId)\n    if (currentIncarnationId !== undefined && currentIncarnationId !== expectedIncarnationId) {\n      return false\n    }\n    if (ptyOwnership.has(ptyId) &&\n        (ptyOwnership.get(ptyId) !== expectedOwnerConnectionId || getProviderForPty(ptyId) !== provider)) {\n      return false\n    }\n  } catch (err) {\n"
+      },
+      {
+        "before": "    )\n    return false\n  }\n  const incarnationId = finishPtyShutdown(ptyId, connectionId, store)\n  if (!providerExitObserved) {\n    // The owning provider's fresh inventory observed absence, so this is a\n    // death certificate even when its exit event was missed.\n",
+        "after": "    )\n    return false\n  }\n  const incarnationId = finishPtyShutdown(ptyId, connectionId, store) ?? expectedIncarnationId\n  if (!providerExitObserved) {\n    // The owning provider's fresh inventory observed absence, so this is a\n    // death certificate even when its exit event was missed.\n"
+      }
+    ]
+  }
+]
