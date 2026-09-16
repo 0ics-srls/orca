@@ -277,7 +277,8 @@ export function SessionHistorySettingsPane({
               )}
         </p>
       </div>
-      {isWebClient ? null : (
+      {/* With no paired server the line and the button only restate the single switch below them. */}
+      {serverEntries.length === 0 ? null : (
         <div className="flex items-center justify-between gap-4 pt-2">
           <p className="text-xs text-muted-foreground">
             {sessionSearchSummarySentence(summary, autoEnableNewComputers)}

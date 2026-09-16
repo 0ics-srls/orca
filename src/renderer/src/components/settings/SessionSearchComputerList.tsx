@@ -23,13 +23,17 @@ export function SessionSearchComputerList({
   const visibleServerCount = VISIBLE_COMPUTER_LIMIT - 1
   const hiddenCount = Math.max(0, servers.length - visibleServerCount)
   const shownServers = expanded ? servers : servers.slice(0, visibleServerCount)
+  // One row needs no heading to tell it apart from the rest; the pair of subheads appears together or not at all.
+  const showSubheads = servers.length > 0
   return (
     <div>
-      <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
-        {translate('sessionHistory.settings.thisComputer', 'This computer')}
-      </p>
+      {showSubheads ? (
+        <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
+          {translate('sessionHistory.settings.thisComputer', 'This computer')}
+        </p>
+      ) : null}
       {local}
-      {servers.length > 0 ? (
+      {showSubheads ? (
         <p className="pt-4 text-[11px] font-semibold uppercase tracking-[0.05em] text-muted-foreground">
           {translate('sessionHistory.settings.remoteServers', 'Orca remote servers')}
         </p>
