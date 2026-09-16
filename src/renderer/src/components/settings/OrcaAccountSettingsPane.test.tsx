@@ -13,18 +13,18 @@ type MockAuthStatus = {
 } | null
 
 const mocks = vi.hoisted(() => {
-  const connectedAuth: MockAuthStatus = {
-    configured: true,
-    state: 'connected',
-    cloud: { displayName: 'Ada Lovelace', email: 'ada@example.com' }
+  const state: { orcaProfileAuthStatus: MockAuthStatus } = {
+    orcaProfileAuthStatus: {
+      configured: true,
+      state: 'connected',
+      cloud: { displayName: 'Ada Lovelace', email: 'ada@example.com' }
+    }
   }
   return {
     connect: vi.fn(),
     fetchAuthStatus: vi.fn(),
     signOut: vi.fn(),
-    state: {
-      orcaProfileAuthStatus: connectedAuth
-    }
+    state
   }
 })
 
