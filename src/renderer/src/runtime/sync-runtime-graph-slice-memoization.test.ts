@@ -139,16 +139,42 @@ describe('mobile session agent status grouping memoization', () => {
     expect(idReads()).toBe(0)
   })
 
-  it('rebuilds when the agent status slice changes', () => {
+  // The memo used to key the tab index on the status slice too, so one OSC frame re-walked every
+  // tab in the store. Ownership depends on `tabsByWorktree` alone; only the grouping is redone.
+  it('regroups without re-walking the tab index when only the status slice changes', () => {
     const { tabsByWorktree, idReads, resetIdReads } = makeCountingTabs(WORKTREES)
 
     buildMobileSessionAgentStatusByWorktree(agentStatusByPaneKey, tabsByWorktree)
-    const firstBuildReads = idReads()
+    expect(idReads()).toBeGreaterThan(0)
     resetIdReads()
 
-    buildMobileSessionAgentStatusByWorktree({ ...agentStatusByPaneKey }, tabsByWorktree)
+    const regrouped = buildMobileSessionAgentStatusByWorktree(
+      { ...agentStatusByPaneKey },
+      tabsByWorktree
+    )
 
-    expect(idReads()).toBe(firstBuildReads)
+    expect(idReads()).toBe(0)
+    expect([...regrouped.keys()]).toEqual(['repo::/memo-wt-7'])
+  })
+
+  // Bucket identity is the signal the publication loop skips an untouched worktree on; a fresh
+  // Map per worktree per frame would make every one of them look dirty.
+  it('keeps an untouched worktree bucket identical across a status frame', () => {
+    const otherPaneKey = `memo-term-9:${STATUS_LEAF_ID}`
+    const { tabsByWorktree } = makeCountingTabs(WORKTREES)
+    const twoStatuses: AppState['agentStatusByPaneKey'] = {
+      ...agentStatusByPaneKey,
+      [otherPaneKey]: makeStatusEntry(otherPaneKey)
+    }
+
+    const before = buildMobileSessionAgentStatusByWorktree(twoStatuses, tabsByWorktree)
+    const after = buildMobileSessionAgentStatusByWorktree(
+      { ...twoStatuses, [otherPaneKey]: { ...makeStatusEntry(otherPaneKey), state: 'waiting' } },
+      tabsByWorktree
+    )
+
+    expect(after.get('repo::/memo-wt-7')).toBe(before.get('repo::/memo-wt-7'))
+    expect(after.get('repo::/memo-wt-9')).not.toBe(before.get('repo::/memo-wt-9'))
   })
 
   it('rebuilds when the tabs slice changes', () => {
