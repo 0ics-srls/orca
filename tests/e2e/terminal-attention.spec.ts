@@ -191,7 +191,7 @@ test.describe('Terminal attention', () => {
         throw new Error(`No owner worktree found for terminal tab ${tabId}`)
       }
       state.markWorktreeUnread(ownerWorktreeId)
-      state.markTerminalTabUnread(tabId)
+      state.markTerminalTabUnread(tabId, 'terminal-bell')
     }, secondTabId)
 
     await expect
