@@ -41,7 +41,7 @@ Mechanism comparison and verified/unverified claims are recorded only in the unt
 
 - `pnpm tc:node` — passed.
 - `pnpm run check:code-quality:changed` — passed with zero findings.
-- Focused Vitest suites for Auggie, integration health, OpenCode, provider listener routing, Claude account selection, and PTY host-env — passed (34 files, 374 tests).
+- Focused Vitest suites for Auggie, integration health, OpenCode, provider listener routing, Claude account selection, and PTY host-env — passed (34 files, 375 tests).
 - Electron/mobile/manual fish and Windows native validation — not run by instruction.
 
 ## Completion judgment
