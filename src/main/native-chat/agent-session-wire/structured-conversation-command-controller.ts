@@ -104,6 +104,14 @@ export class StructuredConversationCommandController {
     this.finish(entry, await this.execution.abandon(entry))
   }
 
+  abandonAll = async (): Promise<void> => {
+    await Promise.all(
+      [...this.pending.keys()].map((sessionId) =>
+        this.context().serialize(sessionId, () => this.abandon(sessionId))
+      )
+    )
+  }
+
   replacements = () => {
     const store = this.context().deps.store
     const records = store.listRecords()

@@ -100,6 +100,41 @@ describe('StructuredConversationCommandClaim', () => {
     expect(claim.isRunning).toBe(false)
   })
 
+  it('bounds a missing reply and keeps the obligation until host lifecycle settles it', async () => {
+    vi.useFakeTimers()
+    try {
+      const claim = new StructuredConversationCommandClaim(10)
+      const outcome = claim.run({
+        command: 'compact',
+        operationId: OPERATION_ID,
+        blocked: false,
+        send: neverReplies
+      })
+      const settled = expect(outcome).resolves.toMatchObject({
+        accepted: false,
+        error: expect.stringContaining('Restart the session'),
+        retrySameOperation: true
+      })
+
+      await vi.advanceTimersByTimeAsync(11)
+      await settled
+      expect(claim.hasObligation).toBe(true)
+      await expect(
+        claim.run({
+          command: 'compact',
+          operationId: 'op-2',
+          blocked: false,
+          send: neverReplies
+        })
+      ).resolves.toMatchObject({ error: expect.stringContaining('Restart the session') })
+
+      expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'completed')])).toBe(true)
+      expect(claim.hasObligation).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it('uses replies from older hosts that publish no typed lifecycle', async () => {
     const claim = new StructuredConversationCommandClaim()
     await expect(
@@ -120,5 +155,6 @@ describe('StructuredConversationCommandClaim', () => {
       claim.run({ command: 'clear', operationId: 'op-2', blocked: false, send })
     ).resolves.toMatchObject({ accepted: false })
     expect(send).toHaveBeenCalledTimes(1)
+    claim.reset()
   })
 })

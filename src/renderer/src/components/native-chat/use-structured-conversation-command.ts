@@ -98,6 +98,12 @@ export function useStructuredConversationCommand(args: {
               onReconciled(operationId)
             }
             return { result, unresolved }
+          },
+          onLateReply: () => {
+            if (operationIds.current.get(command) === operationId) {
+              operationIds.current.delete(command)
+            }
+            onReconciled(operationId)
           }
         })
         .then(({ retrySameOperation, ...outcome }) => {

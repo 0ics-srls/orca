@@ -407,6 +407,16 @@ describe('host conversation commands', () => {
     )
   })
 
+  it('settles an out-of-lane command during whole-host teardown', async () => {
+    compact.mockImplementation(() => new Promise(() => {}))
+    const running = host.conversationCommand(caller, commandParams('compact'))
+    await vi.waitFor(() => expect(compact).toHaveBeenCalled())
+
+    await host.flushAllStreamedEvents()
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(host.hasSession(HOST_TEST_SESSION)).toBe(false)
+  })
+
   it('settles a compaction admitted immediately before close', async () => {
     const running = host.conversationCommand(caller, commandParams('compact'))
     const closed = host.close(HOST_TEST_SESSION)

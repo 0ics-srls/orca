@@ -65,12 +65,19 @@ export class StructuredSessionCompaction {
     })
     // Observe rejection even while invoke is waiting for its own receipt.
     void completion.catch(() => {})
+    const invocation = Promise.resolve()
+      .then(invoke)
+      .then((value) => {
+        const admission = record(value)
+        if (typeof admission.error === 'string') {
+          this.pending.get(sessionId)?.finish({ error: admission.error })
+        }
+        return completion
+      })
     try {
-      const admission = record(await invoke())
-      if (typeof admission.error === 'string') {
-        this.pending.get(sessionId)?.finish({ error: admission.error })
-      }
-      return await completion
+      // The completion window also bounds a missing request receipt. Provider notifications can
+      // prove the result before the request returns, and a timed-out request can still settle late.
+      return await Promise.race([completion, invocation])
     } catch (error) {
       expired = this.pending.has(sessionId)
       throw error

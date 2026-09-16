@@ -13,6 +13,7 @@ vi.mock('@/runtime/structured-agent-session-client', () => ({
 }))
 
 import { useStructuredAgentSessionMutate } from './use-structured-agent-session-mutate'
+import { CONVERSATION_COMMAND_DEADLINE_MS } from './structured-conversation-command-claim'
 import { useStructuredConversationCommand } from './use-structured-conversation-command'
 
 const LOCAL_TARGET = { kind: 'local' } as const
@@ -103,6 +104,66 @@ describe('useStructuredConversationCommand', () => {
     expect(mocks.call.mock.calls[1]![2].envelope.sessionId).toBe('session-2')
     expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).not.toBe(firstOperationId)
     view.unmount()
+  })
+
+  it('ignores a late transport error after switching sessions at the same fence', async () => {
+    let reject!: (error: Error) => void
+    mocks.call.mockImplementation(
+      () =>
+        new Promise((_resolve, rejectCall) => {
+          reject = rejectCall
+        })
+    )
+    const initialProps: {
+      fence: number
+      items: AgentJournalRenderItem[]
+      sessionId: string
+    } = { fence: 1, items: [], sessionId: 'session-1' }
+    const view = renderHook((props) => useCommandHarness(props), { initialProps })
+
+    let first!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      first = view.result.current.run('compact')
+    })
+    view.rerender({ fence: 1, items: [], sessionId: 'session-2' })
+    await expect(first).resolves.toMatchObject({ accepted: false })
+
+    await act(async () => {
+      reject(new Error('old session disconnected'))
+      await Promise.resolve()
+    })
+    expect(view.result.current.writeError).toBeNull()
+  })
+
+  it('uses a fresh identity after a reply settles an expired claim', async () => {
+    vi.useFakeTimers()
+    try {
+      const firstReply = Promise.withResolvers<unknown>()
+      mocks.call
+        .mockReturnValueOnce(firstReply.promise)
+        .mockImplementation(() => new Promise(() => {}))
+      const view = renderHook(() => useCommandHarness({ fence: 1, items: [] }))
+
+      let first!: ReturnType<typeof view.result.current.run>
+      act(() => {
+        first = view.result.current.run('compact')
+      })
+      const firstOperationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
+      await act(() => vi.advanceTimersByTimeAsync(CONVERSATION_COMMAND_DEADLINE_MS + 1))
+      await expect(first).resolves.toMatchObject({ accepted: false })
+
+      await act(async () => {
+        firstReply.resolve({ ok: true, value: { command: 'compact', state: 'completed' } })
+        await Promise.resolve()
+      })
+      act(() => {
+        void view.result.current.run('compact')
+      })
+      expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).not.toBe(firstOperationId)
+      view.unmount()
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('retires a completed clear and gives the next command a fresh identity', async () => {

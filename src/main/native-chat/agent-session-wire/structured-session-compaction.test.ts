@@ -107,6 +107,29 @@ describe('structured compaction lifecycle', () => {
       tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
       expect(late).toHaveBeenCalledWith({})
       expect(invoke).toHaveBeenCalledTimes(1)
+      expect(tracker.hasPending('s')).toBe(false)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('applies the completion deadline while the provider request receipt is still pending', async () => {
+    vi.useFakeTimers()
+    try {
+      const tracker = new StructuredSessionCompaction(10)
+      const late = vi.fn(async () => {})
+      const invoke = vi.fn(() => new Promise<never>(() => {}))
+      const result = tracker.run('s', 'p', invoke, late)
+      const rejected = expect(result).rejects.toThrow('unconfirmed')
+
+      await vi.advanceTimersByTimeAsync(11)
+      await rejected
+      expect(tracker.hasPending('s')).toBe(true)
+
+      tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
+      tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
+      expect(late).toHaveBeenCalledWith({})
+      expect(invoke).toHaveBeenCalledTimes(1)
     } finally {
       vi.useRealTimers()
     }

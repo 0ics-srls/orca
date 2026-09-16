@@ -253,6 +253,7 @@ export class StructuredAgentSessionHost {
         runtimeState: this.runtimeState,
         handoffs: this.handoffs,
         tasks: this.tasks,
+        abandonConversationCommands: this.conversationCommands.abandonAll,
         evictOwnedSessions: () =>
           evictOwnedStructuredAgentSessions(this.lifetimeContext(), retainSessionIds)
       }),

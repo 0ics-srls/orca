@@ -17,11 +17,20 @@ export type ConversationCommandReply = {
   unresolved: boolean
 }
 
-type LiveClaim = {
+type Obligation = {
   command: AgentSessionConversationCommand
   operationId: string
-  settle: (outcome: ConversationCommandClaimOutcome) => void
 }
+
+type LiveClaim = Obligation & {
+  deadline: ReturnType<typeof setTimeout>
+  settle: (outcome: ConversationCommandClaimOutcome) => void
+  onLateReply: () => void
+}
+
+/** The provider's own completion window is 180s. Keep a small margin for host persistence and
+ * stream delivery before presenting the command as unresolved. */
+export const CONVERSATION_COMMAND_DEADLINE_MS = 195_000
 
 function message(key: string, fallback: string): string {
   return translate(`components.native-chat.conversationCommand.${key}`, fallback)
@@ -37,7 +46,7 @@ function unresolvedMessage(command: AgentSessionConversationCommand): string {
 
 function terminalFrameOutcome(
   items: readonly AgentJournalRenderItem[],
-  claim: LiveClaim
+  claim: Obligation
 ): ConversationCommandOutcome | null {
   const item = items.find(
     (entry) => entry.itemId === agentJournalSubmissionKey(`${claim.command}:${claim.operationId}`)
@@ -74,17 +83,20 @@ export function isUnconfirmedConversationCommand(method: string, value: unknown)
 /** Correlates one in-flight request with host lifecycle. Durable ownership remains on the host. */
 export class StructuredConversationCommandClaim {
   private live: LiveClaim | null = null
+  private unresolved: Obligation | null = null
+
+  constructor(private readonly deadlineMs = CONVERSATION_COMMAND_DEADLINE_MS) {}
 
   get isRunning(): boolean {
-    return this.live !== null
+    return this.live !== null || this.unresolved !== null
   }
 
   get hasObligation(): boolean {
-    return this.live !== null
+    return this.live !== null || this.unresolved !== null
   }
 
   isOperationOutstanding(operationId: string): boolean {
-    return this.live?.operationId === operationId
+    return this.live?.operationId === operationId || this.unresolved?.operationId === operationId
   }
 
   run(input: {
@@ -92,23 +104,28 @@ export class StructuredConversationCommandClaim {
     operationId: string
     blocked: boolean
     send: () => Promise<ConversationCommandReply>
+    onLateReply?: () => void
   }): Promise<ConversationCommandClaimOutcome> {
-    if (this.live || input.blocked) {
+    if (this.live || this.unresolved || input.blocked) {
       return Promise.resolve({
         accepted: false,
-        error: message(
-          this.live ? 'running' : 'pendingWork',
-          this.live
-            ? 'Wait for the conversation operation to finish.'
-            : 'Wait for pending work and messages to finish before using this command.'
-        )
+        error: this.unresolved
+          ? unresolvedMessage(this.unresolved.command)
+          : message(
+              this.live ? 'running' : 'pendingWork',
+              this.live
+                ? 'Wait for the conversation operation to finish.'
+                : 'Wait for pending work and messages to finish before using this command.'
+            )
       })
     }
     const waiter = Promise.withResolvers<ConversationCommandClaimOutcome>()
     const claim: LiveClaim = {
       command: input.command,
       operationId: input.operationId,
-      settle: waiter.resolve
+      deadline: setTimeout(() => this.expire(claim), this.deadlineMs),
+      settle: waiter.resolve,
+      onLateReply: input.onLateReply ?? (() => {})
     }
     this.live = claim
     void input.send().then(
@@ -119,15 +136,22 @@ export class StructuredConversationCommandClaim {
   }
 
   applyStreamSnapshot(items: readonly AgentJournalRenderItem[]): boolean {
-    if (!this.live) {
-      return false
+    if (this.live) {
+      const outcome = terminalFrameOutcome(items, this.live)
+      if (!outcome) {
+        return false
+      }
+      this.finish(this.live, outcome)
+      return true
     }
-    const outcome = terminalFrameOutcome(items, this.live)
-    if (!outcome) {
-      return false
+    if (this.unresolved) {
+      const outcome = terminalFrameOutcome(items, this.unresolved)
+      if (outcome) {
+        this.unresolved = null
+        return true
+      }
     }
-    this.finish(this.live, outcome)
-    return true
+    return false
   }
 
   reset(retryPreparedClear = false): void {
@@ -140,9 +164,17 @@ export class StructuredConversationCommandClaim {
           : {})
       })
     }
+    this.unresolved = null
   }
 
   private applyReply(claim: LiveClaim, reply: ConversationCommandReply): void {
+    if (this.unresolved?.operationId === claim.operationId) {
+      if (!reply.unresolved && reply.result?.state !== 'unknown') {
+        this.unresolved = null
+        claim.onLateReply()
+      }
+      return
+    }
     if (reply.result?.state === 'unknown') {
       return
     }
@@ -168,7 +200,22 @@ export class StructuredConversationCommandClaim {
     if (this.live !== claim) {
       return
     }
+    clearTimeout(claim.deadline)
     this.live = null
+    this.unresolved = null
     claim.settle(outcome)
+  }
+
+  private expire(claim: LiveClaim): void {
+    if (this.live !== claim) {
+      return
+    }
+    this.live = null
+    this.unresolved = { command: claim.command, operationId: claim.operationId }
+    claim.settle({
+      accepted: false,
+      error: unresolvedMessage(claim.command),
+      retrySameOperation: true
+    })
   }
 }

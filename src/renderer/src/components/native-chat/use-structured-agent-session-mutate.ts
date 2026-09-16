@@ -5,7 +5,7 @@
 // every result is discarded unless the runtime fence it was issued against is
 // still the current one.
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { isUnconfirmedConversationCommand } from './structured-conversation-command-claim'
 import type { AgentSessionMutationResult } from '../../../../shared/agent-session-wire'
 import { agentSessionRefusalOperationState } from '../../../../shared/agent-session-refusal-retry'
@@ -47,10 +47,23 @@ export function useStructuredAgentSessionMutate(args: {
   const latestSettledSequence = useRef(0)
   const operationIds = useRef(new Map<string, string>())
   const enabledRef = useRef(enabled)
+  const requestScope = JSON.stringify([
+    target.kind,
+    target.kind === 'environment' ? target.environmentId : null,
+    sessionId
+  ])
+  const requestScopeRef = useRef(requestScope)
   useEffect(() => {
     // Why: update the gate after commit so render stays free of ref mutations.
     enabledRef.current = enabled
   }, [enabled])
+  useLayoutEffect(() => {
+    requestScopeRef.current = requestScope
+    operationIds.current.clear()
+    writeErrorOwner.current = null
+    latestSettledSequence.current = nextMutationSequence.current
+    setWriteError(null)
+  }, [requestScope])
 
   const mutate = useCallback(
     async <T>(
@@ -68,6 +81,7 @@ export function useStructuredAgentSessionMutate(args: {
         options?.operationId ?? operationIds.current.get(key) ?? structuredSessionOperationId()
       operationIds.current.set(key, clientOperationId)
       const sequence = ++nextMutationSequence.current
+      const targetScope = requestScope
       let result: AgentSessionMutationResult<T>
       try {
         result = await callStructuredAgentSession<AgentSessionMutationResult<T>>(target, method, {
@@ -87,6 +101,7 @@ export function useStructuredAgentSessionMutate(args: {
         const message = error instanceof Error ? error.message : 'Request was not sent'
         if (
           enabledRef.current &&
+          requestScopeRef.current === targetScope &&
           stateRef.current.fence === targetFence &&
           sequence >= latestSettledSequence.current
         ) {
@@ -106,6 +121,7 @@ export function useStructuredAgentSessionMutate(args: {
         }
         if (
           enabledRef.current &&
+          requestScopeRef.current === targetScope &&
           stateRef.current.fence === targetFence &&
           sequence >= latestSettledSequence.current
         ) {
@@ -115,7 +131,11 @@ export function useStructuredAgentSessionMutate(args: {
         }
         return null
       }
-      if (!enabledRef.current || stateRef.current.fence !== targetFence) {
+      if (
+        !enabledRef.current ||
+        requestScopeRef.current !== targetScope ||
+        stateRef.current.fence !== targetFence
+      ) {
         return null
       }
       if (!isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {
@@ -128,7 +148,7 @@ export function useStructuredAgentSessionMutate(args: {
       }
       return result.value
     },
-    [enabled, sessionId, stateRef, target]
+    [enabled, requestScope, sessionId, stateRef, target]
   )
 
   const clearWriteError = useCallback((operationId: string) => {
