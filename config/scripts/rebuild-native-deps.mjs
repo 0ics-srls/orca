@@ -82,11 +82,10 @@ const NATIVE_MODULES = [
   ...(rebuildPlatform === 'win32' ? ['@orca/windows-registry', '@vscode/windows-process-tree'] : [])
 ]
 const onlyModules = NATIVE_MODULES.filter((m) => !ignoreModules.includes(m))
+/** Whether this rebuild targets something other than the machine running it. */
+const isCrossHostRebuild = rebuildPlatform !== osPlatform() || rebuildArch !== process.arch
 const forceRebuild =
-  process.env.ORCA_FORCE_NATIVE_REBUILD === '1' ||
-  cliOptions.force ||
-  rebuildPlatform !== osPlatform() ||
-  rebuildArch !== process.arch
+  process.env.ORCA_FORCE_NATIVE_REBUILD === '1' || cliOptions.force || isCrossHostRebuild
 let modulesToRebuild = onlyModules
 
 ensureElectronPackageInstalled()
@@ -250,29 +249,12 @@ function assertNodePtyConptyDeniesMsysBreakaway() {
   if (rebuildPlatform !== 'win32' || !modulesToRebuild.includes('node-pty')) {
     return
   }
-  const { assertCygwinBreakawayDenied, conptyAddonMayBeAbsent } = requireLocal(
-    './node-pty-job-ownership.cjs'
-  )
-  const nodePtyDir = resolve(projectDir, 'node_modules', 'node-pty')
-  const addonPath = join(nodePtyDir, 'build', 'Release', 'conpty.node')
-  if (existsSync(addonPath)) {
-    assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
-    return
-  }
-  const crossHost = rebuildPlatform !== osPlatform() || rebuildArch !== process.arch
-  if (conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled: existsSync(nodePtyDir) })) {
-    console.warn(
-      `[rebuild] no addon at ${addonPath}; could not check the MSYS job-breakaway denial.`
-    )
-    return
-  }
-  const prebuildPath = join(nodePtyDir, 'prebuilds', `win32-${rebuildArch}`, 'conpty.node')
-  throw new Error(
-    `the rebuild reported success but ${addonPath} is not there, so node-pty would load ` +
-      `${prebuildPath} instead. That published prebuild predates the Cygwin/MSYS ` +
-      'job-breakaway denial: every Git Bash pane child would be created outside its job and ' +
-      'survive terminatePtyJob.'
-  )
+  const { assertRebuiltConptyDeniesMsysBreakaway } = requireLocal('./node-pty-job-ownership.cjs')
+  assertRebuiltConptyDeniesMsysBreakaway({
+    nodePtyDir: resolve(projectDir, 'node_modules', 'node-pty'),
+    rebuildArch,
+    crossHost: isCrossHostRebuild
+  })
 }
 
 function restoreNodePtyWindowsConptyRuntime() {

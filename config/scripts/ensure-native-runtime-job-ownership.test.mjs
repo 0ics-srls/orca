@@ -1,23 +1,21 @@
-import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { dirname, join } from 'node:path'
+import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
 const {
   CYGWIN_BREAKAWAY_MARKER,
   CYGWIN_BREAKAWAY_MARKER_TEXT,
   assertNodePtyJobOwnership,
-  conptyAddonMayBeAbsent,
+  assertRebuiltConptyDeniesMsysBreakaway,
   nodePtyAddonPath
 } = require('./node-pty-job-ownership.cjs')
 const NODE_PTY_PATCH = readFileSync(
   new URL('../patches/node-pty@1.1.0.patch', import.meta.url),
   'utf8'
 )
-
-const DIFF_HEADER = '\ndiff --git '
 
 const JOB_EXPORTS = {
   listJobProcessIds: () => [],
@@ -78,7 +76,7 @@ describe('assertNodePtyJobOwnership', () => {
   // constant to the C++ that compiles it in. Drift either way has to fail HERE:
   // otherwise it fails every correctly rebuilt addon, and no rebuild can fix it.
   it('sniffs for a literal the patch really adds to conpty.cc', () => {
-    const conptyHunk = NODE_PTY_PATCH.split(DIFF_HEADER).find((section) =>
+    const conptyHunk = NODE_PTY_PATCH.split(/^diff --git /m).find((section) =>
       section.startsWith('a/src/win/conpty.cc ')
     )
     expect(conptyHunk, 'the patch no longer touches src/win/conpty.cc').toBeDefined()
@@ -174,18 +172,70 @@ describe('nodePtyAddonPath', () => {
   })
 })
 
-describe('conptyAddonMayBeAbsent', () => {
-  // The rebuild path's verdict, split out so the host that will run the install
-  // is a value rather than the platform the test happens to run on.
-  it('refuses to shrug at a missing addon on the host that will run this install', () => {
-    expect(conptyAddonMayBeAbsent({ crossHost: false, nodePtyInstalled: true })).toBe(false)
+describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
+  const rebuiltInto = (files) => {
+    const nodePtyDir = join(mkdtempSync(join(fixtureDir, 'rebuild-')), 'node-pty')
+    for (const [relativePath, cygwinBreakawayDenied] of Object.entries(files)) {
+      const addonPath = join(nodePtyDir, ...relativePath.split('/'))
+      mkdirSync(dirname(addonPath), { recursive: true })
+      writeFileSync(
+        addonPath,
+        Buffer.concat([
+          Buffer.from('MZ fake addon '),
+          cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
+        ])
+      )
+    }
+    return nodePtyDir
+  }
+
+  it('accepts the addon a good same-host rebuild leaves behind', () => {
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': true })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
+    ).not.toThrow()
+  })
+
+  it('rejects one that predates the denial, wherever the rebuild ran', () => {
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': false })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: true })
+    ).toThrow(/predates the Cygwin\/MSYS job-breakaway denial/)
+  })
+
+  // On the host that will run this install, no addon means loadNativeModule
+  // falls through to the published prebuild -- the binary that leaks every MSYS
+  // pane child. That is a broken build, not an absence to shrug at.
+  it('refuses a same-host rebuild that reported success and produced nothing', () => {
+    const nodePtyDir = rebuiltInto({ 'package.json': true })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
+    ).toThrow(/the rebuild reported success/)
+  })
+
+  it('names both the addon it wanted and the prebuild that would load instead', () => {
+    const nodePtyDir = rebuiltInto({ 'package.json': true })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'arm64', crossHost: false })
+    ).toThrow(/build[\\/]Release[\s\S]*prebuilds[\\/]win32-arm64/)
   })
 
   it.each([
-    ['a cross-host rebuild need not leave a win32 addon here', true, true],
-    ['no node-pty installed is not a bad build', false, false],
-    ['neither', true, false]
-  ])('lets it go: %s', (_case, crossHost, nodePtyInstalled) => {
-    expect(conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled })).toBe(true)
+    ['a cross-host rebuild need not leave a win32 addon here', { crossHost: true }, true],
+    ['no node-pty on this disk is not a bad build', { crossHost: false }, false]
+  ])('warns instead: %s', (_case, verdict, nodePtyInstalled) => {
+    const nodePtyDir = nodePtyInstalled
+      ? rebuiltInto({ 'package.json': true })
+      : join(fixtureDir, 'no-node-pty-here')
+    const warn = vi.fn()
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({
+        nodePtyDir,
+        rebuildArch: 'x64',
+        ...verdict,
+        warn
+      })
+    ).not.toThrow()
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining('could not check the MSYS'))
   })
 })

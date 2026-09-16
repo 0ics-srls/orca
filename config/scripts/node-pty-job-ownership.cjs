@@ -1,7 +1,7 @@
 'use strict'
 
-const { readFileSync } = require('node:fs')
-const { dirname, resolve } = require('node:path')
+const { existsSync, readFileSync } = require('node:fs')
+const { dirname, join, resolve } = require('node:path')
 
 const NODE_PTY_JOB_EXPORTS = ['listJobProcessIds', 'terminateJob', 'assignCurrentProcessToJob']
 
@@ -31,16 +31,43 @@ function conptyDeniesCygwinBreakaway(addonPath) {
 }
 
 /**
- * Whether a rebuild that left no conpty.node in build/Release may be let go.
+ * The verdict on the addon a Windows rebuild just claimed to produce.
  *
- * On the host that will run this install it may not: `loadNativeModule` falls
- * through to prebuilds/win32-<arch>, and the published prebuild predates the
- * denial, so the app would load it with nothing said. A cross-host rebuild need
- * not leave a win32 addon on this disk, and node-pty may not be installed at
- * all -- neither is evidence of a bad build.
+ * Takes the host as arguments rather than reading `process`, because the branch
+ * that matters -- a rebuild for the very host running it -- is otherwise
+ * reachable only from Windows, and a gate nobody can run is a gate nobody
+ * checks.
+ *
+ * Absent is fatal on that host: `loadNativeModule` falls through to
+ * prebuilds/win32-<arch>, and the published prebuild predates the denial, so
+ * the app would load it with nothing said. A cross-host rebuild need not leave
+ * a win32 addon on this disk, and node-pty may not be installed at all --
+ * neither is evidence of a bad build.
  */
-function conptyAddonMayBeAbsent({ crossHost, nodePtyInstalled }) {
-  return crossHost || !nodePtyInstalled
+function assertRebuiltConptyDeniesMsysBreakaway({
+  nodePtyDir,
+  rebuildArch,
+  crossHost,
+  exists = existsSync,
+  warn = console.warn
+}) {
+  const addonPath = join(nodePtyDir, 'build', 'Release', 'conpty.node')
+  if (exists(addonPath)) {
+    assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+    return
+  }
+  if (crossHost || !exists(nodePtyDir)) {
+    warn(`[rebuild] no addon at ${addonPath}; could not check the MSYS job-breakaway denial.`)
+    return
+  }
+  const prebuildPath = join(nodePtyDir, 'prebuilds', `win32-${rebuildArch}`, 'conpty.node')
+  throw new Error(
+    `the rebuild reported success but ${addonPath} is not there, so node-pty would load ` +
+      `${prebuildPath} instead. That published prebuild predates the Cygwin/MSYS ` +
+      'job-breakaway denial: every Git Bash pane child would be created outside its job and ' +
+      'survive terminatePtyJob. Check the node-pty build output above; a same-host source ' +
+      'build must leave conpty.node in build/Release.'
+  )
 }
 
 /**
@@ -118,7 +145,7 @@ module.exports = {
   CYGWIN_BREAKAWAY_MARKER_TEXT,
   assertNodePtyJobOwnership,
   assertCygwinBreakawayDenied,
-  conptyAddonMayBeAbsent,
+  assertRebuiltConptyDeniesMsysBreakaway,
   conptyDeniesCygwinBreakaway,
   nodePtyAddonPath
 }

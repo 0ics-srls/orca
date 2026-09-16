@@ -108,18 +108,29 @@ rebuilt addon and tells the developer to do the one thing that cannot help.
 ## Every path the loader can fall through to
 
 `loadNativeModule` tries `build/Release`, then `build/Debug`, then
-`prebuilds/win32-<arch>`, swallowing each failure. The published prebuild is
-always the last candidate and never carries the patch, so checking only
-`build/Release` is not enough:
+`prebuilds/win32-<arch>`, each relative to node-pty's root and then to `lib/`,
+swallowing every failure in between. A require of a wrong-architecture `.node`
+is one of those failures, so the candidate that runs is the first one the target
+arch can actually load. The published prebuild is always the last candidate and
+never carries the patch:
 
-| package             | `build/Release`        | prebuild pruned? | what the app loads |
-| ------------------- | ---------------------- | ---------------- | ------------------ |
-| same host, same arch | patched                | yes              | `build/Release`    |
-| cross host          | absent (no cross-compile) | no            | the prebuild       |
-| cross arch          | the host's, unloadable | no               | the prebuild       |
+| package              | `build/Release`               | prebuild pruned? | what the app loads |
+| -------------------- | ----------------------------- | ---------------- | ------------------ |
+| same host, same arch | patched                       | yes              | `build/Release`    |
+| cross host           | absent, cannot be cross-built | no               | the prebuild       |
+| cross arch, built    | patched, target arch          | no               | `build/Release`    |
+| cross arch, failed   | the host's arch               | no               | the prebuild       |
 
-`prunePackagedNodePty` drops the prebuild only when a same-arch
-`build/Release/conpty.node` exists to replace it, so in the last two rows the
-unpatched fallback ships. `verifyPackagedConptyBreakawayMarker` therefore checks
-every candidate present for the target arch rather than one path, and refuses a
-package with no candidate at all — that package has no ConPTY backend to load.
+`beforeBuild` runs `rebuild-native-deps.mjs --platform=win32 --arch=<target>`, so
+a cross-arch slice normally does get a patched `build/Release` for the target —
+row three is a correct package whose leftover prebuild is never reached.
+`prunePackagedNodePty` keeps that prebuild anyway, because its guard is
+`electronArch === process.arch` rather than the arch of the binary.
+
+So presence alone cannot separate row three from row four, and failing on any
+unmarked file present would reject a correct package with advice its builder
+could not act on. `verifyPackagedConptyBreakawayMarker` instead resolves the
+addon the way the loader does — first candidate whose PE `IMAGE_FILE_HEADER`
+machine matches the target — and checks the marker on that one. A package with
+no candidate at all, or none of the target's architecture, is refused: it has no
+ConPTY backend to load.

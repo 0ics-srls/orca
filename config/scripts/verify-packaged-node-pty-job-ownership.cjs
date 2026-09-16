@@ -8,22 +8,31 @@ const {
   nodePtyAddonPath
 } = require('./node-pty-job-ownership.cjs')
 const { normalizeNodePtyWindowsArch } = require('../packaged-runtime-node-modules.cjs')
+const { isLoadableByArch } = require('./windows-pe-machine.cjs')
 
 /**
  * Every conpty.node the packaged tree can hand `loadNativeModule`, in its order.
  *
- * Why not just build/Release: that loader swallows each failure and falls
- * through, so a wrong-arch or unloadable Release build silently hands the pane
- * to the next candidate. The published prebuild is always that next candidate
- * and never carries the patch, so each path present is a live load path.
+ * Why the order matters: the loader swallows each require failure and falls
+ * through, so a wrong-arch or otherwise unloadable build hands the pane to the
+ * next candidate. First loadable wins, and the published prebuild is always the
+ * last one standing.
  */
 function packagedConptyCandidates(resourcesDir, targetArch) {
   const nodePtyDir = join(resourcesDir, 'node_modules', 'node-pty')
-  return [
-    join(nodePtyDir, 'build', 'Release', 'conpty.node'),
-    join(nodePtyDir, 'build', 'Debug', 'conpty.node'),
-    join(nodePtyDir, 'prebuilds', `win32-${targetArch}`, 'conpty.node')
+  const layouts = [
+    { segments: ['build', 'Release'], prebuilt: false },
+    { segments: ['build', 'Debug'], prebuilt: false },
+    { segments: ['prebuilds', `win32-${targetArch}`], prebuilt: true }
   ]
+  // Each layout is tried relative to node-pty's root, then to lib/, before the
+  // next layout -- the unbundled then bundled pair node-pty's loader walks.
+  return layouts.flatMap(({ segments, prebuilt }) =>
+    [nodePtyDir, join(nodePtyDir, 'lib')].map((root) => ({
+      path: join(root, ...segments, 'conpty.node'),
+      prebuilt
+    }))
+  )
 }
 
 function loadPackagedConpty(resourcesDir) {
@@ -56,14 +65,23 @@ function verifyPackagedNodePtyJobOwnership(resourcesDir, options = {}) {
  * release built elsewhere could ship a node-pty that leaks every MSYS pane
  * child out of its job. Reading the binary needs neither.
  *
- * It sweeps every candidate rather than one path because a cross-host package
- * has no build/Release at all and a cross-arch one has an unloadable build/Release:
- * in both the addon that actually runs is the unpatched prebuild that
- * prunePackagedNodePty could not replace. Checking only build/Release warns on
- * the first and prints OK on the second.
+ * It resolves the addon the way the loader does rather than reading one path,
+ * because the path that matters is not always build/Release:
  *
- * No candidate at all is fatal, not skipped: it means the packaged app has no
- * ConPTY backend to load, which a gate must not shrug at.
+ * | package              | build/Release            | prebuild pruned | loads        |
+ * | -------------------- | ------------------------ | --------------- | ------------ |
+ * | same host, same arch | patched                  | yes             | build/Release|
+ * | cross host           | absent, cannot be built  | no              | the prebuild |
+ * | cross arch, built    | patched, target arch     | no              | build/Release|
+ * | cross arch, failed   | host arch, target cannot load | no         | the prebuild |
+ *
+ * Only the arch of the binary separates the last two, so this reads the PE
+ * machine field instead of assuming. Checking every present file instead would
+ * fail row three, whose package is correct and whose leftover prebuild is never
+ * reached.
+ *
+ * Nothing loadable is fatal, not skipped: that package has no ConPTY backend,
+ * which a gate must not shrug at.
  */
 function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options = {}) {
   // Deliberately no host-platform gate: the caller has already established that
@@ -72,44 +90,82 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
   const architecture = normalizeNodePtyWindowsArch(targetArch)
   const candidates = packagedConptyCandidates(resourcesDir, architecture)
   const exists = options.exists ?? existsSync
-  const present = candidates.filter((candidate) => exists(candidate))
+  const present = candidates.filter((candidate) => exists(candidate.path))
   if (present.length === 0) {
     throw new Error(
       [
         `Packaged node-pty for win32-${architecture} has no conpty.node on any path its loader`,
-        `tries (${candidates.join(', ')}), so the packaged app has no ConPTY backend at all.`,
+        `tries (${candidates.map((c) => c.path).join(', ')}), so the packaged app has no`,
+        'ConPTY backend at all.',
         'Nothing here can be checked for the Cygwin/MSYS job-breakaway denial, and a gate that',
         'cannot see its subject refuses rather than assume.'
       ].join(' ')
     )
   }
-  for (const candidate of present) {
-    if ((options.deniesBreakaway ?? conptyDeniesCygwinBreakaway)(candidate)) {
-      continue
-    }
-    // A source build that is merely stale: rebuilding it on this host is the fix,
-    // which is exactly what assertCygwinBreakawayDenied already says.
-    if (!candidate.includes(`win32-${architecture}`)) {
-      assertCygwinBreakawayDenied(candidate, { dir: candidate })
-    }
+  const loadable = options.loadableByArch ?? isLoadableByArch
+  const loaded = present.find((candidate) => loadable(candidate.path, architecture))
+  if (!loaded) {
     throw new Error(
       [
-        `Packaged node-pty for win32-${architecture} would load ${candidate}, the published`,
-        'prebuilt fallback, which predates the Cygwin/MSYS job-breakaway denial: its per-PTY job',
-        'still carries JOB_OBJECT_LIMIT_BREAKAWAY_OK, so every Git Bash pane child is created',
-        'outside the job and survives terminatePtyJob.',
-        'It is still in the package because no patched build/Release/conpty.node for',
-        `win32-${architecture} is here for prunePackagedNodePty to have replaced it with, and only`,
-        `a node-pty source build on a Windows ${architecture} host produces one.`,
-        `Package this Windows slice on a Windows ${architecture} host.`,
-        'See docs/reference/windows-msys-job-breakaway.md.'
+        `Packaged node-pty for win32-${architecture} has conpty.node at`,
+        `${present.map((c) => c.path).join(', ')},`,
+        `but none of them is a win32-${architecture} image, so the app can load none of them.`,
+        "A cross-arch rebuild that quietly emitted the packaging host's architecture looks",
+        'exactly like this. Rebuild node-pty for the target arch and repackage.'
       ].join(' ')
     )
   }
-  console.log(
-    `[verify-packaged-node-pty] OK — all ${present.length} packaged ConPTY load path(s) for ` +
-      `win32-${architecture} deny MSYS job breakaway`
+  const addonPath = loaded.path
+  if ((options.deniesBreakaway ?? conptyDeniesCygwinBreakaway)(addonPath)) {
+    console.log(
+      `[verify-packaged-node-pty] OK — win32-${architecture} loads ${addonPath}, which denies ` +
+        'MSYS job breakaway'
+    )
+    return
+  }
+  // A stale source build is the packaging host's own to rebuild, which is what
+  // assertCygwinBreakawayDenied already says. The prebuild is not: it never
+  // carries the patch, and no rebuild on this host replaces it.
+  if (!loaded.prebuilt) {
+    assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+  }
+  throw new Error(
+    [
+      `Packaged node-pty for win32-${architecture} loads ${addonPath}, the published prebuilt`,
+      'fallback, which predates the Cygwin/MSYS job-breakaway denial: its per-PTY job still',
+      'carries JOB_OBJECT_LIMIT_BREAKAWAY_OK, so every Git Bash pane child is created outside',
+      'the job and survives terminatePtyJob.',
+      'It is still here because no patched build/Release/conpty.node for',
+      `win32-${architecture} was produced for prunePackagedNodePty to replace it with, and only`,
+      `a node-pty source build targeting win32-${architecture} produces one.`,
+      `Package this Windows slice on a host that can build node-pty for win32-${architecture}.`,
+      'See docs/reference/windows-msys-job-breakaway.md.'
+    ].join(' ')
   )
 }
 
-module.exports = { verifyPackagedNodePtyJobOwnership, verifyPackagedConptyBreakawayMarker }
+/**
+ * The whole Windows verdict for one packaged slice.
+ *
+ * Both halves live here rather than in the afterPack hook so that "the marker
+ * sweep runs even when the export check cannot" is a tested claim instead of
+ * the shape of an if/else somebody could re-nest.
+ */
+function verifyPackagedWindowsNodePty(resourcesDir, targetArch, options = {}) {
+  ;(options.verifyMarker ?? verifyPackagedConptyBreakawayMarker)(resourcesDir, targetArch)
+  const hostPlatform = options.hostPlatform ?? process.platform
+  if (hostPlatform !== 'win32' || !options.canExecuteTargetArch) {
+    console.log(
+      '[verify-packaged-node-pty] skipped the export check on a cross-platform or cross-arch package'
+    )
+    return
+  }
+  ;(options.verifyExports ?? verifyPackagedNodePtyJobOwnership)(resourcesDir)
+}
+
+module.exports = {
+  packagedConptyCandidates,
+  verifyPackagedConptyBreakawayMarker,
+  verifyPackagedNodePtyJobOwnership,
+  verifyPackagedWindowsNodePty
+}
