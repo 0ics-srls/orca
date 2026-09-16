@@ -126,10 +126,11 @@ export function resolveWorktreeRemovalHomeForHost(
       return CLIENT_REMOVAL_HOME
     case 'ssh':
       return executionHostRemovalHome(sshHostHomeResolver(parsed.targetId))
-    default:
-      // Why: `runtime:<env>` deletes on that environment's own server, and an id that parses to
-      // nothing names no machine at all. Neither can be answered with this client's home, so both
-      // stay unknown and the guard refuses.
+    // Why spelled out rather than a `default`: `runtime:<env>` deletes on that environment's own
+    // server and an id that parses to nothing names no machine at all, so neither can be answered
+    // with this client's home — and a host kind added later has to come here and say which it is.
+    case 'runtime':
+    case undefined:
       return executionHostRemovalHome(null)
   }
 }

@@ -688,7 +688,7 @@ describe('canSafelyRemoveOrphanedWorktreeDirectory on an execution host', () => 
 
   it('refuses the leftover-directory cleanup while the host home is unanswered', async () => {
     const leftoverArgs = {
-      meta: { orcaCreatedAt: 1, orcaCreationSource: 'ssh' } as never,
+      meta: { orcaCreatedAt: 1, orcaCreationSource: 'ssh' as const },
       worktreePath: '/srv/homes/alice',
       runtimeWorktreePath: '/srv/homes/alice',
       repo: { path: '/opt/src/repo' },

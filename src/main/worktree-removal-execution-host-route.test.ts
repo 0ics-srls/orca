@@ -9,6 +9,7 @@ import {
   unregisterSshFilesystemProvider
 } from './providers/ssh-filesystem-dispatch'
 import { ExecutionHostNotDispatchableError } from './providers/execution-host-provider-dispatch'
+import type { ExecutionHostId } from '../shared/execution-host'
 import {
   getWorktreeRemovalConnectionId,
   resolveWorktreeRemovalHome,
@@ -161,7 +162,8 @@ describe('resolveWorktreeRemovalHomeForHost', () => {
   })
 
   it('refuses to answer an id that names no host', () => {
-    expect(resolveWorktreeRemovalHomeForHost('nonsense' as never)).toEqual({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: host ids also arrive from persistence and IPC, where the compiler cannot vouch for them; this pins what an unparseable one answers.
+    expect(resolveWorktreeRemovalHomeForHost('nonsense' as ExecutionHostId)).toEqual({
       kind: 'executionHost',
       homePath: null
     })
