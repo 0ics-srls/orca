@@ -37,7 +37,7 @@ const CENSUS: CensusEntry[] = [
   // so they cannot cycle with placement's ordered inventory lock, and the
   // 23-row lock there had serialised every reconnect in the fleet behind every
   // other one.
-  { method: 'acquireActivity', mode: 'unset', reach: 'request' },
+  { method: 'acquireActivity', mode: 'request', reach: 'request' },
   { method: 'startEvacuation', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'nowait', reach: 'request' },
@@ -58,7 +58,7 @@ const CENSUS: CensusEntry[] = [
   // Repairs exactly two cells' counters and holds only those rows. leastLoadedCell
   // is absent because it selects from the inventory its single caller already locked.
   { method: 'reconcileReservationAccounting', mode: 'pool-default', reach: 'both' },
-  { method: 'removeSupersededSameCellControls', mode: 'unset', reach: 'request' }
+  { method: 'removeSupersededSameCellControls', mode: 'request', reach: 'request' }
 ]
 
 // Every statement outside the named lock helpers that takes a relay_cells row
@@ -235,10 +235,11 @@ function cellRowLockSites(file: string, source: string): string[] {
 
 type CensusSite = { method: string; helper: string; mode: CensusMode }
 
-// Both take the 500ms bounded wait; 'unset' only does so because of the default
-// pinned by the test below.
+// 'unset' cannot occur while lockCellRows has no mode default, and is kept so
+// that reintroducing one lands a site on the bounded wait here rather than in
+// production. The test below is what keeps the two claims in step.
 const BOUNDED_WAIT_MODES: CensusMode[] = ['request', 'unset']
-const CELL_ROWS_DEFAULT = /mode: CellInventoryLockMode = '([a-z-]+)'/
+const CELL_ROWS_MODE_DEFAULT = /mode: CellInventoryLockMode\s*=/
 
 const HELPER_CALL = new RegExp(`\\b(${NAMED_LOCK_HELPERS.join('|')})\\(`, 'g')
 const QUOTED_MODE = /^'([a-z-]+)'$/
@@ -348,16 +349,17 @@ describe('cell inventory lock call-site census', () => {
     expect(bounded).toEqual([])
   })
 
-  // Why: the census reads an omitted lockCellRows mode as a bounded wait. That
-  // is an inference about a default declared elsewhere, so pin the default here
-  // rather than let the two drift apart silently.
-  it('pins the lockCellRows mode default the census infers', () => {
-    const declaration = storeSource()
-      .slice(storeSource().findIndex((line) => line.includes('private async lockCellRows(')))
-      .slice(0, 6)
+  // Why: an omitted mode used to mean the bounded wait, which is the one policy
+  // a sweep must never take. There is no default to fall back on now, so the
+  // compiler enforces what this census could only observe after the fact.
+  it('leaves lockCellRows no mode default to fall back on', () => {
+    const lines = storeSource()
+    const declaration = lines
+      .slice(lines.findIndex((line) => line.includes('private async lockCellRows(')))
+      .slice(0, 8)
       .join('\n')
 
-    expect(CELL_ROWS_DEFAULT.exec(declaration)?.[1]).toBe('request')
+    expect(CELL_ROWS_MODE_DEFAULT.test(declaration)).toBe(false)
   })
 
   // Why: converting a sweep site from lockCellInventory to lockCellRows is the
