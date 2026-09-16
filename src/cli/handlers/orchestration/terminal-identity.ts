@@ -36,10 +36,14 @@ export async function resolveOrchestrationTerminalHandle(
   // rightful worker never saw its mail. Refusing is the only honest answer: this child genuinely
   // cannot infer its own identity.
   if (isStructuredSessionWithoutIdentity()) {
+    // Why not suggest --${flagName}: the explicit-flag branch above returns before this guard, so
+    // that advice succeeds — against a handle that necessarily belongs to another pane.
     throw new RuntimeClientError(
       'no_active_sender_terminal',
-      `This chat session has no orchestration identity of its own, so --${flagName} cannot be inferred. ` +
-        `Pass --${flagName} <terminal-handle> explicitly; guessing would act on another pane's mailbox.`
+      `This chat session has no orchestration identity of its own, so --${flagName} cannot be inferred, ` +
+        `and no terminal handle names it — every live handle belongs to a different pane, whose mailbox ` +
+        `passing it would consume. Drive a worker directly instead: create a worktree, create a terminal ` +
+        `in it with an agent, then use terminal send and terminal read.`
     )
   }
   if (flagName === 'from') {
@@ -192,6 +196,7 @@ export function throwNoActiveSenderTerminal(): never {
   throw new RuntimeClientError(
     'no_active_sender_terminal',
     'Could not determine the sender terminal for this orchestration command. ' +
-      'Pass --from <terminal-handle> or run the command inside a live Orca terminal with ORCA_TERMINAL_HANDLE set.'
+      "Pass --from with your own terminal's handle — another pane's handle would act on its mailbox — " +
+      'or run the command inside a live Orca terminal with ORCA_TERMINAL_HANDLE set.'
   )
 }
