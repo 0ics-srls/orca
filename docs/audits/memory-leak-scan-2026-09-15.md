@@ -45,7 +45,7 @@ alive for a scenario were reviewed separately from application code.
 | ML-009 | `src/renderer/src/components/terminal-pane/terminal-render-desync-trigger.ts` | HMR could stack the opt-in mouseup listener and retain stale burst state. | Added disposer removing the listener and stopping the active burst. | oxlint/oxfmt passed. |
 | ML-008 | `src/main/hang-watchdog/main-thread-hang-watchdog.ts` | Repeated watchdog lifecycles retained the app `will-quit` stop listener after manual stop/worker exit. | Remove the app listener whenever the watchdog stops. | Hang watchdog tests: 8 passed; oxlint passed. |
 | ML-002 | `src/preload/preload-runtime-support.ts` | Installation functions could add duplicate global listeners if setup ran repeatedly, retaining closures and processing each drop more than once. | Added idempotent guards to native drop and browser-find listener installation. | Native chat drop scope test: 10 passed; oxlint passed. |
-| ML-010 | `src/renderer/src/components/terminal-pane/terminal-parked-watcher-registry.ts` | Parked panes bypass the normal close teardown; their keyed scroll-intent records stayed in strong Maps after tab close or worktree removal. | Release captured leaf keys during parked-tab retirement and worktree pruning. | Parked-watcher reconciliation tests: 7 passed; PR #20924. |
+| ML-010 | `src/renderer/src/components/terminal-pane/terminal-parked-watcher-registry.ts` | Parked panes bypass the normal close teardown; their keyed scroll-intent records stayed in strong Maps after tab close or worktree removal. | Release captured leaf keys during parked-tab retirement and worktree pruning. | Parked-watcher reconciliation tests: 6 passed; PR #20924. |
 
 ## GitHub memory-issue correlation
 
@@ -102,5 +102,5 @@ slope or a heap-snapshot comparison. No raw heap snapshots were read.
 - [#20910 — hang watchdog quit listener](https://github.com/stablyai/orca/pull/20910)
 - [#20924 — parked terminal scroll-intent cleanup](https://github.com/stablyai/orca/pull/20924)
 
-Validation on the combined audit branch: 26 focused tests passed, `pnpm tc`
+Validation on the combined audit branch: 27 focused tests passed, `pnpm tc`
 passed, and `pnpm run check:code-quality:changed` passed.
