@@ -62,8 +62,6 @@ export const graphState = {
   publishedMobileSessionSnapshotByWorktree: new Map<string, RuntimeMobileSessionTabsSnapshot>(),
   cachedTabsProjection: null as TabsProjectionCache | null,
   cachedAgentStatusProjection: null as AgentStatusProjectionCache | null,
-  cachedAmbiguousTerminalTabIds: null as AmbiguousTerminalTabIdsCache | null,
-  cachedMobileSessionAgentStatus: null as MobileSessionAgentStatusCache | null,
   cachedOpenFilesProjection: null as OpenFilesProjectionCache | null,
   cachedBrowserWorkspacesProjection: null as BrowserWorkspacesProjectionCache | null,
   cachedBrowserPagesProjection: null as BrowserPagesProjectionCache | null,
@@ -74,6 +72,24 @@ export const graphState = {
   cachedMobileTerminalThemeSystemPrefersDark: null as boolean | null,
   cachedMobileTerminalTheme: undefined as RuntimeMobileTerminalTheme | undefined,
   hasCachedMobileTerminalTheme: false
+}
+
+// Why module-local and not `graphState` fields: these are scan memos owned by this module,
+// and a plain `let` carries its nullable type without a cast.
+let ambiguousTerminalTabIdsCache: AmbiguousTerminalTabIdsCache | null = null
+let mobileSessionAgentStatusCache: MobileSessionAgentStatusCache | null = null
+
+export function getMobileSessionAgentStatusCache(): MobileSessionAgentStatusCache | null {
+  return mobileSessionAgentStatusCache
+}
+
+export function setMobileSessionAgentStatusCache(cache: MobileSessionAgentStatusCache): void {
+  mobileSessionAgentStatusCache = cache
+}
+
+export function resetRuntimeGraphSliceScanCaches(): void {
+  ambiguousTerminalTabIdsCache = null
+  mobileSessionAgentStatusCache = null
 }
 
 export function registeredTerminalTabKey(
@@ -150,7 +166,7 @@ export function findRegisteredTerminalTab(
 export function collectAmbiguousTerminalTabIds(
   tabsByWorktree: AppState['tabsByWorktree']
 ): ReadonlySet<string> {
-  const cached = graphState.cachedAmbiguousTerminalTabIds
+  const cached = ambiguousTerminalTabIdsCache
   if (cached?.source === tabsByWorktree) {
     return cached.ambiguousTabIds
   }
@@ -165,7 +181,7 @@ export function collectAmbiguousTerminalTabIds(
       }
     }
   }
-  graphState.cachedAmbiguousTerminalTabIds = { source: tabsByWorktree, ambiguousTabIds: ambiguous }
+  ambiguousTerminalTabIdsCache = { source: tabsByWorktree, ambiguousTabIds: ambiguous }
   return ambiguous
 }
 

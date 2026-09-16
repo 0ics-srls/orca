@@ -10,7 +10,9 @@ import {
   EMPTY_WORKTREE_TERMINAL_TABS,
   EMPTY_WORKTREE_UNIFIED_TABS,
   EMPTY_LAYOUT_BY_WORKTREE,
-  graphState
+  getMobileSessionAgentStatusCache,
+  graphState,
+  setMobileSessionAgentStatusCache
 } from './graph-state'
 import type {
   MobileSessionAgentStatusByWorktree,
@@ -60,18 +62,18 @@ export function buildMobileSessionAgentStatusByWorktree(
   agentStatusByPaneKey: AppState['agentStatusByPaneKey'],
   tabsByWorktree: AppState['tabsByWorktree']
 ): MobileSessionAgentStatusByWorktree {
-  const cached = graphState.cachedMobileSessionAgentStatus
+  const cached = getMobileSessionAgentStatusCache()
   if (cached?.agentStatusSource === agentStatusByPaneKey && cached.tabsSource === tabsByWorktree) {
     return cached.byWorktreeId
   }
   const byWorktreeId = new Map<string, Map<string, AppState['agentStatusByPaneKey'][string]>>()
   const paneKeys = Object.keys(agentStatusByPaneKey)
   if (paneKeys.length === 0) {
-    graphState.cachedMobileSessionAgentStatus = {
+    setMobileSessionAgentStatusCache({
       agentStatusSource: agentStatusByPaneKey,
       tabsSource: tabsByWorktree,
       byWorktreeId
-    }
+    })
     return byWorktreeId
   }
   const worktreeIdByTabId = new Map<string, string>()
@@ -93,11 +95,11 @@ export function buildMobileSessionAgentStatusByWorktree(
     }
     bucket.set(paneKey, agentStatusByPaneKey[paneKey])
   }
-  graphState.cachedMobileSessionAgentStatus = {
+  setMobileSessionAgentStatusCache({
     agentStatusSource: agentStatusByPaneKey,
     tabsSource: tabsByWorktree,
     byWorktreeId
-  }
+  })
   return byWorktreeId
 }
 

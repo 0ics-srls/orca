@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AgentStatusEntry } from '../../../shared/agent-status-types'
+import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import type { AppState } from '../store/types'
 import {
   buildMobileSessionTabSnapshots,
@@ -19,6 +21,30 @@ const WORKTREES = 300
 /** `parsePaneKey` only resolves a pane key whose leaf segment is a real terminal leaf id. */
 const STATUS_LEAF_ID = 'dddddddd-1111-4111-8111-111111111111'
 
+function makeTab(id: string, worktreeId: string, title = 'Agent'): TerminalTab {
+  return {
+    id,
+    ptyId: null,
+    worktreeId,
+    title,
+    customTitle: null,
+    color: null,
+    sortOrder: 0,
+    createdAt: 0
+  }
+}
+
+function makeStatusEntry(paneKey: string): AgentStatusEntry {
+  return {
+    state: 'working',
+    prompt: '',
+    updatedAt: 1,
+    stateStartedAt: 1,
+    paneKey,
+    stateHistory: []
+  }
+}
+
 /** `tab.id` is read only while a scan walks the tabs, so its read count is the rebuild counter. */
 function makeCountingTabs(worktreeCount: number): {
   tabsByWorktree: AppState['tabsByWorktree']
@@ -26,22 +52,21 @@ function makeCountingTabs(worktreeCount: number): {
   resetIdReads: () => void
 } {
   let idReads = 0
-  const tabsByWorktree: Record<string, unknown[]> = {}
+  const tabsByWorktree: Record<string, TerminalTab[]> = {}
   for (let index = 0; index < worktreeCount; index += 1) {
-    tabsByWorktree[`repo::/memo-wt-${index}`] = [
+    const worktreeId = `repo::/memo-wt-${index}`
+    tabsByWorktree[worktreeId] = [
       {
+        ...makeTab(`memo-term-${index}`, worktreeId, `Agent ${index}`),
         get id() {
           idReads += 1
           return `memo-term-${index}`
-        },
-        title: `Agent ${index}`,
-        customTitle: null,
-        ptyId: null
+        }
       }
     ]
   }
   return {
-    tabsByWorktree: tabsByWorktree as AppState['tabsByWorktree'],
+    tabsByWorktree,
     idReads: () => idReads,
     resetIdReads: () => {
       idReads = 0
@@ -85,10 +110,10 @@ describe('ambiguous terminal tab id memoization', () => {
     const { tabsByWorktree } = makeCountingTabs(2)
 
     expect([...collectAmbiguousTerminalTabIds(tabsByWorktree)]).toEqual([])
-    const duplicated = {
+    const duplicated: AppState['tabsByWorktree'] = {
       ...tabsByWorktree,
-      'repo::/memo-wt-1': [{ id: 'memo-term-0', title: 'Clone', customTitle: null, ptyId: null }]
-    } as AppState['tabsByWorktree']
+      'repo::/memo-wt-1': [makeTab('memo-term-0', 'repo::/memo-wt-1', 'Clone')]
+    }
 
     expect([...collectAmbiguousTerminalTabIds(duplicated)]).toEqual(['memo-term-0'])
   })
@@ -96,9 +121,9 @@ describe('ambiguous terminal tab id memoization', () => {
 
 describe('mobile session agent status grouping memoization', () => {
   const statusPaneKey = `memo-term-7:${STATUS_LEAF_ID}`
-  const agentStatusByPaneKey = {
-    [statusPaneKey]: { state: 'working', paneKey: statusPaneKey }
-  } as unknown as AppState['agentStatusByPaneKey']
+  const agentStatusByPaneKey: AppState['agentStatusByPaneKey'] = {
+    [statusPaneKey]: makeStatusEntry(statusPaneKey)
+  }
 
   it('builds the tab index once across many publications with unchanged slices', () => {
     const { tabsByWorktree, idReads, resetIdReads } = makeCountingTabs(WORKTREES)
@@ -139,20 +164,20 @@ describe('mobile session agent status grouping memoization', () => {
   })
 
   it('regroups a status entry onto the worktree its tab moved to', () => {
-    const movedTab = { id: 'moved-term', title: 'Agent', customTitle: null, ptyId: null }
+    const movedTab = makeTab('moved-term', 'repo::/from')
     const movedPaneKey = `moved-term:${STATUS_LEAF_ID}`
-    const statusByPaneKey = {
-      [movedPaneKey]: { state: 'working', paneKey: movedPaneKey }
-    } as unknown as AppState['agentStatusByPaneKey']
+    const statusByPaneKey: AppState['agentStatusByPaneKey'] = {
+      [movedPaneKey]: makeStatusEntry(movedPaneKey)
+    }
 
     const before = buildMobileSessionAgentStatusByWorktree(statusByPaneKey, {
       'repo::/from': [movedTab]
-    } as unknown as AppState['tabsByWorktree'])
+    })
     expect([...before.keys()]).toEqual(['repo::/from'])
 
     const after = buildMobileSessionAgentStatusByWorktree(statusByPaneKey, {
       'repo::/to': [movedTab]
-    } as unknown as AppState['tabsByWorktree'])
+    })
     expect([...after.keys()]).toEqual(['repo::/to'])
   })
 })
@@ -162,21 +187,16 @@ const REGISTERED_WT = 'repo::/memo-registered-wt'
 const REGISTERED_LEAF_ID = 'cccccccc-1111-4111-8111-111111111111'
 
 function makeRegistrationState(persistedWorktrees: number): AppState {
-  const tabsByWorktree: Record<string, unknown[]> = {
-    [REGISTERED_WT]: [
-      { id: 'memo-registered-term', title: 'Mounted', customTitle: null, ptyId: null }
-    ]
+  const tabsByWorktree: Record<string, TerminalTab[]> = {
+    [REGISTERED_WT]: [makeTab('memo-registered-term', REGISTERED_WT, 'Mounted')]
   }
   for (let index = 0; index < persistedWorktrees; index += 1) {
-    tabsByWorktree[`repo::/memo-unmounted-wt-${index}`] = [
-      {
-        id: `memo-unmounted-term-${index}`,
-        title: `Agent ${index}`,
-        customTitle: null,
-        ptyId: null
-      }
+    const worktreeId = `repo::/memo-unmounted-wt-${index}`
+    tabsByWorktree[worktreeId] = [
+      makeTab(`memo-unmounted-term-${index}`, worktreeId, `Agent ${index}`)
     ]
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the code under test reads only the slices assigned here; a full AppState is not constructible in a unit test.
   return {
     tabsByWorktree,
     terminalLayoutsByTabId: {},
@@ -204,6 +224,7 @@ function makeRegistration(tabId: string): Parameters<typeof registerRuntimeTermi
     getNumericIdForLeaf: (leafId: string) =>
       panes.find((pane) => pane.leafId === leafId)?.id ?? null
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path calls only the PaneManager members stubbed above; a real one needs a live xterm.
   return {
     tabId,
     worktreeId: REGISTERED_WT,
