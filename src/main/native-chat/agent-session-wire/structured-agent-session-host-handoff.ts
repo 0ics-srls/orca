@@ -20,7 +20,6 @@ import { StructuredTuiTranscriptCatchup } from './structured-tui-transcript-catc
 import { adapterSupportsCreateIfDeclared } from './structured-agent-session-provider-support'
 import { retryLoadedStructuredAgentSessionSettlement } from './structured-agent-session-settlement-retry'
 import { latestJournalDispatchObservation } from '../agent-session-journal/journal-dispatch-observation'
-import { activeStructuredAgentSessionTurnId } from '../../../shared/structured-agent-session-projection'
 
 type HostHandoffAccess = {
   session: (sessionId: string) => StructuredAgentSessionHostSession
@@ -174,7 +173,7 @@ export async function stopNativeHandoffTurn(
     await adapter.cancelTurn({
       ...input,
       // The journal is what the client read to name a turn, so it is what judges the request.
-      resolveLiveTurnId: () => activeStructuredAgentSessionTurnId(session.journal.snapshot().items),
+      resolveLiveTurnId: () => session.journal.activeTurnId(),
       ...(dispatchStatus ? { dispatchStatus } : {})
     })
   ).cancelled

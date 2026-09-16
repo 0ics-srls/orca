@@ -394,6 +394,25 @@ describe('Claude turn ownership', () => {
     expect(interrupt).toHaveBeenCalledOnce()
   })
 
+  // The journal drains through a serialized async queue, so a live turn routinely has no published
+  // row yet. Refusing there would gate a user's Stop on bookkeeping, so the in-memory turn covers
+  // the lag — the journal is authoritative only while it has an answer.
+  it('admits a Stop for the live turn while the journal has not drained its row', async () => {
+    const session = sessionHoldingTurn('turn-live')
+    const interrupt = vi.fn().mockResolvedValue(undefined)
+    session.connection.interrupt = interrupt
+
+    await expect(
+      cancellationOf(session, {
+        sessionId: 'session-1',
+        turnId: 'turn-live',
+        fence: 1,
+        resolveLiveTurnId: () => null
+      })
+    ).resolves.toEqual({ cancelled: true })
+    expect(interrupt).toHaveBeenCalledOnce()
+  })
+
   it('refuses a Stop the adapter still holds once the journal published a newer turn', async () => {
     const session = sessionHoldingTurn('turn-stale')
     const interrupt = vi.fn().mockResolvedValue(undefined)
