@@ -3,7 +3,7 @@
 //
 // Split out of the translator when that file reached its line budget. The body
 // moved unchanged; the only edit is that what were closure variables are now
-// read off an explicit context, so the turn opener and the collaborators it
+// read off an explicit context, so the open turn and the collaborators it
 // writes through stay owned by the translator.
 
 import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
@@ -34,7 +34,7 @@ import type { createClaudeStreamedBlockRegistry } from './claude-streamed-block-
 import type { createClaudeStreamedTextCheckpoints } from './claude-streamed-text-checkpoints'
 import type { ClaudeSubagentRoster } from './claude-subagent-roster'
 import { claudeTurnOpenedBySendEcho, type ClaudeTurnSource } from './claude-turn-opening'
-import type { ClaudeCurrentTurn } from './claude-turn-lifecycle-item'
+import type { ClaudeOpenTurn } from './claude-open-turn'
 
 export type ClaudeMessageJournalContext = {
   sink: StructuredAgentSessionEventSink
@@ -44,14 +44,9 @@ export type ClaudeMessageJournalContext = {
   subagents: ClaudeSubagentRoster
   forwardedTools: ClaudeForwardedToolRegistry
   providerFallback: ClaudeProviderFrameFallback
-  ensureTurnOpen: (
-    frame: Record<string, unknown>,
-    source: ClaudeTurnSource | null,
-    observedAt: number
-  ) => void
-  openTurn: (turn: ClaudeCurrentTurn, observedAt: number) => void
-  /** An accepted send is the only thing that lifts the reopen latch. */
-  liftSuppression: () => void
+  /** The session's open turn. Sole owner of turn identity and of the reopen
+   *  latch; this module asks it rather than tracking a copy. */
+  turn: ClaudeOpenTurn
 }
 
 export function journalClaudeMessage(
@@ -80,17 +75,17 @@ export function journalClaudeMessage(
     uuid: envelope.uuid,
     assistant: envelope.role === 'assistant'
   }
-  const openOutputTurn = (): void => ctx.ensureTurnOpen(message, source, observedAt)
+  const openOutputTurn = (): void => ctx.turn.ensureOpen(message, source, observedAt)
   if (body) {
     // Opening before the append is what brackets a turn around its own first
     // output; a reader that scans back to the turn record and stops would
     // otherwise look straight past the row that opened it.
-    ctx.ensureTurnOpen(message, source, observedAt)
+    ctx.turn.ensureOpen(message, source, observedAt)
     ctx.sink.appendItem(identity, body)
     changed = true
   }
   for (const tool of claudeToolUses(outputEnvelope)) {
-    ctx.ensureTurnOpen(message, source, observedAt)
+    ctx.turn.ensureOpen(message, source, observedAt)
     ctx.tools.set(tool.id, tool)
     // Only a TOP-LEVEL call can be the parent of a top-level task row; a
     // sidechain's own tool ids never reach the transcript.
@@ -115,7 +110,7 @@ export function journalClaudeMessage(
     changed = true
   }
   if (thinking) {
-    ctx.ensureTurnOpen(message, source, observedAt)
+    ctx.turn.ensureOpen(message, source, observedAt)
     ctx.sink.appendItem(claudeThinkingIdentity(envelope.sessionId, envelope.uuid), {
       kind: 'message',
       role: 'reasoning',
@@ -136,8 +131,8 @@ export function journalClaudeMessage(
     userItemId: agentJournalItemKey(identity)
   })
   if (sendEchoTurn) {
-    ctx.liftSuppression()
-    ctx.openTurn(sendEchoTurn, observedAt)
+    ctx.turn.allowReopen()
+    ctx.turn.open(sendEchoTurn, observedAt)
   }
   if (changed) {
     ctx.sink.publish()

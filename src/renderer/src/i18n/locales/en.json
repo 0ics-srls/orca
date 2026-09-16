@@ -828,7 +828,7 @@
           "flow": {
             "structured": {
               "launch": {
-                "unknown": "Could not confirm whether Codex chat opened. Retry to check again."
+                "unknown": "Could not confirm whether {{value0}} chat opened. Retry to check again."
               }
             }
           }
@@ -11519,7 +11519,8 @@
           "noteKeysBody": "API keys and workspaces are stored for the active runtime.",
           "noteVisibilityTitle": "Hiding ≠ disconnect",
           "noteVisibilityBody": "Hiding Linear in Task Sources only removes it from the picker. It does not remove your key or skill.",
-          "setupChecking": "Checking…"
+          "setupChecking": "Checking…",
+          "setupUnverified": "Cannot verify"
         },
         "TaskSourceLinearSetup": {
           "connectTitle": "Connect Linear",
@@ -11545,7 +11546,8 @@
           "statusHidden": "Hidden from Tasks",
           "statusIncomplete": "Needs setup",
           "collapseSetup": "Collapse {{provider}} setup steps",
-          "expandSetup": "Show {{provider}} setup steps"
+          "expandSetup": "Show {{provider}} setup steps",
+          "statusUnverified": "Cannot verify"
         },
         "TaskSourceShowInTasksStep": {
           "shown": "Shown",
@@ -16906,6 +16908,11 @@
             "1f772bb5d0": "Message delivery is unconfirmed.",
             "93ef441197": "Message was not sent.",
             "a5e7f14068": "Retry"
+          },
+          "NativeChatLaunchRetry": {
+            "failed": "Chat could not be started.",
+            "unknown": "Chat connection could not be confirmed.",
+            "retry": "Retry"
           }
         }
       },
@@ -17285,7 +17292,6 @@
       "launchPromptNotDelivered": "Not delivered — check the terminal",
       "structuredSessionCloseFailed": "Could not close this chat session",
       "structuredSessionLaunchFailed": "Could not open {{value0}} chat",
-      "structuredSessionLaunchPending": "Starting {{value0}} chat…",
       "structuredSessionCloseFailedDescription": "The terminal stayed open so the provider remains recoverable.",
       "handoff": {
         "stage": {
@@ -17319,8 +17325,6 @@
         "retry": "Retry",
         "details": "Details"
       },
-      "structuredSessionFellBackToTerminal": "Structured chat isn't available",
-      "structuredSessionFellBackToTerminalDescription": "Orca tried to open a {{value0}} terminal instead.",
       "structuredSessionLaunchFailedDescription": "Orca could not open a structured {{value0}} chat. See the logs for details.",
       "subagents": {
         "state": {
@@ -17674,78 +17678,6 @@
     }
   },
   "dashboardPopout": {
-    "view": {
-      "label": "Dashboard view",
-      "board": "Dashboard",
-      "map": "Agent Map"
-    },
-    "map": {
-      "host": {
-        "local": "Local",
-        "ssh": "SSH",
-        "wsl": "WSL",
-        "remote": "Remote"
-      },
-      "filters": {
-        "showStates": "Agent states",
-        "agentlessWorkspaces": "Workspaces without agents",
-        "orchestrationLinks": "Orchestration links",
-        "orchestrationLinksHidden": "Orchestration links hidden",
-        "workspaceVisibility": "Map content",
-        "title": "Map controls",
-        "reset": "Reset",
-        "ofTotalAgents": "of {{total}} agents shown",
-        "quickViews": "Quick views",
-        "agents": "Agents",
-        "time": "Time",
-        "lifespan": "Session lifespan",
-        "sinceMessage": "Since last message",
-        "timeInState": "Time in current state",
-        "timeMinimum": "{{label}} minimum",
-        "timeMaximum": "{{label}} maximum",
-        "timeAny": "any",
-        "timeRangeCount": "{{count}} ranges",
-        "resetRanges": "Reset ranges",
-        "summaryAll": "All",
-        "summaryCount": "{{shown}} of {{total}}",
-        "summarySelected": "{{count}} selected",
-        "workspace": "Workspace",
-        "stateChip": "State: {{states}}"
-      },
-      "liveContainmentMap": "Live containment map",
-      "empty": "No agents match the current filters.",
-      "canvasLabel": "Nested project, workspace, and agent map",
-      "zoomOut": "Zoom out",
-      "zoomIn": "Zoom in",
-      "fit": "Fit",
-      "openWorktree": "Open {{worktree}} worktree details",
-      "openFolderWorkspace": "Open {{workspace}} folder workspace details",
-      "worktreeSummary": "{{total}} agents · {{active}} active · {{done}} done",
-      "worktreeSummary_one": "{{total}} agent · {{active}} active · {{done}} done",
-      "worktreeSummary_other": "{{total}} agents · {{active}} active · {{done}} done",
-      "runningAgents": "Agents",
-      "spawnAgent": "Start a new agent",
-      "noLaunchableAgents": "No enabled agents detected.",
-      "sleepWorkspace": "Sleep",
-      "projectCount": "{{agents}} agents · {{workspaces}} workspaces",
-      "agentCount": "{{count}} agents",
-      "agentCount_one": "{{count}} agent",
-      "agentCount_other": "{{count}} agents",
-      "noWorkspaceAgents": "No agents in this workspace.",
-      "status": {
-        "doneSeen": "Done, seen"
-      },
-      "quickView": {
-        "everything": "Everything",
-        "attention": "Needs me",
-        "stuck": "Stuck",
-        "unread": "Unread",
-        "recent": "Last 30 min",
-        "longRunning": "Long runners",
-        "stale": "Stale > 3d",
-        "orchestration": "Orchestration"
-      }
-    },
     "placeholder": {
       "title": "Agent dashboard",
       "description": "This is where all your agents will show up at a glance. The board is coming soon."
@@ -17808,8 +17740,7 @@
       "project": "Project",
       "workspaceStatus": "Workspace status",
       "reviewStatus": "PR / MR status",
-      "clearAll": "Clear all filters",
-      "removeChip": "Remove {{filter}}"
+      "clearAll": "Clear all filters"
     },
     "search": {
       "placeholder": "Search worktree, project, or agent…",
