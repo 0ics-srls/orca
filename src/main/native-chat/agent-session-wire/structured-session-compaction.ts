@@ -4,6 +4,7 @@ type PendingCompaction = {
   turnId?: string
   error?: string
   compacted: boolean
+  interrupted: boolean
   finish: (result: { error?: string }) => void
   interrupt: () => void
 }
@@ -31,53 +32,64 @@ export class StructuredSessionCompaction {
     onLateResult?: (result: { error?: string }) => Promise<void>,
     commandTurnId?: string
   ): Promise<{ error?: string }> {
-    if (this.pending.has(sessionId)) {
-      throw new Error('Compaction is already running.')
+    const current = this.pending.get(sessionId)
+    if (current) {
+      return {
+        error: current.interrupted
+          ? 'The interrupted compaction is still settling.'
+          : 'Compaction is already running.'
+      }
     }
-    let timer: ReturnType<typeof setTimeout>
     let expired = false
-    const completion = new Promise<{ error?: string }>((resolve, reject) => {
-      const finish = (result: { error?: string }) => {
+    const completion = Promise.withResolvers<{ error?: string }>()
+    const pending: PendingCompaction = {
+      identity,
+      commandTurnId,
+      compacted: false,
+      interrupted: false,
+      finish: (result) => {
+        if (this.pending.get(sessionId) !== pending) {
+          return
+        }
         this.pending.delete(sessionId)
         if (expired && onLateResult) {
           void onLateResult(result).catch((error) =>
             console.warn('Could not persist late compaction completion', error)
           )
         }
-        resolve(result)
+        completion.resolve(result)
+      },
+      interrupt: () => {
+        if (this.pending.get(sessionId) !== pending || pending.interrupted) {
+          return
+        }
+        // The provider's interrupt receipt can precede its terminal frame. Retain this generation
+        // until that frame arrives so it cannot be mistaken for a later compaction.
+        pending.interrupted = true
+        completion.reject(new Error('Compaction was interrupted.'))
       }
-      const interrupt = () => {
-        this.pending.delete(sessionId)
-        reject(new Error('Compaction was interrupted.'))
-      }
-      this.pending.set(sessionId, {
-        identity,
-        commandTurnId,
-        compacted: false,
-        finish,
-        interrupt
-      })
-      timer = setTimeout(() => {
-        expired = true
-        reject(new Error('Compaction completion is unconfirmed.'))
-      }, this.timeoutMs)
-      timer.unref?.()
-    })
+    }
+    this.pending.set(sessionId, pending)
+    const timer = setTimeout(() => {
+      expired = true
+      completion.reject(new Error('Compaction completion is unconfirmed.'))
+    }, this.timeoutMs)
+    timer.unref?.()
     // Observe rejection even while invoke is waiting for its own receipt.
-    void completion.catch(() => {})
+    void completion.promise.catch(() => {})
     const invocation = Promise.resolve()
       .then(invoke)
       .then((value) => {
         const admission = record(value)
         if (typeof admission.error === 'string') {
-          this.pending.get(sessionId)?.finish({ error: admission.error })
+          pending.finish({ error: admission.error })
         }
-        return completion
+        return completion.promise
       })
     try {
       // The completion window also bounds a missing request receipt. Provider notifications can
       // prove the result before the request returns, and a timed-out request can still settle late.
-      return await Promise.race([completion, invocation])
+      return await Promise.race([completion.promise, invocation])
     } catch (error) {
       expired = this.pending.has(sessionId)
       throw error
@@ -94,7 +106,8 @@ export class StructuredSessionCompaction {
   }
 
   ownsTurn(sessionId: string, turnId: string): boolean {
-    return this.pending.get(sessionId)?.commandTurnId === turnId
+    const pending = this.pending.get(sessionId)
+    return pending?.interrupted === false && pending.commandTurnId === turnId
   }
 
   providerTurnId(sessionId: string, turnId: string): string | undefined {
@@ -105,7 +118,7 @@ export class StructuredSessionCompaction {
     this.pending.get(sessionId)?.finish({ error: 'The provider exited during compaction.' })
   }
 
-  /** A confirmed provider interrupt ends this attempt; later commands must not inherit its latch. */
+  /** Reject the waiter but retain its generation until the provider emits a terminal frame. */
   interrupted(sessionId: string): void {
     this.pending.get(sessionId)?.interrupt()
   }

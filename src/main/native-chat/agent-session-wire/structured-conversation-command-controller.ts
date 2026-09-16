@@ -33,15 +33,7 @@ export class StructuredConversationCommandController {
     caller: StructuredAgentSessionCaller,
     params: Parameters<typeof sendStructuredAgentSessionTurn>[2]
   ): ReturnType<typeof sendStructuredAgentSessionTurn> =>
-    this.pending.has(params.envelope.sessionId)
-      ? Promise.resolve({
-          ok: false,
-          refusal: {
-            code: 'agent_session_operation_invalid',
-            message: 'Wait for the conversation operation to finish.'
-          }
-        })
-      : sendStructuredAgentSessionTurn(this.context(), caller, params)
+    sendStructuredAgentSessionTurn(this.context(), caller, params)
 
   run = (
     caller: StructuredAgentSessionCaller,
@@ -51,7 +43,9 @@ export class StructuredConversationCommandController {
     const key = JSON.stringify([
       caller.callerKey,
       params.envelope.clientOperationId,
-      params.command
+      params.command,
+      params.envelope.expectedRuntimeFence,
+      params.envelope.payloadFingerprint
     ])
     const pending = this.pending.get(sessionId)
     if (pending) {

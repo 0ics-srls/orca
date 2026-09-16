@@ -80,19 +80,63 @@ describe('structured compaction lifecycle', () => {
     await expect(next).resolves.toEqual({})
   })
 
-  it('cleans up after a confirmed interrupt and permits another operation', async () => {
+  it('quarantines a confirmed interrupt until its terminal frame', async () => {
     const tracker = new StructuredSessionCompaction()
-    const pending = tracker.run('s', 'p', async () => {}, undefined, 'compact:operation-1')
+    const late = vi.fn(async () => {})
+    const interrupted = tracker.run('s', 'p', async () => {}, late, 'compact:operation-1')
+    tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
     tracker.interrupted('s')
-    await expect(pending).rejects.toThrow('interrupted')
+    await expect(interrupted).rejects.toThrow('interrupted')
+    expect(tracker.hasPending('s')).toBe(true)
+
+    const refusedInvoke = vi.fn(async () => {})
+    await expect(tracker.run('s', 'p', refusedInvoke)).resolves.toEqual({
+      error: 'The interrupted compaction is still settling.'
+    })
+    expect(refusedInvoke).not.toHaveBeenCalled()
+
+    tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
+    await vi.waitFor(() => expect(late).toHaveBeenCalledWith({}))
     expect(tracker.hasPending('s')).toBe(false)
 
-    const next = tracker.run('s', 'p', async () => {
-      tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
-      tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
-    })
+    const next = tracker.run('s', 'p', async () => {})
+    tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
+    tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
     await expect(next).resolves.toEqual({})
   })
+
+  it('does not apply an interrupted request receipt to the next generation', async () => {
+    const tracker = new StructuredSessionCompaction()
+    const oldReceipt = Promise.withResolvers<{ error: string }>()
+    const interrupted = tracker.run(
+      's',
+      'p',
+      () => oldReceipt.promise,
+      undefined,
+      'compact:operation-1'
+    )
+    await Promise.resolve()
+    tracker.interrupted('s')
+    await expect(interrupted).rejects.toThrow('interrupted')
+    tracker.claude('s', { type: 'result', subtype: 'error_during_execution', session_id: 'p' })
+
+    const settled = vi.fn()
+    const next = tracker
+      .run('s', 'p', async () => {})
+      .then((result) => {
+        settled(result)
+        return result
+      })
+    oldReceipt.resolve({ error: 'old request failed late' })
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(settled).not.toHaveBeenCalled()
+
+    tracker.claude('s', { type: 'system', subtype: 'compact_boundary', session_id: 'p' })
+    tracker.claude('s', { type: 'result', subtype: 'success', session_id: 'p' })
+    await expect(next).resolves.toEqual({})
+  })
+
   it('reconciles a terminal frame after timeout without repeating the provider request', async () => {
     vi.useFakeTimers()
     try {
