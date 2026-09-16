@@ -95,18 +95,18 @@ export function useStructuredConversationCommand(args: {
               { command },
               { operationId }
             )
+            if (disposition.status === 'unresolved') {
+              // The session stream still owns completion after the transport stops waiting.
+              onReconciled(operationId)
+              return { status: 'unresolved' }
+            }
             if (!claim.current.isOperationOutstanding(operationId)) {
               onReconciled(operationId)
-            }
-            if (disposition.status === 'unresolved') {
-              return { status: 'unresolved' }
             }
             if (disposition.status === 'refused') {
               return { status: 'refused', error: disposition.message }
             }
-            return disposition.value.state === 'unknown'
-              ? { status: 'unresolved' }
-              : { status: 'completed', result: disposition.value }
+            return { status: 'completed', result: disposition.value }
           },
           onLateReply: () => {
             if (operationIds.current.get(command) === operationId) {

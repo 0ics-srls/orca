@@ -71,18 +71,22 @@ describe('useStructuredConversationCommand', () => {
     }
     const view = renderHook((props) => useCommandHarness(props), { initialProps })
 
-    let first!: Awaited<ReturnType<typeof view.result.current.run>>
-    await act(async () => {
-      first = await view.result.current.run('clear')
+    let first!: ReturnType<typeof view.result.current.run>
+    act(() => {
+      first = view.result.current.run('clear')
     })
-    expect(first.accepted).toBe(false)
+    await waitFor(() => expect(mocks.call).toHaveBeenCalledTimes(1))
+    expect(view.result.current.isRunning()).toBe(true)
+    await waitFor(() => expect(view.result.current.writeError).toBeNull())
     const firstOperationId = mocks.call.mock.calls[0]![2].envelope.clientOperationId
 
     view.rerender({ fence: 2, items: [] })
-    await act(async () => {
-      await view.result.current.run('clear')
+    await expect(first).resolves.toMatchObject({ accepted: false })
+    act(() => {
+      void view.result.current.run('clear')
     })
     expect(mocks.call.mock.calls[1]![2].envelope.clientOperationId).toBe(firstOperationId)
+    view.unmount()
   })
 
   it('keeps the replay identity when an old-fence reply arrives during recovery', async () => {

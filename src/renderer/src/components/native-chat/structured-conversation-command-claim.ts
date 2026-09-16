@@ -133,9 +133,10 @@ export class StructuredConversationCommandClaim {
       onLateReply: input.onLateReply ?? (() => {})
     }
     this.live = claim
+    // Transport doubt cannot settle host-owned work; the session lifecycle or claim deadline does.
     void input.send().then(
       (reply) => this.applyReply(claim, reply),
-      () => this.finishUnconfirmed(claim)
+      () => undefined
     )
     return waiter.promise
   }
@@ -198,7 +199,6 @@ export class StructuredConversationCommandClaim {
       return
     }
     if (reply.status === 'unresolved') {
-      this.finishUnconfirmed(claim)
       return
     }
     if (reply.status === 'refused') {

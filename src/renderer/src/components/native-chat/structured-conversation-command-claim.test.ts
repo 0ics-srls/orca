@@ -91,14 +91,39 @@ describe('StructuredConversationCommandClaim', () => {
     })
   })
 
-  it('retains the operation id for retry when transport returns no reply', async () => {
+  it('keeps waiting for lifecycle when transport returns no reply', async () => {
+    const claim = new StructuredConversationCommandClaim()
+    const settled = vi.fn()
+    const outcome = claim
+      .run({
+        command: 'compact',
+        operationId: OPERATION_ID,
+        blocked: false,
+        send: async () => ({ status: 'unresolved' })
+      })
+      .then((value) => {
+        settled(value)
+        return value
+      })
+    await Promise.resolve()
+    expect(settled).not.toHaveBeenCalled()
+    expect(claim.isRunning).toBe(true)
+
+    claim.applyStreamSnapshot([lifecycleItem('compact', 'completed')])
+    await expect(outcome).resolves.toEqual({ accepted: true, error: null })
+  })
+
+  it('releases a host-confirmed unknown result for same-operation replay', async () => {
     const claim = new StructuredConversationCommandClaim()
     await expect(
       claim.run({
         command: 'compact',
         operationId: OPERATION_ID,
         blocked: false,
-        send: async () => ({ status: 'unresolved' })
+        send: async () => ({
+          status: 'completed',
+          result: { command: 'compact', state: 'unknown' }
+        })
       })
     ).resolves.toMatchObject({ accepted: false, retrySameOperation: true })
     expect(claim.isRunning).toBe(false)
