@@ -4,6 +4,11 @@ import type { AgentJournalItemIdentity } from '../../shared/agent-session-journa
  *  retired by the journal's pending-submission recovery on exit, not from here. */
 export const MAX_CODEX_PENDING_DISPATCH_ECHOES = 256
 
+export type CodexDispatchRequestOrigin = {
+  requestedAt: number
+  sequence: number
+}
+
 /**
  * Which sends this session is still waiting to hear back about, keyed by the
  * client message id Codex echoes on the user message.
@@ -19,27 +24,45 @@ export type CodexDispatchEchoes = {
   settle: (clientMessageId: string) => boolean
   /** Drops an armed send whose write never reached the provider. */
   disarm: (clientMessageId: string) => void
-  /** Submission instant for this exact send, retained until its echo settles it. */
-  requestedAt: (clientMessageId: string) => number | null
+  /** Submission origin for this exact send, retained until its echo settles it. */
+  requestOrigin: (clientMessageId: string) => CodexDispatchRequestOrigin | null
+  /** Highest causal sequence assigned to a dispatch in this session. */
+  latestSequence: () => number
   clear: () => void
   readonly size: number
 }
 
 export function createCodexDispatchEchoes(): CodexDispatchEchoes {
-  const armed = new Map<string, number | null>()
+  const armed = new Map<string, { requestedAt: number | null; sequence: number }>()
+  let nextSequence = 0
   return {
     arm(clientMessageId, requestedAt) {
-      if (!armed.has(clientMessageId) && armed.size >= MAX_CODEX_PENDING_DISPATCH_ECHOES) {
+      const existing = armed.get(clientMessageId)
+      if (existing) {
+        if (existing.requestedAt === null && requestedAt !== undefined) {
+          existing.requestedAt = requestedAt
+        }
+        return true
+      }
+      if (armed.size >= MAX_CODEX_PENDING_DISPATCH_ECHOES) {
         return false
       }
-      armed.delete(clientMessageId)
-      armed.set(clientMessageId, requestedAt ?? null)
+      armed.set(clientMessageId, { requestedAt: requestedAt ?? null, sequence: nextSequence++ })
       return true
     },
     settle: (clientMessageId) => armed.delete(clientMessageId),
     disarm: (clientMessageId) => void armed.delete(clientMessageId),
-    requestedAt: (clientMessageId) => armed.get(clientMessageId) ?? null,
-    clear: () => armed.clear(),
+    requestOrigin: (clientMessageId) => {
+      const origin = armed.get(clientMessageId)
+      return origin?.requestedAt === null || origin === undefined
+        ? null
+        : { requestedAt: origin.requestedAt, sequence: origin.sequence }
+    },
+    latestSequence: () => nextSequence - 1,
+    clear: () => {
+      armed.clear()
+      nextSequence = 0
+    },
     get size() {
       return armed.size
     }

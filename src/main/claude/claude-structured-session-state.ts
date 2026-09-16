@@ -113,8 +113,10 @@ export type ClaudeDispatchWaiter = {
   clientMessageId: string | null
   /** Client uuid echoed by Claude so a replay is tied to its own dispatch. */
   sentUuid: string
-  /** Sequence used to fence a late identity from a newer dispatch. */
+  /** Sequence used to identify the latest pending dispatch for control ownership. */
   dispatchSequence: number
+  /** Host submission instant owned by this exact dispatch. */
+  requestedAt: number | null
   /** Set when the provider replay settled this waiter before send returned. */
   settledUuid?: string
   /** The write failed or the child died, but a replay may still name it. */
@@ -156,9 +158,6 @@ export type ClaudeSession = {
   commands: ClaudeSlashCommandCatalog
   /** Monotonic fence advanced when a dispatch starts, including unresolved dispatches. */
   dispatchSequence: number
-  /** Submission instant of the dispatch `dispatchSequence` names. A replay only
-   *  opens a turn when it matches that sequence, so this is that turn's origin. */
-  dispatchRequestedAt: number | null
   /** Fences overlapping option writes so a late completion cannot restore stale state. */
   optionMutationSequence: number
   /** Shared durable-close write; a failed write clears this for a retry. */

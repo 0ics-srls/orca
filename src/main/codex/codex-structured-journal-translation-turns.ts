@@ -56,6 +56,7 @@ export function publishCodexTurnLifecycle(input: {
   threadId: string
   turnId: string
   state: AgentJournalTurnLifecycleState
+  userItemId?: string
   startedAt?: number
   requestedAt?: number
   completedAt?: number
@@ -68,7 +69,7 @@ export function publishCodexTurnLifecycle(input: {
   const body = codexTurnLifecycleBody({
     turnId: input.turnId,
     state: input.state,
-    userItemId: codexTurnUserItemId(input.threadId, input.turnId),
+    userItemId: input.userItemId ?? codexTurnUserItemId(input.threadId, input.turnId),
     ...(input.startedAt !== undefined ? { startedAt: input.startedAt } : {}),
     ...(input.requestedAt !== undefined ? { requestedAt: input.requestedAt } : {}),
     ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {}),

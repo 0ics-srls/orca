@@ -97,8 +97,8 @@ export async function startCodexTurn(
     timeoutMs?: number
   }
 ): Promise<boolean> {
-  // Armed before the write: the echo can land while the response is in flight,
-  // and so can the `turn/started` that reads this send's submission instant.
+  // Armed before the write: the echo and `turn/started` can both land while the
+  // response is in flight, and the start must snapshot this send in its frontier.
   if (!host.dispatchEchoes.arm(input.clientMessageId, input.requestedAt)) {
     return false
   }

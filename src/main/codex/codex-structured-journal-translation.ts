@@ -182,7 +182,7 @@ export function createCodexJournalTranslator(
         deps.sink.setActivity?.(null)
         items.activeItems.clear()
         prompts.pending.clear()
-        activeTurns.clear()
+        turnBoundaries.clear()
         compactions.clear()
         goals.clear()
         return CODEX_JOURNAL_ADMITTED
@@ -259,13 +259,14 @@ export function createCodexJournalTranslator(
         const translated = items.handle(event)
         if (translated.handled && translated.dispatchEcho) {
           const { clientMessageId, providerIdentity } = translated.dispatchEcho
-          const requestedAt = deps.dispatchRequestedAt?.(clientMessageId) ?? null
-          if (requestedAt !== null && providerIdentity.provider === 'codex') {
+          const requestOrigin = deps.dispatchRequestOrigin?.(clientMessageId) ?? null
+          if (requestOrigin !== null && providerIdentity.provider === 'codex') {
             const attribution = turnBoundaries.attributeRequest({
               sessionId: event.sessionId,
+              clientMessageId,
               threadId: providerIdentity.threadId,
               turnId: providerIdentity.turnId,
-              requestedAt
+              requestOrigin
             })
             if (!attribution.accepted) {
               return attribution
@@ -300,7 +301,7 @@ export function createCodexJournalTranslator(
       prompts.dispose()
       genericFrames.dispose()
       subagents.dispose()
-      activeTurns.clear()
+      turnBoundaries.clear()
       compactions.clear()
       goals.dispose()
     }

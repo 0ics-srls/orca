@@ -9,11 +9,10 @@
 // counter backwards. With the offset fixed, an origin that improves moves the
 // anchor earlier by exactly that much, so displayed elapsed only ever grows.
 
-import type { AgentJournalRenderItem } from './agent-session-journal-types'
 import type { StructuredAgentHostClock } from './structured-agent-session-reducer'
 import {
-  selectStructuredAgentRunningTurnTiming,
-  structuredAgentTurnLocalStartedAt
+  structuredAgentTurnLocalStartedAt,
+  type StructuredAgentTurnTiming
 } from './structured-agent-session-turn-timing'
 
 /** One turn's conversion basis: the client instant it was first seen, and the
@@ -44,13 +43,13 @@ export type StructuredAgentTurnClockReader = () => number
 /** The live counter's anchor for one render. Returns the latch it was given,
  *  unchanged, while the turn holds, so a caller can compare by reference. */
 export function stepStructuredAgentTurnClock(input: {
-  items: readonly AgentJournalRenderItem[]
+  timing: StructuredAgentTurnTiming | null
   turnId: string | null
   now: StructuredAgentTurnClockReader
   hostClock: StructuredAgentHostClock | null | undefined
   latch: StructuredAgentTurnClockLatch | null
 }): { latch: StructuredAgentTurnClockLatch | null; workingStartedAt: number | null } {
-  const { items, turnId, latch } = input
+  const { timing, turnId, latch } = input
   if (turnId === null) {
     return { latch: null, workingStartedAt: null }
   }
@@ -58,7 +57,6 @@ export function stepStructuredAgentTurnClock(input: {
     latch?.turnId === turnId
       ? latch
       : latchStructuredAgentTurnClock(turnId, input.now(), input.hostClock)
-  const timing = selectStructuredAgentRunningTurnTiming(items, turnId)
   return {
     latch: next,
     workingStartedAt: timing

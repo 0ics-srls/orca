@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import type { AgentJournalRenderItem, AgentJournalTurnLifecycle } from './agent-session-journal-types'
+import type {
+  AgentJournalRenderItem,
+  AgentJournalTurnLifecycle
+} from './agent-session-journal-types'
 import { agentJournalTurnBody } from './agent-session-turn-record'
 import {
   stepStructuredAgentTurnClock,
@@ -7,6 +10,7 @@ import {
 } from './structured-agent-turn-clock-anchor'
 import {
   completedStructuredAgentTurnSeconds,
+  selectStructuredAgentRunningTurnTiming,
   structuredAgentTurnOrigin
 } from './structured-agent-session-turn-timing'
 
@@ -47,7 +51,13 @@ function anchorFor(
   hostClock: { hostNow: number; receivedAt: number } | null,
   latch: StructuredAgentTurnClockLatch | null = null
 ): { latch: StructuredAgentTurnClockLatch | null; workingStartedAt: number | null } {
-  return stepStructuredAgentTurnClock({ items, turnId: 't1', now: () => CLIENT_NOW, hostClock, latch })
+  return stepStructuredAgentTurnClock({
+    timing: selectStructuredAgentRunningTurnTiming(items, 't1'),
+    turnId: 't1',
+    now: () => CLIENT_NOW,
+    hostClock,
+    latch
+  })
 }
 
 describe('structured agent turn clock anchor', () => {
@@ -91,7 +101,11 @@ describe('structured agent turn clock anchor', () => {
     const items = runningTurn(HOST_START + 1_000, HOST_START)
     const first = anchorFor(items, { hostNow: HOST_START + 1_000, receivedAt: CLIENT_NOW })
 
-    const jittered = anchorFor(items, { hostNow: HOST_START - 1_000, receivedAt: CLIENT_NOW }, first.latch)
+    const jittered = anchorFor(
+      items,
+      { hostNow: HOST_START - 1_000, receivedAt: CLIENT_NOW },
+      first.latch
+    )
 
     expect(jittered.latch).toBe(first.latch)
     expect(jittered.workingStartedAt).toBe(first.workingStartedAt)
@@ -125,7 +139,7 @@ describe('structured agent turn clock anchor', () => {
     })
 
     const closed = stepStructuredAgentTurnClock({
-      items: [],
+      timing: null,
       turnId: null,
       now: () => CLIENT_NOW,
       hostClock: null,

@@ -276,7 +276,7 @@ describe('codex turn lifecycle rows', () => {
       sink: tap.sink,
       sessionId: SESSION_ID,
       primaryThreadId: () => THREAD_ID,
-      dispatchRequestedAt: () => 900,
+      dispatchRequestOrigin: () => ({ requestedAt: 900, sequence: 0 }),
       onUserMessageEcho
     })
     const echo = notification(
@@ -412,13 +412,13 @@ describe('codex turn lifecycle rows', () => {
       translate
     })
 
-    expect(retries.handle(SESSION_ID, 'turn/started', { turn: { id: TURN_ID } }, 1_000)).toEqual({
-      accepted: false,
-      reason: 'backpressure'
-    })
+    expect(
+      retries.handle(SESSION_ID, 'turn/started', { turn: { id: TURN_ID } }, 1_000, -1)
+    ).toEqual({ accepted: false, reason: 'backpressure' })
     await vi.advanceTimersByTimeAsync(50)
 
     expect(translate.mock.calls.map((call) => call[4])).toEqual([1_000, 1_000])
+    expect(translate.mock.calls.map((call) => call[5])).toEqual([-1, -1])
     expect(connection.resumeReading).not.toHaveBeenCalled()
   })
 

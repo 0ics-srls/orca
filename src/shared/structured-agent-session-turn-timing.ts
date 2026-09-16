@@ -59,9 +59,9 @@ function readTiming(item: AgentJournalRenderItem): StructuredAgentTurnTiming | n
   }
 }
 
-/** Timing keyed by the user message that opened each turn. A row names its
- *  user item by provider key; a submission the provider later acknowledged is
- *  reached through its alias. Rows from older hosts carry no key and fall back
+/** Timing keyed by the user message that opened each turn. A row can name the
+ *  submission directly or by a provider key that resolves through its alias.
+ *  Rows from older hosts carry no key and fall back
  *  to the nearest user message before them in journal order — the submission
  *  row is written ahead of dispatch, so it always precedes the provider's
  *  turn-start. Untimed rows are skipped unless explicitly unverifiable (null). */
