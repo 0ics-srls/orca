@@ -11,7 +11,9 @@ import type { AgentSessionStoreTransactionQueue } from './agent-session-store-tr
 export type AgentSessionResumeMarkerStore = {
   list: (now: number) => AgentSessionResumeMarker[]
   record: (markers: readonly AgentSessionResumeMarker[], now: number) => Promise<void>
-  consume: (sessionId: string) => Promise<boolean>
+  /** Drops every durable marker in one transaction. Startup claims the set into launch-scoped
+   *  memory and clears it here, so no marker outlives the launch that read it. */
+  clear: () => Promise<void>
 }
 
 export function createAgentSessionResumeMarkerStore(
@@ -34,6 +36,9 @@ export function createAgentSessionResumeMarkerStore(
             .map((marker) => [marker.sessionId, marker])
         )
       }),
-    consume: (sessionId) => queue.transact(() => queue.state.resumeMarkers.delete(sessionId))
+    clear: () =>
+      queue.transact(() => {
+        queue.state.resumeMarkers = new Map()
+      })
   }
 }

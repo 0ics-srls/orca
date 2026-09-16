@@ -3,6 +3,7 @@ import type { AgentSessionProviderHandleLink } from '../../../shared/agent-sessi
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionStatusSummary } from '../../../shared/agent-session-wire'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
+import type { AgentSessionLaunchGeneration } from '../../runtime/agent-session-launch-generation'
 import type { AgentSessionSpawnTokenScan } from '../../runtime/agent-session-spawn-token-process-scan'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
@@ -43,6 +44,9 @@ export type StructuredAgentSessionHostSession = {
 export type StructuredAgentSessionHostDeps = {
   store: AgentSessionRecordStore
   adapter: StructuredAgentSessionAdapter
+  /** This launch's identity, rotated once at install. Proves a resume marker came from the
+   *  shutdown immediately before this launch; absent, no marker is ever claimed. */
+  launchGeneration?: AgentSessionLaunchGeneration
   journalRoot: string
   claimKeyId: string
   probeOwner?: (record: AgentSessionRecord) => Promise<AgentSessionOwnerProbe>

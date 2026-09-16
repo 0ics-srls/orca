@@ -6,14 +6,16 @@
 // resumable session, so deleting the matching guard turns that test red.
 
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentJournalRenderItem } from '../../../shared/agent-session-journal-types'
+import type {
+  AgentJournalRenderItem,
+  AgentJournalSubmission
+} from '../../../shared/agent-session-journal-types'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import {
   AGENT_SESSION_RESUME_MARKER_TTL_MS,
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
 import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
-import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
@@ -22,140 +24,37 @@ import {
   STRUCTURED_AGENT_SESSION_RESUME_IN_PROGRESS
 } from './structured-agent-session-restart-resume-runner'
 import { structuredAgentSessionsWorkingAtTeardown } from './structured-agent-session-working-at-teardown'
-import { createStructuredAgentSessionRestartResume } from './structured-agent-session-restart-resume-host'
-
-const SESSION = 'session-working-1'
-const THREAD = 'thread-1'
-const HANDLE_ROOT = `codex:${JSON.stringify(THREAD)}`
-const NOW = 1_700_000_000_000
-
-function turnItem(
-  turnId: string,
-  state: 'running' | 'completed' | 'interrupted' | 'unverifiable'
-): AgentJournalRenderItem {
-  return {
-    itemId: `turn:${turnId}`,
-    revision: 1,
-    body: { kind: 'turn', turnId, state },
-    sequence: 1,
-    observedAt: NOW
-  }
-}
-
-function record(overrides: { chain?: AgentSessionRecord['providerHandleChain'] } = {}) {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a literal fixture standing in for a durable record; the code under test reads only lease, provider, location and providerHandleChain.
-  return {
-    schemaVersion: 2,
-    sessionId: SESSION,
-    location: {
-      executionHostId: 'local',
-      wslDistro: null,
-      workspaceId: 'workspace-1',
-      workspaceKind: 'git-worktree'
-    },
-    provider: 'codex',
-    providerHandleChain: overrides.chain ?? [
-      {
-        linkId: 'link-1',
-        handle: { provider: 'codex', threadId: THREAD },
-        origin: 'created',
-        mintedAtFence: 1,
-        observedAt: NOW
-      }
-    ],
-    accountHome: { variable: 'CODEX_HOME', path: '/home/codex' },
-    lease: {
-      sessionId: SESSION,
-      runtimeKind: 'native',
-      runtimeFence: 1,
-      handoffStage: null,
-      provenHandleLinkId: null,
-      ownerProcess: null,
-      reservedSpawnToken: null,
-      leaseDeadlineAt: NOW,
-      lastRenewedAt: NOW,
-      handoffOperationId: null,
-      journalCheckpoint: null,
-      claimKeyId: 'key-1',
-      claimStatus: 'released',
-      unreconciled: false,
-      deathEvidence: null
-    },
-    createdAt: NOW,
-    updatedAt: NOW
-  } as unknown as AgentSessionRecord
-}
-
-/** A prompt the agent is blocked on. The chat is waiting on the USER, not on itself. */
-function pendingApproval(): AgentJournalRenderItem {
-  return {
-    itemId: 'approval:1',
-    revision: 1,
-    body: {
-      kind: 'approval',
-      title: 'Run the command?',
-      detail: null,
-      options: [{ id: 'allow', label: 'Allow' }],
-      resolution: { state: 'pending', selectedOptionId: null, resolvedBy: null, resolvedAt: null }
-    },
-    sequence: 2,
-    observedAt: NOW
-  }
-}
-
-const CLAUDE_PROVIDER_SESSION = 'prov-session-1'
-const CLAUDE_ROOT = `claude:${JSON.stringify(CLAUDE_PROVIDER_SESSION)}`
-
-/** Claude's handle carries a leaf uuid, and the adapter's close path advances it. */
-function claudeRecord(
-  leafUuid: string | null,
-  providerSessionId = CLAUDE_PROVIDER_SESSION
-): AgentSessionRecord {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; this only swaps the provider and its Claude handle chain.
-  return {
-    ...record(),
-    provider: 'claude',
-    accountHome: { variable: 'CLAUDE_CONFIG_DIR', path: '/home/claude' },
-    providerHandleChain: [
-      {
-        linkId: 'link-1',
-        handle: { provider: 'claude', sessionId: providerSessionId, leafUuid },
-        origin: 'created',
-        mintedAtFence: 1,
-        observedAt: NOW
-      }
-    ]
-  } as unknown as AgentSessionRecord
-}
-
-function journal(items: AgentJournalRenderItem[], isReadOnly = false) {
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the code under test calls only isReadOnly and snapshot(); a real AgentSessionJournal needs an on-disk SQLite store.
-  return { isReadOnly, snapshot: () => ({ items, submissions: [] }) } as never
-}
-
-function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSessionResumeMarker {
-  return {
-    sessionId: SESSION,
-    turnId: 'turn-1',
-    recordedAt: NOW,
-    trigger: 'quit',
-    providerHandleRoot: HANDLE_ROOT,
-    ...overrides
-  }
-}
+import {
+  CLAUDE_ROOT,
+  claudeRecord,
+  HANDLE_ROOT,
+  journal,
+  LAUNCH_CURRENT,
+  marker,
+  NOW,
+  pendingApproval,
+  record,
+  SESSION,
+  submission,
+  turnItem
+} from './structured-agent-session-restart-resume-test-harness'
 
 function resumableSet(input: {
   markers: AgentSessionResumeMarker[]
   items?: AgentJournalRenderItem[]
+  submissions?: AgentJournalSubmission[]
   chain?: AgentSessionRecord['providerHandleChain']
   now?: number
 }) {
   const items = input.items ?? [turnItem('turn-1', 'interrupted')]
+  const submissions = input.submissions ?? []
   return structuredAgentSessionResumableSet({
     markers: input.markers,
     getRecord: () => record(input.chain === undefined ? {} : { chain: input.chain }),
     supportsRecord: () => true,
     journalTurn: () => newestStructuredAgentSessionTurn(items),
+    journalSubmission: (_sessionId, clientMessageId) =>
+      submissions.find((entry) => entry.clientMessageId === clientMessageId) ?? null,
     latestPrompt: () => 'fix the auth bug',
     now: input.now ?? NOW
   })
@@ -169,15 +68,17 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => record(),
       trigger: 'quit',
+      launchId: LAUNCH_CURRENT,
       now: NOW
     })
 
     expect(markers).toEqual([
       {
         sessionId: SESSION,
-        turnId: 'turn-1',
+        work: { kind: 'turn', id: 'turn-1' },
         recordedAt: NOW,
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         providerHandleRoot: HANDLE_ROOT
       }
     ])
@@ -190,6 +91,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => record(),
       trigger: 'update',
+      launchId: LAUNCH_CURRENT,
       now: NOW
     })
 
@@ -202,6 +104,7 @@ describe('deriving what was working at teardown', () => {
         sessions: new Map([[SESSION, { journal: journal([]), hasProviderChild: true }]]),
         getRecord: () => record(),
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -215,6 +118,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -230,6 +134,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -251,6 +156,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -264,6 +170,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => claudeRecord(null),
       trigger: 'quit',
+      launchId: LAUNCH_CURRENT,
       now: NOW
     })
 
@@ -278,9 +185,57 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record({ chain: [] }),
         trigger: 'quit',
+        launchId: LAUNCH_CURRENT,
         now: NOW
       })
     ).toEqual([])
+  })
+
+  // Codex declares a turn in about 150ms; Claude cannot write one until the SDK echoes the user
+  // message back, which is seconds on a real journal. A turn-id-only marker drops exactly those
+  // sessions — the ones that were working hardest — so the send carries its own identity.
+  it('records the submission identity for a send the provider has not echoed yet', () => {
+    const [recorded] = structuredAgentSessionsWorkingAtTeardown({
+      sessions: new Map([
+        [
+          SESSION,
+          {
+            journal: journal([], false, [submission('msg-1', 'pending')]),
+            hasProviderChild: true
+          }
+        ]
+      ]),
+      getRecord: () => claudeRecord(null),
+      trigger: 'quit',
+      launchId: LAUNCH_CURRENT,
+      now: NOW
+    })
+
+    expect(recorded?.work).toEqual({ kind: 'submission', id: 'msg-1' })
+  })
+
+  // Once a turn exists it is the better identity: it is what eviction rewrites, so it is what the
+  // journal can be asked about at launch.
+  it('prefers the running turn over the send that opened it', () => {
+    const [recorded] = structuredAgentSessionsWorkingAtTeardown({
+      sessions: new Map([
+        [
+          SESSION,
+          {
+            journal: journal([turnItem('turn-1', 'running')], false, [
+              submission('msg-1', 'accepted')
+            ]),
+            hasProviderChild: true
+          }
+        ]
+      ]),
+      getRecord: () => record(),
+      trigger: 'quit',
+      launchId: LAUNCH_CURRENT,
+      now: NOW
+    })
+
+    expect(recorded?.work).toEqual({ kind: 'turn', id: 'turn-1' })
   })
 })
 
@@ -291,7 +246,7 @@ describe('the resumable set', () => {
     expect(candidates).toHaveLength(1)
     expect(candidates[0]).toMatchObject({
       sessionId: SESSION,
-      turnId: 'turn-1',
+      work: { kind: 'turn', id: 'turn-1' },
       trigger: 'quit',
       latestPrompt: 'fix the auth bug'
     })
@@ -305,7 +260,7 @@ describe('the resumable set', () => {
   it('refuses when the marker and the journal name different turns', () => {
     expect(
       resumableSet({
-        markers: [marker({ turnId: 'turn-9' })],
+        markers: [marker({ work: { kind: 'turn', id: 'turn-9' } })],
         items: [turnItem('turn-1', 'interrupted')]
       })
     ).toEqual([])
@@ -335,6 +290,7 @@ describe('the resumable set', () => {
       getRecord: () => claudeRecord('5aed93d6-advanced-leaf'),
       supportsRecord: () => true,
       journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+      journalSubmission: () => null,
       latestPrompt: () => '',
       now: NOW
     })
@@ -349,6 +305,7 @@ describe('the resumable set', () => {
         getRecord: () => claudeRecord(null, 'prov-session-2'),
         supportsRecord: () => true,
         journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
+        journalSubmission: () => null,
         latestPrompt: () => '',
         now: NOW
       })
@@ -380,230 +337,58 @@ describe('the resumable set', () => {
       resumableSet({ markers: [marker()], now: NOW + AGENT_SESSION_RESUME_MARKER_TTL_MS + 1 })
     ).toEqual([])
   })
-})
 
-describe('the restart-resume surface', () => {
-  function surface(input: {
-    markers?: AgentSessionResumeMarker[]
-    sessions?: Map<string, { journal: unknown; hasProviderChild: boolean }>
-    record?: AgentSessionRecord
-    holdFails?: boolean
-  }) {
-    const live = new Map((input.markers ?? [marker()]).map((entry) => [entry.sessionId, entry]))
-    const recorded: AgentSessionResumeMarker[][] = []
-    const held: string[] = []
-    const store = {
-      getRecord: () => input.record ?? record(),
-      resumeMarkers: {
-        list: () => [...live.values()],
-        record: async (markers: readonly AgentSessionResumeMarker[]) => {
-          recorded.push([...markers])
-          live.clear()
-          markers.forEach((entry) => live.set(entry.sessionId, entry))
-        },
-        consume: async (sessionId: string) => live.delete(sessionId)
-      }
+  // A submission never became a turn, so its dispatch state carries the same evidence a turn state
+  // does: settled to `unknown` by the close path, or still `pending` because nothing settled it.
+  it.each(['pending', 'unknown'] as const)(
+    'offers a send left %s, which nothing ever answered',
+    (dispatchState) => {
+      const candidates = resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [],
+        submissions: [submission('msg-1', dispatchState)]
+      })
+
+      expect(candidates).toHaveLength(1)
+      expect(candidates[0]?.work).toEqual({ kind: 'submission', id: 'msg-1' })
     }
-    const sent: { sessionId: string; text: string }[] = []
-    const sessions =
-      input.sessions ??
-      new Map([
-        [
-          SESSION,
-          {
-            journal: journal([turnItem('turn-1', 'interrupted')]),
-            hasProviderChild: false,
-            fence: 1
-          }
-        ]
-      ])
-    return {
-      restartResume: createStructuredAgentSessionRestartResume(
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the collaborator reads only getRecord and resumeMarkers from the store, and supportsCreate from the adapter.
-        { store, adapter: { supportsCreate: () => true } } as never,
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the live-session map is read for journal, hasProviderChild and fence only.
-        sessions as never,
-        {
-          revealSession: async () => ({ readable: true }),
-          hold: async (sessionId: string) => {
-            if (input.holdFails) {
-              throw new Error('provider refused the reconnect')
-            }
-            held.push(sessionId)
-          },
-          send: async ({ envelope, body }) => {
-            sent.push({
-              sessionId: envelope.sessionId,
-              // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: restartContinuationBody builds exactly one text block, which is what this assertion reads.
-              text: (body.blocks[0] as { text: string }).text
-            })
-            return { ok: true }
-          },
-          now: () => NOW
-        }
-      ),
-      live,
-      recorded,
-      held,
-      sent
+  )
+
+  // An accepted send BECAME a turn, and a rejected one never ran. Neither is interrupted work, and
+  // resuming on either hands a provider child to a conversation that does not owe one.
+  it.each(['accepted', 'rejected'] as const)(
+    'refuses a send that settled as %s',
+    (dispatchState) => {
+      expect(
+        resumableSet({
+          markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+          items: [],
+          submissions: [submission('msg-1', dispatchState)]
+        })
+      ).toEqual([])
     }
-  }
+  )
 
-  // The structural guarantee behind "the checkbox can never continue": the reconnect path contains
-  // no send at all, so no setting, and no automatic launch, can turn it into a continuation.
-  it('never sends a message when reconnecting', async () => {
-    const { restartResume, held, sent } = surface({})
-
-    await restartResume.resume(undefined, 'modal')
-
-    expect(held).toEqual([SESSION])
-    expect(sent).toEqual([])
+  it('refuses a submission marker the journal has no record of', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'submission', id: 'msg-1' } })],
+        items: [],
+        submissions: [submission('msg-other', 'pending')]
+      })
+    ).toEqual([])
   })
 
-  it('reconnects and then sends exactly one continuation carrying the shared message', async () => {
-    const { restartResume, held, sent } = surface({})
-
-    const result = await restartResume.continueAfterRestart(undefined, 'modal')
-
-    expect(held).toEqual([SESSION])
-    expect(sent).toEqual([{ sessionId: SESSION, text: AGENT_SESSION_RESTART_CONTINUATION_MESSAGE }])
-    expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'continued' }])
-  })
-
-  // The predicate refused it, so it is not even a candidate and the loop never sees it.
-  it('sends nothing to a session that was never eligible', async () => {
-    const { restartResume, sent } = surface({ markers: [marker({ turnId: 'turn-elsewhere' })] })
-
-    const result = await restartResume.continueAfterRestart(undefined, 'modal')
-
-    expect(sent).toEqual([])
-    expect(result.continued).toEqual([])
-  })
-
-  // The case that actually exercises the gate: an ELIGIBLE session whose reconnect failed. It
-  // reaches the loop as a refused outcome, and continuation must still not send to it.
-  it('sends nothing to a session that did not reconnect', async () => {
-    const { restartResume, sent, held } = surface({ holdFails: true })
-
-    const result = await restartResume.continueAfterRestart(undefined, 'modal')
-
-    expect(held).toEqual([])
-    expect(sent).toEqual([])
-    expect(result.continued).toEqual([
-      { sessionId: SESSION, outcome: 'refused', reason: 'provider refused the reconnect' }
-    ])
-  })
-
-  it('offers and resumes an eligible session', async () => {
-    const { restartResume, held } = surface({})
-
-    expect(await restartResume.list()).toHaveLength(1)
-    await restartResume.resume(undefined, 'modal')
-
-    expect(held).toEqual([SESSION])
-  })
-
-  // Turning the prompt down must not leave anything that can bring it back next launch — including
-  // a marker that was never eligible in the first place.
-  it('spends every live marker on dismiss, eligible or not', async () => {
-    const ineligible = marker({ sessionId: 'session-working-2', turnId: 'turn-elsewhere' })
-    const { restartResume, live } = surface({ markers: [marker(), ineligible] })
-
-    expect(await restartResume.dismiss()).toBe(2)
-
-    expect(live.size).toBe(0)
-    expect(await restartResume.list()).toEqual([])
-  })
-
-  // TOCTOU: the chat's own pane binds between the offer and the click, the lease goes live, and the
-  // predicate drops the session. Reporting "nothing happened" would leave the user pressing a dead
-  // button for a session that IS running.
-  it('reports a session the chat pane already re-acquired as resumed, not as nothing', async () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; only claimStatus is overridden, to model a lease the pane re-took.
-    const liveRecord = {
-      ...record(),
-      lease: { ...record().lease, claimStatus: 'live' }
-    } as AgentSessionRecord
-    const { restartResume, live, held } = surface({
-      record: liveRecord,
-      sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'interrupted')]), hasProviderChild: true }]
-      ])
-    })
-
-    const outcomes = await restartResume.resume([SESSION], 'modal')
-
-    expect(outcomes).toEqual([
-      { sessionId: SESSION, outcome: 'resumed', reason: 'agent_session_resume_already_live' }
-    ])
-    // Spent, so the prompt cannot offer it again, and no second hold was taken.
-    expect(live.size).toBe(0)
-    expect(held).toEqual([])
-  })
-
-  // Relaxing the lease clause must not relax the whole predicate. "Resume all" targets every
-  // marker, so a held-but-ineligible session would otherwise be consumed and counted as resumed.
-  it('refuses to settle an already-live session the predicate rejects', async () => {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the base fixture is already record-shaped; only claimStatus is overridden, to model a lease the pane re-took.
-    const liveRecord = {
-      ...record(),
-      lease: { ...record().lease, claimStatus: 'live' }
-    } as AgentSessionRecord
-    const { restartResume, live, held } = surface({
-      record: liveRecord,
-      sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-1', 'completed')]), hasProviderChild: true }]
-      ])
-    })
-
-    const outcomes = await restartResume.resume(undefined, 'modal')
-
-    expect(outcomes).toEqual([])
-    // The marker survives: nothing was resumed, so nothing may be spent.
-    expect(live.size).toBe(1)
-    expect(held).toEqual([])
-  })
-
-  // The client names ids; only the host decides which of them may have a provider child.
-  it('resumes nothing for a session id the caller invented', async () => {
-    const { restartResume, held } = surface({})
-
-    const outcomes = await restartResume.resume(['session-not-offered-1'], 'modal')
-
-    expect(outcomes).toEqual([])
-    expect(held).toEqual([])
-  })
-
-  // Quitting while the prompt is open: the offered session has no provider child in THIS
-  // generation, so teardown mints no marker for it and the replace-the-whole-set write clears the
-  // old one. The offer is discarded rather than resurrected, and nothing can double-fire.
-  it('leaves no marker behind when the user quits with the offer still open', async () => {
-    const { restartResume, live, recorded } = surface({})
-
-    await restartResume.recordMarkers('quit')
-
-    expect(recorded).toEqual([[]])
-    expect(live.size).toBe(0)
-  })
-
-  it('re-marks a session whose resume is already running when the next quit lands', async () => {
-    const { restartResume, recorded } = surface({
-      sessions: new Map([
-        [SESSION, { journal: journal([turnItem('turn-2', 'running')]), hasProviderChild: true }]
-      ])
-    })
-
-    await restartResume.recordMarkers('update')
-
-    expect(recorded[0]).toEqual([
-      {
-        sessionId: SESSION,
-        turnId: 'turn-2',
-        recordedAt: NOW,
-        trigger: 'update',
-        providerHandleRoot: HANDLE_ROOT
-      }
-    ])
+  // The two identities must not be interchangeable: a turn marker may never be satisfied by a
+  // submission that happens to share its id, or the journal stops being an independent witness.
+  it('refuses a turn marker whose id only matches a submission', () => {
+    expect(
+      resumableSet({
+        markers: [marker({ work: { kind: 'turn', id: 'msg-1' } })],
+        items: [],
+        submissions: [submission('msg-1', 'pending')]
+      })
+    ).toEqual([])
   })
 })
 
@@ -634,7 +419,7 @@ describe('spending a marker', () => {
     sessionId,
     workspaceId: 'workspace-1',
     agent: 'codex' as const,
-    turnId: 'turn-1',
+    work: { kind: 'turn' as const, id: 'turn-1' },
     trigger: 'quit' as const,
     recordedAt: NOW,
     latestPrompt: ''

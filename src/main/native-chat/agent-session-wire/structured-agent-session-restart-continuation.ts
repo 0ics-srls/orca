@@ -15,9 +15,21 @@ import {
 } from '../../../shared/agent-session-restart-continuation'
 import { structuredAgentSessionResumeOperationId } from './structured-agent-session-resume-eligibility'
 
+/**
+ * All four dispatch states are preserved, never collapsed into transport success.
+ *
+ * The send layer answers `ok: true` as soon as Orca OWNS the message — a rejected or unverifiable
+ * provider dispatch is recorded inside the submission, not on the envelope. Reading only the
+ * envelope reports a refused `turn/start` as continued and stamps the journal saying so.
+ *
+ *   accepted  -> `continued`, and only this appends the attribution note
+ *   pending   -> `pending`: journaled and handed off, not yet confirmed by the provider
+ *   unknown   -> `unknown`: delivery unverifiable, never reported as either success or failure
+ *   rejected  -> `refused`, carrying the provider's reason
+ */
 export type StructuredAgentSessionContinuationOutcome = {
   sessionId: string
-  outcome: 'continued' | 'refused'
+  outcome: 'continued' | 'pending' | 'unknown' | 'refused'
   reason?: string
 }
 
@@ -60,7 +72,12 @@ export type StructuredAgentSessionContinuationDeps = {
   send: (input: {
     envelope: AgentSessionMutationEnvelope
     body: AgentJournalMessageItem
-  }) => Promise<{ ok: boolean; refusal?: { code: string } }>
+  }) => Promise<{
+    ok: boolean
+    refusal?: { code: string }
+    /** The submission is where the provider's answer lives; the envelope only says Orca took it. */
+    value?: { submission?: { dispatchState?: string; reason?: string | null } }
+  }>
   /** Records the host-authored journal note that marks this send as Orca's, not the user's. */
   note: (sessionId: string, text: string) => Promise<void>
   now: () => number
@@ -90,8 +107,25 @@ export async function continueStructuredAgentSessionAfterRestart(
       reason: sent.refusal?.code ?? 'agent_session_send_failed'
     }
   }
-  // Best effort: the note is attribution, and losing it must never turn a delivered continuation
-  // into a reported failure.
+  const dispatch = sent.value?.submission?.dispatchState
+  if (dispatch === 'rejected') {
+    return {
+      sessionId,
+      outcome: 'refused',
+      reason: sent.value?.submission?.reason ?? 'agent_session_dispatch_rejected'
+    }
+  }
+  if (dispatch === 'pending') {
+    return { sessionId, outcome: 'pending' }
+  }
+  if (dispatch !== 'accepted') {
+    // `unknown`, or a peer that reported no state at all. Delivery is unverifiable, so this claims
+    // neither success nor failure — and writes no note saying the agent was asked to continue.
+    return { sessionId, outcome: 'unknown' }
+  }
+  // Only an accepted dispatch gets the note: it is a durable claim that Orca asked this agent to
+  // carry on, and it must not sit beside a message the provider refused or never confirmed. Best
+  // effort beyond that — losing the note must not turn a delivered continuation into a failure.
   await deps.note(sessionId, AGENT_SESSION_RESTART_CONTINUATION_NOTE).catch(() => undefined)
   return { sessionId, outcome: 'continued' }
 }

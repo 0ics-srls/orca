@@ -16,10 +16,46 @@ import { projectStructuredAgentSessionStatus } from '../../../shared/structured-
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type {
   AgentSessionResumeMarker,
-  AgentSessionResumeTrigger
+  AgentSessionResumeTrigger,
+  AgentSessionResumeWork
 } from '../../../shared/agent-session-resume-marker'
+import type {
+  AgentJournalRenderItem,
+  AgentJournalSubmission
+} from '../../../shared/agent-session-journal-types'
 import { activeStructuredAgentSessionTurnId } from '../../../shared/structured-agent-session-live-turn'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
+
+/** A send Orca journaled that the provider has neither opened a turn for nor refused. Mirrors the
+ *  projection's own unanswered-dispatch rule, which is what makes that window read as `working`. */
+function pendingSubmissionInFlight(
+  submissions: readonly AgentJournalSubmission[]
+): AgentJournalSubmission | null {
+  for (let index = submissions.length - 1; index >= 0; index -= 1) {
+    const submission = submissions[index]
+    if (
+      submission &&
+      submission.recovered !== true &&
+      (submission.dispatchState === 'pending' || submission.dispatchState === 'unknown')
+    ) {
+      return submission
+    }
+  }
+  return null
+}
+
+/** The work identity to record: a running turn if one exists, else the send still awaiting one. */
+export function structuredAgentSessionWorkInFlight(
+  items: readonly AgentJournalRenderItem[],
+  submissions: readonly AgentJournalSubmission[]
+): AgentSessionResumeWork | null {
+  const turnId = activeStructuredAgentSessionTurnId(items)
+  if (turnId) {
+    return { kind: 'turn', id: turnId }
+  }
+  const submission = pendingSubmissionInFlight(submissions)
+  return submission ? { kind: 'submission', id: submission.clientMessageId } : null
+}
 
 type WorkingCandidateSession = {
   journal: AgentSessionJournal
@@ -31,6 +67,8 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
   sessions: ReadonlyMap<string, WorkingCandidateSession>
   getRecord: (sessionId: string) => AgentSessionRecord | null
   trigger: AgentSessionResumeTrigger
+  /** Identity of the launch that is dying. Only the launch immediately after it may act on these. */
+  launchId: string
   now: number
 }): AgentSessionResumeMarker[] {
   const markers: AgentSessionResumeMarker[] = []
@@ -57,8 +95,11 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
     if (status !== 'working') {
       continue
     }
-    const turnId = activeStructuredAgentSessionTurnId(snapshot.items)
-    if (!turnId) {
+    // A running turn when there is one; otherwise the send that has not become a turn YET. Claude
+    // cannot write its turn until the SDK echoes the message back, and dropping the session for
+    // that window under-offers exactly the chats that were working hardest.
+    const work = structuredAgentSessionWorkInFlight(snapshot.items, snapshot.submissions)
+    if (!work) {
       continue
     }
     const head = agentSessionProviderHandleChainHead(
@@ -69,9 +110,10 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
     }
     markers.push({
       sessionId,
-      turnId,
+      work,
       recordedAt: input.now,
       trigger: input.trigger,
+      launchId: input.launchId,
       // Root, not key: the close path advances Claude's leaf moments after this runs, and a key
       // comparison would then refuse the session forever.
       providerHandleRoot: agentSessionProviderHandleRoot(head.handle)

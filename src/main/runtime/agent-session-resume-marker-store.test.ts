@@ -1,5 +1,5 @@
-// Markers on disk: they survive a restart, they are spent exactly once, they expire, and a
-// malformed one can never cost the user their session store.
+// Markers on disk: they survive a restart, the next launch clears them wholesale, they expire, and
+// a malformed one can never cost the user their session store.
 
 import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -18,10 +18,11 @@ const SESSION = 'session-working-1'
 function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSessionResumeMarker {
   return {
     sessionId: SESSION,
-    turnId: 'turn-1',
+    work: { kind: 'turn', id: 'turn-1' },
     recordedAt: NOW,
     trigger: 'quit',
     providerHandleRoot: 'codex:"thread-1"',
+    launchId: 'launch-previous',
     ...overrides
   }
 }
@@ -65,12 +66,18 @@ describe('durable resume markers', () => {
     ])
   })
 
-  it('spends a marker exactly once', async () => {
+  // The claim deletes every marker in one step, refused ones included, so no later launch can find
+  // one to re-examine.
+  it('clears every marker durably, including ones the claiming launch will refuse', async () => {
     const store = await openStore()
-    await store.resumeMarkers.record([marker()], NOW)
+    await store.resumeMarkers.record(
+      [marker(), marker({ sessionId: 'session-working-2', launchId: 'launch-older' })],
+      NOW
+    )
 
-    expect(await store.resumeMarkers.consume(SESSION)).toBe(true)
-    expect(await store.resumeMarkers.consume(SESSION)).toBe(false)
+    await store.resumeMarkers.clear()
+
+    expect(store.resumeMarkers.list(NOW)).toEqual([])
     expect((await openStore()).resumeMarkers.list(NOW)).toEqual([])
   })
 
@@ -96,7 +103,7 @@ describe('durable resume markers', () => {
     const filePath = agentSessionStorePath(directory)
     const parsed = JSON.parse(await readFile(filePath, 'utf-8'))
     parsed.resumeMarkers = {
-      [SESSION]: { sessionId: SESSION, turnId: 42, trigger: 'nonsense' },
+      [SESSION]: { sessionId: SESSION, work: { kind: 'turn', id: 42 }, trigger: 'nonsense' },
       'session-working-2': marker({ sessionId: 'session-working-2' })
     }
     await writeFile(filePath, JSON.stringify(parsed))

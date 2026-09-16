@@ -17,10 +17,24 @@ export type AgentSessionResumeTrigger = (typeof AGENT_SESSION_RESUME_TRIGGERS)[n
  *  the user has long since forgotten, and an obligation with no expiry strands forever. */
 export const AGENT_SESSION_RESUME_MARKER_TTL_MS = 24 * 60 * 60 * 1000
 
+/**
+ * WHAT the session was working on, in whichever identity that work actually had.
+ *
+ * A turn id is not always available. Codex declares its turn within ~150ms, but Claude cannot write
+ * a running turn until the SDK echoes the user message back — seconds on real journals. A send is
+ * journaled before provider dispatch, so the projection already calls that window `working`. Forcing
+ * a turn-id shape onto it would drop exactly those genuinely-working Claude sessions, so a
+ * submission carries its own identity instead of being made to look like a turn.
+ */
+export type AgentSessionResumeWork =
+  | { kind: 'turn'; id: string }
+  | { kind: 'submission'; id: string }
+
 export type AgentSessionResumeMarker = {
   sessionId: string
-  /** The turn that was running when teardown observed it, from the live journal. */
-  turnId: string
+  /** The work in flight when teardown observed it — a running turn, or a send that had not yet
+   *  become one. */
+  work: AgentSessionResumeWork
   /** Execution host's clock at teardown. */
   recordedAt: number
   trigger: AgentSessionResumeTrigger
@@ -34,12 +48,29 @@ export type AgentSessionResumeMarker = {
    * preserve — a resume that changes it forked — which is exactly what this guard is for.
    */
   providerHandleRoot: string
+  /**
+   * Identity of the launch whose teardown wrote this.
+   *
+   * The adjacency proof: a launch accepts a marker only when this equals the id of the launch
+   * immediately before it. Without it the marker is a durable write-ahead latch with a 24h TTL —
+   * a previous generation's marker stays actionable after a failed clear, a timed-out teardown
+   * write, or a store restored from its backup, and auto mode would act on it silently.
+   */
+  launchId: string
 }
 
 const MAX_FIELD_LENGTH = 512
 
 function isMarkerField(value: unknown): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= MAX_FIELD_LENGTH
+}
+
+function isAgentSessionResumeWork(value: unknown): value is AgentSessionResumeWork {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+  const kind = Reflect.get(value, 'kind')
+  return (kind === 'turn' || kind === 'submission') && isMarkerField(Reflect.get(value, 'id'))
 }
 
 export function isAgentSessionResumeMarker(value: unknown): value is AgentSessionResumeMarker {
@@ -50,8 +81,9 @@ export function isAgentSessionResumeMarker(value: unknown): value is AgentSessio
   const trigger = Reflect.get(value, 'trigger')
   return (
     isMarkerField(Reflect.get(value, 'sessionId')) &&
-    isMarkerField(Reflect.get(value, 'turnId')) &&
+    isAgentSessionResumeWork(Reflect.get(value, 'work')) &&
     isMarkerField(Reflect.get(value, 'providerHandleRoot')) &&
+    isMarkerField(Reflect.get(value, 'launchId')) &&
     typeof recordedAt === 'number' &&
     Number.isSafeInteger(recordedAt) &&
     recordedAt >= 0 &&

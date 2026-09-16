@@ -1,17 +1,29 @@
 // The host's restart-resume surface: what teardown records, what may resume, and the one call that
 // resumes it.
 //
-// Assembled here rather than on the host for the same reason holds and handoffs were — the host is
-// a coordinator, and a marker set that has to open journals before it can adjudicate them reads
-// better next to the predicate it feeds.
+// TWO TIERS, deliberately. Teardown writes a durable marker; startup CLAIMS that marker into
+// launch-scoped memory and deletes the durable copy in the same step. The durable fact therefore
+// dies at claim time, not at use time, which is what makes a stranded marker impossible: a failed
+// resume, a timed-out teardown write, or a store restored from its `.bak` can no longer leave
+// something actionable behind, because nothing actionable is left on disk and the claim dies with
+// the process.
+//
+// The marker also carries the id of the launch that wrote it, and only the launch immediately after
+// it may act on it. Without that stamp a marker from an older generation stays valid for its whole
+// 24h TTL — and in automatic mode it would be acted on silently.
 
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
-import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
+import type { AgentSessionLaunchGeneration } from '../../runtime/agent-session-launch-generation'
+import type {
+  AgentSessionResumeMarker,
+  AgentSessionResumeTrigger
+} from '../../../shared/agent-session-resume-marker'
 import {
   latestStructuredAgentSessionPrompt,
   newestStructuredAgentSessionTurn
 } from '../../../shared/structured-agent-session-projection'
-import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
+import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
+import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import type { StructuredAgentSessionAdapter } from './structured-agent-session-adapter'
 import { adapterSupportsRecord } from './structured-agent-session-provider-support'
@@ -24,13 +36,11 @@ import {
   StructuredAgentSessionResumeAdmission,
   type StructuredAgentSessionResumeOutcome
 } from './structured-agent-session-restart-resume-runner'
-import { structuredAgentSessionsWorkingAtTeardown } from './structured-agent-session-working-at-teardown'
 import {
   continueStructuredAgentSessionAfterRestart,
   type StructuredAgentSessionContinuationOutcome
 } from './structured-agent-session-restart-continuation'
-import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
-import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
+import { structuredAgentSessionsWorkingAtTeardown } from './structured-agent-session-working-at-teardown'
 
 type LiveSession = { journal: AgentSessionJournal; hasProviderChild: boolean; fence: number }
 
@@ -67,18 +77,62 @@ export type StructuredAgentSessionRestartResume = {
 }
 
 export function createStructuredAgentSessionRestartResume(
-  deps: { store: AgentSessionRecordStore; adapter: StructuredAgentSessionAdapter },
+  deps: {
+    store: AgentSessionRecordStore
+    adapter: StructuredAgentSessionAdapter
+    /** Absent only where a host is built without the runtime wiring it — a test harness. The
+     *  fallback proves no adjacency, so such a host claims nothing. */
+    launchGeneration?: AgentSessionLaunchGeneration
+  },
   /** The host's LIVE session map — the only honest answer to "was this actually working". */
   sessions: ReadonlyMap<string, LiveSession>,
   surfaces: RestartResumeSurfaces
 ): StructuredAgentSessionRestartResume {
   const admission = new StructuredAgentSessionResumeAdmission()
   const itemsFor = (sessionId: string) => sessions.get(sessionId)?.journal.snapshot().items ?? []
+  // `previous: null` accepts nothing, and markers stamped `unproven` can never match a real launch
+  // id, so an unwired host neither claims nor creates anything actionable.
+  const launch = deps.launchGeneration ?? { current: 'unproven', previous: null }
 
-  /** Opens any marked session this launch has not, so its journal can answer for itself. An
+  /** The claimed set: markers this launch owns, held only in memory. Null until the claim runs. */
+  let claimed: AgentSessionResumeMarker[] | null = null
+
+  /**
+   * Claims the previous launch's markers exactly once, and deletes EVERY durable marker in the
+   * same step — including ones this launch refuses, so a non-adjacent marker cannot be re-examined
+   * by a later launch either.
+   *
+   * Fails closed: an unprovable adjacency (`previous === null`) claims nothing, and a clear that
+   * throws claims nothing rather than proceeding with markers still live on disk.
+   */
+  const claimMarkers = async (): Promise<AgentSessionResumeMarker[]> => {
+    if (claimed) {
+      return claimed
+    }
+    const stored = deps.store.resumeMarkers.list(surfaces.now())
+    const adjacent =
+      launch.previous === null ? [] : stored.filter((marker) => marker.launchId === launch.previous)
+    try {
+      await deps.store.resumeMarkers.clear()
+    } catch {
+      claimed = []
+      return claimed
+    }
+    claimed = adjacent
+    return claimed
+  }
+
+  /** Spends one claimed marker. In memory, because the durable copy is already gone. */
+  const spendClaimed = (sessionId: string): boolean => {
+    const before = claimed?.length ?? 0
+    claimed = (claimed ?? []).filter((marker) => marker.sessionId !== sessionId)
+    return claimed.length < before
+  }
+
+  /** Opens any claimed session this launch has not, so its journal can answer for itself. An
    *  unreadable journal leaves the predicate with one record instead of two, which refuses. */
-  const revealMarked = async (): Promise<AgentSessionResumeMarker[]> => {
-    const markers = deps.store.resumeMarkers.list(surfaces.now())
+  const revealClaimed = async (): Promise<AgentSessionResumeMarker[]> => {
+    const markers = await claimMarkers()
     for (const marker of markers) {
       if (!sessions.has(marker.sessionId)) {
         await surfaces.revealSession(marker.sessionId).catch(() => null)
@@ -96,19 +150,24 @@ export function createStructuredAgentSessionRestartResume(
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
       journalTurn: (sessionId) => newestStructuredAgentSessionTurn(itemsFor(sessionId)),
+      journalSubmission: (sessionId, clientMessageId) =>
+        sessions
+          .get(sessionId)
+          ?.journal.submissions()
+          .find((submission) => submission.clientMessageId === clientMessageId) ?? null,
       latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
       now: surfaces.now(),
       leaseState
     })
 
   const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> =>
-    derive(await revealMarked(), 'must-be-released')
+    derive(await revealClaimed(), 'must-be-released')
 
   const resume = async (
     sessionIds: readonly string[] | undefined,
     owner: string
   ): Promise<StructuredAgentSessionResumeOutcome[]> => {
-    const markers = await revealMarked()
+    const markers = await revealClaimed()
     const requested = new Set(sessionIds ?? markers.map((entry) => entry.sessionId))
     // Re-derived at CLICK time, never taken from the caller: a client may name any session id,
     // and only the predicate decides which of them is allowed a provider child.
@@ -118,7 +177,7 @@ export function createStructuredAgentSessionRestartResume(
     const outcomes = await resumeStructuredAgentSessionsFromRestart(
       {
         admission,
-        consumeMarker: (sessionId) => deps.store.resumeMarkers.consume(sessionId),
+        consumeMarker: async (sessionId) => spendClaimed(sessionId),
         resume: (sessionId) => surfaces.hold(sessionId, `restart-resume:${sessionId}`)
       },
       candidates,
@@ -140,7 +199,7 @@ export function createStructuredAgentSessionRestartResume(
       if (sessions.get(sessionId)?.hasProviderChild !== true) {
         continue
       }
-      await deps.store.resumeMarkers.consume(sessionId)
+      spendClaimed(sessionId)
       outcomes.push({
         sessionId,
         outcome: 'resumed',
@@ -206,25 +265,25 @@ export function createStructuredAgentSessionRestartResume(
           sessions,
           getRecord: deps.store.getRecord,
           trigger,
+          launchId: launch.current,
           now: surfaces.now()
         }),
         surfaces.now()
       ),
     list,
     /**
-     * Turning the offer down, which SPENDS the markers.
+     * Turning the offer down, which spends the claim.
      *
-     * A prompt that returns at every launch is worse than the problem it solves. Nothing is lost by
-     * spending them: the first resume-capable hold on a childless session re-acquires the provider
-     * at the same proved cursor, so opening the chat still resumes it. Every live marker goes, not
-     * just the eligible ones, so an ineligible marker cannot make the prompt reappear either.
+     * A prompt that returns at every launch is worse than the problem it solves. Nothing is lost:
+     * the first resume-capable hold on a childless session re-acquires the provider at the same
+     * proved cursor, so opening the chat still reconnects it. The durable markers are already gone
+     * — the claim deleted them — so this only has to empty the launch-scoped set.
      */
     dismiss: async () => {
-      const markers = deps.store.resumeMarkers.list(surfaces.now())
-      for (const marker of markers) {
-        await deps.store.resumeMarkers.consume(marker.sessionId)
-      }
-      return markers.length
+      const markers = await claimMarkers()
+      const spent = markers.length
+      claimed = []
+      return spent
     },
     resume,
     continueAfterRestart
