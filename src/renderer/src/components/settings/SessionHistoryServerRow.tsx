@@ -25,8 +25,7 @@ export function SessionHistoryServerRow({
   details,
   refresh = 0,
   onError,
-  onStateChange,
-  onUserToggle
+  onStateChange
 }: {
   environment: PublicKnownRuntimeEnvironment
   details: RuntimeHostDetails | undefined
@@ -35,7 +34,6 @@ export function SessionHistoryServerRow({
   onError: (message: string | null) => void
   /** Lets the pane count and order computers it does not itself poll. */
   onStateChange?: (environmentId: string, state: SessionSearchComputerState) => void
-  onUserToggle?: (environmentId: string, enabled: boolean) => void
 }): React.JSX.Element {
   const hostId = toRuntimeExecutionHostId(environment.id)
   const mounted = useMountedRef()
@@ -93,7 +91,6 @@ export function SessionHistoryServerRow({
   }
 
   function toggle(): Promise<void> {
-    onUserToggle?.(environment.id, !enabled)
     return setEnabled(!enabled)
   }
 

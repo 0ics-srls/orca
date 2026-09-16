@@ -17939,16 +17939,12 @@
       "clearedAndTurnedOff": "Search turned off and search data cleared.",
       "thisComputer": "This computer",
       "remoteServers": "Orca remote servers",
-      "summaryOn": "On {{on}} of {{total}} computers",
-      "summaryOffline": "{{offline}} offline",
-      "summaryNeedUpdate": "{{needUpdate}} need an update",
-      "summaryAutoEnable": "New computers turn on when they can.",
-      "turnOnAll": "Turn on all",
       "showMore": "Show {{count}} more",
       "showFewer": "Show fewer",
       "openInSidebar": "Open in the sidebar",
       "openInSidebarCopy": "Type what you remember, or ask an agent: “find the session where we fixed the login timeout.”",
-      "open": "Open"
+      "open": "Open",
+      "enableOnAll": "Enable on all computers"
     }
   }
 }

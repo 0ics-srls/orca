@@ -22,8 +22,6 @@ import { SessionSearchComputerList } from './SessionSearchComputerList'
 import {
   isTurnOnableSessionSearchState,
   orderSessionSearchServers,
-  sessionSearchSummarySentence,
-  summarizeSessionSearchComputers,
   type SessionSearchComputerEntry,
   type SessionSearchComputerState
 } from './session-search-computer-rollup'
@@ -33,7 +31,6 @@ import {
   sessionSearchStatusDetails,
   sessionSearchStatusMessage
 } from './session-history-status-copy'
-import { useSessionSearchAutoEnable } from './use-session-search-auto-enable'
 import { useSessionSearchStatus } from './use-session-search-status'
 import { useRuntimeEnvironmentCatalog } from './use-runtime-environment-catalog'
 
@@ -45,7 +42,6 @@ export function SessionHistorySettingsPane({
   updateSettings: (updates: Partial<GlobalSettings>) => Promise<void>
 }): React.JSX.Element {
   const policy = resolveAiVaultSearchSettings(settings)
-  const autoEnableNewComputers = settings.aiVaultSearchAutoEnableNewComputers === true
   const isWebClient = isWebClientLocation()
   const closeSettingsPage = useAppStore((state) => state.closeSettingsPage)
   const showAiVaultSearch = useAppStore((state) => state.showAiVaultSearch)
@@ -53,9 +49,6 @@ export function SessionHistorySettingsPane({
   const [error, setError] = useState<string | null>(null)
   const [refresh, setRefresh] = useState(0)
   const [serverStates, setServerStates] = useState<Record<string, SessionSearchComputerState>>({})
-  const [userToggledServers, setUserToggledServers] = useState<ReadonlySet<string>>(
-    () => new Set<string>()
-  )
   const { environments, detailsByEnvironmentId } = useRuntimeEnvironmentCatalog()
   const localRead = useSessionSearchStatus({
     executionHostId: LOCAL_EXECUTION_HOST_ID,
@@ -82,18 +75,11 @@ export function SessionHistorySettingsPane({
     state: serverStates[environment.id] ?? 'checking',
     environment
   }))
-  const summary = summarizeSessionSearchComputers([localEntry, ...serverEntries])
   const orderedServers = orderSessionSearchServers(serverEntries)
-  // Rebuilt each render on purpose: the hook keys off the host ids, not this array.
-  const autoEnableTargets = serverEntries
-    .filter(
-      (entry) => isTurnOnableSessionSearchState(entry.state) && !userToggledServers.has(entry.id)
-    )
-    .map((entry) => ({
-      id: entry.id,
-      hostId: toRuntimeExecutionHostId(entry.id),
-      name: entry.name
-    }))
+  // The button's whole reason to exist: a paired server this client could switch on right now.
+  const enableableServers = serverEntries.filter((entry) =>
+    isTurnOnableSessionSearchState(entry.state)
+  )
 
   const handleServerState = useCallback(
     (environmentId: string, state: SessionSearchComputerState) => {
@@ -130,48 +116,25 @@ export function SessionHistorySettingsPane({
     return save({ enabled: !policy.enabled })
   }
 
-  /** A hand-off the user made themselves overrides the standing "turn on new computers" consent. */
-  function noteServerToggledByHand(environmentId: string, enabled: boolean): void {
-    setUserToggledServers((current) => {
-      if (current.has(environmentId)) {
-        return current
-      }
-      const next = new Set(current)
-      next.add(environmentId)
-      return next
-    })
-    if (!enabled && autoEnableNewComputers) {
-      void updateSettings({ aiVaultSearchAutoEnableNewComputers: false })
-    }
-  }
-
-  async function turnOnEveryComputer(): Promise<void> {
+  /** Remembers nothing: what it acts on is read off the rows at the moment it is clicked. */
+  async function enableOnAllComputers(): Promise<void> {
     setBusy(true)
     setError(null)
-    let failed = false
     try {
       if (!policy.enabled) {
         try {
           await writePolicy({ enabled: true })
         } catch {
-          failed = true
           setError(saveErrorMessage())
         }
       }
       // One host at a time: a failure is that host's, and it must not stop the rest.
-      for (const entry of orderedServers) {
-        if (!isTurnOnableSessionSearchState(entry.state)) {
-          continue
-        }
+      for (const entry of enableableServers) {
         try {
           await window.api.aiVault.setSearchEnabled(toRuntimeExecutionHostId(entry.id), true)
         } catch {
-          failed = true
           setError(serverToggleErrorMessage(entry.name))
         }
-      }
-      if (!failed) {
-        await updateSettings({ aiVaultSearchAutoEnableNewComputers: true })
       }
     } finally {
       if (mounted.current) {
@@ -180,13 +143,6 @@ export function SessionHistorySettingsPane({
       }
     }
   }
-
-  useSessionSearchAutoEnable({
-    active: autoEnableNewComputers && !isWebClient,
-    targets: autoEnableTargets,
-    onError: setError,
-    onSettled: () => setRefresh((value) => value + 1)
-  })
 
   /** False when the settings write failed or the pane went away, so the delete is skipped. */
   async function turnSearchOffBeforeDelete(): Promise<boolean> {
@@ -230,23 +186,18 @@ export function SessionHistorySettingsPane({
               )}
         </p>
       </div>
-      {/* With no paired server the line and the button only restate the single switch below them. */}
-      {serverEntries.length === 0 ? null : (
-        <div className="flex items-center justify-between gap-4 pt-2">
-          <p className="text-xs text-muted-foreground">
-            {sessionSearchSummarySentence(summary, autoEnableNewComputers)}
-          </p>
-          {summary.turnOnable > 0 ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={busy}
-              onClick={() => void turnOnEveryComputer()}
-            >
-              {translate('sessionHistory.settings.turnOnAll', 'Turn on all')}
-            </Button>
-          ) : null}
+      {/* Nothing left to switch on means nothing to offer: each row already speaks for itself. */}
+      {enableableServers.length === 0 ? null : (
+        <div className="flex items-center justify-end pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={busy}
+            onClick={() => void enableOnAllComputers()}
+          >
+            {translate('sessionHistory.settings.enableOnAll', 'Enable on all computers')}
+          </Button>
         </div>
       )}
       <SessionSearchComputerList
@@ -271,7 +222,6 @@ export function SessionHistorySettingsPane({
               refresh={refresh}
               onError={setError}
               onStateChange={handleServerState}
-              onUserToggle={noteServerToggledByHand}
             />
           )
         }))}

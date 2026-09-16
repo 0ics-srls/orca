@@ -59,16 +59,14 @@ function pane(
   enabled = false,
   confirm = vi.fn().mockResolvedValue(true),
   save = vi.fn().mockResolvedValue(undefined),
-  historyDays: number | null = null,
-  autoEnableNewComputers = false
+  historyDays: number | null = null
 ) {
   return render(
     <ConfirmationDialogContext.Provider value={confirm}>
       <SessionHistorySettingsPane
         settings={{
           ...getDefaultSettings('/synthetic'),
-          aiVaultSearch: { enabled, historyDays },
-          aiVaultSearchAutoEnableNewComputers: autoEnableNewComputers
+          aiVaultSearch: { enabled, historyDays }
         }}
         updateSettings={save}
       />
@@ -110,7 +108,7 @@ function statusByHost(): void {
     return answer
   })
 }
-const summaryLine = (): string => screen.getByText(/computers/).textContent ?? ''
+const enableAllButton = () => screen.queryByRole('button', { name: 'Enable on all computers' })
 async function openAdvanced(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
@@ -359,7 +357,7 @@ it('offers only this computer to a paired client, with no server rows', async ()
   expect(screen.getAllByRole('switch')).toHaveLength(1)
   expect(screen.getByRole('switch')).toBeDisabled()
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(enableAllButton()).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Open' })).not.toBeInTheDocument()
   expect(mocks.status).not.toHaveBeenCalled()
 })
@@ -391,57 +389,65 @@ it('leaves a lone computer to its own switch, with no roll-up above it', async (
   pane(true)
   await act(async () => {})
   expect(screen.getAllByRole('switch')).toHaveLength(1)
-  expect(screen.queryByText(/of 1 computers/)).not.toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(enableAllButton()).not.toBeInTheDocument()
   expect(screen.queryByText('This computer')).not.toBeInTheDocument()
   expect(screen.queryByText('Orca remote servers')).not.toBeInTheDocument()
 })
 
-it('counts every computer in one line, leaving out the segments worth zero', async () => {
+it('offers the button only while a paired server is reachable and off', async () => {
   mixedFleet()
   pane(true)
   await act(async () => {})
-  expect(summaryLine()).toBe('On 2 of 5 computers · 1 offline · 1 need an update')
-  mocks.environments = [{ id: 'off', name: 'gpu-a' }]
-  mocks.details = { off: CONNECTED_DETAILS }
-  mocks.statusByHost = { local: current, 'runtime:off': off }
+  expect(enableAllButton()).toBeInTheDocument()
+
+  // gpu-a was the only eligible one; with it on, the offline and too-old rows leave nothing to do.
+  mocks.statusByHost = { ...mocks.statusByHost, 'runtime:off': current }
   statusByHost()
   cleanup()
   pane(true)
   await act(async () => {})
-  expect(summaryLine()).toBe('On 1 of 2 computers')
+  expect(enableAllButton()).not.toBeInTheDocument()
 })
 
-it('turns on every reachable computer and skips the ones it cannot', async () => {
+it('does not offer the button for a server whose state is still unknown', async () => {
+  mocks.environments = [{ id: 'a', name: 'gpu-a' }]
+  mocks.details = {}
+  mocks.statusByHost = { local: current }
+  statusByHost()
+  pane(true)
+  await act(async () => {})
+  expect(enableAllButton()).not.toBeInTheDocument()
+})
+
+it('enables every reachable server and skips the ones it cannot', async () => {
   mixedFleet()
   const confirm = vi.fn().mockResolvedValue(true)
-  const save = vi.fn().mockResolvedValue(undefined)
-  pane(true, confirm, save)
+  pane(true, confirm)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable on all computers' }))
   })
   expect(confirm).not.toHaveBeenCalled()
+  // linux 1 is offline and m4 air is too old, so neither is asked; build-01 is already on.
   expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:off'])
-  expect(save).toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
 })
 
-it('turns this computer on as part of turning them all on', async () => {
+it('enables this computer as part of enabling them all', async () => {
   mocks.environments = [{ id: 'off', name: 'gpu-a' }]
   mocks.details = { off: CONNECTED_DETAILS }
   mocks.statusByHost = { local: off, 'runtime:off': off }
   statusByHost()
   const save = vi.fn().mockResolvedValue(undefined)
-  pane(false, vi.fn().mockResolvedValue(true), save)
+  pane(false, undefined, save)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable on all computers' }))
   })
   expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:off', true)
 })
 
-it('keeps going after a host refuses, and withholds the standing consent', async () => {
+it('keeps going after a host refuses, and names the one that did', async () => {
   mocks.environments = [
     { id: 'a', name: 'gpu-a' },
     { id: 'b', name: 'gpu-b' }
@@ -450,53 +456,31 @@ it('keeps going after a host refuses, and withholds the standing consent', async
   mocks.statusByHost = { local: current, 'runtime:a': off, 'runtime:b': off }
   statusByHost()
   mocks.setEnabled.mockRejectedValueOnce(new Error('relay down')).mockResolvedValue(current)
-  const save = vi.fn().mockResolvedValue(undefined)
-  pane(true, vi.fn().mockResolvedValue(true), save)
+  pane(true)
   await act(async () => {})
   await act(async () => {
-    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Enable on all computers' }))
   })
   expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:a', 'runtime:b'])
   expect(screen.getByRole('alert')).toHaveTextContent('Could not change session search on gpu-a')
-  expect(save).not.toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
 })
 
-it('hides the button and says so once nothing is left to turn on', async () => {
-  mocks.environments = [
-    { id: 'a', name: 'gpu-a' },
-    { id: 'gone', name: 'linux 1' }
-  ]
-  mocks.details = { a: CONNECTED_DETAILS, gone: OFFLINE_DETAILS }
-  mocks.statusByHost = { local: current, 'runtime:a': current }
-  statusByHost()
-  pane(true, undefined, undefined, null, true)
-  await act(async () => {})
-  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
-  expect(summaryLine()).toBe('On 2 of 3 computers · 1 offline New computers turn on when they can.')
-})
-
-it('turns on a newly reachable server while the standing consent holds', async () => {
-  mocks.environments = [{ id: 'a', name: 'gpu-a' }]
-  mocks.details = { a: CONNECTED_DETAILS }
-  mocks.statusByHost = { local: current, 'runtime:a': off }
-  statusByHost()
-  pane(true, undefined, undefined, null, true)
-  await act(async () => {})
-  expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:a', true)
-})
-
-it('drops the standing consent when a server is turned off by hand', async () => {
+it('remembers nothing after a server is turned back off by hand', async () => {
   mocks.environments = [{ id: 'a', name: 'gpu-a' }]
   mocks.details = { a: CONNECTED_DETAILS }
   mocks.statusByHost = { local: current, 'runtime:a': current }
   statusByHost()
   const save = vi.fn().mockResolvedValue(undefined)
-  pane(true, vi.fn().mockResolvedValue(true), save, null, true)
+  pane(true, undefined, save)
   await act(async () => {})
+  expect(enableAllButton()).not.toBeInTheDocument()
+  mocks.setEnabled.mockResolvedValue(off)
   await act(async () => {
     fireEvent.click(screen.getByRole('switch', { name: 'Search sessions on gpu-a' }))
   })
-  expect(save).toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: false })
+  // The row went off, so the offer comes straight back; no preference was written either way.
+  expect(enableAllButton()).toBeInTheDocument()
+  expect(save).not.toHaveBeenCalled()
 })
 
 it('folds the list past six computers and orders it by what the user can act on', async () => {
