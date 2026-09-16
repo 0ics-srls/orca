@@ -45,6 +45,15 @@ export function EphemeralVmsPane(): React.JSX.Element {
   const [promptCopied, setPromptCopied] = useState(false)
   const mountedRef = useMountedRef()
   const refreshGenerationRef = useRef(0)
+  const promptResetTimerRef = useRef<number | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (promptResetTimerRef.current !== null) {
+        window.clearTimeout(promptResetTimerRef.current)
+      }
+    }
+  }, [])
 
   // Why: an absent runtime still resolves to the local host, which is what the
   // seven sibling panes rely on to reach the Windows npx preflight.
@@ -127,7 +136,13 @@ export function EphemeralVmsPane(): React.JSX.Element {
       await window.api.ui.writeClipboardText(AGENT_PROMPT)
       useAppStore.getState().recordFeatureInteraction('ephemeral-vm-setup')
       setPromptCopied(true)
-      setTimeout(() => setPromptCopied(false), 1500)
+      if (promptResetTimerRef.current !== null) {
+        window.clearTimeout(promptResetTimerRef.current)
+      }
+      promptResetTimerRef.current = window.setTimeout(() => {
+        promptResetTimerRef.current = null
+        setPromptCopied(false)
+      }, 1500)
     } catch {
       toast.error(
         translate(
