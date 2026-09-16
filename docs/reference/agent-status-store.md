@@ -4,12 +4,11 @@
 
 The current boundary is PR 2A: structured sessions use the hook server's fully
 scoped canonical store; unbound PTY/relay evidence remains in an isolated legacy
-adapter. See [the canonical boundary](./agent-status-canonical-boundary.md).
-Do not remove the renderer bridge or its publication filters in this slice:
-they still carry native-chat child rows.
+adapter. Do not remove the renderer bridge or its publication filters in this
+slice: they still carry native-chat child rows.
 
 The sections below record the original 2026-09-09 rollout. Its PR 1a and PR 1b
-have landed; its proposed PR 2/3 sequence is superseded by the canonical boundary:
+have landed; its proposed PR 2/3 sequence is superseded by that boundary:
 
 1. main-only: every producer writes into one store and `worktree ps` reads it,
    split into 1a (structured sessions join the store) and 1b (the runtime's
