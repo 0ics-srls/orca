@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { peImage } from './windows-pe-image-fixture.mjs'
 
 const require = createRequire(import.meta.url)
 const {
@@ -12,7 +13,6 @@ const {
   verifyPackagedWindowsNodePty
 } = require('./verify-packaged-node-pty-job-ownership.cjs')
 const { CYGWIN_BREAKAWAY_MARKER } = require('./node-pty-job-ownership.cjs')
-import { peImage } from './windows-pe-image-fixture.mjs'
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'packaged-node-pty-job-'))
 const ELECTRON_BUILDER_CONFIG = readFileSync(
@@ -213,6 +213,27 @@ describe('verifyPackagedConptyBreakawayMarker', () => {
     expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(/not a PE image/)
   })
 
+  // A truncated or quarantined artifact reaches the gate looking exactly like a
+  // cross-arch build, and "re-run with --arch" is not the command that fixes it.
+  it('does not blame --arch for a source build that is not a PE image', () => {
+    const resourcesDir = packagedResources({
+      'prebuilds/win32-x64/conpty.node': { cygwinBreakawayDenied: false }
+    })
+    const addonPath = join(
+      resourcesDir,
+      'node_modules',
+      'node-pty',
+      'build',
+      'Release',
+      'conpty.node'
+    )
+    mkdirSync(dirname(addonPath), { recursive: true })
+    writeFileSync(addonPath, Buffer.alloc(0x200))
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(
+      /is not a PE image at all[\s\S]*truncated, empty or quarantined/
+    )
+  })
+
   // The remedy for this one is a rebuild, not a different host, and the
   // difference is a build somebody has to run twice to find out.
   it('blames the wrong-arch source build rather than the host, when there is one', () => {
@@ -293,7 +314,8 @@ describe('verifyPackagedConptyBreakawayMarker', () => {
   })
 
   // Present but unreadable is the state that used to pass, so it must not warn.
-  it('refuses when a candidate is there but cannot be read', () => {
+  // The read error itself is the message; the point is that it does not return.
+  it('fails rather than pass a candidate it cannot read', () => {
     const resourcesDir = packagedResources({})
     mkdirSync(join(resourcesDir, 'node_modules', 'node-pty', 'build', 'Release', 'conpty.node'), {
       recursive: true

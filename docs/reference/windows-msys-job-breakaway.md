@@ -8,7 +8,7 @@ orphan that holds a worktree directory open.
 The denial is already in `config/patches/node-pty@1.1.0.patch`
 (`usesCygwinRuntime`, added in #19068). This page records the measurement
 behind it, because the failure mode it prevents is indistinguishable from a
-stale native addon and the existing gates cannot tell the two apart.
+stale native addon and the gates of the day could not tell the two apart.
 
 ## The mechanism
 

@@ -3,9 +3,9 @@ const { createRequire } = require('node:module')
 const { join } = require('node:path')
 const {
   assertNodePtyJobOwnership,
-  assertCygwinBreakawayDenied,
   conptyDeniesCygwinBreakaway,
-  nodePtyAddonPath
+  nodePtyAddonPath,
+  staleConptySourceBuildError
 } = require('./node-pty-job-ownership.cjs')
 const { normalizeNodePtyWindowsArch } = require('../packaged-runtime-node-modules.cjs')
 const { PE_MACHINE, describePeMachine, readPeMachine } = require('./windows-pe-machine.cjs')
@@ -33,6 +33,12 @@ function packagedConptyCandidates(resourcesDir, targetArch) {
       prebuilt
     }))
   )
+}
+
+function describeCandidates(candidates) {
+  return candidates
+    .map((candidate) => `${candidate.path} (${describePeMachine(candidate.machine)})`)
+    .join(', ')
 }
 
 function loadPackagedConpty(resourcesDir) {
@@ -65,20 +71,11 @@ function verifyPackagedNodePtyJobOwnership(resourcesDir, options = {}) {
  * release built elsewhere could ship a node-pty that leaks every MSYS pane
  * child out of its job. Reading the binary needs neither.
  *
- * It resolves the addon the way the loader does rather than reading one path,
- * because the path that matters is not always build/Release:
- *
- * | package              | build/Release            | prebuild pruned | loads        |
- * | -------------------- | ------------------------ | --------------- | ------------ |
- * | same host, same arch | patched                  | yes             | build/Release|
- * | cross host           | absent, cannot be built  | no              | the prebuild |
- * | cross arch, built    | patched, target arch     | no              | build/Release|
- * | cross arch, failed   | host arch, target cannot load | no         | the prebuild |
- *
- * Only the arch of the binary separates the last two, so this reads the PE
- * machine field instead of assuming. Checking every present file instead would
- * fail row three, whose package is correct and whose leftover prebuild is never
- * reached.
+ * It resolves the addon the way the loader does rather than reading one path:
+ * only the PE machine field separates a cross-arch package that built correctly
+ * from one whose rebuild silently emitted the host's arch, and the first is a
+ * correct package whose leftover prebuild is never reached. See the table in
+ * docs/reference/windows-msys-job-breakaway.md.
  *
  * Nothing loadable is fatal, not skipped: that package has no ConPTY backend,
  * which a gate must not shrug at.
@@ -102,20 +99,17 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
       ].join(' ')
     )
   }
-  const machineOf = options.peMachine ?? readPeMachine
   // Read once: the same header answers "which one loads" and "what did we find".
   const inspected = present.map((candidate) => ({
     ...candidate,
-    machine: machineOf(candidate.path)
+    machine: readPeMachine(candidate.path)
   }))
-  const described = inspected.map(
-    (candidate) => `${candidate.path} (${describePeMachine(candidate.machine)})`
-  )
   const loaded = inspected.find((candidate) => candidate.machine === PE_MACHINE[architecture])
   if (!loaded) {
     throw new Error(
       [
-        `Packaged node-pty for win32-${architecture} has conpty.node at ${described.join(', ')},`,
+        `Packaged node-pty for win32-${architecture} has conpty.node at`,
+        `${describeCandidates(inspected)},`,
         'and the app can load none of them: a Windows process only loads a PE of its own',
         `machine, which for win32-${architecture} is`,
         `0x${PE_MACHINE[architecture].toString(16)}.`,
@@ -124,30 +118,37 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
     )
   }
   const addonPath = loaded.path
-  if ((options.deniesBreakaway ?? conptyDeniesCygwinBreakaway)(addonPath)) {
+  if (conptyDeniesCygwinBreakaway(addonPath)) {
     console.log(
       `[verify-packaged-node-pty] OK — win32-${architecture} loads ${addonPath}, which denies ` +
         'MSYS job breakaway'
     )
     return
   }
-  // A stale source build is the packaging host's own to rebuild, which is what
-  // assertCygwinBreakawayDenied already says.
   if (!loaded.prebuilt) {
-    assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+    throw staleConptySourceBuildError(addonPath)
   }
   // Past here the app falls back to the published prebuild, which never carries
-  // the patch. Why it fell back decides the remedy, and the two are different
+  // the patch. Why it fell back decides the remedy, and the three are different
   // enough that naming the wrong one wastes the reader's build.
-  const wrongArchSourceBuilds = inspected.filter((candidate) => !candidate.prebuilt)
-  if (wrongArchSourceBuilds.length > 0) {
+  const unusableSourceBuilds = inspected.filter((candidate) => !candidate.prebuilt)
+  if (unusableSourceBuilds.some((candidate) => candidate.machine === null)) {
+    throw new Error(
+      [
+        `Packaged node-pty for win32-${architecture} falls back to ${addonPath}, which predates`,
+        'the Cygwin/MSYS job-breakaway denial, because the source build beside it is not a PE',
+        `image at all: ${describeCandidates(unusableSourceBuilds)}.`,
+        'A truncated, empty or quarantined build artifact looks like this. Rebuild node-pty and',
+        'repackage. See docs/reference/windows-msys-job-breakaway.md.'
+      ].join(' ')
+    )
+  }
+  if (unusableSourceBuilds.length > 0) {
     throw new Error(
       [
         `Packaged node-pty for win32-${architecture} falls back to ${addonPath}, which predates`,
         'the Cygwin/MSYS job-breakaway denial, because the source build beside it is the wrong',
-        `architecture: ${wrongArchSourceBuilds
-          .map((candidate) => `${candidate.path} (${describePeMachine(candidate.machine)})`)
-          .join(', ')}.`,
+        `architecture: ${describeCandidates(unusableSourceBuilds)}.`,
         'A cross-arch rebuild that did not honour --arch looks exactly like this. Re-run',
         `config/scripts/rebuild-native-deps.mjs --platform=win32 --arch=${architecture},`,
         'confirm it emitted a conpty.node of that machine, and repackage.',

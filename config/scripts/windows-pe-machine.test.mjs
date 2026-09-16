@@ -58,6 +58,20 @@ describe('readPeMachine', () => {
   })
 })
 
+describe('peImage fixture', () => {
+  // A fixture that quietly stamps machine 0x0000 for an arch it does not know
+  // is the same species of silent lie these gates exist to catch.
+  it('refuses to invent a machine value for an arch it has none for', () => {
+    expect(() => peImage({ arch: 'ia32' })).toThrow(/must not invent one/)
+  })
+
+  it('still takes an explicit machine, which is how the non-PE cases are built', () => {
+    expect(readPeMachine(writeImage('explicit.node', () => peImage({ machine: 0x1234 })))).toBe(
+      0x1234
+    )
+  })
+})
+
 describe('describePeMachine', () => {
   // The callers put this straight into an error, and "not a PE image" is a
   // different problem from a cross-arch build.

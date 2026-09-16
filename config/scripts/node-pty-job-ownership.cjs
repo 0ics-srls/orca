@@ -38,12 +38,12 @@ function conptyDeniesCygwinBreakaway(addonPath) {
  * that could fix it. `PE_MACHINE` covers the Windows arches Orca ships; anything
  * else this cannot judge, so it does not pretend to.
  */
-function assertRebuiltConptyMatchesArch(addonPath, rebuildArch, peMachine) {
+function assertRebuiltConptyMatchesArch(addonPath, rebuildArch) {
   const expected = PE_MACHINE[rebuildArch]
   if (expected === undefined) {
     return
   }
-  const machine = peMachine(addonPath)
+  const machine = readPeMachine(addonPath)
   if (machine === expected) {
     return
   }
@@ -79,17 +79,15 @@ function assertRebuiltConptyDeniesMsysBreakaway({
   nodePtyDir,
   rebuildArch,
   crossHost,
-  exists = existsSync,
-  peMachine = readPeMachine,
   warn = console.warn
 }) {
   const addonPath = join(nodePtyDir, 'build', 'Release', 'conpty.node')
-  if (exists(addonPath)) {
-    assertRebuiltConptyMatchesArch(addonPath, rebuildArch, peMachine)
+  if (existsSync(addonPath)) {
+    assertRebuiltConptyMatchesArch(addonPath, rebuildArch)
     assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
     return
   }
-  if (crossHost || !exists(nodePtyDir)) {
+  if (crossHost || !existsSync(nodePtyDir)) {
     warn(`[rebuild] no addon at ${addonPath}; could not check the MSYS job-breakaway denial.`)
     return
   }
@@ -158,7 +156,12 @@ function assertCygwinBreakawayDenied(addonPath, native) {
   if (binary.includes(CYGWIN_BREAKAWAY_MARKER)) {
     return
   }
-  throw new Error(
+  throw staleConptySourceBuildError(addonPath)
+}
+
+/** The verdict on a source build that is simply out of date: rebuild it here. */
+function staleConptySourceBuildError(addonPath) {
+  return new Error(
     [
       `node-pty's conpty native at ${addonPath} predates the Cygwin/MSYS job-breakaway denial.`,
       'It exports the job functions, so it looks patched, but its per-PTY job still carries',
@@ -180,5 +183,6 @@ module.exports = {
   assertCygwinBreakawayDenied,
   assertRebuiltConptyDeniesMsysBreakaway,
   conptyDeniesCygwinBreakaway,
-  nodePtyAddonPath
+  nodePtyAddonPath,
+  staleConptySourceBuildError
 }
