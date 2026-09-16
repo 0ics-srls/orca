@@ -7,7 +7,7 @@ export class CodexJournalActiveTurns {
   readonly byThread = new Map<string, Set<string>>()
   /** Host turn-start receipt per remembered turn; the terminal row carries it forward. */
   private readonly startedAtByTurn = new Map<string, number>()
-  /** Opening send's instant per remembered turn, written once and carried forward. */
+  /** Earliest eligible echoed send per remembered turn, carried onto terminal rows. */
   private readonly requestedAtByTurn = new Map<string, number>()
   private activeCount = 0
   private retainedBytes = 0
@@ -47,6 +47,25 @@ export class CodexJournalActiveTurns {
 
   requestedAt(threadId: string, turnId: string): number | undefined {
     return this.requestedAtByTurn.get(this.turnKey(threadId, turnId))
+  }
+
+  requestOriginRevision(
+    threadId: string,
+    turnId: string,
+    requestedAt: number
+  ): { startedAt: number; requestedAt: number } | null {
+    const startedAt = this.startedAt(threadId, turnId)
+    if (startedAt === undefined || requestedAt > startedAt) {
+      return null
+    }
+    const current = this.requestedAt(threadId, turnId)
+    return current === undefined || requestedAt < current ? { startedAt, requestedAt } : null
+  }
+
+  rememberRequestOrigin(threadId: string, turnId: string, requestedAt: number): void {
+    if (this.byThread.get(threadId)?.has(turnId)) {
+      this.requestedAtByTurn.set(this.turnKey(threadId, turnId), requestedAt)
+    }
   }
 
   remember(threadId: string, turnId: string, startedAt?: number, requestedAt?: number): boolean {

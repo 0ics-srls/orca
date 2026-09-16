@@ -133,7 +133,7 @@ export function completedStructuredAgentTurnSeconds(
     return Math.floor(timing.durationMs / 1000)
   }
   return timing.completedAt !== undefined
-    ? Math.floor((timing.completedAt - structuredAgentTurnOrigin(timing)) / 1000)
+    ? Math.max(0, Math.floor((timing.completedAt - structuredAgentTurnOrigin(timing)) / 1000))
     : null
 }
 

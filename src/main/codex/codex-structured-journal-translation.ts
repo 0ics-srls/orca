@@ -88,7 +88,6 @@ export function createCodexJournalTranslator(
     ...(deps.clearPromptTurn ? { clearPromptTurn: deps.clearPromptTurn } : {}),
     flushSuppression: () => genericFrames.flush(),
     resetActivity,
-    ...(deps.openingRequestedAt ? { openingRequestedAt: deps.openingRequestedAt } : {}),
     ...(deps.now ? { now: deps.now } : {})
   })
   const publishActivity = (
@@ -258,6 +257,22 @@ export function createCodexJournalTranslator(
           return publishActivity(event, subagentAdmission)
         }
         const translated = items.handle(event)
+        if (translated.handled && translated.dispatchEcho) {
+          const { clientMessageId, providerIdentity } = translated.dispatchEcho
+          const requestedAt = deps.dispatchRequestedAt?.(clientMessageId) ?? null
+          if (requestedAt !== null && providerIdentity.provider === 'codex') {
+            const attribution = turnBoundaries.attributeRequest({
+              sessionId: event.sessionId,
+              threadId: providerIdentity.threadId,
+              turnId: providerIdentity.turnId,
+              requestedAt
+            })
+            if (!attribution.accepted) {
+              return attribution
+            }
+          }
+          deps.onUserMessageEcho?.(clientMessageId, providerIdentity)
+        }
         return publishActivity(
           event,
           translated.handled

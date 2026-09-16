@@ -1,6 +1,6 @@
 import type { AgentJournalItemIdentity } from '../../shared/agent-session-journal-types'
 
-/** Sends awaiting their echo, oldest first. A send whose echo never arrives is
+/** Sends awaiting their echo. A send whose echo never arrives is
  *  retired by the journal's pending-submission recovery on exit, not from here. */
 export const MAX_CODEX_PENDING_DISPATCH_ECHOES = 256
 
@@ -19,10 +19,8 @@ export type CodexDispatchEchoes = {
   settle: (clientMessageId: string) => boolean
   /** Drops an armed send whose write never reached the provider. */
   disarm: (clientMessageId: string) => void
-  /** Submission instant of the oldest send still awaiting its echo. A turn opening
-   *  now is that send's: later ones were coalesced into turns already running, and
-   *  the echo that retires this entry does not arrive until inside the new turn. */
-  openingRequestedAt: () => number | null
+  /** Submission instant for this exact send, retained until its echo settles it. */
+  requestedAt: (clientMessageId: string) => number | null
   clear: () => void
   readonly size: number
 }
@@ -40,7 +38,7 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
     },
     settle: (clientMessageId) => armed.delete(clientMessageId),
     disarm: (clientMessageId) => void armed.delete(clientMessageId),
-    openingRequestedAt: () => armed.values().next().value ?? null,
+    requestedAt: (clientMessageId) => armed.get(clientMessageId) ?? null,
     clear: () => armed.clear(),
     get size() {
       return armed.size

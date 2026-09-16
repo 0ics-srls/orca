@@ -38,7 +38,6 @@ export class CodexJournalTurnBoundaries {
       clearPromptTurn?: (threadId: string, turnId: string) => void
       flushSuppression: () => CodexJournalTranslationAdmission
       resetActivity: (threadId: string) => void
-      openingRequestedAt?: () => number | null
       now?: () => number
     }
   ) {}
@@ -52,7 +51,6 @@ export class CodexJournalTurnBoundaries {
       return { accepted: false, reason: 'backpressure' }
     }
     const startedAt = this.receiptTime(event)
-    const requestedAt = this.deps.openingRequestedAt?.() ?? undefined
     const admission = publishCodexTurnLifecycle({
       sink: this.deps.sink,
       primaryThreadId: this.deps.primaryThreadId(),
@@ -60,12 +58,48 @@ export class CodexJournalTurnBoundaries {
       threadId: event.threadId,
       turnId,
       state: 'running',
-      startedAt,
-      ...(requestedAt === undefined ? {} : { requestedAt })
+      startedAt
     })
     if (admission.accepted) {
-      this.deps.activeTurns.remember(event.threadId, turnId, startedAt, requestedAt)
+      this.deps.activeTurns.remember(event.threadId, turnId, startedAt)
       this.deps.resetActivity(event.threadId)
+    }
+    return admission
+  }
+
+  /** Revises one running turn only after Codex echoes the exact send inside it. */
+  attributeRequest(input: {
+    sessionId: string
+    threadId: string
+    turnId: string
+    requestedAt: number
+  }): CodexJournalTranslationAdmission {
+    if (input.threadId !== this.deps.primaryThreadId()) {
+      return CODEX_JOURNAL_ADMITTED
+    }
+    const revision = this.deps.activeTurns.requestOriginRevision(
+      input.threadId,
+      input.turnId,
+      input.requestedAt
+    )
+    if (!revision) {
+      return CODEX_JOURNAL_ADMITTED
+    }
+    const admission = publishCodexTurnLifecycle({
+      sink: this.deps.sink,
+      primaryThreadId: this.deps.primaryThreadId(),
+      sessionId: input.sessionId,
+      threadId: input.threadId,
+      turnId: input.turnId,
+      state: 'running',
+      ...revision
+    })
+    if (admission.accepted) {
+      this.deps.activeTurns.rememberRequestOrigin(
+        input.threadId,
+        input.turnId,
+        revision.requestedAt
+      )
     }
     return admission
   }
@@ -120,7 +154,7 @@ export class CodexJournalTurnBoundaries {
     durationMs: number | null = null
   ): AgentJournalTurnLifecycle {
     const startedAt = this.deps.activeTurns.startedAt(threadId, turnId)
-    // Carried forward, not re-resolved: the running row already fixed this turn's origin.
+    // Carried forward from the exact echoed send that was attributed to this turn.
     const requestedAt = this.deps.activeTurns.requestedAt(threadId, turnId)
     return {
       turnId,

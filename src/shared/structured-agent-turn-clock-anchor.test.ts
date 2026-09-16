@@ -175,4 +175,16 @@ describe('structured agent turn origin', () => {
 
     expect(settled).toBe(7)
   })
+
+  it('clamps a settled host interval when the wall clock moved backward', () => {
+    const settled = completedStructuredAgentTurnSeconds({
+      state: 'interrupted',
+      startedAt: HOST_START - 2_000,
+      requestedAt: HOST_START,
+      completedAt: HOST_START - 1_000,
+      observedAt: HOST_START - 2_000
+    })
+
+    expect(settled).toBe(0)
+  })
 })

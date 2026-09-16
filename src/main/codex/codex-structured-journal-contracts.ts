@@ -20,9 +20,8 @@ export type CodexJournalTranslatorDeps = {
    *  identity the journal row carries so a replay computes the same key. */
   onUserMessageEcho?: (clientMessageId: string, identity: AgentJournalItemIdentity) => void
   primaryThreadId?: () => string | null
-  /** Submission instant of the send a turn opening now belongs to, when the host
-   *  can name one. Read as the turn's row is written; never revised afterwards. */
-  openingRequestedAt?: () => number | null
+  /** Submission instant for one exact client message still awaiting its echo. */
+  dispatchRequestedAt?: (clientMessageId: string) => number | null
   subagentExecutions?: CodexSubagentExecutions
   coalesceMs?: number
   maxRetainedBytes?: number
@@ -47,6 +46,10 @@ export type CodexJournalTranslationAdmission =
 
 export type CodexItemTranslation =
   | { handled: false }
-  | { handled: true; admission: CodexJournalTranslationAdmission }
+  | {
+      handled: true
+      admission: CodexJournalTranslationAdmission
+      dispatchEcho?: { clientMessageId: string; providerIdentity: AgentJournalItemIdentity }
+    }
 
 export const CODEX_JOURNAL_ADMITTED = { accepted: true } as const

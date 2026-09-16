@@ -261,6 +261,55 @@ describe('codex turn lifecycle rows', () => {
     deferred.close()
   })
 
+  it('settles an echoed send only after its request-origin revision is admitted', () => {
+    const tap = recorder()
+    let rejectOrigin = true
+    tap.sink.tryAppendItem = (identity, body, blobs) => {
+      if (body.kind === 'turn' && body.requestedAt !== undefined && rejectOrigin) {
+        return { accepted: false, reason: 'backpressure' }
+      }
+      tap.sink.appendItem(identity, body, blobs)
+      return { accepted: true }
+    }
+    const onUserMessageEcho = vi.fn()
+    const translator = createCodexJournalTranslator({
+      sink: tap.sink,
+      sessionId: SESSION_ID,
+      primaryThreadId: () => THREAD_ID,
+      dispatchRequestedAt: () => 900,
+      onUserMessageEcho
+    })
+    const echo = notification(
+      'item/started',
+      {
+        turn: { id: TURN_ID },
+        item: { type: 'userMessage', id: 'user-1', clientId: 'client-1' }
+      },
+      1_100
+    )
+
+    translator.handle(notification('turn/started', { turn: { id: TURN_ID } }, 1_000))
+    expect(translator.handle(echo)).toEqual({ accepted: false, reason: 'backpressure' })
+    expect(onUserMessageEcho).not.toHaveBeenCalled()
+    expect(tap.rows.map((row) => row.body)).toEqual([
+      expect.objectContaining({ kind: 'turn', state: 'running', startedAt: 1_000 })
+    ])
+
+    rejectOrigin = false
+    expect(translator.handle(echo)).toEqual({ accepted: true })
+    expect(onUserMessageEcho).toHaveBeenCalledOnce()
+    expect(onUserMessageEcho).toHaveBeenCalledWith(
+      'client-1',
+      expect.objectContaining({ provider: 'codex', threadId: THREAD_ID, turnId: TURN_ID })
+    )
+    expect(tap.rows.at(-1)?.body).toMatchObject({
+      kind: 'turn',
+      state: 'running',
+      startedAt: 1_000,
+      requestedAt: 900
+    })
+  })
+
   it('carries the provider duration and the same user item onto the terminal row', () => {
     const tap = recorder()
     const translator = translatorFor(tap)

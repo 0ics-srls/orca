@@ -26,6 +26,16 @@ describe('codex dispatch echoes', () => {
     expect(echoes.size).toBe(0)
   })
 
+  it('reads each submission instant by client message id', () => {
+    const echoes = createCodexDispatchEchoes()
+    echoes.arm('stale-unknown', 100)
+    echoes.arm('later-turn', 200)
+
+    expect(echoes.requestedAt('later-turn')).toBe(200)
+    expect(echoes.requestedAt('stale-unknown')).toBe(100)
+    expect(echoes.requestedAt('never-armed')).toBeNull()
+  })
+
   it('refuses an echo this session never armed', () => {
     const echoes = createCodexDispatchEchoes()
     echoes.arm('client-1')

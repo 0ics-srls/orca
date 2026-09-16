@@ -89,7 +89,7 @@ export async function acquireCodexStructuredSession(input: {
         sessionId,
         ...(deps.now ? { now: deps.now } : {}),
         primaryThreadId: () => primaryThreadId,
-        openingRequestedAt: () => dispatchEchoes.openingRequestedAt(),
+        dispatchRequestedAt: (clientMessageId) => dispatchEchoes.requestedAt(clientMessageId),
         subagentExecutions,
         bindPromptItemId: (journalItemId, threadId, promptKey, turnId) =>
           acquisition.prompts.bindJournalItemId(journalItemId, threadId, promptKey, turnId),
