@@ -19,4 +19,5 @@ export type RelayControlClientOptions = {
   createSocket?: (url: string, relayJwt: string) => WebSocket
   connectDeadlineMs?: number
   silenceLimitMs?: number
+  probeDeadlineMs?: number
 }

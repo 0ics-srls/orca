@@ -18,10 +18,7 @@ import {
 import { RelayControlRequests } from './relay-control-requests'
 import type { DeviceCredentialInstallAuthorization } from './relay-control-requests'
 import { answerRelayHostChallenge } from './relay-host-proof'
-import {
-  RELAY_CONTROL_SILENCE_LIMIT_MS,
-  RelayControlSilenceWatchdog
-} from './relay-control-silence-watchdog'
+import { RelayControlLiveness } from './relay-control-liveness'
 import { closeRelayControlSocket } from './relay-control-socket-close'
 import { controlWebSocketUrl } from './relay-control-url'
 
@@ -40,18 +37,23 @@ export class RelayControlClient {
   private connectResolve: ((ack: RelayHostHelloAckMessage) => void) | null = null
   private connectReject: ((error: Error) => void) | null = null
   private connectTimer: ReturnType<typeof setTimeout> | null = null
-  private readonly silenceWatchdog: RelayControlSilenceWatchdog
+  private readonly liveness: RelayControlLiveness
 
   constructor(options: RelayControlClientOptions) {
     this.options = options
-    this.requests = new RelayControlRequests(options.onPendingChanged)
+    this.requests = new RelayControlRequests(options.onPendingChanged, (timeout) =>
+      this.liveness.describeTimeout(timeout, this.isLive())
+    )
     const endpoint = controlWebSocketUrl(options.cellUrl)
     this.relayOrigin = endpoint.origin
     this.controlUrl = endpoint.url
-    this.silenceWatchdog = new RelayControlSilenceWatchdog(
-      options.silenceLimitMs ?? RELAY_CONTROL_SILENCE_LIMIT_MS,
-      () => this.socket?.terminate()
-    )
+    this.liveness = new RelayControlLiveness({
+      cellUrl: this.relayOrigin,
+      ping: () => this.socket?.ping(),
+      onDead: () => this.socket?.terminate(),
+      ...(options.silenceLimitMs !== undefined ? { silenceLimitMs: options.silenceLimitMs } : {}),
+      ...(options.probeDeadlineMs !== undefined ? { probeDeadlineMs: options.probeDeadlineMs } : {})
+    })
     this.createSocket =
       options.createSocket ??
       ((url, token) =>
@@ -70,8 +72,9 @@ export class RelayControlClient {
     const socket = this.createSocket(this.controlUrl, this.options.relayJwt)
     this.socket = socket
     socket.once('open', () => this.sendHostHello())
+    socket.on('pong', () => this.liveness.notePong())
     socket.on('message', (raw, isBinary) => {
-      this.silenceWatchdog.noteInbound()
+      this.liveness.noteInbound()
       if (isBinary) {
         this.failProtocol('binary control message')
         return
@@ -154,7 +157,7 @@ export class RelayControlClient {
   closeNow(hostCloseReason?: RelayHostCloseReason): void {
     const wasConnecting = this.state === 'opening' || this.state === 'proving'
     this.state = 'closed'
-    this.silenceWatchdog.stop()
+    this.liveness.stop()
     if (wasConnecting) {
       this.connectReject?.(new Error('relay_control_closed'))
       this.clearConnectPromise()
@@ -264,7 +267,7 @@ export class RelayControlClient {
       return
     }
     this.state = 'active'
-    this.silenceWatchdog.start()
+    this.liveness.start()
     this.connectResolve?.(ack.data)
     this.clearConnectPromise()
   }
@@ -285,7 +288,7 @@ export class RelayControlClient {
   private handleClose(code: number): void {
     const wasConnecting = this.state === 'opening' || this.state === 'proving'
     this.state = 'closed'
-    this.silenceWatchdog.stop()
+    this.liveness.stop()
     if (wasConnecting) {
       this.connectReject?.(new Error(`relay_control_closed_${code}`))
       this.clearConnectPromise()
