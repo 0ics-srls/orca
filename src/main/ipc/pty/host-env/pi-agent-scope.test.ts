@@ -43,6 +43,35 @@ describe('OMP launch scope', () => {
     ).toBe(join(homeDir, 'custom-agent'))
   })
 
+  it('treats an explicit default profile as the base root', () => {
+    const configDir = join(homeDir, 'omp-config')
+    expect(
+      resolvePiAgentSourceDir(
+        { HOME: homeDir, PI_CONFIG_DIR: configDir, OMP_PROFILE: 'default' },
+        'omp',
+        'omp --profile default'
+      )
+    ).toBe(join(configDir, 'agent'))
+  })
+
+  it('uses the selected fish shell when the inherited shell is zsh', () => {
+    const configDir = join(homeDir, 'fish-omp-config')
+    mkdirSync(join(homeDir, '.config', 'fish'), { recursive: true })
+    writeFileSync(
+      join(homeDir, '.config', 'fish', 'config.fish'),
+      `set -gx PI_CONFIG_DIR ${configDir}\n`
+    )
+
+    expect(
+      resolvePiAgentSourceDir(
+        { HOME: homeDir, SHELL: '/bin/zsh' },
+        'omp',
+        'omp',
+        '/opt/homebrew/bin/fish'
+      )
+    ).toBe(join(configDir, 'agent'))
+  })
+
   it('copies XDG data roots exported by the launching shell', () => {
     const xdgDataHome = join(homeDir, 'xdg-data')
     const xdgStateHome = join(homeDir, 'xdg-state')

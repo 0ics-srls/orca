@@ -10,7 +10,6 @@ import {
   buildWindowsHookStdinDrainEpilogue
 } from '../agent-hooks/hook-stdin-contract'
 import {
-  createManagedCommandMatcher,
   getSharedManagedScriptPath,
   wrapPosixHookCommand,
   wrapWindowsCmdHookCommand,
@@ -26,19 +25,23 @@ import {
 import {
   applyAuggieManagedHooks,
   AUGGIE_HOOK_EVENTS,
+  isManagedAuggieCommand,
   readAuggieManagedEvents,
   removeAuggieManagedHooks
 } from './hook-config'
 import type { HooksConfig } from '../agent-hooks/installer-utils'
 import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
+import { getAppEnvironment } from '../../shared/app-environment'
+import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
 
 const SCRIPT_NAME = 'aug-hook.sh'
 const WINDOWS_SCRIPT_NAME = 'aug-hook.cmd'
-const isManagedCommand = createManagedCommandMatcher(SCRIPT_NAME)
+const isManagedCommand = isManagedAuggieCommand
 
 export type AuggieInstallState = 'installed' | 'not_installed' | 'partial' | 'error'
 export type AuggieInstallStatus = {
-  agent: 'auggie'
+  /** Canonical managed-hook target; provider/vendor name remains `auggie`. */
+  agent: 'aug'
   state: AuggieInstallState
   configPath: string
   managedHooksPresent: boolean
@@ -122,7 +125,7 @@ function readConfig(path: string): HooksConfig | null {
 function status(configPath: string, config: HooksConfig | null): AuggieInstallStatus {
   if (!config) {
     return {
-      agent: 'auggie',
+      agent: 'aug',
       state: 'error',
       configPath,
       managedHooksPresent: false,
@@ -132,7 +135,7 @@ function status(configPath: string, config: HooksConfig | null): AuggieInstallSt
   const present = readAuggieManagedEvents(config, isManagedCommand)
   const missing = AUGGIE_HOOK_EVENTS.filter((event) => !present.has(event))
   return {
-    agent: 'auggie',
+    agent: 'aug',
     state: missing.length === 0 ? 'installed' : present.size === 0 ? 'not_installed' : 'partial',
     configPath,
     managedHooksPresent: present.size > 0,
@@ -144,6 +147,13 @@ function status(configPath: string, config: HooksConfig | null): AuggieInstallSt
 }
 
 export class AuggieHookService {
+  async refreshManagedScripts(): Promise<void> {
+    await refreshManagedScriptIfPresent(
+      getScriptPath(),
+      process.platform === 'win32' ? buildAuggieWindowsManagedScript() : buildAuggieManagedScript()
+    )
+  }
+
   getStatus(): AuggieInstallStatus {
     const path = getConfigPath()
     return status(path, readConfig(path))
@@ -165,7 +175,7 @@ export class AuggieHookService {
     )
     writeHooksJson(path, applyAuggieManagedHooks(config, command))
     createIntegrationHealthStore(
-      join(homedir(), '.orca', 'agent-hooks', 'integration-health.json')
+      join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
     ).recordArtifact({
       integration: 'auggie',
       host: 'local',
@@ -185,6 +195,13 @@ export class AuggieHookService {
       return status(path, null)
     }
     writeHooksJson(path, removeAuggieManagedHooks(config))
+    try {
+      createIntegrationHealthStore(
+        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
+      ).markArtifactStale('auggie', 'local', path)
+    } catch {
+      // Diagnostics must never gate removal.
+    }
     return this.getStatus()
   }
   async installRemote(sftp: SFTPWrapper, remoteHome: string): Promise<AuggieInstallStatus> {
@@ -205,7 +222,7 @@ export class AuggieHookService {
         applyAuggieManagedHooks(config, wrapPosixHookCommand(script))
       )
       return {
-        agent: 'auggie',
+        agent: 'aug',
         state: 'installed',
         configPath: path,
         managedHooksPresent: true,
@@ -213,7 +230,7 @@ export class AuggieHookService {
       }
     } catch (error) {
       return {
-        agent: 'auggie',
+        agent: 'aug',
         state: 'error',
         configPath: path,
         managedHooksPresent: false,

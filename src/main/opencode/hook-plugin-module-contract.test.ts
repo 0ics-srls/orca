@@ -32,8 +32,7 @@ describe('OpenCode status plugin module contract', () => {
   type PluginModule = {
     default?: {
       id?: unknown
-      setup?: (ctx: unknown) => Promise<void>
-      server?: (ctx: unknown) => Promise<PluginHooks>
+      server?: (ctx: unknown, options?: unknown) => Promise<PluginHooks>
     }
     OrcaOpenCodeStatusPlugin?: (ctx: unknown) => Promise<PluginHooks>
   }
@@ -87,6 +86,17 @@ describe('OpenCode status plugin module contract', () => {
     return (await import(pathToFileURL(pluginPath).href)) as PluginModule
   }
 
+  /** Exact shape used by OpenCode's versioned v1 loader: the default module
+   * object is validated, then server(input, options) is awaited and its hooks
+   * receive the EventV2 bridge envelope. */
+  async function invokeSupportedV1Loader(module: PluginModule): Promise<PluginHooks> {
+    const candidate = module.default
+    if (!candidate || typeof candidate !== 'object' || typeof candidate.server !== 'function') {
+      throw new Error('unsupported OpenCode plugin module')
+    }
+    return candidate.server({ client: {} }, { source: 'contract-test' })
+  }
+
   it('exposes a default export carrying a string id and a callable server()', async () => {
     const module = await loadPluginModule()
 
@@ -94,33 +104,31 @@ describe('OpenCode status plugin module contract', () => {
     expect(typeof module.default?.id).toBe('string')
     expect(module.default?.id).toBe('orca-opencode-status')
     expect(module.default?.server).toBeTypeOf('function')
-    expect(module.default?.setup).toBeTypeOf('function')
   })
 
-  it('accepts V2 data-envelope events through the setup adapter when event streams are available', async () => {
+  it('matches the supported loader and event bridge contract', async () => {
     process.env.ORCA_PANE_KEY = 'tab-v2:leaf-1'
-    const posts: unknown[] = []
+    const posts: { body: unknown }[] = []
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: test double matches fetch's callable shape for this contract test.
     globalThis.fetch = vi.fn(async (_input: unknown, init?: { body?: unknown }) => {
-      posts.push(JSON.parse(String(init?.body ?? '{}')))
+      posts.push({ body: JSON.parse(String(init?.body ?? '{}')) })
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: fetch mock only needs the Response.ok field consumed by generated plugin.
       return { ok: true } as Response
     }) as unknown as typeof globalThis.fetch
     const module = await loadPluginModule()
-    let callback: ((value: unknown) => unknown) | undefined
-    await module.default?.setup?.({
+    // Mirrors the vendor readV1Plugin/applyPlugin path: it validates a default
+    // object with server(), invokes server(input), then forwards EventV2Bridge's
+    // { id, type, properties } envelope to the returned hook.
+    const hooks = await invokeSupportedV1Loader(module)
+    await hooks.event({
       event: {
-        subscribe: () => (next: (value: unknown) => unknown) => {
-          callback = next
-        }
+        id: 'evt-1',
+        type: 'session.status',
+        properties: { sessionID: 'ses-v2', status: { type: 'busy' } }
       }
     })
-    await callback?.({
-      type: 'session.status',
-      data: { session_id: 'ses-v2', status: { type: 'busy' } }
-    })
     await new Promise((resolve) => setTimeout(resolve, 50))
-    expect(posts.some((body) => JSON.stringify(body).includes('SessionBusy'))).toBe(true)
+    expect(posts.some(({ body }) => JSON.stringify(body).includes('SessionBusy'))).toBe(true)
   })
 
   it('rejects the shape OpenCode refuses: a default export without server()', async () => {
@@ -130,6 +138,7 @@ describe('OpenCode status plugin module contract', () => {
     // accepted, so a default export must never regress to it.
     expect(module.default).not.toBeUndefined()
     expect(Object.hasOwn(module.default ?? {}, 'server')).toBe(true)
+    expect(_internals.getOpenCodePluginSource()).not.toContain('event.subscribe')
   })
 
   it('keeps the named factory export so the factory-based loader still resolves', async () => {

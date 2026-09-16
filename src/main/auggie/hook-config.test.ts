@@ -24,4 +24,46 @@ describe('Auggie hook contract', () => {
     const next = removeAuggieManagedHooks(source)
     expect(next.hooks).toEqual({})
   })
+
+  it('does not remove a user command that merely contains the vendor script name', () => {
+    const source = {
+      hooks: {
+        PromptSubmit: [
+          { hooks: [{ type: 'command' as const, command: '/tmp/aug-hook.py --check' }] }
+        ]
+      }
+    }
+    const next = removeAuggieManagedHooks(source)
+    expect(next.hooks?.PromptSubmit?.[0]?.hooks?.[0]?.command).toBe('/tmp/aug-hook.py --check')
+  })
+
+  it('preserves user-owned aug-hook.sh paths outside Orca’s managed directory', () => {
+    const source = {
+      hooks: {
+        PromptSubmit: [
+          { hooks: [{ type: 'command' as const, command: '/tmp/aug-hook.sh --check' }] }
+        ]
+      }
+    }
+    const next = removeAuggieManagedHooks(source)
+    expect(next.hooks?.PromptSubmit?.[0]?.hooks?.[0]?.command).toBe('/tmp/aug-hook.sh --check')
+  })
+
+  it('removes platform variants only from the shared Orca hook directory', () => {
+    const source = {
+      hooks: {
+        PromptSubmit: [
+          {
+            hooks: [
+              {
+                type: 'command' as const,
+                command: `C:\\Users\\me\\.orca\\agent-hooks\\aug-hook.cmd`
+              }
+            ]
+          }
+        ]
+      }
+    }
+    expect(removeAuggieManagedHooks(source).hooks).toEqual({})
+  })
 })

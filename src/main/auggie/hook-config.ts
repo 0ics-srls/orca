@@ -1,6 +1,18 @@
 import type { HookCommandConfig, HooksConfig } from '../agent-hooks/installer-utils'
 import { removeManagedCommands, buildManagedCommandHook } from '../agent-hooks/installer-utils'
 
+/** Match only the shared Orca hook location; a user's unrelated aug-hook.*
+ * command must survive removal even when its basename happens to match. */
+export function isManagedAuggieCommand(command: string | undefined): boolean {
+  if (!command) {
+    return false
+  }
+  const normalized = command.replaceAll('\\', '/').replaceAll('"', "'")
+  return /(?:^|[\s';&|])(?:[A-Za-z]:)?[^\s';&|]*\/\.orca\/agent-hooks\/aug-hook\.(?:sh|cmd|ps1)(?=$|[\s';&|])/.test(
+    normalized
+  )
+}
+
 export const AUGGIE_HOOK_EVENTS = [
   'SessionStart',
   'SessionEnd',
@@ -16,8 +28,7 @@ export function applyAuggieManagedHooks(source: HooksConfig, command: string): H
     const current = Array.isArray(hooks[event]) ? hooks[event] : []
     const retained = removeManagedCommands(
       current,
-      (candidate) =>
-        candidate !== undefined && (candidate === command || candidate.includes('aug-hook.'))
+      (candidate) => candidate === command || isManagedAuggieCommand(candidate)
     )
     hooks[event] = [{ hooks: [buildManagedCommandHook(command, 10_000)] }]
     if (retained.length > 0) {
@@ -31,10 +42,7 @@ export function removeAuggieManagedHooks(source: HooksConfig): HooksConfig {
   const hooks = { ...source.hooks }
   for (const event of AUGGIE_HOOK_EVENTS) {
     const current = Array.isArray(hooks[event]) ? hooks[event] : []
-    const retained = removeManagedCommands(
-      current,
-      (candidate) => candidate !== undefined && candidate.includes('aug-hook.')
-    )
+    const retained = removeManagedCommands(current, isManagedAuggieCommand)
     if (retained.length > 0) {
       hooks[event] = retained
     } else {

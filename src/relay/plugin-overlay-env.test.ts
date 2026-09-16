@@ -77,6 +77,23 @@ describe('plugin overlay env source resolution', () => {
     }
   )
 
+  it('treats explicit OMP default as the base root and preserves PI_CODING_AGENT_DIR', () => {
+    const explicitDir = join(homeDir, 'custom-agent')
+    expect(
+      resolvePiSourceAgentDir(
+        {
+          HOME: homeDir,
+          PI_CONFIG_DIR: join(homeDir, 'omp-config'),
+          PI_CODING_AGENT_DIR: explicitDir,
+          OMP_PROFILE: 'default'
+        },
+        undefined,
+        'omp',
+        'omp --profile default'
+      )
+    ).toMatchObject({ path: explicitDir, origin: 'source-override' })
+  })
+
   it.skipIf(process.platform === 'win32')(
     'discovers overlay sources from a custom zsh ZDOTDIR',
     () => {

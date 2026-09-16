@@ -22,6 +22,7 @@ import { getStatusPluginOwnershipSource } from './status-plugin-ownership-source
 import { getStatusPluginLifecycleSource } from './status-plugin-lifecycle-source'
 import { getStatusPluginFactorySource } from './status-plugin-factory-source'
 import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
+import { ORCA_HOOK_PROTOCOL_VERSION } from '../../shared/agent-hook-types'
 
 const ORCA_OPENCODE_PLUGIN_FILE = 'orca-opencode-status.js'
 const OPENCODE_LEGACY_HOOKS_DIR = 'opencode-hooks'
@@ -91,7 +92,7 @@ export class OpenCodeHookService {
         host: 'local',
         scope: configDir,
         bytes: getOpenCodePluginSource(),
-        version: 'v1-v2'
+        version: ORCA_HOOK_PROTOCOL_VERSION
       })
       return { OPENCODE_CONFIG_DIR: configDir }
     }
@@ -114,7 +115,7 @@ export class OpenCodeHookService {
         host: 'local',
         scope: overlayDir,
         bytes: getOpenCodePluginSource(),
-        version: 'v1-v2'
+        version: ORCA_HOOK_PROTOCOL_VERSION
       })
     } catch {
       // Why: best-effort — symlink creation needs Windows developer mode (else EPERM) and userData may be read-only; preserve the user's config over dropping their auth/models/keymap.

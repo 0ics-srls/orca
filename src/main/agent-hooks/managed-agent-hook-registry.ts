@@ -15,6 +15,7 @@ import { grokHookService } from '../grok/hook-service'
 import { hermesHookService } from '../hermes/hook-service'
 import { kimiHookService } from '../kimi/hook-service'
 import { openClaudeHookService } from '../openclaude/hook-service'
+import { auggieHookService } from '../auggie/hook-service'
 
 // Why (#16441): Codex's installer awaits a codex app-server trust-grant session
 // instead of blocking the main thread on spawnSync. Widening the tuple keeps the
@@ -202,6 +203,17 @@ export const MANAGED_AGENT_INTEGRATIONS: readonly ManagedAgentIntegration[] = [
     refreshManagedScripts: () => kimiHookService.refreshManagedScripts(),
     remove: () => kimiHookService.remove(),
     getStatus: () => kimiHookService.getStatus()
+  },
+  {
+    // The persisted TUI id is `aug`; the vendor executable/service is Auggie.
+    // Keeping this mapping in the canonical descriptor prevents a second
+    // lifecycle registry from drifting from detection and remote installers.
+    agent: 'aug',
+    install: () => auggieHookService.install(),
+    installRemote: (sftp, remoteHome) => auggieHookService.installRemote(sftp, remoteHome),
+    refreshManagedScripts: () => auggieHookService.refreshManagedScripts(),
+    remove: () => auggieHookService.remove(),
+    getStatus: () => auggieHookService.getStatus()
   }
 ]
 

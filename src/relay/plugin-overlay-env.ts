@@ -46,6 +46,8 @@ export function resolvePiSourceAgentDir(
 ): PiSourceAgentDirResolution | undefined {
   const sourceKey = SOURCE_AGENT_DIR_ENV_BY_KIND[kind]
   const primaryKey = PRIMARY_AGENT_DIR_ENV_BY_KIND[kind]
+  const overlayKey = kind === 'omp' ? 'ORCA_OMP_CODING_AGENT_DIR' : 'ORCA_PI_CODING_AGENT_DIR'
+  const otherOverlayKey = kind === 'omp' ? 'ORCA_PI_CODING_AGENT_DIR' : 'ORCA_OMP_CODING_AGENT_DIR'
 
   const ompProfile =
     kind === 'omp'
@@ -54,7 +56,9 @@ export function resolvePiSourceAgentDir(
         )
       : undefined
 
-  if (kind === 'omp' && ompProfile) {
+  // OMP's `default` profile is the base config root and honors an explicit
+  // PI_CODING_AGENT_DIR; only named profiles use the nested profile tree.
+  if (kind === 'omp' && ompProfile && ompProfile !== 'default') {
     const configuredRoot = firstNonEmpty(
       env.PI_CONFIG_DIR,
       readStartupEnv('PI_CONFIG_DIR', env, shell)
@@ -64,6 +68,15 @@ export function resolvePiSourceAgentDir(
       path: join(configDir, 'profiles', ompProfile, 'agent'),
       origin: 'explicit-profile',
       createIfMissing: true
+    }
+  }
+
+  if (kind === 'omp' && ompProfile === 'default') {
+    const explicitDir = firstNonEmpty(env[primaryKey])
+    const ownOverlayDir = firstNonEmpty(env[overlayKey])
+    const otherOverlayDir = firstNonEmpty(env[otherOverlayKey])
+    if (explicitDir && explicitDir !== ownOverlayDir && explicitDir !== otherOverlayDir) {
+      return { path: explicitDir, origin: 'source-override', createIfMissing: false }
     }
   }
 
@@ -83,9 +96,6 @@ export function resolvePiSourceAgentDir(
       ? { path: primeDir, origin: 'source-override', createIfMissing: false }
       : undefined
   }
-
-  const overlayKey = kind === 'omp' ? 'ORCA_OMP_CODING_AGENT_DIR' : 'ORCA_PI_CODING_AGENT_DIR'
-  const otherOverlayKey = kind === 'omp' ? 'ORCA_PI_CODING_AGENT_DIR' : 'ORCA_OMP_CODING_AGENT_DIR'
 
   // Why: a mismatched Orca overlay shadow means this shell inherited the other
   // Pi-compatible agent's PTY overlay. Do not remirror that overlay into this

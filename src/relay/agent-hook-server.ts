@@ -8,7 +8,6 @@ import {
 } from '../shared/agent-hook-types'
 import {
   clearAllListenerCaches,
-  clearPaneCacheState,
   createHookListenerState,
   type HookListenerState
 } from '../shared/agent-hook-listener/listener-state'
@@ -42,7 +41,9 @@ import { ingestRelayAgentHookSpoolRecord } from './agent-hook-spool-ingest'
 import { buildRelayHookPtyEnv, defaultEndpointDir } from './agent-hook-endpoint-coordinates'
 import { buildRelayHookEnvelope, hookBodyEnv, hookBodyVersion } from './agent-hook-envelope-build'
 import { AgentHookResultRetryScheduler } from './agent-hook-result-retry-scheduler'
-import { MAX_CACHED_PANES, selectReplayableCachedPanes } from './agent-hook-cached-pane-status'
+import { MAX_CACHED_PANES } from './agent-hook-cached-pane-status'
+import { recordIntegrationDelivery } from '../main/agent-hooks/integration-health-receipts'
+import { clearRelayPaneState, replayRelayCachedPanes } from './agent-hook-cache-controls'
 
 export type RelayHookForward = (envelope: AgentHookRelayEnvelope) => void
 
@@ -214,27 +215,18 @@ export class RelayAgentHookServer {
   /** Request-driven replay: re-forwards each cached paneKey payload as a fresh notification. Forwards are
    *  issued before the request handler returns, so the response trails all replayed notifications. */
   replayCachedPayloadsForPanes(): number {
-    const cachedSnapshot = new Map(this.state.lastStatusByPaneKey)
-    const replayable = selectReplayableCachedPanes({
-      cachedByPaneKey: cachedSnapshot,
-      metaByPaneKey: this.lastEnvelopeMetaByPaneKey,
+    return replayRelayCachedPanes({
+      state: this.state,
+      envelopeMetadata: this.lastEnvelopeMetaByPaneKey,
       isPaneSurfaceRetired: this.isPaneSurfaceRetired,
-      dropPane: (paneKey) => this.clearPaneState(paneKey)
+      clearPaneState: (paneKey) => this.clearPaneState(paneKey),
+      forward: this.forward
     })
-    for (const { event, meta } of replayable) {
-      this.forward(
-        buildRelayHookEnvelope(event, meta.source, meta.env, meta.version, { isReplay: true })
-      )
-    }
-    return replayable.length
   }
 
   /** Drop a paneKey's cached entries on PTY exit so a terminated pane can't resurface as a ghost event on reconnect. */
   clearPaneState(paneKey: string): void {
-    this.retryScheduler.clearAssistantMessageRetry(paneKey)
-    this.retryScheduler.clearCodexSubagentPoll(paneKey)
-    clearPaneCacheState(this.state, paneKey)
-    this.lastEnvelopeMetaByPaneKey.delete(paneKey)
+    clearRelayPaneState(paneKey, this.state, this.retryScheduler, this.lastEnvelopeMetaByPaneKey)
   }
 
   /** Env vars to inject into relay-spawned PTYs so the hook script/plugin POSTs back to this loopback server. */
@@ -289,6 +281,14 @@ export class RelayAgentHookServer {
         // TODO: once normalizeHookPayload returns validated env/version, drop bodyEnv/bodyVersion and source them from the listener result.
         const env = hookBodyEnv(hookBody)
         const version = hookBodyVersion(hookBody)
+        recordIntegrationDelivery({
+          source,
+          body: hookBody,
+          executionId: event.launchToken,
+          paneKey: event.paneKey,
+          host: 'remote',
+          healthFilePath: join(this.endpointDir, 'integration-health.json')
+        })
         this.applyEvent(event, source, env, version)
         this.retryScheduler.scheduleAssistantMessageRetry(source, hookBody, event, env, version)
         this.retryScheduler.scheduleCodexSubagentPoll(source, hookBody, event, env, version)
@@ -300,12 +300,11 @@ export class RelayAgentHookServer {
         respondWithAgentHookRequestTooLarge(res, req)
         return
       }
-      // Why (#11217): a remote host can run the same IDS; count truncations here so a blocked SSH
-      // relay reports the cause instead of an anonymous "hook request failed".
+      // Count truncations so blocked SSH relays report the transport cause.
       if (isHookRequestTruncatedError(err) && !destroyedBySlowlorisCap) {
         this.transportInterference.record({ source: null, error: err })
       }
-      // Why: hooks fail open (204 on any error) so a buggy agent never blocks the run; still log so the 204 doesn't mask bugs.
+      // Hooks fail open so a buggy agent never blocks a run; log the failure.
       process.stderr.write(
         `[relay-hook-server] hook request failed: ${err instanceof Error ? err.message : String(err)}\n`
       )
@@ -321,10 +320,7 @@ export class RelayAgentHookServer {
     version?: string,
     options: { isReplay?: boolean } = {}
   ): void {
-    // Why: this post came from a process still running inside a pane whose tab the user closed.
-    // Caching or forwarding it makes every connected client advertise a live, resumable agent pane
-    // that no tab owns — the advertisement that ends up auto-typing a second `--resume` onto a
-    // transcript the orphan is still writing (#12447). Drop the stale cache with it.
+    // Drop posts from retired panes so reconnect cannot advertise a ghost session.
     if (this.isPaneSurfaceRetired(event.paneKey)) {
       this.clearPaneState(event.paneKey)
       return
@@ -332,9 +328,7 @@ export class RelayAgentHookServer {
     if (event.payload.state !== 'done' || event.payload.lastAssistantMessage) {
       this.retryScheduler.clearAssistantMessageRetry(event.paneKey)
     }
-    // Why: keep PostCompact identity in the replay cache so the client can re-run ownership when
-    // it reconnects. Stripping it would let a cold relay replay a completion as an ordinary `done`
-    // row and resurrect a pane that the client had already retired.
+    // Keep PostCompact identity so reconnect replay cannot resurrect a retired pane.
     if (
       !cacheRelayLegacyAgentStatus(this.state, event, MAX_CACHED_PANES, (paneKey) =>
         this.clearPaneState(paneKey)

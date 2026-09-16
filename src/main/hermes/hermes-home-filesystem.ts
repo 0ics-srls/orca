@@ -29,7 +29,7 @@ function isSafeProfileName(value: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/.test(value)
 }
 
-function profileFromCommand(command: string | undefined): string | undefined {
+export function getHermesProfileFromCommand(command: string | undefined): string | undefined {
   if (!command) {
     return undefined
   }
@@ -53,7 +53,7 @@ export function resolveHermesHomeForLaunch(
   launchCommand?: string
 ): string {
   const root = getHermesHome(env)
-  const profile = profileFromCommand(launchCommand) ?? activeHermesProfile(root)
+  const profile = getHermesProfileFromCommand(launchCommand) ?? activeHermesProfile(root)
   if (!profile || profile === 'default') {
     return root
   }

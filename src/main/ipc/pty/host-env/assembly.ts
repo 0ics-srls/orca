@@ -74,7 +74,7 @@ export function buildPtyHostEnv(
   const preexistingPiAgentDir = resolvePiAgentSourceDir(baseEnv, 'pi')
   const preexistingOmpAgentDir =
     piAgentKind === 'omp'
-      ? resolvePiAgentSourceDir(baseEnv, 'omp', launchCommandHint)
+      ? resolvePiAgentSourceDir(baseEnv, 'omp', launchCommandHint, opts.shellPath)
       : resolveScopedPiAgentSourceDir(baseEnv, 'omp')
   const preexistingPrimeAgentDir =
     piAgentKind === 'prime-agent'
@@ -143,7 +143,7 @@ export function buildPtyHostEnv(
     if (opts.isWsl === true) {
       // Why: hook POSTs to 127.0.0.1 die inside WSL's NAT namespace; use the guest-resident relay's endpoint instead of the Windows one.
       const distro = opts.wslDistro ?? null
-      wslHookRelayManager.ensureForDistro(distro, opts.selectedCodexHomePath)
+      wslHookRelayManager.ensureForDistro(distro, opts.selectedCodexHomePath, launchCommandHint)
       const guestEndpoint = wslHookRelayManager.getGuestEndpointFilePath(distro)
       if (guestEndpoint) {
         baseEnv.ORCA_AGENT_HOOK_ENDPOINT = guestEndpoint

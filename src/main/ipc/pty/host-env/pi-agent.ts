@@ -22,7 +22,8 @@ export function readEnvWithProcessFallback(
 export function resolvePiAgentSourceDir(
   baseEnv: Record<string, string>,
   kind: PiAgentKind,
-  launchCommand?: string
+  launchCommand?: string,
+  shellPath?: string
 ): string | undefined {
   const sourceKey = SOURCE_AGENT_DIR_ENV_BY_KIND[kind]
   const primaryKey = PRIMARY_AGENT_DIR_ENV_BY_KIND[kind]
@@ -36,10 +37,12 @@ export function resolvePiAgentSourceDir(
         ].find((candidate) => candidate !== undefined && isSafeOmpProfile(candidate))
       : undefined
 
-  if (kind === 'omp' && ompProfile) {
+  // OMP's `default` profile is the base config root and honors an explicit
+  // PI_CODING_AGENT_DIR; only named profiles use the nested profile tree.
+  if (kind === 'omp' && ompProfile && ompProfile !== 'default') {
     const configuredRoot =
       readEnvWithProcessFallback(baseEnv, 'PI_CONFIG_DIR') ??
-      readSessionShellStartupEnvVar('PI_CONFIG_DIR', baseEnv)
+      readSessionShellStartupEnvVar('PI_CONFIG_DIR', baseEnv, shellPath)
     const configDir =
       configuredRoot ?? join(readEnvWithProcessFallback(baseEnv, 'HOME') ?? homedir(), '.omp')
     return join(configDir, 'profiles', ompProfile, 'agent')
@@ -74,7 +77,7 @@ export function resolvePiAgentSourceDir(
   if (kind === 'omp') {
     const configuredRoot =
       readEnvWithProcessFallback(baseEnv, 'PI_CONFIG_DIR') ??
-      readSessionShellStartupEnvVar('PI_CONFIG_DIR', baseEnv)
+      readSessionShellStartupEnvVar('PI_CONFIG_DIR', baseEnv, shellPath)
     if (configuredRoot) {
       return join(configuredRoot, 'agent')
     }

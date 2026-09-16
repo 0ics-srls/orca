@@ -18,6 +18,8 @@ import { drainAgentHookSpool, type SpoolRecord } from '../../../shared/agent-hoo
 import { clearAllListenerCaches } from '../../../shared/agent-hook-listener/listener-state'
 import { trackEmptyPaneKeyHook } from './server-transport-rules'
 import { AgentHookServerRuntimeEnv } from './server-runtime-env'
+import { dirname, join } from 'node:path'
+import { recordIntegrationDelivery } from '../integration-health-receipts'
 
 export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv {
   /** Start the loopback listener after hydration and spool replay have settled. */
@@ -99,6 +101,16 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
         trackEmptyPaneKeyHook(hookBody)
         const aliasedBody = this.normalizeHookBodyPaneKeyAlias(hookBody)
         const normalized = this.normalizeLocalHookPayload(source, aliasedBody)
+        if (normalized.event && (source === 'opencode' || source === 'auggie')) {
+          recordIntegrationDelivery({
+            source,
+            body: aliasedBody,
+            executionId: normalized.event.launchToken,
+            paneKey: normalized.event.paneKey,
+            host: this.env === 'remote' ? 'remote' : 'local',
+            healthFilePath: join(dirname(this.lastStatusFilePath!), 'integration-health.json')
+          })
+        }
         const statusDisposition = normalized.event
           ? this.getAgentStatusDisposition(normalized.event.paneKey, {
               source,

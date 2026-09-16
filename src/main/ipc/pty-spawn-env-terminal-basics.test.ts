@@ -150,7 +150,7 @@ describe('registerPtyHandlers', () => {
             agentStatusHooksEnabled: true
           }
         )
-        expect(ensureForDistro).toHaveBeenCalledExactlyOnceWith('Ubuntu', runtimeHome)
+        expect(ensureForDistro).toHaveBeenCalledExactlyOnceWith('Ubuntu', runtimeHome, undefined)
       } finally {
         ensureForDistro.mockRestore()
       }

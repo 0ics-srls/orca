@@ -5,7 +5,12 @@ import type {
 } from '../../shared/managed-account-types'
 import type { Store } from '../persistence'
 import type { RateLimitService } from '../rate-limits/service'
-import { beginClaudeAuthSwitch, endClaudeAuthSwitch } from './live-pty-gate'
+import {
+  beginClaudeAuthSwitch,
+  endClaudeAuthSwitch,
+  listClaudeExecutionAccountBindings
+} from './live-pty-gate'
+import type { ClaudeAccountTransitionResult } from '../../shared/claude-account-transition'
 import type { ClaudeRuntimeAuthService } from './runtime-auth-service'
 import {
   getClaudeSelectionTargetForAccount,
@@ -18,14 +23,7 @@ import {
   type ClaudeAccountSelectionTarget
 } from './runtime-selection'
 
-export type ClaudeAccountSwitchResult =
-  | { state: 'succeeded'; accountId: string | null; previousAccountId: string | null }
-  | {
-      state: 'rolled_back'
-      accountId: string | null
-      previousAccountId: string | null
-      error: string
-    }
+export type ClaudeAccountSwitchResult = ClaudeAccountTransitionResult
 
 export class ClaudeAccountSelection {
   constructor(
@@ -130,17 +128,71 @@ export class ClaudeAccountSelection {
     accountId: string | null,
     target?: ClaudeAccountSelectionTarget
   ): Promise<ClaudeAccountSwitchResult> {
-    const previousAccountId = getSelectedClaudeAccountIdForTarget(this.store.getSettings(), target)
+    const effectiveTarget =
+      accountId === null
+        ? target
+        : getClaudeSelectionTargetForAccount(this.requireAccount(accountId))
+    const previousAccountId = getSelectedClaudeAccountIdForTarget(
+      this.store.getSettings(),
+      effectiveTarget
+    )
     try {
-      await this.select(accountId, target)
-      return { state: 'succeeded', accountId, previousAccountId }
+      const accounts = await this.select(accountId, effectiveTarget)
+      const transition = this.executionTransition(effectiveTarget, accountId)
+      return {
+        state: 'succeeded',
+        accountId,
+        previousAccountId,
+        accounts,
+        effect: 'future_launches_only',
+        ...transition
+      }
     } catch (error) {
+      const accounts = this.snapshot()
+      const transition = this.executionTransition(effectiveTarget, previousAccountId)
       return {
         state: 'rolled_back',
         accountId,
         previousAccountId,
+        accounts,
+        effect: 'future_launches_only',
+        ...transition,
         error: error instanceof Error ? error.message : String(error)
       }
+    }
+  }
+
+  private executionTransition(
+    target: ClaudeAccountSelectionTarget | undefined,
+    accountId: string | null
+  ): Pick<
+    ClaudeAccountTransitionResult,
+    'restartRequired' | 'boundLiveExecutionCount' | 'unknownLiveExecutionCount'
+  > {
+    const normalized = normalizeClaudeAccountSelectionTarget(target)
+    let boundLiveExecutionCount = 0
+    let unknownLiveExecutionCount = 0
+    for (const { binding } of listClaudeExecutionAccountBindings()) {
+      if (binding.runtime !== normalized.runtime) {
+        continue
+      }
+      if (
+        normalized.runtime === 'wsl' &&
+        normalized.wslDistro !== null &&
+        binding.wslDistro !== normalized.wslDistro
+      ) {
+        continue
+      }
+      if (binding.accountId === undefined) {
+        unknownLiveExecutionCount += 1
+      } else if (binding.accountId !== accountId) {
+        boundLiveExecutionCount += 1
+      }
+    }
+    return {
+      restartRequired: boundLiveExecutionCount > 0 || unknownLiveExecutionCount > 0,
+      boundLiveExecutionCount,
+      unknownLiveExecutionCount
     }
   }
 
