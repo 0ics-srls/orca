@@ -88,16 +88,31 @@ describe('readAgentLaunchCreateOutcome', () => {
     ).toEqual({ worktreeId: 'wt-1' })
   })
 
-  it('ignores a warning left on the outcome, which is no longer where one lives', () => {
-    // Pins the contract migration: the warning moved to the top level precisely so a reader never
-    // has to branch on `outcome.kind` to find it. A host still sending the old shape must not
-    // sneak one through the surface it happened to build.
+  it('reads a warning an older host nested on the outcome', () => {
+    // A host from before the warning moved to the top level nests it on the terminal outcome, and
+    // advertises the same `agent.launch.v1`, so this route really is taken against one. Its warning
+    // is legitimate, not a stale shape to defend against: dropping it loses the incomplete-create
+    // notice the `worktree.create` path already delivered, which is a regression rather than a
+    // contract cleanup.
     expect(
       readAgentLaunchCreateOutcome({
         worktreeId: 'wt-1',
-        outcome: { kind: 'terminal', handle: 'term-1', warning: 'stale shape' }
+        outcome: { kind: 'terminal', handle: 'term-1', warning: '  startup terminal failed  ' }
       })
-    ).toEqual({ worktreeId: 'wt-1' })
+    ).toEqual({ worktreeId: 'wt-1', warning: 'startup terminal failed' })
+  })
+
+  it('prefers the top-level warning over a nested one', () => {
+    // A current host writes only the top level — `AgentLaunchOutcome` has no `warning` on either
+    // arm, so it cannot nest one — meaning this case cannot arise from one. Pinned anyway so the
+    // migration fallback can never shadow the fresher value.
+    expect(
+      readAgentLaunchCreateOutcome({
+        worktreeId: 'wt-1',
+        outcome: { kind: 'terminal', handle: 'term-1', warning: 'nested' },
+        warning: 'top level'
+      })
+    ).toEqual({ worktreeId: 'wt-1', warning: 'top level' })
   })
 })
 

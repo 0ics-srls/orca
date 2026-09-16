@@ -59,11 +59,22 @@ export function readAgentLaunchCreateOutcome(result: unknown): AgentLaunchCreate
   if (typeof worktreeId !== 'string' || !worktreeId.trim()) {
     return null
   }
-  // The launch reports an incomplete create at the top level, the same place `worktree.create`
-  // puts it, so nothing here branches on which surface the host built to find it.
+  // A current host reports an incomplete create at the top level, the same place `worktree.create`
+  // puts it, so nothing here branches on which surface the host built to find it. A host that
+  // predates that move nests the same warning on the terminal outcome instead, and still advertises
+  // the one `agent.launch.v1` capability, so this route cannot tell the two apart up front — read
+  // both shapes for as long as such a host can be paired. Top level wins: it is the only place a
+  // current host writes, so the fallback cannot shadow a fresher value.
   const warning =
-    'warning' in result && typeof result.warning === 'string' ? result.warning.trim() : ''
+    readTrimmedWarning(result) || readTrimmedWarning('outcome' in result ? result.outcome : null)
   return { worktreeId, ...(warning ? { warning } : {}) }
+}
+
+function readTrimmedWarning(source: unknown): string {
+  if (!source || typeof source !== 'object' || !('warning' in source)) {
+    return ''
+  }
+  return typeof source.warning === 'string' ? source.warning.trim() : ''
 }
 
 /**
