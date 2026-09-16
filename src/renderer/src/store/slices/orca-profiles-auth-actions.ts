@@ -180,6 +180,8 @@ export const createOrcaProfilesAuthActions: StateCreator<
     },
 
     signOutCurrentOrcaProfile: async () => {
+      nextConnectAttempt += 1
+      appliedConnectAttempt = nextConnectAttempt
       try {
         const result = await window.api.orcaProfiles.signOutCurrent()
         set({

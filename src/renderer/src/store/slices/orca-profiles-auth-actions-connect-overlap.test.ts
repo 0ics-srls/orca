@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type {
   ConnectCurrentOrcaProfileResult,
   OrcaProfileAuthStatus,
-  OrcaProfileListState
+  OrcaProfileListState,
+  SignOutCurrentOrcaProfileResult
 } from '../../../../shared/orca-profiles'
 import { createTestStore } from './store-test-helpers'
 
@@ -53,7 +54,8 @@ const connectedAuthStatus: OrcaProfileAuthStatus = {
 }
 
 const orcaProfilesApi = {
-  connectCurrent: vi.fn()
+  connectCurrent: vi.fn(),
+  signOutCurrent: vi.fn()
 }
 
 describe('orca profile overlapping connect actions', () => {
@@ -103,5 +105,58 @@ describe('orca profile overlapping connect actions', () => {
     expect(toastErrorMock).not.toHaveBeenCalled()
     expect(store.getState().orcaProfileAuthStatus).toEqual(laterAuthStatus)
     expect(store.getState().orcaProfiles).toEqual(laterConnected.profiles)
+  })
+
+  it('ignores an in-flight later connect after sign-out', async () => {
+    const signedOutAuth: OrcaProfileAuthStatus = {
+      activeProfileId: 'local-default',
+      configured: true,
+      state: 'local',
+      persistence: 'none'
+    }
+    const signedOut: SignOutCurrentOrcaProfileResult = {
+      status: 'signed-out',
+      auth: signedOutAuth,
+      activeProfileId: 'local-default',
+      profiles: listState.profiles
+    }
+    const earlierConnected: ConnectCurrentOrcaProfileResult = {
+      status: 'connected',
+      auth: connectedAuthStatus,
+      activeProfileId: 'local-default',
+      profiles: [{ ...listState.profiles[0], kind: 'cloud-linked', cloud: connectedCloud }]
+    }
+    const laterConnected: ConnectCurrentOrcaProfileResult = {
+      status: 'connected',
+      auth: {
+        ...connectedAuthStatus,
+        cloud: { ...connectedCloud, userId: 'user-2', email: 'ada@example.com' }
+      },
+      activeProfileId: 'local-default',
+      profiles: [
+        {
+          ...listState.profiles[0],
+          kind: 'cloud-linked',
+          cloud: { ...connectedCloud, userId: 'user-2', email: 'ada@example.com' }
+        }
+      ]
+    }
+    let finishLater!: (value: ConnectCurrentOrcaProfileResult) => void
+    orcaProfilesApi.connectCurrent.mockResolvedValueOnce(earlierConnected).mockReturnValueOnce(
+      new Promise<ConnectCurrentOrcaProfileResult>((resolve) => {
+        finishLater = resolve
+      })
+    )
+    orcaProfilesApi.signOutCurrent.mockResolvedValue(signedOut)
+    const store = createTestStore()
+
+    const earlier = store.getState().connectCurrentOrcaProfile()
+    const later = store.getState().connectCurrentOrcaProfile()
+    await expect(earlier).resolves.toEqual(earlierConnected)
+    await expect(store.getState().signOutCurrentOrcaProfile()).resolves.toEqual(signedOut)
+    finishLater(laterConnected)
+    await expect(later).resolves.toEqual(laterConnected)
+    expect(store.getState().orcaProfileAuthStatus).toEqual(signedOutAuth)
+    expect(store.getState().orcaProfiles).toEqual(listState.profiles)
   })
 })

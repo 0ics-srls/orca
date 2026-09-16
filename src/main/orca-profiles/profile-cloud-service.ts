@@ -39,6 +39,11 @@ export { refreshCurrentOrcaProfileAuth } from './profile-cloud-capability-refres
 let nextCloudConnectAttempt = 0
 let linkedCloudConnectAttempt = 0
 
+function invalidateOutstandingCloudConnectAttempts(): void {
+  nextCloudConnectAttempt += 1
+  linkedCloudConnectAttempt = nextCloudConnectAttempt
+}
+
 function isUserCancelledAuthError(message: string): boolean {
   return message === 'orca_cloud_auth_timeout' || message === 'orca_cloud_auth_denied'
 }
@@ -123,6 +128,9 @@ export async function connectCurrentOrcaProfile(
 export async function signOutCurrentOrcaProfile(
   userDataPath: string
 ): Promise<SignOutCurrentOrcaProfileResult> {
+  // Why: a Sign in click still waiting in the browser must not relink after
+  // the user explicitly signed out.
+  invalidateOutstandingCloudConnectAttempts()
   const active = ensureActiveOrcaProfile(userDataPath)
   const configState = getOrcaCloudAuthConfig()
   const session = readOrcaCloudSession(active.profile.id, userDataPath)
