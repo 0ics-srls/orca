@@ -65,3 +65,11 @@ isolated baseline. Owned carries reduce that to about 41 KB, 204 KB, or 575 KB,
 including the different owner objects. These per-owner costs are not an
 unbounded growth curve, and readers of the same input can share its parent.
 The follow-up adds 164 passing tests across five detector/URL/copier suites.
+
+The [Claude task metadata reproduction](../claude-task-retention/README.md) adds
+the shared 512-character description/name boundary. JSON-parsed task frames
+retained their parents in the actual live, settled, and recently removed tracker
+entries. Eight 4 Mi-character inputs retained about 32 MiB before the copy and
+7–12 KB afterward; 32 smaller 64 Ki-character inputs retained about 2.1 MB before
+and 25–45 KB afterward. These synthetic fields establish a retaining mechanism,
+not the trigger of a reported incident.
