@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { CLOSE_DIALOG_DEBOUNCE_MS } from './terminal-workspace-model'
 import {
   assessWindowCloseRunningWork,
@@ -26,6 +26,15 @@ export function useTerminalEditorCloseFoundation(
       isClosingRef.current = false
     }, CLOSE_DIALOG_DEBOUNCE_MS)
     closeDialogDebounceTimersRef.current.add(timer)
+  }, [])
+  useEffect(() => {
+    const debounceTimers = closeDialogDebounceTimersRef.current
+    return () => {
+      for (const timer of debounceTimers) {
+        window.clearTimeout(timer)
+      }
+      debounceTimers.clear()
+    }
   }, [])
   const [windowCloseDialogOpen, setWindowCloseDialogOpen] = useState(false)
   // Why: "running" and "could not reach the host" are different claims, and telling the user
