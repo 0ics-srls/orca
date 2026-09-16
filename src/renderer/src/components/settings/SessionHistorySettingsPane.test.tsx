@@ -403,6 +403,16 @@ function mixedFleet(): void {
   statusByHost()
 }
 
+it('leaves a lone computer to its own switch, with no roll-up above it', async () => {
+  pane(true)
+  await act(async () => {})
+  expect(screen.getAllByRole('switch')).toHaveLength(1)
+  expect(screen.queryByText(/of 1 computers/)).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(screen.queryByText('This computer')).not.toBeInTheDocument()
+  expect(screen.queryByText('Orca remote servers')).not.toBeInTheDocument()
+})
+
 it('counts every computer in one line, leaving out the segments worth zero', async () => {
   mixedFleet()
   pane(true)
