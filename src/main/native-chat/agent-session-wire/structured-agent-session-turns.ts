@@ -18,6 +18,7 @@ import type {
 import { DISPATCH_DOUBT_PERSISTENCE_FAILED } from '../agent-session-journal/journal-dispatch-doubt-reasons'
 import type { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { latestJournalDispatchObservation } from '../agent-session-journal/journal-dispatch-observation'
+import { activeStructuredAgentSessionTurnId } from '../../../shared/structured-agent-session-projection'
 import type {
   AgentSessionDispatchOutcome,
   StructuredAgentSessionAdapter
@@ -216,6 +217,9 @@ export async function performCancel(
             sessionId: ctx.sessionId,
             turnId: input.turnId,
             fence: ctx.fence,
+            // The journal is what the client read to name a turn, so it is what judges the request.
+            resolveLiveTurnId: () =>
+              activeStructuredAgentSessionTurnId(ctx.journal.snapshot().items),
             ...(dispatchStatus ? { dispatchStatus } : {}),
             ...(input.prompt ? { prompt: { itemId: input.prompt.itemId } } : {})
           })
