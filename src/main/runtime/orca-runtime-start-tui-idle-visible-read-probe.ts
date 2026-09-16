@@ -26,6 +26,7 @@ import {
   buildTerminalWaitResult
 } from './terminal-wait-results'
 import { createSetupCompletionScanner } from './orchestration/setup-completion-signal'
+import type { RuntimeScreenCapture } from './orca-runtime-core'
 
 export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWithCreateAgentPromptRenderGate {
   /** One bounded look at the provider's screen for an adopted PTY whose retained
@@ -55,7 +56,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         retireOnTimeout: true,
         // Why: the ready banner stays in scrollback for the whole session, so
         // classifying history would call a working agent idle (#15569 review).
-        visibleScreenOnly: true
+        visibleScreenOnly: true,
+        freshVisibleCapture: true
       } satisfies RuntimeProviderSnapshotReadOptions),
       probeTimeoutMs,
       null
@@ -73,11 +75,15 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         const snapshotText = projection.tail.join('\n')
         const blockedReason = detectTerminalWaitBlockedReason(snapshotText)
         const promptAgent = detectKnownReadyPromptAgent(snapshotText)
+        const screenCapture = this.visibleScreenCaptureByPtyId.get(
+          this.getLivePtyForHandle(waiter.handle)?.pty.ptyId ?? ''
+        )
         const result = this.buildTuiIdleProbeResult(
           waiter.handle,
           blockedReason,
           promptAgent,
-          waiter.evidenceCursor
+          waiter.evidenceCursor,
+          screenCapture ?? null
         )
         if (!result) {
           return
@@ -94,7 +100,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
     handle: string,
     blockedReason: RuntimeTerminalWaitBlockedReason | null,
     promptAgent: KnownReadyPromptAgent | null,
-    evidenceCursor?: TuiIdleEvidenceCursor
+    evidenceCursor?: TuiIdleEvidenceCursor,
+    screenCapture?: RuntimeScreenCapture | null
   ): RuntimeTerminalWait | null {
     const pty = this.getLivePtyForHandle(handle)
     if (pty) {
@@ -105,8 +112,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         record: {
           ...pty.pty,
           lastOscTitleObservedAt: pty.pty.lastOscTitleEpochMs,
-          attachmentId: pty.pty.incarnationId,
-          screenObservedAt: Date.now()
+          attachmentId: this.getPtyAttachmentId(pty.pty.ptyId),
+          screenCapture: screenCapture ?? null
         },
         rendererTitle: this.getAdoptedPtyTitle(pty.pty),
         readPositiveBodyEvidence: () => promptAgent !== null,
@@ -131,8 +138,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
     const observation = observeTuiIdle({
       record: {
         ...leaf,
-        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null,
-        screenObservedAt: Date.now()
+        attachmentId: leaf.ptyId ? this.getPtyAttachmentId(leaf.ptyId) : null,
+        screenCapture: screenCapture ?? null
       },
       rendererTitle: leaf.paneTitle ?? this.tabs.get(leaf.tabId)?.title ?? null,
       readPositiveBodyEvidence: () => promptAgent !== null,

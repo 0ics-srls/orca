@@ -56,6 +56,14 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     // provider-supported readiness fact; name-only or otherwise unbound observations stay open.
     for (const waiter of [...waiters]) {
       if (waiter.condition === 'tui-idle') {
+        if (
+          waiter.processIncarnation === null ||
+          this.getTerminalProcessIncarnation(handle) !== waiter.processIncarnation
+        ) {
+          this.removeWaiter(waiter)
+          waiter.reject(new Error('terminal_handle_stale'))
+          continue
+        }
         const observation = this.observeTuiIdleForLeaf(leaf, waiter.evidenceCursor)
         if (observation.state !== 'ready') {
           continue
@@ -103,6 +111,14 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     // Why: same re-ranking as resolveTuiIdleWaiters above.
     for (const waiter of [...waiters]) {
       if (waiter.condition === 'tui-idle') {
+        if (
+          waiter.processIncarnation === null ||
+          this.getTerminalProcessIncarnation(handle) !== waiter.processIncarnation
+        ) {
+          this.removeWaiter(waiter)
+          waiter.reject(new Error('terminal_handle_stale'))
+          continue
+        }
         const observation = this.observeTuiIdleForPty(pty, waiter.evidenceCursor)
         if (observation.state !== 'ready') {
           continue
@@ -133,7 +149,10 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
     return observeTuiIdle({
       record: {
         ...leaf,
-        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null
+        attachmentId: leaf.ptyId ? this.getPtyAttachmentId(leaf.ptyId) : null,
+        screenCapture: leaf.ptyId
+          ? (this.visibleScreenCaptureByPtyId.get(leaf.ptyId) ?? null)
+          : null
       },
       rendererTitle: leaf.paneTitle ?? this.tabs.get(leaf.tabId)?.title ?? null,
       readPositiveBodyEvidence: () => promptAgent !== null,
@@ -181,7 +200,8 @@ export class OrcaRuntimeWithResolveExitWaiters extends OrcaRuntimeWithBindPtyInc
       record: {
         ...pty,
         lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
-        attachmentId: pty.incarnationId
+        attachmentId: this.getPtyAttachmentId(pty.ptyId),
+        screenCapture: this.visibleScreenCaptureByPtyId.get(pty.ptyId) ?? null
       },
       rendererTitle: adoptedTitle,
       readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,

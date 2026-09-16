@@ -324,10 +324,18 @@ export class OrcaRuntimeWithRuntimeId {
     getAdoptedPtyIdleStatus: (pty) => this.getAdoptedPtyExplicitIdleStatus(pty),
     getAdoptedPtyTitle: (pty) => this.getAdoptedPtyTitle(pty),
     getPaneAgent: (ptyId) => this.getPaneAgentForTuiIdle(ptyId),
-    getFirstPartyAgentStatus: (ptyId) =>
-      (ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null) ?? null,
-    getAttachmentId: (ptyId) => (ptyId ? (this.ptysById.get(ptyId)?.incarnationId ?? null) : null),
+    getFirstPartyAgentStatus: (ptyId) => {
+      const status = ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null
+      return status ?? null
+    },
+    getAttachmentId: (ptyId) => (ptyId ? this.getPtyAttachmentId(ptyId) : null),
+    getScreenCapture: (ptyId) =>
+      ptyId ? (this.visibleScreenCaptureByPtyId.get(ptyId) ?? null) : null,
     getTerminalProcessIncarnation: (handle) => this.getTerminalProcessIncarnation(handle),
+    retire: (waiter, reason) => {
+      this.terminalWaiters.remove(waiter)
+      waiter.reject(new Error(reason))
+    },
     getLiveLeaf: (leaf) => this.leaves.get(this.getLeafKey(leaf.tabId, leaf.leafId)) ?? leaf,
     resolve: (waiter, result) => this.terminalWaiters.resolve(waiter, result)
   })
@@ -341,10 +349,13 @@ export class OrcaRuntimeWithRuntimeId {
       getAdoptedPtyTitle: (pty) => this.getAdoptedPtyTitle(pty),
       getTabTitle: (tabId) => this.tabs.get(tabId)?.title ?? null,
       getPaneAgent: (ptyId) => this.getPaneAgentForTuiIdle(ptyId),
-      getFirstPartyAgentStatus: (ptyId) =>
-        (ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null) ?? null,
-      getAttachmentId: (ptyId) =>
-        ptyId ? (this.ptysById.get(ptyId)?.incarnationId ?? null) : null,
+      getFirstPartyAgentStatus: (ptyId) => {
+        const status = ptyId ? this.ptysById.get(ptyId)?.lastExplicitAgentStatus : null
+        return status ?? null
+      },
+      getAttachmentId: (ptyId) => (ptyId ? this.getPtyAttachmentId(ptyId) : null),
+      getScreenCapture: (ptyId) =>
+        ptyId ? (this.visibleScreenCaptureByPtyId.get(ptyId) ?? null) : null,
       getTerminalProcessIncarnation: (handle) => this.getTerminalProcessIncarnation(handle),
       startVisibleReadProbe: (waiter, waiterTimeoutMs) =>
         this.startTuiIdleVisibleReadProbe(waiter, waiterTimeoutMs)

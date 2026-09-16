@@ -120,7 +120,8 @@ export class RuntimeTerminalWait {
               reject,
               this.deps,
               this.evidence,
-              waiter.evidenceCursor
+              waiter.evidenceCursor,
+              waiter.processIncarnation
             )
           }, effectiveTimeoutMs)
         }
@@ -159,7 +160,13 @@ export class RuntimeTerminalWait {
             )
           } else {
             this.polls.startPty(waiter, live.pty)
-            if (live.pty.lastAgentStatus === null && livePtyWaitText.length === 0) {
+            // A fresh screen capture can prove an unchanged ready CLI even when
+            // retained stream text is non-empty; generic bytes still never count
+            // as readiness without the provider's positive matcher.
+            if (
+              live.pty.lastAgentStatus !== 'working' &&
+              live.pty.lastAgentStatus !== 'permission'
+            ) {
               this.deps.startVisibleReadProbe(waiter, effectiveTimeoutMs)
             }
           }
@@ -237,7 +244,8 @@ export class RuntimeTerminalWait {
             reject,
             this.deps,
             this.evidence,
-            waiter.evidenceCursor
+            waiter.evidenceCursor,
+            waiter.processIncarnation
           )
         }, effectiveTimeoutMs)
       }
@@ -276,7 +284,10 @@ export class RuntimeTerminalWait {
             )
           } else {
             this.polls.startLeaf(waiter, live.leaf)
-            if (live.leaf.lastAgentStatus === null && liveLeafWaitText.length === 0) {
+            if (
+              live.leaf.lastAgentStatus !== 'working' &&
+              live.leaf.lastAgentStatus !== 'permission'
+            ) {
               this.deps.startVisibleReadProbe(waiter, effectiveTimeoutMs)
             }
           }

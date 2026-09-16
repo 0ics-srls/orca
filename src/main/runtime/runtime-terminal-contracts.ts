@@ -187,6 +187,8 @@ export type RuntimeProviderSnapshotReadOptions = {
   timeoutMs?: number
   retireOnTimeout?: boolean
   visibleScreenOnly?: boolean
+  /** Force an actual screen capture; cache reuse keeps the prior provenance. */
+  freshVisibleCapture?: boolean
 }
 
 /** Agent-prompt writes add the correlation inputs a queued-acceptance receipt needs. */

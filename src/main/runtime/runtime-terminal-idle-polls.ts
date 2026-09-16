@@ -17,6 +17,7 @@ import {
   type TuiIdleEvidenceRecord
 } from './tui-idle-evidence'
 import type { TuiAgent } from '../../shared/tui-agent'
+import type { RuntimeScreenCapture } from './orca-runtime-core'
 
 import type { TerminalWaiter } from './runtime-terminal-contracts'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
@@ -29,6 +30,9 @@ type RuntimeTerminalIdlePollDependencies = {
   getPaneAgent(ptyId: string | null | undefined): TuiAgent | null
   getFirstPartyAgentStatus(ptyId: string | null | undefined): FirstPartyAgentStatus
   getAttachmentId?(ptyId: string | null | undefined): string | null
+  getScreenCapture?(ptyId: string | null | undefined): RuntimeScreenCapture | null
+  getTerminalProcessIncarnation?(handle: string): string | null
+  retire?(waiter: TerminalWaiter, reason: string): void
   /** Re-read the record the waiter registered against; see `liveLeaf` below. */
   getLiveLeaf(leaf: RuntimeLeafRecord): RuntimeLeafRecord
   resolve(waiter: TerminalWaiter, result: RuntimeTerminalWait): void
@@ -91,6 +95,14 @@ export class RuntimeTerminalIdlePolls {
       return
     }
     const { waiter } = entry
+    if (
+      this.deps.getTerminalProcessIncarnation &&
+      waiter.processIncarnation !== this.deps.getTerminalProcessIncarnation(waiter.handle)
+    ) {
+      this.stop(entry)
+      this.deps.retire?.(waiter, 'terminal_handle_stale')
+      return
+    }
     // Why re-read: `syncWindowGraph` rebuilds `this.leaves` with fresh objects on every
     // renderer publish, so the record captured at registration stops advancing. Reading the
     // live record keeps readiness and first-party status tied to the current attachment.
@@ -111,7 +123,8 @@ export class RuntimeTerminalIdlePolls {
       const observation = observeTuiIdle({
         record: {
           ...leaf,
-          attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+          attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null,
+          screenCapture: this.deps.getScreenCapture?.(leaf.ptyId) ?? null
         } satisfies TuiIdleEvidenceRecord,
         rendererTitle: leaf.paneTitle ?? this.deps.getTabTitle(leaf.tabId),
         readPositiveBodyEvidence: () => promptAgent !== null,
@@ -141,6 +154,14 @@ export class RuntimeTerminalIdlePolls {
       return
     }
     const { waiter, pty } = entry
+    if (
+      this.deps.getTerminalProcessIncarnation &&
+      waiter.processIncarnation !== this.deps.getTerminalProcessIncarnation(waiter.handle)
+    ) {
+      this.stop(entry)
+      this.deps.retire?.(waiter, 'terminal_handle_stale')
+      return
+    }
     // Why no re-read here: `ptysById` has a single create-once `set` site, so PTY
     // records are mutated in place rather than swapped, and a capture stays live.
     const agent = this.deps.getPaneAgent(pty.ptyId)
@@ -162,7 +183,8 @@ export class RuntimeTerminalIdlePolls {
         record: {
           ...pty,
           lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
-          attachmentId: pty.incarnationId
+          attachmentId: this.deps.getAttachmentId?.(pty.ptyId) ?? pty.incarnationId,
+          screenCapture: this.deps.getScreenCapture?.(pty.ptyId) ?? null
         } satisfies TuiIdleEvidenceRecord,
         rendererTitle: adoptedTitle,
         readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,

@@ -8,6 +8,7 @@ import type { TuiIdleEvidenceCursor } from './tui-idle-evidence'
 type RuntimeTerminalWaitTimeoutDependencies = {
   getLivePty(handle: string): { pty: RuntimePtyWorktreeRecord } | null
   getLiveLeaf(handle: string): { leaf: RuntimeLeafRecord }
+  getTerminalProcessIncarnation?(handle: string): string | null
 }
 
 export function resolvePtyTuiIdleTimeout(
@@ -16,8 +17,16 @@ export function resolvePtyTuiIdleTimeout(
   reject: (error: Error) => void,
   deps: RuntimeTerminalWaitTimeoutDependencies,
   evidence: RuntimeTerminalWaitEvidence,
-  evidenceCursor?: TuiIdleEvidenceCursor
+  evidenceCursor?: TuiIdleEvidenceCursor,
+  expectedProcessIncarnation?: string | null
 ): void {
+  if (
+    deps.getTerminalProcessIncarnation &&
+    expectedProcessIncarnation !== deps.getTerminalProcessIncarnation(handle)
+  ) {
+    reject(new Error('terminal_handle_stale'))
+    return
+  }
   const live = deps.getLivePty(handle)
   if (!live) {
     reject(new Error('terminal_handle_stale'))
@@ -45,8 +54,16 @@ export function resolveLeafTuiIdleTimeout(
   reject: (error: Error) => void,
   deps: RuntimeTerminalWaitTimeoutDependencies,
   evidence: RuntimeTerminalWaitEvidence,
-  evidenceCursor?: TuiIdleEvidenceCursor
+  evidenceCursor?: TuiIdleEvidenceCursor,
+  expectedProcessIncarnation?: string | null
 ): void {
+  if (
+    deps.getTerminalProcessIncarnation &&
+    expectedProcessIncarnation !== deps.getTerminalProcessIncarnation(handle)
+  ) {
+    reject(new Error('terminal_handle_stale'))
+    return
+  }
   let current: RuntimeLeafRecord
   try {
     current = deps.getLiveLeaf(handle).leaf

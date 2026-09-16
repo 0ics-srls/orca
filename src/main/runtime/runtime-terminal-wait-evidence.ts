@@ -3,6 +3,7 @@ import type { RuntimeTerminalReadiness } from '../../shared/runtime-types'
 import type { TuiAgent } from '../../shared/tui-agent'
 import { detectKnownReadyPromptAgent } from './terminal-wait-detection'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import type { RuntimeScreenCapture } from './orca-runtime-core'
 import {
   observeTuiIdle,
   captureTuiIdleEvidenceCursor,
@@ -18,6 +19,7 @@ type RuntimeTerminalWaitEvidenceDependencies = {
   getPaneAgent(ptyId: string | null | undefined): TuiAgent | null
   getFirstPartyAgentStatus(ptyId: string | null | undefined): FirstPartyAgentStatus
   getAttachmentId?(ptyId: string | null | undefined): string | null
+  getScreenCapture?(ptyId: string | null | undefined): RuntimeScreenCapture | null
 }
 
 export class RuntimeTerminalWaitEvidence {
@@ -43,7 +45,8 @@ export class RuntimeTerminalWaitEvidence {
       record: {
         ...pty,
         lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
-        attachmentId: pty.incarnationId
+        attachmentId: this.deps.getAttachmentId?.(pty.ptyId) ?? pty.incarnationId,
+        screenCapture: this.deps.getScreenCapture?.(pty.ptyId) ?? null
       },
       rendererTitle: adoptedTitle,
       readPositiveBodyEvidence: () => adoptedIdle || promptAgent !== null,
@@ -64,7 +67,8 @@ export class RuntimeTerminalWaitEvidence {
     return observeTuiIdle({
       record: {
         ...leaf,
-        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null,
+        screenCapture: this.deps.getScreenCapture?.(leaf.ptyId) ?? null
       },
       rendererTitle: leaf.paneTitle ?? this.deps.getTabTitle(leaf.tabId),
       readPositiveBodyEvidence: () => promptAgent !== null,
@@ -80,9 +84,10 @@ export class RuntimeTerminalWaitEvidence {
       {
         ...pty,
         lastOscTitleObservedAt: pty.lastOscTitleEpochMs,
-        attachmentId: pty.incarnationId
+        attachmentId: this.deps.getAttachmentId?.(pty.ptyId) ?? pty.incarnationId,
+        screenCapture: this.deps.getScreenCapture?.(pty.ptyId) ?? null
       },
-      pty.incarnationId
+      this.deps.getAttachmentId?.(pty.ptyId) ?? pty.incarnationId
     )
   }
 
@@ -90,7 +95,8 @@ export class RuntimeTerminalWaitEvidence {
     return captureTuiIdleEvidenceCursor(
       {
         ...leaf,
-        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null
+        attachmentId: this.deps.getAttachmentId?.(leaf.ptyId) ?? null,
+        screenCapture: this.deps.getScreenCapture?.(leaf.ptyId) ?? null
       },
       this.deps.getAttachmentId?.(leaf.ptyId) ?? null
     )

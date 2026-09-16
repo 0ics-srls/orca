@@ -5,6 +5,7 @@ import { getAgentReadinessCapability } from '../../shared/agent-readiness-capabi
 import { resolveExplicitTerminalTitleAgentType } from '../../shared/terminal-title-agent-type'
 import type { TuiAgent } from '../../shared/tui-agent'
 import { detectExplicitIdleStatusFromTitle } from './terminal-wait-detection'
+import type { RuntimeScreenCapture } from './orca-runtime-core'
 
 /**
  * Ranking the evidence that a `tui-idle` wait may settle on.
@@ -38,14 +39,18 @@ export type TuiIdleEvidenceRecord = {
   lastOscTitleObservedAt?: number | null
   /** Host-owned attachment identity. Historical bytes must never certify a replacement process. */
   attachmentId?: string | null
-  /** Host capture time for a visible-screen read; distinct from PTY stream output time. */
+  /** @deprecated Legacy wall-clock field; readiness ignores it in favor of screenCapture. */
   screenObservedAt?: number | null
+  /** Provenance of the visible screen text used by a readiness decision. */
+  screenCapture?: RuntimeScreenCapture | null
 }
 
 export type FirstPartyAgentStatus = {
   state: AgentStatusState
   /** When the host observed this provider fact, not when a replica replayed it. */
   updatedAt: number
+  /** PTY output sequence at the host observation, when available. */
+  outputSequence?: number
   attachmentId?: string | null
 } | null
 
@@ -54,7 +59,9 @@ export type FirstPartyAgentStatus = {
 export type TuiIdleEvidenceCursor = {
   attachmentId: string | null
   titleRevision: number | null
-  screenObservedAt: number | null
+  screenCaptureRevision: number | null
+  screenCaptureAttachmentId: string | null
+  screenCaptureGeneration: number | null
 }
 
 export type TuiIdleObservation = {
@@ -133,10 +140,10 @@ export function captureTuiIdleEvidenceCursor(
         ? record.lastOscTitleAt
         : typeof record.lastOscTitleObservedAt === 'number'
           ? record.lastOscTitleObservedAt
-          : typeof record.lastOutputAt === 'number'
-            ? record.lastOutputAt
-            : null,
-    screenObservedAt: record.screenObservedAt ?? record.lastOutputAt
+          : null,
+    screenCaptureRevision: record.screenCapture?.revision ?? null,
+    screenCaptureAttachmentId: record.screenCapture?.attachmentId ?? null,
+    screenCaptureGeneration: record.screenCapture?.generation ?? null
   }
 }
 
@@ -145,7 +152,12 @@ function hasEvidenceAfter(
   cursor: TuiIdleEvidenceCursor,
   source: 'title' | 'screen'
 ): boolean {
-  if (cursor.attachmentId !== null && record.attachmentId !== cursor.attachmentId) {
+  if (
+    cursor.attachmentId === null ||
+    record.attachmentId === null ||
+    record.attachmentId === undefined ||
+    record.attachmentId !== cursor.attachmentId
+  ) {
     return false
   }
   if (source === 'title') {
@@ -154,20 +166,24 @@ function hasEvidenceAfter(
         ? record.lastOscTitleAt
         : typeof record.lastOscTitleObservedAt === 'number'
           ? record.lastOscTitleObservedAt
-          : typeof record.lastOutputAt === 'number'
-            ? record.lastOutputAt
-            : null
+          : null
     return (
       currentRevision !== null &&
       (cursor.titleRevision === null || currentRevision > cursor.titleRevision)
     )
   }
-  const currentScreenObservation = record.screenObservedAt ?? record.lastOutputAt
-  return (
-    currentScreenObservation !== null &&
-    currentScreenObservation !== undefined &&
-    (cursor.screenObservedAt === null || currentScreenObservation > cursor.screenObservedAt)
-  )
+  const capture = record.screenCapture
+  if (
+    !capture ||
+    capture.attachmentId !== record.attachmentId ||
+    (cursor.screenCaptureAttachmentId !== null &&
+      capture.attachmentId !== cursor.screenCaptureAttachmentId) ||
+    (cursor.screenCaptureGeneration !== null &&
+      capture.generation !== cursor.screenCaptureGeneration)
+  ) {
+    return false
+  }
+  return cursor.screenCaptureRevision === null || capture.revision > cursor.screenCaptureRevision
 }
 
 function hasEvidenceAfterFirstPartyStatus(
@@ -191,8 +207,17 @@ function hasEvidenceAfterFirstPartyStatus(
       record.lastOscTitleObservedAt > status.updatedAt
     )
   }
-  const currentScreenObservation = record.screenObservedAt ?? record.lastOutputAt
-  return typeof currentScreenObservation === 'number' && currentScreenObservation > status.updatedAt
+  // A screen capture is a host observation, not a replayed stream timestamp. The
+  // operation cursor fences old captures; once a new same-attachment frame exists,
+  // it is newer evidence even when the provider screen itself is unchanged.
+  return Boolean(
+    record.screenCapture &&
+    (status.attachmentId === undefined ||
+      status.attachmentId === null ||
+      record.screenCapture.attachmentId === status.attachmentId) &&
+    (status.outputSequence === undefined ||
+      record.screenCapture.outputSequence > status.outputSequence)
+  )
 }
 
 /**

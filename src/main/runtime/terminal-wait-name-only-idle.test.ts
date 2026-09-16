@@ -12,6 +12,7 @@ import type { RuntimeSyncWindowGraph } from '../../shared/runtime-types'
 import type { AgentStatus } from '../../shared/agent-detection'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
+import type { RuntimeScreenCapture } from './orca-runtime-core'
 import type { FirstPartyAgentStatus } from './tui-idle-evidence'
 import {
   captureTuiIdleEvidenceCursor,
@@ -40,6 +41,7 @@ function createWait(options: {
   agent?: TuiAgent | null
   firstPartyStatus?: FirstPartyAgentStatus
   liveLeaf?: () => RuntimeLeafRecord
+  screenCapture?: RuntimeScreenCapture | null
 }) {
   const waiters = new RuntimeTerminalWaiterRegistry()
   const startVisibleReadProbe = vi.fn()
@@ -49,6 +51,8 @@ function createWait(options: {
     getAdoptedPtyTitle: () => options.adoptedTitle ?? null,
     getPaneAgent: () => options.agent ?? null,
     getFirstPartyAgentStatus: () => options.firstPartyStatus ?? null,
+    getAttachmentId: () => 'test-incarnation',
+    getScreenCapture: () => options.screenCapture ?? null,
     getTerminalProcessIncarnation: () => 'test-incarnation'
   }
   const polls = new RuntimeTerminalIdlePolls({
@@ -127,7 +131,7 @@ describe('tui-idle evidence ranking', () => {
     const { wait } = createWait({ pty, agent: 'codex' })
     const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
     pty.lastOscTitle = EXPLICIT_IDLE_TITLE
-    pty.lastOutputAt = Date.now() + 1
+    pty.lastOscTitleAt = 2
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({ satisfied: true })
   })
@@ -146,10 +150,21 @@ describe('tui-idle evidence ranking', () => {
 
   it('accepts a provider-specific ready screen when launch metadata is absent', async () => {
     const pty = makeTuiIdlePty()
-    const { wait } = createWait({ pty, agent: null })
+    const screenCapture: RuntimeScreenCapture = {
+      attachmentId: 'test-incarnation',
+      generation: 1,
+      outputSequence: 1,
+      revision: 1,
+      source: 'headless'
+    }
+    const { wait } = createWait({
+      pty,
+      agent: null,
+      screenCapture
+    })
     const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
     pty.preview = 'OpenAI Codex\nModel: gpt-5\nDirectory: /tmp/repo'
-    pty.lastOutputAt = Date.now() + 1
+    screenCapture.revision = 2
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({
       satisfied: true,
@@ -166,7 +181,7 @@ describe('tui-idle evidence ranking', () => {
       adoptedTitle: 'OMP ready'
     })
     const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    pty.lastOscTitleEpochMs = Date.now() + 1
+    pty.lastOscTitleAt = 2
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({
       satisfied: true,
@@ -197,7 +212,7 @@ describe('tui-idle evidence ranking', () => {
     })
     const { wait } = createWait({ leaf, agent: 'codex', tabTitle: null })
     const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 60_000 })
-    leaf.lastOutputAt = Date.now() + 1
+    leaf.lastOscTitleAt = 2
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({ satisfied: true })
   })
@@ -294,6 +309,7 @@ describe('tui-idle evidence ranking', () => {
         record: {
           lastAgentStatus: 'idle',
           lastOscTitle: EXPLICIT_IDLE_TITLE,
+          lastOscTitleAt: 1,
           lastOscTitleObservedAt: now,
           lastOutputAt: now,
           attachmentId: 'inc-1'
@@ -314,6 +330,7 @@ describe('tui-idle evidence ranking', () => {
     const record: TuiIdleEvidenceRecord = {
       lastAgentStatus: 'idle',
       lastOscTitle: EXPLICIT_IDLE_TITLE,
+      lastOscTitleAt: 1,
       lastOscTitleObservedAt: now,
       lastOutputAt: now,
       attachmentId: 'inc-1'
@@ -330,7 +347,7 @@ describe('tui-idle evidence ranking', () => {
     ).toMatchObject({ state: 'unknown', agent: 'codex' })
     expect(
       observeTuiIdle({
-        record: { ...record, lastOscTitleObservedAt: now + 1, lastOutputAt: now + 1 },
+        record: { ...record, lastOscTitleAt: 2, lastOscTitleObservedAt: now + 1 },
         agent: 'codex',
         firstPartyStatus: null,
         evidenceCursor: cursor,
@@ -351,7 +368,7 @@ describe('tui-idle evidence ranking', () => {
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     expect(settled).not.toHaveBeenCalled()
 
-    pty.lastOutputAt = Date.now()
+    pty.lastOscTitleAt = 2
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     await expect(result).resolves.toMatchObject({ satisfied: true })
   })
@@ -397,7 +414,13 @@ describe('tui-idle evidence ranking', () => {
           lastAgentStatus: 'idle',
           lastOscTitle: NAME_ONLY_TITLE,
           lastOutputAt: now,
-          screenObservedAt: now + 1,
+          screenCapture: {
+            attachmentId: 'inc-1',
+            generation: 1,
+            outputSequence: 1,
+            revision: 1,
+            source: 'headless'
+          },
           attachmentId: 'inc-1'
         },
         agent: 'codex',
@@ -407,6 +430,141 @@ describe('tui-idle evidence ranking', () => {
         positiveBodyEvidenceAgent: 'codex'
       })
     ).toMatchObject({ state: 'ready', source: 'screen', agent: 'codex' })
+  })
+
+  it('rejects a cached screen replay even when a caller wall clock advances', () => {
+    const capture = {
+      attachmentId: 'inc-1',
+      generation: 3,
+      outputSequence: 42,
+      revision: 7,
+      source: 'headless' as const
+    }
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      attachmentId: 'inc-1',
+      screenCapture: capture,
+      screenObservedAt: Date.now() + 10_000
+    }
+    const cursor = captureTuiIdleEvidenceCursor(record)
+    expect(
+      observeTuiIdle({
+        record: { ...record, screenObservedAt: Date.now() + 20_000 },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'unknown', agent: 'codex' })
+  })
+
+  it('accepts an unchanged screen only after a new host capture revision', () => {
+    const capture = {
+      attachmentId: 'inc-1',
+      generation: 3,
+      outputSequence: 42,
+      revision: 7,
+      source: 'headless' as const
+    }
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      attachmentId: 'inc-1',
+      screenCapture: capture
+    }
+    const cursor = captureTuiIdleEvidenceCursor(record)
+    expect(
+      observeTuiIdle({
+        record: { ...record, screenCapture: { ...capture, revision: 8 } },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'ready', source: 'screen', agent: 'codex' })
+  })
+
+  it('does not let a recapture of a pre-working screen outrank a stale working fact', () => {
+    const capture = {
+      attachmentId: 'inc-1',
+      generation: 3,
+      outputSequence: 42,
+      revision: 8,
+      source: 'headless' as const
+    }
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      attachmentId: 'inc-1',
+      screenCapture: capture
+    }
+    expect(
+      observeTuiIdle({
+        record,
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'working',
+          updatedAt: Date.now() - 31 * 60 * 1000,
+          outputSequence: 42,
+          attachmentId: 'inc-1'
+        },
+        evidenceCursor: captureTuiIdleEvidenceCursor({
+          ...record,
+          screenCapture: { ...capture, revision: 7 }
+        }),
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'unknown', source: 'first-party', agent: 'codex' })
+    expect(
+      observeTuiIdle({
+        record: { ...record, screenCapture: { ...capture, outputSequence: 43, revision: 9 } },
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'working',
+          updatedAt: Date.now() - 31 * 60 * 1000,
+          outputSequence: 42,
+          attachmentId: 'inc-1'
+        },
+        evidenceCursor: captureTuiIdleEvidenceCursor({
+          ...record,
+          screenCapture: { ...capture, revision: 7 }
+        }),
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'ready', source: 'screen', agent: 'codex' })
+  })
+
+  it('does not treat an unknown attachment as a wildcard for a replacement', () => {
+    const cursor = captureTuiIdleEvidenceCursor({
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      attachmentId: null,
+      lastOscTitleAt: 1
+    })
+    expect(
+      observeTuiIdle({
+        record: {
+          lastAgentStatus: 'idle',
+          lastOscTitle: EXPLICIT_IDLE_TITLE,
+          lastOutputAt: null,
+          attachmentId: 'inc-replacement',
+          lastOscTitleAt: 2
+        },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => false
+      })
+    ).toMatchObject({ state: 'unknown', agent: 'codex' })
   })
 })
 
