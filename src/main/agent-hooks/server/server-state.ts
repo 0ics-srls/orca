@@ -22,7 +22,7 @@ import type { AgentHookSource } from '../../../shared/agent-hook-relay'
 import type { AgentStatusClearIpcPayload } from '../../../shared/agent-status-types'
 import type { LegacyPaneKeyAliasEntry } from '../../../shared/persisted-state-types'
 import type { SpoolRecord } from '../../../shared/agent-hook-spool'
-import { createAgentStatusStore } from '../../../shared/agent-status-store'
+import { createAgentStatusStore, type AgentStatusStore } from '../../../shared/agent-status-store'
 import { AGENT_STATUS_2A_CURRENT_PRODUCER_MODE } from '../../../shared/agent-status-legacy-adapter'
 import type { AgentStatusStructuredSessionSubject } from '../../../shared/agent-status-subject'
 import type {
@@ -58,10 +58,16 @@ export abstract class AgentHookServerState {
     )
   }
 
-  protected canonicalStatusStore = createAgentStatusStore({
-    epoch: randomUUID(),
-    mode: 'authority'
-  })
+  // Why: the epoch is minted on first canonical use, so constructing the server — which happens at
+  // import time for the module singleton — owes nothing to a live crypto implementation.
+  private canonicalStatusStoreInstance: AgentStatusStore | null = null
+  protected get canonicalStatusStore(): AgentStatusStore {
+    this.canonicalStatusStoreInstance ??= createAgentStatusStore({
+      epoch: randomUUID(),
+      mode: 'authority'
+    })
+    return this.canonicalStatusStoreInstance
+  }
   protected readonly canonicalListingOrder = new Map<string, number>()
   protected readonly canonicalSubjectsByPane = new Map<
     string,
@@ -71,7 +77,7 @@ export abstract class AgentHookServerState {
   protected nextStatusListingOrder = (): number => ++this.statusListingOrder
 
   protected resetCanonicalStatus(): void {
-    this.canonicalStatusStore = createAgentStatusStore({ epoch: randomUUID(), mode: 'authority' })
+    this.canonicalStatusStoreInstance = null
     this.canonicalListingOrder.clear()
     this.canonicalSubjectsByPane.clear()
   }
