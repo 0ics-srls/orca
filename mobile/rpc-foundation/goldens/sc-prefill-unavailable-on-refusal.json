@@ -3,9 +3,9 @@
   "family": "hostedReview.eligibility",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
+  "baseline": "a28085adbfb65d3f27393cc7a0d78cfa2b4ff07e",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "d08bf9cd596ee449531f079c9f4f83efcb03fbc5e8d8658d15e0407d3464ec0e",
   "adapterSha256": "c582ce355b0704b38d7e84cbce352630096c91231bf09aecd1f6dbb409fed17f",
   "scenarioSha256": "9de96287a4dfa6cf5c9a8b683cc696fdc2cd387f86f231e22ee3f100a2e778e3",
   "platform": "darwin",
@@ -58,7 +58,12 @@
         }
       }
     },
-    "2f56274e5397": {
+    "349d5045a996": {
+      "name": "hostedReview.getCreationEligibility#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"hostedReview.getCreationEligibility\",\"params\":{\"repo\":\"id:repo42\",\"worktree\":\"id:repo42::/p\",\"branch\":\"feature\",\"base\":null,\"linkedGitHubPR\":null,\"linkedGitLabMR\":null}}",
+      "sent": 1
+    },
+    "478df34536dc": {
       "status": "fulfilled",
       "startedAt": 0,
       "settledAt": 0,
@@ -68,7 +73,6 @@
           "$rpc": "null"
         },
         "body": "",
-        "canCreate": false,
         "nextAction": {
           "$rpc": "null"
         },
@@ -77,7 +81,7 @@
         "title": "Recorded title"
       }
     },
-    "77a5a5f8b111": {
+    "ac13623773fe": {
       "eligibility": "unfetched",
       "prefill": {
         "base": "main",
@@ -85,7 +89,6 @@
           "$rpc": "null"
         },
         "body": "",
-        "canCreate": false,
         "nextAction": {
           "$rpc": "null"
         },
@@ -93,10 +96,6 @@
         "reviewLookupOutcome": "unavailable",
         "title": "Recorded title"
       }
-    },
-    "cc09b6142ccb": {
-      "name": "hostedReview.getCreationEligibility#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"hostedReview.getCreationEligibility\",\"params\":{\"repo\":\"id:repo42\",\"worktree\":\"id:repo42::/p\",\"branch\":\"feature\",\"base\":null,\"linkedGitHubPR\":null,\"linkedGitLabMR\":null}}"
     }
   },
   "recording": {
@@ -106,11 +105,11 @@
         "id": "settled",
         "observation": {
           "sender": ["0710fc7e2b71"],
-          "payloads": ["cc09b6142ccb"],
+          "payloads": ["349d5045a996"],
           "settlements": {
-            "prefill": "2f56274e5397"
+            "prefill": "478df34536dc"
           },
-          "state": "77a5a5f8b111",
+          "state": "ac13623773fe",
           "effects": []
         }
       }
