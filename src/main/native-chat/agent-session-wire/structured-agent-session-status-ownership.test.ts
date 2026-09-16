@@ -53,6 +53,23 @@ describe('structured status owner address retention', () => {
     )
   })
 
+  it('does not report a throwing publication as an owned location', () => {
+    const sink = {
+      publish: vi.fn().mockImplementationOnce(() => {
+        throw new Error('store down')
+      }),
+      forget: vi.fn()
+    }
+    const owner = new StructuredAgentSessionStatusOwnership(() => sink)
+    expect(() => owner.publish(summary, location)).toThrow('store down')
+    // The feed skips an unchanged re-projection only when the location already matches. Reporting a
+    // match here would strand the row: the publish never landed and nothing else re-offers it.
+    expect(owner.matchesLocation(summary.sessionId, location)).toBe(false)
+    owner.publish(summary, location)
+    expect(sink.publish).toHaveBeenCalledTimes(2)
+    expect(owner.matchesLocation(summary.sessionId, location)).toBe(true)
+  })
+
   it('keeps the owner address when a downstream publication observer throws', () => {
     const sink = {
       publish: vi.fn(() => {

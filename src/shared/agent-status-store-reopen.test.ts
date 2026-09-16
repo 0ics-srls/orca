@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { createAgentStatusStore } from './agent-status-store'
-import { AGENT_STATUS_STORE_LIMITS } from './agent-status-store-contract'
 import {
   makePtyRunAgentStatusSubject,
   makeStructuredAgentStatusSubject
@@ -15,7 +14,7 @@ const scope = {
 const subject = makeStructuredAgentStatusSubject(scope, 'durable-session')
 
 describe('structured parent reopening', () => {
-  it('reopens a removed structured parent and fences replay from before the reopen', () => {
+  it('reopens a removed structured parent and refuses a replay whose revision pair is spent', () => {
     const owner = createAgentStatusStore({ epoch: 'host', mode: 'authority' })
     const replica = createAgentStatusStore({ epoch: 'reader', mode: 'replica' })
     const oldPublication = owner.applyMutation({ parent: { subject, firstObservedAt: 10 } })
@@ -24,27 +23,25 @@ describe('structured parent reopening', () => {
     const removal = owner.applyMutation({ removeParent: subject })
     expect(removal).not.toBeNull()
     expect(replica.applyTransportEnvelope(removal)).toBe(true)
+    expect(replica.getParent(subject)).toBeNull()
 
     const reopened = owner.applyMutation({ parent: { subject, firstObservedAt: 30 } })
     expect(reopened).not.toBeNull()
     expect(replica.applyTransportEnvelope(reopened)).toBe(true)
     expect(replica.getParent(subject)).toEqual(owner.getParent(subject))
-    expect(replica.applyTransportEnvelope(oldPublication)).toBe(false)
-    expect(replica.getSnapshot()).toEqual(owner.getSnapshot())
+    expect(replica.getParent(subject)?.firstObservedAt).toBe(30)
 
-    // The revision envelope, not the tombstone's presence, is what fences the stale replay.
-    expect(
-      owner.applyMutation({
-        removeChildren: Array.from(
-          { length: AGENT_STATUS_STORE_LIMITS.tombstones + 1 },
-          (_, index) => `unused-child-${index}`
-        )
-      })
-    ).not.toBeNull()
-    expect(owner.getSnapshot().tombstones.some((item) => item.entity === 'parent')).toBe(false)
-    expect(replica.applySnapshot(owner.getSnapshot())).toBe(true)
+    // Outcome only, deliberately: a spent replay is refused and a resequenced one is not. Which
+    // layer refuses it is NOT asserted, because no test at this API can tell — transport
+    // consecutiveness, the parent-revision validator and the tombstone guard each refuse it alone,
+    // and ablating any two leaves this green. Attributing one of them here would be a false claim.
     expect(replica.applyTransportEnvelope(oldPublication)).toBe(false)
     expect(replica.getParent(subject)?.firstObservedAt).toBe(30)
+    const resequenced = owner.applyMutation({ parent: { subject, firstObservedAt: 10 } })
+    expect(resequenced).not.toBeNull()
+    expect(replica.applyTransportEnvelope(resequenced)).toBe(true)
+    expect(replica.getParent(subject)?.firstObservedAt).toBe(10)
+    expect(replica.getSnapshot()).toEqual(owner.getSnapshot())
   })
 
   it('fences a republication only inside the removing mutation, for every subject kind', () => {

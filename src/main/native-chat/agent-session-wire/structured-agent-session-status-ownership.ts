@@ -17,12 +17,17 @@ export type StructuredAgentSessionStatusSink = {
 /** Retain the owner address because record removal may precede the final status callback. */
 export class StructuredAgentSessionStatusOwnership {
   private readonly subjects = new Map<string, AgentStatusStructuredSessionSubject>()
+  // Why separate from `subjects`: the address must survive a throwing publish so teardown can still
+  // forget a row that did land, but "we hold an address" is not evidence the row is there. Only a
+  // publish that returned proves that, and only that proof may suppress the re-offer below.
+  private readonly landed = new Set<string>()
 
   constructor(private readonly sink: () => StructuredAgentSessionStatusSink | undefined) {}
 
   matchesLocation(sessionId: string, location: AgentSessionExecutionLocation): boolean {
     const subject = this.subjects.get(sessionId)
     return (
+      this.landed.has(sessionId) &&
       subject?.executionHostId === location.executionHostId &&
       subject.wslDistro === location.wslDistro &&
       subject.workspaceId === location.workspaceId &&
@@ -53,7 +58,9 @@ export class StructuredAgentSessionStatusOwnership {
       sink.forget(previous)
     }
     this.subjects.set(summary.sessionId, subject)
+    this.landed.delete(summary.sessionId)
     sink.publish(summary, subject)
+    this.landed.add(summary.sessionId)
   }
 
   forget(sessionId: string): void {
@@ -61,6 +68,7 @@ export class StructuredAgentSessionStatusOwnership {
     if (!subject) {
       return
     }
+    this.landed.delete(sessionId)
     this.sink()?.forget(subject)
     this.subjects.delete(sessionId)
   }

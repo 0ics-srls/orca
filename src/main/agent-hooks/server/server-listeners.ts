@@ -21,6 +21,9 @@ import { AgentHookServerState } from './server-state'
 import { serializeAgentStatusSubject } from '../../../shared/agent-status-subject'
 import { structuredStatusLegacyEvent } from './server-structured-status-row'
 
+// Why: the listing counter starts at 1, so an unassigned row must sort last — never above every ordered row.
+const UNORDERED_STATUS_ROW = Number.MAX_SAFE_INTEGER
+
 export abstract class AgentHookServerListeners extends AgentHookServerState {
   protected emitEnrichedStatus(enriched: EnrichedAgentHookEventPayload): void {
     this.onAgentStatus?.(enriched)
@@ -47,7 +50,7 @@ export abstract class AgentHookServerListeners extends AgentHookServerState {
       rows.push({
         // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Main admits enriched legacy rows; shared listeners expose only the base event type.
         entry: entry as EnrichedAgentHookEventPayload,
-        order: getLegacyStatusListingOrder(this.state, paneKey) ?? 0
+        order: getLegacyStatusListingOrder(this.state, paneKey) ?? UNORDERED_STATUS_ROW
       })
     }
     for (const parent of this.canonicalStatusStore.getSnapshot().parents) {
@@ -56,7 +59,9 @@ export abstract class AgentHookServerListeners extends AgentHookServerState {
       }
       rows.push({
         entry: structuredStatusLegacyEvent(parent.status),
-        order: this.canonicalListingOrder.get(serializeAgentStatusSubject(parent.subject)) ?? 0
+        order:
+          this.canonicalListingOrder.get(serializeAgentStatusSubject(parent.subject)) ??
+          UNORDERED_STATUS_ROW
       })
     }
     return rows.sort((a, b) => a.order - b.order).map(({ entry }) => entry)
