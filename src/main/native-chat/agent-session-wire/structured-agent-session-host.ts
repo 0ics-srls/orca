@@ -52,7 +52,6 @@ import type { StructuredAgentSessionStatusSubscriber } from './structured-agent-
 import { StructuredAgentSessionEventRecovery } from './structured-agent-session-event-recovery'
 import { StructuredAgentSessionBackgroundTaskChannel } from './structured-agent-session-background-task-channel'
 import { StructuredAgentSessionClientDelivery } from './structured-agent-session-client-delivery'
-import type { AgentSessionResumeTrigger } from '../../../shared/agent-session-resume-marker'
 import {
   createStructuredAgentSessionRestartResume,
   type StructuredAgentSessionRestartResume
@@ -155,6 +154,7 @@ export class StructuredAgentSessionHost {
     this.restartResume = createStructuredAgentSessionRestartResume(deps, this.sessions, {
       revealSession: this.revealSession,
       hold: this.hold,
+      send: (params) => this.send({ callerKey: 'trusted-local:restart-continuation' }, params),
       now: this.now
     })
     this.runtimeState.startLeaseRenewal()
@@ -256,7 +256,9 @@ export class StructuredAgentSessionHost {
   flushStreamedEvents = (sessionId: string): Promise<void> =>
     this.runtimeState.flushEventSink(sessionId)
 
-  async flushAllStreamedEvents(options?: { trigger?: AgentSessionResumeTrigger }): Promise<void> {
+  // Trigger inlined rather than imported: `AgentSessionResumeTrigger` in shared is the canonical
+  // type, and this file has no line budget left for the import.
+  async flushAllStreamedEvents(options?: { trigger?: 'quit' | 'update' }): Promise<void> {
     const retainSessionIds = new Set<string>()
     await tearDownStructuredAgentSessionHost({
       phases: structuredAgentSessionHostTeardownPhases({

@@ -32,6 +32,21 @@ export const STRUCTURED_AGENT_SESSION_RESTART_RESUME_METHODS = [
     }
   }),
   defineMethod({
+    // Reconnect AND ask each reconnected agent to carry on. Separate from `restartResume` on
+    // purpose: that method sends nothing, and the automatic-reconnect setting only ever calls it,
+    // so no configuration can reach this one.
+    name: 'agentSession.restartContinue',
+    params: RestartResumeParams,
+    handler: async (params, ctx) => {
+      await ensureStructuredHostInstalled(ctx)
+      const host = requireStructuredHost(ctx)
+      return host.restartResume.continueAfterRestart(
+        params.sessionIds,
+        structuredCallerFor(ctx).callerKey
+      )
+    }
+  }),
+  defineMethod({
     name: 'agentSession.restartResume',
     params: RestartResumeParams,
     handler: async (params, ctx) => {

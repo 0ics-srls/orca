@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Play, RotateCcw } from 'lucide-react'
+import { Info, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
 import { Checkbox } from './ui/checkbox'
@@ -14,8 +14,9 @@ import {
 import { useAppStore } from '../store'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { translate } from '@/i18n/i18n'
-import { formatUiRelativeTime } from '@/i18n/relative-time-format'
-import { parseWorkspaceKey } from '../../../shared/workspace-scope'
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
+import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
+import { ResumeOnRestartGroups, type ResumeCandidate } from './NativeChatResumeOnRestartGroups'
 
 /**
  * What would be reconnected, shown before anything runs.
@@ -33,16 +34,6 @@ import { parseWorkspaceKey } from '../../../shared/workspace-scope'
  * the problem it solves, and nothing is lost: opening a chat takes a resume-capable hold, which
  * re-acquires the provider at the same cursor.
  */
-
-type ResumeCandidate = {
-  sessionId: string
-  workspaceId: string
-  agent: 'claude' | 'codex'
-  trigger: 'quit' | 'update'
-  latestPrompt: string
-  /** Host clock when teardown recorded the marker; the row shows its age. */
-  recordedAt: number
-}
 
 type ResumeOutcome = { sessionId: string; outcome: 'resumed' | 'refused' }
 
@@ -67,66 +58,60 @@ function announceResumed(count: number): void {
   )
 }
 
-/**
- * A workspace id is not a name. `folder:<uuid>` identifies nothing at twenty rows, and recognising
- * which chats would reconnect is the entire point of this list.
- *
- * Resolved the way automation dispatch already resolves the same id space: a folder workspace is
- * keyed by its full `folder:<uuid>` key, a git worktree by its bare `repoId::path` id. Falls back
- * to the id — what the row showed before — when nothing is resolvable, which also covers the window
- * before the worktree store has hydrated.
- */
-function useWorkspaceLabel(workspaceId: string): string {
-  // Returns a primitive, so the selector re-runs freely without churning referential equality.
-  return useAppStore((store) => {
-    const scope = parseWorkspaceKey(workspaceId)
-    const worktree =
-      scope?.type === 'folder'
-        ? store.getKnownWorktreeById(workspaceId)
-        : store.allWorktrees().find((entry) => entry.id === workspaceId)
-    return worktree?.displayName ?? workspaceId
-  })
+function announceContinued(count: number): void {
+  if (count <= 0) {
+    return
+  }
+  toast(
+    count === 1
+      ? translate(
+          'auto.components.NativeChatResumeOnRestartModal.continuedOne',
+          'Reconnected 1 chat and asked it to continue'
+        )
+      : translate(
+          'auto.components.NativeChatResumeOnRestartModal.continuedMany',
+          'Reconnected {{value0}} chats and asked them to continue',
+          { value0: count }
+        )
+  )
 }
 
-/** Its own component because a hook cannot run inside `map`, and the label needs one per row. */
-function ResumeOnRestartRow({
-  candidate,
-  listedAt,
-  busy,
-  onReconnect
-}: {
-  candidate: ResumeCandidate
-  listedAt: number
-  busy: boolean
-  onReconnect: () => void
-}): React.JSX.Element {
-  const workspaceLabel = useWorkspaceLabel(candidate.workspaceId)
+/** Shows the LITERAL message, read from the same constant the host sends, so the popover cannot
+ *  drift into describing something other than what goes out. */
+function ContinuationExplainer(): React.JSX.Element {
   return (
-    <li className="flex items-center gap-2">
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs font-medium">
-          {candidate.latestPrompt.trim() ||
-            translate('auto.components.NativeChatResumeOnRestartModal.untitled', 'Untitled chat')}
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-7 shrink-0"
+          aria-label={translate(
+            'auto.components.NativeChatResumeOnRestartModal.whatIsSentTitle',
+            'What Orca sends'
+          )}
+        >
+          <Info className="size-3.5" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-96 text-xs">
+        <p className="font-semibold">
+          {translate(
+            'auto.components.NativeChatResumeOnRestartModal.whatIsSentTitle',
+            'What Orca sends'
+          )}
         </p>
-        {/* Age matters: the TTL is 24h, so an eight-hour-old offer must not look like one from a
-            minute ago. */}
-        <p className="truncate text-[11px] text-muted-foreground">
-          {`${candidate.agent} · ${workspaceLabel} · ${formatUiRelativeTime(
-            candidate.recordedAt - listedAt
-          )}`}
+        <p className="mt-1 text-muted-foreground">
+          {translate(
+            'auto.components.NativeChatResumeOnRestartModal.whatIsSentBody',
+            'Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.'
+          )}
         </p>
-      </div>
-      <Button
-        variant="ghost"
-        size="sm"
-        className="h-7 shrink-0 gap-1 px-2"
-        disabled={busy}
-        onClick={onReconnect}
-      >
-        <Play className="size-3" />
-        {translate('auto.components.NativeChatResumeOnRestartModal.resume', 'Reconnect')}
-      </Button>
-    </li>
+        <blockquote className="mt-2 rounded-md border bg-muted/40 p-2 text-muted-foreground">
+          {AGENT_SESSION_RESTART_CONTINUATION_MESSAGE}
+        </blockquote>
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -214,6 +199,27 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     [candidates, persistPreference]
   )
 
+  /**
+   * Reconnect AND ask each agent to carry on. A deliberate action only.
+   *
+   * The automatic path calls `restartResume`, which has no send in it, so no setting — the
+   * checkbox included — can reach this. The checkbox opts into automatic RECONNECTION, never
+   * automatic continuation.
+   */
+  const reconnectAndContinue = useCallback(async (): Promise<void> => {
+    setBusy(true)
+    try {
+      await persistPreference()
+      const result = await callStructuredAgentSession<{
+        continued: { sessionId: string; outcome: 'continued' | 'refused' }[]
+      }>(LOCAL, 'agentSession.restartContinue', {})
+      announceContinued(result.continued.filter((entry) => entry.outcome === 'continued').length)
+      setResolved(true)
+    } finally {
+      setBusy(false)
+    }
+  }, [persistPreference])
+
   /** Any close is a decline, and a decline spends the markers so this cannot return every launch. */
   const decline = useCallback(async (): Promise<void> => {
     setResolved(true)
@@ -262,24 +268,21 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           </DialogDescription>
         </DialogHeader>
 
-        <ul
+        <div
           tabIndex={0}
           aria-label={translate(
             'auto.components.NativeChatResumeOnRestartModal.listLabel',
             'Chats that would be reconnected'
           )}
-          className="flex min-h-0 flex-col gap-1 overflow-y-auto scrollbar-sleek rounded-md border bg-muted/35 p-1.5"
+          className="min-h-0 overflow-y-auto scrollbar-sleek rounded-md border bg-muted/35 p-1.5"
         >
-          {candidates.map((candidate) => (
-            <ResumeOnRestartRow
-              key={candidate.sessionId}
-              candidate={candidate}
-              listedAt={listedAt}
-              busy={busy}
-              onReconnect={() => void resume([candidate.sessionId])}
-            />
-          ))}
-        </ul>
+          <ResumeOnRestartGroups
+            candidates={candidates}
+            listedAt={listedAt}
+            busy={busy}
+            onReconnect={(sessionId) => void resume([sessionId])}
+          />
+        </div>
 
         {/* Says the quiet part: declining is not destructive, because opening the chat still
             re-acquires it at the same cursor. */}
@@ -315,26 +318,41 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           </span>
         </label>
 
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
           <Button variant="secondary" size="sm" disabled={busy} onClick={() => void decline()}>
             {translate('auto.components.NativeChatResumeOnRestartModal.notNow', 'Not now')}
           </Button>
-          <Button
-            variant="default"
-            size="sm"
-            disabled={busy}
-            onClick={() => void resume(candidates.map((candidate) => candidate.sessionId))}
-          >
-            {busy
-              ? translate(
-                  'auto.components.NativeChatResumeOnRestartModal.resuming',
-                  'Reconnecting…'
-                )
-              : translate(
-                  'auto.components.NativeChatResumeOnRestartModal.resumeAll',
-                  'Reconnect all'
-                )}
-          </Button>
+          <span className="flex items-center gap-1.5">
+            <ContinuationExplainer />
+            {/* Secondary, never the default: continuing sends a message, reconnecting does not. */}
+            <Button
+              variant="secondary"
+              size="sm"
+              disabled={busy}
+              onClick={() => void reconnectAndContinue()}
+            >
+              {translate(
+                'auto.components.NativeChatResumeOnRestartModal.reconnectAndContinue',
+                'Reconnect and continue'
+              )}
+            </Button>
+            <Button
+              variant="default"
+              size="sm"
+              disabled={busy}
+              onClick={() => void resume(candidates.map((candidate) => candidate.sessionId))}
+            >
+              {busy
+                ? translate(
+                    'auto.components.NativeChatResumeOnRestartModal.resuming',
+                    'Reconnecting…'
+                  )
+                : translate(
+                    'auto.components.NativeChatResumeOnRestartModal.resumeAll',
+                    'Reconnect all'
+                  )}
+            </Button>
+          </span>
         </DialogFooter>
       </DialogContent>
     </Dialog>

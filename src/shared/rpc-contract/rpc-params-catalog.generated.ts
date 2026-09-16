@@ -572,6 +572,7 @@ export const RPC_PARAMS_BY_METHOD = {
   'agentSession.requestHandoff': HandoffParams,
   'agentSession.respondToApproval': RespondParams,
   'agentSession.respondToQuestion': RespondParams,
+  'agentSession.restartContinue': RestartResumeParams,
   'agentSession.restartResumable': RestartResumableParams,
   'agentSession.restartResumableDismiss': RestartResumableParams,
   'agentSession.restartResume': RestartResumeParams,

@@ -13,6 +13,7 @@ import {
   type AgentSessionResumeMarker
 } from '../../../shared/agent-session-resume-marker'
 import { newestStructuredAgentSessionTurn } from '../../../shared/structured-agent-session-live-turn'
+import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
 import { structuredAgentSessionResumableSet } from './structured-agent-session-restart-resume-set'
 import {
   resumeStructuredAgentSessionsFromRestart,
@@ -383,6 +384,7 @@ describe('the restart-resume surface', () => {
     markers?: AgentSessionResumeMarker[]
     sessions?: Map<string, { journal: unknown; hasProviderChild: boolean }>
     record?: AgentSessionRecord
+    holdFails?: boolean
   }) {
     const live = new Map((input.markers ?? [marker()]).map((entry) => [entry.sessionId, entry]))
     const recorded: AgentSessionResumeMarker[][] = []
@@ -399,12 +401,17 @@ describe('the restart-resume surface', () => {
         consume: async (sessionId: string) => live.delete(sessionId)
       }
     }
+    const sent: { sessionId: string; text: string }[] = []
     const sessions =
       input.sessions ??
       new Map([
         [
           SESSION,
-          { journal: journal([turnItem('turn-1', 'interrupted')]), hasProviderChild: false }
+          {
+            journal: journal([turnItem('turn-1', 'interrupted')]),
+            hasProviderChild: false,
+            fence: 1
+          }
         ]
       ])
     return {
@@ -414,16 +421,72 @@ describe('the restart-resume surface', () => {
         {
           revealSession: async () => ({ readable: true }),
           hold: async (sessionId: string) => {
+            if (input.holdFails) {
+              throw new Error('provider refused the reconnect')
+            }
             held.push(sessionId)
+          },
+          send: async ({ envelope, body }) => {
+            sent.push({
+              sessionId: envelope.sessionId,
+              text: (body.blocks[0] as { text: string }).text
+            })
+            return { ok: true }
           },
           now: () => NOW
         }
       ),
       live,
       recorded,
-      held
+      held,
+      sent
     }
   }
+
+  // The structural guarantee behind "the checkbox can never continue": the reconnect path contains
+  // no send at all, so no setting, and no automatic launch, can turn it into a continuation.
+  it('never sends a message when reconnecting', async () => {
+    const { restartResume, held, sent } = surface({})
+
+    await restartResume.resume(undefined, 'modal')
+
+    expect(held).toEqual([SESSION])
+    expect(sent).toEqual([])
+  })
+
+  it('reconnects and then sends exactly one continuation carrying the shared message', async () => {
+    const { restartResume, held, sent } = surface({})
+
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(held).toEqual([SESSION])
+    expect(sent).toEqual([{ sessionId: SESSION, text: AGENT_SESSION_RESTART_CONTINUATION_MESSAGE }])
+    expect(result.continued).toEqual([{ sessionId: SESSION, outcome: 'continued' }])
+  })
+
+  // The predicate refused it, so it is not even a candidate and the loop never sees it.
+  it('sends nothing to a session that was never eligible', async () => {
+    const { restartResume, sent } = surface({ markers: [marker({ turnId: 'turn-elsewhere' })] })
+
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(sent).toEqual([])
+    expect(result.continued).toEqual([])
+  })
+
+  // The case that actually exercises the gate: an ELIGIBLE session whose reconnect failed. It
+  // reaches the loop as a refused outcome, and continuation must still not send to it.
+  it('sends nothing to a session that did not reconnect', async () => {
+    const { restartResume, sent, held } = surface({ holdFails: true })
+
+    const result = await restartResume.continueAfterRestart(undefined, 'modal')
+
+    expect(held).toEqual([])
+    expect(sent).toEqual([])
+    expect(result.continued).toEqual([
+      { sessionId: SESSION, outcome: 'refused', reason: 'provider refused the reconnect' }
+    ])
+  })
 
   it('offers and resumes an eligible session', async () => {
     const { restartResume, held } = surface({})
