@@ -14,7 +14,7 @@ pnpm exec oxlint src/main/computer/macos-native-provider-client.ts src/main/comp
 Process exited 0
 
 git diff HEAD~3 --check
-Process exited 0</pre>
+Process exited 0</pre><p><strong>Broader area run:</strong> <code>NODE_OPTIONS=--expose-gc pnpm exec vitest run src/main/computer</code> — <span class="pass">23 passed, 1 skipped; 169 tests passed, 4 skipped</span>. The default invocation had one infrastructure failure because <code>global.gc</code> was unavailable.</p>
 <h2>Readiness review</h2><p class="pass">PASS — no proven P0, P1, or P2 findings in the changed surface.</p><p>Reviewed crash/unbounded growth, process/timer/listener cleanup, concurrency and stale generations, security/signal targeting, cross-platform boundaries, compatibility, and code organization. The change is macOS-gated; no IPC, wire protocol, persisted state, mobile surface, shell invocation, or dependency is changed.</p>
 <h2>Residual risk and scope</h2><ul><li>This directly prevents new abandoned helpers from surviving teardown; it does not sweep helpers already stranded before the fix.</li><li>The real macOS wedged-helper state was not reproduced in this environment; tests use ChildProcess doubles and fake timers to deterministically exercise the same teardown contract.</li><li>No visual Electron surface changes, so UI screenshot validation is not applicable.</li></ul>
 <h2>Files and commits</h2><p><code>src/main/computer/macos-native-provider-process-reaping.ts</code>, <code>macos-native-provider-client.ts</code>, <code>macos-native-provider-transport.ts</code>, and <code>macos-native-provider-client.test.ts</code>.</p><p>Commits: <code>e3894693a5f</code>, <code>ce7b874e5f4</code>, <code>800162d0b4b</code>.</p>
