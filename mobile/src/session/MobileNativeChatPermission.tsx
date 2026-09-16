@@ -1,5 +1,5 @@
 import { memo, useRef, useState } from 'react'
-import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { ShieldQuestion, X } from 'lucide-react-native'
 import { colors, radii, spacing, typography } from '../theme/mobile-theme'
 import type { MobileChatPermission } from './mobile-native-chat-permission'
@@ -47,7 +47,32 @@ function MobileNativeChatPermissionImpl({
           </Pressable>
         ) : null}
       </View>
-      {permission.detail ? <Text style={styles.detail}>{permission.detail}</Text> : null}
+      {permission.description ? <Text style={styles.detail}>{permission.description}</Text> : null}
+      {permission.decisionReason ? (
+        <Text style={styles.detail}>
+          <Text style={styles.contextLabel}>Reason: </Text>
+          {permission.decisionReason}
+        </Text>
+      ) : null}
+      {permission.blockedPath ? (
+        <Text style={styles.detail}>
+          <Text style={styles.contextLabel}>Blocked path: </Text>
+          {permission.blockedPath}
+        </Text>
+      ) : null}
+      {permission.matchedAskRule ? (
+        <Text style={styles.detail}>
+          <Text style={styles.contextLabel}>Ask rule: </Text>
+          {permission.matchedAskRule.ruleContent ?? permission.matchedAskRule.toolName}
+          {' · '}
+          {permission.matchedAskRule.source}
+        </Text>
+      ) : null}
+      {permission.detail ? (
+        <ScrollView style={styles.detailScroll} nestedScrollEnabled>
+          <Text style={styles.detail}>{permission.detail}</Text>
+        </ScrollView>
+      ) : null}
       <View style={styles.options}>
         {permission.options.map((option, index) => {
           const isPrimary = index === 0
@@ -108,6 +133,13 @@ const styles = StyleSheet.create({
     color: colors.textSecondary,
     fontSize: typography.metaSize,
     lineHeight: typography.metaSize + 5
+  },
+  contextLabel: {
+    color: colors.textPrimary,
+    fontWeight: '600'
+  },
+  detailScroll: {
+    maxHeight: 240
   },
   options: {
     flexDirection: 'row',

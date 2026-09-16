@@ -5,6 +5,7 @@ import { MobileNativeChatPermission } from './MobileNativeChatPermission'
 
 vi.mock('react-native', () => ({
   Pressable: 'Pressable',
+  ScrollView: 'ScrollView',
   StyleSheet: { create: (styles: unknown) => styles, hairlineWidth: 1 },
   Text: 'Text',
   View: 'View'
