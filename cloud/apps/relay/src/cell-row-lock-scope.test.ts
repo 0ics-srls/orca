@@ -12,10 +12,18 @@ import {
 // claim that lets the cheap suite prove the invariant.
 
 const PREFIX = 'lock-scope'
-const CELL_IDS = [`${PREFIX}-a`, `${PREFIX}-b`, `${PREFIX}-c`, `${PREFIX}-d`]
-const [CELL_A, CELL_B, CELL_C, CELL_D] = CELL_IDS as [string, string, string, string]
+const CELL_A = `${PREFIX}-a`
+const CELL_B = `${PREFIX}-b`
+const CELL_C = `${PREFIX}-c`
+// Sorts below every seeded cell, so inserting it proves the insert exemption.
+const CELL_BELOW = `${PREFIX}-0`
+// Sorts below CELL_B under code units and equal to it under a punctuation-
+// insensitive collation, so its order against CELL_B is not knowable here.
+const CELL_AMBIGUOUS = `${PREFIX}b`
 
+const LOCK_ONE = `SELECT * FROM relay_cells WHERE cell_id = ?`
 const INVENTORY_LOCK = `SELECT * FROM relay_cells ORDER BY cell_id ASC`
+const UNORDERED_LOCK = `SELECT * FROM relay_cells`
 const RESERVE = `UPDATE relay_cells SET reserved_requests = ?, updated_at = ? WHERE cell_id = ?`
 const INSERT_CELL = `INSERT INTO relay_cells
  (cell_id, cell_url, enabled, capacity_requests, reserved_requests,
@@ -46,7 +54,7 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
   // later suites that assert on the whole inventory.
   async function removeScopedCells(): Promise<void> {
     for (const table of ['relay_cell_regions', 'relay_cells']) {
-      await database.query(`DELETE FROM ${table} WHERE cell_id LIKE '${PREFIX}-%'`)
+      await database.query(`DELETE FROM ${table} WHERE cell_id LIKE '${PREFIX}%'`)
     }
   }
 
@@ -73,28 +81,73 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
     ).resolves.toBeUndefined()
   })
 
-  it('catches a write to a cell the transaction locked a different row for', async () => {
+  // Why: this is the case a per-statement sort check cannot see. Each statement
+  // locks one row and is trivially ordered; the transaction's sequence descends,
+  // and a second transaction running it the other way round deadlocks.
+  it('catches a descending sequence of individually sorted locks', async () => {
     await expect(
       database.transaction(async (transaction) => {
-        await transaction.queryLocked(`SELECT * FROM relay_cells WHERE cell_id = ?`, [CELL_A])
-        await transaction.query(RESERVE, [1, 0, CELL_B])
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.queryLocked(LOCK_ONE, [CELL_A])
+      })
+    ).rejects.toThrow('out-of-order')
+  })
+
+  it('allows an ascending sequence of single-row locks', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_A])
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  // Why: NOWAIT either takes the row at once or fails, so it can never be an edge
+  // in a wait-for cycle and its place in the order cannot matter. The sweeps and
+  // the contention probes in this suite rely on that.
+  it('exempts a NOWAIT acquisition from the order', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.queryLocked(LOCK_ONE, [CELL_A], { failIfUnavailable: true })
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  // Why: the exemption covers the NOWAIT acquisition itself, not what follows.
+  // A row taken without waiting is still held, and a later wait below it is the
+  // edge that closes a cycle.
+  it('still catches a wait below a row taken with NOWAIT', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C], { failIfUnavailable: true })
+        await transaction.query(RESERVE, [1, 0, CELL_A])
+      })
+    ).rejects.toThrow('out-of-order')
+  })
+
+  it('catches a write below a row the transaction already holds', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.query(RESERVE, [1, 0, CELL_A])
       })
     ).rejects.toThrow(VIOLATION)
   })
 
-  it('treats an insert as extending the locked set rather than escaping it', async () => {
+  it('treats an insert as extending what is held rather than reordering it', async () => {
     await expect(
       database.transaction(async (transaction) => {
-        await transaction.queryLocked(INVENTORY_LOCK)
-        await transaction.query(INSERT_CELL, [CELL_D, `https://${CELL_D}.example`])
-        await transaction.query(RESERVE, [1, 0, CELL_D])
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.query(INSERT_CELL, [CELL_BELOW, `https://${CELL_BELOW}.example`])
+        await transaction.query(RESERVE, [1, 0, CELL_BELOW])
       })
     ).resolves.toBeUndefined()
   })
 
   // The release and acquire paths take one cell row late, with the atomic write
   // itself, and hold nothing else; adjustCellReservationAtomically exists for it.
-  it('allows one row locked late by its own write', async () => {
+  it('allows a row locked late by its own write', async () => {
     await expect(
       database.transaction(async (transaction) => {
         await transaction.query(RESERVE, [1, 0, CELL_B])
@@ -103,25 +156,24 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
     ).resolves.toBeUndefined()
   })
 
-  it('catches a second row locked late, which is the unordered acquisition', async () => {
+  // Why: an unlocked read is exactly the mistake the guard exists to catch, so
+  // it must not be able to authorise the writes that follow it.
+  it('does not let an unlocked read hold anything', async () => {
     await expect(
       database.transaction(async (transaction) => {
+        await transaction.query(INVENTORY_LOCK)
+        await transaction.query(RESERVE, [1, 0, CELL_C])
         await transaction.query(RESERVE, [1, 0, CELL_A])
-        await transaction.query(RESERVE, [1, 0, CELL_B])
       })
     ).rejects.toThrow(VIOLATION)
   })
 
-  // Why: an unlocked read is exactly the mistake the guard exists to catch, so
-  // it must not be able to authorise the writes that follow it.
-  it('does not let an unlocked read declare anything', async () => {
+  it('catches a multi-row lock that does not name its order', async () => {
     await expect(
       database.transaction(async (transaction) => {
-        await transaction.query(INVENTORY_LOCK)
-        await transaction.query(RESERVE, [1, 0, CELL_A])
-        await transaction.query(RESERVE, [1, 0, CELL_B])
+        await transaction.queryLocked(UNORDERED_LOCK)
       })
-    ).rejects.toThrow(VIOLATION)
+    ).rejects.toThrow('unordered-lock')
   })
 
   it('reports a relay_cells write that names no cell at all', async () => {
@@ -136,6 +188,20 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
     ).rejects.toThrow('unparsed-write')
   })
 
+  // Why: ORDER BY uses the column collation, which may rank punctuation
+  // differently from JS. Reporting a pair the two disagree about would put noise
+  // into the one production signal this guard exists to keep clean.
+  it('stays silent where the two orderings disagree', async () => {
+    await database.query(INSERT_CELL, [CELL_AMBIGUOUS, `https://${CELL_AMBIGUOUS}.example`])
+
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_AMBIGUOUS])
+        await transaction.queryLocked(LOCK_ONE, [CELL_B])
+      })
+    ).resolves.toBeUndefined()
+  })
+
   // Nothing locks relay_cells without selecting cell_id today. If something does,
   // standing down beats guessing -- a spurious production warning on a shape the
   // guard cannot read would be indistinguishable from the real thing.
@@ -144,16 +210,15 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
       database.transaction(async (transaction) => {
         await transaction.queryLocked(
           `SELECT capacity_requests FROM relay_cells WHERE cell_id = ?`,
-          [CELL_A]
+          [CELL_C]
         )
-        await transaction.query(RESERVE, [1, 0, CELL_B])
-        await transaction.query(RESERVE, [1, 0, CELL_C])
+        await transaction.query(RESERVE, [1, 0, CELL_A])
       })
     ).resolves.toBeUndefined()
   })
 
-  it('scopes the declared set to one transaction', async () => {
-    for (const cellId of [CELL_A, CELL_B]) {
+  it('scopes what is held to one transaction', async () => {
+    for (const cellId of [CELL_C, CELL_A]) {
       await expect(
         database.transaction(async (transaction) => {
           await transaction.query(RESERVE, [1, 0, cellId])
@@ -162,10 +227,10 @@ describe.each(backends)('cell row lock scope ($name)', ({ open }) => {
     }
   })
 
-  // Autocommit statements each commit on their own, so there is no scope to
+  // Autocommit statements each commit on their own, so there is no order to
   // police and the guard must stay out of the way.
   it('leaves statements outside a transaction alone', async () => {
+    await expect(database.query(RESERVE, [1, 0, CELL_C])).resolves.toBeDefined()
     await expect(database.query(RESERVE, [1, 0, CELL_A])).resolves.toBeDefined()
-    await expect(database.query(RESERVE, [1, 0, CELL_B])).resolves.toBeDefined()
   })
 })

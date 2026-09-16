@@ -1,17 +1,23 @@
 import type { SqlRow } from './database.js'
 
-// A transaction may only touch relay_cells rows it has already locked, plus at
-// most one row it locks late with a single write while it holds no other.
-// Placement takes the inventory in one ascending order so cross-cell cycles
-// cannot form; a statement that reaches a second, unordered row is how that
-// breaks, and nothing checked it. This is a SQL-shape assertion -- which
-// cell_ids does the statement name, against the set the transaction declared --
+// A transaction may WAIT for a relay_cells row lock only in ascending cell_id,
+// and re-touching a row it already holds is free. That is what stops cross-cell
+// cycles, and nothing checked it: per-statement sorting is not enough, because
+// one transaction taking {A} then {B} while another takes {B} then {A} is two
+// trivially sorted statements and one deadlock. This is a SQL-shape assertion --
+// which cell_ids does the statement name, against what the transaction holds --
 // so it reads the same on Postgres and on SQLite, and ordinary tests prove it.
 
+// Waiting is what the order governs. A NOWAIT acquisition either takes the row
+// at once or fails, so it is never an edge in a wait-for cycle and its position
+// in the order cannot matter; it is still recorded, because a later wait must be
+// ordered against everything the transaction holds however it got there.
+export type CellRowLockKind = 'none' | 'wait' | 'nowait'
+
 type CellRowLockViolation = {
-  reason: 'outside-declared-set' | 'unparsed-write'
+  reason: 'out-of-order' | 'unordered-lock' | 'unparsed-write'
   cellIds: string[]
-  declared: string[]
+  held: string[]
   statement: string
 }
 
@@ -22,63 +28,83 @@ const CELL_INSERT = /^\s*INSERT\s+INTO\s+relay_cells\s*\(([^)]*)\)\s*VALUES\s*\(
 const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
 const CELL_TABLE_READ = /\bFROM\s+relay_cells\b/i
 const CELL_ID_EQUALS = /\bcell_id\s*=\s*\?/gi
+const ORDERED_LOCK = /\bORDER\s+BY\s+cell_id\s+ASC\b/i
 
 export class CellRowLockScope {
-  private readonly declared = new Set<string>()
+  private readonly held = new Set<string>()
   // A locked read whose rows do not name their cell. Nothing produces one today;
   // policing would then mean guessing, so the scope stands down instead.
   private opaque = false
 
-  observe(sql: string, params: readonly unknown[], locked: boolean, rows: SqlRow[]): void {
+  observe(sql: string, params: readonly unknown[], lock: CellRowLockKind, rows: SqlRow[]): void {
     if (!sql.includes(CELL_TABLE)) return
-    // An insert adds a row that by definition was not in the locked set, so it
-    // extends the scope rather than violating it.
+    // An insert adds a row nobody could have locked before it existed, so it
+    // extends what the transaction holds and takes no place in the order.
     if (CELL_INSERT.test(sql)) {
-      for (const cellId of insertedCellIds(sql, params)) this.declared.add(cellId)
+      for (const cellId of insertedCellIds(sql, params)) this.held.add(cellId)
       return
     }
     if (CELL_ROW_WRITE.test(sql)) {
-      this.requireDeclared(sql, params)
+      // A write blocks on a conflicting row lock, so it is always a wait. This is
+      // how the release and acquire paths take one row late, and what bounds it.
+      this.acquire(namedCellIds(sql, params), fingerprint(sql), 'wait')
       return
     }
-    if (locked && CELL_TABLE_READ.test(sql)) this.declare(rows)
+    if (lock !== 'none' && CELL_TABLE_READ.test(sql)) this.acquireRead(sql, lock, rows)
   }
 
-  // Why the returned rows and not the WHERE clause: a fleet-wide lock, the
-  // general-admission subset and a single-row lock then all declare exactly what
-  // they held, including the empty set, with one rule and no SQL to interpret.
-  private declare(rows: SqlRow[]): void {
+  private acquireRead(sql: string, lock: CellRowLockKind, rows: SqlRow[]): void {
+    if (this.opaque) return
+    const statement = fingerprint(sql)
+    // A multi-row lock without ORDER BY takes its rows in whatever order the plan
+    // produces, so the acquisition order stops being a property of the code.
+    if (rows.length > 1 && !ORDERED_LOCK.test(sql)) {
+      report({ reason: 'unordered-lock', cellIds: [], held: [...this.held], statement })
+    }
+    const cellIds: string[] = []
     for (const row of rows) {
       const cellId = row.cell_id
       if (typeof cellId !== 'string') {
         this.opaque = true
         return
       }
-      this.declared.add(cellId)
+      cellIds.push(cellId)
     }
+    this.acquire(cellIds, statement, lock)
   }
 
-  private requireDeclared(sql: string, params: readonly unknown[]): void {
+  private acquire(
+    cellIds: string[] | undefined,
+    statement: string,
+    lock: CellRowLockKind
+  ): void {
     if (this.opaque) return
-    const cellIds = namedCellIds(sql, params)
-    const statement = fingerprint(sql)
-    const declared = [...this.declared]
     if (cellIds === undefined) {
-      report({ reason: 'unparsed-write', cellIds: [], declared, statement })
+      report({ reason: 'unparsed-write', cellIds: [], held: [...this.held], statement })
       return
     }
-    const outside = cellIds.filter((cellId) => !this.declared.has(cellId))
-    if (outside.length === 0) return
-    // A write is its own lock acquisition, and the release and acquire paths use
-    // that deliberately: one row, taken late, held only to COMMIT. It is safe
-    // for exactly as long as it is the transaction's only cell row -- a second
-    // undeclared row is the unordered two-cell acquisition that cycles.
-    if (this.declared.size === 0 && outside.length === 1) {
-      this.declared.add(outside[0]!)
-      return
+    for (const cellId of cellIds) {
+      if (this.held.has(cellId)) continue
+      const below =
+        lock === 'nowait' ? [] : [...this.held].filter((held) => sortsBelow(cellId, held))
+      if (below.length > 0) {
+        report({ reason: 'out-of-order', cellIds: [cellId], held: below, statement })
+      }
+      this.held.add(cellId)
     }
-    report({ reason: 'outside-declared-set', cellIds: outside, declared, statement })
   }
+}
+
+// Why both comparisons: ORDER BY uses the column's collation, which on a
+// linguistic locale treats punctuation as secondary, while JS compares code
+// units. Reporting only where the two agree keeps a collation difference from
+// inventing a violation in the one signal this guard exists to keep clean.
+function sortsBelow(candidate: string, held: string): boolean {
+  return candidate < held && alphanumeric(candidate) < alphanumeric(held)
+}
+
+function alphanumeric(cellId: string): string {
+  return cellId.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
 // Positional binding: the nth `?` takes the nth parameter. A `?` inside a string
@@ -129,7 +155,7 @@ function report(violation: CellRowLockViolation): void {
     throw new Error(
       `cell_row_lock_scope_violation ${violation.reason}` +
         ` cells=[${violation.cellIds.join(', ')}]` +
-        ` declared=[${violation.declared.join(', ')}] sql=${violation.statement}`
+        ` held=[${violation.held.join(', ')}] sql=${violation.statement}`
     )
   }
   const signature = `${violation.reason}:${violation.statement}`

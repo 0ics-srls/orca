@@ -9,7 +9,7 @@ import {
   PostgresPoolPressure,
   type PostgresPoolPressureCounts
 } from './postgres-pool-pressure.js'
-import { CellRowLockScope } from './cell-row-lock-scope.js'
+import { CellRowLockScope, type CellRowLockKind } from './cell-row-lock-scope.js'
 import { applyPostgresSchema } from './postgres-schema-startup.js'
 import { POSTGRES_STATEMENT_STATS_MIGRATION } from './postgres-statement-stats.js'
 import { reportPostgresQueryFailure } from './postgres-query-failure.js'
@@ -642,6 +642,15 @@ function postgresSql(sql: string): string {
   return sql.replace(/\?/g, () => `$${++index}`)
 }
 
+function lockKind(options: RelayLockOptions): CellRowLockKind {
+  return options.failIfUnavailable === true ? 'nowait' : 'wait'
+}
+
+function statementLockKind(sql: string): CellRowLockKind {
+  if (!/\bFOR\s+UPDATE\b/i.test(sql)) return 'none'
+  return /\bFOR\s+UPDATE\s+NOWAIT\b/i.test(sql) ? 'nowait' : 'wait'
+}
+
 function returnsRows(sql: string): boolean {
   return /^\s*(select|with)/i.test(sql) || /returning/i.test(sql)
 }
@@ -726,7 +735,7 @@ class SqliteTransaction implements RelayDatabase {
     const rows = returnsRows(sql)
       ? (statement.all(...bound) as SqlRow[])
       : [{ changes: Number(statement.run(...bound).changes) }]
-    this.cellLocks?.observe(sql, params, false, rows)
+    this.cellLocks?.observe(sql, params, 'none', rows)
     return rows
   }
 
@@ -736,10 +745,10 @@ class SqliteTransaction implements RelayDatabase {
     options: RelayLockOptions = {}
   ): Promise<SqlRow[]> {
     const rows = await this.query(sql, params)
-    // SQLite has no FOR UPDATE to read back, so the lock is declared by the call
+    // SQLite has no FOR UPDATE to read back, so the lock is named by the call
     // rather than by the statement text; Postgres appends the clause before the
-    // statement reaches query(), so both dialects declare the same rows.
-    this.cellLocks?.observe(sql, params, true, rows)
+    // statement reaches query(), so both dialects report the same acquisition.
+    this.cellLocks?.observe(sql, params, lockKind(options), rows)
     this.noteHeld(options)
     return rows
   }
@@ -831,7 +840,7 @@ class PostgresTransaction implements RelayDatabase {
       const rows = returnsRows(sql) ? (result.rows as SqlRow[]) : [{ changes: result.rowCount ?? 0 }]
       // queryLocked appends FOR UPDATE before it gets here, so every locked read
       // is visible on this one path.
-      this.cellLocks?.observe(sql, params, /\bFOR\s+UPDATE\b/i.test(sql), rows)
+      this.cellLocks?.observe(sql, params, statementLockKind(sql), rows)
       return rows
     } catch (error) {
       rememberPostgresTransactionPhase(error, sql)
