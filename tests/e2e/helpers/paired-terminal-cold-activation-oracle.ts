@@ -161,7 +161,10 @@ export async function runPairedTerminalColdActivationOracle(
       originalPtyId: originalPtyIds[index]!
     }))
     const tabIds = tabs.map((tab) => tab.tabId)
-    expect(await readColdActivationMountState(page, tabIds)).toEqual({ mounted: 0, parked: 0 })
+    expect(await readColdActivationMountState(page, tabIds)).toEqual({
+      mounted: 0,
+      parked: TARGET_TAB_COUNT
+    })
 
     await page.evaluate(
       ({ activeTabId, targetWorktreeId }) => {

@@ -108,19 +108,6 @@ async function readLocalBrowserViewUrls(page: Page): Promise<string[]> {
   )
 }
 
-async function readRemotePaneUrls(page: Page, worktreeId: string): Promise<string[]> {
-  return page.evaluate((worktreeId) => {
-    const state = window.__store?.getState()
-    const workspaces = state?.browserTabsByWorktree[worktreeId] ?? []
-    return workspaces
-      .flatMap((workspace) => state?.browserPagesByWorkspace[workspace.id] ?? [])
-      .filter(
-        (browserPage) => state?.remoteBrowserPageHandlesByPageId[browserPage.id]?.environmentId
-      )
-      .map((browserPage) => browserPage.url)
-  }, worktreeId)
-}
-
 /** The client mirrors host browser tabs on its own; this finds the mirrored page for one URL. */
 async function findMirroredPage(
   page: Page,
@@ -147,6 +134,42 @@ async function findMirroredPage(
       return null
     },
     { url, worktreeId }
+  )
+}
+
+async function readMirroredPageIds(page: Page, worktreeId: string): Promise<string[]> {
+  return page.evaluate((worktreeId) => {
+    const state = window.__store?.getState()
+    return (state?.browserTabsByWorktree[worktreeId] ?? []).flatMap((workspace) =>
+      (state?.browserPagesByWorkspace[workspace.id] ?? [])
+        .filter((browserPage) => state?.remoteBrowserPageHandlesByPageId[browserPage.id])
+        .map((browserPage) => browserPage.id)
+    )
+  }, worktreeId)
+}
+
+async function findNewMirroredPage(
+  page: Page,
+  worktreeId: string,
+  priorPageIds: string[]
+): Promise<{ handleEnvironmentId: string | null; pageId: string } | null> {
+  return page.evaluate(
+    ({ priorPageIds, worktreeId }) => {
+      const state = window.__store?.getState()
+      for (const workspace of state?.browserTabsByWorktree[worktreeId] ?? []) {
+        for (const browserPage of state?.browserPagesByWorkspace[workspace.id] ?? []) {
+          if (priorPageIds.includes(browserPage.id)) {
+            continue
+          }
+          const handle = state?.remoteBrowserPageHandlesByPageId[browserPage.id]
+          if (handle) {
+            return { handleEnvironmentId: handle.environmentId, pageId: browserPage.id }
+          }
+        }
+      }
+      return null
+    },
+    { priorPageIds, worktreeId }
   )
 }
 
@@ -281,6 +304,7 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
     // Act 1: server placement. The user asked for pages to live on the server, so the link must
     // land on the runtime and be streamed back — nothing renders here.
     await pinClientHostedPlacement(page, false)
+    const pageIdsBeforeFirstOpen = await readMirroredPageIds(page, worktreeId)
     await openLinkFromRemotePaneContextMenu(page)
 
     await expect
@@ -300,13 +324,25 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
         message: 'the runtime process never held a page for the link'
       })
       .toHaveLength(1)
-    // One more remote pane, and still nothing rendered by this machine's own browser.
-    await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen + 1, {
+    // The inactive page is mirrored in the store while the pane keeps rendering the active page.
+    await expect
+      .poll(() => findNewMirroredPage(page, worktreeId, pageIdsBeforeFirstOpen), {
+        timeout: 60_000
+      })
+      .not.toBeNull()
+    const firstLinkPage = await findNewMirroredPage(page, worktreeId, pageIdsBeforeFirstOpen)
+    if (!firstLinkPage) {
+      throw new Error('mirrored server-placed link page disappeared')
+    }
+    expect(firstLinkPage.handleEnvironmentId).toBe(environmentId)
+    await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen)
+    await focusMirroredPage(page, worktreeId, firstLinkPage.pageId)
+    await expect
+      .poll(() => findMirroredPage(page, worktreeId, fixture.linkUrl), { timeout: 60_000 })
+      .toMatchObject({ pageId: firstLinkPage.pageId })
+    await expect(page.locator('[data-testid="remote-browser-frame"]:visible')).toBeVisible({
       timeout: 60_000
     })
-    expect(await readRemotePaneUrls(page, worktreeId)).toContainEqual(
-      expect.stringContaining(fixture.linkUrl)
-    )
     expect(await readLocalBrowserViewUrls(page)).toHaveLength(0)
 
     // Drop every tab except the pane's, so the next act drives the pane it started with against a
@@ -330,6 +366,7 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
     // Act 2 still stays server-hosted even when the generic client-hosted preference is enabled:
     // the remote pane explicitly pins links to its owning runtime.
     await pinClientHostedPlacement(page, true)
+    const pageIdsBeforeSecondOpen = await readMirroredPageIds(page, worktreeId)
     await openLinkFromRemotePaneContextMenu(page)
 
     await expect
@@ -353,7 +390,21 @@ test('opens a remote pane link on the pane runtime and refuses to fall back to t
       .toHaveLength(1)
     expect(await readOwnedPageUrls(client!.app, fixture.linkUrl)).toHaveLength(0)
     expect(await readLocalBrowserViewUrls(page)).toHaveLength(0)
-    await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen + 1)
+    await expect
+      .poll(() => findNewMirroredPage(page, worktreeId, pageIdsBeforeSecondOpen), {
+        timeout: 60_000
+      })
+      .not.toBeNull()
+    const secondLinkPage = await findNewMirroredPage(page, worktreeId, pageIdsBeforeSecondOpen)
+    if (!secondLinkPage) {
+      throw new Error('mirrored owner-pinned link page disappeared')
+    }
+    expect(secondLinkPage.handleEnvironmentId).toBe(environmentId)
+    await expect(page.getByTestId('remote-browser-pane')).toHaveCount(paneCountBeforeOpen)
+    await focusMirroredPage(page, worktreeId, secondLinkPage.pageId)
+    await expect
+      .poll(() => findMirroredPage(page, worktreeId, fixture.linkUrl), { timeout: 60_000 })
+      .toMatchObject({ pageId: secondLinkPage.pageId })
 
     // The store drops the tab synchronously and only then fires browser.tabClose, so settle the
     // mirror, host inventory, and host guest before act 3 reads them as its own baseline.

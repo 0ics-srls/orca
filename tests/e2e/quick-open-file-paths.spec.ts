@@ -30,6 +30,7 @@ test('cmd+p quick open prioritizes the filename and reveals the full path on hov
   expect(inputBox!.height).toBeLessThanOrEqual(45)
   const input = dialog.locator('input[placeholder="Go to file..."]')
   await input.fill('QuickOpenTarget')
+  await expect(dialog.locator('[aria-live="polite"]')).toContainText(/files found$/)
 
   const row = dialog.getByRole('option').filter({ hasText: 'QuickOpenTarget.tsx' }).first()
   await expect(row).toBeVisible()

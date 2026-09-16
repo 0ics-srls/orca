@@ -448,10 +448,20 @@ test.describe('Onboarding flow', () => {
       // runtime-environment list (store.runtimeEnvironments), not just the
       // activeRuntimeEnvironmentId setting.
       store.getState().setRuntimeEnvironments(await window.api.runtimeEnvironments.list())
-      // Why: a runtime host is only auto-selectable (health 'available') when it
-      // has a live, protocol-compatible status; without one it reads
-      // 'disconnected' and the Add Project dialog falls back to Local Mac.
-      // runtimeProtocolVersion 3 clears MIN_COMPATIBLE_RUNTIME_SERVER_VERSION.
+      store.setState({
+        applyRuntimeHostStatusSnapshot: () => {},
+        readRuntimeHostStatusSnapshots: async () => {},
+        refreshRuntimeEnvironmentStatus: async () => false
+      })
+      // Why: the store's switchRuntimeEnvironment probes reachability, which a
+      // synthetic host can't satisfy — write the preference directly and push
+      // the returned settings in rather than refetching.
+      const settings = await window.api.settings.setActiveRuntimeEnvironmentPreference({
+        environmentId: environment.id
+      })
+      store.setState({ settings })
+      // Why: the preference write can hydrate real status and overwrite a synthetic fixture, so
+      // seed availability last. runtimeProtocolVersion 3 clears the compatibility floor.
       store.getState().setRuntimeEnvironmentStatus(environment.id, {
         status: {
           runtimeId: `${environment.id}-runtime`,
@@ -465,14 +475,6 @@ test.describe('Onboarding flow', () => {
         },
         checkedAt: Date.now()
       })
-      // Why: the store's switchRuntimeEnvironment probes reachability, which a
-      // synthetic host can't satisfy — write the preference directly and push
-      // the returned settings in rather than refetching (fetchSettings would
-      // kick off a status hydrate that clobbers the seeded 'available' health).
-      const settings = await window.api.settings.setActiveRuntimeEnvironmentPreference({
-        environmentId: environment.id
-      })
-      store.setState({ settings })
       return environment.id
     }, pairingCode)
     await expect

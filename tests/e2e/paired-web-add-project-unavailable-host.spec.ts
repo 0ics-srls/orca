@@ -35,6 +35,13 @@ async function setOnlyRuntimeHostHealth(page: Page, health: HostHealth): Promise
     if (nextHealth === 'blocked' && !current?.status) {
       throw new Error('Paired web runtime status unavailable for compatibility fault')
     }
+    // The disposable client must keep this synthetic health instead of accepting the live host's
+    // next status snapshot while the two unavailable-state journeys run.
+    store.setState({
+      applyRuntimeHostStatusSnapshot: () => {},
+      readRuntimeHostStatusSnapshots: async () => {},
+      refreshRuntimeEnvironmentStatus: async () => false
+    })
     store.setState({
       runtimeStatusByEnvironmentId: new Map(state.runtimeStatusByEnvironmentId).set(
         environment.id,
@@ -48,7 +55,7 @@ async function setOnlyRuntimeHostHealth(page: Page, health: HostHealth): Promise
                 runtimeProtocolVersion: 0
               }
             }
-          : { ...current, checkedAt: Date.now(), status: null }
+          : { checkedAt: Date.now(), status: null }
       )
     })
     return environment.name
@@ -98,9 +105,6 @@ async function runUnavailableHostJourney(args: {
   let client: PairedWebClient | null = null
   try {
     client = await launchPairedWebClient(args.app, args.offer)
-    await args.app.evaluate(({ BrowserWindow }) => {
-      BrowserWindow.getAllWindows().forEach((window) => window.show())
-    })
     const hostName = await setOnlyRuntimeHostHealth(client.page, 'blocked')
     await assertCreationActionsDisabled({
       health: 'blocked',
