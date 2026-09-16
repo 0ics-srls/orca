@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { createEphemeralAgentSessionClaimSigner } from '../main/runtime/agent-session-claim-identity'
+import type { AgentSessionExecutionClaim } from './agent-session-host-authority'
 import { ClaimedAgentPtyOwnerRegistry } from './claimed-agent-pty-owner'
 import {
   admitVerifiedAgentDiscovery,
@@ -7,18 +7,17 @@ import {
   type VerifiedAgentDiscovery
 } from './agent-status-verified-discovery'
 
-const signer = createEphemeralAgentSessionClaimSigner('verified-discovery-test')
-const claim = signer.createFreshClaim({
-  namespace: {
-    machine: 'native:darwin',
-    principal: 'uid:1',
-    container: 'native',
-    providerRoot: 'profile-default:codex'
-  },
-  agent: 'codex',
-  launchIdentity: 'manual-process-1',
-  canonicalWorktreeId: 'repo::/tmp/worktree'
-})
+function makeClaim(identityCharacter: string): AgentSessionExecutionClaim {
+  return {
+    digestVersion: 1,
+    keyId: 'verified-discovery-test',
+    identityDigest: identityCharacter.repeat(43),
+    worktreeScopeDigest: 'b'.repeat(43),
+    agent: 'codex'
+  }
+}
+
+const claim = makeClaim('a')
 
 const surface = {
   worktreeId: 'repo::/tmp/worktree',
@@ -156,17 +155,7 @@ describe('verified agent discovery admission', () => {
 
   it('does not replace a managed launch owner with process discovery', async () => {
     const owners = new ClaimedAgentPtyOwnerRegistry()
-    const managedClaim = signer.createFreshClaim({
-      namespace: {
-        machine: 'native:darwin',
-        principal: 'uid:1',
-        container: 'native',
-        providerRoot: 'profile-default:codex'
-      },
-      agent: 'codex',
-      launchIdentity: 'managed-launch',
-      canonicalWorktreeId: surface.worktreeId
-    })
+    const managedClaim = makeClaim('c')
     owners.register({
       claim: managedClaim,
       generation: 'managed-generation',
@@ -233,17 +222,7 @@ describe('verified agent discovery admission', () => {
       throw new Error('expected posix fixture')
     }
     const replacement = discovery({
-      claim: signer.createFreshClaim({
-        namespace: {
-          machine: 'native:darwin',
-          principal: 'uid:1',
-          container: 'native',
-          providerRoot: 'profile-default:codex'
-        },
-        agent: 'codex',
-        launchIdentity: 'manual-process-2',
-        canonicalWorktreeId: 'repo::/tmp/worktree'
-      }),
+      claim: makeClaim('d'),
       evidence: {
         ...liveEvidence,
         ptyIncarnationId: '33333333-3333-4333-8333-333333333333',
@@ -289,17 +268,7 @@ describe('verified agent discovery admission', () => {
       throw new Error('expected posix live fixture')
     }
     const replacement = discovery({
-      claim: signer.createFreshClaim({
-        namespace: {
-          machine: 'native:darwin',
-          principal: 'uid:1',
-          container: 'native',
-          providerRoot: 'profile-default:codex'
-        },
-        agent: 'codex',
-        launchIdentity: 'manual-process-stale-provider',
-        canonicalWorktreeId: 'repo::/tmp/worktree'
-      }),
+      claim: makeClaim('e'),
       evidence: {
         ...liveEvidence,
         fence: {
