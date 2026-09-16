@@ -7,24 +7,10 @@ import type { Automation, AutomationRun } from '../../../../shared/automations-t
 import type { AutomationRunsDashboardEntry } from './automation-runs-dashboard-model'
 import { AutomationRunsTable } from './AutomationRunsTable'
 
-vi.mock('@tanstack/react-virtual', () => ({
-  useVirtualizer: ({
-    count,
-    getItemKey
-  }: {
-    count: number
-    getItemKey: (index: number) => string
-  }) => ({
-    getTotalSize: () => count * 59,
-    getVirtualItems: () =>
-      Array.from({ length: Math.min(count, 21) }, (_, index) => ({
-        index,
-        key: getItemKey(index),
-        start: index * 59
-      })),
-    measureElement: () => undefined
-  })
-}))
+vi.mock('@tanstack/react-virtual', async () => {
+  const { createVirtualizerStub } = await import('./virtualizer-test-stub')
+  return { useVirtualizer: createVirtualizerStub() }
+})
 
 function entries(count: number): AutomationRunsDashboardEntry[] {
   const automation = { id: 'automation', name: 'Daily check' } as Automation

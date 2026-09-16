@@ -15,6 +15,11 @@ import type { AutomationRun } from '../../../../shared/automations-types'
 import { AutomationRunHistory } from './AutomationRunHistory'
 import { makeRun } from './automations-page-fixtures'
 
+vi.mock('@tanstack/react-virtual', async () => {
+  const { createVirtualizerStub } = await import('./virtualizer-test-stub')
+  return { useVirtualizer: createVirtualizerStub() }
+})
+
 const roots: Root[] = []
 
 const FIRST = Date.UTC(2026, 7, 9, 14, 0)
@@ -129,6 +134,34 @@ describe('AutomationRunHistory unanswered history', () => {
     })
 
     expect(onRecoverHistory).toHaveBeenCalledWith('reconnect')
+  })
+})
+
+describe('AutomationRunHistory virtualization', () => {
+  it('keeps a long history to a bounded number of mounted rows', async () => {
+    const runs = Array.from({ length: 5_000 }, (_, index) =>
+      makeRun({ id: `run-${index}`, scheduledFor: FIRST + index })
+    )
+
+    const container = document.createElement('div')
+    document.body.appendChild(container)
+    const root = createRoot(container)
+    roots.push(root)
+
+    await act(async () => {
+      root.render(
+        <AutomationRunHistory
+          runs={runs}
+          automationId="a-1"
+          worktreeMap={new Map()}
+          onOpenRun={vi.fn()}
+        />
+      )
+    })
+
+    expect(container.querySelectorAll('button[data-automation-run-id]').length).toBeLessThan(50)
+    // The count above the table still speaks for the whole history, not the window.
+    expect(container.textContent).toContain('5000 runs')
   })
 })
 
