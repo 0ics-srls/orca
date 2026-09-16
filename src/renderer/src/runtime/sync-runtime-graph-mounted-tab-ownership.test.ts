@@ -39,6 +39,7 @@ function registerSurface(tabId: string, worktreeId: string): () => void {
   return registerRuntimeTerminalTab({
     tabId,
     worktreeId,
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path calls only the PaneManager members stubbed above.
     getManager: () => manager as never,
     getContainer: () => null,
     getPtyIdForPane: (paneId) => (paneId === pane.id ? 'pty-ownership' : null),

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
-import type { TerminalTab } from '../../../shared/terminal-tab-types'
+import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import type { AppState } from '../store/types'
 import {
   buildMobileSessionTabSnapshots,
@@ -56,10 +56,11 @@ function makeStatusEntry(paneKey: string, state: AgentStatusEntry['state']): Age
   return { state, prompt: '', updatedAt: 1, stateStartedAt: 1, paneKey, stateHistory: [] }
 }
 
-function makeLayout(ptyId: string): unknown {
+function makeLayout(ptyId: string): TerminalLayoutSnapshot {
   return {
     root: { type: 'leaf', leafId: LEAF_ID },
     activeLeafId: LEAF_ID,
+    expandedLeafId: null,
     ptyIdsByLeafId: { [LEAF_ID]: ptyId }
   }
 }
@@ -83,7 +84,7 @@ function makeGateState(filler: number): {
     // change of its ownership.
     [DIRTY_WT]: [countingTab('gate-dirty-term', DIRTY_WT), countingTab('gate-bare-term', DIRTY_WT)]
   }
-  const terminalLayoutsByTabId: Record<string, unknown> = {
+  const terminalLayoutsByTabId: AppState['terminalLayoutsByTabId'] = {
     'gate-dirty-term': makeLayout('pty-gate-dirty')
   }
   for (let index = 0; index < filler; index += 1) {
@@ -91,6 +92,7 @@ function makeGateState(filler: number): {
     tabsByWorktree[worktreeId] = [countingTab(`gate-filler-term-${index}`, worktreeId)]
     terminalLayoutsByTabId[`gate-filler-term-${index}`] = makeLayout(`pty-gate-filler-${index}`)
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path reads only the slices assigned here; a full AppState is not constructible in a unit test.
   const state = {
     tabsByWorktree,
     terminalLayoutsByTabId,
@@ -118,7 +120,6 @@ function makeGateState(filler: number): {
     worktreesByRepo: {},
     folderWorkspaces: [],
     settings: { tabAutoGenerateTitle: false }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path reads only the slices assigned here; a full AppState is not constructible in a unit test.
   } as unknown as AppState
   return {
     state,
@@ -129,13 +130,17 @@ function makeGateState(filler: number): {
   }
 }
 
+/** Every mutation below replaces slices of the same partial fixture; see `makeGateState`. */
+function patchGateState(state: AppState, patch: Partial<AppState>): AppState {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: a patch of the partial fixture is the same shape, and the publication path reads only the slices it assigns.
+  return { ...state, ...patch } as AppState
+}
+
 function withChangedStatus(state: AppState, nextState: AgentStatusEntry['state']): AppState {
   const paneKey = `gate-dirty-term:${LEAF_ID}`
-  return {
-    ...state,
+  return patchGateState(state, {
     agentStatusByPaneKey: { [paneKey]: makeStatusEntry(paneKey, nextState) }
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: one slice replaced on the same partial state; see makeGateState.
-  } as AppState
+  })
 }
 
 function resetPublicationCaches(): void {
@@ -239,7 +244,8 @@ describe('the gate reads every store value the inputs builder reads', () => {
             if (typeof key === 'string') {
               reads.add(key)
             }
-            return Reflect.get(target, key)
+            // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the proxy target is this fixture's AppState, so every key it is asked for indexes it.
+            return target[key as keyof AppState]
           }
         })
       )
@@ -280,11 +286,9 @@ const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
   {
     name: 'a saved terminal layout',
     apply: (state) =>
-      ({
-        ...state,
+      patchGateState(state, {
         terminalLayoutsByTabId: { 'gate-dirty-term': makeLayout('pty-gate-relayout') }
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-      }) as unknown as AppState
+      })
   },
   {
     name: 'the active tab',
@@ -311,11 +315,10 @@ const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
   {
     name: 'the generated-title setting',
     apply: (state) =>
-      ({
-        ...state,
-        settings: { ...state.settings, tabAutoGenerateTitle: true }
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-      }) as AppState
+      patchGateState(state, {
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture's settings object is a partial one; only `tabAutoGenerateTitle` is read here.
+        settings: { ...state.settings, tabAutoGenerateTitle: true } as AppState['settings']
+      })
   },
   {
     name: 'another worktree claiming a tab with no tab-keyed records',
@@ -330,20 +333,19 @@ const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
   {
     name: 'an open file',
     apply: (state) =>
-      ({
-        ...state,
+      patchGateState(state, {
         openFiles: [
           {
-            id: 'gate-file',
-            worktreeId: DIRTY_WT,
-            path: '/gate/readme.md',
+            id: '/gate/readme.md',
+            filePath: '/gate/readme.md',
             relativePath: 'readme.md',
-            content: '# gate',
-            isDirty: false
+            worktreeId: DIRTY_WT,
+            language: 'markdown',
+            isDirty: false,
+            mode: 'edit'
           }
         ]
-        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-      }) as unknown as AppState
+      })
   },
   {
     name: 'another worktree claiming this tab id',
@@ -467,14 +469,13 @@ describe('a mounted worktree is never gated on store references alone', () => {
         panes.find((pane) => pane.leafId === leafId)?.id ?? null
     }
     const { state } = makeGateState(12)
-    const mountedState = {
-      ...state,
+    const mountedState = patchGateState(state, {
       tabsByWorktree: {
         ...state.tabsByWorktree,
         [MOUNTED_WT]: [makeTab('gate-mounted-term', MOUNTED_WT)]
       }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-    } as AppState
+    })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path calls only the PaneManager members stubbed above.
     const unregister = registerRuntimeTerminalTab({
       tabId: 'gate-mounted-term',
       worktreeId: MOUNTED_WT,
@@ -482,7 +483,6 @@ describe('a mounted worktree is never gated on store references alone', () => {
       getContainer: () => null,
       getPtyIdForPane: (paneId: number) => `pty-gate-${paneId}`,
       getTabWideAgentHintLeafId: () => LEAF_ID
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path calls only the PaneManager members stubbed above.
     } as unknown as Parameters<typeof registerRuntimeTerminalTab>[0])
     try {
       const activeLeafOf = (): unknown => {
@@ -511,11 +511,9 @@ describe('publication-wide memos the gate depends on', () => {
 
     expect(collectMobileSessionWorktreeIds(state, state.browserTabsByWorktree ?? {})).toBe(first)
 
-    const withNewWorktree = {
-      ...state,
+    const withNewWorktree = patchGateState(state, {
       groupsByWorktree: { ...state.groupsByWorktree, 'repo::/gate-late': [] }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-    } as AppState
+    })
     const second = collectMobileSessionWorktreeIds(
       withNewWorktree,
       withNewWorktree.browserTabsByWorktree ?? {}
