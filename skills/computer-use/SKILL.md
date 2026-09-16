@@ -1,9 +1,13 @@
 ---
 name: computer-use
 description: >-
-  OS/window-level inspection and input in visible local app windows through `orca computer`:
-  native apps, external browser windows (Chrome, Edge, Safari), and app webviews. Not for
-  Orca's embedded browser (use `orca-cli`) or page-only automation (use Playwright or CDP).
+  Drives the GUI of a visible local app window through `orca computer`: accessibility
+  tree, clicks, typing, menus, dialogs, and screenshots in native apps and external
+  browser windows (Chrome, Edge, Safari) or webviews. Use only when the task requires
+  interacting with an on-screen window that has no equivalent CLI, filesystem, or API
+  path. Do not use for files, folders, git, or shell commands, including paths like
+  Desktop or Documents. Do not use for Orca's embedded browser (`orca-cli`) or
+  page-only automation (Playwright or CDP).
 ---
 
 # Computer Use
