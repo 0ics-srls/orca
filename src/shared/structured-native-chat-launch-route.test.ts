@@ -61,7 +61,11 @@ describe('per-launch structured feasibility', () => {
     ['grok', { agent: 'grok' }, 'agent-without-structured-session'],
     ['openclaude', { agent: 'openclaude' }, 'agent-without-structured-session'],
     ['a floating workspace', { workspaceKind: 'floating' }, 'floating-workspace'],
-    ['a custom TUI launch command', { requiresTuiLaunchCommand: true }, 'tui-launch-command'],
+    [
+      'terminal-only launch customization',
+      { requiresTuiLaunchCustomization: true },
+      'tui-launch-customization'
+    ],
     ['an SSH host', { executionHostId: 'ssh:host-a' }, 'remote-execution-host'],
     ['a missing capability', { hostCapabilities: [] }, 'runtime-capability'],
     ['an unanswered host', { hostCapabilities: null }, 'runtime-capability-unknown']

@@ -97,7 +97,9 @@ describe('worker-start mode receipt wording', () => {
       mode: 'terminal',
       preferred: 'structured',
       reason: 'tui_launch_command',
-      detail: downgradeSentence('this agent has a custom launch command that only a terminal runs')
+      detail: downgradeSentence(
+        'this launch has a custom command, per-launch arguments or working directory that only a terminal runs'
+      )
     })
   })
 

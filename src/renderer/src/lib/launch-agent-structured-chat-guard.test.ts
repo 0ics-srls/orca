@@ -232,6 +232,7 @@ describe('structured chat adoption guard on the launch path', () => {
     hostCapabilities = STRUCTURED_HOST_CAPABILITIES
     store.settings.openAgentTabsInChatByDefault = true
     store.settings.nativeChatSessionOptions = undefined
+    store.settings.agentDefaultArgs = {}
   })
 
   afterEach(async () => {
@@ -299,6 +300,53 @@ describe('structured chat adoption guard on the launch path', () => {
     })
     expect(mockCreateStructuredCodexSessionLaunchIntent).toHaveBeenCalledWith('wt-1', 'claude')
     expect(mockCreateTab).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['custom arguments', '--model gpt-5.6-sol', {}],
+    [
+      'an override equal to the default bypass flag',
+      '--dangerously-bypass-approvals-and-sandbox',
+      { codex: '' }
+    ]
+  ])(
+    'keeps attached-workspace launches with %s on the terminal path',
+    async (_name, agentArgs, defaults) => {
+      store.settings.agentDefaultArgs = defaults
+      const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
+
+      const result = launchAgentInNewTab({ agent: 'codex', worktreeId: 'wt-1', agentArgs })
+
+      expect(result?.surface).toEqual({ kind: 'local-terminal', tabId: 'tab-1' })
+      expect(mockCreateStructuredCodexSessionLaunchIntent).not.toHaveBeenCalled()
+      expect(store.queueTabStartupCommand).toHaveBeenCalledWith(
+        'tab-1',
+        expect.objectContaining({ command: expect.stringContaining(agentArgs.split(' ')[0]!) })
+      )
+    }
+  )
+
+  // An explicit `''` means "launch with no flags at all", which is Manual. It used to read as
+  // "unset" here and take the structured route, where the posture is derived from the GLOBAL
+  // agentDefaultArgs — so a launch that asked for no arguments ran bypassed.
+  it.each([
+    ['an explicit empty override', ''],
+    ['an explicit null override', null]
+  ])('keeps a launch with %s on the terminal path', async (_name, agentArgs) => {
+    store.settings.agentDefaultArgs = { codex: '--dangerously-bypass-approvals-and-sandbox' }
+    const { launchAgentInNewTab } = await import('./launch-agent-in-new-tab')
+
+    const result = launchAgentInNewTab({ agent: 'codex', worktreeId: 'wt-1', agentArgs })
+
+    expect(result?.surface).toEqual({ kind: 'local-terminal', tabId: 'tab-1' })
+    expect(mockCreateStructuredCodexSessionLaunchIntent).not.toHaveBeenCalled()
+    // The terminal command carries no agent flags, which is the posture that was asked for.
+    expect(store.queueTabStartupCommand).toHaveBeenCalledWith(
+      'tab-1',
+      expect.objectContaining({
+        command: expect.not.stringContaining('--dangerously-bypass-approvals-and-sandbox')
+      })
+    )
   })
 
   it('keeps a native-chat agent with no structured adapter on the terminal-backed path', async () => {

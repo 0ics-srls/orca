@@ -94,7 +94,7 @@ describe('resolveAgentLaunchRoute', () => {
     // openclaude and grok render native chat but have no structured adapter.
     expect(route({ agent: 'openclaude' })).toBe('legacy-native-chat')
     expect(route({ agent: 'grok' })).toBe('legacy-native-chat')
-    expect(route({ requiresTuiLaunchCommand: true })).toBe('legacy-native-chat')
+    expect(route({ requiresTuiLaunchCustomization: true })).toBe('legacy-native-chat')
   })
 
   it.each([

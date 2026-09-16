@@ -52,8 +52,8 @@ export type AgentLaunchRouteArgs = {
   workspace: ProspectiveWorkspace
   prompt?: string
   promptDelivery?: NativeChatLaunchPromptDelivery
-  /** A working directory only a terminal can apply; a structured session runs in its workspace. */
-  tuiCustomization?: { cwd?: string | null }
+  /** Launch-scoped values only the terminal command can apply. */
+  tuiCustomization?: { cwd?: string | null; agentArgs?: string | null }
   initialSessionOptions?: Readonly<Record<string, unknown>>
 }
 
@@ -129,8 +129,14 @@ export function buildAgentLaunchRouteInput(
       workspace,
       executionHostId
     ),
-    requiresTuiLaunchCommand:
-      Boolean(tuiCustomization?.cwd?.trim()) || hasExplicitTuiLaunchCommand(store.settings, agent),
+    requiresTuiLaunchCustomization:
+      Boolean(tuiCustomization?.cwd?.trim()) ||
+      // Presence, not truthiness: `''` is the caller asking for NO flags, which the terminal
+      // applies verbatim. Reading it as "unset" would route to structured chat, where posture
+      // comes from the global agentDefaultArgs — so a launch that asked for no arguments would
+      // run bypassed. Mirrors launch-agent-in-new-tab's own `agentArgs !== undefined` test.
+      tuiCustomization?.agentArgs !== undefined ||
+      hasExplicitTuiLaunchCommand(store.settings, agent),
     initialSessionOptions: args.initialSessionOptions
   }
 }

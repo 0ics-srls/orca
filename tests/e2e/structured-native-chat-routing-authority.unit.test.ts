@@ -44,7 +44,7 @@ const blockers: StructuredNativeChatBlocker[] = [
   'reused-terminal',
   'agent-without-structured-session',
   'floating-workspace',
-  'tui-launch-command',
+  'tui-launch-customization',
   'remote-execution-host',
   'project-runtime',
   'runtime-capability',
@@ -71,7 +71,7 @@ describe('shared feasibility owns every caller decision', () => {
             agent,
             executionHostId: placement.on ? `runtime:${placement.on}` : 'local',
             reusesTerminal: Boolean(placement.terminal),
-            requiresTuiLaunchCommand: customized
+            requiresTuiLaunchCustomization: customized
           })
         )
         for (const blocker of blockers) {
@@ -99,7 +99,7 @@ describe('shared feasibility owns every caller decision', () => {
             executionHostId,
             promptDelivery,
             hostCapabilities: RUNTIME_CAPABILITIES,
-            requiresTuiLaunchCommand: true,
+            requiresTuiLaunchCustomization: true,
             workspaceKind: 'folder',
             initialSessionOptions: { model: 'model-1', effort: 'high' }
           }
@@ -110,7 +110,7 @@ describe('shared feasibility owns every caller decision', () => {
             expect.objectContaining({
               agent,
               executionHostId,
-              requiresTuiLaunchCommand: true,
+              requiresTuiLaunchCustomization: true,
               workspaceKind: 'folder'
             })
           )

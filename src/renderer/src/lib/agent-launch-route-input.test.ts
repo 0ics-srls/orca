@@ -106,7 +106,7 @@ describe('buildAgentLaunchRouteInput', () => {
       promptDelivery: 'auto-submit',
       launchText: 'fix the flaky test',
       nativeChatTranscriptIsLocalReadable: true,
-      requiresTuiLaunchCommand: false,
+      requiresTuiLaunchCustomization: false,
       initialSessionOptions: { model: 'gpt-5.4' }
     })
     expect(mocks.getExecutionHostIdForWorktree).toHaveBeenCalledWith(appStore, 'wt-1')
@@ -240,6 +240,17 @@ describe('buildAgentLaunchRouteInput', () => {
 
   it.each([
     ['a cwd', { cwd: '/repo/sub' }, {}],
+    ['per-launch CLI arguments', { agentArgs: '--model gpt-5.6-sol' }, {}],
+    [
+      'a per-launch override equal to the shipped default',
+      { agentArgs: '--dangerously-bypass-approvals-and-sandbox' },
+      {}
+    ],
+    // An explicit `''` is the caller asking for NO flags. Read as "unset" it routed to structured
+    // chat, where the posture comes from the GLOBAL agentDefaultArgs — so a launch that asked for
+    // no arguments ran with permissions bypassed.
+    ['an explicit empty argument override', { agentArgs: '' }, {}],
+    ['an explicit null argument override', { agentArgs: null }, {}],
     ['a settings command override', {}, { agentCmdOverrides: { codex: 'codex-nightly' } }]
   ] as const)('requires a terminal for %s', (_name, tuiCustomization, settingsOverride) => {
     const input = buildAgentLaunchRouteInput(
@@ -250,7 +261,7 @@ describe('buildAgentLaunchRouteInput', () => {
         tuiCustomization
       }
     )
-    expect(input.requiresTuiLaunchCommand).toBe(true)
+    expect(input.requiresTuiLaunchCustomization).toBe(true)
   })
 
   // The reported P0: `--dangerously-skip-permissions --model Opus` matched no blessed string, so
@@ -271,7 +282,20 @@ describe('buildAgentLaunchRouteInput', () => {
       workspace: { kind: 'git-worktree' as const, worktreeId: 'wt-1' }
     }
     expect(routeFor(appStore, args)).toBe('structured-native-chat')
-    expect(buildAgentLaunchRouteInput(appStore, args).requiresTuiLaunchCommand).toBe(false)
+    expect(buildAgentLaunchRouteInput(appStore, args).requiresTuiLaunchCustomization).toBe(false)
+  })
+
+  // The other half of the presence test: no `agentArgs` key at all is not a choice, so a plain
+  // launch with only a cwd-free customization stays eligible for structured chat.
+  it('keeps a launch with no argument override structured', () => {
+    const appStore = store(STRUCTURED_SETTINGS)
+    const args = {
+      agent: 'codex' as const,
+      workspace: { kind: 'git-worktree' as const, worktreeId: 'wt-1' },
+      tuiCustomization: { cwd: null }
+    }
+    expect(buildAgentLaunchRouteInput(appStore, args).requiresTuiLaunchCustomization).toBe(false)
+    expect(routeFor(appStore, args)).toBe('structured-native-chat')
   })
 
   // Grok reads its transcript off local disk, so it is the agent the readability answer routes on.
