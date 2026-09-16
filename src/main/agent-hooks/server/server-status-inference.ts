@@ -125,6 +125,9 @@ export abstract class AgentHookServerStatusInference extends AgentHookServerRowO
         ...(payload.subagents ? { subagents: payload.subagents } : {})
       }
     })
+    if (!inferred) {
+      return false
+    }
     console.debug('[agent-hooks] inferred interrupted agent status', {
       paneKey: inferred.paneKey,
       agentType,
@@ -186,6 +189,9 @@ export abstract class AgentHookServerStatusInference extends AgentHookServerRowO
         ...(payload.subagents ? { subagents: payload.subagents } : {})
       }
     })
+    if (!inferred) {
+      return false
+    }
     console.debug('[agent-hooks] inferred resolved question status', {
       paneKey: inferred.paneKey,
       state: inferred.payload.state
