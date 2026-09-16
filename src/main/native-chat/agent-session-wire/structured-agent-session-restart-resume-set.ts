@@ -23,6 +23,8 @@ import {
   type AgentSessionResumeWork
 } from '../../../shared/agent-session-resume-marker'
 import { isResumableStructuredAgentSessionRecord } from './structured-agent-session-resume-eligibility'
+import { normalizeOptionalField } from '../../../shared/agent-status-field-normalization'
+import { AGENT_MODEL_MAX_LENGTH } from '../../../shared/agent-status-types'
 
 export type StructuredAgentSessionResumeCandidate = {
   sessionId: string
@@ -33,6 +35,13 @@ export type StructuredAgentSessionResumeCandidate = {
   recordedAt: number
   /** The prompt the row quotes, so the user recognises the chat before resuming it. */
   latestPrompt: string
+  /** Which machine ran it, so the offer carries the same host badge the sidebar shows. */
+  executionHostId: AgentSessionRecord['location']['executionHostId']
+  /** Git worktree or folder workspace — the surface picks its glyph from this, never from a name. */
+  workspaceKind: AgentSessionRecord['location']['workspaceKind']
+  /** Model in force, read from the record's acknowledged options exactly as the status feed does.
+   *  Absent until the host has read them. */
+  model?: string
 }
 
 export type StructuredAgentSessionResumeSetInput = {
@@ -144,6 +153,7 @@ export function structuredAgentSessionResumableSet(
     if (!journalAgreesWorkWasCutOff(input, marker)) {
       continue
     }
+    const model = normalizeOptionalField(record.options?.model, AGENT_MODEL_MAX_LENGTH)
     candidates.push({
       sessionId: marker.sessionId,
       workspaceId: record.location.workspaceId,
@@ -151,7 +161,10 @@ export function structuredAgentSessionResumableSet(
       work: marker.work,
       trigger: marker.trigger,
       recordedAt: marker.recordedAt,
-      latestPrompt: input.latestPrompt(marker.sessionId)
+      latestPrompt: input.latestPrompt(marker.sessionId),
+      executionHostId: record.location.executionHostId,
+      workspaceKind: record.location.workspaceKind,
+      ...(model === undefined ? {} : { model })
     })
   }
   return candidates

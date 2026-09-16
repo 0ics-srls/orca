@@ -72,6 +72,12 @@
         "af6e02c44a": "page",
         "f5a6b38a14": "sheet"
       },
+      "NativeChatResumeOnRestartModal": {
+        "manyAgents": "{{value0}} agents",
+        "oneAgent": "1 agent",
+        "reconnectAgent": "Reconnect {{value0}} chat",
+        "resume": "Reconnect"
+      },
       "NewWorkspaceComposerCard": {
         "0e587e31fb": "yaml",
         "2132b670da": "both",

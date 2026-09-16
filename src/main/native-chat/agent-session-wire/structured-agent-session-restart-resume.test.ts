@@ -472,7 +472,9 @@ describe('spending a marker', () => {
     work: { kind: 'turn' as const, id: 'turn-1' },
     trigger: 'quit' as const,
     recordedAt: NOW,
-    latestPrompt: ''
+    latestPrompt: '',
+    executionHostId: 'local' as const,
+    workspaceKind: 'git-worktree' as const
   })
 
   it('resumes a candidate once and reports it', async () => {

@@ -1965,7 +1965,10 @@
         "continuedOne": "Reconnected 1 chat and asked it to continue",
         "continuedMany": "Reconnected {{value0}} chats and asked them to continue",
         "whatIsSentTitle": "What Orca sends",
-        "whatIsSentBody": "Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent."
+        "whatIsSentBody": "Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.",
+        "selectAgent": "Reconnect {{value0}} chat \"{{value1}}\" in {{value2}}",
+        "projects": "Folder workspaces",
+        "resumeSelected": "Reconnect {{value0}}"
       },
       "StarNagCard": {
         "92b0f9d921": "is authenticated and try again.",

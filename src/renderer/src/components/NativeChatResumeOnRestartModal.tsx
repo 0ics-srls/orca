@@ -16,7 +16,12 @@ import { callStructuredAgentSession } from '@/runtime/structured-agent-session-c
 import { translate } from '@/i18n/i18n'
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover'
 import { AGENT_SESSION_RESTART_CONTINUATION_MESSAGE } from '../../../shared/agent-session-restart-continuation'
-import { ResumeOnRestartGroups, type ResumeCandidate } from './NativeChatResumeOnRestartGroups'
+import { ResumeOnRestartGroups } from './NativeChatResumeOnRestartGroups'
+import {
+  allResumeSessionIds,
+  selectedResumeSessionIds,
+  type ResumeCandidate
+} from './native-chat-resume-on-restart-grouping'
 
 /**
  * What would be reconnected, shown before anything runs.
@@ -128,6 +133,26 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   const [dontAskAgain, setDontAskAgain] = useState(false)
   const [busy, setBusy] = useState(false)
   const [resolved, setResolved] = useState(false)
+  /**
+   * Which of the OFFERED chats to act on. Defaults to all, and is only ever narrowed by the user.
+   *
+   * This changes which eligible chats are acted on, never what is eligible: ids are seeded from the
+   * host's own answer, `selectedResumeSessionIds` intersects back against it before any call, and
+   * the host re-derives the predicate regardless of what is sent.
+   */
+  const [selected, setSelected] = useState<ReadonlySet<string>>(() => new Set())
+
+  const toggleSelected = useCallback((sessionId: string, checked: boolean) => {
+    setSelected((current) => {
+      const next = new Set(current)
+      if (checked) {
+        next.add(sessionId)
+      } else {
+        next.delete(sessionId)
+      }
+      return next
+    })
+  }, [])
 
   useEffect(() => {
     if (!structuredEnabled || resolved) {
@@ -157,6 +182,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
         }
         setListedAt(Date.now())
         setCandidates(offered.sessions)
+        // Default on, as asked: the common case is reconnecting everything that was working.
+        setSelected(new Set(allResumeSessionIds(offered.sessions)))
       } catch {
         // A host that cannot answer offers nothing. There is no failure worth a modal of its own.
       }
@@ -206,19 +233,22 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
    * checkbox included — can reach this. The checkbox opts into automatic RECONNECTION, never
    * automatic continuation.
    */
-  const reconnectAndContinue = useCallback(async (): Promise<void> => {
-    setBusy(true)
-    try {
-      await persistPreference()
-      const result = await callStructuredAgentSession<{
-        continued: { sessionId: string; outcome: 'continued' | 'refused' }[]
-      }>(LOCAL, 'agentSession.restartContinue', {})
-      announceContinued(result.continued.filter((entry) => entry.outcome === 'continued').length)
-      setResolved(true)
-    } finally {
-      setBusy(false)
-    }
-  }, [persistPreference])
+  const reconnectAndContinue = useCallback(
+    async (sessionIds: string[]): Promise<void> => {
+      setBusy(true)
+      try {
+        await persistPreference()
+        const result = await callStructuredAgentSession<{
+          continued: { sessionId: string; outcome: 'continued' | 'refused' }[]
+        }>(LOCAL, 'agentSession.restartContinue', { sessionIds })
+        announceContinued(result.continued.filter((entry) => entry.outcome === 'continued').length)
+        setResolved(true)
+      } finally {
+        setBusy(false)
+      }
+    },
+    [persistPreference]
+  )
 
   /** Any close is a decline, and a decline spends the markers so this cannot return every launch. */
   const decline = useCallback(async (): Promise<void> => {
@@ -234,6 +264,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   }
 
   const interruptedByUpdate = candidates.some((candidate) => candidate.trigger === 'update')
+  // Intersected against what the host offered, so an action can never name a chat it did not.
+  const chosen = selectedResumeSessionIds(candidates, selected)
 
   return (
     <Dialog
@@ -292,7 +324,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             candidates={candidates}
             listedAt={listedAt}
             busy={busy}
-            onReconnect={(sessionId) => void resume([sessionId])}
+            selected={selected}
+            onToggle={toggleSelected}
           />
         </div>
 
@@ -340,8 +373,8 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             <Button
               variant="secondary"
               size="sm"
-              disabled={busy}
-              onClick={() => void reconnectAndContinue()}
+              disabled={busy || chosen.length === 0}
+              onClick={() => void reconnectAndContinue(chosen)}
             >
               {translate(
                 'auto.components.NativeChatResumeOnRestartModal.reconnectAndContinue',
@@ -351,18 +384,24 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
             <Button
               variant="default"
               size="sm"
-              disabled={busy}
-              onClick={() => void resume(candidates.map((candidate) => candidate.sessionId))}
+              disabled={busy || chosen.length === 0}
+              onClick={() => void resume(chosen)}
             >
               {busy
                 ? translate(
                     'auto.components.NativeChatResumeOnRestartModal.resuming',
                     'Reconnecting…'
                   )
-                : translate(
-                    'auto.components.NativeChatResumeOnRestartModal.resumeAll',
-                    'Reconnect all'
-                  )}
+                : chosen.length === candidates.length
+                  ? translate(
+                      'auto.components.NativeChatResumeOnRestartModal.resumeAll',
+                      'Reconnect all'
+                    )
+                  : translate(
+                      'auto.components.NativeChatResumeOnRestartModal.resumeSelected',
+                      'Reconnect {{value0}}',
+                      { value0: chosen.length }
+                    )}
             </Button>
           </span>
         </DialogFooter>
