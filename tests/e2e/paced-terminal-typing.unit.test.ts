@@ -73,8 +73,6 @@ describe('buildPacedTypingMeasurement', () => {
       dispatchModel: 'absolute-targets-serialized-cdp',
       echoObservation: 'xterm-buffer-poll',
       keyCount: 2,
-      missingPtyArrivalCount: 0,
-      missingEchoCount: 0,
       dispatchDelayMs: { count: 2, max: 6 },
       plannedToPtyArrivalMs: { count: 2, max: 15 },
       plannedToBufferEchoMs: { count: 2, max: 21 },

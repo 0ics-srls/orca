@@ -26,8 +26,6 @@ export type PacedTypingMeasurement = {
   dispatchModel: 'absolute-targets-serialized-cdp'
   echoObservation: 'xterm-buffer-poll'
   keyCount: number
-  missingPtyArrivalCount: number
-  missingEchoCount: number
   dispatchDelayMs: LatencyStats | null
   plannedToPtyArrivalMs: LatencyStats | null
   plannedToBufferEchoMs: LatencyStats | null
@@ -217,8 +215,6 @@ export function buildPacedTypingMeasurement(args: {
     dispatchModel: 'absolute-targets-serialized-cdp',
     echoObservation: 'xterm-buffer-poll',
     keyCount: args.keyCount,
-    missingPtyArrivalCount: 0,
-    missingEchoCount: 0,
     dispatchDelayMs: latencyStats(dispatchDelayMs),
     plannedToPtyArrivalMs: latencyStats(plannedToPtyArrivalMs),
     plannedToBufferEchoMs: latencyStats(plannedToBufferEchoMs),

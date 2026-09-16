@@ -73,8 +73,6 @@ test('typing measurement charges known renderer stalls to the planned schedule',
       const counts = await control.evaluate((value) => value.stop())
       reports.push({ injectStall, counts, measurement })
       expect(counts.keys).toBe(32)
-      expect(measurement.missingPtyArrivalCount).toBe(0)
-      expect(measurement.missingEchoCount).toBe(0)
       if (injectStall) {
         expect(counts.stalls).toBe(8)
         expect(measurement.inputHalfMs?.p90).toBeGreaterThanOrEqual(110)

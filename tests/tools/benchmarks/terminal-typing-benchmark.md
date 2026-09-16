@@ -61,7 +61,7 @@ requires the harness to detect input and scheduled-dispatch backlog. Run it with
 `ORCA_BACKGROUND_LAUNCH=1` in the environment:
 
 ```sh
-pnpm exec playwright test tests/e2e/terminal-typing-measurement-control.spec.ts --config tests/playwright.config.ts --project electron-headless --workers=1
+ORCA_TYPING_BENCH=1 ORCA_BACKGROUND_LAUNCH=1 pnpm exec playwright test tests/e2e/terminal-typing-measurement-control.spec.ts --config tests/playwright.config.ts --project electron-headless --workers=1
 pnpm test tests/e2e/paced-terminal-typing.unit.test.ts tests/e2e/accumulated-workspace-state-builder.unit.test.ts tests/e2e/sustained-agent-typing-load-scripts.unit.test.ts
 ```
 

@@ -20,6 +20,8 @@ it('paces the generated Unicode stream in bytes without splitting UTF-8 characte
     expect(result.stdout).not.toContain('\uFFFD')
     // Readiness/completion control sequences are outside the stream-byte budget.
     expect(Buffer.byteLength(result.stdout)).toBeLessThanOrEqual(4 * 1024 * 2 + 512)
+    // Lower bound too: without it a generator that emits no stream bytes still passes.
+    expect(Buffer.byteLength(result.stdout)).toBeGreaterThan(4 * 1024 * 2 * 0.8)
   } finally {
     rmSync(directory, { recursive: true, force: true })
   }

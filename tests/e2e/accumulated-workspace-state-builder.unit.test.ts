@@ -32,4 +32,20 @@ describe('accumulated workspace state builder', () => {
     expect(lineages.length).toBeGreaterThan(0)
     expect(lineages.every(({ parentWorktreeId }) => !childIds.has(parentWorktreeId))).toBe(true)
   })
+
+  // `lineageEvery: 1` means "every non-main worktree", but the interval check used
+  // `% lineageEvery === 1`, which no ordinal satisfies at 1 — the fixture silently
+  // built zero lineage records at the densest setting.
+  it('builds lineage for every non-main worktree at an interval of 1', () => {
+    const options = normalizeAccumulatedWorkspaceFixtureOptions({
+      worktrees: 9,
+      repositories: 3,
+      lineageEvery: 1
+    })
+    const seed = buildAccumulatedWorkspaceSeed(options)
+    const lineages = Object.values(seed.worktreeLineageById)
+
+    // 9 worktrees over 3 repos gives ordinals 0..2 each; ordinal 0 is the main row.
+    expect(lineages).toHaveLength(6)
+  })
 })

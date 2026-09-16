@@ -76,7 +76,8 @@ export function buildAccumulatedWorkspaceSeed(
     const repo = repos[repoIndex]
     const repoOrdinal = Math.floor(index / config.repositories)
     const id = `synthetic-worktree-${index}`
-    if (repoOrdinal % config.lineageEvery === 1) {
+    // Ordinals 1, 1 + lineageEvery, ...; `% lineageEvery === 1` skipped everything at an interval of 1.
+    if (repoOrdinal >= 1 && (repoOrdinal - 1) % config.lineageEvery === 0) {
       parentIdByWorktreeId.set(id, `synthetic-worktree-${index - config.repositories}`)
     }
     const row: Worktree = {
