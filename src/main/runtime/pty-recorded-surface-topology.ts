@@ -1,27 +1,11 @@
 /**
  * Whether the pane a PTY record names as its surface still exists and still holds it.
  *
- * The incumbent test asked only whether the record agreed with *itself* — `!pty.tabId || !pane
- * || pane.tabId !== pty.tabId`. A record whose `paneKey` still parses to its own `tabId` passes
- * that forever, including after the graph dropped the pane, so a terminal that had lost its
- * surface was reported `orphaned: false` with a `tabId` no tab has: field-for-field identical to
- * a healthy one (#18191). Self-consistency is not topology; the leaf map is.
- *
- * An absence only counts against a record that a graph statement had the standing to contradict,
- * which is what `graphSequence` decides. Every graph statement re-records the surface of every
- * pane it publishes, so a pane the current graph holds always carries the current sequence and
- * is answered without consulting the leaf map at all. That leaves two cases the sequence handles
- * on its own, and neither needs a separate "is the graph usable" flag:
- *
- * - **Nothing has spoken yet.** Before the first sync, and for a surface recorded since the last
- *   one, the stamp is current. Spawn records the renderer's pane identity *before* the graph
- *   carrying it arrives, on purpose (#7587), so the only graph that could have spoken since was
- *   already in flight and its silence is not a retraction.
- * - **The graph went away.** Losing it clears the leaf map wholesale without advancing the
- *   sequence, so every pane it held keeps a current stamp and stays attached. Reading that
- *   emptiness as "no pane holds this" would report every live terminal orphaned at once — the
- *   same lie as #18191, pointed the other way. A pane already observed dropped keeps its stale
- *   stamp and stays named, because losing the ability to re-check is not a reason to un-see it.
+ * Why a graph stamp and not self-consistency: a record whose `paneKey` parses to its own `tabId`
+ * agrees with itself forever, so a terminal the graph had dropped read as attached under a `tabId`
+ * no tab has (#18191). The stamp names the sequence a claim is good as of, so absence counts only
+ * against a claim some graph statement had the standing to contradict — which a spawn ahead of the
+ * graph (#7587) and a graph that went away (leaves cleared, sequence not bumped) do not.
  */
 import { parsePaneKey } from '../../shared/stable-pane-id'
 
@@ -34,9 +18,37 @@ export type RecordedPtySurface = {
 }
 
 /**
- * The one way to name a PTY's surface. A bare `tabId =` / `paneKey =` leaves the stamp behind,
- * and the leaf map then answers for a pane the graph has not been shown yet.
+ * The standing a surface claim gets when its writer does not name one. A persisted replay, a stored
+ * mobile snapshot and an inventory restore are all derived from a graph that has already had its
+ * say, so none of them may speak over it — and defaulting the other way is what let the restore in
+ * `terminal list` un-drop a pane the graph dropped (#18191).
  */
+export const SURFACE_CLAIM_WITHOUT_STANDING = 0
+
+/**
+ * A spawn names its pane before the graph carrying it exists (#7587), so the one statement the
+ * renderer may already have in flight is not silence about that pane. Renderer syncs are
+ * serialized, so there is never more than one.
+ */
+export function spawnSurfaceClaimSequence(graphSequence: number): number {
+  return graphSequence + 1
+}
+
+/** The one way to name a PTY's surface: a bare `paneKey =` leaves the stamp behind. */
+export function recordPtySurfaceClaim(
+  pty: RecordedPtySurface,
+  paneKey: string | null,
+  graphSequence: number
+): void {
+  // Replaying the claim already on the record is not new evidence, but it must not retract the
+  // standing that claim already had.
+  pty.surfaceRecordedAtGraphSequence =
+    paneKey === pty.paneKey
+      ? Math.max(pty.surfaceRecordedAtGraphSequence, graphSequence)
+      : graphSequence
+  pty.paneKey = paneKey
+}
+
 export function recordPtySurface(
   pty: RecordedPtySurface,
   tabId: string,
@@ -44,8 +56,7 @@ export function recordPtySurface(
   graphSequence: number
 ): void {
   pty.tabId = tabId
-  pty.paneKey = paneKey
-  pty.surfaceRecordedAtGraphSequence = graphSequence
+  recordPtySurfaceClaim(pty, paneKey, graphSequence)
 }
 
 export type PtySurfaceTopology = {

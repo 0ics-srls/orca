@@ -43,7 +43,6 @@ import { replaceRuntimeEnvironmentRevisions } from './runtime-environment-revisi
 import { clearHostLiveTerminalProbesForTests } from './host-live-terminal-probe'
 import {
   acceptReplayedWebSessionTabsSnapshot,
-  _getWebSessionTabsRecoveryTrackingCountsForTest,
   _getWebSessionTabsTrackingCountsForTest,
   resetWebSessionTabsSnapshotFreshnessForTests,
   useWebSessionTabsSync,

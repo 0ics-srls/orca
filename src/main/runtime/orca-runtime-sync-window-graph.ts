@@ -147,7 +147,8 @@ export class OrcaRuntimeWithSyncWindowGraph extends OrcaRuntimeWithAttachWindow 
           lastOutputAt: existing?.ptyId === leaf.ptyId ? existing.lastOutputAt : null,
           preview: existing?.ptyId === leaf.ptyId ? existing.preview : '',
           tabId: leaf.tabId,
-          paneKey: this.makeRuntimePaneKey(leaf)
+          paneKey: this.makeRuntimePaneKey(leaf),
+          surfaceRecordedAtGraphSequence: this.graphSequence
         })
       }
 

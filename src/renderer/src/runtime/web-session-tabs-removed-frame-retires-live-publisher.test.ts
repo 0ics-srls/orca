@@ -114,6 +114,39 @@ describe('a removal frame must not retire the publisher that is still live', () 
   })
 
   /**
+   * The case the version fallback cannot decide. The receipt ledger is one slot, and the live
+   * republication overwrites it, so by the time the pre-close list lands the only record that a
+   * retraction ever happened is the boundary itself. Ranking on version instead readmits the list,
+   * because a host that touched the dying surface on its way out published a HIGHER version than
+   * the renderer's counter restarts at.
+   */
+  it('fences a pre-close list that lands after the live publisher already republished', () => {
+    const liveReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, liveFrame(1))
+    expect(admits(liveFrame(1), liveReceived)).toBe(true)
+
+    // The list reserves its place while the terminal is still open.
+    const delayedReceived = nextReceivedSessionTabsFrame()
+
+    const removedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, removalFrame())
+    expect(admits(removalFrame(), removedReceived)).toBe(true)
+
+    // A client recreates a terminal; the live publisher speaks again and overwrites the slot.
+    const republished = liveFrame(2)
+    const republishedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, republished)
+    expect(admits(republished, republishedReceived)).toBe(true)
+
+    const delayed = liveFrame(9)
+    recordReceivedWebSessionTabsSnapshot(
+      ENVIRONMENT_ID,
+      delayed,
+      delayedReceived,
+      undefined,
+      'bootstrap'
+    )
+    expect(admits(delayed, delayedReceived)).toBe(false)
+  })
+
+  /**
    * The boundary is evidence, so a retraction may only ever advance it. A visibility-resume
    * inventory reserves its received frame before it lists, so an omission it reports can be older
    * than a stream frame that landed meanwhile. Letting that stale omission rewind the ledger would

@@ -149,13 +149,9 @@ export class OrcaRuntimeWithPersistTerminalSurfaceRetirements extends OrcaRuntim
     // Why: one repo epoch can cover multiple exits, but only surfaces individually accepted by persistence may disappear.
     const removableRetiredSurfaces = [...persisted.accepted, ...persisted.unpersisted]
     for (const [worktreeId, snapshot] of this.mobileSessionTabsByWorktree) {
-      // Why proofs are not gated on `removable`: the observed exit is itself the attestation that
-      // this surface is retired. Persistence gates *removal* — publishing absence before the
-      // membership fence is durable would let a crash resurrect the surface — but a surface the
-      // renderer's own close transaction already de-persisted and dropped leaves persistence with
-      // nothing to accept, and gating the proof on that acceptance withheld the one piece of host
-      // evidence a paired mirror can act on. Its only other route needs two authoritative
-      // inventories, and a quiet workspace publishes one frame, so the pane stayed forever.
+      // Why proofs aren't gated on `removable`: the exit is the attestation, and a surface the
+      // renderer already de-persisted leaves persistence nothing to accept. Withholding the proof
+      // then strands the mirror's pane until a second inventory a quiet workspace never sends.
       const retirementProofs = terminalHandle
         ? retiredSurfaces
             .filter((surface) => surface.worktreeId === worktreeId)

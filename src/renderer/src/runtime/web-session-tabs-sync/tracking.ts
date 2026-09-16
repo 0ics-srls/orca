@@ -2,12 +2,12 @@ import type { RuntimeMobileSessionTabsResult } from '../../../../shared/runtime-
 import {
   latestReceivedSessionTabsInventoryFrameByEnvironment,
   latestReceivedSessionTabsSnapshotByWorktree,
-  latestSessionTabsRemovalFenceByWorktree,
   latestSessionTabsSnapshotByWorktree,
   lastHostTerminalTabCountByWorktree,
   sessionTabsEnvironmentsByWorktree,
   sessionTabsPublicationEpochHistoryByWorktree,
-  sessionTabsRecoveryStateByWorktree,
+  sessionTabsRemovalWatermarkByWorktree,
+  setBoundedSessionTabsReceipt,
   trackedSessionTabsWorktreeIdsByEnvironment,
   nextReceivedSessionTabsFrame,
   type SnapshotFreshness,
@@ -104,8 +104,10 @@ export function recordReceivedWebSessionTabsSnapshot(
   const publicationEpoch = snapshot.publicationEpoch
   const isRetraction = 'removed' in snapshot && snapshot.removed === true
   const history = sessionTabsPublicationEpochHistoryByWorktree.get(key)
-  const isRetired = history?.retired.includes(publicationEpoch) ?? false
-  if (isRetired) {
+  // Retirement is a property of the lineage, not of the exact string: matching exactly here let a
+  // `:headless-merge:` rebuild of a retired generation be noted as current, which then retired the
+  // live one and locked it out of its own worktree.
+  if (isRetiredSessionTabsPublicationEpoch(key, publicationEpoch)) {
     return frame
   }
   // A retraction withdraws the worktree; it does not take over publishing it. Noting it as current
@@ -124,7 +126,7 @@ export function recordReceivedWebSessionTabsSnapshot(
     snapshot.snapshotVersion > current.snapshotVersion ||
     (snapshot.snapshotVersion === current.snapshotVersion && current.receivedFrame <= frame)
   ) {
-    latestReceivedSessionTabsSnapshotByWorktree.set(key, {
+    setBoundedSessionTabsReceipt(latestReceivedSessionTabsSnapshotByWorktree, key, {
       receivedFrame: frame,
       publicationEpoch,
       snapshotVersion: snapshot.snapshotVersion,
@@ -144,41 +146,6 @@ export function recordReceivedWebSessionTabsInventory(environmentId: string): nu
   return receivedFrame
 }
 
-export function beginWebSessionTabsSnapshotRecovery(
-  environmentId: string,
-  worktreeId: string,
-  receivedFrame: number
-): () => void {
-  const key = sessionTabsFreshnessKey(environmentId, worktreeId)
-  const recoveryState = sessionTabsRecoveryStateByWorktree.get(key) ?? { pendingCount: 0 }
-  recoveryState.pendingCount += 1
-  sessionTabsRecoveryStateByWorktree.set(key, recoveryState)
-  let settled = false
-  return () => {
-    if (settled) {
-      return
-    }
-    settled = true
-    recoveryState.pendingCount -= 1
-    if (
-      recoveryState.pendingCount === 0 &&
-      sessionTabsRecoveryStateByWorktree.get(key) === recoveryState
-    ) {
-      sessionTabsRecoveryStateByWorktree.delete(key)
-    }
-    const removalFence = latestSessionTabsRemovalFenceByWorktree.get(key)
-    if (
-      removalFence?.recoveryState === recoveryState &&
-      receivedFrame < removalFence.receivedFrame
-    ) {
-      removalFence.pendingCount -= 1
-      if (removalFence.pendingCount === 0) {
-        latestSessionTabsRemovalFenceByWorktree.delete(key)
-      }
-    }
-  }
-}
-
 export function recordReceivedWebSessionTabsRemoval(
   environmentId: string,
   worktreeId: string,
@@ -187,33 +154,25 @@ export function recordReceivedWebSessionTabsRemoval(
 ): void {
   const key = sessionTabsFreshnessKey(environmentId, worktreeId)
   const latest = latestReceivedSessionTabsSnapshotByWorktree.get(key)
-  // A retraction is this worktree's newest evidence, not an absence of evidence. Recording the
-  // boundary instead of dropping the ledger is what lets receivedFrame ordering fence a frame
-  // reserved before the retraction while still admitting the live publisher's next frame — the two
-  // are the same epoch at a higher version, so only delivery order separates them. A retraction
-  // epoch never matches a host publication, so a later live frame may still restart its version
-  // counter without being ranked against the pre-removal version.
+  // A retraction is this worktree's newest evidence, not an absence of it. The ledger slot lets the
+  // live publisher's next frame outrank the pre-close one on version; the watermark is what the
+  // slot cannot be, because a later frame overwrites the slot and the boundary has to outlive it.
   if (!latest || latest.receivedFrame <= receivedFrame) {
-    latestReceivedSessionTabsSnapshotByWorktree.set(key, {
+    setBoundedSessionTabsReceipt(latestReceivedSessionTabsSnapshotByWorktree, key, {
       receivedFrame,
       publicationEpoch,
       snapshotVersion: 0
     })
   }
-  const current = latestSessionTabsRemovalFenceByWorktree.get(key)
-  if (current && current.receivedFrame >= receivedFrame) {
-    return
+  const watermark = sessionTabsRemovalWatermarkByWorktree.get(key) ?? 0
+  if (receivedFrame > watermark) {
+    setBoundedSessionTabsReceipt(sessionTabsRemovalWatermarkByWorktree, key, receivedFrame)
   }
-  const recoveryState = sessionTabsRecoveryStateByWorktree.get(key)
-  if (!recoveryState || recoveryState.pendingCount === 0) {
-    latestSessionTabsRemovalFenceByWorktree.delete(key)
-    return
-  }
-  latestSessionTabsRemovalFenceByWorktree.set(key, {
-    receivedFrame,
-    recoveryState,
-    pendingCount: recoveryState.pendingCount
-  })
+}
+
+/** True for a frame whose place in receipt order was fixed before this worktree was last retracted. */
+export function precedesWebSessionTabsRemoval(key: string, receivedFrame: number): boolean {
+  return receivedFrame < (sessionTabsRemovalWatermarkByWorktree.get(key) ?? 0)
 }
 
 export function shouldApplyRecoveredWebSessionTabsSnapshot(
@@ -233,10 +192,10 @@ export function shouldApplyRecoveredWebSessionTabsSnapshot(
   if (isRetiredSessionTabsPublicationEpoch(key, snapshot.publicationEpoch)) {
     return false
   }
-  const removalFrame = latestSessionTabsRemovalFenceByWorktree.get(key)?.receivedFrame
-  if (removalFrame !== undefined && receivedFrame < removalFrame) {
+  if (precedesWebSessionTabsRemoval(key, receivedFrame)) {
     return false
   }
+
   const latest = latestReceivedSessionTabsSnapshotByWorktree.get(key)
   if (!latest || latest.receivedFrame === receivedFrame) {
     return latest !== undefined

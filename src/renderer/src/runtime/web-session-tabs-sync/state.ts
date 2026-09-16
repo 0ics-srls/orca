@@ -63,12 +63,6 @@ export type SessionTabsRuntimeHistory = RetiredValueHistory
  * roll the mirror back after the replacement epoch is accepted.
  */
 export type SessionTabsPublicationEpochHistory = RetiredValueHistory
-export type SessionTabsRecoveryState = { pendingCount: number }
-export type SessionTabsRemovalFence = {
-  receivedFrame: number
-  recoveryState: SessionTabsRecoveryState
-  pendingCount: number
-}
 
 export type WebSessionTabsSnapshotApplyOptions = {
   contentScope?: 'all' | 'agent-session'
@@ -95,6 +89,22 @@ export const latestReceivedSessionTabsSnapshotByWorktree = new Map<
   string,
   ReceivedSessionTabsSnapshot
 >()
+/** Receipt ledgers outlive the worktrees they order, so their keys need a bound of their own. */
+export const MAX_TRACKED_SESSION_TABS_RECEIPTS = 512
+
+/** Writes evict least-recently-written first, so the surviving keys are the ones still being ordered. */
+export function setBoundedSessionTabsReceipt<T>(map: Map<string, T>, key: string, value: T): void {
+  map.delete(key)
+  map.set(key, value)
+  while (map.size > MAX_TRACKED_SESSION_TABS_RECEIPTS) {
+    const oldest = map.keys().next().value
+    if (typeof oldest !== 'string') {
+      break
+    }
+    map.delete(oldest)
+  }
+}
+
 export const sessionTabsRuntimeHistoryByEnvironment = new Map<string, SessionTabsRuntimeHistory>()
 export const sessionTabsPublicationEpochHistoryByWorktree = new Map<
   string,
@@ -102,8 +112,12 @@ export const sessionTabsPublicationEpochHistoryByWorktree = new Map<
 >()
 export const latestReceivedSessionTabsFrameByEnvironment = new Map<string, number>()
 export const latestReceivedSessionTabsInventoryFrameByEnvironment = new Map<string, number>()
-export const latestSessionTabsRemovalFenceByWorktree = new Map<string, SessionTabsRemovalFence>()
-export const sessionTabsRecoveryStateByWorktree = new Map<string, SessionTabsRecoveryState>()
+/**
+ * Highest `receivedFrame` at which this worktree was retracted. Raise-only: a frame reserved before
+ * the retraction is stale evidence no matter what arrived since, so the boundary cannot be a slot a
+ * later frame overwrites, nor conditional on a recovery happening to be in flight when it landed.
+ */
+export const sessionTabsRemovalWatermarkByWorktree = new Map<string, number>()
 export const trackedSessionTabsWorktreeIdsByEnvironment = new Map<string, Set<string>>()
 export const sessionTabsEnvironmentsByWorktree = new Map<string, Set<string>>()
 export const sessionTabsTrackingGenerationByEnvironment = new Map<string, number>()

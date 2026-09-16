@@ -2,6 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 import { OrcaRuntimeService } from './orca-runtime'
 import { getDefaultWorkspaceSession } from '../../shared/constants'
 import type { WorkspaceSessionState } from '../../shared/workspace-session-state-types'
+import { makePaneKey } from '../../shared/stable-pane-id'
+import { spawnSurfaceClaimSequence } from './pty-recorded-surface-topology'
 
 // #18191: a terminal whose pane the graph dropped kept reporting `orphaned: false` with a
 // `tabId` no tab has — "field-for-field identical to a healthy one", so an operator polling
@@ -13,9 +15,32 @@ const KEPT_LEAF = '11111111-1111-4111-8111-111111111111'
 const DROPPED_LEAF = '22222222-2222-4222-8222-222222222222'
 const KEPT_PTY = 'pty-ui-created'
 const DROPPED_PTY = 'pty-cli-created'
+const KEPT_INCARNATION = 'inc-kept'
+const DROPPED_INCARNATION = 'inc-dropped'
 
-function makeStore() {
-  const session: WorkspaceSessionState = getDefaultWorkspaceSession()
+/** A session that still persists both panes, exactly as it is between a graph drop and the next save. */
+function sessionStillHoldingBothPanes(): WorkspaceSessionState {
+  const session = getDefaultWorkspaceSession()
+  session.tabsByWorktree = {
+    [WORKTREE_ID]: [
+      { id: 'tab-kept', title: '', type: 'terminal' },
+      { id: 'tab-dropped', title: '', type: 'terminal' }
+    ]
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: listTerminals reads only the tab ids and the layouts keyed off them.
+  } as never
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: only ptyIdsByLeafId is read by indexPersistedPtySurfaceBindings.
+  session.terminalLayoutsByTabId = {
+    'tab-kept': { ptyIdsByLeafId: { [KEPT_LEAF]: KEPT_PTY } },
+    'tab-dropped': { ptyIdsByLeafId: { [DROPPED_LEAF]: DROPPED_PTY } }
+  } as never
+  session.terminalPtyIncarnationsByPaneKey = {
+    [makePaneKey('tab-kept', KEPT_LEAF)]: KEPT_INCARNATION,
+    [makePaneKey('tab-dropped', DROPPED_LEAF)]: DROPPED_INCARNATION
+  }
+  return session
+}
+
+function makeStore(session: WorkspaceSessionState = getDefaultWorkspaceSession()) {
   return {
     getWorkspaceSession: vi.fn(() => session),
     setWorkspaceSession: vi.fn(),
@@ -54,17 +79,17 @@ function tab(tabId: string, activeLeafId: string) {
 }
 
 /** Both PTYs stay live on the host throughout; only the graph changes. */
-function makeRuntime(): OrcaRuntimeService {
+function makeRuntime(session?: WorkspaceSessionState): OrcaRuntimeService {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: makeStore returns the repo and session reads this suite drives; the rest of Store is unreached.
-  const runtime = new OrcaRuntimeService(makeStore() as never)
+  const runtime = new OrcaRuntimeService(makeStore(session) as never)
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub carries the four controller members this suite drives; both PTYs stay live throughout.
   runtime.setPtyController({
     spawn: vi.fn(async () => ({ id: 'never' })),
     write: () => true,
     kill: () => true,
     listProcesses: vi.fn(async () => [
-      { id: KEPT_PTY, cwd: '/tmp/probe-worktree' },
-      { id: DROPPED_PTY, cwd: '/tmp/probe-worktree' }
+      { id: KEPT_PTY, cwd: '/tmp/probe-worktree', incarnationId: KEPT_INCARNATION },
+      { id: DROPPED_PTY, cwd: '/tmp/probe-worktree', incarnationId: DROPPED_INCARNATION }
     ])
   } as never)
   runtime.attachWindow(1)
@@ -144,12 +169,32 @@ describe('terminal inventory after a pane is dropped', () => {
     stamp.recordPtyWorktree(DROPPED_PTY, WORKTREE_ID, {
       connected: true,
       tabId: 'tab-dropped',
-      paneKey: `tab-dropped:${DROPPED_LEAF}`
+      paneKey: `tab-dropped:${DROPPED_LEAF}`,
+      surfaceRecordedAtGraphSequence: spawnSurfaceClaimSequence(
+        (runtime as unknown as { graphSequence: number }).graphSequence
+      )
     })
 
     const { terminals } = await runtime.listTerminals(`id:${WORKTREE_ID}`)
     const dropped = terminals.find((terminal) => terminal.ptyId === DROPPED_PTY)
     expect(dropped?.orphaned).toBe(false)
+  })
+
+  it('does not let the inventory restore un-drop a pane the graph dropped', async () => {
+    // `list` always refreshes PTY records from the controller inventory first, and that refresh
+    // replays the still-persisted paneKey. Stamping that replay at write time gave it the standing
+    // of a fresh graph statement, so the very read that reports the orphan erased it first.
+    const runtime = makeRuntime(sessionStillHoldingBothPanes())
+    dropOnePane(runtime)
+
+    const first = await runtime.listTerminals(`id:${WORKTREE_ID}`)
+    const second = await runtime.listTerminals(`id:${WORKTREE_ID}`)
+    for (const { terminals } of [first, second]) {
+      const byPty = new Map(terminals.map((terminal) => [terminal.ptyId, terminal]))
+      expect(byPty.get(DROPPED_PTY)?.orphaned).toBe(true)
+      expect(byPty.get(DROPPED_PTY)?.tabId).toBe(`pty:${DROPPED_PTY}`)
+      expect(byPty.get(KEPT_PTY)?.orphaned).toBe(false)
+    }
   })
 
   it('does not call every pane orphaned when the graph goes away', async () => {

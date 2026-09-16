@@ -72,16 +72,18 @@ export function attachRetirementProofsToSnapshot(
   }
   const merged = appendRetiredTerminalSurfaceProofs(snapshot.retiredTerminalSurfaces, proofs)
   const existing = snapshot.retiredTerminalSurfaces
-  // Why by value, not identity: the append rebuilds every re-supplied proof, so an identity
-  // check would call a re-delivered exit a change and fan out a version bump carrying nothing.
+  // Why by key, not by index: the append moves a re-supplied proof to the tail, so comparing
+  // position would call a re-delivered exit a change and fan out a version bump carrying nothing.
+  const priorByKey = new Map(
+    (existing ?? []).map((proof) => [retirementProofKey(proof), proof] as const)
+  )
   const unchanged =
     existing !== undefined &&
     merged.length === existing.length &&
-    merged.every((proof, index) => {
-      const prior = existing[index]
+    merged.every((proof) => {
+      const prior = priorByKey.get(retirementProofKey(proof))
       return (
         prior !== undefined &&
-        retirementProofKey(proof) === retirementProofKey(prior) &&
         proof.ptyId === prior.ptyId &&
         proof.incarnationId === prior.incarnationId
       )
