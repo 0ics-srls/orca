@@ -162,7 +162,7 @@ export class StructuredConversationCommandExecution {
       }
       attachError = null
     }
-    if (!this.owner.isCurrent(entry)) {
+    if (!this.canSettle(entry, execution)) {
       if (!attachError) {
         await this.host
           .close(replacementSessionId)

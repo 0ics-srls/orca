@@ -538,6 +538,58 @@ describe('host conversation commands', () => {
     })
   })
 
+  it('closes a replacement attached while abandonment lifecycle publication is pending', async () => {
+    const params = commandParams('clear')
+    const replacementAcquire = Promise.withResolvers<void>()
+    const replacementAcquireStarted = Promise.withResolvers<void>()
+    const abandonmentPublication = Promise.withResolvers<void>()
+    const abandonmentPersisted = Promise.withResolvers<void>()
+    const replacementAttached = Promise.withResolvers<void>()
+    const originalAcquire = vi.mocked(adapter.acquire).getMockImplementation()!
+    vi.mocked(adapter.acquire).mockImplementation(async (input) => {
+      if (acquisitions > 0) {
+        replacementAcquireStarted.resolve()
+        await replacementAcquire.promise
+      }
+      return originalAcquire(input)
+    })
+    const persistOutcome = store.recordOperationOutcome.bind(store)
+    vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
+      await persistOutcome(input)
+      if (
+        input.operationId === params.envelope.clientOperationId &&
+        input.outcome.status === 'succeeded' &&
+        input.outcome.conversationCommand?.state === 'unknown'
+      ) {
+        abandonmentPersisted.resolve()
+        await abandonmentPublication.promise
+      }
+    })
+    const attachReplacement = host.attach.bind(host)
+    vi.spyOn(host, 'attach').mockImplementation(async (attachCaller, input) => {
+      const result = await attachReplacement(attachCaller, input)
+      if (input.envelope.sessionId !== HOST_TEST_SESSION) {
+        replacementAttached.resolve()
+      }
+      return result
+    })
+
+    const running = host.conversationCommand(caller, params)
+    await replacementAcquireStarted.promise
+    const replacementSessionId =
+      store.getRecord(HOST_TEST_SESSION)?.conversationCommand?.replacementSessionId
+    const close = host.close(HOST_TEST_SESSION)
+    await abandonmentPersisted.promise
+
+    replacementAcquire.resolve()
+    await replacementAttached.promise
+    await vi.waitFor(() => expect(host.hasSession(replacementSessionId!)).toBe(false))
+
+    abandonmentPublication.resolve()
+    await expect(close).resolves.toBeUndefined()
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+  })
+
   it('does not publish terminal success before its durable command commit', async () => {
     const persist = store.setConversationCommand.bind(store)
     let failed = false

@@ -12,10 +12,10 @@ export type ConversationCommandOutcome = { accepted: boolean; error: string | nu
 export type ConversationCommandClaimOutcome = ConversationCommandOutcome & {
   retrySameOperation?: true
 }
-export type ConversationCommandReply = {
-  result: AgentSessionConversationCommandResult | null
-  unresolved: boolean
-}
+export type ConversationCommandReply =
+  | { status: 'completed'; result: AgentSessionConversationCommandResult }
+  | { status: 'refused'; error: string | null }
+  | { status: 'unresolved' }
 
 type Obligation = {
   command: AgentSessionConversationCommand
@@ -26,6 +26,10 @@ type LiveClaim = Obligation & {
   deadline: ReturnType<typeof setTimeout>
   settle: (outcome: ConversationCommandClaimOutcome) => void
   onLateReply: () => void
+}
+
+type ClaimObserver = Obligation & {
+  deadline: ReturnType<typeof setTimeout>
 }
 
 /** The provider's own completion window is 180s. Keep a small margin for host persistence and
@@ -39,7 +43,7 @@ function message(key: string, fallback: string): string {
 function unresolvedMessage(command: AgentSessionConversationCommand): string {
   return translate(
     'components.native-chat.conversationCommand.mayStillBeRunning',
-    'The previous /{{value0}} may still be running. Restart the session before running it again.',
+    'The previous /{{value0}} could not be confirmed. Retry the command to check its status.',
     { value0: command }
   )
 }
@@ -83,20 +87,19 @@ export function isUnconfirmedConversationCommand(method: string, value: unknown)
 /** Correlates one in-flight request with host lifecycle. Durable ownership remains on the host. */
 export class StructuredConversationCommandClaim {
   private live: LiveClaim | null = null
-  private unresolved: Obligation | null = null
+  private readonly observers = new Map<string, ClaimObserver>()
 
   constructor(private readonly deadlineMs = CONVERSATION_COMMAND_DEADLINE_MS) {}
 
   get isRunning(): boolean {
-    return this.live !== null || this.unresolved !== null
-  }
-
-  get hasObligation(): boolean {
-    return this.live !== null || this.unresolved !== null
+    return this.live !== null
   }
 
   isOperationOutstanding(operationId: string): boolean {
-    return this.live?.operationId === operationId || this.unresolved?.operationId === operationId
+    return (
+      this.live?.operationId === operationId ||
+      [...this.observers.values()].some((observer) => observer.operationId === operationId)
+    )
   }
 
   run(input: {
@@ -106,19 +109,18 @@ export class StructuredConversationCommandClaim {
     send: () => Promise<ConversationCommandReply>
     onLateReply?: () => void
   }): Promise<ConversationCommandClaimOutcome> {
-    if (this.live || this.unresolved || input.blocked) {
+    if (this.live || input.blocked) {
       return Promise.resolve({
         accepted: false,
-        error: this.unresolved
-          ? unresolvedMessage(this.unresolved.command)
-          : message(
-              this.live ? 'running' : 'pendingWork',
-              this.live
-                ? 'Wait for the conversation operation to finish.'
-                : 'Wait for pending work and messages to finish before using this command.'
-            )
+        error: message(
+          this.live ? 'running' : 'pendingWork',
+          this.live
+            ? 'Wait for the conversation operation to finish.'
+            : 'Wait for pending work and messages to finish before using this command.'
+        )
       })
     }
+    this.removeObserver(input.command, input.operationId)
     const waiter = Promise.withResolvers<ConversationCommandClaimOutcome>()
     const claim: LiveClaim = {
       command: input.command,
@@ -135,23 +137,24 @@ export class StructuredConversationCommandClaim {
     return waiter.promise
   }
 
-  applyStreamSnapshot(items: readonly AgentJournalRenderItem[]): boolean {
+  applyStreamSnapshot(items: readonly AgentJournalRenderItem[]): string[] {
+    const settledOperationIds: string[] = []
     if (this.live) {
       const outcome = terminalFrameOutcome(items, this.live)
-      if (!outcome) {
-        return false
-      }
-      this.finish(this.live, outcome)
-      return true
-    }
-    if (this.unresolved) {
-      const outcome = terminalFrameOutcome(items, this.unresolved)
       if (outcome) {
-        this.unresolved = null
-        return true
+        settledOperationIds.push(this.live.operationId)
+        this.finish(this.live, outcome)
       }
     }
-    return false
+    for (const [key, observer] of this.observers) {
+      const outcome = terminalFrameOutcome(items, observer)
+      if (outcome) {
+        clearTimeout(observer.deadline)
+        this.observers.delete(key)
+        settledOperationIds.push(observer.operationId)
+      }
+    }
+    return settledOperationIds
   }
 
   reset(retryPreparedClear = false): void {
@@ -164,21 +167,37 @@ export class StructuredConversationCommandClaim {
           : {})
       })
     }
-    this.unresolved = null
+    for (const observer of this.observers.values()) {
+      clearTimeout(observer.deadline)
+    }
+    this.observers.clear()
   }
 
   private applyReply(claim: LiveClaim, reply: ConversationCommandReply): void {
-    if (this.unresolved?.operationId === claim.operationId) {
-      if (!reply.unresolved && reply.result?.state !== 'unknown') {
-        this.unresolved = null
-        claim.onLateReply()
+    if (this.live !== claim) {
+      if (reply.status === 'unresolved') {
+        return
       }
+      if (this.live?.command === claim.command && this.live.operationId === claim.operationId) {
+        this.applyReply(this.live, reply)
+        return
+      }
+      this.removeObserver(claim.command, claim.operationId)
+      claim.onLateReply()
       return
     }
-    if (reply.result?.state === 'unknown') {
+    if (reply.status === 'unresolved') {
+      this.finishUnconfirmed(claim)
       return
     }
-    if (reply.unresolved || !reply.result) {
+    if (reply.status === 'refused') {
+      this.finish(claim, {
+        accepted: false,
+        error: reply.error ?? message('unconfirmed', 'Conversation operation was not confirmed.')
+      })
+      return
+    }
+    if (reply.result.state === 'unknown') {
       this.finishUnconfirmed(claim)
       return
     }
@@ -189,9 +208,15 @@ export class StructuredConversationCommandClaim {
   }
 
   private finishUnconfirmed(claim: LiveClaim): void {
-    this.finish(claim, {
+    if (this.live !== claim) {
+      return
+    }
+    clearTimeout(claim.deadline)
+    this.live = null
+    this.observe(claim)
+    claim.settle({
       accepted: false,
-      error: message('unconfirmed', 'Conversation operation was not confirmed.'),
+      error: unresolvedMessage(claim.command),
       retrySameOperation: true
     })
   }
@@ -202,7 +227,6 @@ export class StructuredConversationCommandClaim {
     }
     clearTimeout(claim.deadline)
     this.live = null
-    this.unresolved = null
     claim.settle(outcome)
   }
 
@@ -211,11 +235,39 @@ export class StructuredConversationCommandClaim {
       return
     }
     this.live = null
-    this.unresolved = { command: claim.command, operationId: claim.operationId }
+    this.observe(claim)
     claim.settle({
       accepted: false,
       error: unresolvedMessage(claim.command),
       retrySameOperation: true
     })
+  }
+
+  private observe(claim: LiveClaim): void {
+    const key = this.observerKey(claim.command, claim.operationId)
+    const observer: ClaimObserver = {
+      command: claim.command,
+      operationId: claim.operationId,
+      deadline: setTimeout(() => {
+        if (this.observers.get(key) === observer) {
+          this.observers.delete(key)
+        }
+      }, this.deadlineMs)
+    }
+    this.observers.set(key, observer)
+  }
+
+  private observerKey(command: AgentSessionConversationCommand, operationId: string): string {
+    return `${command}:${operationId}`
+  }
+
+  private removeObserver(command: AgentSessionConversationCommand, operationId: string): void {
+    const key = this.observerKey(command, operationId)
+    const observer = this.observers.get(key)
+    if (!observer) {
+      return
+    }
+    clearTimeout(observer.deadline)
+    this.observers.delete(key)
   }
 }

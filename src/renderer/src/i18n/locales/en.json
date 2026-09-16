@@ -17381,7 +17381,7 @@
       "conversationCommand": {
         "pendingWork": "Wait for pending work and messages to finish before using this command.",
         "running": "Wait for the conversation operation to finish.",
-        "mayStillBeRunning": "The previous /{{value0}} may still be running. Restart the session before running it again.",
+        "mayStillBeRunning": "The previous /{{value0}} could not be confirmed. Retry the command to check its status.",
         "unconfirmed": "Conversation operation was not confirmed."
       },
       "drop": {

@@ -1,7 +1,7 @@
 // The session hook's half of a conversation command: it owns the claim, feeds it the session's own
 // stream, and retires it when the session restarts.
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import type {
   AgentSessionConversationCommand,
   AgentSessionConversationCommandResult
@@ -12,34 +12,41 @@ import {
   type ConversationCommandOutcome,
   type ConversationCommandReply
 } from './structured-conversation-command-claim'
-import type { StructuredAgentSessionMutate } from './use-structured-agent-session-mutate'
+import {
+  structuredAgentSessionMutationScope,
+  type StructuredAgentSessionMutateWithDisposition
+} from './use-structured-agent-session-mutate'
 import { structuredSessionOperationId } from './use-structured-agent-session-outbox'
+import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 
 export function useStructuredConversationCommand(args: {
   sessionId: string
+  target: RuntimeClientTarget
   fence: number | null
   items: readonly AgentJournalRenderItem[]
   /** Work the command would have to interrupt; the host refuses in that state anyway. */
   blocked: boolean
-  mutate: StructuredAgentSessionMutate
+  mutate: StructuredAgentSessionMutateWithDisposition
   onReconciled: (operationId: string) => void
 }): {
   run: (command: AgentSessionConversationCommand) => Promise<ConversationCommandOutcome>
   isRunning: () => boolean
   retire: () => void
 } {
-  const { blocked, fence, items, mutate, onReconciled, sessionId } = args
+  const { blocked, fence, items, mutate, onReconciled, sessionId, target } = args
   const claim = useRef(new StructuredConversationCommandClaim())
   const operationIds = useRef(new Map<AgentSessionConversationCommand, string>())
+  const requestScope = structuredAgentSessionMutationScope(target, sessionId)
 
   useEffect(() => {
-    const operationId =
-      operationIds.current.get('compact') ?? operationIds.current.get('clear') ?? null
-    if (claim.current.applyStreamSnapshot(items)) {
-      operationIds.current.clear()
-      if (operationId) {
-        onReconciled(operationId)
+    const settledOperationIds = claim.current.applyStreamSnapshot(items)
+    for (const operationId of settledOperationIds) {
+      for (const [command, candidate] of operationIds.current) {
+        if (candidate === operationId) {
+          operationIds.current.delete(command)
+        }
       }
+      onReconciled(operationId)
     }
   }, [items, onReconciled])
 
@@ -53,23 +60,23 @@ export function useStructuredConversationCommand(args: {
     }
   }, [fence])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const current = claim.current
     const ids = operationIds.current
     return () => {
       ids.clear()
       current.reset()
     }
-  }, [sessionId])
+  }, [requestScope])
 
   return {
     run: (command) => {
-      if (claim.current.hasObligation) {
+      if (claim.current.isRunning) {
         return claim.current.run({
           command,
           operationId: '',
           blocked,
-          send: async () => ({ result: null, unresolved: false })
+          send: async () => ({ status: 'refused', error: null })
         })
       }
       // Minted here, not inside `mutate`: the claim needs the id to know which journal item carries
@@ -82,22 +89,24 @@ export function useStructuredConversationCommand(args: {
           operationId,
           blocked,
           send: async (): Promise<ConversationCommandReply> => {
-            let unresolved = false
-            const result = await mutate<AgentSessionConversationCommandResult>(
+            const disposition = await mutate<AgentSessionConversationCommandResult>(
               'agentSession.conversationCommand',
               'agentSession.conversationCommand',
               { command },
-              {
-                operationId,
-                onUnresolved: () => {
-                  unresolved = true
-                }
-              }
+              { operationId }
             )
             if (!claim.current.isOperationOutstanding(operationId)) {
               onReconciled(operationId)
             }
-            return { result, unresolved }
+            if (disposition.status === 'unresolved') {
+              return { status: 'unresolved' }
+            }
+            if (disposition.status === 'refused') {
+              return { status: 'refused', error: disposition.message }
+            }
+            return disposition.value.state === 'unknown'
+              ? { status: 'unresolved' }
+              : { status: 'completed', result: disposition.value }
           },
           onLateReply: () => {
             if (operationIds.current.get(command) === operationId) {

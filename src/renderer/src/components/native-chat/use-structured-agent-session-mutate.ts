@@ -16,10 +16,12 @@ import { structuredSessionOperationId } from './use-structured-agent-session-out
 
 export type StructuredAgentSessionMutateOptions = {
   operationId?: string
-  /** Called instead of returning a verdict when no reply arrived. A refusal is a decision; a
-   *  missing reply is not, and the request it belongs to may still be running. */
-  onUnresolved?: (message: string) => void
 }
+
+export type StructuredAgentSessionMutationDisposition<T> =
+  | { status: 'completed'; value: T }
+  | { status: 'refused'; message: string | null }
+  | { status: 'unresolved'; message: string }
 
 export type StructuredAgentSessionMutate = <T>(
   method: string,
@@ -27,6 +29,24 @@ export type StructuredAgentSessionMutate = <T>(
   fields: Record<string, unknown>,
   options?: StructuredAgentSessionMutateOptions
 ) => Promise<T | null>
+
+export type StructuredAgentSessionMutateWithDisposition = <T>(
+  method: string,
+  fingerprintMethod: string,
+  fields: Record<string, unknown>,
+  options?: StructuredAgentSessionMutateOptions
+) => Promise<StructuredAgentSessionMutationDisposition<T>>
+
+export function structuredAgentSessionMutationScope(
+  target: RuntimeClientTarget,
+  sessionId: string
+): string {
+  return JSON.stringify([
+    target.kind,
+    target.kind === 'environment' ? target.environmentId : null,
+    sessionId
+  ])
+}
 
 export function useStructuredAgentSessionMutate(args: {
   sessionId: string
@@ -37,6 +57,7 @@ export function useStructuredAgentSessionMutate(args: {
   stateRef: { current: { fence: number | null } }
 }): {
   mutate: StructuredAgentSessionMutate
+  mutateWithDisposition: StructuredAgentSessionMutateWithDisposition
   writeError: string | null
   clearWriteError: (operationId: string) => void
 } {
@@ -47,11 +68,7 @@ export function useStructuredAgentSessionMutate(args: {
   const latestSettledSequence = useRef(0)
   const operationIds = useRef(new Map<string, string>())
   const enabledRef = useRef(enabled)
-  const requestScope = JSON.stringify([
-    target.kind,
-    target.kind === 'environment' ? target.environmentId : null,
-    sessionId
-  ])
+  const requestScope = structuredAgentSessionMutationScope(target, sessionId)
   const requestScopeRef = useRef(requestScope)
   useEffect(() => {
     // Why: update the gate after commit so render stays free of ref mutations.
@@ -65,15 +82,15 @@ export function useStructuredAgentSessionMutate(args: {
     setWriteError(null)
   }, [requestScope])
 
-  const mutate = useCallback(
+  const mutateWithDisposition = useCallback(
     async <T>(
       method: string,
       fingerprintMethod: string,
       fields: Record<string, unknown>,
       options?: StructuredAgentSessionMutateOptions
-    ): Promise<T | null> => {
+    ): Promise<StructuredAgentSessionMutationDisposition<T>> => {
       if (!enabled || !enabledRef.current || stateRef.current.fence === null) {
-        return null
+        return { status: 'refused', message: null }
       }
       const targetFence = stateRef.current.fence
       const key = `${sessionId}:${fingerprintMethod}:${JSON.stringify(fields)}`
@@ -109,14 +126,14 @@ export function useStructuredAgentSessionMutate(args: {
           writeErrorOwner.current = { operationId: clientOperationId, sequence }
           setWriteError(message)
         }
-        options?.onUnresolved?.(message)
-        return null
+        return { status: 'unresolved', message }
       }
       if (!result.ok) {
-        if (
-          agentSessionRefusalOperationState(fingerprintMethod, result.refusal.code) ===
-          'settled-rejected'
-        ) {
+        const operationState = agentSessionRefusalOperationState(
+          fingerprintMethod,
+          result.refusal.code
+        )
+        if (operationState === 'settled-rejected') {
           operationIds.current.delete(key)
         }
         if (
@@ -129,14 +146,16 @@ export function useStructuredAgentSessionMutate(args: {
           writeErrorOwner.current = { operationId: clientOperationId, sequence }
           setWriteError(result.refusal.message)
         }
-        return null
+        return operationState === 'unknown'
+          ? { status: 'unresolved', message: result.refusal.message }
+          : { status: 'refused', message: result.refusal.message }
       }
       if (
         !enabledRef.current ||
         requestScopeRef.current !== targetScope ||
         stateRef.current.fence !== targetFence
       ) {
-        return null
+        return { status: 'refused', message: null }
       }
       if (!isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {
         operationIds.current.delete(key)
@@ -146,9 +165,22 @@ export function useStructuredAgentSessionMutate(args: {
         writeErrorOwner.current = null
         setWriteError(null)
       }
-      return result.value
+      return { status: 'completed', value: result.value }
     },
     [enabled, requestScope, sessionId, stateRef, target]
+  )
+
+  const mutate = useCallback(
+    async <T>(
+      method: string,
+      fingerprintMethod: string,
+      fields: Record<string, unknown>,
+      options?: StructuredAgentSessionMutateOptions
+    ): Promise<T | null> => {
+      const result = await mutateWithDisposition<T>(method, fingerprintMethod, fields, options)
+      return result.status === 'completed' ? result.value : null
+    },
+    [mutateWithDisposition]
   )
 
   const clearWriteError = useCallback((operationId: string) => {
@@ -158,5 +190,5 @@ export function useStructuredAgentSessionMutate(args: {
     writeErrorOwner.current = null
     setWriteError(null)
   }, [])
-  return { mutate, writeError, clearWriteError }
+  return { mutate, mutateWithDisposition, writeError, clearWriteError }
 }

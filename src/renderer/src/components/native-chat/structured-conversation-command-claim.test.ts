@@ -47,8 +47,10 @@ describe('StructuredConversationCommandClaim', () => {
         blocked: false,
         send: neverReplies
       })
-      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'running')])).toBe(false)
-      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'completed')])).toBe(true)
+      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'running')])).toEqual([])
+      expect(claim.applyStreamSnapshot([lifecycleItem(command, 'completed')])).toEqual([
+        OPERATION_ID
+      ])
       await expect(outcome).resolves.toEqual({ accepted: true, error: null })
     }
   )
@@ -59,13 +61,15 @@ describe('StructuredConversationCommandClaim', () => {
       command: 'compact',
       operationId: OPERATION_ID,
       blocked: false,
-      send: async () => ({ result: { command: 'compact', state: 'unknown' }, unresolved: false })
+      send: async () => ({ status: 'unresolved' })
     })
     await Promise.resolve()
-    expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'unverifiable')])).toBe(true)
+    expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'unverifiable')])).toEqual([
+      OPERATION_ID
+    ])
     await expect(outcome).resolves.toMatchObject({
       accepted: false,
-      error: expect.stringContaining('Restart the session')
+      error: expect.stringContaining('Retry the command')
     })
     expect(claim.isRunning).toBe(false)
   })
@@ -94,13 +98,13 @@ describe('StructuredConversationCommandClaim', () => {
         command: 'compact',
         operationId: OPERATION_ID,
         blocked: false,
-        send: async () => ({ result: null, unresolved: true })
+        send: async () => ({ status: 'unresolved' })
       })
     ).resolves.toMatchObject({ accepted: false, retrySameOperation: true })
     expect(claim.isRunning).toBe(false)
   })
 
-  it('bounds a missing reply and keeps the obligation until host lifecycle settles it', async () => {
+  it('releases interaction at the deadline and allows same-operation replay', async () => {
     vi.useFakeTimers()
     try {
       const claim = new StructuredConversationCommandClaim(10)
@@ -112,24 +116,46 @@ describe('StructuredConversationCommandClaim', () => {
       })
       const settled = expect(outcome).resolves.toMatchObject({
         accepted: false,
-        error: expect.stringContaining('Restart the session'),
+        error: expect.stringContaining('Retry the command'),
         retrySameOperation: true
       })
 
       await vi.advanceTimersByTimeAsync(11)
       await settled
-      expect(claim.hasObligation).toBe(true)
+      expect(claim.isRunning).toBe(false)
       await expect(
         claim.run({
           command: 'compact',
-          operationId: 'op-2',
+          operationId: OPERATION_ID,
           blocked: false,
-          send: neverReplies
+          send: async () => ({
+            status: 'completed',
+            result: { command: 'compact', state: 'completed' }
+          })
         })
-      ).resolves.toMatchObject({ error: expect.stringContaining('Restart the session') })
+      ).resolves.toEqual({ accepted: true, error: null })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
-      expect(claim.applyStreamSnapshot([lifecycleItem('compact', 'completed')])).toBe(true)
-      expect(claim.hasObligation).toBe(false)
+  it('drops the deadline observer after a bounded window', async () => {
+    vi.useFakeTimers()
+    try {
+      const claim = new StructuredConversationCommandClaim(10)
+      const outcome = claim.run({
+        command: 'compact',
+        operationId: OPERATION_ID,
+        blocked: false,
+        send: neverReplies
+      })
+
+      await vi.advanceTimersByTimeAsync(11)
+      await outcome
+      expect(claim.isOperationOutstanding(OPERATION_ID)).toBe(true)
+
+      await vi.advanceTimersByTimeAsync(11)
+      expect(claim.isOperationOutstanding(OPERATION_ID)).toBe(false)
     } finally {
       vi.useRealTimers()
     }
@@ -142,7 +168,10 @@ describe('StructuredConversationCommandClaim', () => {
         command: 'clear',
         operationId: OPERATION_ID,
         blocked: false,
-        send: async () => ({ result: { command: 'clear', state: 'completed' }, unresolved: false })
+        send: async () => ({
+          status: 'completed',
+          result: { command: 'clear', state: 'completed' }
+        })
       })
     ).resolves.toEqual({ accepted: true, error: null })
   })
@@ -156,5 +185,18 @@ describe('StructuredConversationCommandClaim', () => {
     ).resolves.toMatchObject({ accepted: false })
     expect(send).toHaveBeenCalledTimes(1)
     claim.reset()
+  })
+
+  it('returns a definitive refusal without retaining retry ownership', async () => {
+    const claim = new StructuredConversationCommandClaim()
+    await expect(
+      claim.run({
+        command: 'compact',
+        operationId: OPERATION_ID,
+        blocked: false,
+        send: async () => ({ status: 'refused', error: 'Wait for pending work.' })
+      })
+    ).resolves.toEqual({ accepted: false, error: 'Wait for pending work.' })
+    expect(claim.isOperationOutstanding(OPERATION_ID)).toBe(false)
   })
 })
