@@ -19,6 +19,7 @@ import { RelayControlRequests } from './relay-control-requests'
 import type { DeviceCredentialInstallAuthorization } from './relay-control-requests'
 import { answerRelayHostChallenge } from './relay-host-proof'
 import { RelayControlLiveness } from './relay-control-liveness'
+import type { RelayControlLivenessTeardown } from './relay-control-liveness'
 import { closeRelayControlSocket } from './relay-control-socket-close'
 import { controlWebSocketUrl } from './relay-control-url'
 
@@ -50,9 +51,12 @@ export class RelayControlClient {
     this.liveness = new RelayControlLiveness({
       cellUrl: this.relayOrigin,
       ping: () => this.socket?.ping(),
-      onDead: () => this.socket?.terminate(),
+      onDead: (reason) => this.terminateForLiveness(reason),
       ...(options.silenceLimitMs !== undefined ? { silenceLimitMs: options.silenceLimitMs } : {}),
-      ...(options.probeDeadlineMs !== undefined ? { probeDeadlineMs: options.probeDeadlineMs } : {})
+      ...(options.probeIntervalMs !== undefined
+        ? { probeIntervalMs: options.probeIntervalMs }
+        : {}),
+      ...(options.livenessRandom !== undefined ? { random: options.livenessRandom } : {})
     })
     this.createSocket =
       options.createSocket ??
@@ -270,6 +274,14 @@ export class RelayControlClient {
     this.liveness.start()
     this.connectResolve?.(ack.data)
     this.clearConnectPromise()
+  }
+
+  // A liveness teardown lands on the origin as an ordinary 1006 close, so name
+  // the cause here: without it a probe-driven reconnect is indistinguishable
+  // from any other drop, and a fleet-wide false positive would be invisible.
+  private terminateForLiveness(reason: RelayControlLivenessTeardown): void {
+    console.warn(`[relay] control torn down cell=${this.relayOrigin} reason=${reason}`)
+    this.socket?.terminate()
   }
 
   private sendActive(payload: Record<string, unknown>): void {

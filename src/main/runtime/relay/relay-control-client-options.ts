@@ -19,5 +19,7 @@ export type RelayControlClientOptions = {
   createSocket?: (url: string, relayJwt: string) => WebSocket
   connectDeadlineMs?: number
   silenceLimitMs?: number
-  probeDeadlineMs?: number
+  probeIntervalMs?: number
+  // Test seam: deterministic probe jitter.
+  livenessRandom?: () => number
 }
