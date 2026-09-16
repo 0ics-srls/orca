@@ -34,39 +34,45 @@ export function readOutbox(
   }
 }
 
-const undeliveredSessions = new Map<string, boolean>()
-const undeliveredListeners = new Set<() => void>()
+type UndeliveredSessionSubscription = {
+  undelivered: boolean
+  listeners: Set<() => void>
+}
+
+const undeliveredSessions = new Map<string, UndeliveredSessionSubscription>()
 
 function publishUndelivered(sessionId: string, undelivered: boolean): void {
-  if (undeliveredSessions.get(sessionId) === undelivered) {
+  const subscription = undeliveredSessions.get(sessionId)
+  if (!subscription || subscription.undelivered === undelivered) {
     return
   }
-  undeliveredSessions.set(sessionId, undelivered)
-  for (const listener of undeliveredListeners) {
+  subscription.undelivered = undelivered
+  for (const listener of subscription.listeners) {
     listener()
   }
 }
 
-/** Delivery must not wait on the pane being looked at, so the journal subscription that retires
- *  an entry is kept alive off this rather than off visibility. Every outbox mutation in the
- *  renderer passes through `writeOutbox`, which is why this is the one place that can publish it. */
+/** Keep the journal subscription alive while this session still owes delivery. */
 export function hasUndeliveredStructuredAgentSessionOutbox(sessionId: string): boolean {
-  const known = undeliveredSessions.get(sessionId)
-  if (known !== undefined) {
-    return known
-  }
-  // Seeded from storage, so an outbox persisted before this renderer started still counts.
-  const undelivered = readOutbox(sessionId).length > 0
-  undeliveredSessions.set(sessionId, undelivered)
-  return undelivered
+  return undeliveredSessions.get(sessionId)?.undelivered ?? readOutbox(sessionId).length > 0
 }
 
 export function subscribeToUndeliveredStructuredAgentSessionOutbox(
+  sessionId: string,
   listener: () => void
 ): () => void {
-  undeliveredListeners.add(listener)
+  let subscription = undeliveredSessions.get(sessionId)
+  if (!subscription) {
+    subscription = { undelivered: readOutbox(sessionId).length > 0, listeners: new Set() }
+    undeliveredSessions.set(sessionId, subscription)
+  }
+  const owned = subscription
+  owned.listeners.add(listener)
   return () => {
-    undeliveredListeners.delete(listener)
+    owned.listeners.delete(listener)
+    if (owned.listeners.size === 0 && undeliveredSessions.get(sessionId) === owned) {
+      undeliveredSessions.delete(sessionId)
+    }
   }
 }
 

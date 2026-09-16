@@ -102,7 +102,12 @@ export function useStructuredAgentSessionOutbox(args: {
         .map((submission) => submission.clientMessageId)
     )
     const next = reconcileStructuredAgentSessionOutbox(current, submissions)
-    if (next.some((entry, index) => entry !== current[index]) || next.length !== current.length) {
+    const admittedInFlight = inFlightIdRef.current !== null && hostOwns.has(inFlightIdRef.current)
+    if (
+      admittedInFlight ||
+      next.some((entry, index) => entry !== current[index]) ||
+      next.length !== current.length
+    ) {
       outboxRef.current = next
       setOutbox(next)
       writeOutbox(sessionId, next)
@@ -111,7 +116,7 @@ export function useStructuredAgentSessionOutbox(args: {
     // owning it outranks a send promise that has not settled, so release single-flight and make
     // that promise a no-op. Keying on the head would discard the tail's unsettled send instead,
     // and with it a refusal only that send can report.
-    if (inFlightIdRef.current !== null && hostOwns.has(inFlightIdRef.current)) {
+    if (admittedInFlight) {
       dispatchGenerationRef.current += 1
       inFlightIdRef.current = null
     }

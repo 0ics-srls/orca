@@ -7,6 +7,7 @@
 
 import { act, cleanup, renderHook, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { AgentJournalSubmission } from '../../../../shared/agent-session-journal-types'
 import type { AgentSessionWireRefusalCode } from '../../../../shared/agent-session-wire'
 
 const mocks = vi.hoisted(() => ({
@@ -158,34 +159,64 @@ describe('structured agent session outbox admission', () => {
     expect(result.current.blockedClientMessageId).toBe(result.current.outbox[0]?.clientMessageId)
   })
 
-  it('holds a queued message while the launch prompt send is still in flight', async () => {
-    const stagedEntry = enqueueStructuredAgentSessionLaunchPrompt('session-1', 'review this')
-    if (!stagedEntry) {
-      throw new Error('fixture outbox entry was not persisted')
+  it.each(['accepted', 'pending'] as const)(
+    'holds a queued message until the launch prompt returns %s',
+    async (dispatchState) => {
+      const stagedEntry = enqueueStructuredAgentSessionLaunchPrompt('session-1', 'review this')
+      if (!stagedEntry) {
+        throw new Error('fixture outbox entry was not persisted')
+      }
+      const admission = deferred<ReturnType<typeof submissionResult>>()
+      mocks.call.mockImplementation((_target, _method, params) =>
+        requestText(params) === 'review this' ? admission.promise : new Promise<never>(() => {})
+      )
+      const delivery = settleStructuredAgentLaunchPrompt({
+        launchResult: Promise.resolve({ sessionId: 'session-1', fence: 1 }),
+        options: { prompt: 'review this' },
+        stagedEntry
+      })
+      await waitFor(() => expect(mocks.call).toHaveBeenCalledTimes(1))
+
+      const { result } = renderOutbox()
+      act(() => expect(result.current.send('after launch')).toBe(true))
+      await settleTimers(50)
+      // The launch settlement dispatches outside this hook's single-flight, so nothing may race it.
+      expect(sentTexts()).not.toContain('after launch')
+
+      await act(async () =>
+        admission.resolve(submissionResult(stagedEntry.clientMessageId, dispatchState, 1))
+      )
+      await expect(delivery).resolves.toEqual({ delivered: true, failureNotified: false })
+
+      await waitFor(() => expect(sentTexts()).toContain('after launch'))
+      expect(result.current.outbox).toHaveLength(dispatchState === 'pending' ? 2 : 1)
     }
+  )
+
+  it('advances the tail when the journal admits the head before its RPC resolves', async () => {
     const admission = deferred<ReturnType<typeof submissionResult>>()
     mocks.call.mockImplementation((_target, _method, params) =>
-      requestText(params) === 'review this' ? admission.promise : new Promise<never>(() => {})
+      requestText(params) === 'first' ? admission.promise : new Promise<never>(() => {})
     )
-    const delivery = settleStructuredAgentLaunchPrompt({
-      launchResult: Promise.resolve({ sessionId: 'session-1', fence: 1 }),
-      options: { prompt: 'review this' },
-      stagedEntry
-    })
+    const submissions: readonly AgentJournalSubmission[] = []
+    const { result, rerender } = renderHook(
+      ({ submissions }: { submissions: readonly AgentJournalSubmission[] }) =>
+        useStructuredAgentSessionOutbox({
+          sessionId: 'session-1',
+          target: LOCAL_TARGET,
+          fence: 1,
+          submissions
+        }),
+      { initialProps: { submissions } }
+    )
+    act(() => expect(result.current.send('first')).toBe(true))
     await waitFor(() => expect(mocks.call).toHaveBeenCalledTimes(1))
-
-    const { result } = renderOutbox()
-    act(() => expect(result.current.send('after launch')).toBe(true))
-    await settleTimers(50)
-    // The launch settlement dispatches outside this hook's single-flight, so nothing may race it.
-    expect(sentTexts()).not.toContain('after launch')
-
-    await act(async () =>
-      admission.resolve(submissionResult(stagedEntry.clientMessageId, 'accepted', 1))
-    )
-    await expect(delivery).resolves.toEqual({ delivered: true, failureNotified: false })
-
-    await waitFor(() => expect(sentTexts()).toContain('after launch'))
-    expect(result.current.outbox).toHaveLength(1)
+    act(() => expect(result.current.send('second')).toBe(true))
+    const id = result.current.outbox[0]?.clientMessageId
+    expect(id).toBeDefined()
+    rerender({ submissions: [submissionResult(String(id), 'pending', 10).value.submission] })
+    await waitFor(() => expect(sentTexts()).toEqual(['first', 'second']))
+    await act(async () => admission.resolve(submissionResult(String(id), 'pending', 10)))
+    expect(sentTexts()).toEqual(['first', 'second'])
   })
 })

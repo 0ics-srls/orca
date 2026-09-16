@@ -11,9 +11,10 @@ export function useUndeliveredStructuredAgentSessionOutbox(sessionId: string): b
     () => hasUndeliveredStructuredAgentSessionOutbox(sessionId),
     [sessionId]
   )
-  return useSyncExternalStore(
-    subscribeToUndeliveredStructuredAgentSessionOutbox,
-    getUndelivered,
-    getUndelivered
+  const subscribe = useCallback(
+    (listener: () => void) =>
+      subscribeToUndeliveredStructuredAgentSessionOutbox(sessionId, listener),
+    [sessionId]
   )
+  return useSyncExternalStore(subscribe, getUndelivered, getUndelivered)
 }
