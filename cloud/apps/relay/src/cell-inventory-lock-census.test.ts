@@ -11,18 +11,20 @@ type Reachability = 'request' | 'sweep' | 'both' | 'orphan'
 
 // 'caller' is not a CellInventoryLockMode: those sites take the mode threaded
 // from `assign`, which is 'request' for a client and 'pool-default' for the
-// evacuateDeadCells sweep.
-type CensusMode = CellInventoryLockMode | 'caller'
+// evacuateDeadCells sweep. 'unset' is a lockCellRows call that passes no mode
+// and therefore takes the parameter default, which is the bounded wait.
+type CensusMode = CellInventoryLockMode | 'caller' | 'unset'
 
 type CensusEntry = { method: string; mode: CensusMode; reach: Reachability }
 
-// Every lockCellInventory / lockGeneralCellInventory call site in
-// assignment-store.ts, in source order. A new site fails this test until it is
-// classified here, which is the point.
+// Every call site of a named cell lock helper in assignment-store.ts, in source
+// order. A new site fails this test until it is classified here, which is the
+// point. lockCellRows is censused alongside the inventory locks: converting a
+// site from one to the other must not move it out of the mode policy below.
 const CENSUS: CensusEntry[] = [
-  // assignStickyOnce is gone from this list: its retry now locks only the row
-  // the host is pinned to (lockCellRows), which is what a sticky refresh
-  // touches. Placement below is the one genuinely fleet-wide decision left.
+  // Sticky refresh locks only the row the host is pinned to, and threads the
+  // caller's mode. Placement below is the one genuinely fleet-wide decision left.
+  { method: 'assignStickyOnce', mode: 'caller', reach: 'both' },
   { method: 'assignOnce', mode: 'caller', reach: 'both' },
   { method: 'assignOnce', mode: 'caller', reach: 'both' },
   { method: 'assignOnce', mode: 'nowait', reach: 'both' },
@@ -35,6 +37,7 @@ const CENSUS: CensusEntry[] = [
   // so they cannot cycle with placement's ordered inventory lock, and the
   // 23-row lock there had serialised every reconnect in the fleet behind every
   // other one.
+  { method: 'acquireActivity', mode: 'unset', reach: 'request' },
   { method: 'startEvacuation', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'request', reach: 'request' },
   { method: 'completeEvacuationFromDeadSourceOnce', mode: 'nowait', reach: 'request' },
@@ -51,10 +54,11 @@ const CENSUS: CensusEntry[] = [
   { method: 'abortExpiredEvacuations', mode: 'nowait', reach: 'sweep' },
   { method: 'abortExpiredEvacuations', mode: 'nowait', reach: 'sweep' },
   { method: 'releaseExpiredActivityLeases', mode: 'nowait', reach: 'sweep' },
-  { method: 'releaseExpiredActivity', mode: 'nowait', reach: 'sweep' }
-  // reconcileReservationAccounting and leastLoadedCell are gone too: the first
-  // repairs exactly two cells' counters and now holds only those rows, and the
-  // second selects from the inventory its single caller has already locked.
+  { method: 'releaseExpiredActivity', mode: 'nowait', reach: 'sweep' },
+  // Repairs exactly two cells' counters and holds only those rows. leastLoadedCell
+  // is absent because it selects from the inventory its single caller already locked.
+  { method: 'reconcileReservationAccounting', mode: 'pool-default', reach: 'both' },
+  { method: 'removeSupersededSameCellControls', mode: 'unset', reach: 'request' }
 ]
 
 // Every statement outside the named lock helpers that takes a relay_cells row
@@ -200,19 +204,22 @@ const CELL_TABLE_READ = /\bFROM\s+relay_cells\b/
 // has to move.
 const CELL_ROW_WRITE = /^\s*(?:UPDATE|INSERT INTO|DELETE FROM)\s+relay_cells\b/
 
-function cellRowLockSites(file: string, source: string): string[] {
-  const lines = source.split('\n')
+function methodLocator(source: string): (offset: number) => string {
   const bounds: { name: string; start: number }[] = []
-  lines.forEach((line, index) => {
+  source.split('\n').forEach((line, index) => {
     const declaration = DECLARATION.exec(line) ?? FUNCTION_DECLARATION.exec(line)
     if (declaration) bounds.push({ name: declaration[1]!, start: index })
   })
-  const methodAt = (offset: number): string => {
+  return (offset) => {
     const lineIndex = source.slice(0, offset).split('\n').length - 1
     let name = '<module>'
     for (const bound of bounds) if (bound.start <= lineIndex) name = bound.name
     return name
   }
+}
+
+function cellRowLockSites(file: string, source: string): string[] {
+  const methodAt = methodLocator(source)
   const sites: string[] = []
   for (const call of source.matchAll(new RegExp(STATEMENT_CALL, 'g'))) {
     const statement = call[2]!
@@ -226,23 +233,65 @@ function cellRowLockSites(file: string, source: string): string[] {
   return sites
 }
 
-function readCallSites(): { method: string; mode: CensusMode }[] {
-  const sites: { method: string; mode: CensusMode }[] = []
-  let method = '<module>'
-  for (const line of storeSource()) {
-    const declaration = DECLARATION.exec(line)
-    if (declaration) method = declaration[1]!
-    if (/private async lock(General)?CellInventory\(/.test(line)) continue
-    const call = /lock(?:General)?CellInventory\(\s*\w+\s*,\s*(?:'([a-z-]+)'|(\w+))\s*\)/.exec(line)
-    if (!call) continue
-    sites.push({ method, mode: (call[1] ?? 'caller') as CensusMode })
+type CensusSite = { method: string; helper: string; mode: CensusMode }
+
+// Both take the 500ms bounded wait; 'unset' only does so because of the default
+// pinned by the test below.
+const BOUNDED_WAIT_MODES: CensusMode[] = ['request', 'unset']
+const CELL_ROWS_DEFAULT = /mode: CellInventoryLockMode = '([a-z-]+)'/
+
+const HELPER_CALL = new RegExp(`\\b(${NAMED_LOCK_HELPERS.join('|')})\\(`, 'g')
+const QUOTED_MODE = /^'([a-z-]+)'$/
+
+// lockCellRows takes the cell list before its mode; the inventory locks take the
+// mode second. An out-of-range index means the call omitted it.
+function modeArgument(helper: string): number {
+  return helper === 'lockCellRows' ? 2 : 1
+}
+
+// Top-level arguments of the call whose '(' is at `open`. A line-scoped regex
+// cannot read lockCellRows calls: they pass array literals and wrap across
+// lines. Assumes no brackets inside string arguments, which holds for all modes.
+function callArguments(source: string, open: number): string[] {
+  const args: string[] = []
+  let depth = 0
+  let start = open + 1
+  for (let index = open; index < source.length; index++) {
+    const character = source[index]!
+    if ('(['.includes(character) || character === '{') depth++
+    else if (')]'.includes(character) || character === '}') {
+      depth--
+      if (depth > 0) continue
+      args.push(source.slice(start, index))
+      return args.map((argument) => argument.trim()).filter((argument) => argument !== '')
+    } else if (character === ',' && depth === 1) {
+      args.push(source.slice(start, index))
+      start = index + 1
+    }
+  }
+  return []
+}
+
+function readCallSites(): CensusSite[] {
+  const source = storeSource().join('\n')
+  const methodAt = methodLocator(source)
+  const sites: CensusSite[] = []
+  for (const call of source.matchAll(HELPER_CALL)) {
+    const method = methodAt(call.index)
+    if (NAMED_LOCK_HELPERS.includes(method)) continue
+    const helper = call[1]!
+    const argument = callArguments(source, call.index + call[0].length - 1)[modeArgument(helper)]
+    const mode = argument === undefined ? 'unset' : (QUOTED_MODE.exec(argument)?.[1] ?? 'caller')
+    sites.push({ method, helper, mode: mode as CensusMode })
   }
   return sites
 }
 
 describe('cell inventory lock call-site census', () => {
   it('classifies every call site exactly as recorded', () => {
-    expect(readCallSites()).toEqual(CENSUS.map(({ method, mode }) => ({ method, mode })))
+    expect(readCallSites().map(({ method, mode }) => ({ method, mode }))).toEqual(
+      CENSUS.map(({ method, mode }) => ({ method, mode }))
+    )
   })
 
   // Why: the census only sees lockCellInventory calls, so a hand-written
@@ -292,10 +341,42 @@ describe('cell inventory lock call-site census', () => {
   it('never puts a sweep-reachable site on the bounded wait', () => {
     const reachOf = derivedReachability(storeSource())
     const bounded = readCallSites().filter(
-      (site) => site.mode === 'request' && ['sweep', 'both'].includes(reachOf(site.method))
+      (site) =>
+        BOUNDED_WAIT_MODES.includes(site.mode) && ['sweep', 'both'].includes(reachOf(site.method))
     )
 
     expect(bounded).toEqual([])
+  })
+
+  // Why: the census reads an omitted lockCellRows mode as a bounded wait. That
+  // is an inference about a default declared elsewhere, so pin the default here
+  // rather than let the two drift apart silently.
+  it('pins the lockCellRows mode default the census infers', () => {
+    const declaration = storeSource()
+      .slice(storeSource().findIndex((line) => line.includes('private async lockCellRows(')))
+      .slice(0, 6)
+      .join('\n')
+
+    expect(CELL_ROWS_DEFAULT.exec(declaration)?.[1]).toBe('request')
+  })
+
+  // Why: converting a sweep site from lockCellInventory to lockCellRows is the
+  // planned change, and `lockCellRows(transaction, [cellId])` reads as harmless.
+  // NOWAIT never waits, so it can never be an edge in a wait-for cycle; the
+  // default turns that into a 500ms wait and creates the edge a cycle needs.
+  it('never lets a sweep-reachable lockCellRows call default its mode', () => {
+    const reachOf = derivedReachability(storeSource())
+    const defaulted = readCallSites().filter(
+      (site) =>
+        site.helper === 'lockCellRows' &&
+        site.mode === 'unset' &&
+        ['sweep', 'both'].includes(reachOf(site.method))
+    )
+
+    expect(
+      defaulted,
+      'lockCellRows defaults mode to the bounded wait; a sweep must pass nowait explicitly'
+    ).toEqual([])
   })
 
   it('routes every sweep-only site to NOWAIT so it can skip the tick', () => {
