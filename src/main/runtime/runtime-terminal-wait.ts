@@ -33,6 +33,7 @@ type RuntimeTerminalWaitDependencies = {
   getTabTitle(tabId: string): string | null
   getPaneAgent(ptyId: string | null | undefined): TuiAgent | null
   getFirstPartyAgentStatus(ptyId: string | null | undefined): FirstPartyAgentStatus
+  getAttachmentId?(ptyId: string | null | undefined): string | null
   getTerminalProcessIncarnation(handle: string): string | null
   startVisibleReadProbe(waiter: TerminalWaiter, waiterTimeoutMs: number): void
 }
