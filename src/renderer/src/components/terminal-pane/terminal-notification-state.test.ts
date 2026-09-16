@@ -1,133 +1,128 @@
 // @vitest-environment happy-dom
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it } from 'vitest'
+import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import { useAppStore } from '@/store'
-import type { AppState } from '@/store/types'
-import { makeTerminalTab, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
-import {
-  AGENT_STATUS_STALE_AFTER_MS,
-  type AgentStatusEntry
-} from '../../../../shared/agent-status-types'
-import { countReposNeedingNotificationDisambiguation } from './terminal-notification-state'
+import { makeFolderWorkspace, makeWorktree } from '@/store/slices/worktrees-slice-test-fixtures'
+import { getNotificationWorkspaceLabels } from './terminal-notification-state'
 
-const NOW = 1_700_000_000_000
-const LEAF = '11111111-1111-4111-8111-111111111111'
-
-function status(tabId: string, updatedAt = NOW): AgentStatusEntry {
+function stateWithWorkspace() {
   return {
-    paneKey: `${tabId}:${LEAF}`,
-    state: 'working',
-    agentType: 'codex',
-    prompt: 'Notification benchmark',
-    updatedAt,
-    stateStartedAt: updatedAt,
-    terminalTitle: 'Codex',
-    stateHistory: []
-  }
-}
-
-function stateWithWorkspaces(count: number, repos: number): AppState {
-  const state = { ...useAppStore.getInitialState(), worktreesByRepo: {}, tabsByWorktree: {} }
-  const worktreesByRepo: AppState['worktreesByRepo'] = {}
-  const tabsByWorktree: AppState['tabsByWorktree'] = {}
-  for (let index = 0; index < count; index++) {
-    const repoId = `repo-${index % repos}`
-    const id = `wt-${index}`
-    ;(worktreesByRepo[repoId] ??= []).push(makeWorktree({ id, repoId }))
-    tabsByWorktree[id] = [makeTerminalTab({ id: `tab-${index}`, worktreeId: id })]
-  }
-  return { ...state, worktreesByRepo, tabsByWorktree }
-}
-
-afterEach(() => vi.restoreAllMocks())
-
-describe('notification project disambiguation', () => {
-  it('visits agent rows once at the reported 870-workspace scale', () => {
-    vi.spyOn(Date, 'now').mockReturnValue(NOW)
-    const state = stateWithWorkspaces(870, 27)
-    let paneKeyReads = 0
-    let retainedWorktreeReads = 0
-    state.agentStatusByPaneKey = Object.fromEntries(
-      Array.from({ length: 177 }, (_, index) => {
-        const entry = status(`tab-${index}`)
-        return [
-          entry.paneKey,
-          {
-            ...entry,
-            get paneKey() {
-              paneKeyReads++
-              return entry.paneKey
-            }
-          }
-        ]
-      })
-    )
-    state.retainedAgentsByPaneKey = {
-      retained: {
-        entry: status('tab-869'),
-        tab: state.tabsByWorktree['wt-869'][0],
-        agentType: 'codex',
-        startedAt: NOW,
-        get worktreeId() {
-          retainedWorktreeReads++
-          return 'wt-869'
-        }
+    ...useAppStore.getInitialState(),
+    worktreesByRepo: { repo: [makeWorktree({ id: 'wt', repoId: 'repo', displayName: 'Feature' })] },
+    repos: [
+      {
+        id: 'repo',
+        displayName: 'Orca',
+        path: '/orca',
+        connectionId: null,
+        badgeColor: 'blue',
+        addedAt: 0
       }
-    }
-
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(27)
-    expect(paneKeyReads).toBeLessThanOrEqual(177)
-    expect(retainedWorktreeReads).toBeLessThanOrEqual(1)
-  })
-
-  it('keeps inactive projects in the disambiguation count and ignores empty buckets', () => {
-    const state = stateWithWorkspaces(2, 2)
-    state.worktreesByRepo.empty = []
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(2)
-    expect(countReposNeedingNotificationDisambiguation(stateWithWorkspaces(1, 1))).toBe(1)
-    expect(countReposNeedingNotificationDisambiguation(stateWithWorkspaces(0, 1))).toBe(0)
-  })
-
-  it('preserves active row ownership while repository buckets differ during hydration', () => {
-    vi.spyOn(Date, 'now').mockReturnValue(NOW)
-    const state = stateWithWorkspaces(2, 1)
-    state.worktreesByRepo['repo-0'] = [
-      makeWorktree({ id: 'wt-0', repoId: 'repo-0' }),
-      makeWorktree({ id: 'wt-1', repoId: 'remote-project', hostId: 'ssh:server' })
     ]
-    const first = status('tab-0')
-    const second = status('tab-1')
-    state.agentStatusByPaneKey = { [first.paneKey]: first, [second.paneKey]: second }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(2)
+  }
+}
 
-    state.agentStatusByPaneKey = {
-      [first.paneKey]: first,
-      [second.paneKey]: status('tab-1', NOW - AGENT_STATUS_STALE_AFTER_MS - 1)
-    }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(1)
-
-    state.ptyIdsByTabId = { 'tab-1': ['remote:pty-1'] }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(2)
-    state.suppressedPtyExitIds = { 'remote:pty-1': true }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(1)
-
-    state.agentStatusByPaneKey[second.paneKey] = {
-      ...state.agentStatusByPaneKey[second.paneKey],
-      mirroredEvidenceReceivedAt: NOW
-    }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(2)
-    state.agentStatusByPaneKey[second.paneKey] = {
-      ...second,
-      restoredUnconfirmed: true
-    }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(1)
+describe('notification workspace labels', () => {
+  it('includes the only project without reading agent inventories', () => {
+    const state = stateWithWorkspace()
+    Object.defineProperty(state, 'agentStatusByPaneKey', {
+      get() {
+        throw new Error('agent scan')
+      }
+    })
+    Object.defineProperty(state, 'retainedAgentsByPaneKey', {
+      get() {
+        throw new Error('retained scan')
+      }
+    })
+    expect(getNotificationWorkspaceLabels(state, 'wt')).toEqual({
+      repoLabel: 'Orca',
+      worktreeLabel: 'Feature'
+    })
+    expect(getNotificationWorkspaceLabels(state, 'worktree:wt')).toEqual({
+      repoLabel: 'Orca',
+      worktreeLabel: 'Feature'
+    })
   })
 
-  it('does not invent a repository for a folder workspace', () => {
-    const state = stateWithWorkspaces(1, 1)
-    state.tabsByWorktree['folder:notes'] = [
-      makeTerminalTab({ id: 'folder-tab', worktreeId: 'folder:notes' })
+  it('keeps labels for remote Git workspaces', () => {
+    const state = stateWithWorkspace()
+    state.worktreesByRepo.repo = [
+      makeWorktree({
+        id: 'remote',
+        repoId: 'repo',
+        hostId: 'ssh:server',
+        displayName: 'Remote feature'
+      })
     ]
-    state.ptyIdsByTabId = { 'folder-tab': ['folder-pty'] }
-    expect(countReposNeedingNotificationDisambiguation(state)).toBe(1)
+    expect(getNotificationWorkspaceLabels(state, 'remote')).toEqual({
+      repoLabel: 'Orca',
+      worktreeLabel: 'Remote feature'
+    })
   })
+
+  it.each([undefined, 'ssh:server'] as const)(
+    'resolves folder and project names on host %s',
+    (executionHostId) => {
+      const state = stateWithWorkspace()
+      state.folderWorkspaces = [
+        makeFolderWorkspace({
+          id: 'folder-id',
+          projectGroupId: 'group',
+          name: 'Website',
+          executionHostId
+        })
+      ]
+      state.projectGroups = [
+        {
+          id: 'group',
+          name: 'Personal',
+          executionHostId,
+          parentPath: null,
+          parentGroupId: null,
+          createdFrom: 'manual',
+          tabOrder: 0,
+          isCollapsed: false,
+          color: null,
+          createdAt: 0,
+          updatedAt: 0
+        }
+      ]
+      expect(getNotificationWorkspaceLabels(state, 'folder:folder-id')).toEqual({
+        repoLabel: 'Personal',
+        worktreeLabel: 'Website'
+      })
+      state.projectGroups = []
+      expect(getNotificationWorkspaceLabels(state, 'folder:folder-id')).toEqual({
+        repoLabel: undefined,
+        worktreeLabel: 'Website'
+      })
+    }
+  )
+
+  it('does not pick an arbitrary folder when hosts have conflicting records', () => {
+    const state = stateWithWorkspace()
+    state.folderWorkspaces = (['ssh:a', 'ssh:b'] as const).map((executionHostId) =>
+      makeFolderWorkspace({ id: 'duplicate', name: executionHostId, executionHostId })
+    )
+    expect(getNotificationWorkspaceLabels(state, 'folder:duplicate', 'Terminal')).toEqual({
+      repoLabel: undefined,
+      worktreeLabel: 'Terminal'
+    })
+  })
+
+  it.each(['folder:missing', 'missing-worktree', FLOATING_TERMINAL_WORKTREE_ID])(
+    'uses readable fallbacks for %s',
+    (id) => {
+      const state = stateWithWorkspace()
+      expect(getNotificationWorkspaceLabels(state, id, 'My terminal')).toEqual({
+        repoLabel: undefined,
+        worktreeLabel: 'My terminal'
+      })
+      expect(getNotificationWorkspaceLabels(state, id, '  ')).toEqual({
+        repoLabel: undefined,
+        worktreeLabel: 'workspace'
+      })
+    }
+  )
 })

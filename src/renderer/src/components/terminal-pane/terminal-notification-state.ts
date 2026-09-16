@@ -1,7 +1,10 @@
-import { isExplicitAgentStatusFresh } from '@/lib/agent-status'
 import type { useAppStore } from '@/store'
-import { getWorktreeMapFromState } from '@/store/selectors'
-import { AGENT_STATUS_STALE_AFTER_MS } from '../../../../shared/agent-status-types'
+import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
+import {
+  findIndexedFolderWorkspaceOwner,
+  findIndexedProjectGroupOwner
+} from '@/lib/worktree-runtime-owner-index'
+import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import type { TerminalPaneLayoutNode } from '../../../../shared/terminal-tab-types'
 
@@ -144,76 +147,27 @@ export function isCurrentKnownPaneKey(
   return ptyHints.length === 0 || ptyHints.some((ptyId) => !isSuppressedPtyHint(state, ptyId))
 }
 
-function hasActiveWorktreeState(
+export function getNotificationWorkspaceLabels(
   state: StoreSnapshot,
-  worktreeId: string,
-  activeAgentTabIds: ReadonlySet<string>,
-  retainedAgentWorktreeIds: ReadonlySet<string>
-): boolean {
-  if (hasLivePtyForWorktree(state, worktreeId)) {
-    return true
+  workspaceId: string,
+  terminalTitle?: string
+): { repoLabel?: string; worktreeLabel: string } {
+  const scope = parseWorkspaceKey(workspaceId)
+  const fallback = terminalTitle?.trim() || 'workspace'
+  if (scope?.type === 'folder') {
+    const owner = findIndexedFolderWorkspaceOwner(state.folderWorkspaces, scope.folderWorkspaceId)
+    const folder = owner && state.folderWorkspaces.find((entry) => entry === owner)
+    const groupOwner =
+      folder && findIndexedProjectGroupOwner(state.projectGroups, folder.projectGroupId)
+    const group = groupOwner && state.projectGroups.find((entry) => entry === groupOwner)
+    return { repoLabel: group?.name, worktreeLabel: folder?.name || fallback }
   }
-
-  if ((state.browserTabsByWorktree?.[worktreeId] ?? []).length > 0) {
-    return true
-  }
-
-  const worktree = getWorktreeMapFromState(state).get(worktreeId)
-  if (worktree?.workspaceStatus === 'in-progress') {
-    return true
-  }
-
-  if (retainedAgentWorktreeIds.has(worktreeId)) {
-    return true
-  }
-
-  const tabs = state.tabsByWorktree[worktreeId] ?? []
-  return tabs.some((tab) => activeAgentTabIds.has(tab.id))
-}
-
-function countReposWithWorktrees(state: StoreSnapshot): number {
-  let count = 0
-  for (const worktrees of Object.values(state.worktreesByRepo)) {
-    if (worktrees.length > 0) {
-      count += 1
-    }
-  }
-  return count
-}
-
-export function countReposNeedingNotificationDisambiguation(state: StoreSnapshot): number {
-  const activeRepoIds = new Set<string>()
-  const worktreeMap = getWorktreeMapFromState(state)
-  // Index each agent once per dispatch, not once per accumulated workspace.
-  const activeAgentTabIds = new Set<string>()
-  const now = Date.now()
-  for (const entry of Object.values(state.agentStatusByPaneKey ?? {})) {
-    const tabId = getPaneKeyTabId(entry.paneKey)
-    if (tabId !== null && isExplicitAgentStatusFresh(entry, now, AGENT_STATUS_STALE_AFTER_MS)) {
-      activeAgentTabIds.add(tabId)
-    }
-  }
-  const retainedAgentWorktreeIds = new Set(
-    Object.values(state.retainedAgentsByPaneKey ?? {}).map((agent) => agent.worktreeId)
+  const worktree = getWorktreeMapFromState(state).get(
+    scope?.type === 'worktree' ? scope.worktreeId : workspaceId
   )
-  const hasActiveState = (worktreeId: string): boolean =>
-    hasActiveWorktreeState(state, worktreeId, activeAgentTabIds, retainedAgentWorktreeIds)
-  for (const worktreeId of Object.keys(state.tabsByWorktree)) {
-    if (!hasActiveState(worktreeId)) {
-      continue
-    }
-    const repoId = worktreeMap.get(worktreeId)?.repoId
-    if (repoId) {
-      activeRepoIds.add(repoId)
-    }
+  const repo = worktree ? getRepoMapFromState(state).get(worktree.repoId) : undefined
+  return {
+    repoLabel: repo?.displayName,
+    worktreeLabel: worktree?.displayName || worktree?.branch || fallback
   }
-  for (const [repoId, worktrees] of Object.entries(state.worktreesByRepo)) {
-    if (activeRepoIds.has(repoId)) {
-      continue
-    }
-    if (worktrees.some((worktree) => hasActiveState(worktree.id))) {
-      activeRepoIds.add(repoId)
-    }
-  }
-  return Math.max(activeRepoIds.size, countReposWithWorktrees(state))
 }
