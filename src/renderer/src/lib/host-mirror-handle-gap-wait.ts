@@ -277,14 +277,17 @@ function releaseDueWaiters(state: HandleGapStoreState): void {
     if (waitersByPane.get(key) !== waiter) {
       continue
     }
-    // TWO: the same waiter, re-judged. `parkUntilHostMirrorHandleLands` re-parks a still-parked
-    // pane by MUTATING this object — `worktreeId` moves with `run` when adopting an orphaned
-    // terminal re-keys the rows — so identity survives and the snapshot's verdict can be about a
-    // workspace the waiter is no longer filed under. Releasing on it is retraction evidence about
-    // the wrong workspace, which is the defect that `existing.worktreeId` assignment exists to
-    // prevent. Re-read: a waiter that is no longer due just stays parked, bounded by its own
-    // deadline and re-judged on the next write.
-    if (!waiterIsReleased(waiter, useAppStore.getState())) {
+    // TWO: the same waiter, re-judged against the same frame. `parkUntilHostMirrorHandleLands`
+    // re-parks a still-parked pane by MUTATING this object — `worktreeId` moves with `run` when
+    // adopting an orphaned terminal re-keys the rows — so identity survives it and the verdict
+    // taken above can be about a workspace the waiter is no longer filed under. Releasing on that
+    // is retraction evidence about the wrong workspace, the defect the `existing.worktreeId`
+    // assignment exists to prevent. Re-judging costs nothing: a waiter that is no longer due stays
+    // parked, bounded by its own deadline and judged again on the next write.
+    // `state` and a fresh store read cannot differ here, because a re-park only happens when
+    // `findUnhydratedHostMirrorForPane` finds the row already filed under the sweeping worktree —
+    // rows this frame carries. Judging the frame keeps the drain on one snapshot, as it claims to.
+    if (!waiterIsReleased(waiter, state)) {
       continue
     }
     releaseWaiter(key)

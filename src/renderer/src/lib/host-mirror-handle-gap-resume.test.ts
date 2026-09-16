@@ -95,8 +95,11 @@ function seedMirroredWorkspace(worktree: ReturnType<typeof makeCreatedAgentWorkt
  * Why "never been bound" and not "went pending": `retainPendingTerminalBindings`
  * (web-session-tabs-sync/terminal-build.ts) carries a pending surface's PRIOR binding forward, so a
  * leaf that has ever held a handle keeps it across the gap and this shape cannot arise from one. It
- * needs a cold start or a re-pair — no existing layout to retain from — which is also why no wait
- * is ever armed here: the pane is decided on the first frame.
+ * needs a cold start or a re-pair — no existing layout to retain from.
+ *
+ * No wait is armed here for a separate reason: `ptyIdsByTabId[tab]` is non-empty, so the pane reads
+ * decidable at the tab-granular gate before the per-pane wait is ever considered. That is the
+ * residual, and it is decided on the first frame.
  *
  * And not "the tab published a handle no leaf is bound to": `ptyIdsByTabId[tab]` is built from the
  * very map written to `terminalLayoutsByTabId[tab].ptyIdsByLeafId`, so those two cannot disagree

@@ -19,8 +19,8 @@ import {
 // Both release paths are here on purpose: the store-write drain and the deadline both funnel into
 // `releaseWaiter`, and a guard added to one is easy to forget on the other. One mutation —
 // rethrowing from that catch — kills the first and last cases together, which is the point: they
-// are the two entry points, not two behaviours. The two middle cases are about the re-entrancy the
-// first one's fan-out makes possible, and neither involves a throw.
+// are the two entry points, not two behaviours. The two middle cases are about what one replay can
+// do to the pane queued behind it while the drain is mid-loop, and neither involves a throw.
 
 const ENVIRONMENT_ID = 'env-handle-gap-drain'
 const WORKTREE_ID = 'repo-1::/workspace/repo'
@@ -144,36 +144,47 @@ describe('host-mirror handle-gap drain', () => {
     expect(vi.getTimerCount()).toBe(1)
   })
 
-  // The other way the snapshot goes stale, and the one object identity cannot see: a re-park of a
-  // STILL-PARKED pane mutates the waiter in place, so `worktreeId` can move between the moment the
-  // drain judged it due and the moment it releases. Adopting an orphaned terminal does exactly
-  // that. Releasing here would act on retraction evidence about a workspace the wait is no longer
-  // about — the case `parkUntilHostMirrorHandleLands` re-files the worktree to prevent.
-  it('does not release on retraction evidence a mid-drain re-park has already made stale', () => {
+  // The other way the snapshot goes stale, and the one object identity cannot see: re-parking a
+  // STILL-PARKED pane mutates the waiter in place, so its `worktreeId` can move between the moment
+  // the drain judged it retracted and the moment it releases.
+  //
+  // Staged the only way production can reach it. A replay is
+  // `resumeSleepingAgentSessionsForWorktree` closed over ONE worktree and re-parks only under that
+  // worktree, so a waiter's worktree can only move when a DIFFERENT waiter's replay sweeps the
+  // workspace the row was adopted into. Here the second tab has already been re-keyed onto the
+  // canonical id — `canonicalizeTerminalSessionWorktreeId` re-keys `tabsByWorktree` and leaves the
+  // sleeping record naming the old one — so the first pane's sweep legitimately owns it, while the
+  // live waiter is still filed under the id its record named.
+  it('does not release on retraction evidence a mid-drain adoption has already made stale', () => {
     const adoptedReplay = vi.fn()
+    const ADOPTING_WORKTREE_ID = 'repo-1::/workspace/adopted'
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       tabsByWorktree: {
-        [WORKTREE_ID]: [{ id: FIRST_TAB_ID, title: 'one' }],
-        'repo-1::/workspace/adopted': [{ id: SECOND_TAB_ID, title: 'two' }]
+        [ADOPTING_WORKTREE_ID]: [
+          { id: FIRST_TAB_ID, title: 'one' },
+          { id: SECOND_TAB_ID, title: 'two' }
+        ]
       }
     } as never)
-    // Parked first so the drain reaches it first: the map preserves insertion order, and this
-    // pane's replay is what makes the next entry's snapshot verdict stale.
-    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, FIRST_TAB_ID, () => {
-      // The adoption: the row is re-filed under the canonical worktree, and the sweep for THAT
-      // worktree re-parks the same still-parked waiter, moving it across.
+    // Parked first so the drain reaches it first: `Map` preserves insertion order, and this pane's
+    // replay is what makes the next entry's snapshot verdict stale. If that order ever inverted the
+    // test would fail rather than pass quietly — the second pane would release before the adoption.
+    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, ADOPTING_WORKTREE_ID, FIRST_TAB_ID, () => {
+      // The sweep for the adopting workspace, re-parking the pane it now owns. No store write: a
+      // sweep that parks every record it finds launches nothing, which is exactly this case.
       parkUntilHostMirrorHandleLands(
         ENVIRONMENT_ID,
-        'repo-1::/workspace/adopted',
+        ADOPTING_WORKTREE_ID,
         SECOND_TAB_ID,
         adoptedReplay
       )
     })
     parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, adoptedReplay)
 
-    // The second tab is absent from WORKTREE_ID, so the snapshot judges its waiter retracted — on
-    // evidence that the re-park above makes obsolete before the release loop reaches it.
+    // The frame that starts the drain. The second tab is absent from the worktree its waiter is
+    // filed under, so the snapshot reads retraction — evidence the adoption above makes obsolete
+    // before the release loop reaches it.
     // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
     useAppStore.setState({
       ptyIdsByTabId: { [FIRST_TAB_ID]: [`remote:${ENVIRONMENT_ID}@@term_1`] }
