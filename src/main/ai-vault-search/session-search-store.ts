@@ -314,6 +314,7 @@ export class SessionSearchStore {
       return
     }
     this.closed = true
+    this.writer.close()
     this.db.close()
   }
 }
