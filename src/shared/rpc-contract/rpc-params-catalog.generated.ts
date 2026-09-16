@@ -51,6 +51,7 @@ import {
 } from './automation-params'
 import { CertificateProceed } from './browser-core-params'
 import { MouseClick } from './browser-extras-params'
+import { BrowserIdentitySet, ProfileCreate } from './browser-identity-params'
 import {
   Check,
   ClipboardWrite,
@@ -77,7 +78,6 @@ import {
   MouseButton,
   MouseWheel,
   MouseXY,
-  ProfileCreate,
   ProfileDelete,
   ProfileImportFromBrowser,
   Screencast,
@@ -638,6 +638,8 @@ export const RPC_PARAMS_BY_METHOD = {
   'browser.goto': Goto,
   'browser.highlight': Highlight,
   'browser.hover': Element,
+  'browser.identity.get': null,
+  'browser.identity.set': BrowserIdentitySet,
   'browser.intercept.disable': BrowserTarget,
   'browser.intercept.enable': InterceptEnable,
   'browser.intercept.list': BrowserTarget,
