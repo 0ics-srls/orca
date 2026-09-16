@@ -205,6 +205,76 @@ describe('registerWorktreeHandlers', () => {
     expect(removeWorktreeMock).not.toHaveBeenCalled()
   })
 
+  it('refuses a row owned by a runtime environment this process does not execute', async () => {
+    // `runtime:<env>` deletes on that environment's own server. Its repo row looks local here —
+    // `connectionId` is null — so a host id that fell back to "local" would delete a same-named
+    // path on this client.
+    const runtimeRepo = {
+      id: 'repo-runtime-owned',
+      path: '/env/repo',
+      displayName: 'env',
+      badgeColor: '#000',
+      addedAt: 0,
+      connectionId: null,
+      executionHostId: 'runtime:env-1' as const
+    }
+    store.getRepo.mockReturnValue(runtimeRepo)
+    store.getRepos.mockReturnValue([runtimeRepo])
+
+    await expect(
+      handlers['worktrees:remove'](null, {
+        worktreeId: 'repo-runtime-owned::/env/feature-wt',
+        force: true
+      })
+    ).rejects.toThrow('Refusing to delete worktree: repo repo-runtime-owned names execution host')
+
+    expect(listWorktreesMock).not.toHaveBeenCalled()
+    expect(removeWorktreeMock).not.toHaveBeenCalled()
+  })
+
+  it('accepts a row whose two spellings differ only by percent-escaping', async () => {
+    // `getRepoExecutionHostId` returns the stored text while the connection id is re-encoded, so a
+    // byte compare would refuse this consistent row over a `%20`.
+    const repo = {
+      id: 'repo-escaped',
+      path: '/remote/repo',
+      displayName: 'ssh',
+      badgeColor: '#000',
+      addedAt: 0,
+      connectionId: 'conn one',
+      executionHostId: 'ssh:conn one' as const
+    }
+    const provider = {
+      listWorktrees: vi.fn().mockResolvedValue([
+        {
+          path: repo.path,
+          head: 'main',
+          branch: 'main',
+          isBare: false,
+          isMainWorktree: true
+        },
+        {
+          path: '/remote/feature-wt',
+          head: 'feature',
+          branch: 'feature',
+          isBare: false,
+          isMainWorktree: false
+        }
+      ]),
+      removeWorktree: vi.fn().mockResolvedValue(undefined),
+      worktreeIsClean: vi.fn().mockResolvedValue({ clean: true })
+    }
+    store.getRepo.mockReturnValue(repo)
+    store.getRepos.mockReturnValue([repo])
+    getSshGitProviderMock.mockReturnValue(provider)
+
+    await handlers['worktrees:remove'](null, {
+      worktreeId: 'repo-escaped::/remote/feature-wt'
+    })
+
+    expect(provider.removeWorktree).toHaveBeenCalledWith('/remote/feature-wt', undefined)
+  })
+
   it('tears down the remote session when an ownerless remote worktree is deleted', async () => {
     const sshRepo = {
       id: 'repo-1',

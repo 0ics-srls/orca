@@ -1,5 +1,9 @@
 import type { Repo } from '../../../../shared/repo-types'
-import { getRepoExecutionHostId, type ExecutionHostId } from '../../../../shared/execution-host'
+import {
+  getRepoExecutionHostId,
+  parseExecutionHostId,
+  type ExecutionHostId
+} from '../../../../shared/execution-host'
 import type { RemoveWorktreeResult } from '../../../../shared/worktree/create-types'
 import { isFolderRepo } from '../../../../shared/repo-kind'
 import { assertWorktreeUnlockedForRemoval } from '../../../../shared/worktree/removal'
@@ -49,17 +53,31 @@ function assertRemovalHostMatchesRepoRow(
   repoId: string,
   removalHostId: ExecutionHostId
 ): void {
-  // Same function `removalHostId` came from, with the row's own `executionHostId` withheld: the two
-  // spellings then differ only when the row really carries two host names, never on normalisation.
   const repoRowHostId = getRepoExecutionHostId({
     connectionId: repo.connectionId,
     executionHostId: null
   })
-  if (removalHostId !== repoRowHostId) {
+  if (removalHostName(removalHostId) !== removalHostName(repoRowHostId)) {
     throw new Error(
       `Refusing to delete worktree: repo ${repoId} names execution host ${removalHostId}, but its checkout is only reachable as ${repoRowHostId}.`
     )
   }
+}
+
+/**
+ * The machine a host id names, or `null` for one this path cannot delete on.
+ *
+ * Compared after decoding rather than as stored text: `ssh:my target` and `ssh:my%20target` are the
+ * same host, and refusing a removal over the spelling of a percent-escape would be a false alarm on
+ * a row that is perfectly consistent. `runtime:<env>` and an unparseable id return `null`, which
+ * matches nothing — including each other.
+ */
+function removalHostName(hostId: ExecutionHostId): string | null {
+  const parsed = parseExecutionHostId(hostId)
+  if (parsed?.kind === 'local') {
+    return 'local'
+  }
+  return parsed?.kind === 'ssh' ? `ssh:${parsed.targetId}` : null
 }
 
 export async function executeWorktreeRemoval(
