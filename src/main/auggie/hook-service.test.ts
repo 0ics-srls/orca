@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildAuggieManagedScript } from './hook-service'
+import { buildAuggieManagedScript, buildAuggieWindowsManagedScript } from './hook-service'
 import { wrapPosixHookCommand } from '../agent-hooks/installer-utils'
 
 describe('Auggie hook launcher contract', () => {
@@ -15,5 +15,12 @@ describe('Auggie hook launcher contract', () => {
     expect(command).toContain("'/tmp/Orca Hooks/aug'\\''s hook.sh'")
     expect(command).toContain('/bin/sh')
     expect(command).not.toContain('bash -c')
+  })
+
+  it('ships a Windows command wrapper with the same guarded curl contract', () => {
+    const source = buildAuggieWindowsManagedScript()
+    expect(source).toContain('@echo off')
+    expect(source).toContain('/hook/aug')
+    expect(source).toContain('ORCA_AGENT_HOOK_TOKEN')
   })
 })

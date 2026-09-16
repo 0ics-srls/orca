@@ -5,12 +5,16 @@ import type { SFTPWrapper } from 'ssh2'
 import {
   buildPosixHookPayloadCapture,
   buildPosixHookSpoolLines,
-  POSIX_HOOK_BOUNDED_JSON_STDIN
+  POSIX_HOOK_BOUNDED_JSON_STDIN,
+  buildWindowsHookEnvironmentGuardLines,
+  buildWindowsHookStdinDrainEpilogue
 } from '../agent-hooks/hook-stdin-contract'
 import {
   createManagedCommandMatcher,
   getSharedManagedScriptPath,
   wrapPosixHookCommand,
+  wrapWindowsCmdHookCommand,
+  buildWindowsAgentHookPostCommand,
   writeHooksJson,
   writeManagedScript
 } from '../agent-hooks/installer-utils'
@@ -29,6 +33,7 @@ import type { HooksConfig } from '../agent-hooks/installer-utils'
 import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
 
 const SCRIPT_NAME = 'aug-hook.sh'
+const WINDOWS_SCRIPT_NAME = 'aug-hook.cmd'
 const isManagedCommand = createManagedCommandMatcher(SCRIPT_NAME)
 
 export type AuggieInstallState = 'installed' | 'not_installed' | 'partial' | 'error'
@@ -48,7 +53,9 @@ function getConfigPath(): string {
   return join(getAuggieHome(), 'settings.json')
 }
 function getScriptPath(): string {
-  return getSharedManagedScriptPath(SCRIPT_NAME)
+  return getSharedManagedScriptPath(
+    process.platform === 'win32' ? WINDOWS_SCRIPT_NAME : SCRIPT_NAME
+  )
 }
 
 export function buildAuggieManagedScript(target: 'local' | 'posix' = 'local'): string {
@@ -81,6 +88,19 @@ export function buildAuggieManagedScript(target: 'local' | 'posix' = 'local'): s
     'exit 0',
     ''
   ].join('\n')
+}
+
+export function buildAuggieWindowsManagedScript(): string {
+  return [
+    '@echo off',
+    'setlocal',
+    'if defined ORCA_AGENT_HOOK_ENDPOINT if exist "%ORCA_AGENT_HOOK_ENDPOINT%" call "%ORCA_AGENT_HOOK_ENDPOINT%" 2>nul',
+    ...buildWindowsHookEnvironmentGuardLines(),
+    buildWindowsAgentHookPostCommand('auggie', [], '/hook/aug'),
+    'exit /b 0',
+    ...buildWindowsHookStdinDrainEpilogue(),
+    ''
+  ].join('\r\n')
 }
 
 function readConfig(path: string): HooksConfig | null {
@@ -134,8 +154,15 @@ export class AuggieHookService {
     if (!config) {
       return status(path, null)
     }
-    const command = wrapPosixHookCommand(getScriptPath())
-    writeManagedScript(getScriptPath(), buildAuggieManagedScript())
+    const scriptPath = getScriptPath()
+    const command =
+      process.platform === 'win32'
+        ? wrapWindowsCmdHookCommand(scriptPath)
+        : wrapPosixHookCommand(scriptPath)
+    writeManagedScript(
+      scriptPath,
+      process.platform === 'win32' ? buildAuggieWindowsManagedScript() : buildAuggieManagedScript()
+    )
     writeHooksJson(path, applyAuggieManagedHooks(config, command))
     createIntegrationHealthStore(
       join(homedir(), '.orca', 'agent-hooks', 'integration-health.json')
@@ -143,7 +170,10 @@ export class AuggieHookService {
       integration: 'auggie',
       host: 'local',
       scope: path,
-      bytes: buildAuggieManagedScript(),
+      bytes:
+        process.platform === 'win32'
+          ? buildAuggieWindowsManagedScript()
+          : buildAuggieManagedScript(),
       version: '1'
     })
     return this.getStatus()
