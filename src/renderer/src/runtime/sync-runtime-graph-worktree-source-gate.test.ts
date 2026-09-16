@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { AgentStatusEntry } from '../../../shared/agent-status-types'
 import type { TerminalTab } from '../../../shared/terminal-tab-types'
 import type { AppState } from '../store/types'
@@ -20,8 +20,10 @@ import {
 import {
   collectMobileSessionWorktreeIds,
   collectMobileSessionWorktreeSourceRefs,
+  mobileSessionWorktreeSourceRefsEqual,
   resetMobileSessionWorktreeIdCacheForTests
 } from './sync-runtime-graph/mobile-session-worktree-sources'
+import { canReuseMobileSessionSnapshot } from './sync-runtime-graph/mobile-session-capture'
 import { createTabKeyedRecordPartitioner } from './sync-runtime-graph/tab-keyed-record-partition'
 import { getEditorDraftVersionByFileId } from './sync-runtime-graph/sync-projections'
 import { getMobileTerminalTheme } from './sync-runtime-graph/mobile-terminal-theme'
@@ -151,25 +153,50 @@ beforeEach(() => {
   resetPublicationCaches()
 })
 
-describe('mobile session publication skips worktrees the frame did not touch', () => {
-  it('costs the same whether the session holds 20 worktrees or 400', () => {
-    const counts = [20, 400].map((filler) => {
-      resetPublicationCaches()
-      const { state, tabIdReads, resetTabIdReads } = makeGateState(filler)
-      buildMobileSessionTabSnapshots(state, false)
-      resetTabIdReads()
-      buildMobileSessionTabSnapshots(withChangedStatus(state, 'waiting'), false)
-      return tabIdReads()
-    })
+/**
+ * One cache write per worktree the publication actually rebuilt: the gated path reuses the cached
+ * snapshot and writes nothing, so this counts exactly what the frame failed to skip.
+ */
+function rebuiltWorktreesPerFrame(mutate: (state: AppState) => AppState): number[] {
+  return [20, 400].map((filler) => {
+    resetPublicationCaches()
+    const { state } = makeGateState(filler)
+    buildMobileSessionTabSnapshots(state, false)
+    const writes = vi.spyOn(graphState.mobileSessionSnapshotCacheByWorktree, 'set')
+    try {
+      buildMobileSessionTabSnapshots(mutate(state), false)
+      return writes.mock.calls.length
+    } finally {
+      writes.mockRestore()
+    }
+  })
+}
 
-    expect(counts[0]).toBeGreaterThan(0)
-    expect(counts[1]).toBe(counts[0])
+describe('mobile session publication skips worktrees the frame did not touch', () => {
+  it('rebuilds one worktree on a status frame at either scale', () => {
+    expect(rebuiltWorktreesPerFrame((state) => withChangedStatus(state, 'waiting'))).toEqual([1, 1])
+  })
+
+  // An OSC title frame replaces `tabsByWorktree`, so the ambiguity set must keep its identity when
+  // ownership did not move; otherwise every worktree looks dirty on every title tick.
+  it('rebuilds one worktree on a tab-title frame at either scale', () => {
+    expect(
+      rebuiltWorktreesPerFrame((state) => ({
+        ...state,
+        tabsByWorktree: {
+          ...state.tabsByWorktree,
+          [DIRTY_WT]: [makeTab('gate-dirty-term', DIRTY_WT, 'Renamed')]
+        }
+      }))
+    ).toEqual([1, 1])
   })
 
   it('still republishes the worktree whose status changed', () => {
     const { state } = makeGateState(20)
-    const statusOf = (snapshots: ReturnType<typeof buildMobileSessionTabSnapshots>): unknown =>
-      snapshots.find((snapshot) => snapshot.worktree === DIRTY_WT)?.tabs[0]?.agentStatus?.state
+    const statusOf = (snapshots: ReturnType<typeof buildMobileSessionTabSnapshots>): unknown => {
+      const tab = snapshots.find((snapshot) => snapshot.worktree === DIRTY_WT)?.tabs[0]
+      return tab?.type === 'terminal' ? tab.agentStatus?.state : undefined
+    }
 
     expect(statusOf(buildMobileSessionTabSnapshots(state, false))).toBe('working')
     expect(
@@ -229,88 +256,92 @@ describe('the gate reads every store value the inputs builder reads', () => {
   })
 })
 
-describe('the gate never publishes a stale worktree', () => {
-  const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
-    {
-      name: 'a terminal tab title',
-      apply: (state) => ({
+const mutations: { name: string; apply: (state: AppState) => AppState }[] = [
+  {
+    name: 'a terminal tab title',
+    apply: (state) => ({
+      ...state,
+      tabsByWorktree: {
+        ...state.tabsByWorktree,
+        [DIRTY_WT]: [makeTab('gate-dirty-term', DIRTY_WT, 'Renamed')]
+      }
+    })
+  },
+  { name: 'an agent status', apply: (state) => withChangedStatus(state, 'waiting') },
+  {
+    name: 'a runtime pane title',
+    apply: (state) => ({
+      ...state,
+      runtimePaneTitlesByTabId: { 'gate-dirty-term': { 1: 'vim' } }
+    })
+  },
+  {
+    name: 'a saved terminal layout',
+    apply: (state) =>
+      ({
         ...state,
-        tabsByWorktree: {
-          ...state.tabsByWorktree,
-          [DIRTY_WT]: [makeTab('gate-dirty-term', DIRTY_WT, 'Renamed')]
-        }
-      })
-    },
-    { name: 'an agent status', apply: (state) => withChangedStatus(state, 'waiting') },
-    {
-      name: 'a runtime pane title',
-      apply: (state) => ({
-        ...state,
-        runtimePaneTitlesByTabId: { 'gate-dirty-term': { 1: 'vim' } }
-      })
-    },
-    {
-      name: 'a saved terminal layout',
-      apply: (state) =>
-        ({
-          ...state,
-          terminalLayoutsByTabId: {
-            'gate-dirty-term': {
-              root: { type: 'leaf', leafId: LEAF_ID },
-              activeLeafId: LEAF_ID,
-              ptyIdsByLeafId: { [LEAF_ID]: 'pty-gate-1' }
-            }
+        terminalLayoutsByTabId: { 'gate-dirty-term': makeLayout('pty-gate-relayout') }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
+      }) as unknown as AppState
+  },
+  {
+    name: 'the active tab',
+    apply: (state) => ({ ...state, activeTabId: 'gate-dirty-term' })
+  },
+  {
+    name: 'a tab group',
+    apply: (state) => ({
+      ...state,
+      groupsByWorktree: {
+        ...state.groupsByWorktree,
+        [DIRTY_WT]: [
+          {
+            id: 'gate-group',
+            worktreeId: DIRTY_WT,
+            activeTabId: 'gate-dirty-term',
+            tabOrder: ['gate-dirty-term']
           }
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-        }) as AppState
-    },
-    {
-      name: 'the active tab',
-      apply: (state) => ({ ...state, activeTabId: 'gate-dirty-term' })
-    },
-    {
-      name: 'a tab group',
-      apply: (state) => ({
+        ]
+      },
+      activeGroupIdByWorktree: { ...state.activeGroupIdByWorktree, [DIRTY_WT]: 'gate-group' }
+    })
+  },
+  {
+    name: 'the generated-title setting',
+    apply: (state) =>
+      ({
         ...state,
-        groupsByWorktree: {
-          ...state.groupsByWorktree,
-          [DIRTY_WT]: [
-            {
-              id: 'gate-group',
-              worktreeId: DIRTY_WT,
-              activeTabId: 'gate-dirty-term',
-              tabOrder: ['gate-dirty-term']
-            }
-          ]
-        },
-        activeGroupIdByWorktree: { ...state.activeGroupIdByWorktree, [DIRTY_WT]: 'gate-group' }
-      })
-    },
-    {
-      name: 'the generated-title setting',
-      apply: (state) =>
-        ({
-          ...state,
-          settings: { ...state.settings, tabAutoGenerateTitle: true }
-          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
-        }) as AppState
-    },
-    {
-      name: 'the worktree that owns a tab',
-      apply: (state) => ({
-        ...state,
-        tabsByWorktree: {
-          ...state.tabsByWorktree,
-          [DIRTY_WT]: [],
-          'repo::/gate-filler-0': [
-            makeTab('gate-filler-term-0', 'repo::/gate-filler-0'),
-            makeTab('gate-dirty-term', 'repo::/gate-filler-0')
-          ]
-        }
-      })
-    }
-  ]
+        settings: { ...state.settings, tabAutoGenerateTitle: true }
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial state; see makeGateState.
+      }) as AppState
+  },
+  {
+    name: 'another worktree claiming this tab id',
+    apply: (state) => ({
+      ...state,
+      tabsByWorktree: {
+        ...state.tabsByWorktree,
+        'repo::/gate-claimant': [makeTab('gate-dirty-term', 'repo::/gate-claimant')]
+      }
+    })
+  },
+  {
+    name: 'the worktree that owns a tab',
+    apply: (state) => ({
+      ...state,
+      tabsByWorktree: {
+        ...state.tabsByWorktree,
+        [DIRTY_WT]: [],
+        'repo::/gate-filler-0': [
+          makeTab('gate-filler-term-0', 'repo::/gate-filler-0'),
+          makeTab('gate-dirty-term', 'repo::/gate-filler-0')
+        ]
+      }
+    })
+  }
+]
 
+describe('the gate never publishes a stale worktree', () => {
   for (const mutation of mutations) {
     it(`publishes what a cold rebuild would after ${mutation.name} changes`, () => {
       const { state } = makeGateState(12)
@@ -322,6 +353,71 @@ describe('the gate never publishes a stale worktree', () => {
       const cold = contentOf(buildMobileSessionTabSnapshots(mutated, false))
 
       expect(gated).toEqual(cold)
+    })
+  }
+})
+
+/**
+ * The gate's whole contract: equal source refs must imply the rebuild it skipped would have been a
+ * no-op. Published content is the weaker oracle — a mutation the fingerprint misses can still land
+ * on identical output in one fixture — so assert the invariant against `canReuseMobileSessionSnapshot`
+ * itself.
+ */
+describe('equal source refs imply the skipped rebuild would have been reusable', () => {
+  const partitionLayouts =
+    createTabKeyedRecordPartitioner<AppState['terminalLayoutsByTabId'][string]>()
+  const partitionTitles =
+    createTabKeyedRecordPartitioner<AppState['runtimePaneTitlesByTabId'][string]>()
+  const partitionDrafts =
+    createTabKeyedRecordPartitioner<NonNullable<AppState['nativeChatLaunchDraftByTabId']>[string]>()
+
+  function sideOf(state: AppState): {
+    state: AppState
+    owners: ReturnType<typeof getTerminalTabOwnershipIndex>
+    publication: MobileSessionPublicationInputs
+  } {
+    const owners = getTerminalTabOwnershipIndex(state.tabsByWorktree)
+    return {
+      state,
+      owners,
+      publication: {
+        browserTabsByWorktree: state.browserTabsByWorktree ?? {},
+        openFileIndexes: getOpenFileIndexes(state.openFiles),
+        editorDraftVersionByFileId: getEditorDraftVersionByFileId(state.editorDrafts),
+        agentStatusByWorktreeId: buildMobileSessionAgentStatusByWorktree(
+          state.agentStatusByPaneKey,
+          state.tabsByWorktree
+        ),
+        terminalLayoutByWorktree: partitionLayouts(state.terminalLayoutsByTabId, owners),
+        runtimePaneTitleByWorktree: partitionTitles(state.runtimePaneTitlesByTabId, owners),
+        launchDraftByWorktree: partitionDrafts(state.nativeChatLaunchDraftByTabId, owners),
+        generatedTitlesEnabled: state.settings?.tabAutoGenerateTitle === true,
+        terminalTheme: getMobileTerminalTheme(state, false)
+      }
+    }
+  }
+
+  for (const mutation of mutations) {
+    it(`distinguishes ${mutation.name} from an unchanged frame`, () => {
+      const { state } = makeGateState(4)
+      const base = sideOf(state)
+      const mutated = sideOf(mutation.apply(state))
+      const inputsOf = (
+        side: ReturnType<typeof sideOf>
+      ): ReturnType<typeof buildMobileSessionWorktreeInputs> =>
+        buildMobileSessionWorktreeInputs(
+          side.state,
+          DIRTY_WT,
+          side.publication,
+          side.owners.ambiguousTabIds
+        )
+      const refsOf = (
+        side: ReturnType<typeof sideOf>
+      ): ReturnType<typeof collectMobileSessionWorktreeSourceRefs> =>
+        collectMobileSessionWorktreeSourceRefs(side.state, DIRTY_WT, side.publication, side.owners)
+
+      expect(canReuseMobileSessionSnapshot(inputsOf(base), inputsOf(mutated))).toBe(false)
+      expect(mobileSessionWorktreeSourceRefsEqual(refsOf(base), refsOf(mutated))).toBe(false)
     })
   }
 })
@@ -359,10 +455,12 @@ describe('a mounted worktree is never gated on store references alone', () => {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the publication path calls only the PaneManager members stubbed above.
     } as unknown as Parameters<typeof registerRuntimeTerminalTab>[0])
     try {
-      const activeLeafOf = (): unknown =>
-        buildMobileSessionTabSnapshots(mountedState, false).find(
+      const activeLeafOf = (): unknown => {
+        const tab = buildMobileSessionTabSnapshots(mountedState, false).find(
           (snapshot) => snapshot.worktree === MOUNTED_WT
-        )?.tabs[0]?.parentLayout?.activeLeafId
+        )?.tabs[0]
+        return tab?.type === 'terminal' ? tab.parentLayout?.activeLeafId : undefined
+      }
 
       const before = activeLeafOf()
       activeIndex = 1

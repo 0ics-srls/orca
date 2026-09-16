@@ -186,13 +186,33 @@ export function getTerminalTabOwnershipIndex(
       worktreeIdByTabId.set(tab.id, worktreeId)
     }
   }
+  const previousAmbiguous = cached?.ambiguousTabIds
   const index: TerminalTabOwnershipIndex = {
     source: tabsByWorktree,
     worktreeIdByTabId,
-    ambiguousTabIds
+    // Why reuse the set object: one OSC title frame replaces `tabsByWorktree`, and a fresh set here
+    // would make every worktree's source fingerprint differ even though ownership did not move.
+    ambiguousTabIds: sameMembers(previousAmbiguous, ambiguousTabIds)
+      ? previousAmbiguous
+      : ambiguousTabIds
   }
   ambiguousTerminalTabIdsCache = index
   return index
+}
+
+function sameMembers(
+  previous: ReadonlySet<string> | undefined,
+  next: ReadonlySet<string>
+): previous is ReadonlySet<string> {
+  if (previous === undefined || previous.size !== next.size) {
+    return false
+  }
+  for (const member of next) {
+    if (!previous.has(member)) {
+      return false
+    }
+  }
+  return true
 }
 
 export function collectAmbiguousTerminalTabIds(
