@@ -225,6 +225,11 @@ export function pruneParkedTerminalWatchers(liveWorktreeIds: ReadonlySet<string>
   }
   for (const [tabId, capture] of capturedPanesByTabId) {
     if (!liveWorktreeIds.has(capture.worktreeId)) {
+      for (const pane of capture.panes) {
+        // Worktree removal can bypass closeTab while panes are parked; release
+        // the same strong scroll-intent keys as explicit tab retirement.
+        releaseTerminalScrollIntentKey(pane.leafId)
+      }
       capturedPanesByTabId.delete(tabId)
     }
   }
