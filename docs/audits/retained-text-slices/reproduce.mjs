@@ -8,12 +8,16 @@ if (process.env.ORCA_BACKGROUND_LAUNCH !== '1' || typeof global.gc !== 'function
 }
 const root = fileURLToPath(new URL('../../../', import.meta.url))
 const replacements = {
+  'recent-pty-output-buffer.ts': [
+    'this.chunks = [data.length > this.limit ? ownRetainedString(data.slice(-this.limit)) : data]',
+    'this.chunks = [data.slice(-this.limit)]'
+  ],
   'check-job-log-tail-slice.ts': [
-    'return flattenRetainedSlice(buildCheckLogTail(logText))',
+    'return ownRetainedString(buildCheckLogTail(logText))',
     'return buildCheckLogTail(logText)'
   ],
   'workspace-session-terminal-buffers.ts': [
-    'return flattenRetainedSlice(\n    clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text\n  )',
+    'return ownRetainedString(\n    clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text\n  )',
     'return clampUtf8TextTail(buffer, TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT).text'
   ],
   'pty-eager-buffer-clamp.ts': [
@@ -52,6 +56,7 @@ for (const fixed of [false, true]) {
   const result = await build({
     stdin: {
       contents: `
+        export { RecentPtyOutputBuffer } from './src/main/runtime/recent-pty-output-buffer'
         export { sliceCheckLogTail } from './src/shared/check-job-log-tail-slice'
         export { gitLabJobTraceToLogExcerpt } from './src/shared/gitlab-job-log-excerpt'
         export { capTerminalScrollbackSessionBuffer } from './src/shared/workspace-session-terminal-buffers'
@@ -75,7 +80,7 @@ for (const fixed of [false, true]) {
               builder.onLoad(
                 {
                   filter:
-                    /(?:check-job-log-tail-slice|workspace-session-terminal-buffers|pty-eager-buffer-clamp|terminal-error-accumulation|deferred-reattach-live-data-queue)\.ts$/
+                    /(?:recent-pty-output-buffer|check-job-log-tail-slice|workspace-session-terminal-buffers|pty-eager-buffer-clamp|terminal-error-accumulation|deferred-reattach-live-data-queue)\.ts$/
                 },
                 async ({ path }) => {
                   const source = await readFile(path, 'utf8')
@@ -103,7 +108,8 @@ for (const fixed of [false, true]) {
     capTerminalScrollbackSessionBuffer,
     clampUtf8Tail,
     boundTerminalErrorSurface,
-    DeferredReattachLiveDataQueue
+    DeferredReattachLiveDataQueue,
+    RecentPtyOutputBuffer
   } = await import(`data:text/javascript;base64,${Buffer.from(bundle).toString('base64')}`)
   for (const [kind, makeLog, excerpt] of [
     ['github-long-line', (i) => `${i}:${'x'.repeat(parentChars)}`, sliceCheckLogTail],
@@ -122,6 +128,15 @@ for (const fixed of [false, true]) {
       'terminal-eager-buffer',
       (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
       (text) => clampUtf8Tail(text, 512 * 1024).data
+    ],
+    [
+      'terminal-recent-output',
+      (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
+      (data) => {
+        const buffer = new RecentPtyOutputBuffer()
+        buffer.append(data)
+        return buffer.read()
+      }
     ],
     ['terminal-error', (i) => `${'x'.repeat(parentChars * 2)}:${i}`, boundTerminalErrorSurface],
     [

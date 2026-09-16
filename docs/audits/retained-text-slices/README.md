@@ -1,26 +1,22 @@
 # Retained CI and terminal text tails
 
-`sliceCheckLogTail` limits its returned text to 16 KiB, but a V8 sliced string can
-keep the entire downloaded log alive. Long single lines and oversized earlier
-error context reproduce this. The GitHub job-tail cache accepts 128 entries, with
-downloads up to 64 MiB each; its logical tail cap therefore did not bound retained
-backing storage. GitLab's raw-tail clamp can produce the same parent-retaining
-slice before the shared excerpt function runs.
+Capped V8 string slices can keep their entire original input alive. The affected
+CI excerpt cache accepts 128 entries of 16 KiB text, from downloads up to 64 MiB.
+GitLab's raw-trace clamp reaches the same shared excerpt function. Terminal
+session/eager/shutdown buffers, deferred reattach queues, recent-output buffers,
+and error surfaces also retained oversized parents despite their logical caps.
 
-The fix reuses Orca's existing `flattenRetainedSlice` implementation, moving it to
-shared code and preserving its renderer import through a re-export. The public
-excerpt function copies its final, already-capped result. Content, Unicode,
-earlier-error selection, cache count, and transport payloads stay identical.
+The fix reuses the existing shared `ownRetainedString` copier for CI, persisted
+session tails, and main/relay recent output. Renderer queues and errors reuse
+their existing `flattenRetainedSlice` helper. Content, Unicode, earlier-error
+selection, cache counts, and transport payloads stay identical. Ordinary
+untruncated terminal chunks keep their existing path. Main/relay recent output
+preserves chunk boundaries for path-candidate backfill.
 
-The same defect exists at terminal retention boundaries. Session scrollback caps
-and eager/pre-handler/shutdown queues keep 512 KiB tails of oversized strings,
-but their byte ledgers miss the retained parent. The fix copies only truncated
-tails, preserving the existing path for ordinary chunks. Persisted local
-scrollback is already pruned; the session-buffer fix primarily covers remote or
-not-yet-classified owners, while the queue fix covers local and remote output.
-Deferred reattach queues have the same sliced-tail defect. Terminal error state
-keeps eight messages capped at 4,000 characters each, yet those messages can also
-pin oversized source strings; copying the final error surface bounds that storage.
+Local persisted scrollback is already pruned; the session-buffer fix primarily
+covers remote or not-yet-classified owners. Queue and error fixes cover local
+and remote output. The main/relay recent-output buffer has a configurable cap,
+64 Ki characters by default.
 
 ## Reproduce
 
@@ -28,35 +24,35 @@ pin oversized source strings; copying the final error surface bounds that storag
 ORCA_BACKGROUND_LAUNCH=1 node --expose-gc docs/audits/retained-text-slices/reproduce.mjs
 ```
 
-The script bundles the actual shared GitHub/GitLab excerpt functions. Its baseline
-removes only the five new copy boundaries in memory; production files are not changed. It retains
-eight excerpts from distinct 2 MiB-character CI inputs, or eight 512 KiB
-terminal tails from 4 MiB-character inputs, and measures heap after GC. A small regex operation clears V8's independent last-input reference. Bundle
-hashes and all measurements are in [results.json](./results.json).
+The script bundles actual production functions. Its baseline removes only the
+six new copy boundaries in memory; production files are not changed. Each case
+retains eight distinct inputs: 2 Mi characters per CI log and 4 Mi characters
+per terminal input. It measures heap after GC and clears V8's independent legacy
+RegExp input reference. Bundle hashes and measurements are in
+[results.json](./results.json).
 
 | Case                             | Returned bytes, all eight | Retained heap before |     After |
 | -------------------------------- | ------------------------: | -------------------: | --------: |
-| GitHub long line                 |                   131,072 |           16,786,760 |   142,616 |
-| GitHub earlier Unicode error     |                   131,064 |           33,577,472 |   106,392 |
-| GitLab long line                 |                   131,072 |           16,793,272 |   147,520 |
-| Persisted terminal buffers       |                 4,194,304 |           33,555,624 | 4,195,736 |
-| Eager/pre-handler/shutdown tails |                 4,194,304 |           33,555,960 | 4,195,568 |
-| Terminal error surfaces          |                    32,000 |           33,556,120 |    33,272 |
-| Deferred reattach tails          |                 4,194,304 |           33,565,304 | 4,198,352 |
+| GitHub long line                 |                   131,072 |           16,787,512 |   145,224 |
+| GitHub earlier Unicode error     |                   131,064 |           33,577,840 |   112,744 |
+| GitLab long line                 |                   131,072 |           16,793,640 |   147,312 |
+| Persisted terminal buffers       |                 4,194,304 |           33,555,624 | 4,195,032 |
+| Eager/pre-handler/shutdown tails |                 4,194,304 |           33,556,040 | 4,202,608 |
+| Main/relay recent output         |                   524,288 |           33,558,752 |   527,384 |
+| Terminal error surfaces          |                    32,000 |           33,555,864 |    33,336 |
+| Deferred reattach tails          |                 4,194,304 |           33,565,384 | 4,198,352 |
 
 Captured on macOS with Node v26.6.0. Heap samples include allocator/GC variation;
-the order-of-magnitude separation is the relevant result. The focused six-suite
-run passed 41 tests, including actual retained-heap checks, existing byte/content
-contracts, GitLab normalization, and GitHub check-detail integration. A further
-six-suite terminal run passed 69 tests, including actual shutdown queue storage,
-scrollback ownership, pre-handler buffering, reattach, and UTF-8 boundaries.
-After adding error and deferred-reattach coverage, another three-suite run passed
-28 tests, including the actual retained error state and queue objects. Counts are
-per run and overlap.
+the large separation is the relevant result. Regression tests also retain the
+actual error state and shutdown/reattach/recent-output queue objects.
 
-The cap/slice path also exists in `v1.4.198`. Neither #19831 nor #19768 establishes
-repeated CI-log viewing or oversized terminal payloads, so these are demonstrated
-retention mechanisms, not an attribution of either incident. Copying costs at most the final
-16 KiB CI excerpt, 4,000-character error, or truncated terminal tail
-(512 KiB for byte-capped buffers; 512 Ki characters for the reattach queue) and does not lower the
-temporary allocation needed to download or parse the original input.
+Validation passed: 41 tests across six CI/provider/helper suites; 69 tests across
+six terminal storage/ownership/UTF-8 suites; 28 tests across three error/reattach
+suites; and a final 63 tests across seven recent-output/CI/terminal/copier suites.
+These are per-run counts and overlap. Full typecheck and changed-code quality pass.
+
+All six cap/slice paths exist in `v1.4.198`. Neither #19831 nor #19768 establishes
+the CI-log viewing or oversized terminal inputs required for incident attribution.
+Copying costs scale with retained caps: 16 KiB per CI excerpt, 4,000 characters
+per error, 512 KiB for the largest byte-capped buffer, and 512 Ki characters for
+deferred reattach. The change does not reduce temporary original-input allocation.
