@@ -33,6 +33,11 @@ type RawLine = {
   replaceCells(start: number, end: number, fill: RawCell, respectProtect?: boolean): void
 }
 
+type RawBuffer = {
+  lines: { get(row: number): RawLine | undefined }
+  getNullCell(): RawCell
+}
+
 const emulators: HeadlessEmulator[] = []
 const HAS_EXTENDED = 0x10000000
 const longCell = `a${'\u0301'.repeat(4096)}`
@@ -46,12 +51,22 @@ function create(alternate = false): HeadlessEmulator {
   return emulator
 }
 
+function buffer(emulator: HeadlessEmulator): RawBuffer {
+  const terminal = emulator['terminal']
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: These tests exercise the pinned xterm core's internal BufferLine API.
+  return (terminal as typeof terminal & { _core: { buffer: RawBuffer } })._core.buffer
+}
+
 function line(emulator: HeadlessEmulator, row = 0): RawLine {
-  return Reflect.get(Reflect.get(emulator, 'terminal'), '_core').buffer.lines.get(row)
+  const value = buffer(emulator).lines.get(row)
+  if (!value) {
+    throw new Error(`Expected terminal row ${row}`)
+  }
+  return value
 }
 
 function blank(emulator: HeadlessEmulator): RawCell {
-  return Reflect.get(Reflect.get(emulator, 'terminal'), '_core').buffer.getNullCell()
+  return buffer(emulator).getNullCell()
 }
 
 function expectOnlyLiveEntries(value: RawLine): void {

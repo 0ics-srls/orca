@@ -151,11 +151,11 @@ describe('StatsCollector async debounced save', () => {
         collector.record({ type: 'agent_start', at })
         if (at % 5_000 === 0) {
           await vi.advanceTimersByTimeAsync(5_000)
-          expect(Reflect.get(collector, 'events').length).toBeLessThanOrEqual(10_000)
+          expect(collector['events'].length).toBeLessThanOrEqual(10_000)
         }
       }
       expect(gate.writeFileCalls).toBe(1)
-      expect(Reflect.get(collector, 'events')).toEqual(expectedEvents)
+      expect(collector['events']).toEqual(expectedEvents)
     } finally {
       const flushed = collector.flushAsync()
       gate.blocked = false

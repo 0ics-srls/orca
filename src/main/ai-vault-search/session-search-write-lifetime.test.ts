@@ -19,11 +19,7 @@ const message = { role: 'user' as const, text: 'needle', timestamp: null }
 const outcome = { session: syntheticSession(), byteOffset: 100, incomplete: false }
 
 function trackedPaths(): number {
-  const paths = Reflect.get(writer, 'activeWrites')
-  if (!(paths instanceof Map)) {
-    throw new Error('Expected active-write tracking')
-  }
-  return paths.size
+  return writer['activeWrites'].size
 }
 
 function openRead(named = true): TranscriptMessageChannel {
