@@ -27,9 +27,25 @@ export function nativeChatSessionChoiceLabel(
   optionId?: string
 ): string {
   if (optionId === 'permissionMode') {
-    return choice.value === 'plan'
-      ? translate('components.native-chat.composer.optionValue.plan', 'Plan')
-      : translate('components.native-chat.composer.optionValue.normal', 'Normal')
+    switch (choice.value) {
+      case 'default':
+        return translate('components.native-chat.composer.optionValue.normal', 'Normal')
+      case 'acceptEdits':
+        return translate('components.native-chat.composer.optionValue.acceptEdits', 'Accept edits')
+      case 'bypassPermissions':
+        return translate(
+          'components.native-chat.composer.optionValue.bypassPermissions',
+          'Bypass permissions'
+        )
+      case 'plan':
+        return translate('components.native-chat.composer.optionValue.plan', 'Plan')
+      case 'dontAsk':
+        return translate('components.native-chat.composer.optionValue.dontAsk', "Don't ask")
+      case 'auto':
+        return translate('components.native-chat.composer.optionValue.auto', 'Auto')
+      default:
+        return choice.label
+    }
   }
   switch (choice.value) {
     case 'minimal':

@@ -224,7 +224,37 @@ describe('structured agent session options', () => {
       valueSource: 'reported',
       kind: {
         currentValue: 'plan',
-        choices: [{ value: 'acceptEdits' }, { value: 'plan' }]
+        choices: [
+          { value: 'acceptEdits', label: 'Accept edits' },
+          { value: 'plan', label: 'Plan' }
+        ]
+      }
+    })
+  })
+
+  it('names a non-plan restore mode instead of collapsing it to Normal', () => {
+    const state = applyStructuredAgentSessionOptions(
+      createStructuredAgentSessionOptionState('claude'),
+      CLAUDE_SESSION_OPTION_CATALOG,
+      {
+        models: [{ id: 'account-model', label: 'Account Model', isDefault: true, efforts: [] }],
+        permissionModeRestoreValue: 'bypassPermissions',
+        current: {
+          model: 'account-model',
+          permissionMode: 'plan',
+          confirmed: ['permissionMode']
+        }
+      }
+    )
+
+    expect(
+      structuredAgentSessionOptionSnapshot(state).find(({ id }) => id === 'permissionMode')
+    ).toMatchObject({
+      kind: {
+        choices: [
+          { value: 'bypassPermissions', label: 'Bypass permissions' },
+          { value: 'plan', label: 'Plan' }
+        ]
       }
     })
   })

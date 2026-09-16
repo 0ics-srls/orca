@@ -168,6 +168,10 @@ export type ClaudeSession = {
   dispatchSequence: number
   /** Fences overlapping option writes so a late completion cannot restore stale state. */
   optionMutationSequence: number
+  /** Permission-mode writes have independent ownership from model and effort mutations. */
+  permissionModeMutationSequence: number
+  /** Permission-mode mutation current when the provider last reported the desired mode. */
+  reportedPermissionModeMutation: number
   /** Shared durable-close write; a failed write clears this for a retry. */
   closePersistence?: Promise<void>
   /** Shared full close/finalization operation; a failed operation clears this for a retry. */

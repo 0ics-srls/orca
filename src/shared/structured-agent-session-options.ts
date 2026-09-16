@@ -21,6 +21,10 @@ import {
   decodeStructuredAgentSessionOptionValue,
   encodeStructuredAgentSessionOptionValue
 } from './structured-agent-session-option-codec'
+import {
+  readStructuredAgentSessionPermissionMode,
+  structuredAgentSessionPermissionModeLabel
+} from './structured-agent-session-permission-mode'
 
 function effortOption(model: AgentSessionOptionsResult['models'][number]): CatalogOption | null {
   if (model.efforts.length <= 1) {
@@ -61,15 +65,19 @@ function sessionOption(
   if (!permissionModeRestoreValue || permissionModeRestoreValue === 'plan') {
     return null
   }
+  const restoreMode = readStructuredAgentSessionPermissionMode(permissionModeRestoreValue)
+  if (!restoreMode) {
+    return null
+  }
   return {
     ...option,
     kind: {
       type: 'select',
       choices: [
-        { value: permissionModeRestoreValue, label: 'Normal' },
+        { value: restoreMode, label: structuredAgentSessionPermissionModeLabel(restoreMode) },
         { value: 'plan', label: 'Plan' }
       ],
-      defaultValue: permissionModeRestoreValue
+      defaultValue: restoreMode
     }
   }
 }

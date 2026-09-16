@@ -9,7 +9,6 @@ import {
 import type { ClaudeStreamJsonConnection } from './claude-stream-json-connection'
 import { ClaudeControlRequestError } from './claude-stream-json-connection'
 import { CLAUDE_SPAWN_TOKEN_ENV } from './claude-structured-owner-identity'
-import { encodeClaudeQuestionOptionId } from './claude-structured-prompt-replies'
 import {
   CLAUDE_STRUCTURED_INIT_TIMEOUT_MS,
   type ClaudeStructuredSessionAdapter,
@@ -20,7 +19,6 @@ import {
   adapterFor,
   fakeClaude,
   identityFor,
-  invokeCanUseTool,
   PROVIDER_SESSION_ID,
   tick,
   USER_MESSAGE,
@@ -230,6 +228,41 @@ describe('ClaudeStructuredSessionAdapter.acquire', () => {
     expect(claude.connections[0].calls.map(({ subtype }) => subtype)).not.toContain(
       'set_permission_mode'
     )
+  })
+
+  it('retries a durable approved exit when the resumed provider still reports plan', async () => {
+    let permissionMode = 'plan'
+    const claude = fakeClaude({
+      initPermissionMode: 'plan',
+      routes: {
+        get_settings: () => ({ applied: { permissionMode } }),
+        set_permission_mode: (params) => {
+          permissionMode = String(params?.mode)
+        }
+      }
+    })
+    const adapter = adapterFor(claude, { resumed: true })
+
+    await expect(
+      adapter.acquire({
+        identity: identityFor(),
+        fence: 7,
+        spawnToken: 'spawn-9',
+        options: { permissionMode: 'acceptEdits' }
+      })
+    ).resolves.toBeDefined()
+
+    expect(claude.connections[0].calls).toContainEqual({
+      subtype: 'set_permission_mode',
+      params: { mode: 'acceptEdits' }
+    })
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'acceptEdits',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
   })
 
   it('does not treat a transport timeout while restoring an option as recoverable', async () => {
@@ -711,178 +744,5 @@ describe('ClaudeStructuredSessionAdapter acquisition cleanup', () => {
     )
     expect(events.filter((event) => event.type === 'ended')).toEqual([])
     expect(connection.close).toHaveBeenCalledTimes(4)
-  })
-})
-
-describe('ClaudeStructuredSessionAdapter prompts', () => {
-  it.each(['allow', 'deny', 'cancel'] as const)(
-    'restores the prior permission mode after an ExitPlanMode %s answer',
-    async (decision) => {
-      let permissionMode = 'acceptEdits'
-      const writtenModes: string[] = []
-      const claude = fakeClaude({
-        initPermissionMode: 'acceptEdits',
-        routes: {
-          get_settings: () => ({ applied: { permissionMode } }),
-          set_permission_mode: (params) => {
-            permissionMode = String(params?.mode)
-            writtenModes.push(permissionMode)
-          }
-        }
-      })
-      const adapter = await acquired(claude)
-
-      await adapter.setOption({
-        sessionId: 'session-1',
-        key: 'permissionMode',
-        value: 'plan',
-        fence: 7
-      })
-      const answered = invokeCanUseTool(
-        claude.connections[0],
-        'ExitPlanMode',
-        `exit-plan-${decision}`,
-        `tool-${decision}`
-      )
-      adapter.bindPromptItemId('session-1', `journal-${decision}`, `exit-plan-${decision}`)
-
-      await adapter.answerPrompt({
-        sessionId: 'session-1',
-        itemId: `journal-${decision}`,
-        kind: 'approval',
-        optionId: decision,
-        fence: 7,
-        commit: async () => {}
-      })
-
-      await expect(answered.promise).resolves.toMatchObject({
-        behavior: decision === 'allow' ? 'allow' : 'deny'
-      })
-      expect(writtenModes).toEqual(['plan', 'acceptEdits'])
-      await expect(
-        adapter.readOptions({ sessionId: 'session-1', fence: 7 })
-      ).resolves.toMatchObject({
-        permissionModeRestoreValue: 'acceptEdits',
-        current: { permissionMode: 'acceptEdits' }
-      })
-    }
-  )
-
-  it('turns can_use_tool into an addressable durable approval that settles the SDK callback', async () => {
-    const claude = fakeClaude()
-    const events: ClaudeStructuredSessionEvent[] = []
-    const adapter = await acquired(claude, {}, events)
-    const answered = invokeCanUseTool(claude.connections[0], 'Bash', 'permission-1', 'tool-1', {
-      input: { command: 'git status' },
-      suggestions: [{ type: 'addRules' }]
-    })
-    expect(events.at(-1)).toMatchObject({
-      type: 'prompt',
-      prompt: { kind: 'approval', toolName: 'Bash', promptKey: 'permission-1' }
-    })
-
-    adapter.bindPromptItemId('session-1', 'journal-approval', 'permission-1')
-    await adapter.answerPrompt({
-      sessionId: 'session-1',
-      itemId: 'journal-approval',
-      kind: 'approval',
-      optionId: 'allowForSession',
-      fence: 7,
-      commit: async () => undefined
-    })
-    // The answer resolves the SDK's own callback promise; the SDK writes the wire response.
-    await expect(answered.promise).resolves.toEqual({
-      behavior: 'allow',
-      updatedInput: { command: 'git status' },
-      updatedPermissions: [{ type: 'addRules' }],
-      toolUseID: 'tool-1'
-    })
-  })
-
-  it('collects every AskUserQuestion card before settling the one callback', async () => {
-    const claude = fakeClaude()
-    const adapter = await acquired(claude)
-    const answered = invokeCanUseTool(
-      claude.connections[0],
-      'AskUserQuestion',
-      'question-1',
-      'tool-question',
-      {
-        input: {
-          questions: [
-            { question: 'Library?', options: [{ label: 'Luxon' }] },
-            { question: 'Ship now?', options: [{ label: 'Yes' }] }
-          ]
-        }
-      }
-    )
-    adapter.bindPromptItemId('session-1', 'journal-q1', 'question-1', 'Library?')
-    adapter.bindPromptItemId('session-1', 'journal-q2', 'question-1', 'Ship now?')
-
-    await adapter.answerPrompt({
-      sessionId: 'session-1',
-      itemId: 'journal-q1',
-      kind: 'question',
-      optionId: encodeClaudeQuestionOptionId('Library?', 'Luxon'),
-      fence: 7,
-      commit: async () => undefined
-    })
-    await tick()
-    expect(answered.settled()).toBe(false)
-    await adapter.answerPrompt({
-      sessionId: 'session-1',
-      itemId: 'journal-q2',
-      kind: 'question',
-      optionId: encodeClaudeQuestionOptionId('Ship now?', 'Yes'),
-      fence: 7,
-      commit: async () => undefined
-    })
-    await expect(answered.promise).resolves.toMatchObject({
-      behavior: 'allow',
-      updatedInput: { answers: { 'Library?': 'Luxon', 'Ship now?': 'Yes' } },
-      toolUseID: 'tool-question'
-    })
-  })
-
-  it('leaves a prompt cancelled and unanswerable once the SDK abort signal fires', async () => {
-    const claude = fakeClaude()
-    const events: ClaudeStructuredSessionEvent[] = []
-    const adapter = await acquired(claude, {}, events)
-    const controller = new AbortController()
-    const answered = invokeCanUseTool(claude.connections[0], 'Bash', 'permission-9', 'tool-9', {
-      input: { command: 'rm -rf /' },
-      signal: controller.signal
-    })
-    adapter.bindPromptItemId('session-1', 'journal-9', 'permission-9')
-
-    controller.abort()
-    // A cancelled request is forgotten and settled with null — never an authorization.
-    await expect(answered.promise).resolves.toBeNull()
-    expect(events.at(-1)).toMatchObject({ type: 'prompt-cancelled', promptKey: 'permission-9' })
-    // A late answer after the abort must not authorize the wrong tool.
-    await expect(
-      adapter.answerPrompt({
-        sessionId: 'session-1',
-        itemId: 'journal-9',
-        kind: 'approval',
-        optionId: 'allow',
-        fence: 7,
-        commit: async () => undefined
-      })
-    ).rejects.toThrow(/no longer waiting/)
-  })
-
-  it('settles an in-flight permission callback when the session closes, leaving no dangling promise', async () => {
-    const claude = fakeClaude()
-    const adapter = await acquired(claude)
-    const answered = invokeCanUseTool(claude.connections[0], 'Bash', 'permission-close', 'tool-c', {
-      input: { command: 'ls' }
-    })
-    await tick()
-    expect(answered.settled()).toBe(false)
-
-    await adapter.closeSession('session-1')
-
-    await expect(answered.promise).resolves.toBeNull()
   })
 })

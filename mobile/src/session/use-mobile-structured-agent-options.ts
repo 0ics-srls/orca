@@ -44,9 +44,11 @@ export function useMobileStructuredAgentOptions(args: {
   sessionId: string | null
   enabled: boolean
   fence: number | null
+  turnId: string | null
+  optionsRevision: number
   mutate: StructuredAgentSessionMutate
 }): StructuredOptionsController {
-  const { agent, client, enabled, fence, mutate, sessionId } = args
+  const { agent, client, enabled, fence, mutate, optionsRevision, sessionId, turnId } = args
   const [optionState, setOptionState] = useState(() =>
     createStructuredAgentSessionOptionState(agent ?? 'codex')
   )
@@ -54,6 +56,7 @@ export function useMobileStructuredAgentOptions(args: {
   const activeOptionRecordRef = useRef(optionState.record)
   const pendingOptionRef = useRef<string | null>(null)
   const optionMutationGeneration = useRef(0)
+  const optionReadSequence = useRef(0)
   const updateOptionState = useCallback(
     (update: (current: StructuredAgentSessionOptionState) => StructuredAgentSessionOptionState) => {
       const next = update(optionStateRef.current)
@@ -90,9 +93,14 @@ export function useMobileStructuredAgentOptions(args: {
     }
     let stale = false
     const readGeneration = optionMutationGeneration.current
+    const readSequence = ++optionReadSequence.current
     void callAgentSession<AgentSessionOptionsResult>(client, 'agentSession.options', { sessionId })
       .then((result) => {
-        if (!stale && optionMutationGeneration.current === readGeneration) {
+        if (
+          !stale &&
+          optionMutationGeneration.current === readGeneration &&
+          optionReadSequence.current === readSequence
+        ) {
           setConversationSupport({ sessionId, commands: result.conversationCommands ?? [] })
           updateOptionState((current) =>
             current.record === activeOptionRecordRef.current
@@ -105,7 +113,7 @@ export function useMobileStructuredAgentOptions(args: {
     return () => {
       stale = true
     }
-  }, [client, enabled, optionCatalog, sessionId, fence, updateOptionState])
+  }, [client, enabled, optionCatalog, optionsRevision, sessionId, fence, turnId, updateOptionState])
 
   const optionSnapshot = useMemo(
     () => structuredAgentSessionOptionSnapshot(optionState),
@@ -160,13 +168,15 @@ export function useMobileStructuredAgentOptions(args: {
             })
           }
           if (result.sameFence) {
+            const readSequence = ++optionReadSequence.current
             void callAgentSession<AgentSessionOptionsResult>(client, 'agentSession.options', {
               sessionId
             })
               .then((refreshed) => {
                 if (
                   activeOptionRecordRef.current === targetRecord &&
-                  optionMutationGeneration.current === mutationGeneration
+                  optionMutationGeneration.current === mutationGeneration &&
+                  optionReadSequence.current === readSequence
                 ) {
                   updateOptionState((latest) =>
                     latest.record === targetRecord

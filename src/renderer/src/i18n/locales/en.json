@@ -17172,6 +17172,10 @@
         "optionValue": {
           "fast": "Fast",
           "normal": "Normal",
+          "acceptEdits": "Accept edits",
+          "bypassPermissions": "Bypass permissions",
+          "dontAsk": "Don't ask",
+          "auto": "Auto",
           "plan": "Plan",
           "minimal": "Minimal",
           "low": "Low",

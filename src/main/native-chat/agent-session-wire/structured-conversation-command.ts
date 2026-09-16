@@ -54,6 +54,7 @@ export function runStructuredConversationCommand(
       envelope,
       journal: context.sessions.get(sessionId)?.journal,
       publish: (journal) => context.publish(sessionId, journal),
+      publishOptions: () => context.publishOptions(sessionId),
       flushStreamedEvents: context.flushStreamedEvents,
       now: context.now,
       plan: {

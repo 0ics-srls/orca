@@ -178,6 +178,8 @@ export type AgentSessionSubscribeEvent =
       commands?: AgentSessionSlashCommand[] | null
       /** Additive ephemeral state; it never creates or advances journal rows. */
       activity?: AgentSessionTurnActivity | null
+      /** Provider-owned option state changed; connected clients should reread it. */
+      optionsChanged?: true
     } & AgentSessionHostClockField)
   | ({
       type: 'reset'

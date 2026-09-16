@@ -36,6 +36,8 @@ export type AgentSessionTurnContext = {
   /** Opaque client identity recorded as the resolver of a prompt. */
   resolvedBy: string
   publish: () => void
+  /** Announces provider-owned option state that connected clients must reread. */
+  publishOptions: () => void
   /** Drains provider lifecycle already accepted by the execution host. */
   flushStreamedEvents: () => Promise<void>
   now: () => number

@@ -50,18 +50,31 @@ export function readClaudeSettingsPermissionMode(
 }
 
 export function observeClaudeUserPermissionMode(session: ClaudeSession, value: unknown): void {
-  if (!session.options.has('permissionMode')) {
+  if (
+    session.confirmedOptions.has('permissionMode') &&
+    session.reportedPermissionModeMutation === session.permissionModeMutationSequence
+  ) {
     return
   }
   const permissionMode = readStructuredAgentSessionPermissionMode(record(value)?.permissionMode)
   if (!permissionMode) {
     return
   }
+  const previousPermissionMode = session.reportedOptions.permissionMode
+  const wasConfirmed = session.confirmedOptions.has('permissionMode')
   session.reportedOptions.permissionMode = permissionMode
-  if (session.options.get('permissionMode') === permissionMode) {
+  const desiredPermissionMode = session.options.get('permissionMode') ?? session.basePermissionMode
+  if (desiredPermissionMode === permissionMode) {
+    session.reportedPermissionModeMutation = session.permissionModeMutationSequence
     session.confirmedOptions.add('permissionMode')
   } else {
     session.confirmedOptions.delete('permissionMode')
+  }
+  if (
+    previousPermissionMode !== permissionMode ||
+    wasConfirmed !== session.confirmedOptions.has('permissionMode')
+  ) {
+    session.events?.optionsChanged?.()
   }
 }
 
@@ -233,6 +246,7 @@ export async function readClaudeStructuredSessionOptions(
   timeoutMs: number | undefined
 ): Promise<AgentSessionOptionsResult> {
   const readMutationSequence = session.optionMutationSequence
+  const readPermissionModeMutation = session.permissionModeMutationSequence
   const [catalog, settings] = await Promise.all([
     session.connection.supportedModels({ timeoutMs }).catch(() => null),
     session.connection.getSettings({ timeoutMs }).catch(() => null)
@@ -241,9 +255,6 @@ export async function readClaudeStructuredSessionOptions(
     const effort = readClaudeSettingsEffort(settings)
     const fastMode = readClaudeSettingsFastMode(settings)
     const perSessionOptIn = readClaudeSettingsFastModePerSessionOptIn(settings)
-    const permissionMode = session.options.has('permissionMode')
-      ? readClaudeSettingsPermissionMode(settings)
-      : null
     if (effort) {
       session.reportedOptions.effort = effort
     }
@@ -257,9 +268,21 @@ export async function readClaudeStructuredSessionOptions(
     if (perSessionOptIn !== null) {
       session.fastModePerSessionOptIn = perSessionOptIn
     }
+  }
+  if (
+    settings !== null &&
+    readPermissionModeMutation === session.permissionModeMutationSequence &&
+    session.basePermissionMode &&
+    (session.options.has('permissionMode') ||
+      session.reportedPermissionModeMutation !== readPermissionModeMutation)
+  ) {
+    const permissionMode = readClaudeSettingsPermissionMode(settings)
     if (permissionMode) {
       session.reportedOptions.permissionMode = permissionMode
-      if (session.options.get('permissionMode') === permissionMode) {
+      const desiredPermissionMode =
+        session.options.get('permissionMode') ?? session.basePermissionMode
+      if (desiredPermissionMode === permissionMode) {
+        session.reportedPermissionModeMutation = readPermissionModeMutation
         session.confirmedOptions.add('permissionMode')
       } else {
         session.confirmedOptions.delete('permissionMode')
@@ -295,7 +318,10 @@ export async function readClaudeStructuredSessionOptions(
     session.reportedOptions.fastMode ??
     (session.fastModeState === undefined ? undefined : session.fastModeState !== 'off')
   const support = claudeFastModeSupport(discovered, session.fastModeDisabledReason)
-  const permissionMode = session.reportedOptions.permissionMode
+  const permissionMode =
+    readStructuredAgentSessionPermissionMode(session.options.get('permissionMode')) ??
+    session.basePermissionMode ??
+    session.reportedOptions.permissionMode
   const confirmed = [
     ...(current.confirmed ? ['model'] : []),
     ...(effort && session.confirmedOptions.has('effort') ? ['effort'] : []),

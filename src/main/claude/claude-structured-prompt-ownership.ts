@@ -188,11 +188,11 @@ export async function cancelClaudeStructuredTurn(input: {
   }
 }
 
-export async function answerClaudeStructuredPrompt(input: {
-  request: AnswerInput
-  sessions: Map<string, ClaudeSession>
-}): Promise<void> {
-  const { request, sessions } = input
+export async function answerClaudeStructuredPrompt(
+  request: AnswerInput,
+  sessions: Map<string, ClaudeSession>,
+  timeoutMs?: number
+): Promise<void> {
   const session = sessions.get(request.sessionId)
   if (!session || session.fence !== request.fence) {
     throw new AgentSessionPromptUnavailableError(request.itemId)
@@ -212,7 +212,7 @@ export async function answerClaudeStructuredPrompt(input: {
     ) {
       throw new AgentSessionPromptUnavailableError(request.itemId)
     }
-    await answerClaudePrompt(session, claim, request.optionId)
+    await answerClaudePrompt(session, claim, request.optionId, request.settleOptions, timeoutMs)
   } catch (error) {
     session.prompts.releaseClaim(claim)
     throw error

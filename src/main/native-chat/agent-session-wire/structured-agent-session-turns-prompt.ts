@@ -74,6 +74,14 @@ export async function performPrompt(
           }
         )
         ctx.publish()
+      },
+      settleOptions: async (options) => {
+        try {
+          await ctx.persistOptions(options)
+          ctx.publish()
+        } finally {
+          ctx.publishOptions()
+        }
       }
     })
   } catch (error) {

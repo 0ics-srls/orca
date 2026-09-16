@@ -129,8 +129,12 @@ export function attachStructuredAgentSession(
                 acquisitionGeneration
               })
             }
-            await bindAndDrain(eventSink, attached.journal, fence, (activity) =>
-              context.subscribers.publish(sessionId, attached.journal, activity)
+            await bindAndDrain(
+              eventSink,
+              attached.journal,
+              fence,
+              (activity) => context.subscribers.publish(sessionId, attached.journal, activity),
+              () => context.subscribers.optionsChanged(sessionId)
             )
           } catch (error) {
             await agentSessionJournalCloseRetries.closeOrRetain(attached.journal)
@@ -207,9 +211,10 @@ async function bindAndDrain(
   eventSink: DeferredStructuredAgentSessionEventSink,
   journal: AgentSessionJournal,
   fence: number,
-  publish: (activity?: AgentSessionTurnActivity | null) => void
+  publish: (activity?: AgentSessionTurnActivity | null) => void,
+  publishOptions: () => void
 ): Promise<void> {
-  eventSink.bind({ journal, fence, publish })
+  eventSink.bind({ journal, fence, publish, publishOptions })
   const barrier = await eventSink.drained()
   if (!barrier.ok) {
     throw barrier.error
