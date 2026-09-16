@@ -6,7 +6,8 @@ Run from the repository root:
 ORCA_BACKGROUND_LAUNCH=1 node docs/audits/structured-hold-retention/reproduce.mjs
 ```
 
-The script bundles the actual `StructuredAgentSessionHolds` implementation in memory. It runs it
+The script bundles the actual `StructuredAgentSessionHolds` implementation into temporary CommonJS
+modules, loads them normally, and removes their files and module-cache entries. It runs the code
 once without the post-resume holder check and once with the current source. It uses a deferred
 provider acquisition, an isolated fake child, and a 5 ms release grace. It launches no application,
 provider, or terminal and reads no user profile.
