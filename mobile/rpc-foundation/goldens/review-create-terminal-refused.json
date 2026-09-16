@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "fd443c85a6d2b0c1355e29f6f366e35d330a2033c7ddb90ab6713584ddda2f6f",
   "scenarioSha256": "af837de2e273c5f03130b51d6e1a9bff9ff99a4e8d1c9554a53134acb5924c72",
   "platform": "darwin",
@@ -47,10 +47,6 @@
       "sendSheet": {
         "$rpc": "null"
       }
-    },
-    "58d16e8809a2": {
-      "name": "session.tabs.createTerminal#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.createTerminal\",\"params\":{\"worktree\":\"id:workspace-1\",\"activate\":false,\"select\":true,\"navigation\":\"caller\"}}"
     },
     "6e913cd7b306": {
       "status": "rejected",
@@ -98,6 +94,11 @@
           "ok": false
         }
       }
+    },
+    "af416f104f9a": {
+      "name": "session.tabs.createTerminal#1",
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"session.tabs.createTerminal\",\"params\":{\"worktree\":\"id:workspace-1\",\"activate\":false,\"select\":true,\"navigation\":\"caller\"}}",
+      "sent": 1
     }
   },
   "recording": {
@@ -107,7 +108,7 @@
         "id": "refused",
         "observation": {
           "sender": ["80f030a6d6a9"],
-          "payloads": ["58d16e8809a2"],
+          "payloads": ["af416f104f9a"],
           "settlements": {
             "create-and-send": "6e913cd7b306"
           },

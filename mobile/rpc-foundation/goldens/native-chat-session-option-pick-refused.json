@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "b98a3ca3818678b88cf629bc4635300a103637126a136f025a1600dc16f08008",
   "scenarioSha256": "57b60064eca4526e5d533de5862e7e86ba69b6722cd04692228bdc768486cd76",
   "platform": "darwin",
@@ -58,9 +58,10 @@
     "0aa1124bf746": {
       "settled": "settled"
     },
-    "9c0980cfe789": {
+    "71ba996139a2": {
       "name": "settings.mutateNativeChatSessionOptions#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.mutateNativeChatSessionOptions\",\"params\":{\"type\":\"apply-picks\",\"agent\":\"claude\",\"picks\":[{\"modelId\":\"opus\",\"optionId\":\"model\",\"value\":\"opus\"}]}}"
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.mutateNativeChatSessionOptions\",\"params\":{\"type\":\"apply-picks\",\"agent\":\"claude\",\"picks\":[{\"modelId\":\"opus\",\"optionId\":\"model\",\"value\":\"opus\"}]}}",
+      "sent": 1
     },
     "eb79a9b3682a": {
       "status": "fulfilled",
@@ -78,7 +79,7 @@
         "id": "refusal-swallowed",
         "observation": {
           "sender": ["087f0393107f"],
-          "payloads": ["9c0980cfe789"],
+          "payloads": ["71ba996139a2"],
           "settlements": {
             "pick": "eb79a9b3682a"
           },
