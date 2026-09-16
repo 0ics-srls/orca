@@ -40,7 +40,7 @@ export const AgentLaunch = z.object({
     z.object({
       kind: z.literal('create-worktree'),
       /** The `worktree.create` request verbatim, so a caller migrating to this method keeps its
-       *  existing payload; the agent fields in it are stripped rather than honoured. */
+       *  existing payload; the fields the launch owns are stripped rather than honoured. */
       create: WorktreeCreate
     })
   ]),

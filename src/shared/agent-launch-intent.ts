@@ -40,8 +40,9 @@ export type AgentLaunchPrompt = {
 export type AgentLaunchTarget =
   /** A workspace that already exists, addressed by any selector the runtime resolves. */
   | { kind: 'existing'; worktree: string }
-  /** A worktree this launch creates. `create` is the `worktree.create` request minus its agent
-   *  fields — the launch owns those, so a caller cannot set a startup agent behind the router. */
+  /** A worktree this launch creates. `create` is the `worktree.create` request minus
+   *  `AGENT_LAUNCH_RESERVED_CREATE_FIELDS`, so a caller can neither set a startup agent behind the
+   *  router nor file the launch under a second dedupe key. */
   | { kind: 'create-worktree'; create: Readonly<Record<string, unknown>> }
 
 /** An existing terminal the caller wants reused rather than a fresh surface. Always resolves to a
