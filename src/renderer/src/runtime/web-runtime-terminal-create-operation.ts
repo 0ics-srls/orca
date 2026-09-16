@@ -1,3 +1,5 @@
+import { buildDefaultTerminalOptions } from '@/lib/pane-manager/pane-terminal-options'
+import { createAgentSessionKeyboardOptions } from './agent-session-keyboard-capability'
 import type { RuntimeRpcResponse } from '../../../shared/runtime-rpc-envelope'
 import type { RuntimeMobileSessionCreateTerminalResult } from '../../../shared/runtime-types'
 import type {
@@ -85,6 +87,10 @@ export async function createWebRuntimeSessionTerminalResult(
     const agentArgsOverride =
       args.agentArgs !== undefined ? args.agentArgs : args.launchConfig?.agentArgs
     if (agent) {
+      // Paired panes retain the default keyboard advertisement, including on Windows clients.
+      const keyboardOptions = createAgentSessionKeyboardOptions(
+        buildDefaultTerminalOptions().vtExtensions?.kittyKeyboard
+      )
       let legacyAlreadyPlacedInGroup = false
       // Why: structured creation cannot yet express afterTabId; keep the exact legacy placement contract until it can.
       // Why: focus belongs to the paired client; a headless execution host has no renderer to focus.
@@ -99,6 +105,7 @@ export async function createWebRuntimeSessionTerminalResult(
                   (await callEnvironment({
                     method: 'terminal.ensureAgentSession',
                     params: {
+                      ...(await keyboardOptions(environmentId)),
                       kind: 'explicit',
                       worktree: toRuntimeWorktreeSelector(args.worktreeId),
                       agent,
@@ -123,6 +130,7 @@ export async function createWebRuntimeSessionTerminalResult(
                     method: 'terminal.createAgentSession',
                     params: withAgentSessionCreateOperationId(
                       {
+                        ...(await keyboardOptions(environmentId)),
                         worktree: toRuntimeWorktreeSelector(args.worktreeId),
                         agent,
                         ...(args.prompt ? { prompt: args.prompt } : {}),
