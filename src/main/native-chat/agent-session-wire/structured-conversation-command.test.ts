@@ -263,6 +263,33 @@ describe('host conversation commands', () => {
     await running
   })
 
+  it('closes a session while a compaction still awaits its terminal frame', async () => {
+    let finish!: (value: {}) => void
+    compact.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          finish = resolve
+        })
+    )
+    const running = host.conversationCommand(caller, commandParams('compact'))
+    await vi.waitFor(() => expect(compact).toHaveBeenCalled())
+
+    let parked: ReturnType<typeof setTimeout>
+    const outcome = await Promise.race([
+      host.close(HOST_TEST_SESSION).then(() => 'closed' as const),
+      new Promise<'parked'>((resolve) => {
+        parked = setTimeout(() => resolve('parked'), 2_000)
+      })
+    ])
+    clearTimeout(parked!)
+
+    expect(outcome).toBe('closed')
+    expect(host.hasSession(HOST_TEST_SESSION)).toBe(false)
+
+    finish({})
+    await running.catch(() => undefined)
+  })
+
   it('reconstructs a committed replacement after the ledger settlement is lost', async () => {
     const persist = store.recordOperationOutcome.bind(store)
     vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {

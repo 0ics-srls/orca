@@ -19,6 +19,7 @@ import type {
   AgentSessionPromptResult,
   AgentSessionSendResult
 } from '../../../shared/agent-session-wire'
+import { structuredAgentSessionControlLaneFor } from './structured-agent-session-control-lane'
 import { admitAndRunAgentSessionMutation } from './structured-agent-session-mutation-admission'
 import {
   cancelPlan,
@@ -111,16 +112,15 @@ export function cancelStructuredAgentSessionTurn(
     taskId?: string
   }
 ): Promise<AgentSessionMutationResult<AgentSessionCancelResult>> {
-  const command = context.deps.store.getRecord(params.envelope.sessionId)?.conversationCommand
-  // Interrupts must reach a provider while the command awaits its terminal frame.
-  const cancellationContext =
-    command?.command === 'compact' && command.phase === 'prepared'
-      ? {
-          ...context,
-          serialize: <T>(sessionId: string, task: () => Promise<T>) =>
-            context.serialize(`compact-cancel:${sessionId}`, task)
-        }
-      : context
+  // Interrupts must reach a provider while a command awaits its terminal frame.
+  const cancellationContext = {
+    ...context,
+    serialize: <T>(sessionId: string, task: () => Promise<T>) =>
+      context.serialize(
+        structuredAgentSessionControlLaneFor(sessionId, context.deps.store.getRecord(sessionId)),
+        task
+      )
+  }
   return mutate(cancellationContext, caller, params.envelope, cancelPlan(params))
 }
 

@@ -6,7 +6,7 @@
 // still the current one.
 
 import { useCallback, useRef, useState } from 'react'
-import * as conversationCommands from './structured-conversation-command-send'
+import { isUnconfirmedConversationCommand } from './structured-conversation-command-claim'
 import type { AgentSessionMutationResult } from '../../../../shared/agent-session-wire'
 import { agentSessionRefusalOperationState } from '../../../../shared/agent-session-refusal-retry'
 import { structuredAgentSessionPayloadFingerprint } from '../../../../shared/structured-agent-session-mutation'
@@ -14,11 +14,18 @@ import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { structuredSessionOperationId } from './use-structured-agent-session-outbox'
 
+export type StructuredAgentSessionMutateOptions = {
+  operationId?: string
+  /** Called instead of returning a verdict when no reply arrived. A refusal is a decision; a
+   *  missing reply is not, and the request it belongs to may still be running. */
+  onUnresolved?: (message: string) => void
+}
+
 export type StructuredAgentSessionMutate = <T>(
   method: string,
   fingerprintMethod: string,
   fields: Record<string, unknown>,
-  operationIdOverride?: string | null
+  options?: StructuredAgentSessionMutateOptions
 ) => Promise<T | null>
 
 export function useStructuredAgentSessionMutate(args: {
@@ -37,7 +44,7 @@ export function useStructuredAgentSessionMutate(args: {
       method: string,
       fingerprintMethod: string,
       fields: Record<string, unknown>,
-      operationIdOverride?: string | null
+      options?: StructuredAgentSessionMutateOptions
     ): Promise<T | null> => {
       if (stateRef.current.fence === null) {
         return null
@@ -45,7 +52,7 @@ export function useStructuredAgentSessionMutate(args: {
       const targetFence = stateRef.current.fence
       const key = `${sessionId}:${fingerprintMethod}:${JSON.stringify(fields)}`
       const clientOperationId =
-        operationIdOverride ?? operationIds.current.get(key) ?? structuredSessionOperationId()
+        options?.operationId ?? operationIds.current.get(key) ?? structuredSessionOperationId()
       operationIds.current.set(key, clientOperationId)
       let result: AgentSessionMutationResult<T>
       try {
@@ -63,9 +70,11 @@ export function useStructuredAgentSessionMutate(args: {
           ...fields
         })
       } catch (error) {
+        const message = error instanceof Error ? error.message : 'Request was not sent'
         if (stateRef.current.fence === targetFence) {
-          setWriteError(error instanceof Error ? error.message : 'Request was not sent')
+          setWriteError(message)
         }
+        options?.onUnresolved?.(message)
         return null
       }
       if (!result.ok) {
@@ -83,7 +92,7 @@ export function useStructuredAgentSessionMutate(args: {
       if (stateRef.current.fence !== targetFence) {
         return null
       }
-      if (!conversationCommands.isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {
+      if (!isUnconfirmedConversationCommand(fingerprintMethod, result.value)) {
         operationIds.current.delete(key)
       }
       setWriteError(null)

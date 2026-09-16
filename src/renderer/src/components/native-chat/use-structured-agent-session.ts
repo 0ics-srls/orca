@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import * as conversationCommands from './structured-conversation-command-send'
 import type {
   AgentSessionOptionResult,
   AgentSessionOptionsResult,
@@ -7,10 +6,7 @@ import type {
 } from '../../../../shared/agent-session-wire'
 import { useStructuredAgentSessionOutbox } from './use-structured-agent-session-outbox'
 import { useStructuredAgentSessionMutate } from './use-structured-agent-session-mutate'
-import type {
-  AgentSessionConversationCommand,
-  AgentSessionConversationCommandResult
-} from '../../../../shared/agent-session-conversation-command'
+import type { AgentSessionConversationCommand } from '../../../../shared/agent-session-conversation-command'
 import type { AgentType } from '../../../../shared/agent-status-types'
 import { getAgentSessionOptionCatalog } from '../../../../shared/agent-session-option-catalog'
 import type { SessionOptionsSurface } from '../../../../shared/native-chat-session-options'
@@ -31,6 +27,7 @@ import type { RuntimeClientTarget } from '@/runtime/runtime-rpc-client'
 import { callStructuredAgentSession } from '@/runtime/structured-agent-session-client'
 import { useStructuredAgentSessionHold } from './use-structured-agent-session-hold'
 import { useStructuredAgentSessionRead } from './use-structured-agent-session-read'
+import { useStructuredConversationCommand } from './use-structured-conversation-command'
 import {
   pendingStructuredSessionPrompts,
   type StructuredPromptItem
@@ -61,7 +58,6 @@ export function useStructuredAgentSession(args: {
     sessionId: string
     commands: readonly AgentSessionConversationCommand[]
   } | null>(null)
-  const commandPending = useRef(false)
   const [optionState, setOptionState] = useState(() =>
     createStructuredAgentSessionOptionState(agent)
   )
@@ -237,21 +233,17 @@ export function useStructuredAgentSession(args: {
   const prompts = pendingStructuredSessionPrompts(state.items)
   const { outbox } = outboxController
   const messages = useStructuredAgentSessionMessages(state.items, outbox, state.submissions)
+  const conversationCommand = useStructuredConversationCommand({
+    sessionId,
+    fence: state.fence,
+    items: state.items,
+    blocked: Boolean(turnId || prompts.length || backgroundTasks.isMonitoring || outbox.length),
+    mutate
+  })
   return {
     conversationCommands:
       conversationSupport?.sessionId === sessionId ? conversationSupport.commands : [],
-    runConversationCommand: (command: AgentSessionConversationCommand) =>
-      conversationCommands.sendStructuredConversationCommand({
-        command,
-        pending: commandPending,
-        blocked: Boolean(turnId || prompts.length || backgroundTasks.isMonitoring || outbox.length),
-        send: (command) =>
-          mutate<AgentSessionConversationCommandResult>(
-            'agentSession.conversationCommand',
-            'agentSession.conversationCommand',
-            { command }
-          )
-      }),
+    runConversationCommand: conversationCommand.run,
     journalItems: state.items,
     messages,
     status: state.status,
@@ -263,7 +255,7 @@ export function useStructuredAgentSession(args: {
     outbox,
     blockedClientMessageId: outboxController.blockedClientMessageId,
     send: (...input: Parameters<typeof outboxController.send>) =>
-      !commandPending.current && outboxController.send(...input),
+      !conversationCommand.isRunning() && outboxController.send(...input),
     retry: outboxController.retry,
     isWorking,
     workingStartedAt: turnTiming.workingStartedAt,
@@ -271,7 +263,12 @@ export function useStructuredAgentSession(args: {
     turnActivity,
     backgroundTasks,
     turnId,
-    cancel: (turnId: string) => mutate('agentSession.cancel', 'agentSession.cancel', { turnId }),
+    cancel: (turnId: string) => {
+      // An interrupt is the user withdrawing the work, so it retires a conversation command the
+      // client could not confirm rather than leaving them refused behind it.
+      conversationCommand.retire()
+      return mutate('agentSession.cancel', 'agentSession.cancel', { turnId })
+    },
     stopBackgroundTask: (taskId?: string) =>
       mutate('agentSession.cancel', 'agentSession.cancel', {
         turnId: 'background-tasks',
