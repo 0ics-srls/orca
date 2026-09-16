@@ -77,6 +77,17 @@ const waitersByPane = new Map<string, HandleGapWaiter>()
  * about its predecessor. Pinned as class D in host-mirror-handle-gap-verdict-union.test.ts; do not
  * delete that case.
  *
+ * KNOWN LEAK, deliberately not drained: a verdict whose row the host retracts for good on an
+ * environment that stays paired and never records again. The generation has not moved, teardown
+ * never fires, the retracted row can never publish a handle, and the tab-death rule only runs from
+ * inside a later recording. That entry outlives the session, and because
+ * `stopStoreSubscriptionIfIdle` counts verdicts, so does the store subscription — a no-op rescan on
+ * every write to the two slices below. It cannot answer (a retracted row reads `paneBinding: ''`,
+ * which the read below refuses), so it costs work, not correctness. The obvious drain — drop a
+ * verdict whose binding no longer matches — is NOT safe: it would break the genuine reattach, where
+ * the binding goes away and comes back and the verdict must still answer
+ * (host-mirror-handle-gap-verdict-union.test.ts, "answers for a genuine reattach").
+ *
  * The PUBLISHED HANDLE drain does not close that class and must not be read as closing it: it
  * needs the row to stay published throughout, and that class needs the row to go away. Read-time
  * identity separates two panes behind one tab id; the drain separates two gaps on one pane. They
@@ -248,14 +259,22 @@ function waiterIsReleased(waiter: HandleGapWaiter, state: HandleGapStoreState): 
 function releaseDueWaiters(state: HandleGapStoreState): void {
   // Why: drain from a snapshot — a replay can re-park the pane, and that new
   // waiter belongs to the next store write, not this one.
-  const dueKeys: string[] = []
+  const due: [string, HandleGapWaiter][] = []
   for (const [key, waiter] of waitersByPane) {
     if (waiterIsReleased(waiter, state)) {
-      dueKeys.push(key)
+      due.push([key, waiter])
     }
   }
-  for (const key of dueKeys) {
-    releaseWaiter(key)
+  for (const [key, waiter] of due) {
+    // Why the snapshot holds the WAITER and not just its key: a replay earlier in this loop writes
+    // to the store (the sweep reaches `createTab` and `clearSleepingAgentSession`), and zustand
+    // notifies re-entrantly with no queue, so the nested pass can release and re-park a pane still
+    // queued here. Releasing by key would then find the re-park, clear its brand-new deadline and
+    // replay it a second time off one store write — handing that pane another full budget, which
+    // is exactly the extension `parkUntilHostMirrorHandleLands` refuses to grant a re-park.
+    if (waitersByPane.get(key) === waiter) {
+      releaseWaiter(key)
+    }
   }
 }
 

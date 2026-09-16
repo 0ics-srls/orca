@@ -15,6 +15,11 @@ import {
 // due pane from one store write, running synchronously inside a zustand subscriber. The panes in
 // that loop are strangers to each other and the store write that triggered it is a stranger to all
 // of them, so one pane's replay must not be able to reach either.
+//
+// Both release paths are here on purpose: the store-write drain and the deadline both funnel into
+// `releaseWaiter`, and a guard added to one is easy to forget on the other. One mutation —
+// rethrowing from that catch — kills both cases below, which is the point: they are the two entry
+// points, not two behaviours.
 
 const ENVIRONMENT_ID = 'env-handle-gap-drain'
 const WORKTREE_ID = 'repo-1::/workspace/repo'
@@ -57,56 +62,55 @@ function seedRows(): void {
 function publishBothHandles(): void {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the seeded slice names only the store fields this suite drives; the rest of AppState keeps its defaults.
   useAppStore.setState({
-    ptyIdsByTabId: { [FIRST_TAB_ID]: ['pty-1'], [SECOND_TAB_ID]: ['pty-2'] }
+    ptyIdsByTabId: {
+      [FIRST_TAB_ID]: [`remote:${ENVIRONMENT_ID}@@term_1`],
+      [SECOND_TAB_ID]: [`remote:${ENVIRONMENT_ID}@@term_2`]
+    }
   } as never)
 }
 
 describe('host-mirror handle-gap drain', () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    // The replays below throw on purpose; the module logs and swallows, which is the behaviour
+    // under test, so the log itself is noise.
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
     resetHostMirrorHandleGapWaitsForTests()
     clearRuntimeEnvironmentConnectionGenerationsForTests()
     seedRows()
   })
 
   afterEach(() => {
+    vi.restoreAllMocks()
     resetHostMirrorHandleGapWaitsForTests()
     clearRuntimeEnvironmentConnectionGenerationsForTests()
     useAppStore.setState(initialAppStoreState, true)
     vi.useRealTimers()
   })
 
-  // The drain runs inside `useAppStore.subscribe`, so an unguarded throw from one pane's replay
-  // leaves the store write that published the handle throwing at its own call site — the mirror
-  // apply path, which has nothing to do with this pane. `resumeSleepingAgentSessionsForWorktree`
-  // reaches `state.createTab` with no guard of its own, so the throw is reachable.
-  it('does not let one pane’s replay throw out of the store write that released it', () => {
+  // The drain runs inside `useAppStore.subscribe`, and zustand notifies listeners in a plain loop
+  // with no queue, so an unguarded throw from one pane's replay reaches three strangers at once:
+  // the `setState` that published the handle (the mirror apply, which has nothing to do with this
+  // pane), every sibling pane the same frame made due, and every listener registered after this
+  // module's. `resumeSleepingAgentSessionsForWorktree` reaches `state.createTab` with no guard of
+  // its own, so the throw is reachable.
+  it('does not let one pane’s replay throw reach the store write, its siblings, or later listeners', () => {
+    const siblingReplay = vi.fn()
     parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, FIRST_TAB_ID, () => {
       throw new Error('replay blew up')
     })
-    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, () => {})
-
-    expect(() => publishBothHandles()).not.toThrow()
-  })
-
-  // Same write, the other victim: the panes in a drain are strangers. A replay that throws must not
-  // strand every pane queued behind it — a stranded pane holds its park until its own deadline and
-  // then decides on a connection whose evidence has long since landed.
-  it('releases every other due pane when one pane’s replay throws', () => {
-    const secondReplay = vi.fn()
-    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, FIRST_TAB_ID, () => {
-      throw new Error('replay blew up')
-    })
-    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, secondReplay)
+    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, siblingReplay)
     expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(2)
 
-    try {
-      publishBothHandles()
-    } catch {
-      // The assertion is about the second pane, not about who swallowed the throw.
-    }
+    // Registered after this module's subscription, so it is notified after the drain.
+    const laterListener = vi.fn()
+    const unsubscribe = useAppStore.subscribe(laterListener)
 
-    expect(secondReplay).toHaveBeenCalledTimes(1)
+    expect(() => publishBothHandles()).not.toThrow()
+    unsubscribe()
+
+    expect(siblingReplay).toHaveBeenCalledTimes(1)
+    expect(laterListener).toHaveBeenCalledTimes(1)
     expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(0)
     // Both deadlines are cancelled, so neither pane can record an expiry it did not earn.
     expect(vi.getTimerCount()).toBe(0)
@@ -115,8 +119,33 @@ describe('host-mirror handle-gap drain', () => {
     expect(hasHostMirrorHandleWaitExpired(ENVIRONMENT_ID, SECOND_TAB_ID)).toBe(false)
   })
 
-  // The deadline path fans out the same way: one expiring pane's replay must not keep another pane
-  // from recording its own verdict on the same connection.
+  // The drain is re-entrant: a replay writes to the store, zustand notifies with no queue, and the
+  // nested pass drains the same map the outer loop is still walking. One store write must still
+  // mean one release per pane — a second release clears the re-park's fresh deadline and replays
+  // it again, granting a budget extension the re-park path deliberately refuses.
+  it('releases a pane once per store write even when an earlier replay re-enters the drain', () => {
+    const siblingReplay = vi.fn(() => {
+      // What the real replay does when the sweep still finds the pane undecided.
+      parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, siblingReplay)
+    })
+    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, FIRST_TAB_ID, () => {
+      // `resumeSleepingAgentSessionsForWorktree` reaches `createTab` and
+      // `clearSleepingAgentSession`, so a replay writing mid-drain is the ordinary case.
+      useAppStore.setState({ tabsByWorktree: { ...useAppStore.getState().tabsByWorktree } })
+    })
+    parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, SECOND_TAB_ID, siblingReplay)
+
+    publishBothHandles()
+
+    expect(siblingReplay).toHaveBeenCalledTimes(1)
+    expect(countParkedHostMirrorHandleGapPanesForTests()).toBe(1)
+    // And the re-park it made owns exactly one timer, not one per spurious release.
+    expect(vi.getTimerCount()).toBe(1)
+  })
+
+  // The other entry into `releaseWaiter`. Here the throw would escape the timer callback instead of
+  // the store write, and the verdict must still be recorded — a pane whose replay failed has still
+  // used up its budget, and dropping the verdict re-parks it on a fresh one forever.
   it('records the expiry of a pane whose replay throws and still frees the pane', () => {
     parkUntilHostMirrorHandleLands(ENVIRONMENT_ID, WORKTREE_ID, FIRST_TAB_ID, () => {
       throw new Error('replay blew up')
