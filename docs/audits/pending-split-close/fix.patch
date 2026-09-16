@@ -37,7 +37,7 @@ index 4d7eaf7358..2f6ed734bb 100644
  
  export type IpcPtyTransportOptions = {
 diff --git a/src/renderer/src/components/terminal-pane/pty-transport.ts b/src/renderer/src/components/terminal-pane/pty-transport.ts
-index f794b9a1e4..e0d315153a 100644
+index f794b9a1e4..7731e75eac 100644
 --- a/src/renderer/src/components/terminal-pane/pty-transport.ts
 +++ b/src/renderer/src/components/terminal-pane/pty-transport.ts
 @@ -44,6 +44,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
@@ -48,16 +48,15 @@ index f794b9a1e4..e0d315153a 100644
    let ptyId: string | null = null
    let lifecycleGeneration = 0
    let lastExitGeneration: number | null = null
-@@ -137,6 +138,8 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
+@@ -137,6 +138,7 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
              lastExitGeneration === lifecycleGeneration &&
              lifecycleGeneration === connectGeneration + 1,
            ownsPtyId: (id) => !destroyed && connected && ptyId === id,
-+          handleExplicitlyClosedConnect: (id) =>
-+            destroyed && (onAbandonedConnect?.(id) ?? false),
++          handleExplicitlyClosedConnect: (id) => destroyed && (onAbandonedConnect?.(id) ?? false),
            bind,
            isCurrent: (id) => lifecycleGeneration === connectGeneration && connected && ptyId === id,
            setCallbacks,
-@@ -268,7 +271,8 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
+@@ -268,7 +270,8 @@ export function createIpcPtyTransport(opts: IpcPtyTransportOptions = {}): PtyTra
          : { ...(opts.cwd ? { cwd: opts.cwd } : {}), ...(shellOverride ? { shellOverride } : {}) },
      resetCrossChunkParserState: outputProcessor.resetAgentStatusCarry,
  

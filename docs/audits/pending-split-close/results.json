@@ -11,7 +11,7 @@
     },
     "src/renderer/src/components/terminal-pane/pty-transport.ts": {
       "before": "0455dba126457eb50a6075a8b265b29016aa5ed8c0730948e23d4f864bd8d5b3",
-      "after": "e72c30a5342a4c92d8865097566b1dcfc103cef33a3ed69d4aaf203fea90cf41"
+      "after": "b5ac687bbb5c21e94a433d4a66f9b8fca46b3004f331f128c44bfa21b32a3838"
     },
     "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts": {
       "before": "978003ccd82d0af5dce5501edaa7c20c87170e590a5f3f06e55b28f9e4f0323f",
