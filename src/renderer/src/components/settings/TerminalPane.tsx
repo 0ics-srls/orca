@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { GlobalSettings } from '../../../../shared/global-settings-types'
 import { Separator } from '../ui/separator'
 import { Input } from '../ui/input'
@@ -24,7 +25,7 @@ import { TerminalInteractionSection } from './TerminalInteractionSection'
 import { TerminalRenderingSection } from './TerminalRenderingSection'
 import { TerminalSetupScriptSection } from './TerminalSetupScriptSection'
 import { TerminalWindowsShellSection } from './TerminalWindowsShellSection'
-import { SettingsRow, SettingsSubsectionHeader } from './SettingsFormControls'
+import { SettingsSegmentedControl, SettingsSubsectionHeader } from './SettingsFormControls'
 
 type TerminalPaneProps = {
   settings: GlobalSettings
@@ -62,6 +63,22 @@ export function TerminalPane({
   const showWindowsPowerShellImplementation =
     showWindowsHostSettings && windowsShell === 'powershell.exe'
 
+  const [shellValidationError, setShellValidationError] = useState<string | null>(null)
+  const configuredShell = settings.terminalDefaultShell?.trim() ?? ''
+  const shellMode = configuredShell ? 'custom' : 'system'
+  const systemShell = window.api?.platform?.get?.().shell?.trim() || '/bin/zsh'
+
+  const validateShell = async (): Promise<void> => {
+    const shell = configuredShell
+    const isAbsolute = shell.startsWith('/') || /^[A-Za-z]:[\\/]/.test(shell)
+    if (!isAbsolute) {
+      setShellValidationError(null)
+      return
+    }
+    const exists = await window.api.shell.pathExists(shell)
+    setShellValidationError(exists ? null : `Shell not found: ${shell}`)
+  }
+
   const defaultShellSection =
     !showWindowsHostSettings &&
     matchesSettingsSearch(searchQuery, {
@@ -71,28 +88,55 @@ export function TerminalPane({
     }) ? (
       <section key="default-shell" className="space-y-3">
         <SettingsSubsectionHeader
-          title="Default shell"
-          description="Choose what Orca opens for new terminal panes."
+          title="New terminal shell"
+          description="Choose what Orca opens for new local terminal panes. Existing panes are unchanged."
         />
-        <SettingsRow
-          label="Shell executable"
-          description={
-            settings.terminalDefaultShell?.trim()
-              ? 'Custom shell active for new terminals. Existing panes are unchanged.'
-              : 'System default active. Enter a command or path such as fish, nu, or /bin/zsh.'
-          }
-          control={
-            <Input
-              value={settings.terminalDefaultShell ?? ''}
-              placeholder="System default"
-              onChange={(event) =>
-                updateSettings({ terminalDefaultShell: event.target.value.trimStart() })
-              }
-              className="w-full max-w-64"
-              aria-label="Default shell executable"
-            />
-          }
-        />
+        <div className="space-y-3">
+          <SettingsSegmentedControl
+            ariaLabel="New terminal shell"
+            value={shellMode}
+            onChange={(value) => {
+              setShellValidationError(null)
+              updateSettings({ terminalDefaultShell: value === 'system' ? '' : configuredShell })
+            }}
+            options={[
+              { value: 'system', label: `System shell (${systemShell})` },
+              { value: 'custom', label: 'Custom shell' }
+            ]}
+          />
+          {shellMode === 'custom' ? (
+            <div className="space-y-1.5">
+              <Input
+                value={settings.terminalDefaultShell ?? ''}
+                placeholder="fish, nu, or /bin/zsh"
+                onChange={(event) => {
+                  setShellValidationError(null)
+                  updateSettings({ terminalDefaultShell: event.target.value.trimStart() })
+                }}
+                onBlur={() => void validateShell()}
+                className="w-full"
+                aria-label="Custom shell executable"
+                aria-invalid={shellValidationError != null}
+                aria-describedby={shellValidationError ? 'default-shell-error' : undefined}
+              />
+              <p id="default-shell-help" className="text-xs text-muted-foreground">
+                Enter a command on PATH or an executable path. Orca starts it as a login shell.
+              </p>
+              {shellValidationError ? (
+                <p id="default-shell-error" role="alert" className="text-xs text-destructive">
+                  {shellValidationError}. Switch to System shell or choose an executable on this
+                  host.
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+          <p className="text-xs text-muted-foreground">
+            New terminals will use:{' '}
+            {shellMode === 'system'
+              ? `System shell (${systemShell})`
+              : configuredShell || 'the custom shell you enter'}
+          </p>
+        </div>
       </section>
     ) : null
 
