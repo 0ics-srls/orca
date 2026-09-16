@@ -18,14 +18,15 @@ describe('computer-use skill guidance', () => {
 
     expect(description).toContain('Drives the GUI of a visible local app window')
     expect(description).toContain(
-      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can complete the task.'
+      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs) whenever it can complete the task.'
     )
     expect(description).toContain(
       'Use only when a visible window needs GUI control those cannot reach.'
     )
     expect(description).toContain('external browser windows')
     expect(description).toContain("Do not use for Orca's embedded browser (`orca-cli`)")
-    expect(description).toContain('page-only automation (Playwright or CDP)')
+    expect(description).not.toMatch(/Playwright/iu)
+    expect(description).not.toContain('page-only')
     expect(description).not.toContain('OS/window-level')
     expect(description).not.toContain('Desktop or Documents')
     expect(description).not.toContain('read Slack')
@@ -37,12 +38,13 @@ describe('computer-use skill guidance', () => {
 
     expect(skill).toContain('Use this skill to drive a visible app window through `orca computer`')
     expect(skill).toContain(
-      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs, Playwright/CDP) whenever it can complete the task'
+      'Prefer a programmatic path (shell, filesystem, git, HTTP, existing CLIs) whenever it can complete the task'
     )
     expect(skill).toContain(
       'use this skill only when a visible window needs GUI control those cannot reach'
     )
-    expect(skill).toContain('external browser window that needs window-level control')
+    expect(skill).toContain('browser windows (Chrome, Edge, Safari)')
+    expect(skill).not.toMatch(/Playwright/iu)
     expect(skill).not.toMatch(/\borca goto\b/iu)
     expect(skill).not.toMatch(/\borca snapshot\b/iu)
     expect(skill).not.toMatch(/\borca click\b/iu)
