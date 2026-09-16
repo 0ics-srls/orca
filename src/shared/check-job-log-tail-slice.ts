@@ -3,7 +3,7 @@ import {
   getUtf8ByteLength,
   isUtf8ByteLengthWithinLimit
 } from './utf8-byte-limits'
-import { flattenRetainedSlice } from './flatten-retained-slice'
+import { ownRetainedString } from './own-retained-string'
 
 export const PR_CHECK_LOG_TAIL_LINES = 200
 export const PR_CHECK_LOG_TAIL_RECENT_LINES = 100
@@ -84,5 +84,5 @@ function buildCheckLogTail(logText: string): string {
 
 export function sliceCheckLogTail(logText: string): string {
   // Cached excerpts must not pin the downloaded log behind a small V8 slice.
-  return flattenRetainedSlice(buildCheckLogTail(logText))
+  return ownRetainedString(buildCheckLogTail(logText))
 }
