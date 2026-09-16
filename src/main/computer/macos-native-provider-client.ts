@@ -21,7 +21,7 @@ import { resolveMacOSComputerUseExecutablePath } from './macos-native-provider-p
 import { MacOSProviderProcessOwner } from './macos-native-provider-process-reaping'
 import {
   attachMacOSNativeProviderSocketListeners,
-  consumeNativeProviderLines,
+  NativeProviderLineBuffer,
   startMacOSNativeProviderSocket
 } from './macos-native-provider-transport'
 import { validateComputerProviderActionParams } from './computer-provider-action-validation'
@@ -39,7 +39,7 @@ export class MacOSNativeProviderClient {
   private socketToken: string | null = null
   private nextId = 1
   private pending = new Map<number, PendingNativeRequest>()
-  private socketBuffer = ''
+  private readonly socketBuffer = new NativeProviderLineBuffer()
   private providerCapabilities: ComputerProviderCapabilities | null = null
   private socketListenerCleanup: (() => void) | null = null
   private socketStartGeneration = 0
@@ -72,7 +72,7 @@ export class MacOSNativeProviderClient {
     this.socketStartPromise = null
     this.socketStartGeneration++
     this.providerCapabilities = null
-    this.socketBuffer = ''
+    this.socketBuffer.clear()
     this.cleanupActiveSocketListeners()
     if (socket && !socket.destroyed) {
       const id = this.nextId++
@@ -202,7 +202,7 @@ export class MacOSNativeProviderClient {
     this.socketToken = started.socketToken
     const socket = started.socket
     socket.setEncoding('utf8')
-    this.socketBuffer = ''
+    this.socketBuffer.clear()
     this.socketListenerCleanup = attachMacOSNativeProviderSocketListeners(socket, {
       data: (chunk) => this.handleSocketData(socket, chunk),
       close: () => this.handleSocketClose(socket),
@@ -217,10 +217,7 @@ export class MacOSNativeProviderClient {
     if (this.socket !== socket) {
       return
     }
-    this.socketBuffer += chunk
-    this.socketBuffer = consumeNativeProviderLines(this.socketBuffer, (line) =>
-      this.handleLine(line)
-    )
+    this.socketBuffer.push(chunk, (line) => this.handleLine(line))
   }
   private handleLine(line: string): void {
     let response: NativeResponse
@@ -248,7 +245,7 @@ export class MacOSNativeProviderClient {
     }
     this.cleanupActiveSocketListeners()
     this.socket = null
-    this.socketBuffer = ''
+    this.socketBuffer.clear()
     this.releaseHelperGeneration()
     this.rejectPending(
       new RuntimeClientError('accessibility_error', 'native macOS helper app connection closed')
@@ -269,7 +266,7 @@ export class MacOSNativeProviderClient {
     this.cleanupActiveSocketListeners()
     // Why: a failed transport makes the helper socket unreliable for the next request.
     this.socket = null
-    this.socketBuffer = ''
+    this.socketBuffer.clear()
     if (!socket.destroyed) {
       socket.destroy()
     }
