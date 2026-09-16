@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os'
 import { delimiter, join } from 'node:path'
 import { createServer } from 'node:http'
 import { runProcess } from '../../shared/child-process/run-process'
+import { removeTree } from '../../shared/windows-transient-lock-removal'
 import { getManagedCommand, CODEX_EVENTS } from './codex-hook-definition'
 import { getManagedScript } from './codex-hook-script'
 import {
@@ -137,7 +138,7 @@ describe.skipIf(process.platform !== 'win32')('Codex hook delivery through Power
         expect(posts).toHaveLength(CODEX_EVENTS.length)
       } finally {
         await new Promise<void>((resolve) => server.close(() => resolve()))
-        rmSync(root, { recursive: true, force: true })
+        await removeTree(root)
       }
     },
     30_000
