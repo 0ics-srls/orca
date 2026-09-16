@@ -102,11 +102,23 @@ export function stubLayout({
   /** A hidden transcript measures as nothing, the way `display: none` does. */
   isVisible?: () => boolean
 } = {}): () => void {
-  const scrollTops = new WeakMap<HTMLElement, number>()
+  let scrollTops = new WeakMap<HTMLElement, number>()
+  let wasLaidOut = isVisible()
+  /** Losing the box drops the retained offset, the way `display: none` does in a
+   *  browser: a revealed pane reads a reader's place back only if production
+   *  restored it. */
+  const laidOut = (): boolean => {
+    const nowLaidOut = isVisible()
+    if (wasLaidOut && !nowLaidOut) {
+      scrollTops = new WeakMap()
+    }
+    wasLaidOut = nowLaidOut
+    return nowLaidOut
+  }
   const restores = [
     overrideLayoutProperty('offsetHeight', {
       get(this: HTMLElement): number {
-        if (!isVisible()) {
+        if (!laidOut()) {
           return 0
         }
         if (this.hasAttribute('data-native-chat-scroll')) {
@@ -131,25 +143,25 @@ export function stubLayout({
     restores.push(
       overrideLayoutProperty('clientHeight', {
         get(this: HTMLElement): number {
-          return this.hasAttribute('data-native-chat-scroll') && isVisible() ? viewportHeight() : 0
+          return this.hasAttribute('data-native-chat-scroll') && laidOut() ? viewportHeight() : 0
         }
       }),
       overrideLayoutProperty('scrollHeight', {
         get(this: HTMLElement): number {
-          return this.hasAttribute('data-native-chat-scroll') && isVisible()
+          return this.hasAttribute('data-native-chat-scroll') && laidOut()
             ? layout.aboveTranscriptPx + reservedTranscriptHeight(this) + layout.belowTranscriptPx
             : 0
         }
       }),
       overrideLayoutProperty('scrollTop', {
         get(this: HTMLElement): number {
-          if (this.hasAttribute('data-native-chat-scroll') && !isVisible()) {
+          if (this.hasAttribute('data-native-chat-scroll') && !laidOut()) {
             return 0
           }
           return scrollTops.get(this) ?? 0
         },
         set(this: HTMLElement, value: number): void {
-          if (this.hasAttribute('data-native-chat-scroll') && !isVisible()) {
+          if (this.hasAttribute('data-native-chat-scroll') && !laidOut()) {
             return
           }
           // A browser clamps; without this `scrollTop = scrollHeight` would park
