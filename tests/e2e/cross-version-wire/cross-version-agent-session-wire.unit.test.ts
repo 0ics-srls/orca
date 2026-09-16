@@ -21,6 +21,7 @@ import type { AgentSessionAttachParams } from '../../../src/main/native-chat/age
 import { StructuredAgentSessionHost } from '../../../src/main/native-chat/agent-session-wire/structured-agent-session-host'
 import { setStructuredAgentSessionHost } from '../../../src/main/native-chat/agent-session-wire/structured-agent-session-registry'
 import { AgentSessionRecordStore } from '../../../src/main/runtime/agent-session-record-store'
+import { RuntimeSubscriptionRegistry } from '../../../src/main/runtime/runtime-subscription-registry'
 import { computeAgentSessionPayloadFingerprint } from '../../../src/shared/agent-session-mutation-envelope'
 import type { AgentSessionSubscribeEvent } from '../../../src/shared/agent-session-wire'
 import {
@@ -272,7 +273,7 @@ function paramsFor(method: string): unknown {
 }
 
 function runtimeStub(): unknown {
-  const cleanups = new Map<string, () => void>()
+  const subscriptions = new RuntimeSubscriptionRegistry()
   return {
     getRuntimeId: () => 'runtime-1',
     getClientSettings: () => ({ experimentalStructuredNativeChat: true }),
@@ -287,19 +288,10 @@ function runtimeStub(): unknown {
       return resolved
     },
     publishStructuredAgentSessionTab: () => {},
-    registerSubscriptionCleanup: (id: string, cleanup: () => void) => cleanups.set(id, cleanup),
-    cleanupSubscription: (id: string) => {
-      cleanups.get(id)?.()
-      cleanups.delete(id)
-    },
-    cleanupSubscriptionsByPrefix: (prefix: string) => {
-      for (const [id, cleanup] of cleanups) {
-        if (id.startsWith(prefix)) {
-          cleanup()
-          cleanups.delete(id)
-        }
-      }
-    }
+    registerSubscriptionCleanup: subscriptions.register.bind(subscriptions),
+    registerOwnedSubscriptionCleanup: subscriptions.registerOwned.bind(subscriptions),
+    cleanupSubscription: subscriptions.cleanup.bind(subscriptions),
+    cleanupSubscriptionsByPrefix: subscriptions.cleanupByPrefix.bind(subscriptions)
   }
 }
 
