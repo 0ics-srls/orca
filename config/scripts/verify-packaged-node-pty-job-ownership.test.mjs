@@ -12,7 +12,7 @@ const {
   verifyPackagedWindowsNodePty
 } = require('./verify-packaged-node-pty-job-ownership.cjs')
 const { CYGWIN_BREAKAWAY_MARKER } = require('./node-pty-job-ownership.cjs')
-const { PE_MACHINE } = require('./windows-pe-machine.cjs')
+import { peImage } from './windows-pe-image-fixture.mjs'
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'packaged-node-pty-job-'))
 const ELECTRON_BUILDER_CONFIG = readFileSync(
@@ -20,18 +20,12 @@ const ELECTRON_BUILDER_CONFIG = readFileSync(
   'utf8'
 )
 
-/**
- * A real enough addon: a PE header the arch check can read, and the wide literal
- * the marker check looks for. A fixture that is neither cannot exercise a gate
- * that reads the binary.
- */
+/** A real enough addon: a machine field the arch check reads, and the marker. */
 function conptyImage({ arch = 'x64', cygwinBreakawayDenied = true } = {}) {
-  const image = Buffer.alloc(0x88)
-  image.write('MZ', 0, 'latin1')
-  image.writeUInt32LE(0x80, 0x3c)
-  image.write('PE\0\0', 0x80, 'latin1')
-  image.writeUInt16LE(PE_MACHINE[arch], 0x84)
-  return Buffer.concat([image, cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)])
+  return Buffer.concat([
+    peImage({ arch }),
+    cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
+  ])
 }
 
 function writeAddon(name, options) {
@@ -159,7 +153,7 @@ describe('verifyPackagedConptyBreakawayMarker', () => {
       'prebuilds/win32-x64/conpty.node': { cygwinBreakawayDenied: false }
     })
     expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(
-      /Package this Windows slice on a host that can build node-pty for win32-x64/
+      /this package holds no node-pty source build at all[\s\S]*Package this Windows slice on such a host/
     )
   })
 
@@ -191,7 +185,63 @@ describe('verifyPackagedConptyBreakawayMarker', () => {
   it('refuses a package whose every conpty.node is the wrong architecture', () => {
     const resourcesDir = packagedResources({ 'build/Release/conpty.node': { arch: 'x64' } })
     expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'arm64')).toThrow(
-      /none of them is a win32-arm64 image/
+      /the app can load none of them/
+    )
+  })
+
+  // Naming the machine it found is what separates a cross-arch build from a
+  // truncated download, which are the same "cannot load this" to the loader.
+  it('names what it found rather than guessing why', () => {
+    const resourcesDir = packagedResources({ 'build/Release/conpty.node': { arch: 'x64' } })
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'arm64')).toThrow(
+      /machine 0x8664[\s\S]*0xaa64/
+    )
+  })
+
+  it('calls a candidate that is not a PE image what it is', () => {
+    const resourcesDir = packagedResources({})
+    const addonPath = join(
+      resourcesDir,
+      'node_modules',
+      'node-pty',
+      'build',
+      'Release',
+      'conpty.node'
+    )
+    mkdirSync(dirname(addonPath), { recursive: true })
+    writeFileSync(addonPath, Buffer.alloc(0x200))
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(/not a PE image/)
+  })
+
+  // The remedy for this one is a rebuild, not a different host, and the
+  // difference is a build somebody has to run twice to find out.
+  it('blames the wrong-arch source build rather than the host, when there is one', () => {
+    const resourcesDir = packagedResources({
+      'build/Release/conpty.node': { arch: 'x64' },
+      'prebuilds/win32-arm64/conpty.node': { arch: 'arm64', cygwinBreakawayDenied: false }
+    })
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'arm64')).toThrow(
+      /the source build beside it is the wrong architecture[\s\S]*machine 0x8664/
+    )
+  })
+
+  it('tells that build the command that would fix it', () => {
+    const resourcesDir = packagedResources({
+      'build/Release/conpty.node': { arch: 'x64' },
+      'prebuilds/win32-arm64/conpty.node': { arch: 'arm64', cygwinBreakawayDenied: false }
+    })
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'arm64')).toThrow(
+      /rebuild-native-deps\.mjs --platform=win32 --arch=arm64/
+    )
+  })
+
+  it('does not tell it to change hosts, which would not help', () => {
+    const resourcesDir = packagedResources({
+      'build/Release/conpty.node': { arch: 'x64' },
+      'prebuilds/win32-arm64/conpty.node': { arch: 'arm64', cygwinBreakawayDenied: false }
+    })
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'arm64')).toThrow(
+      /^(?![\s\S]*Package this Windows slice on such a host)[\s\S]*$/
     )
   })
 

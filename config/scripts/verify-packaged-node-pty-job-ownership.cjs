@@ -8,7 +8,7 @@ const {
   nodePtyAddonPath
 } = require('./node-pty-job-ownership.cjs')
 const { normalizeNodePtyWindowsArch } = require('../packaged-runtime-node-modules.cjs')
-const { isLoadableByArch } = require('./windows-pe-machine.cjs')
+const { PE_MACHINE, describePeMachine, readPeMachine } = require('./windows-pe-machine.cjs')
 
 /**
  * Every conpty.node the packaged tree can hand `loadNativeModule`, in its order.
@@ -102,16 +102,19 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
       ].join(' ')
     )
   }
-  const loadable = options.loadableByArch ?? isLoadableByArch
-  const loaded = present.find((candidate) => loadable(candidate.path, architecture))
+  const machineOf = options.peMachine ?? readPeMachine
+  const described = present.map(
+    (candidate) => `${candidate.path} (${describePeMachine(machineOf(candidate.path))})`
+  )
+  const loaded = present.find((candidate) => machineOf(candidate.path) === PE_MACHINE[architecture])
   if (!loaded) {
     throw new Error(
       [
-        `Packaged node-pty for win32-${architecture} has conpty.node at`,
-        `${present.map((c) => c.path).join(', ')},`,
-        `but none of them is a win32-${architecture} image, so the app can load none of them.`,
-        "A cross-arch rebuild that quietly emitted the packaging host's architecture looks",
-        'exactly like this. Rebuild node-pty for the target arch and repackage.'
+        `Packaged node-pty for win32-${architecture} has conpty.node at ${described.join(', ')},`,
+        'and the app can load none of them: a Windows process only loads a PE of its own',
+        `machine, which for win32-${architecture} is`,
+        `0x${PE_MACHINE[architecture].toString(16)}.`,
+        'Rebuild node-pty for the target architecture and repackage.'
       ].join(' ')
     )
   }
@@ -124,10 +127,28 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
     return
   }
   // A stale source build is the packaging host's own to rebuild, which is what
-  // assertCygwinBreakawayDenied already says. The prebuild is not: it never
-  // carries the patch, and no rebuild on this host replaces it.
+  // assertCygwinBreakawayDenied already says.
   if (!loaded.prebuilt) {
     assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
+  }
+  // Past here the app falls back to the published prebuild, which never carries
+  // the patch. Why it fell back decides the remedy, and the two are different
+  // enough that naming the wrong one wastes the reader's build.
+  const wrongArchSourceBuilds = present.filter((candidate) => !candidate.prebuilt)
+  if (wrongArchSourceBuilds.length > 0) {
+    throw new Error(
+      [
+        `Packaged node-pty for win32-${architecture} falls back to ${addonPath}, which predates`,
+        'the Cygwin/MSYS job-breakaway denial, because the source build beside it is the wrong',
+        `architecture: ${wrongArchSourceBuilds
+          .map((candidate) => `${candidate.path} (${describePeMachine(machineOf(candidate.path))})`)
+          .join(', ')}.`,
+        'A cross-arch rebuild that did not honour --arch looks exactly like this. Re-run',
+        `config/scripts/rebuild-native-deps.mjs --platform=win32 --arch=${architecture},`,
+        'confirm it emitted a conpty.node of that machine, and repackage.',
+        'See docs/reference/windows-msys-job-breakaway.md.'
+      ].join(' ')
+    )
   }
   throw new Error(
     [
@@ -135,10 +156,10 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
       'fallback, which predates the Cygwin/MSYS job-breakaway denial: its per-PTY job still',
       'carries JOB_OBJECT_LIMIT_BREAKAWAY_OK, so every Git Bash pane child is created outside',
       'the job and survives terminatePtyJob.',
-      'It is still here because no patched build/Release/conpty.node for',
-      `win32-${architecture} was produced for prunePackagedNodePty to replace it with, and only`,
-      `a node-pty source build targeting win32-${architecture} produces one.`,
-      `Package this Windows slice on a host that can build node-pty for win32-${architecture}.`,
+      'It is here because this package holds no node-pty source build at all for',
+      `prunePackagedNodePty to have replaced it with, and only a host that can build node-pty`,
+      `for win32-${architecture} produces one.`,
+      'Package this Windows slice on such a host.',
       'See docs/reference/windows-msys-job-breakaway.md.'
     ].join(' ')
   )

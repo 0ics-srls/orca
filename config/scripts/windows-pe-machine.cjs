@@ -43,4 +43,9 @@ function isLoadableByArch(binaryPath, arch) {
   return readPeMachine(binaryPath) === PE_MACHINE[arch]
 }
 
-module.exports = { PE_MACHINE, isLoadableByArch, readPeMachine }
+/** How to name a machine field in an error, including the file that has none. */
+function describePeMachine(machine) {
+  return machine === null ? 'not a PE image' : `machine 0x${machine.toString(16)}`
+}
+
+module.exports = { PE_MACHINE, describePeMachine, isLoadableByArch, readPeMachine }

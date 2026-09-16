@@ -12,6 +12,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { copyScriptWithLocalModules } from './script-module-dependencies.mjs'
+import { peImage } from './windows-pe-image-fixture.mjs'
 
 const sourceScriptPath = fileURLToPath(new URL('./rebuild-native-deps.mjs', import.meta.url))
 const sourceInstallScriptPath = fileURLToPath(
@@ -91,10 +92,7 @@ export function mkTempProject() {
   mkdirSync(join(projectDir, 'config', 'scripts'), { recursive: true })
   copyFileSync(sourceScriptPath, join(projectDir, 'config', 'scripts', 'rebuild-native-deps.mjs'))
   copyScriptWithLocalModules(sourceInstallScriptPath, join(projectDir, 'config', 'scripts'))
-  copyFileSync(
-    sourceNodePtyJobOwnershipPath,
-    join(projectDir, 'config', 'scripts', 'node-pty-job-ownership.cjs')
-  )
+  copyScriptWithLocalModules(sourceNodePtyJobOwnershipPath, join(projectDir, 'config', 'scripts'))
   copyFileSync(
     sourceWindowsProcessTreeGypRebuildPath,
     join(projectDir, 'config', 'scripts', 'windows-process-tree-gyp-rebuild.mjs')
@@ -321,7 +319,7 @@ export function writeFakeNodePtyConptyPayload(
   writeFileSync(
     join(releaseDir, 'conpty.node'),
     Buffer.concat([
-      Buffer.from('native addon'),
+      peImage({ arch }),
       cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
     ])
   )
@@ -356,7 +354,7 @@ function writeFakeNodePtyAddon(nodePtyDir, nativeDir, { cygwinBreakawayDenied })
     writeFileSync(
       join(addonDir, `${nativeName}.node`),
       Buffer.concat([
-        Buffer.from('MZ fake addon '),
+        peImage({ arch: process.arch === 'arm64' ? 'arm64' : 'x64' }),
         cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
       ])
     )

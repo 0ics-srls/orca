@@ -3,9 +3,15 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
+import { peImage } from './windows-pe-image-fixture.mjs'
 
 const require = createRequire(import.meta.url)
-const { PE_MACHINE, isLoadableByArch, readPeMachine } = require('./windows-pe-machine.cjs')
+const {
+  PE_MACHINE,
+  describePeMachine,
+  isLoadableByArch,
+  readPeMachine
+} = require('./windows-pe-machine.cjs')
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'windows-pe-machine-'))
 
@@ -13,15 +19,6 @@ function writeImage(name, build) {
   const path = join(fixtureDir, name)
   writeFileSync(path, build())
   return path
-}
-
-function peImage({ machine, peOffset = 0x80, signature = 'PE\0\0', magic = 'MZ' }) {
-  const image = Buffer.alloc(peOffset + 8)
-  image.write(magic, 0, 'latin1')
-  image.writeUInt32LE(peOffset, 0x3c)
-  image.write(signature, peOffset, 'latin1')
-  image.writeUInt16LE(machine, peOffset + 4)
-  return image
 }
 
 const X64 = writeImage('x64.node', () => peImage({ machine: PE_MACHINE.x64 }))
@@ -82,5 +79,17 @@ describe('isLoadableByArch', () => {
     const path = writeImage('garbage.node', () => Buffer.alloc(0x200))
     expect(isLoadableByArch(path, 'x64')).toBe(false)
     expect(isLoadableByArch(path, 'arm64')).toBe(false)
+  })
+})
+
+describe('describePeMachine', () => {
+  // The callers put this straight into an error, and "not a PE image" is a
+  // different problem from a cross-arch build.
+  it('names a machine field it read', () => {
+    expect(describePeMachine(PE_MACHINE.arm64)).toBe('machine 0xaa64')
+  })
+
+  it('says so when there was none, rather than throwing on null', () => {
+    expect(describePeMachine(null)).toBe('not a PE image')
   })
 })

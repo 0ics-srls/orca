@@ -31,7 +31,9 @@ import {
   WINDOWS_PROCESS_TREE_PACKAGE_DIR as PACKAGE_DIR
 } from './windows-process-tree-gyp-rebuild.mjs'
 
-const { PE_MACHINE, readPeMachine } = createRequire(import.meta.url)('./windows-pe-machine.cjs')
+const { PE_MACHINE, describePeMachine, readPeMachine } = createRequire(import.meta.url)(
+  './windows-pe-machine.cjs'
+)
 
 const ROOT = resolve(import.meta.dirname, '..', '..')
 const SUPPORTED_ARCHES = ['x64', 'arm64']
@@ -387,7 +389,7 @@ function main() {
   const machine = readPeMachine(built)
   if (machine !== PE_MACHINE[arch]) {
     throw new Error(
-      `Built binary is machine 0x${machine.toString(16)}, expected 0x${PE_MACHINE[arch].toString(16)} for ${arch}. ` +
+      `Built binary is ${describePeMachine(machine)}, expected 0x${PE_MACHINE[arch].toString(16)} for ${arch}. ` +
         'node-gyp ignored --arch; a relay would get a binary its host cannot load.'
     )
   }

@@ -3,6 +3,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
+import { peImage } from './windows-pe-image-fixture.mjs'
 
 const require = createRequire(import.meta.url)
 const {
@@ -175,13 +176,14 @@ describe('nodePtyAddonPath', () => {
 describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
   const rebuiltInto = (files) => {
     const nodePtyDir = join(mkdtempSync(join(fixtureDir, 'rebuild-')), 'node-pty')
-    for (const [relativePath, cygwinBreakawayDenied] of Object.entries(files)) {
+    for (const [relativePath, options] of Object.entries(files)) {
+      const { arch = 'x64', cygwinBreakawayDenied = true } = options
       const addonPath = join(nodePtyDir, ...relativePath.split('/'))
       mkdirSync(dirname(addonPath), { recursive: true })
       writeFileSync(
         addonPath,
         Buffer.concat([
-          Buffer.from('MZ fake addon '),
+          peImage({ arch }),
           cygwinBreakawayDenied ? CYGWIN_BREAKAWAY_MARKER : Buffer.alloc(0)
         ])
       )
@@ -190,14 +192,16 @@ describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
   }
 
   it('accepts the addon a good same-host rebuild leaves behind', () => {
-    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': true })
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': {} })
     expect(() =>
       assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
     ).not.toThrow()
   })
 
   it('rejects one that predates the denial, wherever the rebuild ran', () => {
-    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': false })
+    const nodePtyDir = rebuiltInto({
+      'build/Release/conpty.node': { cygwinBreakawayDenied: false }
+    })
     expect(() =>
       assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: true })
     ).toThrow(/predates the Cygwin\/MSYS job-breakaway denial/)
@@ -207,17 +211,43 @@ describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
   // falls through to the published prebuild -- the binary that leaks every MSYS
   // pane child. That is a broken build, not an absence to shrug at.
   it('refuses a same-host rebuild that reported success and produced nothing', () => {
-    const nodePtyDir = rebuiltInto({ 'package.json': true })
+    const nodePtyDir = rebuiltInto({ 'package.json': {} })
     expect(() =>
       assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
     ).toThrow(/the rebuild reported success/)
   })
 
   it('names both the addon it wanted and the prebuild that would load instead', () => {
-    const nodePtyDir = rebuiltInto({ 'package.json': true })
+    const nodePtyDir = rebuiltInto({ 'package.json': {} })
     expect(() =>
       assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'arm64', crossHost: false })
     ).toThrow(/build[\\/]Release[\s\S]*prebuilds[\\/]win32-arm64/)
+  })
+
+  // A rebuild that ignored --arch leaves a binary the target cannot load, so
+  // node-pty falls back to the prebuild. Saying so here is two steps closer to
+  // the command that fixes it than saying so at packaging time.
+  it('rejects an addon of an architecture this rebuild did not target', () => {
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': { arch: 'x64' } })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'arm64', crossHost: true })
+    ).toThrow(/machine 0x8664, but this rebuild targets win32-arm64/)
+  })
+
+  it('accepts one a cross-arch rebuild really did emit for the target', () => {
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': { arch: 'arm64' } })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'arm64', crossHost: true })
+    ).not.toThrow()
+  })
+
+  // PE_MACHINE covers what Orca ships; an arch it does not know is not one this
+  // can judge, and guessing would fail a rebuild that was fine.
+  it('does not judge an architecture it has no machine value for', () => {
+    const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': { arch: 'x64' } })
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'ia32', crossHost: true })
+    ).not.toThrow()
   })
 
   it.each([
@@ -225,7 +255,7 @@ describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
     ['no node-pty on this disk is not a bad build', { crossHost: false }, false]
   ])('warns instead: %s', (_case, verdict, nodePtyInstalled) => {
     const nodePtyDir = nodePtyInstalled
-      ? rebuiltInto({ 'package.json': true })
+      ? rebuiltInto({ 'package.json': {} })
       : join(fixtureDir, 'no-node-pty-here')
     const warn = vi.fn()
     expect(() =>

@@ -2,6 +2,7 @@
 
 const { existsSync, readFileSync } = require('node:fs')
 const { dirname, join, resolve } = require('node:path')
+const { PE_MACHINE, describePeMachine, readPeMachine } = require('./windows-pe-machine.cjs')
 
 const NODE_PTY_JOB_EXPORTS = ['listJobProcessIds', 'terminateJob', 'assignCurrentProcessToJob']
 
@@ -31,6 +32,30 @@ function conptyDeniesCygwinBreakaway(addonPath) {
 }
 
 /**
+ * Why here and not only at packaging: a rebuild that did not honour `--arch`
+ * leaves a binary the target cannot load, the app falls back to the published
+ * prebuild, and the packaged gate then reports it two steps from the command
+ * that could fix it. `PE_MACHINE` covers the Windows arches Orca ships; anything
+ * else this cannot judge, so it does not pretend to.
+ */
+function assertRebuiltConptyMatchesArch(addonPath, rebuildArch, peMachine) {
+  const expected = PE_MACHINE[rebuildArch]
+  if (expected === undefined) {
+    return
+  }
+  const machine = peMachine(addonPath)
+  if (machine === expected) {
+    return
+  }
+  throw new Error(
+    `${addonPath} is ${describePeMachine(machine)}, but this rebuild targets win32-${rebuildArch} ` +
+      `(0x${expected.toString(16)}). node-gyp ignored --arch, so node-pty would fall back to the ` +
+      'published prebuild, which predates the Cygwin/MSYS job-breakaway denial and leaks every ' +
+      'MSYS pane child out of its job.'
+  )
+}
+
+/**
  * The verdict on the addon a Windows rebuild just claimed to produce.
  *
  * Takes the host as arguments rather than reading `process`, because the branch
@@ -49,10 +74,12 @@ function assertRebuiltConptyDeniesMsysBreakaway({
   rebuildArch,
   crossHost,
   exists = existsSync,
+  peMachine = readPeMachine,
   warn = console.warn
 }) {
   const addonPath = join(nodePtyDir, 'build', 'Release', 'conpty.node')
   if (exists(addonPath)) {
+    assertRebuiltConptyMatchesArch(addonPath, rebuildArch, peMachine)
     assertCygwinBreakawayDenied(addonPath, { dir: addonPath })
     return
   }

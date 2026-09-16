@@ -19,7 +19,15 @@ function collectScriptModules(scriptPath, seen = new Set()) {
     return seen
   }
   seen.add(scriptPath)
-  for (const [, specifier] of readFileSync(scriptPath, 'utf8').matchAll(/from '(\.\/[^']+)'/g)) {
+  // Every shape that reaches a co-located module: `from`, static and dynamic
+  // `import`, and `require` -- the Windows gates are .cjs, and a module reached
+  // only by require or by a side-effect import is the one nobody notices is
+  // missing until a subprocess fails with a resolution error instead.
+  const source = readFileSync(scriptPath, 'utf8')
+  const specifiers = source.matchAll(
+    /(?:\bfrom|\brequire\s*\(|\bimport\s*\(|\bimport)\s*'(\.\/[^']+)'/g
+  )
+  for (const [, specifier] of specifiers) {
     collectScriptModules(join(dirname(scriptPath), specifier), seen)
   }
   return seen
