@@ -1,8 +1,8 @@
+import { settingsRead } from '../transport/settings-read-operations'
 import { useRef, useState, type Dispatch, type SetStateAction } from 'react'
 import type { PersistedTrustedOrcaHooks } from '../../../src/shared/orca-yaml-hook-types'
 import type { RetiredNameRegistry } from '../../../src/shared/worktree/retired-name-registry'
 import type { RpcClient } from '../transport/rpc-client'
-import type { RpcSuccess } from '../transport/types'
 import { createBlankWorkspace } from '../tasks/blank-workspace-create'
 import { isMobileTuiAgentEnabled } from '../tasks/mobile-tui-agents'
 import {
@@ -56,9 +56,10 @@ export function useNewWorkspaceCreateSubmit(args: {
   trustedOrcaHooks: PersistedTrustedOrcaHooks
   setTrustedOrcaHooks: (trust: PersistedTrustedOrcaHooks) => void
   getWorktreeCreateCutoverSupport: () => Promise<WorktreeCreateIdempotencySupport | false>
+  getAgentLaunchSupport: () => Promise<boolean>
   transitionDrawer: (view: Exclude<NewWorktreeDrawerView, 'transition'>) => void
   setError: Dispatch<SetStateAction<string>>
-  onCreated: (worktreeId: string, name: string) => void
+  onCreated: (worktreeId: string, name: string, warning?: string) => void
   onClose: () => void
 }): {
   creating: boolean
@@ -88,13 +89,12 @@ export function useNewWorkspaceCreateSubmit(args: {
       }
       let latestRuntimeSettings = args.runtimeSettings
       try {
-        const settingsResponse = await client.sendRequest('settings.get')
-        if (settingsResponse.ok) {
-          const result = (settingsResponse as RpcSuccess).result as {
-            settings: NewWorktreeRuntimeSettings
-          }
-          latestRuntimeSettings = result.settings
-          args.setRuntimeSettings(result.settings)
+        const settingsReply = await settingsRead.request(client)
+        const settings = settingsRead.interpret(settingsReply)
+        if (settings.accepted) {
+          // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
+          latestRuntimeSettings = settings.value as NewWorktreeRuntimeSettings
+          args.setRuntimeSettings(latestRuntimeSettings)
         }
       } catch {
         // The runtime validates the same setting before spawning.
@@ -164,7 +164,8 @@ export function useNewWorkspaceCreateSubmit(args: {
             workspaceName: trimmedName || undefined,
             note: trimmedNote,
             nameIsAutoManaged: args.composer.isNameAutoManaged,
-            worktreeCreateIdempotency: args.getWorktreeCreateCutoverSupport()
+            worktreeCreateIdempotency: args.getWorktreeCreateCutoverSupport(),
+            agentLaunchSupported: args.getAgentLaunchSupport()
           })
         : await createBlankWorkspace({
             client,
@@ -174,14 +175,15 @@ export function useNewWorkspaceCreateSubmit(args: {
             createdWithAgentId,
             comment: trimmedNote,
             setupDecision,
-            worktreeCreateIdempotency: args.getWorktreeCreateCutoverSupport()
+            worktreeCreateIdempotency: args.getWorktreeCreateCutoverSupport(),
+            agentLaunchSupported: args.getAgentLaunchSupport()
           })
       if ('error' in result) {
         args.setError(result.error)
         return
       }
       args.onClose()
-      args.onCreated(result.worktreeId, result.name)
+      args.onCreated(result.worktreeId, result.name, result.warning)
     } catch (error) {
       args.setError(error instanceof Error ? error.message : 'Failed to create workspace')
     } finally {

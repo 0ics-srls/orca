@@ -5,15 +5,15 @@ import Database from '../../../../sqlite/sync-database'
 import { afterEach, describe, expect, it } from 'vitest'
 import { OrchestrationDb } from '../orchestration-db'
 import { SCHEMA_VERSION } from '../contract-constants'
-import { migrateV41 } from './migrate-v41'
+import { migrateV42 } from './migrate-v42'
 
 const LEAF1 = '11111111-1111-4111-8111-111111111111'
 const LEAF2 = '22222222-2222-4222-8222-222222222222'
 const LEAF3 = '33333333-3333-4333-8333-333333333333'
 const STRUCTURED_PANE = `structured-agent-session-sess1:${LEAF2}`
 
-/** Puts an already-migrated database back into v40 shape for the direct-unit cases. */
-function revertToV40Shape(db: OrchestrationDb): void {
+/** Puts an already-migrated database back into pre-principal (v41) shape for the direct-unit cases. */
+function revertToV41Shape(db: OrchestrationDb): void {
   db.db.exec(`
     DROP TRIGGER IF EXISTS trg_runs_remember_coordinator_insert;
     DROP TRIGGER IF EXISTS trg_runs_remember_coordinator_update;
@@ -24,7 +24,7 @@ function revertToV40Shape(db: OrchestrationDb): void {
   `)
 }
 
-function seedV40Rows(db: OrchestrationDb): void {
+function seedV41Rows(db: OrchestrationDb): void {
   db.db.exec(`
     INSERT INTO runs (id, objective, coordinator_handle, coordinator_pane_key, legacy)
       VALUES ('run_paned', 'paned', 'term_a', 'tab_a:${LEAF1}', 0);
@@ -68,12 +68,12 @@ describe('principal column migration', () => {
     return join(root, 'orchestration.db')
   }
 
-  it('v40 -> v41 migrates and backfills by classification, and is idempotent', () => {
+  it('v41 -> v42 migrates and backfills by classification, and is idempotent', () => {
     const db = new OrchestrationDb(':memory:')
     try {
-      revertToV40Shape(db)
-      seedV40Rows(db)
-      migrateV41.call(db, 40)
+      revertToV41Shape(db)
+      seedV41Rows(db)
+      migrateV42.call(db, 41)
 
       expect(principalSnapshot(db)).toEqual([
         { id: 'run_legacy_local', coordinator_principal: null },
@@ -95,7 +95,7 @@ describe('principal column migration', () => {
       ).toEqual({ objective: 'paned', legacy: 0 })
 
       const before = principalSnapshot(db)
-      migrateV41.call(db, 40)
+      migrateV42.call(db, 41)
       expect(principalSnapshot(db)).toEqual(before)
     } finally {
       db.close()
@@ -105,8 +105,9 @@ describe('principal column migration', () => {
   it('runs the real chain from a seeded v40 file database, cache and triggers included', () => {
     const path = tempDbPath()
     const seed = new Database(path)
-    // v40 shapes for exactly the tables v41 touches; createTables supplies every other table, and
-    // a 40 stamp survives the completeness probe so the migration start resolves to 40.
+    // v40 shapes for exactly the tables v42 touches; createTables supplies every other table, and
+    // a 40 stamp survives the completeness probe so the migration start resolves to 40. The chain
+    // therefore runs main's v41 before v42, which is the ordering a real upgrade sees.
     seed.exec(`
       CREATE TABLE runs (
         id                    TEXT PRIMARY KEY,

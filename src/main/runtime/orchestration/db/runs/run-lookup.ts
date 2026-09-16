@@ -142,7 +142,7 @@ export function unbindOtherRunsForPane(
            WHERE id = ?`
         )
         .run(run.id)
-      this.fenceOutstandingDelivery(run.id)
+      this.fenceUnacknowledgedMailboxDeliveries(`run:${run.id}`)
     }
   }
 }
@@ -151,10 +151,6 @@ export function requireRun(this: OrchestrationDb, runId: string): void {
   if (!this.getRunRaw(runId)) {
     throw new Error(`Run not found: ${runId}`)
   }
-}
-
-export function fenceOutstandingDelivery(this: OrchestrationDb, runId: string): void {
-  this.fenceOutstandingMailboxDelivery(`run:${runId}`)
 }
 
 export type RunLookupMethods = {
@@ -167,7 +163,6 @@ export type RunLookupMethods = {
   getRunRaw: typeof getRunRaw
   unbindOtherRunsForPane: typeof unbindOtherRunsForPane
   requireRun: typeof requireRun
-  fenceOutstandingDelivery: typeof fenceOutstandingDelivery
 }
 
 export function attachRunLookup(ctor: { prototype: object }): void {
@@ -180,7 +175,6 @@ export function attachRunLookup(ctor: { prototype: object }): void {
     runsBoundToPane,
     getRunRaw,
     unbindOtherRunsForPane,
-    requireRun,
-    fenceOutstandingDelivery
+    requireRun
   })
 }
