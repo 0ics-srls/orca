@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "c582ce355b0704b38d7e84cbce352630096c91231bf09aecd1f6dbb409fed17f",
   "scenarioSha256": "e6e8197a541cd73e5811a1f28b0dbfc414a4d34c1ae6929fc1bbae1213820674",
   "platform": "darwin",
@@ -37,9 +37,10 @@
       "status": "pending",
       "startedAt": 0
     },
-    "95b1f2f379aa": {
+    "9f78c498e866": {
       "name": "git.push#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.push\",\"params\":{\"worktree\":\"id:repo42::/p\"}}"
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"git.push\",\"params\":{\"worktree\":\"id:repo42::/p\"}}",
+      "sent": 1
     },
     "b7a56d89f615": {
       "name": "git.push#1",
@@ -110,7 +111,7 @@
         "id": "pending",
         "observation": {
           "sender": ["b7a56d89f615"],
-          "payloads": ["95b1f2f379aa"],
+          "payloads": ["9f78c498e866"],
           "settlements": {
             "apply": "9270aeb7d9c6"
           },
@@ -122,7 +123,7 @@
         "id": "settled",
         "observation": {
           "sender": ["f9869252c305"],
-          "payloads": ["95b1f2f379aa"],
+          "payloads": ["9f78c498e866"],
           "settlements": {
             "apply": "00e8a3bac22f"
           },
