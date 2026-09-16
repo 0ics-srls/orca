@@ -23,6 +23,9 @@ import { peImage } from './windows-pe-image-fixture.mjs'
  * construction, which is the one thing these fixtures must not do.
  */
 const { CYGWIN_BREAKAWAY_MARKER } = createRequire(import.meta.url)('./node-pty-job-ownership.cjs')
+const { CREATION_TIME_FLAG } = createRequire(import.meta.url)(
+  './windows-process-tree-creation-time.cjs'
+)
 
 const sourceScriptPath = fileURLToPath(new URL('./rebuild-native-deps.mjs', import.meta.url))
 const sourceInstallScriptPath = fileURLToPath(
@@ -243,33 +246,10 @@ const FAKE_ADDON_BYTES = {
  * because "produced the upstream reader" and "produced nothing" are both real
  * outcomes that assertion has to tell apart.
  */
-/** What a real node-gyp Windows build leaves behind, per target arch. */
-const FAKE_CONPTY_BY_ARCH = Object.fromEntries(
-  ['x64', 'arm64'].map((arch) => [
-    arch,
-    Buffer.concat([peImage({ arch }), CYGWIN_BREAKAWAY_MARKER]).toString('base64')
-  ])
-)
-
 export function writeFakeElectronRebuild(projectDir, { logPathEnv = null, addon = 'clean' } = {}) {
   const rebuildDir = join(projectDir, 'node_modules', '@electron', 'rebuild')
   mkdirSync(rebuildDir, { recursive: true })
   writeFileSync(join(rebuildDir, 'package.json'), JSON.stringify({ type: 'module' }))
-  // A real Windows rebuild leaves conpty.node in build/Release; a fake one that
-  // does not makes the gates downstream see a tree that cannot happen.
-  const emitNodePty = `
-  const nodePtyDir = join('node_modules', 'node-pty')
-  if (
-    options.platform === 'win32' &&
-    (options.onlyModules ?? []).includes('node-pty') &&
-    existsSync(join(nodePtyDir, 'lib', 'utils.js'))
-  ) {
-    mkdirSync(join(nodePtyDir, 'build', 'Release'), { recursive: true })
-    writeFileSync(
-      join(nodePtyDir, 'build', 'Release', 'conpty.node'),
-      Buffer.from(${JSON.stringify(FAKE_CONPTY_BY_ARCH)}[options.arch] ?? '', 'base64')
-    )
-  }`
   const emitAddon =
     addon === 'none'
       ? ''
@@ -281,7 +261,7 @@ export function writeFakeElectronRebuild(projectDir, { logPathEnv = null, addon 
       join(packageDir, 'build', 'Release', 'windows_process_tree.node'),
       ${JSON.stringify(FAKE_ADDON_BYTES[addon])}
     )
-  }${emitNodePty}`
+  }`
   const emitImports =
     addon === 'none'
       ? ''
@@ -311,7 +291,7 @@ export async function rebuild(options) {${emitAddon}
 }
 `
       : `${emitImports}
-export async function rebuild(options) {${emitAddon}
+export async function rebuild() {${emitAddon}
 }
 `
   )
@@ -435,10 +415,18 @@ export function writeFakeWindowsRegistry(projectDir) {
   )
 }
 
+/**
+ * A healthy one: the addon reports CreationTime, which is what a build of the
+ * patched source does and what the probe has required since the creation-time
+ * gate landed. Exporting nothing means "the tarball prebuilt" to that gate.
+ */
 export function writeFakeWindowsProcessTree(projectDir) {
   const processTreeDir = join(projectDir, 'node_modules', '@vscode', 'windows-process-tree')
   mkdirSync(processTreeDir, { recursive: true })
-  writeFileSync(join(processTreeDir, 'index.js'), 'module.exports = {}\n')
+  writeFileSync(
+    join(processTreeDir, 'index.js'),
+    `module.exports = { supportedProcessDataFlags: ${CREATION_TIME_FLAG} }\n`
+  )
 }
 
 export function writeFakeWindowsProcessTreeWithNodeAddonApi(
