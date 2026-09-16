@@ -19,6 +19,11 @@ const replacements = {
   'pty-eager-buffer-clamp.ts': [
     'data: tail.text.length < data.length ? flattenRetainedSlice(tail.text) : tail.text',
     'data: tail.text'
+  ],
+  'terminal-error-accumulation.ts': ['return flattenRetainedSlice(bounded)', 'return bounded'],
+  'deferred-reattach-live-data-queue.ts': [
+    'flattenRetainedSlice(chunk.data.slice(-MAX_DEFERRED_REATTACH_LIVE_CHARS))',
+    'chunk.data.slice(-MAX_DEFERRED_REATTACH_LIVE_CHARS)'
   ]
 }
 const results = []
@@ -51,6 +56,8 @@ for (const fixed of [false, true]) {
         export { gitLabJobTraceToLogExcerpt } from './src/shared/gitlab-job-log-excerpt'
         export { capTerminalScrollbackSessionBuffer } from './src/shared/workspace-session-terminal-buffers'
         export { clampUtf8Tail } from './src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp'
+        export { boundTerminalErrorSurface } from './src/renderer/src/components/terminal-pane/terminal-error-accumulation'
+        export { DeferredReattachLiveDataQueue } from './src/renderer/src/components/terminal-pane/deferred-reattach-live-data-queue'
       `,
       resolveDir: root,
       loader: 'ts'
@@ -68,7 +75,7 @@ for (const fixed of [false, true]) {
               builder.onLoad(
                 {
                   filter:
-                    /(?:check-job-log-tail-slice|workspace-session-terminal-buffers|pty-eager-buffer-clamp)\.ts$/
+                    /(?:check-job-log-tail-slice|workspace-session-terminal-buffers|pty-eager-buffer-clamp|terminal-error-accumulation|deferred-reattach-live-data-queue)\.ts$/
                 },
                 async ({ path }) => {
                   const source = await readFile(path, 'utf8')
@@ -79,7 +86,7 @@ for (const fixed of [false, true]) {
                     throw new Error('The copy boundary changed; update the baseline transform')
                   }
                   return {
-                    contents: source.replace(...replacement),
+                    contents: source.replaceAll(...replacement),
                     loader: 'ts'
                   }
                 }
@@ -94,7 +101,9 @@ for (const fixed of [false, true]) {
     sliceCheckLogTail,
     gitLabJobTraceToLogExcerpt,
     capTerminalScrollbackSessionBuffer,
-    clampUtf8Tail
+    clampUtf8Tail,
+    boundTerminalErrorSurface,
+    DeferredReattachLiveDataQueue
   } = await import(`data:text/javascript;base64,${Buffer.from(bundle).toString('base64')}`)
   for (const [kind, makeLog, excerpt] of [
     ['github-long-line', (i) => `${i}:${'x'.repeat(parentChars)}`, sliceCheckLogTail],
@@ -113,6 +122,16 @@ for (const fixed of [false, true]) {
       'terminal-eager-buffer',
       (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
       (text) => clampUtf8Tail(text, 512 * 1024).data
+    ],
+    ['terminal-error', (i) => `${'x'.repeat(parentChars * 2)}:${i}`, boundTerminalErrorSurface],
+    [
+      'terminal-deferred-reattach',
+      (i) => `${i}:${'x'.repeat(parentChars * 2)}`,
+      (data) => {
+        const queue = new DeferredReattachLiveDataQueue()
+        queue.enqueue({ data, ptyId: 'p', streamGeneration: 1 })
+        return queue.takeAll()[0].data
+      }
     ]
   ]) {
     results.push({ kind, fixed, ...measure(excerpt, makeLog) })

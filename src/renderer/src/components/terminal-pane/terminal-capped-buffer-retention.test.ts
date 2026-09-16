@@ -3,6 +3,8 @@ import { capTerminalScrollbackSessionBuffer } from '../../../../shared/workspace
 import { TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT } from '../../../../shared/terminal-scrollback-limits'
 import { clampUtf8Tail } from './pty-eager-buffer-clamp'
 import { PtyShutdownOutputQueue } from './pty-shutdown-output-queue'
+import { DeferredReattachLiveDataQueue } from './deferred-reattach-live-data-queue'
+import { appendPaneTerminalError, type TerminalErrorsByPaneId } from './terminal-error-accumulation'
 
 const LIMIT = TERMINAL_SCROLLBACK_SESSION_BUFFER_BYTE_LIMIT
 const PARENT_CHARS = 4 * 1024 * 1024
@@ -15,6 +17,14 @@ function heapAfterGc(): number {
   globalThis.gc()
   globalThis.gc()
   return process.memoryUsage().heapUsed
+}
+
+function createPaneErrors(): TerminalErrorsByPaneId {
+  let errors: TerminalErrorsByPaneId = {}
+  for (let index = 0; index < COUNT; index++) {
+    errors = appendPaneTerminalError(errors, 0, `${'x'.repeat(PARENT_CHARS)}:${index}`)
+  }
+  return errors
 }
 
 describe('capped terminal buffer retention', () => {
@@ -46,5 +56,37 @@ describe('capped terminal buffer retention', () => {
     for (const queue of queues) {
       expect(queue.takeAll()).toEqual([{ kind: 'replay', data: 'x'.repeat(LIMIT) }])
     }
+  })
+
+  it('detaches oversized chunks while a reattach queue waits for its consumer', () => {
+    const before = heapAfterGc()
+    const queues = Array.from({ length: COUNT }, (_value, index) => {
+      const queue = new DeferredReattachLiveDataQueue()
+      queue.enqueue({
+        data: `${index}:${'x'.repeat(PARENT_CHARS)}`,
+        ptyId: 'p',
+        streamGeneration: 1
+      })
+      return queue
+    })
+    const growth = heapAfterGc() - before
+
+    expect(queues.every((queue) => queue.getStorageForTest().retainedChars === LIMIT)).toBe(true)
+    expect(growth).toBeLessThan(COUNT * LIMIT * 2)
+    for (const queue of queues) {
+      expect(queue.takeAll()[0]?.data).toBe('x'.repeat(LIMIT))
+    }
+  })
+
+  it('keeps capped pane errors without retaining the original error payloads', () => {
+    const before = heapAfterGc()
+    const errors = createPaneErrors()
+    const growth = heapAfterGc() - before
+
+    expect(errors[0]).toHaveLength(COUNT)
+    expect(
+      errors[0].every((text, index) => text.length === 4000 && text.endsWith(`:${index}`))
+    ).toBe(true)
+    expect(growth).toBeLessThan(PARENT_CHARS)
   })
 })

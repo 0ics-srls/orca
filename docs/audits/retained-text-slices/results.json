@@ -4,8 +4,8 @@
   "parentChars": 2097152,
   "count": 8,
   "bundles": {
-    "before": "e8c11e93f529e8e8ff8b379a4f6e9bc1dedf37717ae086c6b019ab2fa39b3c1f",
-    "after": "3bb39c435d59f8d8e07e533a7eb2fe54c1afd39e27825e64e73d852b74f547a4"
+    "before": "a02e097c1c10d0c9b60c44b415c9d0eb521a56e3033fef1eecc001c41b822624",
+    "after": "f6a0b5d5c50b34b86b63161f16ec961b46793b408dc8916443e327ba7e623b80"
   },
   "results": [
     {
@@ -14,7 +14,7 @@
       "entries": 8,
       "logicalChars": 131072,
       "logicalBytes": 131072,
-      "heapDelta": 16774216
+      "heapDelta": 16786760
     },
     {
       "kind": "github-earlier-error",
@@ -22,7 +22,7 @@
       "entries": 8,
       "logicalChars": 43816,
       "logicalBytes": 131064,
-      "heapDelta": 33577840
+      "heapDelta": 33577472
     },
     {
       "kind": "gitlab-long-line",
@@ -30,7 +30,7 @@
       "entries": 8,
       "logicalChars": 131072,
       "logicalBytes": 131072,
-      "heapDelta": 16793640
+      "heapDelta": 16793272
     },
     {
       "kind": "terminal-session-buffer",
@@ -46,7 +46,23 @@
       "entries": 8,
       "logicalChars": 4194304,
       "logicalBytes": 4194304,
-      "heapDelta": 33556040
+      "heapDelta": 33555960
+    },
+    {
+      "kind": "terminal-error",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 32000,
+      "logicalBytes": 32000,
+      "heapDelta": 33556120
+    },
+    {
+      "kind": "terminal-deferred-reattach",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 33565304
     },
     {
       "kind": "github-long-line",
@@ -54,7 +70,7 @@
       "entries": 8,
       "logicalChars": 131072,
       "logicalBytes": 131072,
-      "heapDelta": 143160
+      "heapDelta": 142616
     },
     {
       "kind": "github-earlier-error",
@@ -62,7 +78,7 @@
       "entries": 8,
       "logicalChars": 43816,
       "logicalBytes": 131064,
-      "heapDelta": 106064
+      "heapDelta": 106392
     },
     {
       "kind": "gitlab-long-line",
@@ -70,7 +86,7 @@
       "entries": 8,
       "logicalChars": 131072,
       "logicalBytes": 131072,
-      "heapDelta": 147488
+      "heapDelta": 147520
     },
     {
       "kind": "terminal-session-buffer",
@@ -78,7 +94,7 @@
       "entries": 8,
       "logicalChars": 4194304,
       "logicalBytes": 4194304,
-      "heapDelta": 4195352
+      "heapDelta": 4195736
     },
     {
       "kind": "terminal-eager-buffer",
@@ -86,7 +102,23 @@
       "entries": 8,
       "logicalChars": 4194304,
       "logicalBytes": 4194304,
-      "heapDelta": 4195600
+      "heapDelta": 4195568
+    },
+    {
+      "kind": "terminal-error",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 32000,
+      "logicalBytes": 32000,
+      "heapDelta": 33272
+    },
+    {
+      "kind": "terminal-deferred-reattach",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 4198352
     }
   ]
 }
