@@ -130,7 +130,8 @@ export class StructuredSessionCompaction {
       return
     }
     const turn = record(params.turn)
-    if (method === 'turn/started' && typeof turn.id === 'string') {
+    // The first start identifies this generation; a later start can belong to work after interrupt.
+    if (method === 'turn/started' && pending.turnId === undefined && typeof turn.id === 'string') {
       pending.turnId = turn.id
     }
     if (isCodexCompactionComplete(method, params)) {

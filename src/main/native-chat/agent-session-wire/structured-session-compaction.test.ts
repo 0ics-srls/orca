@@ -105,6 +105,37 @@ describe('structured compaction lifecycle', () => {
     await expect(next).resolves.toEqual({})
   })
 
+  it('does not let a later Codex turn release an interrupted compaction generation', async () => {
+    const tracker = new StructuredSessionCompaction()
+    const late = vi.fn(async () => {})
+    const interrupted = tracker.run('s', 'thread', async () => {}, late, 'compact:operation-1')
+    tracker.codex('s', 'turn/started', {
+      threadId: 'thread',
+      turn: { id: 'interrupted-compaction' }
+    })
+    tracker.codex('s', 'item/completed', {
+      threadId: 'thread',
+      item: { type: 'contextCompaction' }
+    })
+    tracker.interrupted('s')
+    await expect(interrupted).rejects.toThrow('interrupted')
+
+    tracker.codex('s', 'turn/started', { threadId: 'thread', turn: { id: 'later-turn' } })
+    tracker.codex('s', 'turn/completed', {
+      threadId: 'thread',
+      turn: { id: 'later-turn', status: 'completed' }
+    })
+    expect(tracker.hasPending('s')).toBe(true)
+    expect(late).not.toHaveBeenCalled()
+
+    tracker.codex('s', 'turn/completed', {
+      threadId: 'thread',
+      turn: { id: 'interrupted-compaction', status: 'completed' }
+    })
+    await vi.waitFor(() => expect(late).toHaveBeenCalledWith({}))
+    expect(tracker.hasPending('s')).toBe(false)
+  })
+
   it('does not apply an interrupted request receipt to the next generation', async () => {
     const tracker = new StructuredSessionCompaction()
     const oldReceipt = Promise.withResolvers<{ error: string }>()
