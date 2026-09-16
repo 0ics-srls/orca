@@ -10,7 +10,8 @@ import {
   findIndexedFolderWorkspaceOwner,
   findIndexedProjectGroupOwner,
   findIndexedRepoOwnerForHost,
-  getCatalogOwnerHostId
+  getCatalogOwnerHostId,
+  resolveIndexedRepoOwner
 } from '@/lib/worktree-runtime-owner-index'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 import type { Repo } from '../../../../shared/repo-types'
@@ -184,16 +185,29 @@ function findWorktreeRowOnItsOwnHost(
   return { worktree: rows.find((row) => worktreeMatchesHost(row, hostId, matchOptions)), hostId }
 }
 
+/**
+ * The project for this worktree, named only when one host owns the repo id.
+ *
+ * A repo id is registered per host, so the same id can name two projects (see
+ * `src/main/persistence-duplicate-repo-id-host-scope.test.ts`). That collision is
+ * independent of the worktree-id collision above: two hosts can hold repo `dup` at
+ * different paths, giving unique worktree ids whose repo lookup is still ambiguous.
+ */
 function findNotificationRepo(
   state: StoreSnapshot,
+  worktreeId: string,
   repoId: string,
   hostId: ExecutionHostId | null
 ): Repo | undefined {
-  if (!hostId) {
+  // One owner for the id means the id-keyed map already names it, at no extra cost.
+  if (resolveIndexedRepoOwner(state.repos, repoId).kind !== 'ambiguous') {
     return getRepoMapFromState(state).get(repoId)
   }
-  // A repo id collides across hosts too, so the resolved host picks the project name.
-  return findIndexedRepoOwnerForHost(state.repos, repoId, hostId) ?? undefined
+  const owningHost = hostId ?? getResolvedExecutionHostIdForWorktree(state, worktreeId)
+  if (!owningHost) {
+    return undefined
+  }
+  return findIndexedRepoOwnerForHost(state.repos, repoId, owningHost) ?? undefined
 }
 
 export function getNotificationWorkspaceLabels(
@@ -215,11 +229,11 @@ export function getNotificationWorkspaceLabels(
       )
     return { repoLabel: group?.name, worktreeLabel: folder?.name || fallback }
   }
-  const { worktree, hostId } = findWorktreeRowOnItsOwnHost(
-    state,
-    scope?.type === 'worktree' ? scope.worktreeId : workspaceId
-  )
-  const repo = worktree ? findNotificationRepo(state, worktree.repoId, hostId) : undefined
+  const worktreeId = scope?.type === 'worktree' ? scope.worktreeId : workspaceId
+  const { worktree, hostId } = findWorktreeRowOnItsOwnHost(state, worktreeId)
+  const repo = worktree
+    ? findNotificationRepo(state, worktreeId, worktree.repoId, hostId)
+    : undefined
   return {
     repoLabel: repo?.displayName,
     worktreeLabel: worktree?.displayName || worktree?.branch || fallback

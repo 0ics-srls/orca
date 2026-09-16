@@ -138,6 +138,75 @@ describe('notification workspace labels', () => {
     }
   )
 
+  // A repo id is registered per host, so two hosts can hold one id at different
+  // paths. Their worktree ids are then unique, so the collision lives entirely in
+  // the repo lookup — the id-keyed repo map is last-wins and names the wrong project.
+  function duplicateRepoIdAcrossHosts(): Repo[] {
+    return [
+      {
+        id: 'dup',
+        displayName: 'Dup Local',
+        path: '/laptop/dup',
+        connectionId: null,
+        badgeColor: 'blue',
+        addedAt: 0
+      },
+      {
+        id: 'dup',
+        displayName: 'Dup Remote',
+        path: '/remote/dup',
+        connectionId: 'ssh-1',
+        badgeColor: 'blue',
+        addedAt: 0
+      }
+    ]
+  }
+
+  it('names the local project for a unique worktree id whose repo id spans hosts', () => {
+    const state = {
+      ...useAppStore.getInitialState(),
+      // The ssh row is last, so a bare-id repo lookup answers "Dup Remote" here.
+      repos: duplicateRepoIdAcrossHosts(),
+      worktreesByRepo: {
+        dup: [
+          makeWorktree({
+            id: 'dup::/laptop/dup',
+            repoId: 'dup',
+            hostId: 'local',
+            path: '/laptop/dup',
+            displayName: 'Laptop main'
+          })
+        ]
+      }
+    }
+    expect(getNotificationWorkspaceLabels(state, 'dup::/laptop/dup', 'Terminal')).toEqual({
+      repoLabel: 'Dup Local',
+      worktreeLabel: 'Laptop main'
+    })
+  })
+
+  it('omits the project rather than guessing when a spanning repo id has no provable host', () => {
+    const state = {
+      ...useAppStore.getInitialState(),
+      repos: duplicateRepoIdAcrossHosts(),
+      worktreesByRepo: {
+        dup: [
+          makeWorktree({
+            id: 'dup::/laptop/dup',
+            repoId: 'dup',
+            path: '/laptop/dup',
+            displayName: 'Laptop main'
+          })
+        ]
+      }
+    }
+    // Last-wins on the bare id would answer "Dup Remote" for this local row.
+    expect(getNotificationWorkspaceLabels(state, 'dup::/laptop/dup', 'Terminal')).toEqual({
+      repoLabel: undefined,
+      worktreeLabel: 'Laptop main'
+    })
+  })
+
   it('does not pick an arbitrary folder when hosts have conflicting records', () => {
     const state = stateWithWorkspace()
     state.folderWorkspaces = (['ssh:a', 'ssh:b'] as const).map((executionHostId) =>
