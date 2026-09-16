@@ -55,8 +55,8 @@ describe('ensureBrowserPageViewport', () => {
     expect(viewport.scroller.style.overflow).toBe('')
 
     setBrowserPageViewportPresetSize('page-1', { width: 1440, height: 900 })
-    expect(viewport.content.style.width).toBe('1440px')
-    expect(viewport.content.style.height).toBe('900px')
+    expect(viewport.content.style.getPropertyValue('--browser-page-viewport-width')).toBe('1440px')
+    expect(viewport.content.style.getPropertyValue('--browser-page-viewport-height')).toBe('900px')
     expect(viewport.scroller.style.overflow).toBe('auto')
 
     setBrowserPageViewportPresetSize('page-1', null)
@@ -71,9 +71,29 @@ describe('ensureBrowserPageViewport', () => {
     removeBrowserPageViewport('page-1')
 
     const rebuilt = ensureBrowserPageViewport('page-1', 'workspace-1')!
-    expect(rebuilt.content.style.width).toBe('1024px')
-    expect(rebuilt.content.style.height).toBe('768px')
+    expect(rebuilt.content.style.getPropertyValue('--browser-page-viewport-width')).toBe('1024px')
+    expect(rebuilt.content.style.getPropertyValue('--browser-page-viewport-height')).toBe('768px')
     expect(rebuilt.scroller.style.overflow).toBe('auto')
+  })
+
+  // STA-7568: the CSS variable keeps the host box in window DIP while the stylesheet
+  // divides by the live UI zoom factor.
+  it('stores preset host dimensions as window-DIP CSS variables', () => {
+    mountSlotViewport('workspace-1')
+
+    const viewport = ensureBrowserPageViewport('page-1', 'workspace-1')!
+    setBrowserPageViewportPresetSize('page-1', { width: 390, height: 844 })
+    expect(viewport.content.style.getPropertyValue('--browser-page-viewport-width')).toBe('390px')
+    expect(viewport.content.style.getPropertyValue('--browser-page-viewport-height')).toBe('844px')
+  })
+
+  it('clears preset dimensions when no preset is active', () => {
+    mountSlotViewport('workspace-1')
+    const viewport = ensureBrowserPageViewport('page-1', 'workspace-1')!
+    setBrowserPageViewportPresetSize('page-1', { width: 390, height: 844 })
+    setBrowserPageViewportPresetSize('page-1', null)
+
+    expect(viewport.content.style.width).toBe('100%')
   })
 
   it('routes host wheel deltas to the preset scroller', () => {

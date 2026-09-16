@@ -137,12 +137,26 @@ export function ensureBrowserPageViewport(
   return viewport
 }
 
+// Why the DIP conversion: CDP emulates the guest viewport in window DIP, but UI zoom
+// redefines this renderer's CSS px, so an unconverted `${width}px` host box outgrows the
+// emulated page and leaves an unpainted strip beside it (STA-7568).
 function applyViewportPresetSizeStyles(
   viewport: BrowserPageViewport,
   size: { width: number; height: number } | null
 ): void {
-  viewport.content.style.width = size ? `${size.width}px` : '100%'
-  viewport.content.style.height = size ? `${size.height}px` : '100%'
+  if (size) {
+    viewport.content.style.setProperty('--browser-page-viewport-width', `${size.width}px`)
+    viewport.content.style.setProperty('--browser-page-viewport-height', `${size.height}px`)
+    viewport.content.style.width =
+      'calc(var(--browser-page-viewport-width) / var(--ui-zoom-factor, 1))'
+    viewport.content.style.height =
+      'calc(var(--browser-page-viewport-height) / var(--ui-zoom-factor, 1))'
+  } else {
+    viewport.content.style.removeProperty('--browser-page-viewport-width')
+    viewport.content.style.removeProperty('--browser-page-viewport-height')
+    viewport.content.style.width = '100%'
+    viewport.content.style.height = '100%'
+  }
   viewport.scroller.style.overflow = size ? 'auto' : ''
 }
 
