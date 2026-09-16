@@ -5,8 +5,14 @@ import {
 } from './daemon-launch-paths'
 import { parseDaemonPidFile } from './daemon-pid-file-parse'
 import { DaemonPtyAdapter } from './daemon-pty-adapter'
+import { DaemonClient } from './client'
 import { getDaemonPidPath, getDaemonSocketPath, getDaemonTokenPath } from './daemon-spawner'
-import { PREVIOUS_DAEMON_PROTOCOL_VERSIONS } from './types'
+import {
+  CLEAN_DISCONNECT_PROTOCOL_VERSION,
+  PREVIOUS_DAEMON_PROTOCOL_VERSIONS,
+  type ListSessionsResult,
+  type ShutdownIfIdleResult
+} from './types'
 
 function legacyDaemonProcessMayBeAlive(runtimeDir: string, protocolVersion: number): boolean {
   try {
@@ -20,6 +26,40 @@ function legacyDaemonProcessMayBeAlive(runtimeDir: string, protocolVersion: numb
     return true
   } catch {
     return false
+  }
+}
+
+/**
+ * Retire an old daemon that has no live PTYs. Without this, every protocol
+ * generation remains resident after an update even when all of its sessions
+ * have exited (#9138).
+ */
+async function retireIdleLegacyDaemon(
+  socketPath: string,
+  tokenPath: string,
+  protocolVersion: number
+): Promise<boolean> {
+  const client = new DaemonClient({ socketPath, tokenPath, protocolVersion })
+  try {
+    await client.ensureConnectedWithin(1_000)
+    const { sessions } = await client.request<ListSessionsResult>('listSessions', undefined, 1_000)
+    if (sessions.some((session) => session.isAlive)) {
+      return false
+    }
+    if (protocolVersion >= CLEAN_DISCONNECT_PROTOCOL_VERSION) {
+      const result = await client.request<ShutdownIfIdleResult>('shutdownIfIdle', undefined, 1_000)
+      return result.retiring
+    }
+    // Older generations predate shutdownIfIdle; the inventory just proved that
+    // killing this daemon cannot take a live PTY with it.
+    await client.request('shutdown', { killSessions: true }, 1_000)
+    return true
+  } catch {
+    // A failed inventory is not evidence of idleness; preserve the adapter so
+    // its sessions remain adoptable on the next startup.
+    return false
+  } finally {
+    client.disconnect()
   }
 }
 
@@ -46,6 +86,9 @@ export async function createLegacyDaemonAdapters(
           }
         }
       }
+      continue
+    }
+    if (await retireIdleLegacyDaemon(socketPath, tokenPath, protocolVersion)) {
       continue
     }
     // Keep old-protocol PTYs routed to their original daemon during upgrade; legacy adapters never respawn (new code would recreate stale env semantics).

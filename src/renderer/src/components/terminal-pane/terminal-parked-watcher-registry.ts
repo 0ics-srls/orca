@@ -147,10 +147,14 @@ export function retireParkedTerminalTab(tabId: string): void {
     // strong scroll-intent keys here or every closed parked tab leaks one per
     // leaf for the renderer lifetime.
     for (const pane of capture.panes) {
-      releaseTerminalScrollIntentKey(pane.leafId)
+      releaseCapturedPaneScrollIntent(pane)
     }
     capturedPanesByTabId.delete(tabId)
   }
+}
+
+function releaseCapturedPaneScrollIntent(pane: ParkedTerminalPaneCapture): void {
+  releaseTerminalScrollIntentKey(pane.leafId)
 }
 
 /**
@@ -225,6 +229,11 @@ export function pruneParkedTerminalWatchers(liveWorktreeIds: ReadonlySet<string>
   }
   for (const [tabId, capture] of capturedPanesByTabId) {
     if (!liveWorktreeIds.has(capture.worktreeId)) {
+      for (const pane of capture.panes) {
+        // Worktree removal can bypass closeTab while panes are parked; release
+        // the same strong scroll-intent keys as explicit tab retirement.
+        releaseCapturedPaneScrollIntent(pane)
+      }
       capturedPanesByTabId.delete(tabId)
     }
   }
