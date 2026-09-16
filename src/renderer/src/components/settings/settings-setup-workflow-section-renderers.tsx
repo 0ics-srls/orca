@@ -185,7 +185,7 @@ export function renderSessionHistorySettingsSection(
   return (
     <SettingsSection
       id="session-history"
-      title={translate('sessionHistory.settings.title', 'Agent Session History')}
+      title={translate('sessionHistory.settings.title', 'Agent Session Search')}
       description={translate(
         'sessionHistory.settings.description',
         'Search everything your agents have said and done, on this computer and on any paired Orca server.'

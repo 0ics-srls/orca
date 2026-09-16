@@ -10,6 +10,7 @@ import { ConfirmationDialogContext } from '@/components/confirmation-dialog-cont
 import { SessionHistoryComputerRow } from './SessionHistoryComputerRow'
 import { SessionHistoryServerRow } from './SessionHistoryServerRow'
 import type { RuntimeHostDetails } from './runtime-environment-host-details'
+import type { SessionSearchComputerState } from './session-search-computer-rollup'
 
 const mocks = vi.hoisted(() => ({
   visible: true,
@@ -38,6 +39,7 @@ const runningIndex: AiVaultSearchStatus = {
   enabled: true,
   phase: 'current',
   filesIndexed: 4_880,
+  messagesIndexed: 1_400_000,
   lastSweepCompletedAt: 1
 }
 const environment: PublicKnownRuntimeEnvironment = {
@@ -71,11 +73,17 @@ function connectedDetails(appVersion = '1.4.202'): RuntimeHostDetails {
 function serverRow(
   details: RuntimeHostDetails | undefined,
   confirm = vi.fn().mockResolvedValue(true),
-  onError = vi.fn()
+  onError = vi.fn(),
+  onStateChange?: (environmentId: string, state: SessionSearchComputerState) => void
 ) {
   return render(
     <ConfirmationDialogContext.Provider value={confirm}>
-      <SessionHistoryServerRow environment={environment} details={details} onError={onError} />
+      <SessionHistoryServerRow
+        environment={environment}
+        details={details}
+        onError={onError}
+        {...(onStateChange ? { onStateChange } : {})}
+      />
     </ConfirmationDialogContext.Provider>
   )
 }
@@ -107,7 +115,7 @@ it('renders a computer as icon, name, version, one status line and a switch', ()
       kind="server"
       name="build-box"
       version="1.4.202"
-      status="Ready · 12 sessions searchable"
+      status="12 sessions · 1.4K messages searchable"
       details={['2 sessions could not be read and will be retried.']}
       checked
       onToggle={vi.fn()}
@@ -115,7 +123,7 @@ it('renders a computer as icon, name, version, one status line and a switch', ()
   )
   expect(screen.getByText('build-box')).toBeInTheDocument()
   expect(screen.getByText('Orca v1.4.202')).toBeInTheDocument()
-  expect(screen.getByRole('status')).toHaveTextContent('Ready · 12 sessions searchable')
+  expect(screen.getByRole('status')).toHaveTextContent('12 sessions · 1.4K messages searchable')
   expect(screen.getByText('2 sessions could not be read and will be retried.')).toBeInTheDocument()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'true')
 })
@@ -131,17 +139,58 @@ it('reports a reachable server by its live index status and version', async () =
   serverRow(connectedDetails())
   await act(async () => {})
   expect(mocks.status).toHaveBeenCalledWith('runtime:env-1')
-  expect(screen.getByRole('status')).toHaveTextContent('Ready · 4880 sessions searchable')
+  expect(screen.getByRole('status')).toHaveTextContent('4,880 sessions · 1.4M messages searchable')
   expect(screen.getByText('Orca v1.4.202')).toBeInTheDocument()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'true')
 })
 
-it('calls a server with indexing switched off Off rather than unavailable', async () => {
+it('leaves a reachable server with search off to its switch, with no status sentence', async () => {
   mocks.status.mockResolvedValue(unavailableSessionSearchStatus())
   serverRow(connectedDetails())
   await act(async () => {})
-  expect(screen.getByRole('status')).toHaveTextContent('Off')
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
   expect(serverSwitch()).toHaveAttribute('aria-checked', 'false')
+})
+
+it('publishes each server state the pane counts and orders by', async () => {
+  const onStateChange = vi.fn()
+  mocks.status.mockResolvedValue(unavailableSessionSearchStatus())
+  serverRow(connectedDetails(), undefined, undefined, onStateChange)
+  await act(async () => {})
+  expect(onStateChange).toHaveBeenLastCalledWith('env-1', 'off')
+  mocks.status.mockResolvedValue(runningIndex)
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(10_000)
+  })
+  expect(onStateChange).toHaveBeenLastCalledWith('env-1', 'on')
+})
+
+it('publishes offline and needs-update states without claiming either too early', async () => {
+  const onStateChange = vi.fn()
+  const { unmount } = serverRow(undefined, undefined, undefined, onStateChange)
+  await act(async () => {})
+  expect(onStateChange).toHaveBeenLastCalledWith('env-1', 'checking')
+  unmount()
+  serverRow(
+    {
+      status: 'error',
+      runtimeStatus: null,
+      remoteControl: null,
+      compatibility: null,
+      error: 'unreachable'
+    },
+    undefined,
+    undefined,
+    onStateChange
+  )
+  await act(async () => {})
+  expect(onStateChange).toHaveBeenLastCalledWith('env-1', 'offline')
+
+  cleanup()
+  mocks.status.mockRejectedValue(new Error("Error invoking remote method 'x': Error: host-too-old"))
+  serverRow(connectedDetails('1.4.190'), undefined, undefined, onStateChange)
+  await act(async () => {})
+  expect(onStateChange).toHaveBeenLastCalledWith('env-1', 'needs-update')
 })
 
 it('keeps an offline server dimmed, disabled and honest about its index', async () => {
@@ -177,7 +226,7 @@ it('asks for consent naming the server before enabling it', async () => {
     })
   )
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:env-1', true)
-  expect(screen.getByRole('status')).toHaveTextContent('Ready · 4880 sessions searchable')
+  expect(screen.getByRole('status')).toHaveTextContent('4,880 sessions · 1.4M messages searchable')
 })
 
 it('leaves a server untouched when the consent is declined', async () => {
@@ -200,7 +249,7 @@ it('turns a server off without asking again', async () => {
   })
   expect(confirm).not.toHaveBeenCalled()
   expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:env-1', false)
-  expect(screen.getByRole('status')).toHaveTextContent('Off')
+  expect(screen.queryByRole('status')).not.toBeInTheDocument()
 })
 
 it('turns a host-too-old rejection into the update-server state', async () => {

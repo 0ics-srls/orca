@@ -1,5 +1,6 @@
 import type { AiVaultSearchStatus } from '../../../../shared/ai-vault-search-types'
 import { translate } from '@/i18n/i18n'
+import { formatMessageCount, formatSessionCount } from './session-search-count-format'
 
 export const SESSION_SEARCH_SWEEPING_POLL_MS = 2_000
 export const SESSION_SEARCH_SETTLED_POLL_MS = 10_000
@@ -18,27 +19,49 @@ export function sessionSearchPollIntervalMs(status: AiVaultSearchStatus | null):
     : SESSION_SEARCH_SETTLED_POLL_MS
 }
 
-function sweepMessage(status: AiVaultSearchStatus): string {
-  if (status.lastSweepCompletedAt === null) {
-    // No completed sweep yet, so the denominator is still growing and a percentage would mislead.
+/** Messages are optional on the wire: a host that predates the field reports sessions only. */
+function searchableMessage(status: AiVaultSearchStatus): string {
+  const sessions = formatSessionCount(status.filesIndexed)
+  if (status.messagesIndexed === undefined) {
     return translate(
-      'sessionHistory.status.firstScan',
-      'Preparing search · {{indexed}} sessions so far',
+      'sessionHistory.status.searchableSessions',
+      '{{sessions}} sessions searchable',
       {
-        indexed: status.filesIndexed
+        sessions
       }
     )
   }
-  const total = status.filesIndexed + status.filesDue + status.filesFailed
-  const percent = total > 0 ? Math.floor((status.filesIndexed / total) * 100) : 0
   return translate(
-    'sessionHistory.status.progress',
-    'Preparing search · {{percent}}% · {{indexed}} of {{total}} sessions',
-    { percent, indexed: status.filesIndexed, total }
+    'sessionHistory.status.searchable',
+    '{{sessions}} sessions · {{messages}} messages searchable',
+    { sessions, messages: formatMessageCount(status.messagesIndexed) }
   )
 }
 
-/** The one status sentence every computer row shows, local or paired server. */
+/**
+ * A sweep in flight. The denominator is what the pass knows about so far, which
+ * is why it is a plain fraction and never a percentage. Messages are the count
+ * already searchable, not a total: nothing knows how many a file holds until it
+ * is read.
+ */
+function catchingUpMessage(status: AiVaultSearchStatus): string {
+  const indexed = formatSessionCount(status.filesIndexed)
+  const total = formatSessionCount(status.filesIndexed + status.filesDue + status.filesFailed)
+  if (status.messagesIndexed === undefined) {
+    return translate(
+      'sessionHistory.status.catchingUpSessions',
+      '{{indexed}} of {{total}} sessions searchable',
+      { indexed, total }
+    )
+  }
+  return translate(
+    'sessionHistory.status.catchingUp',
+    '{{indexed}} of {{total}} sessions · {{messages}} messages searchable',
+    { indexed, total, messages: formatMessageCount(status.messagesIndexed) }
+  )
+}
+
+/** The one status sentence a computer row shows while its search is on. */
 export function sessionSearchStatusMessage(status: AiVaultSearchStatus): string {
   if (!status.enabled || status.phase === 'idle' || status.phase === 'closed') {
     return translate(
@@ -46,12 +69,7 @@ export function sessionSearchStatusMessage(status: AiVaultSearchStatus): string 
       'Search is not available on this computer right now.'
     )
   }
-  if (isSweepingSessionSearch(status)) {
-    return sweepMessage(status)
-  }
-  return translate('sessionHistory.status.upToDate', 'Ready · {{indexed}} sessions searchable', {
-    indexed: status.filesIndexed
-  })
+  return isSweepingSessionSearch(status) ? catchingUpMessage(status) : searchableMessage(status)
 }
 
 /** Lines shown under the status sentence when something needs the user's attention. */
@@ -81,10 +99,6 @@ export function sessionSearchStatusDetails(status: AiVaultSearchStatus | null): 
 
 export function sessionSearchCheckingMessage(): string {
   return translate('sessionHistory.status.checking', 'Checking…')
-}
-
-export function sessionSearchOffMessage(): string {
-  return translate('sessionHistory.status.off', 'Off')
 }
 
 export function sessionSearchReadErrorMessage(): string {
