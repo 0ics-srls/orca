@@ -1,0 +1,92 @@
+{
+  "node": "v26.6.0",
+  "platform": "darwin",
+  "parentChars": 2097152,
+  "count": 8,
+  "bundles": {
+    "before": "e8c11e93f529e8e8ff8b379a4f6e9bc1dedf37717ae086c6b019ab2fa39b3c1f",
+    "after": "3bb39c435d59f8d8e07e533a7eb2fe54c1afd39e27825e64e73d852b74f547a4"
+  },
+  "results": [
+    {
+      "kind": "github-long-line",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 131072,
+      "logicalBytes": 131072,
+      "heapDelta": 16774216
+    },
+    {
+      "kind": "github-earlier-error",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 43816,
+      "logicalBytes": 131064,
+      "heapDelta": 33577840
+    },
+    {
+      "kind": "gitlab-long-line",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 131072,
+      "logicalBytes": 131072,
+      "heapDelta": 16793640
+    },
+    {
+      "kind": "terminal-session-buffer",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 33555624
+    },
+    {
+      "kind": "terminal-eager-buffer",
+      "fixed": false,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 33556040
+    },
+    {
+      "kind": "github-long-line",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 131072,
+      "logicalBytes": 131072,
+      "heapDelta": 143160
+    },
+    {
+      "kind": "github-earlier-error",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 43816,
+      "logicalBytes": 131064,
+      "heapDelta": 106064
+    },
+    {
+      "kind": "gitlab-long-line",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 131072,
+      "logicalBytes": 131072,
+      "heapDelta": 147488
+    },
+    {
+      "kind": "terminal-session-buffer",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 4195352
+    },
+    {
+      "kind": "terminal-eager-buffer",
+      "fixed": true,
+      "entries": 8,
+      "logicalChars": 4194304,
+      "logicalBytes": 4194304,
+      "heapDelta": 4195600
+    }
+  ]
+}
