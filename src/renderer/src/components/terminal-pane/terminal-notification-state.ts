@@ -1,10 +1,20 @@
 import type { useAppStore } from '@/store'
-import { getRepoMapFromState, getWorktreeMapFromState } from '@/store/selectors'
+import { getRepoMapFromState } from '@/store/selectors'
+import { getIndexedWorktreesById } from '@/store/worktree-repo-index'
+import {
+  worktreeHostMatchOptions,
+  worktreeMatchesHost
+} from '@/store/slices/worktrees/listing/worktree-host-ownership'
+import { getResolvedExecutionHostIdForWorktree } from '@/lib/resolved-worktree-execution-host'
 import {
   findIndexedFolderWorkspaceOwner,
   findIndexedProjectGroupOwner,
+  findIndexedRepoOwnerForHost,
   getCatalogOwnerHostId
 } from '@/lib/worktree-runtime-owner-index'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { Repo } from '../../../../shared/repo-types'
+import type { Worktree } from '../../../../shared/worktree/types'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
 import type { TerminalPaneLayoutNode } from '../../../../shared/terminal-tab-types'
@@ -148,6 +158,44 @@ export function isCurrentKnownPaneKey(
   return ptyHints.length === 0 || ptyHints.some((ptyId) => !isSuppressedPtyHint(state, ptyId))
 }
 
+/**
+ * The row for this workspace on the host that owns it, plus that host when the
+ * id needed one to be named.
+ *
+ * STA-4343: a worktree id is `repoId::path` with no host component, so two hosts
+ * publish one id for two different workspaces. An id-keyed lookup answers with
+ * whichever row came first, which on a collision is a coin flip — so resolve the
+ * owning host instead, and name nothing when hydrated ownership cannot prove one.
+ */
+function findWorktreeRowOnItsOwnHost(
+  state: StoreSnapshot,
+  worktreeId: string
+): { worktree: Worktree | undefined; hostId: ExecutionHostId | null } {
+  const rows = getIndexedWorktreesById(state.worktreesByRepo, worktreeId)
+  if (rows.length <= 1) {
+    return { worktree: rows[0], hostId: null }
+  }
+  const hostId = getResolvedExecutionHostIdForWorktree(state, worktreeId)
+  if (!hostId) {
+    return { worktree: undefined, hostId: null }
+  }
+  // Colliding rows share the id's repo prefix, so any row names the repo to scope against.
+  const matchOptions = worktreeHostMatchOptions(state, rows[0].repoId, hostId)
+  return { worktree: rows.find((row) => worktreeMatchesHost(row, hostId, matchOptions)), hostId }
+}
+
+function findNotificationRepo(
+  state: StoreSnapshot,
+  repoId: string,
+  hostId: ExecutionHostId | null
+): Repo | undefined {
+  if (!hostId) {
+    return getRepoMapFromState(state).get(repoId)
+  }
+  // A repo id collides across hosts too, so the resolved host picks the project name.
+  return findIndexedRepoOwnerForHost(state.repos, repoId, hostId) ?? undefined
+}
+
 export function getNotificationWorkspaceLabels(
   state: StoreSnapshot,
   workspaceId: string,
@@ -167,10 +215,11 @@ export function getNotificationWorkspaceLabels(
       )
     return { repoLabel: group?.name, worktreeLabel: folder?.name || fallback }
   }
-  const worktree = getWorktreeMapFromState(state).get(
+  const { worktree, hostId } = findWorktreeRowOnItsOwnHost(
+    state,
     scope?.type === 'worktree' ? scope.worktreeId : workspaceId
   )
-  const repo = worktree ? getRepoMapFromState(state).get(worktree.repoId) : undefined
+  const repo = worktree ? findNotificationRepo(state, worktree.repoId, hostId) : undefined
   return {
     repoLabel: repo?.displayName,
     worktreeLabel: worktree?.displayName || worktree?.branch || fallback
