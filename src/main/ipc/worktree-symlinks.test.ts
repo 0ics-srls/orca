@@ -938,6 +938,16 @@ describe('removeWorktreeSymlinks', () => {
     expect(existsSync(join(worktree, '.env'))).toBe(true)
   })
 
+  it('never removes links outside the worktree through ambiguous paths or linked parents', async () => {
+    writeFileSync(join(primary, 'value'), 'keep')
+    const outside = join(primary, 'alias')
+    symlinkSync(join(primary, 'value'), outside)
+    symlinkSync(primary, join(worktree, 'parent'), 'junction')
+    await removeWorktreeLinkedPaths(worktree, [`.//${outside}`, 'parent/alias'])
+    expect(lstatSync(outside).isSymbolicLink()).toBe(true)
+    expect(readFileSync(outside, 'utf8')).toBe('keep')
+  })
+
   it('ignores missing entries', async () => {
     await removeWorktreeSymlinks(worktree, ['.env', 'node_modules'])
     expect(error).not.toHaveBeenCalled()

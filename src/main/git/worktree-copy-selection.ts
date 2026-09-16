@@ -54,7 +54,9 @@ export async function resolveWorktreeCopySelection(
     )
   }
   const invalidProject = project.filter((path) => !isWorktreeCopyPath(path))
-  project = project.filter(isWorktreeCopyPath).slice(0, 1000)
+  project = project.filter(isWorktreeCopyPath)
+  const excessProjectPaths = Math.max(0, project.length - 1000)
+  project = project.slice(0, 1000)
   const candidates = [...new Set([...personal, ...project])]
   const existing = await mapWithConcurrency(candidates, 8, async (path) => {
     try {
@@ -74,6 +76,11 @@ export async function resolveWorktreeCopySelection(
     invalidProject.length > 0
       ? [`${invalidProject.length} unsupported .worktreeinclude entries were skipped.`]
       : []
+  if (excessProjectPaths) {
+    notices.push(
+      `${excessProjectPaths} .worktreeinclude entries exceeded the 1,000-path limit and were skipped.`
+    )
+  }
   notices.push(
     ...missing.slice(0, 5).map((path) => {
       const name = path.length > 160 ? `${path.slice(0, 157)}…` : path

@@ -32,6 +32,16 @@ async function fixture() {
 }
 
 describe('repository and project copy selection', () => {
+  it('reports project paths beyond the manifest limit', async () => {
+    const { source } = await fixture()
+    await writeFile(
+      join(source, '.worktreeinclude'),
+      Array.from({ length: 1002 }, (_, i) => `absent-${i}`).join('\n')
+    )
+    expect((await resolveWorktreeCopySelection(source, [])).notices).toContain(
+      '2 .worktreeinclude entries exceeded the 1,000-path limit and were skipped.'
+    )
+  })
   it('copies the union privately without CoW, collapses children, and preserves existing destinations', async () => {
     const { source, target } = await fixture()
     expect(

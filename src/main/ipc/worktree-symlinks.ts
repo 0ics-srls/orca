@@ -374,6 +374,7 @@ export async function removeWorktreeLinkedPaths(
     try {
       const s = await lstat(target)
       if (s.isSymbolicLink()) {
+        await assertWorktreeMaterializationTarget(worktreePath, target)
         await unlink(target)
       }
     } catch (error) {
