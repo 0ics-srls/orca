@@ -244,6 +244,7 @@ export class DaemonClientConnections {
     socket.on('error', cleanup)
     if (previous && previous !== socket) {
       previous.destroy()
+      this.options.streamDataBatcher.flush(client.clientId)
     }
   }
 }
