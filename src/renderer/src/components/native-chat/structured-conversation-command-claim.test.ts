@@ -139,6 +139,37 @@ describe('StructuredConversationCommandClaim', () => {
     }
   })
 
+  it('does not let a reply from before reset settle a same-operation replay', async () => {
+    const claim = new StructuredConversationCommandClaim()
+    const firstReply = Promise.withResolvers<ConversationCommandReply>()
+    const first = claim.run({
+      command: 'clear',
+      operationId: OPERATION_ID,
+      blocked: false,
+      send: () => firstReply.promise
+    })
+
+    claim.reset(true)
+    await expect(first).resolves.toMatchObject({ accepted: false, retrySameOperation: true })
+
+    const replayReply = Promise.withResolvers<ConversationCommandReply>()
+    const replay = claim.run({
+      command: 'clear',
+      operationId: OPERATION_ID,
+      blocked: false,
+      send: () => replayReply.promise
+    })
+    firstReply.resolve({ status: 'refused', error: 'The old fence is stale.' })
+    await Promise.resolve()
+    expect(claim.isRunning).toBe(true)
+
+    replayReply.resolve({
+      status: 'completed',
+      result: { command: 'clear', state: 'completed' }
+    })
+    await expect(replay).resolves.toEqual({ accepted: true, error: null })
+  })
+
   it('drops the deadline observer after a bounded window', async () => {
     vi.useFakeTimers()
     try {

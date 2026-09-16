@@ -23,6 +23,7 @@ type Obligation = {
 }
 
 type LiveClaim = Obligation & {
+  generation: number
   deadline: ReturnType<typeof setTimeout>
   settle: (outcome: ConversationCommandClaimOutcome) => void
   onLateReply: () => void
@@ -88,6 +89,7 @@ export function isUnconfirmedConversationCommand(method: string, value: unknown)
 export class StructuredConversationCommandClaim {
   private live: LiveClaim | null = null
   private readonly observers = new Map<string, ClaimObserver>()
+  private generation = 0
 
   constructor(private readonly deadlineMs = CONVERSATION_COMMAND_DEADLINE_MS) {}
 
@@ -125,6 +127,7 @@ export class StructuredConversationCommandClaim {
     const claim: LiveClaim = {
       command: input.command,
       operationId: input.operationId,
+      generation: this.generation,
       deadline: setTimeout(() => this.expire(claim), this.deadlineMs),
       settle: waiter.resolve,
       onLateReply: input.onLateReply ?? (() => {})
@@ -158,6 +161,7 @@ export class StructuredConversationCommandClaim {
   }
 
   reset(retryPreparedClear = false): void {
+    this.generation++
     if (this.live) {
       this.finish(this.live, {
         accepted: false,
@@ -178,7 +182,11 @@ export class StructuredConversationCommandClaim {
       if (reply.status === 'unresolved') {
         return
       }
-      if (this.live?.command === claim.command && this.live.operationId === claim.operationId) {
+      if (
+        this.live?.generation === claim.generation &&
+        this.live.command === claim.command &&
+        this.live.operationId === claim.operationId
+      ) {
         this.applyReply(this.live, reply)
         return
       }
