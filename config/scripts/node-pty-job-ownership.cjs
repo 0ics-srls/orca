@@ -47,11 +47,17 @@ function assertRebuiltConptyMatchesArch(addonPath, rebuildArch, peMachine) {
   if (machine === expected) {
     return
   }
+  const consequence = [
+    ', so node-pty would fall back to the published prebuild, which predates the',
+    'Cygwin/MSYS job-breakaway denial and leaks every MSYS pane child out of its job.'
+  ].join(' ')
   throw new Error(
-    `${addonPath} is ${describePeMachine(machine)}, but this rebuild targets win32-${rebuildArch} ` +
-      `(0x${expected.toString(16)}). node-gyp ignored --arch, so node-pty would fall back to the ` +
-      'published prebuild, which predates the Cygwin/MSYS job-breakaway denial and leaks every ' +
-      'MSYS pane child out of its job.'
+    machine === null
+      ? `${addonPath} is not a PE image, so nothing can load it${consequence} Check the ` +
+          `node-pty build output above; a truncated or quarantined artifact looks like this.`
+      : `${addonPath} is ${describePeMachine(machine)}, but this rebuild targets ` +
+          `win32-${rebuildArch} (0x${expected.toString(16)}): node-gyp did not honour ` +
+          `--arch${consequence}`
   )
 }
 
@@ -89,8 +95,8 @@ function assertRebuiltConptyDeniesMsysBreakaway({
   }
   const prebuildPath = join(nodePtyDir, 'prebuilds', `win32-${rebuildArch}`, 'conpty.node')
   throw new Error(
-    `the rebuild reported success but ${addonPath} is not there, so node-pty would load ` +
-      `${prebuildPath} instead. That published prebuild predates the Cygwin/MSYS ` +
+    `the rebuild reported success but ${addonPath} is not there, so node-pty would fall through ` +
+      `to ${prebuildPath}. That published prebuild predates the Cygwin/MSYS ` +
       'job-breakaway denial: every Git Bash pane child would be created outside its job and ' +
       'survive terminatePtyJob. Check the node-pty build output above; a same-host source ' +
       'build must leave conpty.node in build/Release.'

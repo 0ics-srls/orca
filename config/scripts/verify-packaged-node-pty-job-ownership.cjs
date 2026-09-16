@@ -103,10 +103,15 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
     )
   }
   const machineOf = options.peMachine ?? readPeMachine
-  const described = present.map(
-    (candidate) => `${candidate.path} (${describePeMachine(machineOf(candidate.path))})`
+  // Read once: the same header answers "which one loads" and "what did we find".
+  const inspected = present.map((candidate) => ({
+    ...candidate,
+    machine: machineOf(candidate.path)
+  }))
+  const described = inspected.map(
+    (candidate) => `${candidate.path} (${describePeMachine(candidate.machine)})`
   )
-  const loaded = present.find((candidate) => machineOf(candidate.path) === PE_MACHINE[architecture])
+  const loaded = inspected.find((candidate) => candidate.machine === PE_MACHINE[architecture])
   if (!loaded) {
     throw new Error(
       [
@@ -134,14 +139,14 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
   // Past here the app falls back to the published prebuild, which never carries
   // the patch. Why it fell back decides the remedy, and the two are different
   // enough that naming the wrong one wastes the reader's build.
-  const wrongArchSourceBuilds = present.filter((candidate) => !candidate.prebuilt)
+  const wrongArchSourceBuilds = inspected.filter((candidate) => !candidate.prebuilt)
   if (wrongArchSourceBuilds.length > 0) {
     throw new Error(
       [
         `Packaged node-pty for win32-${architecture} falls back to ${addonPath}, which predates`,
         'the Cygwin/MSYS job-breakaway denial, because the source build beside it is the wrong',
         `architecture: ${wrongArchSourceBuilds
-          .map((candidate) => `${candidate.path} (${describePeMachine(machineOf(candidate.path))})`)
+          .map((candidate) => `${candidate.path} (${describePeMachine(candidate.machine)})`)
           .join(', ')}.`,
         'A cross-arch rebuild that did not honour --arch looks exactly like this. Re-run',
         `config/scripts/rebuild-native-deps.mjs --platform=win32 --arch=${architecture},`,

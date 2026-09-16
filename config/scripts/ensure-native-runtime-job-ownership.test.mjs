@@ -234,6 +234,27 @@ describe('assertRebuiltConptyDeniesMsysBreakaway', () => {
     ).toThrow(/machine 0x8664, but this rebuild targets win32-arm64/)
   })
 
+  // "node-gyp ignored --arch" is a guess when the file is not a PE at all: that
+  // is a truncated or quarantined artifact, and saying otherwise sends the
+  // reader to the wrong command.
+  it('does not blame --arch for a file that is not a PE image', () => {
+    const nodePtyDir = join(mkdtempSync(join(fixtureDir, 'rebuild-')), 'node-pty')
+    mkdirSync(join(nodePtyDir, 'build', 'Release'), { recursive: true })
+    writeFileSync(join(nodePtyDir, 'build', 'Release', 'conpty.node'), Buffer.alloc(0x200))
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
+    ).toThrow(/is not a PE image[\s\S]*truncated or quarantined/)
+  })
+
+  it('still names the consequence for that file, which is the prebuild', () => {
+    const nodePtyDir = join(mkdtempSync(join(fixtureDir, 'rebuild-')), 'node-pty')
+    mkdirSync(join(nodePtyDir, 'build', 'Release'), { recursive: true })
+    writeFileSync(join(nodePtyDir, 'build', 'Release', 'conpty.node'), Buffer.alloc(0x200))
+    expect(() =>
+      assertRebuiltConptyDeniesMsysBreakaway({ nodePtyDir, rebuildArch: 'x64', crossHost: false })
+    ).toThrow(/fall back to the published prebuild/)
+  })
+
   it('accepts one a cross-arch rebuild really did emit for the target', () => {
     const nodePtyDir = rebuiltInto({ 'build/Release/conpty.node': { arch: 'arm64' } })
     expect(() =>

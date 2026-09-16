@@ -32,20 +32,9 @@ function readPeMachine(binaryPath) {
   }
 }
 
-/**
- * Whether a Windows process of `arch` could load this binary at all.
- *
- * `loadNativeModule` swallows the require failure of one that cannot and falls
- * through to the next candidate, so "can this arch load it" is the difference
- * between the addon that runs and the one that is merely on disk.
- */
-function isLoadableByArch(binaryPath, arch) {
-  return readPeMachine(binaryPath) === PE_MACHINE[arch]
-}
-
 /** How to name a machine field in an error, including the file that has none. */
 function describePeMachine(machine) {
   return machine === null ? 'not a PE image' : `machine 0x${machine.toString(16)}`
 }
 
-module.exports = { PE_MACHINE, describePeMachine, isLoadableByArch, readPeMachine }
+module.exports = { PE_MACHINE, describePeMachine, readPeMachine }

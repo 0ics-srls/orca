@@ -1,6 +1,7 @@
 import { existsSync, mkdtempSync, readdirSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { copyScriptWithLocalModules } from './script-module-dependencies.mjs'
 
@@ -89,7 +90,7 @@ describe('copyScriptWithLocalModules', () => {
   it('stages the node-pty job-ownership gate with everything it requires', () => {
     const destinationDir = join(mkdtempSync(join(fixtureDir, 'dest-')), 'scripts')
     copyScriptWithLocalModules(
-      new URL('./node-pty-job-ownership.cjs', import.meta.url).pathname,
+      fileURLToPath(new URL('./node-pty-job-ownership.cjs', import.meta.url)),
       destinationDir
     )
     expect(readdirSync(destinationDir).sort()).toEqual([

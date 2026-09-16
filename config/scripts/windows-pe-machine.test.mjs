@@ -6,12 +6,7 @@ import { describe, expect, it } from 'vitest'
 import { peImage } from './windows-pe-image-fixture.mjs'
 
 const require = createRequire(import.meta.url)
-const {
-  PE_MACHINE,
-  describePeMachine,
-  isLoadableByArch,
-  readPeMachine
-} = require('./windows-pe-machine.cjs')
+const { PE_MACHINE, describePeMachine, readPeMachine } = require('./windows-pe-machine.cjs')
 
 const fixtureDir = mkdtempSync(join(tmpdir(), 'windows-pe-machine-'))
 
@@ -60,25 +55,6 @@ describe('readPeMachine', () => {
       peImage({ machine: PE_MACHINE.arm64, peOffset: 0x120 })
     )
     expect(readPeMachine(path)).toBe(PE_MACHINE.arm64)
-  })
-})
-
-describe('isLoadableByArch', () => {
-  // The whole point: node-pty's loader swallows the require failure of a
-  // wrong-arch addon and falls through, so this decides which binary runs.
-  it.each([
-    ['x64 by x64', X64, 'x64', true],
-    ['arm64 by arm64', ARM64, 'arm64', true],
-    ['x64 by arm64', X64, 'arm64', false],
-    ['arm64 by x64', ARM64, 'x64', false]
-  ])('%s', (_case, path, arch, expected) => {
-    expect(isLoadableByArch(path, arch)).toBe(expected)
-  })
-
-  it('treats a binary it cannot parse as loadable by nothing', () => {
-    const path = writeImage('garbage.node', () => Buffer.alloc(0x200))
-    expect(isLoadableByArch(path, 'x64')).toBe(false)
-    expect(isLoadableByArch(path, 'arm64')).toBe(false)
   })
 })
 
