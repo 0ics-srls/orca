@@ -173,7 +173,12 @@ export function readOpenCodeSessionMessages(
   sessionId: string
 ): TranscriptMessage[] {
   if (!canReadOpenCodeMessageParts(db)) {
-    return []
+    // Thrown for the same reason the part limit below throws: an empty capture
+    // returned here is committed under a complete-read cursor, so the session
+    // stays out of search with nothing on its row to say why and no retry.
+    throw new Error(
+      `OpenCode session ${sessionId} uses an unreadable message-part schema; its transcript was not read.`
+    )
   }
   const rows = db.prepare(buildCaptureQuery()).all(sessionId, OPENCODE_CAPTURE_PART_LIMIT + 1)
   if (rows.length > OPENCODE_CAPTURE_PART_LIMIT) {

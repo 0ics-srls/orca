@@ -210,8 +210,17 @@ export function appendOpenCodeSqliteTurn(
   }
 }
 
+// Throws rather than falling back to the epoch: a mistyped id would otherwise
+// append orphan rows and update nothing, leaving a test asserting over a
+// transcript that no session owns.
 function currentUpdatedMs(db: SyncDatabase, sessionId: string): number {
   const row = db.prepare('SELECT time_updated FROM session WHERE id = ?').get(sessionId)
-  const updated = row === undefined ? undefined : Object.values(row)[0]
-  return typeof updated === 'number' ? updated : OPENCODE_FIXTURE_EPOCH_MS
+  if (row === undefined) {
+    throw new Error(`OpenCode fixture has no session ${sessionId} to append to`)
+  }
+  const updated = Object.values(row)[0]
+  if (typeof updated !== 'number') {
+    throw new Error(`OpenCode fixture session ${sessionId} has no numeric time_updated`)
+  }
+  return updated
 }
