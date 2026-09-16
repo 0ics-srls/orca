@@ -7,12 +7,13 @@ import type {
 } from '../../../../shared/runtime-types'
 import type {
   AgentStatusProjectionCache,
-  AmbiguousTerminalTabIdsCache,
+  TerminalTabOwnershipIndex,
   BrowserPagesProjectionCache,
   BrowserWorkspacesProjectionCache,
   EditorDraftHashCache,
   MobileSessionAgentStatusCache,
   MobileSessionWorktreeInputs,
+  MobileSessionWorktreeSourceRefs,
   OpenFileIndexes,
   OpenFilesProjectionCache,
   RegisteredTerminalTab,
@@ -55,6 +56,7 @@ export const graphState = {
     string,
     {
       inputs: MobileSessionWorktreeInputs
+      sourceRefs: MobileSessionWorktreeSourceRefs
       content: unknown
       snapshot: RuntimeMobileSessionTabsSnapshot
     }
@@ -76,7 +78,7 @@ export const graphState = {
 
 // Why module-local and not `graphState` fields: these are scan memos owned by this module,
 // and a plain `let` carries its nullable type without a cast.
-let ambiguousTerminalTabIdsCache: AmbiguousTerminalTabIdsCache | null = null
+let ambiguousTerminalTabIdsCache: TerminalTabOwnershipIndex | null = null
 let mobileSessionAgentStatusCache: MobileSessionAgentStatusCache | null = null
 
 export function getMobileSessionAgentStatusCache(): MobileSessionAgentStatusCache | null {
@@ -158,31 +160,45 @@ export function findRegisteredTerminalTab(
 }
 
 /**
- * IDs occurring more than once cannot address the legacy tab-keyed runtime maps safely.
+ * Which worktree owns each unambiguously-owned terminal tab, plus the ids that no worktree owns.
  *
- * Memoized on slice identity: every publication scanned all tabs in all worktrees, but
- * `tabsByWorktree` is copy-on-write, so an unchanged reference cannot hide a new duplicate.
+ * IDs occurring more than once cannot address the legacy tab-keyed runtime maps safely, so they
+ * appear in neither map. Memoized on slice identity: every publication scanned all tabs in all
+ * worktrees, but `tabsByWorktree` is copy-on-write, so an unchanged reference cannot hide a new
+ * duplicate.
  */
+export function getTerminalTabOwnershipIndex(
+  tabsByWorktree: AppState['tabsByWorktree']
+): TerminalTabOwnershipIndex {
+  const cached = ambiguousTerminalTabIdsCache
+  if (cached?.source === tabsByWorktree) {
+    return cached
+  }
+  const worktreeIdByTabId = new Map<string, string>()
+  const ambiguousTabIds = new Set<string>()
+  for (const [worktreeId, tabs] of Object.entries(tabsByWorktree)) {
+    for (const tab of tabs) {
+      if (worktreeIdByTabId.has(tab.id) || ambiguousTabIds.has(tab.id)) {
+        worktreeIdByTabId.delete(tab.id)
+        ambiguousTabIds.add(tab.id)
+        continue
+      }
+      worktreeIdByTabId.set(tab.id, worktreeId)
+    }
+  }
+  const index: TerminalTabOwnershipIndex = {
+    source: tabsByWorktree,
+    worktreeIdByTabId,
+    ambiguousTabIds
+  }
+  ambiguousTerminalTabIdsCache = index
+  return index
+}
+
 export function collectAmbiguousTerminalTabIds(
   tabsByWorktree: AppState['tabsByWorktree']
 ): ReadonlySet<string> {
-  const cached = ambiguousTerminalTabIdsCache
-  if (cached?.source === tabsByWorktree) {
-    return cached.ambiguousTabIds
-  }
-  const seen = new Set<string>()
-  const ambiguous = new Set<string>()
-  for (const tabs of Object.values(tabsByWorktree)) {
-    for (const tab of tabs) {
-      if (seen.has(tab.id)) {
-        ambiguous.add(tab.id)
-      } else {
-        seen.add(tab.id)
-      }
-    }
-  }
-  ambiguousTerminalTabIdsCache = { source: tabsByWorktree, ambiguousTabIds: ambiguous }
-  return ambiguous
+  return getTerminalTabOwnershipIndex(tabsByWorktree).ambiguousTabIds
 }
 
 // Structural equality under JSON-serialization semantics (undefined-valued keys are absent).
