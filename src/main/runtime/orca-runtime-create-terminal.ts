@@ -159,6 +159,7 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
             preAllocatedHandle,
             tabId,
             leafId,
+            ...(launchOpts.shellOverride ? { shellOverride: launchOpts.shellOverride } : {}),
             ...(terminalColorQueryReplies ? { terminalColorQueryReplies } : {}),
             ...((launchOpts.agentSessionClaim ?? freshAgentSessionClaim)
               ? {
