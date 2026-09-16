@@ -53,7 +53,7 @@ function assertRebuiltConptyMatchesArch(addonPath, rebuildArch) {
   ].join(' ')
   throw new Error(
     machine === null
-      ? `${addonPath} is not a PE image, so nothing can load it${consequence} Check the ` +
+      ? `${addonPath} is not a PE image${consequence} Check the ` +
           `node-pty build output above; a truncated or quarantined artifact looks like this.`
       : `${addonPath} is ${describePeMachine(machine)}, but this rebuild targets ` +
           `win32-${rebuildArch} (0x${expected.toString(16)}): node-gyp did not honour ` +

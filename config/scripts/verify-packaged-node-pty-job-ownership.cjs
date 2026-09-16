@@ -163,9 +163,10 @@ function verifyPackagedConptyBreakawayMarker(resourcesDir, targetArch, options =
       'carries JOB_OBJECT_LIMIT_BREAKAWAY_OK, so every Git Bash pane child is created outside',
       'the job and survives terminatePtyJob.',
       'It is here because this package holds no node-pty source build at all for',
-      `prunePackagedNodePty to have replaced it with, and only a host that can build node-pty`,
+      'prunePackagedNodePty to have replaced it with, and only a host that can build node-pty',
       `for win32-${architecture} produces one.`,
-      'Package this Windows slice on such a host.',
+      `If this IS a Windows ${architecture} host, the rebuild did not leave one -- check the`,
+      'beforeBuild output above. Otherwise package this Windows slice on a host that can.',
       'See docs/reference/windows-msys-job-breakaway.md.'
     ].join(' ')
   )

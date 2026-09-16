@@ -153,7 +153,18 @@ describe('verifyPackagedConptyBreakawayMarker', () => {
       'prebuilds/win32-x64/conpty.node': { cygwinBreakawayDenied: false }
     })
     expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(
-      /this package holds no node-pty source build at all[\s\S]*Package this Windows slice on such a host/
+      /this package holds no node-pty source build at all[\s\S]*Otherwise package this Windows slice on a host that can/
+    )
+  })
+
+  // The same state reaches this from a capable host too, when the rebuild left
+  // nothing: telling that packager to change hosts would send them nowhere.
+  it('does not assume the packaging host is the wrong one', () => {
+    const resourcesDir = packagedResources({
+      'prebuilds/win32-x64/conpty.node': { cygwinBreakawayDenied: false }
+    })
+    expect(() => verifyPackagedConptyBreakawayMarker(resourcesDir, 'x64')).toThrow(
+      /If this IS a Windows x64 host, the rebuild did not leave one/
     )
   })
 

@@ -388,9 +388,12 @@ function main() {
   }
   const machine = readPeMachine(built)
   if (machine !== PE_MACHINE[arch]) {
+    const cause =
+      machine === null
+        ? 'A truncated or quarantined build output looks like this; a relay would get a binary no host can load.'
+        : 'node-gyp ignored --arch; a relay would get a binary its host cannot load.'
     throw new Error(
-      `Built binary is ${describePeMachine(machine)}, expected 0x${PE_MACHINE[arch].toString(16)} for ${arch}. ` +
-        'node-gyp ignored --arch; a relay would get a binary its host cannot load.'
+      `Built binary is ${describePeMachine(machine)}, expected 0x${PE_MACHINE[arch].toString(16)} for ${arch}. ${cause}`
     )
   }
 

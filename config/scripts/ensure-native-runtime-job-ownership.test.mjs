@@ -84,7 +84,12 @@ describe('assertNodePtyJobOwnership', () => {
     const addedCode = conptyHunk
       .split('\n')
       .filter((line) => line.startsWith('+') && !/^\+\s*(\/\/|\*)/.test(line))
-    expect(addedCode.some((line) => line.includes(`L"${CYGWIN_BREAKAWAY_MARKER_TEXT}"`))).toBe(true)
+    expect(
+      addedCode.some((line) => line.includes(`L"${CYGWIN_BREAKAWAY_MARKER_TEXT}"`)),
+      `No added conpty.cc line carries L"${CYGWIN_BREAKAWAY_MARKER_TEXT}". Either the patch ` +
+        'stopped adding it or CYGWIN_BREAKAWAY_MARKER_TEXT drifted; until they agree the gate ' +
+        'rejects every correctly rebuilt addon.'
+    ).toBe(true)
   })
 
   // MSVC compiles L"" to UTF-16LE; reading the addon as anything else finds nothing.
