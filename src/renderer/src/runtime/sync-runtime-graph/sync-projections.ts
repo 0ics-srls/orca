@@ -272,4 +272,6 @@ export function resetRuntimeMobileSyncProjectionCachesForTests(): void {
   graphState.cachedBrowserWorkspacesProjection = null
   graphState.cachedBrowserPagesProjection = null
   graphState.cachedEditorDraftHashes = null
+  graphState.cachedAmbiguousTerminalTabIds = null
+  graphState.cachedMobileSessionAgentStatus = null
 }
