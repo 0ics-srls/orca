@@ -66,7 +66,8 @@ export function TerminalPane({
   const [shellValidationError, setShellValidationError] = useState<string | null>(null)
   const configuredShell = settings.terminalDefaultShell?.trim() ?? ''
   const shellMode = configuredShell ? 'custom' : 'system'
-  const systemShell = window.api?.platform?.get?.().shell?.trim() || '/bin/zsh'
+  const systemShell =
+    (typeof window !== 'undefined' ? window.api?.platform?.get?.().shell?.trim() : '') || '/bin/zsh'
 
   const validateShell = async (): Promise<void> => {
     const shell = configuredShell
