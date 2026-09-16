@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "160421b989563424531fc893a115b95b399d1524ebaf1c91caa8b2862b52eb07",
   "scenarioSha256": "ec02d3f76085619fad35231e12654ec6e926e423c6799fd0df53708743000612",
   "platform": "darwin",
@@ -38,10 +38,6 @@
         "status": "pending",
         "startedAt": 0
       }
-    },
-    "1a3946e517d4": {
-      "name": "files.list#1",
-      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:wt-files\"}}"
     },
     "30859af566b0": {
       "name": "files.readDir#1",
@@ -124,9 +120,10 @@
         }
       }
     },
-    "b5b1bc83b44d": {
+    "87ae27687a19": {
       "name": "files.readDir#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.readDir\",\"params\":{\"worktree\":\"id:wt-files\",\"relativePath\":\"\"}}"
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"files.readDir\",\"params\":{\"worktree\":\"id:wt-files\",\"relativePath\":\"\"}}",
+      "sent": 1
     },
     "b85511fb8929": {
       "crash": {
@@ -143,6 +140,11 @@
       "labels": ["Back to session"],
       "rows": ["dir:src", "file:README.md"],
       "text": ["Files", "orca-files", " - Showing first 5000"]
+    },
+    "c3a91710450a": {
+      "name": "files.list#1",
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"files.list\",\"params\":{\"worktree\":\"id:wt-files\"}}",
+      "sent": 2
     },
     "e91880eefe86": {
       "crash": {
@@ -176,7 +178,7 @@
         "id": "loading",
         "observation": {
           "sender": ["195987bc4ef2"],
-          "payloads": ["b5b1bc83b44d"],
+          "payloads": ["87ae27687a19"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
@@ -188,7 +190,7 @@
         "id": "legacy-listed",
         "observation": {
           "sender": ["30859af566b0", "80bd28a48dda"],
-          "payloads": ["b5b1bc83b44d", "1a3946e517d4"],
+          "payloads": ["87ae27687a19", "c3a91710450a"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },
