@@ -1,11 +1,15 @@
 import { translate } from '@/i18n/i18n'
+import { useActiveWorktree, useRepoById } from '@/store/selectors'
+import { isFolderRepo } from '../../../../../../shared/repo-kind'
 import { SourceControlPanelReady } from './panel-ready'
+import type { SourceControlPanelReadyProps } from './panel-props'
 import { useSourceControlPanelModel } from './use-panel-model'
 
-/** Resolves the panel model and guards the two states that have no source control to show. */
+/** Keep Git hooks unmounted for workspaces that only display a placeholder. */
 export function SourceControlPanel() {
-  const model = useSourceControlPanelModel()
-  const { activeRepo, activeWorktree, isFolder, worktreePath } = model
+  const activeWorktree = useActiveWorktree()
+  const activeRepo = useRepoById(activeWorktree?.repoId ?? null)
+  const worktreePath = activeWorktree?.path
 
   if (!activeWorktree || !activeRepo || !worktreePath) {
     return (
@@ -17,7 +21,7 @@ export function SourceControlPanel() {
       </div>
     )
   }
-  if (isFolder) {
+  if (isFolderRepo(activeRepo)) {
     return (
       <div className="flex items-center justify-center h-full text-xs text-muted-foreground px-4 text-center">
         {translate(
@@ -29,12 +33,19 @@ export function SourceControlPanel() {
   }
 
   return (
-    <SourceControlPanelReady
+    <GitSourceControlPanel
       activeRepo={activeRepo}
       activeWorktree={activeWorktree}
-      currentWorktreeId={activeWorktree.id}
-      model={model}
       worktreePath={worktreePath}
     />
+  )
+}
+
+function GitSourceControlPanel(
+  props: Pick<SourceControlPanelReadyProps, 'activeRepo' | 'activeWorktree' | 'worktreePath'>
+) {
+  const model = useSourceControlPanelModel()
+  return (
+    <SourceControlPanelReady {...props} currentWorktreeId={props.activeWorktree.id} model={model} />
   )
 }
