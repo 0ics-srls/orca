@@ -70,14 +70,12 @@ export const createOrcaProfilesAuthActions: StateCreator<
   },
 
   connectCurrentOrcaProfile: async () => {
-    if (get().orcaProfileConnecting) {
-      return null
-    }
-    set({ orcaProfileConnecting: true })
     try {
+      // Why: a pending browser callback must not block retry. Another click
+      // starts a second PKCE wait; the earlier tab can still complete.
+      const alreadyConnected = get().orcaProfileAuthStatus?.state === 'connected'
       const result = await window.api.orcaProfiles.connectCurrent()
       set({
-        orcaProfileConnecting: false,
         orcaProfileAuthStatus: result.auth,
         ...(result.status === 'connected'
           ? {
@@ -96,24 +94,29 @@ export const createOrcaProfilesAuthActions: StateCreator<
             description: result.auth.setupMessage
           }
         )
-      } else if (result.status === 'failed') {
+      } else if (
+        result.status === 'failed' &&
+        !alreadyConnected &&
+        result.auth.state !== 'connected'
+      ) {
         toast.error(
           translate('auto.store.slices.orca.profiles.33290e88ed', 'Failed to connect profile'),
           { description: result.error }
         )
-      } else if (result.status === 'connected') {
+      } else if (result.status === 'connected' && !alreadyConnected) {
         toast.success(translate('auto.store.slices.orca.profiles.9fcb07a796', 'Profile connected'))
       }
       return result
     } catch (err) {
       console.error('Failed to connect Orca profile:', err)
-      set({ orcaProfileConnecting: false })
-      toast.error(
-        translate('auto.store.slices.orca.profiles.33290e88ed', 'Failed to connect profile'),
-        {
-          description: err instanceof Error ? err.message : String(err)
-        }
-      )
+      if (get().orcaProfileAuthStatus?.state !== 'connected') {
+        toast.error(
+          translate('auto.store.slices.orca.profiles.33290e88ed', 'Failed to connect profile'),
+          {
+            description: err instanceof Error ? err.message : String(err)
+          }
+        )
+      }
       return null
     }
   },

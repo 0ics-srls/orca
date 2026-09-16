@@ -6,19 +6,27 @@ import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-const mocks = vi.hoisted(() => ({
-  connect: vi.fn(),
-  fetchAuthStatus: vi.fn(),
-  signOut: vi.fn(),
-  state: {
-    orcaProfileAuthStatus: {
-      configured: true,
-      state: 'connected',
-      cloud: { displayName: 'Ada Lovelace', email: 'ada@example.com' }
-    } as Record<string, unknown> | null,
-    orcaProfileConnecting: false
+type MockAuthStatus = {
+  configured: boolean
+  state: string
+  cloud?: { displayName: string; email: string }
+} | null
+
+const mocks = vi.hoisted(() => {
+  const connectedAuth: MockAuthStatus = {
+    configured: true,
+    state: 'connected',
+    cloud: { displayName: 'Ada Lovelace', email: 'ada@example.com' }
   }
-}))
+  return {
+    connect: vi.fn(),
+    fetchAuthStatus: vi.fn(),
+    signOut: vi.fn(),
+    state: {
+      orcaProfileAuthStatus: connectedAuth
+    }
+  }
+})
 
 vi.mock('@/i18n/i18n', () => ({
   translate: (_key: string, fallback: string) => fallback
@@ -58,7 +66,6 @@ describe('OrcaAccountSettingsPane', () => {
       state: 'connected',
       cloud: { displayName: 'Ada Lovelace', email: 'ada@example.com' }
     }
-    mocks.state.orcaProfileConnecting = false
   })
 
   afterEach(cleanup)
@@ -89,6 +96,9 @@ describe('OrcaAccountSettingsPane', () => {
     ).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Sign in to Orca' }))
     expect(mocks.connect).toHaveBeenCalledOnce()
+    expect(screen.getByRole('button', { name: 'Sign in to Orca' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Sign in to Orca' }))
+    expect(mocks.connect).toHaveBeenCalledTimes(2)
   })
 
   it('loads account status when it is not hydrated yet', () => {
