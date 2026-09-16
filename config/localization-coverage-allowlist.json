@@ -178,7 +178,7 @@
     "filePath": "src/renderer/src/components/settings/TerminalPane.tsx",
     "kind": "object-property:label",
     "text": "System shell (",
-    "dynamic": false,
+    "dynamic": true,
     "count": 1
   },
   {
