@@ -38,6 +38,7 @@ export class CodexJournalTurnBoundaries {
       clearPromptTurn?: (threadId: string, turnId: string) => void
       flushSuppression: () => CodexJournalTranslationAdmission
       resetActivity: (threadId: string) => void
+      openingRequestedAt?: () => number | null
       now?: () => number
     }
   ) {}
@@ -51,6 +52,7 @@ export class CodexJournalTurnBoundaries {
       return { accepted: false, reason: 'backpressure' }
     }
     const startedAt = this.receiptTime(event)
+    const requestedAt = this.deps.openingRequestedAt?.() ?? undefined
     const admission = publishCodexTurnLifecycle({
       sink: this.deps.sink,
       primaryThreadId: this.deps.primaryThreadId(),
@@ -58,10 +60,11 @@ export class CodexJournalTurnBoundaries {
       threadId: event.threadId,
       turnId,
       state: 'running',
-      startedAt
+      startedAt,
+      ...(requestedAt === undefined ? {} : { requestedAt })
     })
     if (admission.accepted) {
-      this.deps.activeTurns.remember(event.threadId, turnId, startedAt)
+      this.deps.activeTurns.remember(event.threadId, turnId, startedAt, requestedAt)
       this.deps.resetActivity(event.threadId)
     }
     return admission
@@ -117,11 +120,14 @@ export class CodexJournalTurnBoundaries {
     durationMs: number | null = null
   ): AgentJournalTurnLifecycle {
     const startedAt = this.deps.activeTurns.startedAt(threadId, turnId)
+    // Carried forward, not re-resolved: the running row already fixed this turn's origin.
+    const requestedAt = this.deps.activeTurns.requestedAt(threadId, turnId)
     return {
       turnId,
       state,
       userItemId: codexTurnUserItemId(threadId, turnId),
       ...(startedAt !== undefined ? { startedAt } : {}),
+      ...(requestedAt !== undefined ? { requestedAt } : {}),
       completedAt,
       ...(durationMs !== null ? { durationMs } : {})
     }

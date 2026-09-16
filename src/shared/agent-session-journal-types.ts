@@ -174,6 +174,9 @@ export type AgentJournalTurnLifecycle = {
    *  output opened a turn with no user item; absent means an older host. */
   userItemId?: string
   startedAt?: number
+  /** Host clock at the send that opened this turn, when one is known. `startedAt`
+   *  remains the provider turn-open instant and is never rewritten. */
+  requestedAt?: number
   completedAt?: number
   /** The provider's own measured turn duration, preferred over the host interval. */
   durationMs?: number

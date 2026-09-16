@@ -88,6 +88,7 @@ export function createCodexJournalTranslator(
     ...(deps.clearPromptTurn ? { clearPromptTurn: deps.clearPromptTurn } : {}),
     flushSuppression: () => genericFrames.flush(),
     resetActivity,
+    ...(deps.openingRequestedAt ? { openingRequestedAt: deps.openingRequestedAt } : {}),
     ...(deps.now ? { now: deps.now } : {})
   })
   const publishActivity = (

@@ -57,6 +57,7 @@ export function publishCodexTurnLifecycle(input: {
   turnId: string
   state: AgentJournalTurnLifecycleState
   startedAt?: number
+  requestedAt?: number
   completedAt?: number
   durationMs?: number
 }): StructuredAgentSessionSinkAdmission {
@@ -69,6 +70,7 @@ export function publishCodexTurnLifecycle(input: {
     state: input.state,
     userItemId: codexTurnUserItemId(input.threadId, input.turnId),
     ...(input.startedAt !== undefined ? { startedAt: input.startedAt } : {}),
+    ...(input.requestedAt !== undefined ? { requestedAt: input.requestedAt } : {}),
     ...(input.completedAt !== undefined ? { completedAt: input.completedAt } : {}),
     ...(input.durationMs !== undefined ? { durationMs: input.durationMs } : {})
   })

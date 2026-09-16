@@ -20,6 +20,9 @@ export type CodexJournalTranslatorDeps = {
    *  identity the journal row carries so a replay computes the same key. */
   onUserMessageEcho?: (clientMessageId: string, identity: AgentJournalItemIdentity) => void
   primaryThreadId?: () => string | null
+  /** Submission instant of the send a turn opening now belongs to, when the host
+   *  can name one. Read as the turn's row is written; never revised afterwards. */
+  openingRequestedAt?: () => number | null
   subagentExecutions?: CodexSubagentExecutions
   coalesceMs?: number
   maxRetainedBytes?: number

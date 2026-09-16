@@ -125,12 +125,16 @@ export async function acquireClaudeSession({
     // Turn endpoints are stamped on the host clock, never the frame's own timestamp.
     const observedAt =
       startsTurn || message.type === 'result' ? { observedAt: deps.now?.() ?? Date.now() } : {}
+    // Only the newest dispatch's replay starts a turn, which is the dispatch this
+    // instant belongs to.
+    const requestedAt = startsTurn ? liveSession?.dispatchRequestedAt : null
     callbacks.deliver(attempt, sessionId, () =>
       callbacks.emit(liveSession, input.events, {
         type: 'message',
         sessionId,
         message,
         ...(startsTurn ? { startsTurn: true } : {}),
+        ...(requestedAt === null || requestedAt === undefined ? {} : { requestedAt }),
         ...observedAt
       })
     )

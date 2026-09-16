@@ -14,28 +14,33 @@ export const MAX_CODEX_PENDING_DISPATCH_ECHOES = 256
  */
 export type CodexDispatchEchoes = {
   /** Arms settlement for a send about to be written; false preserves older waits at capacity. */
-  arm: (clientMessageId: string) => boolean
+  arm: (clientMessageId: string, requestedAt?: number) => boolean
   /** True once, for a send this session armed and has not yet settled. */
   settle: (clientMessageId: string) => boolean
   /** Drops an armed send whose write never reached the provider. */
   disarm: (clientMessageId: string) => void
+  /** Submission instant of the oldest send still awaiting its echo. A turn opening
+   *  now is that send's: later ones were coalesced into turns already running, and
+   *  the echo that retires this entry does not arrive until inside the new turn. */
+  openingRequestedAt: () => number | null
   clear: () => void
   readonly size: number
 }
 
 export function createCodexDispatchEchoes(): CodexDispatchEchoes {
-  const armed = new Set<string>()
+  const armed = new Map<string, number | null>()
   return {
-    arm(clientMessageId) {
+    arm(clientMessageId, requestedAt) {
       if (!armed.has(clientMessageId) && armed.size >= MAX_CODEX_PENDING_DISPATCH_ECHOES) {
         return false
       }
       armed.delete(clientMessageId)
-      armed.add(clientMessageId)
+      armed.set(clientMessageId, requestedAt ?? null)
       return true
     },
     settle: (clientMessageId) => armed.delete(clientMessageId),
     disarm: (clientMessageId) => void armed.delete(clientMessageId),
+    openingRequestedAt: () => armed.values().next().value ?? null,
     clear: () => armed.clear(),
     get size() {
       return armed.size

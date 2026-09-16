@@ -16,6 +16,9 @@ export type StructuredAgentTurnTiming = {
   state: AgentJournalTurnLifecycleState
   /** Host clock at provider turn-start receipt. */
   startedAt: number
+  /** Host clock at the send that opened the turn; absent when the host could not
+   *  name one (provider-resumed turns, replayed history, older hosts). */
+  requestedAt?: number
   /** Host clock at the terminal provider event; absent while running or unverifiable. */
   completedAt?: number
   /** The provider's own measured duration; outranks the host interval. */
@@ -30,10 +33,14 @@ function readTiming(item: AgentJournalRenderItem): StructuredAgentTurnTiming | n
   if (!turn) {
     return null
   }
-  const { state, startedAt, completedAt, durationMs } = turn
+  const { state, startedAt, requestedAt, completedAt, durationMs } = turn
   if (startedAt === undefined || !Number.isFinite(startedAt) || startedAt <= 0) {
     return null
   }
+  const requested =
+    requestedAt !== undefined && Number.isFinite(requestedAt) && requestedAt > 0
+      ? requestedAt
+      : undefined
   const end =
     completedAt !== undefined && Number.isFinite(completedAt) && completedAt >= startedAt
       ? completedAt
@@ -45,6 +52,7 @@ function readTiming(item: AgentJournalRenderItem): StructuredAgentTurnTiming | n
   return {
     state,
     startedAt,
+    ...(requested !== undefined ? { requestedAt: requested } : {}),
     ...(end !== undefined ? { completedAt: end } : {}),
     ...(measured !== undefined ? { durationMs: measured } : {}),
     observedAt: item.observedAt
@@ -107,6 +115,13 @@ export function selectStructuredAgentRunningTurnTiming(
   return null
 }
 
+/** The single instant every reading of a turn's elapsed time counts from: the
+ *  send that opened it when the host named one, the provider turn-open otherwise.
+ *  One origin is what keeps the live counter and the settled duration agreeing. */
+export function structuredAgentTurnOrigin(timing: StructuredAgentTurnTiming): number {
+  return timing.requestedAt ?? timing.startedAt
+}
+
 /** Whole seconds a settled turn ran, or null when the host never observed its end. */
 export function completedStructuredAgentTurnSeconds(
   timing: StructuredAgentTurnTiming | null | undefined
@@ -118,7 +133,7 @@ export function completedStructuredAgentTurnSeconds(
     return Math.floor(timing.durationMs / 1000)
   }
   return timing.completedAt !== undefined
-    ? Math.floor((timing.completedAt - timing.startedAt) / 1000)
+    ? Math.floor((timing.completedAt - structuredAgentTurnOrigin(timing)) / 1000)
     : null
 }
 
@@ -133,10 +148,13 @@ export function structuredAgentTurnLocalStartedAt(
   firstSeenAt: number,
   hostNow?: number
 ): number {
+  const origin = structuredAgentTurnOrigin(timing)
   const hostElapsed =
     hostNow !== undefined && Number.isFinite(hostNow)
-      ? hostNow - timing.startedAt
-      : timing.observedAt - timing.startedAt
+      ? hostNow - origin
+      : timing.observedAt - origin
+  // Wall-clock, not monotonic: an NTP step can put the origin after the host's
+  // own reading, and a negative elapsed would run the counter backwards.
   return firstSeenAt - Math.max(0, hostElapsed)
 }
 

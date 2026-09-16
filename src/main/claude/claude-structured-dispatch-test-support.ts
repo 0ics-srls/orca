@@ -20,6 +20,7 @@ export function sessionFor(send: Mock = vi.fn().mockResolvedValue(undefined)): C
     backgroundTasks: new ClaudeBackgroundTaskTracker(),
     commands: new ClaudeSlashCommandCatalog(),
     dispatchSequence: 0,
+    dispatchRequestedAt: null,
     optionMutationSequence: 0,
     options: new Map(),
     reportedOptions: {},

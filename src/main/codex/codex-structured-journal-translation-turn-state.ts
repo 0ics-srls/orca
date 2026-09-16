@@ -7,6 +7,8 @@ export class CodexJournalActiveTurns {
   readonly byThread = new Map<string, Set<string>>()
   /** Host turn-start receipt per remembered turn; the terminal row carries it forward. */
   private readonly startedAtByTurn = new Map<string, number>()
+  /** Opening send's instant per remembered turn, written once and carried forward. */
+  private readonly requestedAtByTurn = new Map<string, number>()
   private activeCount = 0
   private retainedBytes = 0
 
@@ -43,7 +45,11 @@ export class CodexJournalActiveTurns {
     return this.startedAtByTurn.get(this.turnKey(threadId, turnId))
   }
 
-  remember(threadId: string, turnId: string, startedAt?: number): boolean {
+  requestedAt(threadId: string, turnId: string): number | undefined {
+    return this.requestedAtByTurn.get(this.turnKey(threadId, turnId))
+  }
+
+  remember(threadId: string, turnId: string, startedAt?: number, requestedAt?: number): boolean {
     const active = this.byThread.get(threadId)
     if (active?.has(turnId)) {
       return true
@@ -53,6 +59,9 @@ export class CodexJournalActiveTurns {
     }
     if (startedAt !== undefined) {
       this.startedAtByTurn.set(this.turnKey(threadId, turnId), startedAt)
+    }
+    if (requestedAt !== undefined) {
+      this.requestedAtByTurn.set(this.turnKey(threadId, turnId), requestedAt)
     }
     if (active) {
       active.add(turnId)
@@ -66,6 +75,7 @@ export class CodexJournalActiveTurns {
 
   forget(threadId: string, turnId: string): void {
     this.startedAtByTurn.delete(this.turnKey(threadId, turnId))
+    this.requestedAtByTurn.delete(this.turnKey(threadId, turnId))
     const active = this.byThread.get(threadId)
     if (active?.delete(turnId)) {
       this.activeCount -= 1
@@ -79,6 +89,7 @@ export class CodexJournalActiveTurns {
   clear(): void {
     this.byThread.clear()
     this.startedAtByTurn.clear()
+    this.requestedAtByTurn.clear()
     this.activeCount = 0
     this.retainedBytes = 0
   }

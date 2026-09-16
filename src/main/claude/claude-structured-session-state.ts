@@ -34,6 +34,9 @@ export type ClaudeStructuredSessionEvent =
       message: Record<string, unknown>
       /** Present only when this replay acknowledged Orca's in-flight dispatch. */
       startsTurn?: true
+      /** Submission instant of the dispatch this replay acknowledged; the origin
+       *  of the turn it opens. Absent when the host cannot name a send. */
+      requestedAt?: number
       /** Host clock at receipt; stamped on turn boundaries only. */
       observedAt?: number
     }
@@ -153,6 +156,9 @@ export type ClaudeSession = {
   commands: ClaudeSlashCommandCatalog
   /** Monotonic fence advanced when a dispatch starts, including unresolved dispatches. */
   dispatchSequence: number
+  /** Submission instant of the dispatch `dispatchSequence` names. A replay only
+   *  opens a turn when it matches that sequence, so this is that turn's origin. */
+  dispatchRequestedAt: number | null
   /** Fences overlapping option writes so a late completion cannot restore stale state. */
   optionMutationSequence: number
   /** Shared durable-close write; a failed write clears this for a retry. */
