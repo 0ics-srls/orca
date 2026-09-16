@@ -12,6 +12,7 @@ import {
   structuredTuiRecoveryProofIsAdmissible
 } from './structured-agent-session-handoff-status'
 import type { StructuredTuiOwner } from './structured-agent-session-handoff-types'
+import { StructuredTuiCatchupStoppedError } from './structured-agent-session-handoff-types'
 import {
   persistReprovedTuiOwner,
   recoverTuiOwnerOrContinue,
@@ -57,6 +58,9 @@ export async function restoreStructuredAgentSessionHandoff(
       }
       return
     } catch (error) {
+      if (error instanceof StructuredTuiCatchupStoppedError) {
+        throw error
+      }
       lastError = error
       if (attempt < 2) {
         await new Promise((resolve) => setTimeout(resolve, 100 * 2 ** attempt))
@@ -282,8 +286,13 @@ async function startRecoveredTuiCatchup(
   input: RestartAccess,
   record: AgentSessionRecord
 ): Promise<void> {
-  await input.deps.recoverTuiHistoryCatchup?.(record.sessionId, record.lease.runtimeFence)
+  const prepared = await input.deps.recoverTuiHistoryCatchup?.(
+    record.sessionId,
+    record.lease.runtimeFence
+  )
+  prepared?.throwIfAborted()
   await input.deps.activateTuiHistoryCatchup?.(record.sessionId)
+  prepared?.throwIfAborted()
 }
 
 async function continueHandoff(input: RestartAccess, record: AgentSessionRecord): Promise<void> {
