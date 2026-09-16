@@ -89,12 +89,12 @@ export function TerminalPane({
     }) ? (
       <section key="default-shell" className="space-y-3">
         <SettingsSubsectionHeader
-          title="New terminal shell"
-          description="Choose what Orca opens for new local terminal panes. Existing panes are unchanged."
+          title="Terminal shell"
+          description="Choose what Orca opens for new local terminal panes."
         />
         <div className="space-y-3">
           <SettingsSegmentedControl
-            ariaLabel="New terminal shell"
+            ariaLabel="Terminal shell"
             value={shellMode}
             onChange={(value) => {
               setShellValidationError(null)
@@ -121,7 +121,7 @@ export function TerminalPane({
                 aria-describedby={shellValidationError ? 'default-shell-error' : undefined}
               />
               <p id="default-shell-help" className="text-xs text-muted-foreground">
-                Enter a command on PATH or an executable path. Orca starts it as a login shell.
+                Enter a shell name on PATH or an executable path. Orca starts it as a login shell.
               </p>
               {shellValidationError ? (
                 <p id="default-shell-error" role="alert" className="text-xs text-destructive">
@@ -131,12 +131,6 @@ export function TerminalPane({
               ) : null}
             </div>
           ) : null}
-          <p className="text-xs text-muted-foreground">
-            New terminals will use:{' '}
-            {shellMode === 'system'
-              ? `System shell (${systemShell})`
-              : configuredShell || 'the custom shell you enter'}
-          </p>
         </div>
       </section>
     ) : null
