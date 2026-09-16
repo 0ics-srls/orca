@@ -299,8 +299,6 @@ export function NativeChatStructuredSession(
         sessionId={props.sessionId}
         error={controller.error}
         composerError={composerError}
-        retryableOutboxEntry={null}
-        onRetry={controller.retry}
         isVisible={props.isVisible}
         backgroundTasks={controller.backgroundTasks}
         stopBackgroundTask={controller.stopBackgroundTask}

@@ -1,10 +1,6 @@
 import { useState } from 'react'
-import { RotateCcw } from 'lucide-react'
-import type { StructuredAgentSessionOutboxEntry } from '../../../../shared/structured-agent-session-outbox'
-import { Button } from '@/components/ui/button'
 import { NativeChatBackgroundTasksStatus } from './NativeChatBackgroundTasksStatus'
 import type { StructuredSessionBackgroundTasksView } from './structured-session-background-tasks-view'
-import { translate } from '@/i18n/i18n'
 
 type StoppingBackgroundTasks = {
   sessionId: string
@@ -18,8 +14,6 @@ export function NativeChatStructuredSessionStatus(props: {
   sessionId: string
   error: string | null
   composerError: string | null
-  retryableOutboxEntry: StructuredAgentSessionOutboxEntry | null
-  onRetry: (clientMessageId: string) => void
   isVisible: boolean
   backgroundTasks: StructuredSessionBackgroundTasksView
   stopBackgroundTask: (taskId?: string) => Promise<unknown>
@@ -60,33 +54,6 @@ export function NativeChatStructuredSessionStatus(props: {
 
   return (
     <>
-      {props.retryableOutboxEntry ? (
-        <div className="mx-auto flex w-full max-w-4xl items-center justify-between gap-3 px-4 py-1 text-xs text-muted-foreground">
-          <span>
-            {props.retryableOutboxEntry.state === 'unconfirmed'
-              ? translate(
-                  'auto.components.native.chat.NativeChatStructuredSession.1f772bb5d0',
-                  'Message delivery is unconfirmed.'
-                )
-              : translate(
-                  'auto.components.native.chat.NativeChatStructuredSession.93ef441197',
-                  'Message was not sent.'
-                )}
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => props.onRetry(props.retryableOutboxEntry!.clientMessageId)}
-          >
-            <RotateCcw className="size-3" />
-            {translate(
-              'auto.components.native.chat.NativeChatStructuredSession.a5e7f14068',
-              'Retry'
-            )}
-          </Button>
-        </div>
-      ) : null}
       {props.error || props.composerError ? (
         <p className="mx-auto w-full max-w-4xl px-4 py-1 text-xs text-destructive">
           {props.error ?? props.composerError}
