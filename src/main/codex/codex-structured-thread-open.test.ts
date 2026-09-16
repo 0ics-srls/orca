@@ -13,6 +13,47 @@ function connectionFor(
 }
 
 describe('openCodexThread', () => {
+  it('applies the resolved permission policy when starting and resuming a thread', async () => {
+    const request = vi.fn(async (method: string) => ({
+      thread: { id: method === 'thread/start' ? 'thread-created' : 'thread-existing' }
+    }))
+    const connection = connectionFor(request)
+    const permissionPolicy = {
+      approvalPolicy: 'never' as const,
+      sandbox: 'danger-full-access' as const
+    }
+
+    await openCodexThread(
+      connection,
+      { cwd: '/workspace', resumeThreadId: null, permissionPolicy },
+      2_000
+    )
+    await openCodexThread(
+      connection,
+      { cwd: '/workspace', resumeThreadId: 'thread-existing', permissionPolicy },
+      2_000
+    )
+
+    expect(request).toHaveBeenNthCalledWith(
+      1,
+      'thread/start',
+      { cwd: '/workspace', approvalPolicy: 'never', sandbox: 'danger-full-access' },
+      { timeoutMs: 2_000 }
+    )
+    expect(request).toHaveBeenNthCalledWith(
+      2,
+      'thread/resume',
+      {
+        threadId: 'thread-existing',
+        cwd: '/workspace',
+        approvalPolicy: 'never',
+        sandbox: 'danger-full-access',
+        excludeTurns: true
+      },
+      { timeoutMs: 2_000 }
+    )
+  })
+
   it('preserves an explicitly reported service tier, including Standard', async () => {
     const priority = vi.fn(async () => ({
       thread: { id: 'thread-fast' },

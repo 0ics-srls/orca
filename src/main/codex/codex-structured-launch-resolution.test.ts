@@ -3,7 +3,7 @@ import type { AgentSessionRecord } from '../../shared/agent-session-record'
 import { LOCAL_EXECUTION_HOST_ID } from '../../shared/execution-host'
 import type { AgentSessionRecordStore } from '../runtime/agent-session-record-store'
 import { createCodexStructuredLaunchResolver } from './codex-structured-launch-resolution'
-import { codexStructuredPermissionArgsForSettings } from './codex-structured-permission-mode'
+import { codexStructuredPermissionPolicyForSettings } from './codex-structured-permission-policy'
 
 const SESSION_ID = 'session-1'
 const IDENTITY = { sessionId: SESSION_ID } as Parameters<
@@ -48,7 +48,7 @@ function resolverFor(
     resolveCommand: () => '/usr/local/bin/codex',
     resolveRollout,
     isWindowsProcessStartTimeAvailable: () => true,
-    resolvePermissionArgs: () => codexStructuredPermissionArgsForSettings({ agentDefaultArgs })
+    resolvePermissionPolicy: () => codexStructuredPermissionPolicyForSettings({ agentDefaultArgs })
   })
 }
 
@@ -112,26 +112,35 @@ describe('codex structured launch resolution', () => {
     expect(launch.resumeThreadId).toBe('thread-current')
   })
 
-  // Agent Permissions is the only thing from the arguments field that reaches app-server, and it
-  // keeps the position the durable arguments used to hold: before the subcommand.
-  it('places the permission flag before the app-server subcommand', async () => {
+  // Agent Permissions is the only thing derived from the arguments field. app-server owns it on
+  // the thread RPC rather than through the interactive CLI's process flags.
+  it('resolves the bypass posture as app-server thread policy', async () => {
     const launch = await resolverFor(record(), undefined, undefined, {
       codex: '--dangerously-bypass-approvals-and-sandbox --model gpt-5.6-sol'
     })({ identity: IDENTITY })
 
-    expect(launch.args).toEqual(['--dangerously-bypass-approvals-and-sandbox', 'app-server'])
+    expect(launch.args).toEqual(['app-server'])
+    expect(launch.permissionPolicy).toEqual({
+      approvalPolicy: 'never',
+      sandbox: 'danger-full-access'
+    })
   })
 
   it('bypasses approvals for a profile that never opened Agent settings', async () => {
     const launch = await resolverFor(record(), undefined, undefined, {})({ identity: IDENTITY })
 
-    expect(launch.args).toEqual(['--dangerously-bypass-approvals-and-sandbox', 'app-server'])
+    expect(launch.args).toEqual(['app-server'])
+    expect(launch.permissionPolicy).toEqual({
+      approvalPolicy: 'never',
+      sandbox: 'danger-full-access'
+    })
   })
 
   it('leaves the approval prompts on under Manual', async () => {
     const launch = await resolverFor(record())({ identity: IDENTITY })
 
     expect(launch.args).toEqual(['app-server'])
+    expect(launch.permissionPolicy).toBeUndefined()
   })
 
   // The configured CLI arguments are a terminal concern: a durable record written before they

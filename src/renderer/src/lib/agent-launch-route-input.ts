@@ -52,8 +52,8 @@ export type AgentLaunchRouteArgs = {
   workspace: ProspectiveWorkspace
   prompt?: string
   promptDelivery?: NativeChatLaunchPromptDelivery
-  /** A working directory only a terminal can apply; a structured session runs in its workspace. */
-  tuiCustomization?: { cwd?: string | null }
+  /** Launch-scoped values only the terminal command can apply. */
+  tuiCustomization?: { cwd?: string | null; agentArgs?: string | null }
   initialSessionOptions?: Readonly<Record<string, unknown>>
 }
 
@@ -129,8 +129,10 @@ export function buildAgentLaunchRouteInput(
       workspace,
       executionHostId
     ),
-    requiresTuiLaunchCommand:
-      Boolean(tuiCustomization?.cwd?.trim()) || hasExplicitTuiLaunchCommand(store.settings, agent),
+    requiresTuiLaunchCustomization:
+      Boolean(tuiCustomization?.cwd?.trim()) ||
+      Boolean(tuiCustomization?.agentArgs?.trim()) ||
+      hasExplicitTuiLaunchCommand(store.settings, agent),
     initialSessionOptions: args.initialSessionOptions
   }
 }

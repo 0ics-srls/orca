@@ -219,7 +219,7 @@ function launchAgentInNewTabInternal(args: LaunchAgentInNewTabArgs): LaunchAgent
       workspace: { kind: workspaceKindForWorktreeId(worktreeId), worktreeId },
       prompt: trimmedPrompt,
       promptDelivery: viewModePromptDelivery,
-      tuiCustomization: { cwd: initialCwd },
+      tuiCustomization: { cwd: initialCwd, agentArgs },
       initialSessionOptions: startupPlan.sessionOptions,
       onPromptDelivered
     })

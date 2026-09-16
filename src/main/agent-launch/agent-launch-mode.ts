@@ -36,7 +36,7 @@ export type AgentLaunchModeReason =
   | 'remote_execution_host'
   | 'reused_terminal'
   | 'agent_without_structured_session'
-  | 'tui_launch_command'
+  | 'tui_launch_customization'
   | 'structured_sessions_unavailable'
   | 'structured_support_unknown'
   | 'wsl_execution_runtime'
@@ -88,7 +88,8 @@ const DOWNGRADE_DETAIL: Record<Exclude<AgentLaunchModeReason, 'user_default'>, s
   remote_execution_host: 'this launch runs on a remote execution host',
   reused_terminal: 'it reuses a running terminal agent',
   agent_without_structured_session: 'this agent has no structured session',
-  tui_launch_command: 'this agent has a custom launch command that only a terminal runs',
+  tui_launch_customization:
+    'this launch has a custom command, per-launch arguments or working directory that only a terminal runs',
   structured_sessions_unavailable: 'this runtime does not support structured agent sessions',
   structured_support_unknown: 'the execution host has not established structured session support',
   wsl_execution_runtime: 'this workspace runs under WSL',
@@ -103,7 +104,7 @@ const BLOCKER_REASON: Record<
   'reused-terminal': 'reused_terminal',
   'agent-without-structured-session': 'agent_without_structured_session',
   'floating-workspace': 'structured_unsupported_on_host',
-  'tui-launch-command': 'tui_launch_command',
+  'tui-launch-customization': 'tui_launch_customization',
   'remote-execution-host': 'remote_execution_host',
   'project-runtime': 'wsl_execution_runtime',
   'runtime-capability': 'structured_sessions_unavailable',
@@ -149,7 +150,7 @@ export function decideAgentLaunchMode(args: {
     // A resolved managed worktree or folder workspace is never a floating terminal. WSL is left to
     // the executing host's own create-support probe, which reads the resolved workspace rather
     // than guessing from a client-side project runtime.
-    requiresTuiLaunchCommand: hasExplicitTuiLaunchCommand(settings, agent)
+    requiresTuiLaunchCustomization: hasExplicitTuiLaunchCommand(settings, agent)
   })
   if (!support.supported) {
     return downgraded(BLOCKER_REASON[support.blocker], vocabulary)

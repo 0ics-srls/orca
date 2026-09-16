@@ -106,7 +106,7 @@ describe('buildAgentLaunchRouteInput', () => {
       promptDelivery: 'auto-submit',
       launchText: 'fix the flaky test',
       nativeChatTranscriptIsLocalReadable: true,
-      requiresTuiLaunchCommand: false,
+      requiresTuiLaunchCustomization: false,
       initialSessionOptions: { model: 'gpt-5.4' }
     })
     expect(mocks.getExecutionHostIdForWorktree).toHaveBeenCalledWith(appStore, 'wt-1')
@@ -240,6 +240,12 @@ describe('buildAgentLaunchRouteInput', () => {
 
   it.each([
     ['a cwd', { cwd: '/repo/sub' }, {}],
+    ['per-launch CLI arguments', { agentArgs: '--model gpt-5.6-sol' }, {}],
+    [
+      'a per-launch override equal to the shipped default',
+      { agentArgs: '--dangerously-bypass-approvals-and-sandbox' },
+      {}
+    ],
     ['a settings command override', {}, { agentCmdOverrides: { codex: 'codex-nightly' } }]
   ] as const)('requires a terminal for %s', (_name, tuiCustomization, settingsOverride) => {
     const input = buildAgentLaunchRouteInput(
@@ -250,7 +256,7 @@ describe('buildAgentLaunchRouteInput', () => {
         tuiCustomization
       }
     )
-    expect(input.requiresTuiLaunchCommand).toBe(true)
+    expect(input.requiresTuiLaunchCustomization).toBe(true)
   })
 
   // The reported P0: `--dangerously-skip-permissions --model Opus` matched no blessed string, so
@@ -271,7 +277,7 @@ describe('buildAgentLaunchRouteInput', () => {
       workspace: { kind: 'git-worktree' as const, worktreeId: 'wt-1' }
     }
     expect(routeFor(appStore, args)).toBe('structured-native-chat')
-    expect(buildAgentLaunchRouteInput(appStore, args).requiresTuiLaunchCommand).toBe(false)
+    expect(buildAgentLaunchRouteInput(appStore, args).requiresTuiLaunchCustomization).toBe(false)
   })
 
   // Grok reads its transcript off local disk, so it is the agent the readability answer routes on.

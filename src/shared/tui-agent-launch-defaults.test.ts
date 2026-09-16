@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  resolvedTuiAgentArgsBypassPermissions,
   resolveTuiAgentLaunchArgs,
   tuiAgentArgsBypassPermissions
 } from './tui-agent-launch-defaults'
@@ -15,15 +16,55 @@ describe('tuiAgentArgsBypassPermissions', () => {
     ['claude', '--model Opus', false],
     // A token boundary, so a longer flag that merely starts the same way is not a bypass.
     ['claude', '--dangerously-skip-permissions-not-really', false],
+    [
+      'claude',
+      '--append-system-prompt "mention --dangerously-skip-permissions only as text"',
+      false
+    ],
+    ['claude', '-- --dangerously-skip-permissions', false],
     ['codex', '--dangerously-bypass-approvals-and-sandbox --model gpt-5.6-sol', true],
-    ['codex', '--model gpt-5.6-sol', false]
+    ['codex', '--model gpt-5.6-sol', false],
+    ['codex', '-- --dangerously-bypass-approvals-and-sandbox', false]
   ] as const)('reads %s args %s as %s', (agent, args, expected) => {
-    expect(tuiAgentArgsBypassPermissions(agent, args)).toBe(expected)
+    expect(tuiAgentArgsBypassPermissions(agent, args, 'posix')).toBe(expected)
   })
 
   it('reads no bypass out of an absent or non-string value', () => {
-    expect(tuiAgentArgsBypassPermissions('claude', null)).toBe(false)
-    expect(tuiAgentArgsBypassPermissions('claude', undefined)).toBe(false)
+    expect(tuiAgentArgsBypassPermissions('claude', null, 'posix')).toBe(false)
+    expect(tuiAgentArgsBypassPermissions('claude', undefined, 'posix')).toBe(false)
+  })
+
+  it('uses the configured local Windows shell family', () => {
+    expect(
+      resolvedTuiAgentArgsBypassPermissions(
+        'claude',
+        {
+          agentDefaultArgs: { claude: '`--dangerously-skip-permissions' },
+          terminalWindowsShell: 'powershell.exe'
+        },
+        'win32'
+      )
+    ).toBe(true)
+    expect(
+      resolvedTuiAgentArgsBypassPermissions(
+        'codex',
+        {
+          agentDefaultArgs: { codex: '^--dangerously-bypass-approvals-and-sandbox' },
+          terminalWindowsShell: 'cmd.exe'
+        },
+        'win32'
+      )
+    ).toBe(true)
+    expect(
+      resolvedTuiAgentArgsBypassPermissions(
+        'claude',
+        {
+          agentDefaultArgs: { claude: '`--dangerously-skip-permissions' },
+          terminalWindowsShell: 'powershell.exe'
+        },
+        'darwin'
+      )
+    ).toBe(false)
   })
 })
 
