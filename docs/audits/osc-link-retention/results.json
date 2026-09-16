@@ -1,0 +1,433 @@
+{
+  "node": "v26.6.0",
+  "platform": "darwin",
+  "bundleSha256": "e1a9a778efea3d746792ba009f0a37d6277dfc6a5c15dff953455c678f05dfe2",
+  "results": [
+    {
+      "kind": "headless",
+      "mode": "overwrite",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5470328
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10623216
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15659960
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20930000
+        }
+      ]
+    },
+    {
+      "kind": "headless",
+      "mode": "overwrite",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 1027056
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1954312
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 794592
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1717232
+        }
+      ]
+    },
+    {
+      "kind": "headless",
+      "mode": "erase-line",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5148080
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10301032
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15352184
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20591968
+        }
+      ]
+    },
+    {
+      "kind": "headless",
+      "mode": "erase-line",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 981072
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1907184
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 751440
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1696272
+        }
+      ]
+    },
+    {
+      "kind": "headless",
+      "mode": "alternate",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5179480
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10335264
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15382584
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20628776
+        }
+      ]
+    },
+    {
+      "kind": "headless",
+      "mode": "alternate",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 960872
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1888584
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 725992
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1647440
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "overwrite",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5296144
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10448952
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15485728
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20755144
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "overwrite",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 969392
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1894808
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 764824
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1711672
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "erase-line",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5170624
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10326080
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15370224
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20609792
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "erase-line",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 960568
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1881152
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 732576
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1658192
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "alternate",
+      "fixed": false,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 2500,
+          "markers": 2500,
+          "rows": 24,
+          "retainedHeapDelta": 5076776
+        },
+        {
+          "updates": 5000,
+          "links": 5000,
+          "markers": 5000,
+          "rows": 24,
+          "retainedHeapDelta": 10236792
+        },
+        {
+          "updates": 7500,
+          "links": 7500,
+          "markers": 7500,
+          "rows": 24,
+          "retainedHeapDelta": 15273760
+        },
+        {
+          "updates": 10000,
+          "links": 10000,
+          "markers": 10000,
+          "rows": 24,
+          "retainedHeapDelta": 20519904
+        }
+      ]
+    },
+    {
+      "kind": "renderer",
+      "mode": "alternate",
+      "fixed": true,
+      "samples": [
+        {
+          "updates": 2500,
+          "links": 453,
+          "markers": 453,
+          "rows": 24,
+          "retainedHeapDelta": 964296
+        },
+        {
+          "updates": 5000,
+          "links": 905,
+          "markers": 905,
+          "rows": 24,
+          "retainedHeapDelta": 1886304
+        },
+        {
+          "updates": 7500,
+          "links": 333,
+          "markers": 333,
+          "rows": 24,
+          "retainedHeapDelta": 741152
+        },
+        {
+          "updates": 10000,
+          "links": 785,
+          "markers": 785,
+          "rows": 24,
+          "retainedHeapDelta": 1671072
+        }
+      ]
+    }
+  ],
+  "sweepCost": {
+    "rows": 5024,
+    "columns": 160,
+    "removed": 1023,
+    "milliseconds": 9.98633400000017
+  }
+}
