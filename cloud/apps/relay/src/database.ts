@@ -9,6 +9,7 @@ import {
   PostgresPoolPressure,
   type PostgresPoolPressureCounts
 } from './postgres-pool-pressure.js'
+import { CellRowLockScope } from './cell-row-lock-scope.js'
 import { applyPostgresSchema } from './postgres-schema-startup.js'
 import { POSTGRES_STATEMENT_STATS_MIGRATION } from './postgres-statement-stats.js'
 import { reportPostgresQueryFailure } from './postgres-query-failure.js'
@@ -699,7 +700,12 @@ class SqliteTransaction implements RelayDatabase {
   readonly dialect = 'sqlite' as const
   private heldFromMs: number | undefined
 
-  constructor(protected readonly database: DatabaseSync) {}
+  // SqliteDatabase extends this class for autocommit statements, where each
+  // statement is its own transaction and there is no scope to police.
+  constructor(
+    protected readonly database: DatabaseSync,
+    private readonly cellLocks?: CellRowLockScope
+  ) {}
 
   consumeHoldMs(): number | undefined {
     if (this.heldFromMs === undefined) return undefined
@@ -717,9 +723,11 @@ class SqliteTransaction implements RelayDatabase {
   async query(sql: string, params: unknown[] = []): Promise<SqlRow[]> {
     const statement = this.database.prepare(sql)
     const bound = params.map((value) => (value === undefined ? null : value)) as never[]
-    if (returnsRows(sql)) return statement.all(...bound) as SqlRow[]
-    const result = statement.run(...bound)
-    return [{ changes: Number(result.changes) }]
+    const rows = returnsRows(sql)
+      ? (statement.all(...bound) as SqlRow[])
+      : [{ changes: Number(statement.run(...bound).changes) }]
+    this.cellLocks?.observe(sql, params, false, rows)
+    return rows
   }
 
   async queryLocked(
@@ -728,6 +736,10 @@ class SqliteTransaction implements RelayDatabase {
     options: RelayLockOptions = {}
   ): Promise<SqlRow[]> {
     const rows = await this.query(sql, params)
+    // SQLite has no FOR UPDATE to read back, so the lock is declared by the call
+    // rather than by the statement text; Postgres appends the clause before the
+    // statement reaches query(), so both dialects declare the same rows.
+    this.cellLocks?.observe(sql, params, true, rows)
     this.noteHeld(options)
     return rows
   }
@@ -761,7 +773,7 @@ class SqliteDatabase extends SqliteTransaction {
     this.tail = new Promise((resolve) => (release = resolve))
     await previous
     this.database.exec('BEGIN IMMEDIATE')
-    const transaction = new SqliteTransaction(this.database)
+    const transaction = new SqliteTransaction(this.database, new CellRowLockScope())
     try {
       const result = await operation(transaction)
       this.database.exec('COMMIT')
@@ -787,7 +799,10 @@ class PostgresTransaction implements RelayDatabase {
   private lockUnavailable = 0
   private lockTimeouts = 0
 
-  constructor(protected readonly client: pg.PoolClient) {}
+  constructor(
+    protected readonly client: pg.PoolClient,
+    private readonly cellLocks?: CellRowLockScope
+  ) {}
 
   consumeHoldMs(): number | undefined {
     if (this.heldFromMs === undefined) return undefined
@@ -813,7 +828,11 @@ class PostgresTransaction implements RelayDatabase {
   async query(sql: string, params: unknown[] = []): Promise<SqlRow[]> {
     try {
       const result = await this.client.query(postgresSql(sql), params)
-      return returnsRows(sql) ? (result.rows as SqlRow[]) : [{ changes: result.rowCount ?? 0 }]
+      const rows = returnsRows(sql) ? (result.rows as SqlRow[]) : [{ changes: result.rowCount ?? 0 }]
+      // queryLocked appends FOR UPDATE before it gets here, so every locked read
+      // is visible on this one path.
+      this.cellLocks?.observe(sql, params, /\bFOR\s+UPDATE\b/i.test(sql), rows)
+      return rows
     } catch (error) {
       rememberPostgresTransactionPhase(error, sql)
       throw error
@@ -985,7 +1004,7 @@ class PostgresDatabase implements RelayDatabase {
   ): Promise<T> {
     for (let attempt = 1; attempt <= POSTGRES_TRANSACTION_ATTEMPTS; attempt++) {
       const client = await this.pressure.connect()
-      const transaction = new PostgresTransaction(client)
+      const transaction = new PostgresTransaction(client, new CellRowLockScope())
       try {
         await client.query('BEGIN')
         const result = await operation(transaction)
