@@ -5,9 +5,11 @@
 This change integrates execution identity and committed launch membership in one
 host-owned transaction. The pinned upstream base is
 `b5a99462bced6871b8a1c711222bc58cff938b9f`; the branch was reconciled through
-merge `2227d85138eb19bf4b2256233ea21acc7276d5b3` and the final implementation
-commit is `165851414dde2cf4801b5d60b60553e7cefc5cf9` (parent
-`0561ac9ff02f6d9e76c3ac0ef0980bee6d4b41f5`). The earlier identity source was
+merge `2227d85138eb19bf4b2256233ea21acc7276d5b3`; the implementation tip is
+`9adb2253c5d6a0cc0e5f29cd27bd0e94b0c9e895` (foundation commit
+`165851414dde2cf4801b5d60b60553e7cefc5cf9`, parent
+`0561ac9ff02f6d9e76c3ac0ef0980bee6d4b41f5`; the tip adds only bounded-owner
+lint refactoring). The earlier identity source was
 tree-equivalent to `22f80ab284`; the valid amend chain was inspected before
 integration. The unrelated dirty `pnpm-lock.yaml` was preserved and is not in
 the implementation commit.
@@ -183,7 +185,8 @@ covered by this implementation commit.
 
 This commit is a reusable C5/C10 foundation for dependent batches, not full
 closure of both architecture plans. Dependents should consume
-`owner.statusBinding` and `agentSessionEnsure` from commit
-`165851414dde2cf4801b5d60b60553e7cefc5cf9`; they must not mint another run or
+`owner.statusBinding` and `agentSessionEnsure` from implementation commits
+`165851414dde2cf4801b5d60b60553e7cefc5cf9` and
+`9adb2253c5d6a0cc0e5f29cd27bd0e94b0c9e895`; they must not mint another run or
 reservation. Full batch completion requires the explicit gaps in the matrix,
 with fresh independent review and provider/platform QA before any PR or merge.
