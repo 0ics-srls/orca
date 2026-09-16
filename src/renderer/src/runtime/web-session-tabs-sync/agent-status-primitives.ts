@@ -10,6 +10,17 @@ import { buildRetiredTerminalTabStateSweepPatch } from '../../store/slices/retir
 import { isMirroredTerminalSurfaceId } from './terminal-surfaces'
 import { isAgentStatusFresh } from './state-equality-core'
 
+export function isMirroredAgentStatusOwnedBy(
+  entry: AgentStatusEntry,
+  environmentId: string,
+  worktreeId: string
+): boolean {
+  return (
+    entry.worktreeId === worktreeId &&
+    (entry.connectionId === environmentId || entry.connectionId == null)
+  )
+}
+
 export function toMirroredPaneKey(
   surface: TerminalSurface,
   leafId = surface.leafId
@@ -143,6 +154,41 @@ export function buildRemirroredClosedTabMarkerLiftPatch(
   return next ? { recentlyClosedAgentStatusTabIds: next } : null
 }
 
+export function collectCollidingRetractionPaneKeys(
+  state: WebSessionTabsSyncState,
+  retractedTabIds: readonly string[],
+  environmentId: string,
+  worktreeId: string,
+  batchContext?: WebSessionTabsBatchContext
+): ReadonlySet<string> | undefined {
+  if (retractedTabIds.length === 0) {
+    return undefined
+  }
+  const retractedIds = new Set(retractedTabIds)
+  const scopedPaneKeys = new Set<string>()
+  let hasForeignPane = false
+  const entries = new Map([
+    ...Object.entries(state.retainedAgentsByPaneKey ?? {}).map(
+      ([key, retained]) => [key, retained.entry] as const
+    ),
+    ...batchAgentPaneKeysForTabs(state, retractedIds, batchContext).map(
+      (key) => [key, state.agentStatusByPaneKey[key]] as const
+    )
+  ])
+  for (const [paneKey, entry] of entries) {
+    const tabId = parsePaneKey(paneKey)?.tabId
+    if (!tabId || !retractedIds.has(tabId)) {
+      continue
+    }
+    if (isMirroredAgentStatusOwnedBy(entry, environmentId, worktreeId)) {
+      scopedPaneKeys.add(paneKey)
+    } else {
+      hasForeignPane = true
+    }
+  }
+  return hasForeignPane ? scopedPaneKeys : undefined
+}
+
 /**
  * A host retraction owes the retracted tab closeTab's renderer-state sweep: without it,
  * client-owned rows (STA-3107-exempt in the mirror's delete loop) and retention promotions
@@ -156,6 +202,7 @@ export function buildRetractedMirroredTabSweepPatch(
     'agentStatusByPaneKey' | 'agentStatusEpoch' | 'sortEpoch'
   > | null,
   removedTerminalResourceIds: readonly string[],
+  scopedPaneKeys: ReadonlySet<string> | undefined,
   batchContext?: WebSessionTabsBatchContext
 ): Partial<WebSessionTabsSyncState> | null {
   // Why: only a mirrored id the host stopped publishing is a retraction — a local or provisional
@@ -184,8 +231,10 @@ export function buildRetractedMirroredTabSweepPatch(
   // Why: a retraction can be a reconnect re-key, not pane death (ssh-execution-boundary); keeping
   // cutoffs means a republished pane cannot replay activity the user cleared on this client.
   // The host retracts exact tab ids; a worktree-wide orphan sweep could erase a sibling host.
+  // A colliding host tab id cannot authorize global tombstones or tab registry cleanup.
   const sweep = buildRetiredTerminalTabStateSweepPatch(sweepState, retractedTabIds, undefined, {
-    preserveActivityClearedState: true
+    preserveActivityClearedState: true,
+    ...(scopedPaneKeys ? { paneKeys: scopedPaneKeys } : {})
   })
   if (!sweep?.agentStatusByPaneKey || !batchContext) {
     return sweep ?? null
