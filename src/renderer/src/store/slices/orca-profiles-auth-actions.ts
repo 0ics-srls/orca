@@ -113,7 +113,11 @@ export const createOrcaProfilesAuthActions: StateCreator<
               description: result.auth.setupMessage
             }
           )
-        } else if (result.status === 'failed' && !alreadyConnected) {
+        } else if (
+          result.status === 'failed' &&
+          !alreadyConnected &&
+          result.auth.state !== 'connected'
+        ) {
           toast.error(
             translate('auto.store.slices.orca.profiles.33290e88ed', 'Failed to connect profile'),
             { description: result.error }

@@ -87,6 +87,7 @@ describe('OrcaAccountSettingsPane', () => {
   it('offers sign in for a local profile', async () => {
     const user = userEvent.setup()
     mocks.state.orcaProfileAuthStatus = { configured: true, state: 'local' }
+    mocks.connect.mockReturnValue(new Promise(() => {}))
     render(<OrcaAccountSettingsPane />)
 
     expect(
