@@ -1,0 +1,21 @@
+{
+  "node": "v26.6.0",
+  "bytesPerRound": 1200000,
+  "writesPerRound": 8,
+  "discardedWarmupRounds": 4,
+  "results": [
+    {
+      "name": "baseline",
+      "sha256": "e71666dbadcd0d4be1012b59c72c000d8f3624493050413d422bb0acebcce1d3",
+      "timings": [9.82, 8.07, 8.1, 8.12, 8.15, 8.18, 8.1, 8.26, 8.32, 8.31, 8.27, 8.12, 8.09, 8.08],
+      "medianMs": 8.165
+    },
+    {
+      "name": "patched",
+      "sha256": "dfc93ca980570fa5f8f6eb02a042c19b9965083fb83499d2acf5a920bfd429d9",
+      "timings": [9.78, 8.41, 8.46, 8.42, 8.42, 8.49, 8.6, 8.62, 8.64, 8.55, 9.75, 8.59, 8.41, 8.4],
+      "medianMs": 8.57
+    }
+  ],
+  "limits": "Actual pristine and patched CJS headless bundles. Sequential synthetic ASCII writes; no app, filesystem, provider or renderer overhead. Timing noise is not application-wide performance evidence."
+}

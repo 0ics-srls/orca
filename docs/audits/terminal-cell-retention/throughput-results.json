@@ -1,0 +1,18 @@
+{
+  "node": "v26.6.0",
+  "baselineBundleSha256": "e71666dbadcd0d4be1012b59c72c000d8f3624493050413d422bb0acebcce1d3",
+  "baselineBufferLineSha256": "26551bd2db8ddd5cdb4f77b0f62f3b5f1ae4d14fd76ac4d5b5eae70eab10ea12",
+  "patchedBufferLineSha256": "435b6bccb646071deda696d8e5ffccb5396524570a0d6f345093a1e0aebead1a",
+  "bytesPerTerminalRound": 1200000,
+  "timings": {
+    "baseline": {
+      "setterMs": [7.8, 9.1, 5.2, 5.3, 5.3, 5.3, 5.3],
+      "terminalMs": [16.6, 11.7, 9.6, 9.6, 9.6, 9.5, 9.5]
+    },
+    "patched": {
+      "setterMs": [11.1, 15.4, 6.3, 6.3, 6.3, 7.1, 6.3],
+      "terminalMs": [17.1, 10.7, 10, 9.9, 9.8, 9.8, 9.8]
+    }
+  },
+  "limits": "Real headless source bundled in memory with esbuild from installed baseline sourcemap; omitted enum-only source files come from installed desktop source at the same pinned upstream commit. Not the published webpack bundle. No renderer windows."
+}
