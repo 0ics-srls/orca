@@ -22,6 +22,7 @@ import {
   isAgentSessionConversationCommandResult,
   type AgentSessionConversationCommandResult
 } from './agent-session-conversation-command'
+import { isAgentLaunchResult, type AgentLaunchResult } from './agent-launch-intent'
 
 export const AGENT_SESSION_DURABLE_OPERATION_PER_CLIENT_LIMIT = 512
 export const AGENT_SESSION_DURABLE_OPERATION_GLOBAL_LIMIT = 4_096
@@ -30,9 +31,22 @@ export type AgentSessionOperationOutcome =
   | { status: 'pending' }
   | {
       status: 'succeeded'
+      /**
+       * Empty exactly when `launch` recorded a terminal surface — a PTY has a handle, not a session
+       * id. Kept a required string rather than made optional because a build that predates `launch`
+       * rejects a `succeeded` row without one, and a single rejected row invalidates the whole
+       * store on load (`agent-session-record-store-file.ts`). A downgrade must skip what it cannot
+       * read, not lose every lease in the file.
+       */
       sessionId: string
       conversationCommand?: AgentSessionConversationCommandResult
       rewind?: AgentSessionRewindResult
+      /**
+       * The full `agent.launch` answer. Recorded whole rather than rebuilt, because the preferred
+       * mode and the reason a launch downgraded away from it cannot be recomputed once the user's
+       * settings move: a replay must return what ran, not what would run now.
+       */
+      launch?: AgentLaunchResult
     }
   | { status: 'failed'; code: string; message?: string; rewindReason?: AgentSessionRewindReason }
   /** The effect may or may not have happened; replay this answer instead of spawning again. */
@@ -81,11 +95,67 @@ export function settleAgentSessionOperation(
   return new Map(
     [...rows].map(([key, row]) => [
       key,
-      (targetKey ? key === targetKey : row.operationId === args.operationId)
+      (targetKey ? key === targetKey : row.operationId === args.operationId) &&
+      !supersedesSettledOutcome(row.outcome, args.outcome)
         ? { ...row, outcome: args.outcome }
         : row
     ])
   )
+}
+
+/**
+ * Settlement is monotone in one direction only: once an operation is known to have succeeded or
+ * failed, a later `unknown` must not take that certainty away. A crash handler, a restart
+ * reconciler and the operation's own settle can all reach the same row, and the slowest of them is
+ * not the best informed — an `unknown` landing after a recorded success would turn a replayable
+ * answer into a permanent refusal for work that demonstrably completed.
+ */
+function supersedesSettledOutcome(
+  current: AgentSessionOperationOutcome,
+  next: AgentSessionOperationOutcome
+): boolean {
+  return (
+    next.status === 'unknown' && (current.status === 'succeeded' || current.status === 'failed')
+  )
+}
+
+/** Who owns the right to run this operation's effect. */
+export type AgentSessionOperationClaim =
+  /** This caller moved the row from `pending`; it alone may run the effect. */
+  | { claim: 'won'; row: AgentSessionOperationRow }
+  /** Someone else already took it. The row says what to answer with. */
+  | { claim: 'lost'; row: AgentSessionOperationRow }
+  /** Pruned or never admitted. */
+  | { claim: 'absent' }
+
+/**
+ * Take exclusive ownership of an admitted operation, atomically.
+ *
+ * Admission alone does not decide who runs: two callers replaying one id both read `pending`, and
+ * two unconditional writes of `unknown` are not a compare-and-swap — both would see their own write
+ * land and both would execute. The swap has to be conditional on the state it read, in one step,
+ * and it has to report which caller won. `pending` is the only state that can be claimed.
+ *
+ * The row moves to `unknown` rather than staying `pending` on purpose: from the instant the effect
+ * may start, the truthful durable answer is "this may have happened", and a host that dies mid-run
+ * leaves exactly that behind.
+ */
+export function claimAgentSessionOperation(
+  rows: ReadonlyMap<string, AgentSessionOperationRow>,
+  args: { callerKey: string; operationId: string }
+): { rows: Map<string, AgentSessionOperationRow>; claim: AgentSessionOperationClaim } {
+  const key = agentSessionOperationKey(args.callerKey, args.operationId)
+  const existing = rows.get(key)
+  if (!existing) {
+    return { rows: new Map(rows), claim: { claim: 'absent' } }
+  }
+  if (existing.outcome.status !== 'pending') {
+    return { rows: new Map(rows), claim: { claim: 'lost', row: existing } }
+  }
+  const claimed: AgentSessionOperationRow = { ...existing, outcome: { status: 'unknown' } }
+  const next = new Map(rows)
+  next.set(key, claimed)
+  return { rows: next, claim: { claim: 'won', row: claimed } }
 }
 
 /**
@@ -193,6 +263,7 @@ export function isAgentSessionOperationRow(value: unknown): value is AgentSessio
       (outcome.status === 'succeeded' &&
         typeof outcome.sessionId === 'string' &&
         (outcome.rewind === undefined || isAgentSessionRewindResult(outcome.rewind)) &&
+        (outcome.launch === undefined || isAgentLaunchResult(outcome.launch)) &&
         (outcome.conversationCommand === undefined ||
           isAgentSessionConversationCommandResult(outcome.conversationCommand))) ||
       (outcome.status === 'failed' && typeof outcome.code === 'string') ||

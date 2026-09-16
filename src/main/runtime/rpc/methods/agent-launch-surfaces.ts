@@ -22,7 +22,17 @@ import type { RpcContext } from '../core'
 import { structuredCallerFor } from './structured-agent-session-gate'
 import { createStructuredAgentSessionForWorktree } from './structured-agent-session-create'
 
-export function agentLaunchSurfaceFactory(context: RpcContext): AgentLaunchSurfaceFactory {
+/**
+ * `attachOperationId` is the launch's derived child id, present only when the caller named the
+ * launch. It cannot be the launch's own id: the ledger keys a row on `(callerKey, operationId)`
+ * with no method in it, so the attach would meet the launch's own row, disagree with its
+ * fingerprint, and refuse a conflict before creating anything. Absent, the attach mints its own —
+ * which is what every launch did before, and is still correct for a launch nobody can replay.
+ */
+export function agentLaunchSurfaceFactory(
+  context: RpcContext,
+  attachOperationId?: string
+): AgentLaunchSurfaceFactory {
   return {
     createStructuredSession: async ({ worktreeId, agent, options }) => {
       const sessionId = randomUUID()
@@ -36,7 +46,8 @@ export function agentLaunchSurfaceFactory(context: RpcContext): AgentLaunchSurfa
         caller: structuredCallerFor(context),
         envelope: {
           sessionId,
-          clientOperationId: createStructuredAgentSessionOperationId(randomUUID),
+          clientOperationId:
+            attachOperationId ?? createStructuredAgentSessionOperationId(randomUUID),
           expectedRuntimeFence: null,
           // Overwritten by `prepare` with the host's own attach fingerprint. The create-intent
           // conflict check it would otherwise feed guards a replayed client operation id, and this

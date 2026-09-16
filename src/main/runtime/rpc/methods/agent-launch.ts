@@ -11,13 +11,24 @@
  *
  * A caller therefore never asks for a mode, and must read `outcome.kind` rather than assume one:
  * the receipt always says which surface ran and why, so a downgrade is never silent.
+ *
+ * A launch is also the one call whose retry is most expensive to get wrong — a lost reply means the
+ * caller cannot tell "never ran" from "ran, answer lost" — so a caller may name the operation with
+ * `operationId` and get exactly one execution, a recorded answer on every replay, and a refusal
+ * when the outcome is genuinely unknown. That guarantee is safety, not recovery: it makes a retry
+ * harmless, and does nothing to reunite a caller with a surface a dead attempt left behind.
  */
 
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
-import type { AgentLaunchIntent, AgentLaunchTarget } from '../../../../shared/agent-launch-intent'
+import type {
+  AgentLaunchIntent,
+  AgentLaunchResult,
+  AgentLaunchTarget
+} from '../../../../shared/agent-launch-intent'
 import { executeAgentLaunch } from '../../../agent-launch/agent-launch-executor'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import { defineMethod, type RpcContext } from '../core'
+import { admitAgentLaunchOperation } from './agent-launch-replay'
 import { AgentLaunch, type AgentLaunchParams } from './agent-launch-schemas'
 import { agentLaunchSurfaceFactory } from './agent-launch-surfaces'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
@@ -86,33 +97,110 @@ async function validateReusedTerminal(
   }
 }
 
+/**
+ * The half before anything is created: resolve the caller's selector, then check a reused terminal.
+ * A throw from here proves no surface was built, which is what lets the ledger record a launch that
+ * failed in it as `failed` rather than `unknown`.
+ */
+async function resolveUnlaunchedIntent(
+  params: AgentLaunchParams,
+  runtime: OrcaRuntimeService
+): Promise<AgentLaunchIntent> {
+  const intent = await agentLaunchIntent(params, runtime)
+  await validateReusedTerminal(intent, runtime)
+  return intent
+}
+
+function runAgentLaunch(
+  intent: AgentLaunchIntent,
+  context: RpcContext,
+  attachOperationId?: string
+): Promise<AgentLaunchResult> {
+  return executeAgentLaunch({
+    runtime: context.runtime,
+    intent,
+    surfaces: agentLaunchSurfaceFactory(context, attachOperationId),
+    workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
+  })
+}
+
+/**
+ * The pre-ledger path, unchanged and kept for every caller that names no operation.
+ *
+ * `dedupeWorktreeCreate` is an in-memory 60-second window over the create half of a launch, keyed
+ * on repo plus mutation id with no caller partition, and it dies with the process. That was the
+ * only idempotency `agent.launch` ever had, and an existing-workspace launch never got even that.
+ * It is deliberately NOT a second correctness authority now: once a caller supplies `operationId`,
+ * durable admission encloses the whole operation and this cache is bypassed entirely, so there is
+ * one place that decides whether a launch runs.
+ */
+function runLegacyAgentLaunch(
+  params: AgentLaunchParams,
+  context: RpcContext
+): Promise<AgentLaunchResult> {
+  const execute = async () =>
+    runAgentLaunch(await resolveUnlaunchedIntent(params, context.runtime), context)
+  if (params.target.kind === 'create-worktree' && params.target.create.clientMutationId) {
+    return context.runtime.dedupeWorktreeCreate(
+      params.target.create.repo,
+      `agent.launch:${params.target.create.clientMutationId}`,
+      execute
+    )
+  }
+  return execute()
+}
+
+function settleQuietly(settlement: Promise<void>): Promise<void> {
+  return settlement.catch((error: unknown) => {
+    console.warn('[agent-launch] the launch settled, its operation row did not', error)
+  })
+}
+
+/** This path raises its refusals as the thrown code, the way the method's own guards do. */
+function agentLaunchFailureCode(error: unknown): string {
+  const code = error instanceof Error ? error.message : ''
+  return code.length > 0 ? code : 'agent_launch_failed'
+}
+
 export const AGENT_LAUNCH_METHODS = [
   defineMethod({
     name: 'agent.launch',
     params: AgentLaunch,
-    handler: async (params, context) => {
+    handler: async (params, context): Promise<AgentLaunchResult> => {
       if (!supportsAgentLaunch(context)) {
         throw new Error('agent_launch_unsupported')
       }
-      const intent = await agentLaunchIntent(params, context.runtime)
-      await validateReusedTerminal(intent, context.runtime)
-      const execute = () =>
-        executeAgentLaunch({
-          runtime: context.runtime,
-          intent,
-          surfaces: agentLaunchSurfaceFactory(context),
-          workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
-        })
-      // Preserve the existing bounded create guard. Complete launch replay needs durable operation
-      // identity, caller scope and a host-computed payload fingerprint; this cache has none of them.
-      if (params.target.kind === 'create-worktree' && params.target.create.clientMutationId) {
-        return context.runtime.dedupeWorktreeCreate(
-          params.target.create.repo,
-          `agent.launch:${params.target.create.clientMutationId}`,
-          execute
-        )
+      if (!params.operationId) {
+        return runLegacyAgentLaunch(params, context)
       }
-      return execute()
+      const admission = await admitAgentLaunchOperation(context, {
+        ...params,
+        operationId: params.operationId
+      })
+      if (admission.decision === 'refuse') {
+        throw new Error(admission.refusal.code)
+      }
+      if (admission.decision === 'replay') {
+        return admission.result
+      }
+      let intent: AgentLaunchIntent
+      try {
+        intent = await resolveUnlaunchedIntent(params, context.runtime)
+      } catch (error) {
+        // Nothing was created yet, so the retry deserves the same answer rather than another
+        // attempt at a selector that did not resolve.
+        await settleQuietly(admission.fail(agentLaunchFailureCode(error)))
+        throw error
+      }
+      // Past here a throw no longer proves the launch did nothing: the structured create's commit
+      // half says so in as many words. The row therefore stays at the `unknown` its claim wrote,
+      // and a later replay of this id refuses instead of building a second surface.
+      const result = await runAgentLaunch(intent, context, admission.attachOperationId)
+      // The launch is done; settling is bookkeeping, and bookkeeping must never take the answer
+      // away from the caller that earned it. A settle that fails leaves the row `unknown`, so a
+      // retry refuses rather than launching again — uncertain, which is the truth.
+      await settleQuietly(admission.settle(result))
+      return result
     }
   })
 ]

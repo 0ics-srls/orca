@@ -26,8 +26,24 @@ const LaunchAgent = z
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the superRefine above rejects anything isTuiAgent refuses, so the transform only ever runs on a TuiAgent.
   .transform((value): TuiAgent => value as TuiAgent)
 
+/** The shipped durable-operation id shape: millisecond timestamp, then 128 bits of hex entropy.
+ *  Same format the structured session ledger already keys on, so one id vocabulary covers both. */
+const LAUNCH_OPERATION_ID_PATTERN = /^\d{13}-[0-9a-f]{32}$/
+
 export const AgentLaunch = z.object({
   agent: LaunchAgent,
+  /**
+   * Names this launch so a retry replays instead of starting a second agent.
+   *
+   * Optional, and optional forever: shipped mobile sends none, and a host that required one would
+   * refuse every live client. Its absence is not a silent downgrade to a weaker guarantee — it is
+   * the caller declining the guarantee, and the host must never mint an id on a caller's behalf
+   * after an ambiguous launch, because an id minted on the retry is a brand new operation.
+   */
+  operationId: z
+    .string()
+    .regex(LAUNCH_OPERATION_ID_PATTERN, 'Malformed launch operation id')
+    .optional(),
   target: z.discriminatedUnion('kind', [
     z.object({
       kind: z.literal('existing'),
