@@ -6,6 +6,7 @@ import { getLocalPtyProvider, getSshPtyProvider, clearProviderPtyState } from '.
 import { agentHookServer } from '../agent-hooks/server'
 import { browserManager } from '../browser/browser-manager'
 import { loadAgentSessionClaimSigner } from '../runtime/agent-session-claim-identity'
+import { admitLocalVerifiedAgentDiscoveries } from '../runtime/runtime-agent-discovery-admission'
 import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
 import { prepareCodexAiVaultSessionResume } from '../codex/codex-ai-vault-session-resume'
 import { resolveHostCodexSessionSourceHome } from '../codex/codex-session-source-home'
@@ -99,6 +100,12 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
           ? { connectionId: reconciliation.connectionId }
           : {})
       })
+      // A manual process can only be adopted by the execution host that supplied the
+      // process/ancestry proof. Remote inventories remain unverifiable until their host
+      // exposes the same admission transaction.
+      if (reconciliation.connectionId === null) {
+        admitLocalVerifiedAgentDiscoveries(reconciliation.discoveries)
+      }
     },
     // Why: serve can be promoted in place, so wire the listener from startup; runtime enables desktop-only scanners only for a ready renderer.
     onTerminalSideEffects: (batch: TerminalSideEffectBatch) => {

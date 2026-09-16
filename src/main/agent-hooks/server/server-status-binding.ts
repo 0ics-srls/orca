@@ -41,12 +41,12 @@ export function resolveAgentStatusBinding(args: {
           reported
         })
       : null
+  if (reported && args.payload.emitterRole === 'child' && !resolved) {
+    // An inherited root claim is not child identity. Without a verified child-work
+    // admission, suppress even a first child event so it cannot create a pane fallback.
+    return { payload, previous, suppress: true, replacement: false }
+  }
   if (reported && !resolved && previous?.runId && previous.executionId) {
-    if (args.payload.emitterRole === 'child') {
-      // A nested emitter may inherit the root env claim. It must not mutate the
-      // root row; a verified child-work admission owns that progress instead.
-      return { payload, previous, suppress: true, replacement: false }
-    }
     // A delayed prior owner or inherited claim cannot rewrite the confirmed subject.
     return { payload, previous, suppress: true, replacement: false }
   }

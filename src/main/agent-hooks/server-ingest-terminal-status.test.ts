@@ -119,6 +119,25 @@ describe('AgentHookServer ingestTerminalStatus', () => {
     })
   })
 
+  it('suppresses an inherited child claim before a root row exists', () => {
+    const server = new AgentHookServer()
+    server.setExecutionBindingResolver(() => null)
+
+    server.ingestRemote(
+      {
+        paneKey: PANE,
+        source: 'codex',
+        worktreeId: 'repo::/tmp/worktree',
+        emitterRole: 'child',
+        reportedExecutionBinding: { runId: 'run-inherited', executionId: 'execution-root' },
+        payload: { state: 'working', prompt: 'inherited child', agentType: 'codex' }
+      },
+      'conn-1'
+    )
+
+    expect(server.getStatusSnapshot()).toEqual([])
+  })
+
   it('keeps hook monitoring mode across an equivalent OSC ping until a hook clears it', () => {
     const server = new AgentHookServer()
 

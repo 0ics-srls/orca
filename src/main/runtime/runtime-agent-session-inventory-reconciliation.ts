@@ -30,6 +30,9 @@ export function reconcileRuntimeAgentSessionInventory(args: {
       ? agentSessionOwners.list().filter((owner) => getPtyExecutionHost(owner.ptyId) === null)
       : [])
   ]
+  const discoveries = args.sessions.flatMap((session) =>
+    session.verifiedAgentDiscovery ? [session.verifiedAgentDiscovery] : []
+  )
   const complete =
     args.connectionId !== undefined ||
     [...args.knownHostIds].every((hostId) => {
@@ -37,7 +40,7 @@ export function reconcileRuntimeAgentSessionInventory(args: {
       return kind === 'runtime' || args.queriedHostIds.has(hostId)
     })
   try {
-    args.onReconciled({ owners, complete, connectionId: args.connectionId })
+    args.onReconciled({ owners, discoveries, complete, connectionId: args.connectionId })
   } catch (error) {
     // Inventory-derived bookkeeping must not make a terminal listing fail.
     console.warn('[runtime] launch membership reconciliation failed:', error)

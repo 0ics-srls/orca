@@ -20,6 +20,7 @@ import type { RuntimeTerminalWriteOptions } from './runtime-terminal-writer'
 import type { RuntimePtyController } from './runtime-pty-controller-contract'
 import type { RuntimeAgentRowSnapshot } from './runtime-worktree-agent-rows'
 import type { WorkerTerminalHostScope } from './orchestration/worker-terminal-process-liveness'
+import type { VerifiedAgentDiscovery } from '../../shared/agent-status-verified-discovery'
 
 export type TerminalCreateOptions = {
   command?: string
@@ -80,6 +81,8 @@ export type RuntimeAgentSessionCommit = {
 
 export type RuntimeAgentSessionInventoryReconciliation = {
   owners: readonly unknown[]
+  /** Host-verified manual/adopted processes; consumers still admit through the owner registry. */
+  discoveries: readonly VerifiedAgentDiscovery[]
   complete: boolean
   /** `undefined` is an aggregate census; null is the local host; a string is one SSH host. */
   connectionId?: string | null

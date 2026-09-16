@@ -171,7 +171,7 @@ export abstract class AgentHookServerState {
     origin?: AgentStatusObservationOrigin,
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
-  ): EnrichedAgentHookEventPayload
+  ): EnrichedAgentHookEventPayload | null
   protected abstract emitEnrichedStatus(enriched: EnrichedAgentHookEventPayload): void
   protected abstract clearAssistantMessageRetry(paneKey: string): void
   protected abstract clearCodexSubagentPoll(paneKey: string): void

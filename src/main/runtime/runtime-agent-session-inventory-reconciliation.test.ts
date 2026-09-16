@@ -44,7 +44,7 @@ describe('runtime launch-owner inventory reconciliation', () => {
     })
 
     expect(onReconciled).toHaveBeenCalledWith(
-      expect.objectContaining({ complete: true, connectionId: null })
+      expect.objectContaining({ complete: true, connectionId: null, discoveries: [] })
     )
     expect(onReconciled.mock.calls[0]?.[0].owners).toEqual([owner])
   })

@@ -26,6 +26,7 @@ import {
 import { acquireOrcadInstanceLock, OrcadInstanceLockError } from './orcad-instance-lock'
 import { startOrcadWithLifecycle } from './orcad-lifecycle'
 import { parseArgs } from './orcad-command-arguments'
+import { admitLocalVerifiedAgentDiscoveries } from '../runtime/runtime-agent-discovery-admission'
 
 export { parseArgs }
 
@@ -245,6 +246,9 @@ async function startOrcadRuntime(
           ? { connectionId: reconciliation.connectionId }
           : {})
       })
+      if (reconciliation.connectionId === null) {
+        admitLocalVerifiedAgentDiscoveries(reconciliation.discoveries)
+      }
     },
     // Why here too and not only on the desktop: orcad serves `worktree.ps` and `agentSession.*`,
     // so without these a headless host publishes its structured chats nowhere and lists no agents.

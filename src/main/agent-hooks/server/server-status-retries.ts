@@ -76,7 +76,7 @@ export abstract class AgentHookServerStatusRetries extends AgentHookServerStatus
     }
     const subagentsChanged =
       JSON.stringify(normalized.payload.subagents) !== JSON.stringify(original.payload.subagents)
-    const next = subagentsChanged ? this.applyNormalizedStatus(normalized) : original
+    const next = subagentsChanged ? (this.applyNormalizedStatus(normalized) ?? original) : original
     this.scheduleCodexSubagentPoll(source, body, next)
   }
 

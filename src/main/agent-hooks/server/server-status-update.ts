@@ -35,14 +35,16 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     origin: AgentStatusObservationOrigin = 'hook',
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
-  ): EnrichedAgentHookEventPayload {
+  ): EnrichedAgentHookEventPayload | null {
     const binding = resolveAgentStatusBinding({
       payload,
       previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
       resolver: this.executionBindingResolver
     })
-    if (binding.suppress && binding.previous) {
-      return binding.previous
+    if (binding.suppress) {
+      // A suppressed first event has no row to return; callers must not schedule
+      // retries or project a synthetic status for an unadmitted child.
+      return binding.previous ?? null
     }
     payload = binding.payload
     const previousBeforeIdentity = binding.previous
