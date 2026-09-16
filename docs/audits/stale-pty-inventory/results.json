@@ -1,0 +1,52 @@
+{
+  "comparison": "Actual runtime inventory, spawn, registration, and exit methods with controlled provider responses; before reverses only fix.patch in a temporary Vite transform",
+  "sourceHashes": {
+    "src/main/runtime/orca-runtime-invalidate-all-handles-for-pty.ts": {
+      "before": "5ee6ba0ae3407207ea7f894a83e3325851f8cd6b4b7b8b5adf0be0a6def7d244",
+      "after": "0eeaf4f89324aea51c49fd4149d632635dbf327d5d91b251e65488bb3852e3ce"
+    },
+    "src/main/runtime/orca-runtime-on-pty-exit.ts": {
+      "before": "def5d33f70a656b13c619db8b453ab2b72cade31c7078583c6f6f6ea8d3544e6",
+      "after": "75f108950c55d77d5e2b4ee89fb677ae9be2bb6b94d62a3085996cb201259db2"
+    },
+    "src/main/runtime/orca-runtime-register-pty.ts": {
+      "before": "1f10fb6b9ceefb192e1fde77056897d0b913e6ea21be7b30f60473c1876dc178",
+      "after": "8855f7ea968e9a759377d4bc3a34c184398b9274d5793e7a1a13a61025c7cbcb"
+    },
+    "src/main/runtime/pty-inventory-lifecycle-admission.test.ts": {
+      "current": "b00527c138453edf1cb6281b4f6a6fc8dede4de8bcfb39d3b82826125f89721d"
+    },
+    "src/main/runtime/pty-inventory-lifecycle-scope.test.ts": {
+      "current": "83b1ca97f6908be6258a40c8ffc4f36bcaf8f9adf4ce843cabccb93ff3c9a934"
+    },
+    "src/main/runtime/pty-inventory-lifecycle-fixture.ts": {
+      "current": "27958421bac5c9e6ef4dea643774ff1950b77165620bfd565a89c498ddc85f3f"
+    }
+  },
+  "before": {
+    "exitCode": 1,
+    "passed": 6,
+    "failed": 12,
+    "failedCases": [
+      "inventory admission after a PTY lifecycle change rejects a captured predecessor row after exit before it can adopt handles",
+      "inventory admission after a PTY lifecycle change rejects a captured predecessor row after registered-successor before it can adopt handles",
+      "inventory admission after a PTY lifecycle change rejects a captured predecessor row after spawned-successor before it can adopt handles",
+      "inventory admission after a PTY lifecycle change rejects a captured predecessor row after unknown-start-spawn before it can adopt handles",
+      "inventory admission after a PTY lifecycle change does not apply stale absence to unknown-at-start spawn",
+      "inventory admission after a PTY lifecycle change does not apply stale absence to unknown-at-start register",
+      "inventory admission after a PTY lifecycle change fences a same-ID legacy registration with no incarnation",
+      "lifecycle invalidation respects inventory scope and retry bounds conservatively rejects pending inventory for foreign lifecycle ID remote:unscoped-handle",
+      "lifecycle invalidation respects inventory scope and retry bounds conservatively rejects pending inventory for foreign lifecycle ID remote:paired-host@@term_guest",
+      "lifecycle invalidation respects inventory scope and retry bounds uses explicit host ownership for a legacy unqualified PTY ID",
+      "lifecycle invalidation respects inventory scope and retry bounds allows only one target retry and keeps a second invalidation unknown",
+      "lifecycle invalidation respects inventory scope and retry bounds retries with the original remaining deadline and accepts fresh truth"
+    ]
+  },
+  "after": {
+    "exitCode": 0,
+    "passed": 18,
+    "failed": 0,
+    "failedCases": []
+  },
+  "passed": true
+}
