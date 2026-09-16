@@ -80,9 +80,18 @@ export type AgentLaunchOutcome =
   | { kind: 'structured'; sessionId: string; handle: string }
   | { kind: 'terminal'; handle: string }
 
-/** Whether this launch produced the agent or reported an earlier attempt's. Same vocabulary as
- *  `RuntimeCreateAgentSessionResult`, because it is the same distinction: a caller that retried
- *  must be able to tell "I started it" from "it was already started". */
+/**
+ * Whether this launch produced the agent or reported an earlier attempt's. Same vocabulary as
+ * `RuntimeCreateAgentSessionResult`, because it is the same distinction: a caller that retried must
+ * be able to tell "I started it" from "it was already started".
+ *
+ * Two-valued deliberately, and only while it can be: every launch here is settled before it
+ * returns, so both answers are knowable. Whoever admits launches through the operation ledger owns
+ * re-reading this — a durable ledger has a state the host genuinely cannot resolve (an attempt
+ * whose outcome was never recorded), and neither word above can say "I cannot tell you". A caller
+ * handed `created` for an unresolved attempt starts a second agent. Add the third member with the
+ * ledger, not after it.
+ */
 export type AgentLaunchDisposition = 'created' | 'replayed'
 
 /**
