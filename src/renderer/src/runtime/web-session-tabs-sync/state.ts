@@ -127,6 +127,11 @@ export const latestReceivedSessionTabsInventoryFrameByEnvironment = new Map<stri
  * Highest `receivedFrame` at which this worktree was retracted. Raise-only: a frame reserved before
  * the retraction is stale evidence no matter what arrived since, so the boundary cannot be a slot a
  * later frame overwrites, nor conditional on a recovery happening to be in flight when it landed.
+ *
+ * Deliberately not size-bounded, unlike the receipt ledger beside it. Evicting a boundary readmits
+ * every pre-close frame it was fencing, which is the defect this map exists to prevent; one number
+ * per worktree ever retracted on an environment is a cheaper price, and the environment teardown
+ * below drains it.
  */
 export const sessionTabsRemovalWatermarkByWorktree = new Map<string, number>()
 export const trackedSessionTabsWorktreeIdsByEnvironment = new Map<string, Set<string>>()

@@ -696,16 +696,18 @@ describe('useWebSessionTabsSync visibility collision recovery', () => {
         ...makeTerminalSnapshot(index === 0 ? '-a' : '-b', index + 1)
       })
     }
-    expect(_getWebSessionTabsReceiptTrackingCountsForTest().receipts).toBe(1)
-
     for (const [index, recovery] of recoveries.entries()) {
       recovery.resolve(makeTerminalSnapshot(index === 0 ? '-a' : '-b', index + 1))
     }
     await act(settle)
+    // The receipt slot is per worktree, so what repeated frames could grow is the tracking behind
+    // it; the watermark stays absent because nothing retracted, and the mirror holds one tab.
     expect(_getWebSessionTabsReceiptTrackingCountsForTest()).toEqual({
       receipts: 1,
       removalWatermarks: 0
     })
+    expect(_getWebSessionTabsTrackingCountsForTest().freshness).toBe(1)
+    expect(useAppStore.getState().tabsByWorktree[WORKTREE]?.length).toBe(1)
     hook.unmount()
   })
 })

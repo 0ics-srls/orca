@@ -178,12 +178,7 @@ export function recordReceivedWebSessionTabsRemoval(
   }
   const watermark = sessionTabsRemovalWatermarkByWorktree.get(key) ?? 0
   if (receivedFrame > watermark) {
-    setBoundedSessionTabsReceipt(
-      sessionTabsRemovalWatermarkByWorktree,
-      key,
-      receivedFrame,
-      (entry) => entry
-    )
+    sessionTabsRemovalWatermarkByWorktree.set(key, receivedFrame)
   }
 }
 

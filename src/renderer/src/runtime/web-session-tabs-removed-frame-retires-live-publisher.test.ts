@@ -149,6 +149,39 @@ describe('a removal frame must not retire the publisher that is still live', () 
   })
 
   /**
+   * The boundary must outlive the bound. A ledger entry may be dropped once nothing can be ranked
+   * against it, but dropping a retraction boundary readmits every pre-close frame it was fencing —
+   * so a long-lived session that has seen many worktrees must not lose the one thing standing
+   * between a stale list and a resurrected tab.
+   */
+  it('keeps a worktree fence after enough other worktrees to evict its receipt', () => {
+    const liveReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, liveFrame(1))
+    expect(admits(liveFrame(1), liveReceived)).toBe(true)
+
+    const delayedReceived = nextReceivedSessionTabsFrame()
+    const removedReceived = recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, removalFrame())
+    expect(admits(removalFrame(), removedReceived)).toBe(true)
+
+    // Churn other worktrees through the same open-and-close cycle, past the bound and past the
+    // frame-age horizon, so both ledgers are over capacity when the delayed list finally lands.
+    for (let index = 0; index < MAX_TRACKED_SESSION_TABS_RECEIPTS + 16; index += 1) {
+      const worktree = `repo::/churn-${index}`
+      recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, { ...liveFrame(1), worktree })
+      recordReceivedWebSessionTabsSnapshot(ENVIRONMENT_ID, { ...removalFrame(), worktree })
+    }
+
+    const delayed = liveFrame(9)
+    recordReceivedWebSessionTabsSnapshot(
+      ENVIRONMENT_ID,
+      delayed,
+      delayedReceived,
+      undefined,
+      'bootstrap'
+    )
+    expect(admits(delayed, delayedReceived)).toBe(false)
+  })
+
+  /**
    * A worktree the host has published nothing for still answers a forced list, with a synthesized
    * `none`/v0 frame that means "ask me later" (host-session-snapshot-authority.ts). Every
    * post-close list and every activation of an emptied worktree gets one. Noting it as a
