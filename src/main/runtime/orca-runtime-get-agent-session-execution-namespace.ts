@@ -20,6 +20,7 @@ import {
 import type { AgentSessionLaunchArgs } from '../../shared/agent-session-record'
 import { resolveStartupShell } from '../../shared/tui-agent-startup-shell'
 import { resolveAgentSessionResumeArgs } from './agent-session-resume-args'
+import type { AgentSessionExecutionClaim } from '../../shared/agent-session-host-authority'
 
 export class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntimeWithResolveWorktreeRemovalTarget {
   protected getAgentSessionExecutionNamespace(
@@ -72,6 +73,37 @@ export class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntim
       // Why: this read-only check has not launched anything, so the old route remains safe.
       return false
     }
+  }
+
+  /**
+   * Build the host-owned reservation identity for a fresh launch before the
+   * provider has emitted a resumable session id. The returned claim is only a
+   * key for the existing owner transaction; status attribution comes from its
+   * committed execution binding, never from this launch identity.
+   */
+  async createFreshAgentSessionClaim(args: {
+    worktreeId: string
+    connectionId: string | null
+    agent: TuiAgent
+    launchIdentity: string
+  }): Promise<AgentSessionExecutionClaim | null> {
+    if (!isResumableTuiAgent(args.agent) || args.launchIdentity.trim().length === 0) {
+      return null
+    }
+    const workspace = await this.resolveTerminalWorkspaceLaunchScope(`id:${args.worktreeId}`)
+    const namespace = this.getAgentSessionExecutionNamespace(workspace, args.agent)
+    if (
+      !namespace ||
+      !(await this.executionOwnerSupportsAgentSessionOperation(workspace, 'resume'))
+    ) {
+      return null
+    }
+    return this.agentSessionClaimSigner.createFreshClaim({
+      namespace,
+      agent: args.agent,
+      launchIdentity: args.launchIdentity,
+      canonicalWorktreeId: workspace.id
+    })
   }
 
   protected toAgentSessionOptions(

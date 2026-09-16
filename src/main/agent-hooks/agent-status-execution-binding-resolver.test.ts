@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { ClaimedAgentPtyOwnerRegistry } from '../../shared/claimed-agent-pty-owner'
+import type { AgentStatusExecutionBinding } from '../../shared/agent-status-run'
 import { makePaneKey } from '../../shared/stable-pane-id'
 import { createAgentStatusExecutionBindingResolver } from './agent-status-execution-binding-resolver'
 
@@ -68,5 +69,37 @@ describe('agent status execution binding resolver', () => {
         reported: { runId: 'run-a', executionId: 'execution-a' }
       })
     ).toBeNull()
+  })
+
+  it('accepts a matching claim while the owner transaction is still reserved', async () => {
+    const owners = new ClaimedAgentPtyOwnerRegistry()
+    let reservedBinding: AgentStatusExecutionBinding | undefined
+    let finishSpawn!: (result: { ptyId: string }) => void
+    const reservedOwner = owner('pty-reserved', 'execution-reserved', 'run-reserved')
+    const ensure = owners.ensure({
+      claim: reservedOwner.claim,
+      surface: reservedOwner.surface,
+      spawn: async ({ statusBinding }) => {
+        reservedBinding = statusBinding
+        return new Promise<{ ptyId: string }>((resolve) => {
+          finishSpawn = resolve
+        })
+      }
+    })
+    await Promise.resolve()
+    const binding = reservedBinding
+    if (!binding) {
+      throw new Error('expected reservation binding')
+    }
+    const resolved = createAgentStatusExecutionBindingResolver(owners)({
+      paneKey: PANE_KEY,
+      worktreeId: WORKTREE_ID,
+      source: 'codex',
+      reported: { runId: binding.runId, executionId: binding.attachment.executionId }
+    })
+
+    expect(resolved).toEqual(binding)
+    finishSpawn({ ptyId: 'pty-reserved' })
+    await expect(ensure).resolves.toMatchObject({ disposition: 'created' })
   })
 })

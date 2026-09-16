@@ -9,6 +9,8 @@ import { attachRuntimeWorktreeAgentRows } from '../runtime/runtime-worktree-agen
 import type { RuntimeWorktreePsSummary } from '../../shared/runtime-types'
 import type { AgentStatusLaunchBinding } from '../../shared/agent-status-launch-membership'
 import { makePaneKey } from '../../shared/stable-pane-id'
+import { ClaimedAgentPtyOwnerRegistry } from '../../shared/claimed-agent-pty-owner'
+import { createAgentStatusExecutionBindingResolver } from './agent-status-execution-binding-resolver'
 
 const { getCohortAtEmitMock, trackMock } = vi.hoisted(() => ({
   getCohortAtEmitMock: vi.fn(),
@@ -133,6 +135,65 @@ describe('host-owned launch membership', () => {
       state: 'working',
       launchMembership: { binding, phase: 'committed' }
     })
+  })
+
+  it('keeps a hook that arrives during owner promotion and attaches membership after commit', async () => {
+    const owners = new ClaimedAgentPtyOwnerRegistry()
+    const launchOwner = {
+      ...owner,
+      ptyId: 'pty-reserved',
+      surface: { ...owner.surface, terminalHandle: 'term_reserved' }
+    }
+    let pendingBinding: AgentStatusLaunchBinding | undefined
+    let finishSpawn!: (result: { ptyId: string }) => void
+    const ensure = owners.ensure({
+      claim: launchOwner.claim,
+      surface: launchOwner.surface,
+      spawn: async ({ statusBinding }) => {
+        pendingBinding = statusBinding
+        return new Promise<{ ptyId: string }>((resolve) => {
+          finishSpawn = resolve
+        })
+      }
+    })
+    await Promise.resolve()
+    const bindingDuringPromotion = pendingBinding
+    if (!bindingDuringPromotion) {
+      throw new Error('expected reservation binding')
+    }
+    const server = new AgentHookServer()
+    server.setExecutionBindingResolver(createAgentStatusExecutionBindingResolver(owners))
+    server.ingestTerminalStatus({
+      paneKey: PANE,
+      tabId: launchOwner.surface.tabId,
+      worktreeId: launchOwner.surface.worktreeId,
+      terminalHandle: launchOwner.surface.terminalHandle,
+      reportedExecutionBinding: {
+        runId: bindingDuringPromotion.runId,
+        executionId: bindingDuringPromotion.attachment.executionId
+      },
+      payload: { state: 'working', prompt: 'first hook', agentType: 'codex' }
+    })
+
+    expect(server.getStatusSnapshot()[0]).toMatchObject({
+      state: 'working',
+      runId: bindingDuringPromotion.runId,
+      executionId: bindingDuringPromotion.attachment.executionId
+    })
+    finishSpawn({ ptyId: launchOwner.ptyId })
+    const committed = await ensure
+    expect(
+      server.admitAgentSessionOwner({
+        owner: committed.owner,
+        paneKey: PANE,
+        tabId: launchOwner.surface.tabId,
+        worktreeId: launchOwner.surface.worktreeId,
+        connectionId: null,
+        terminalHandle: launchOwner.surface.terminalHandle,
+        agentType: 'codex',
+        disposition: committed.disposition
+      })
+    ).toMatchObject({ payload: { state: 'working' }, launchMembership: { phase: 'committed' } })
   })
 
   it('retires failed launches and permits dismissal even when persistence fails', () => {

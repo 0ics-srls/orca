@@ -13,6 +13,7 @@ import type { EventProps } from '../../../../shared/telemetry-events'
 import type { TerminalOscColorQueryReplyColors } from '../../../../shared/terminal-osc-color-reply'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
+import type { AgentSessionExecutionClaim } from '../../../../shared/agent-session-host-authority'
 import type { PtyDataMeta } from './pty-dispatcher'
 import type { RemoteRuntimeSnapshotOutcome } from '../../runtime/remote-runtime-terminal-multiplexer'
 import type { PtyPreconnectInputEntry } from './pty-preconnect-input-buffer'
@@ -82,6 +83,7 @@ export type PtyConnectResult = {
    *  Startup commands may be ignored; recovery still requires separate ownership evidence. */
   isReattach?: boolean
   launchAgent?: TuiAgent
+  agentSessionClaim?: AgentSessionExecutionClaim
   launchConfig?: SleepingAgentLaunchConfig
   snapshot?: string
   snapshotCols?: number
@@ -256,6 +258,7 @@ export type IpcPtyTransportOptions = {
   agentLaunchPreferences?: AgentLaunchPreferences
   launchToken?: string
   launchAgent?: TuiAgent
+  agentSessionClaim?: AgentSessionExecutionClaim
   startupCommandDelivery?: StartupCommandDelivery
   connectionId?: string | null
   executionHostId?: ExecutionHostId | null

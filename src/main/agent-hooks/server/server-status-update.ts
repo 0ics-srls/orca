@@ -11,7 +11,10 @@ import type { EnrichedAgentHookEventPayload } from './server-types'
 import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import type { AgentStatusObservationOrigin } from '../../../shared/agent-status-observation'
 import { AGENT_STATUS_2A_CURRENT_PRODUCER_MODE } from '../../../shared/agent-status-legacy-adapter'
-import { admitLegacyAgentStatus } from '../../../shared/agent-hook-listener/listener-state'
+import {
+  admitLegacyAgentStatus,
+  deleteLegacyAgentStatus
+} from '../../../shared/agent-hook-listener/listener-state'
 import {
   attachClaudeChildOnlyBoundary,
   attachClaudePermissionToolUseId,
@@ -45,7 +48,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     const previousBeforeIdentity = binding.previous
     if (binding.replacement) {
       // A replacement run is a new subject even when the pane slot is reused.
-      this.state.lastStatusByPaneKey.delete(payload.paneKey)
+      deleteLegacyAgentStatus(this.state, payload.paneKey)
     }
     if (payload.hookEventName === 'UserPromptSubmit') {
       // Why: the prompt boundary is authoritative even when text is unchanged; its next OSC working row must not inherit the prior cron/background turn stamp.

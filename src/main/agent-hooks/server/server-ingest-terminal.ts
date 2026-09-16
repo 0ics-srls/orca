@@ -3,6 +3,7 @@ import { MAX_PANE_KEY_LEN } from '../../../shared/agent-hook-listener/listener-l
 import { parseLegacyNumericPaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
 import { terminalStatusPayloadMatchesHook } from '../../../shared/agent-terminal-status-equivalence'
 import type { ParsedAgentStatusPayload } from '../../../shared/agent-status-types'
+import type { AgentHookEventPayload } from '../../../shared/agent-hook-listener/listener-event'
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import { AgentHookServerIngestNormalization } from './server-ingest-normalization'
 import { isAgentStatusTurnComplete } from '../../../shared/agent-completion-time'
@@ -15,6 +16,7 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
     worktreeId?: string
     connectionId?: string | null
     terminalHandle?: string
+    reportedExecutionBinding?: AgentHookEventPayload['reportedExecutionBinding']
     payload: ParsedAgentStatusPayload
   }): void {
     const physicalPaneKey = event.paneKey.trim()
@@ -144,6 +146,9 @@ export abstract class AgentHookServerIngestTerminal extends AgentHookServerInges
         connectionId,
         ...(preservedProviderSession ? { providerSession: preservedProviderSession } : {}),
         ...(terminalHandle ? { terminalHandle } : {}),
+        ...(event.reportedExecutionBinding
+          ? { reportedExecutionBinding: event.reportedExecutionBinding }
+          : {}),
         payload: event.payload
       },
       undefined,

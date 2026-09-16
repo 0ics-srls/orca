@@ -74,6 +74,18 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
         const launchToken = launchOpts.launchConfig
           ? (launchOpts.launchToken ?? dependencies.randomUUID())
           : undefined
+        const freshAgentSessionClaim =
+          !launchOpts.agentSessionClaim &&
+          !launchOpts.resumeProviderSession &&
+          launchToken &&
+          launchOpts.launchAgent
+            ? await this.createFreshAgentSessionClaim({
+                worktreeId: workspace.id,
+                connectionId: workspace.connectionId,
+                agent: launchOpts.launchAgent,
+                launchIdentity: launchToken
+              })
+            : null
         const baseEnv = {
           ...launchOpts.env,
           ...(launchToken ? { ORCA_AGENT_LAUNCH_TOKEN: launchToken } : {})
@@ -148,10 +160,10 @@ export class OrcaRuntimeWithCreateTerminal extends OrcaRuntimeWithTerminalCreate
             tabId,
             leafId,
             ...(terminalColorQueryReplies ? { terminalColorQueryReplies } : {}),
-            ...(launchOpts.agentSessionClaim
+            ...((launchOpts.agentSessionClaim ?? freshAgentSessionClaim)
               ? {
                   agentSessionEnsure: {
-                    claim: launchOpts.agentSessionClaim,
+                    claim: launchOpts.agentSessionClaim ?? freshAgentSessionClaim,
                     surface: {
                       worktreeId: workspace.id,
                       tabId,

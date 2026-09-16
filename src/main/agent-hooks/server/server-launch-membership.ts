@@ -13,6 +13,14 @@ import {
 import { makePaneKey, parsePaneKey } from '../../../shared/stable-pane-id'
 import type { EnrichedAgentHookEventPayload } from './server-types'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
+import { admitLegacyAgentStatus } from '../../../shared/agent-hook-listener/listener-state'
+import { AGENT_STATUS_2A_CURRENT_PRODUCER_MODE } from '../../../shared/agent-status-legacy-adapter'
+import {
+  isOwnerBinding,
+  launchMembershipKey,
+  ownerStatusBinding,
+  readEnrichedStatus
+} from './server-launch-membership-helpers'
 
 export type AgentLaunchAdmission = {
   paneKey: string
@@ -29,33 +37,6 @@ export type AgentLaunchAdmission = {
 }
 
 export type AgentLaunchSettlement = 'committed' | 'unconfirmed' | 'failed' | 'exited'
-
-function ownerStatusBinding(value: unknown): AgentStatusLaunchBinding | null {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return null
-  }
-  return parseAgentStatusLaunchBinding(Reflect.get(value, 'statusBinding'))
-}
-
-function launchMembershipKey(binding: AgentStatusLaunchBinding): string {
-  return `${binding.runId}\u0000${binding.attachment.executionId}`
-}
-
-function readEnrichedStatus(
-  value: AgentHookEventPayload | undefined
-): EnrichedAgentHookEventPayload | undefined {
-  if (
-    !value ||
-    typeof value !== 'object' ||
-    !('receivedAt' in value) ||
-    typeof value.receivedAt !== 'number' ||
-    !('stateStartedAt' in value) ||
-    typeof value.stateStartedAt !== 'number'
-  ) {
-    return undefined
-  }
-  return { ...value, receivedAt: value.receivedAt, stateStartedAt: value.stateStartedAt }
-}
 
 export abstract class AgentHookServerLaunchMembership extends AgentHookServerIngestStructured {
   private sameLaunchTerminalOwner(
@@ -99,6 +80,39 @@ export abstract class AgentHookServerLaunchMembership extends AgentHookServerIng
       }
       return this.replaceLaunchMembership(previous, membership, args.launchToken)
     }
+    if (
+      previous &&
+      this.sameLaunchTerminalOwner(previous, args) &&
+      ((previous.runId === undefined && previous.executionId === undefined) ||
+        (previous.runId === args.binding.runId &&
+          previous.executionId === args.binding.attachment.executionId))
+    ) {
+      // A hook can arrive while ensure is still reserved. Preserve its real
+      // state and attach membership instead of overwriting it with the
+      // compatibility boundary row.
+      const updated: EnrichedAgentHookEventPayload = {
+        ...previous,
+        runId: args.binding.runId,
+        executionId: args.binding.attachment.executionId,
+        launchMembership: membership,
+        ...(args.launchToken ? { launchToken: args.launchToken } : {})
+      }
+      if (
+        !admitLegacyAgentStatus(
+          this.state,
+          'main-launch-membership',
+          updated,
+          AGENT_STATUS_2A_CURRENT_PRODUCER_MODE
+        )
+      ) {
+        return previous
+      }
+      this.commitStatusRowMutation(previous, updated)
+      this.scheduleStatusPersist()
+      this.notifyStatusChangeListeners()
+      this.emitEnrichedStatus(updated)
+      return updated
+    }
     if (previous && !this.sameLaunchTerminalOwner(previous, args)) {
       // A provider row with no terminal join is not safe to re-key from a launch.
       // The host may still admit the owner later once the canonical surface is known.
@@ -136,7 +150,7 @@ export abstract class AgentHookServerLaunchMembership extends AgentHookServerIng
     disposition: 'created' | 'adopted'
     committedAt?: number
   }): EnrichedAgentHookEventPayload | null {
-    if (!isAgentSessionOwnerBinding(args.owner)) {
+    if (!isOwnerBinding(args.owner)) {
       return null
     }
     const binding = ownerStatusBinding(args.owner)
@@ -245,7 +259,16 @@ export abstract class AgentHookServerLaunchMembership extends AgentHookServerIng
             terminalHandle: owner.surface.terminalHandle,
             launchMembership: { ...membership, phase: 'committed' as const }
           }
-          this.state.lastStatusByPaneKey.set(currentPaneKey, updated)
+          if (
+            !admitLegacyAgentStatus(
+              this.state,
+              'main-launch-membership',
+              updated,
+              AGENT_STATUS_2A_CURRENT_PRODUCER_MODE
+            )
+          ) {
+            continue
+          }
           this.commitStatusRowMutation(currentEntry, updated)
           this.emitEnrichedStatus(updated)
           if (membership.phase !== 'committed') {
@@ -283,7 +306,16 @@ export abstract class AgentHookServerLaunchMembership extends AgentHookServerIng
       ...(launchToken ? { launchToken } : {}),
       launchMembership
     }
-    this.state.lastStatusByPaneKey.set(existing.paneKey, updated)
+    if (
+      !admitLegacyAgentStatus(
+        this.state,
+        'main-launch-membership',
+        updated,
+        AGENT_STATUS_2A_CURRENT_PRODUCER_MODE
+      )
+    ) {
+      return existing
+    }
     this.commitStatusRowMutation(existing, updated)
     this.scheduleStatusPersist()
     this.notifyStatusChangeListeners()
