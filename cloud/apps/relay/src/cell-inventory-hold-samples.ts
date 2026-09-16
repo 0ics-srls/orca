@@ -6,11 +6,11 @@ export type CellInventoryHoldCounts = {
   cellInventoryHoldMsP95: number
   cellInventoryHolds: number
   // Why: a failed acquisition produces no hold sample, so the hold fields alone
-  // read healthy while the lock is saturated. The two failure modes are split
-  // because they mean opposite things: background sweeps take the inventory
-  // NOWAIT and re-derive a skipped candidate next tick, so deferrals are an
-  // ordinary by-design outcome, while a bounded request-path wait that expires
-  // is a user-visible stall.
+  // read healthy while the lock is saturated. Split by wait policy, not by
+  // caller: fail-fast covers background sweeps that step aside by design AND
+  // request-path first attempts that retry, so it reads as contention pressure,
+  // not user-visible failure. An expired bounded wait has already spent its
+  // budget, so that lane is the one that tracks stalls.
   cellInventoryLockUnavailable: number
   cellInventoryLockTimeouts: number
 }
