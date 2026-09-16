@@ -180,20 +180,28 @@ export class SessionSearchRetrieval {
   ): SessionSearchQueryPlan | null {
     const typoRepair = this.typoRepair
     let changed = false
-    const body = plan.body.map((term) => {
+    // Only the body is a candidate for a correction, but the re-plan is fed the
+    // tokens as typed: re-planning the body alone would hand the phrase rung a
+    // sentence with its stop words already gone, and `relay dropping frames`
+    // cannot match the `relay is dropping frames` that is in the transcript.
+    const repairable = new Set(plan.body.map((term) => term.toLowerCase()))
+    const phrase = plan.phrase.map((token) => {
+      if (!repairable.has(token.toLowerCase())) {
+        return token
+      }
       // Repaired inside the scope the search will run in, so a spelling only
       // tool output carries neither suppresses a repair nor becomes one.
-      const fix = typoRepair.correct(term, scope)
-      if (fix && fix !== term.toLowerCase()) {
+      const fix = typoRepair.correct(token, scope)
+      if (fix && fix !== token.toLowerCase()) {
         changed = true
         return fix
       }
-      return term
+      return token
     })
     // The repair changes spellings, not the query's character: the re-plan is
     // told what the original decided so a corrected literal keeps every term it
     // was typed with.
-    return changed ? planSessionSearchQuery(body.join(' '), plan.literal) : null
+    return changed ? planSessionSearchQuery(phrase.join(' '), plan.literal) : null
   }
 
   /**

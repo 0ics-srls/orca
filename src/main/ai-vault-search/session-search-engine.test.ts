@@ -66,6 +66,18 @@ describe('the route ladder tries phrase, then AND, then repair, then OR', () => 
     expect(ids(result).sort()).toEqual(['1', '2'])
   })
 
+  it('keeps the stop words a repaired prose phrase was typed with', async () => {
+    const { db, engine } = await open('ss-engine-typo-phrase')
+    // Two copies, so the repair only suggests a term the index really holds.
+    addSyntheticSession(db, { id: 1, text: 'relay is dropping frames' })
+    addSyntheticSession(db, { id: 2, text: 'dropping frames again here' })
+    // Repairing the body alone would re-plan `relay dropping frames`, which no
+    // phrase in the index can match, and the answer would fall to AND.
+    const result = engine.search({ query: 'relay is droppng frames' })
+    expect(result.planner.route).toBe('typo+phrase')
+    expect(ids(result)).toEqual(['1'])
+  })
+
   it('keeps every term a repaired literal was typed with', async () => {
     const { db, engine } = await open('ss-engine-typo-literal')
     addSyntheticSession(db, { id: 1, text: 'parseJson the data' })
