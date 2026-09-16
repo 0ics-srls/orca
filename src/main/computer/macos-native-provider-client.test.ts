@@ -115,6 +115,11 @@ describe('MacOSNativeProviderClient', () => {
   })
 
   afterEach(() => {
+    for (const result of spawnMock.mock.results) {
+      if (result.value instanceof FakeProvider) {
+        result.value.exit()
+      }
+    }
     chmodSyncMock.mockReset()
     connectMacOSProviderSocketMock.mockReset()
     mkdtempSyncMock.mockReset()

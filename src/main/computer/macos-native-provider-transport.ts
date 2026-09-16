@@ -120,7 +120,6 @@ export async function startMacOSNativeProviderSocket({
     rmSync(socketTokenPath, { force: true })
     if (!isCurrent(socketPath)) {
       socket.destroy()
-      cleanupSocketDirectory(socketDirectory)
       throw new RuntimeClientError(
         'accessibility_error',
         'native macOS provider startup was superseded'
@@ -133,9 +132,8 @@ export async function startMacOSNativeProviderSocket({
     // Why: connect failures and superseded startups both happen after spawn;
     // escalate so a helper that ignores SIGTERM cannot outlive the attempt.
     reapMacOSProviderProcess(provider)
-    if (isCurrent(socketPath)) {
-      cleanupSocketDirectory(socketDirectory)
-    }
+    // Each attempt owns a unique directory, even after its generation is superseded.
+    cleanupSocketDirectory(socketDirectory)
     throw error
   }
 }

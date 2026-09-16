@@ -1,8 +1,15 @@
-import type { ChildProcess } from 'node:child_process'
+import type { ChildProcessHandle as ChildProcess } from '../../shared/child-process/run-process'
 
 export const PROVIDER_SIGKILL_GRACE_MS = 2_000
 
 const reaped = new WeakSet<ChildProcess>()
+const pendingReaps = new Set<() => void>()
+
+function forcePendingReaps(): void {
+  for (const forceReap of pendingReaps) {
+    forceReap()
+  }
+}
 
 // Why: signal the child handle, not a raw pid. Node no-ops once the child has
 // exited, so a recycled pid can never be signalled.
@@ -11,16 +18,32 @@ export function reapMacOSProviderProcess(provider: ChildProcess): void {
     return
   }
   reaped.add(provider)
-  // Why: SIGTERM must land synchronously. The sidecar's SIGTERM handler calls
-  // process.exit(0) straight after shutdown(), so no deferred timer runs there.
-  provider.kill('SIGTERM')
-  const escalation = setTimeout(() => {
-    if (!hasProviderExited(provider)) {
-      provider.kill('SIGKILL')
+  const cleanup = (): void => {
+    clearTimeout(escalation)
+    provider.off('exit', cleanup)
+    pendingReaps.delete(forceReap)
+    if (pendingReaps.size === 0) {
+      process.off('exit', forcePendingReaps)
     }
-  }, PROVIDER_SIGKILL_GRACE_MS)
-  escalation.unref?.()
-  provider.once('exit', () => clearTimeout(escalation))
+  }
+  const forceReap = (): void => {
+    try {
+      if (!hasProviderExited(provider)) {
+        provider.kill('SIGKILL')
+      }
+    } finally {
+      cleanup()
+    }
+  }
+  const escalation = setTimeout(forceReap, PROVIDER_SIGKILL_GRACE_MS)
+  escalation.unref()
+  if (pendingReaps.size === 0) {
+    // Sidecar shutdown calls process.exit(), so timer escalation alone can strand a helper.
+    process.once('exit', forcePendingReaps)
+  }
+  pendingReaps.add(forceReap)
+  provider.once('exit', cleanup)
+  provider.kill('SIGTERM')
 }
 
 export class MacOSProviderProcessOwner {
