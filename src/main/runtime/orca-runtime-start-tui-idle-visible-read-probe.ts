@@ -105,7 +105,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
         record: {
           ...pty.pty,
           lastOscTitleObservedAt: pty.pty.lastOscTitleEpochMs,
-          attachmentId: pty.pty.incarnationId
+          attachmentId: pty.pty.incarnationId,
+          screenObservedAt: Date.now()
         },
         rendererTitle: this.getAdoptedPtyTitle(pty.pty),
         readPositiveBodyEvidence: () => promptAgent !== null,
@@ -130,7 +131,8 @@ export class OrcaRuntimeWithStartTuiIdleVisibleReadProbe extends OrcaRuntimeWith
     const observation = observeTuiIdle({
       record: {
         ...leaf,
-        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null
+        attachmentId: leaf.ptyId ? (this.ptysById.get(leaf.ptyId)?.incarnationId ?? null) : null,
+        screenObservedAt: Date.now()
       },
       rendererTitle: leaf.paneTitle ?? this.tabs.get(leaf.tabId)?.title ?? null,
       readPositiveBodyEvidence: () => promptAgent !== null,

@@ -382,6 +382,32 @@ describe('tui-idle evidence ranking', () => {
       })
     ).toMatchObject({ state: 'unknown', agent: 'codex' })
   })
+
+  it('accepts a current visible-screen observation without rewriting stream recency', () => {
+    const now = Date.now()
+    const cursor = captureTuiIdleEvidenceCursor({
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: now,
+      attachmentId: 'inc-1'
+    })
+    expect(
+      observeTuiIdle({
+        record: {
+          lastAgentStatus: 'idle',
+          lastOscTitle: NAME_ONLY_TITLE,
+          lastOutputAt: now,
+          screenObservedAt: now + 1,
+          attachmentId: 'inc-1'
+        },
+        agent: 'codex',
+        firstPartyStatus: null,
+        evidenceCursor: cursor,
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).toMatchObject({ state: 'ready', source: 'screen', agent: 'codex' })
+  })
 })
 
 const E2E_WORKTREE_ID = 'repo-1::/tmp/name-only-idle'

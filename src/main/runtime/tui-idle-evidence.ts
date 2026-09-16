@@ -38,6 +38,8 @@ export type TuiIdleEvidenceRecord = {
   lastOscTitleObservedAt?: number | null
   /** Host-owned attachment identity. Historical bytes must never certify a replacement process. */
   attachmentId?: string | null
+  /** Host capture time for a visible-screen read; distinct from PTY stream output time. */
+  screenObservedAt?: number | null
 }
 
 export type FirstPartyAgentStatus = {
@@ -134,7 +136,7 @@ export function captureTuiIdleEvidenceCursor(
           : typeof record.lastOutputAt === 'number'
             ? record.lastOutputAt
             : null,
-    screenObservedAt: record.lastOutputAt
+    screenObservedAt: record.screenObservedAt ?? record.lastOutputAt
   }
 }
 
@@ -160,10 +162,11 @@ function hasEvidenceAfter(
       (cursor.titleRevision === null || currentRevision > cursor.titleRevision)
     )
   }
+  const currentScreenObservation = record.screenObservedAt ?? record.lastOutputAt
   return (
-    record.lastOutputAt !== null &&
-    record.lastOutputAt !== undefined &&
-    (cursor.screenObservedAt === null || record.lastOutputAt > cursor.screenObservedAt)
+    currentScreenObservation !== null &&
+    currentScreenObservation !== undefined &&
+    (cursor.screenObservedAt === null || currentScreenObservation > cursor.screenObservedAt)
   )
 }
 
@@ -188,7 +191,8 @@ function hasEvidenceAfterFirstPartyStatus(
       record.lastOscTitleObservedAt > status.updatedAt
     )
   }
-  return typeof record.lastOutputAt === 'number' && record.lastOutputAt > status.updatedAt
+  const currentScreenObservation = record.screenObservedAt ?? record.lastOutputAt
+  return typeof currentScreenObservation === 'number' && currentScreenObservation > status.updatedAt
 }
 
 /**
