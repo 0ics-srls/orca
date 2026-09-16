@@ -25,6 +25,7 @@ const current: AiVaultSearchStatus = {
   enabled: true,
   phase: 'current',
   filesIndexed: 12,
+  messagesIndexed: 3_400,
   lastSweepCompletedAt: 1
 }
 function poll(active = true, refresh = 0) {
@@ -61,25 +62,26 @@ it('keeps polling a settled index so counts stay live between sweeps', async () 
   const view = poll()
   await act(async () => {})
   expect(mocks.status).toHaveBeenCalledWith('local')
-  expect(message(view.result.current.status)).toBe('Ready · 12 sessions searchable')
-  mocks.status.mockResolvedValue({ ...current, filesIndexed: 30 })
+  expect(message(view.result.current.status)).toBe('12 sessions · 3.4K messages searchable')
+  mocks.status.mockResolvedValue({ ...current, filesIndexed: 30, messagesIndexed: 9_000 })
   await act(async () => {
     await vi.advanceTimersByTimeAsync(10_000)
   })
-  expect(message(view.result.current.status)).toBe('Ready · 30 sessions searchable')
+  expect(message(view.result.current.status)).toBe('30 sessions · 9K messages searchable')
 })
 
-it('reports a first scan by count and later sweeps by percentage', async () => {
+it('counts a sweep in flight against what it knows about so far', async () => {
   mocks.status.mockResolvedValue({
     ...current,
     phase: 'indexing',
     filesIndexed: 4,
     filesDue: 6,
+    messagesIndexed: 410_000,
     lastSweepCompletedAt: null
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Preparing search · 4 sessions so far')
+  expect(message(view.result.current.status)).toBe('4 of 10 sessions · 410K messages searchable')
   expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([])
   mocks.status.mockResolvedValue({
     ...current,
@@ -87,12 +89,31 @@ it('reports a first scan by count and later sweeps by percentage', async () => {
     filesIndexed: 4,
     filesDue: 5,
     filesFailed: 1,
+    messagesIndexed: 420_000,
     lastSweepCompletedAt: 1
   })
   await act(async () => {
     await vi.advanceTimersByTimeAsync(2_000)
   })
-  expect(message(view.result.current.status)).toBe('Preparing search · 40% · 4 of 10 sessions')
+  expect(message(view.result.current.status)).toBe('4 of 10 sessions · 420K messages searchable')
+})
+
+it('degrades to a session count when the host is too old to report messages', async () => {
+  const { messagesIndexed: _messagesIndexed, ...withoutMessages } = current
+  mocks.status.mockResolvedValue(withoutMessages)
+  const view = poll()
+  await act(async () => {})
+  expect(message(view.result.current.status)).toBe('12 sessions searchable')
+  mocks.status.mockResolvedValue({
+    ...withoutMessages,
+    phase: 'indexing',
+    filesIndexed: 4,
+    filesDue: 6
+  })
+  await act(async () => {
+    await vi.advanceTimersByTimeAsync(10_000)
+  })
+  expect(message(view.result.current.status)).toBe('4 of 10 sessions searchable')
 })
 
 it('polls a sweep faster than a settled index', async () => {
@@ -106,7 +127,7 @@ it('polls a sweep faster than a settled index', async () => {
   expect(mocks.status.mock.calls.length - started).toBe(3)
 })
 
-it('names unreadable files while degraded and still reports progress', async () => {
+it('names unreadable files while degraded and still counts what is searchable', async () => {
   mocks.status.mockResolvedValue({
     ...current,
     phase: 'degraded',
@@ -117,7 +138,7 @@ it('names unreadable files while degraded and still reports progress', async () 
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Preparing search · 80% · 8 of 10 sessions')
+  expect(message(view.result.current.status)).toBe('8 of 10 sessions · 3.4K messages searchable')
   expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([
     '1 sessions could not be read and will be retried.',
     '1 session folders could not be checked.'
@@ -134,7 +155,7 @@ it('calls a drained degraded index up to date', async () => {
   })
   const view = poll()
   await act(async () => {})
-  expect(message(view.result.current.status)).toBe('Ready · 9 sessions searchable')
+  expect(message(view.result.current.status)).toBe('9 sessions · 3.4K messages searchable')
   expect(sessionSearchStatusDetails(view.result.current.status)).toEqual([
     '2 sessions could not be read and will be retried.'
   ])

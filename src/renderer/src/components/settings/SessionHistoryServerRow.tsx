@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { PublicKnownRuntimeEnvironment } from '../../../../shared/runtime-environments'
 import { toRuntimeExecutionHostId } from '../../../../shared/execution-host'
 import { useConfirmationDialog } from '@/components/confirmation-dialog-context'
@@ -11,6 +11,7 @@ import {
   type RuntimeHostDetails
 } from './runtime-environment-host-details'
 import { SessionHistoryComputerRow } from './SessionHistoryComputerRow'
+import type { SessionSearchComputerState } from './session-search-computer-rollup'
 import {
   isHostTooOldError,
   sessionSearchCheckingMessage,
@@ -23,11 +24,19 @@ import { useSessionSearchStatus } from './use-session-search-status'
 export function SessionHistoryServerRow({
   environment,
   details,
-  onError
+  refresh = 0,
+  onError,
+  onStateChange,
+  onUserToggle
 }: {
   environment: PublicKnownRuntimeEnvironment
   details: RuntimeHostDetails | undefined
+  /** Bumped by the pane after it changes this host from outside the row. */
+  refresh?: number
   onError: (message: string | null) => void
+  /** Lets the pane count and order computers it does not itself poll. */
+  onStateChange?: (environmentId: string, state: SessionSearchComputerState) => void
+  onUserToggle?: (environmentId: string, enabled: boolean) => void
 }): React.JSX.Element {
   const hostId = toRuntimeExecutionHostId(environment.id)
   const confirm = useConfirmationDialog()
@@ -40,11 +49,23 @@ export function SessionHistoryServerRow({
   const connected = isRuntimeServerTransportConnected(connectionState)
   const { status, failed, hostTooOld, adopt } = useSessionSearchStatus({
     executionHostId: hostId,
-    active: connected && !tooOldOnSet
+    active: connected && !tooOldOnSet,
+    refresh
   })
   // A status read or a set call can each prove the server predates session search.
   const tooOld = tooOldOnSet || hostTooOld
   const enabled = status?.enabled === true
+  const state = resolveServerState({
+    tooOld,
+    connected,
+    checking: connectionState === 'checking',
+    enabled,
+    answered: Boolean(status)
+  })
+
+  useEffect(() => {
+    onStateChange?.(environment.id, state)
+  }, [environment.id, onStateChange, state])
 
   async function setEnabled(next: boolean): Promise<void> {
     setBusy(true)
@@ -74,6 +95,7 @@ export function SessionHistoryServerRow({
   }
 
   async function toggle(): Promise<void> {
+    onUserToggle?.(environment.id, !enabled)
     if (enabled) {
       await setEnabled(false)
       return
@@ -148,21 +170,44 @@ export function SessionHistoryServerRow({
       />
     )
   }
-  let statusText = sessionSearchCheckingMessage()
+  // An off computer says so with its switch; a sentence repeating it is noise.
+  let statusText: string | undefined = sessionSearchCheckingMessage()
   if (failed) {
     statusText = sessionSearchReadErrorMessage()
   } else if (status) {
-    statusText = enabled
-      ? sessionSearchStatusMessage(status)
-      : translate('sessionHistory.settings.serverOff', 'Off')
+    statusText = enabled ? sessionSearchStatusMessage(status) : undefined
   }
   return (
     <SessionHistoryComputerRow
       {...row}
       checked={enabled}
       disabled={busy}
-      status={statusText}
+      {...(statusText === undefined ? {} : { status: statusText })}
       details={sessionSearchStatusDetails(status)}
     />
   )
+}
+
+/** What the pane needs to count and order this row, from what the row already knows. */
+function resolveServerState(args: {
+  tooOld: boolean
+  connected: boolean
+  checking: boolean
+  enabled: boolean
+  answered: boolean
+}): SessionSearchComputerState {
+  if (args.tooOld) {
+    return 'needs-update'
+  }
+  // A probe still in flight is not evidence of an unreachable host.
+  if (args.checking) {
+    return 'checking'
+  }
+  if (!args.connected) {
+    return 'offline'
+  }
+  if (!args.answered) {
+    return 'checking'
+  }
+  return args.enabled ? 'on' : 'off'
 }

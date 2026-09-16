@@ -491,6 +491,13 @@ export type GlobalSettings = {
   voice?: VoiceSettings
   /** Transcript full-text search consent + retention. Absent means off; nothing indexes until the user opts in. */
   aiVaultSearch?: AiVaultSearchSettings
+  /**
+   * Standing consent from "Turn on all": a paired server that becomes reachable
+   * and new enough gets session search turned on without another dialog. Kept
+   * out of `aiVaultSearch` because it changes no indexer configuration, so it
+   * must never close and reconstruct one. Cleared when a server is turned off by hand.
+   */
+  aiVaultSearchAutoEnableNewComputers?: boolean
 }
 
 export type OrcaWorkspaceLayout = {

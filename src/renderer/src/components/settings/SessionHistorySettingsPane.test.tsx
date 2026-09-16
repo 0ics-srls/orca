@@ -11,20 +11,26 @@ import { SessionHistorySettingsPane } from './SessionHistorySettingsPane'
 
 const mocks = vi.hoisted(() => {
   const environments: { id: string; name: string }[] = []
+  const statusByHost: Record<string, unknown> = {}
+  const details: Record<string, unknown> = {}
   return {
     web: false,
     visible: true,
     status: vi.fn(),
+    statusByHost,
     clear: vi.fn(),
     setEnabled: vi.fn(),
-    environments
+    environments,
+    details,
+    closeSettingsPage: vi.fn(),
+    showAiVaultSearch: vi.fn()
   }
 })
 vi.mock('./use-runtime-environment-catalog', () => ({
   useRuntimeEnvironmentCatalog: () => ({
     environments: mocks.environments,
     isLoading: false,
-    detailsByEnvironmentId: {},
+    detailsByEnvironmentId: mocks.details,
     setDetailsByEnvironmentId: vi.fn(),
     mountedRef: { current: true },
     loadEnvironments: vi.fn()
@@ -32,7 +38,12 @@ vi.mock('./use-runtime-environment-catalog', () => ({
 }))
 vi.mock('@/store', () => ({
   useAppStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({ openSettingsPage: vi.fn(), openSettingsTarget: vi.fn() })
+    selector({
+      openSettingsPage: vi.fn(),
+      openSettingsTarget: vi.fn(),
+      closeSettingsPage: mocks.closeSettingsPage,
+      showAiVaultSearch: mocks.showAiVaultSearch
+    })
 }))
 vi.mock('@/lib/web-client-location', () => ({ isWebClientLocation: () => mocks.web }))
 vi.mock('@/hooks/use-window-stream-visibility', () => ({
@@ -48,20 +59,58 @@ function pane(
   enabled = false,
   confirm = vi.fn().mockResolvedValue(true),
   save = vi.fn().mockResolvedValue(undefined),
-  historyDays: number | null = null
+  historyDays: number | null = null,
+  autoEnableNewComputers = false
 ) {
   return render(
     <ConfirmationDialogContext.Provider value={confirm}>
       <SessionHistorySettingsPane
         settings={{
           ...getDefaultSettings('/synthetic'),
-          aiVaultSearch: { enabled, historyDays }
+          aiVaultSearch: { enabled, historyDays },
+          aiVaultSearchAutoEnableNewComputers: autoEnableNewComputers
         }}
         updateSettings={save}
       />
     </ConfirmationDialogContext.Provider>
   )
 }
+const CONNECTED_DETAILS = {
+  status: 'ready',
+  runtimeStatus: {
+    runtimeId: 'runtime-1',
+    rendererGraphEpoch: 1,
+    graphStatus: 'ready',
+    authoritativeWindowId: 1,
+    liveTabCount: 1,
+    liveLeafCount: 1,
+    appVersion: '1.4.202'
+  },
+  remoteControl: null,
+  compatibility: { kind: 'ok', clientProtocolVersion: 1, serverProtocolVersion: 1 },
+  error: null
+}
+const OFFLINE_DETAILS = {
+  status: 'error',
+  runtimeStatus: null,
+  remoteControl: null,
+  compatibility: null,
+  error: 'unreachable'
+}
+/** Answers status per host so one pane can hold servers in different states. */
+function statusByHost(): void {
+  mocks.status.mockImplementation(async (hostId: string) => {
+    const answer = mocks.statusByHost[hostId]
+    if (answer === undefined) {
+      return unavailableSessionSearchStatus()
+    }
+    if (answer === 'too-old') {
+      throw new Error("Error invoking remote method 'x': Error: host-too-old")
+    }
+    return answer
+  })
+}
+const summaryLine = (): string => screen.getByText(/computers/).textContent ?? ''
 async function openAdvanced(): Promise<void> {
   await act(async () => {
     fireEvent.click(screen.getByRole('button', { name: /Advanced/ }))
@@ -72,13 +121,19 @@ const current: AiVaultSearchStatus = {
   enabled: true,
   phase: 'current',
   filesIndexed: 12,
+  messagesIndexed: 3_400,
   lastSweepCompletedAt: 1
 }
+const off: AiVaultSearchStatus = unavailableSessionSearchStatus()
 beforeEach(() => {
   vi.useFakeTimers()
   mocks.web = false
   mocks.visible = true
   mocks.environments = []
+  mocks.details = {}
+  mocks.statusByHost = {}
+  mocks.closeSettingsPage.mockReset()
+  mocks.showAiVaultSearch.mockReset()
   mocks.status.mockReset().mockResolvedValue(current)
   mocks.clear.mockReset().mockResolvedValue(undefined)
   mocks.setEnabled.mockReset().mockResolvedValue(current)
@@ -122,6 +177,16 @@ it('requires opt-in and saves the existing policy without touching transcripts o
     })
   )
   expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
+})
+
+it('sends the user to the sidebar panel with one click', async () => {
+  pane(true)
+  await act(async () => {})
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Open' }))
+  })
+  expect(mocks.showAiVaultSearch).toHaveBeenCalledOnce()
+  expect(mocks.closeSettingsPage).toHaveBeenCalledOnce()
 })
 
 it('leaves search off when the indexing consent is declined', async () => {
@@ -276,11 +341,11 @@ it('keeps the last index status visible while a save is in flight', async () => 
   )
   pane(true, vi.fn().mockResolvedValue(true), save)
   await act(async () => {})
-  expect(screen.getByRole('status')).toHaveTextContent('Ready · 12 sessions searchable')
+  expect(screen.getByRole('status')).toHaveTextContent('12 sessions · 3.4K messages searchable')
   await act(async () => {
     fireEvent.click(screen.getByRole('switch'))
   })
-  expect(screen.getByRole('status')).toHaveTextContent('Ready · 12 sessions searchable')
+  expect(screen.getByRole('status')).toHaveTextContent('12 sessions · 3.4K messages searchable')
   await act(async () => {
     finishSave()
   })
@@ -298,9 +363,8 @@ it('lists one row per paired Orca server under this computer, and says where SSH
   expect(screen.getByRole('switch', { name: 'Search sessions on build-box' })).toBeInTheDocument()
   expect(screen.getByRole('switch', { name: 'Search sessions on office-mini' })).toBeInTheDocument()
   expect(mocks.status).toHaveBeenCalledWith('local')
-  expect(
-    screen.getByText('Search from the Agent Session History panel in the sidebar.')
-  ).toBeInTheDocument()
+  expect(screen.getByText('This computer')).toBeInTheDocument()
+  expect(screen.getByText('Orca remote servers')).toBeInTheDocument()
 })
 
 it('offers only this computer to a paired client, with no server rows', async () => {
@@ -311,5 +375,181 @@ it('offers only this computer to a paired client, with no server rows', async ()
   expect(screen.getAllByRole('switch')).toHaveLength(1)
   expect(screen.getByRole('switch')).toBeDisabled()
   expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Open' })).not.toBeInTheDocument()
   expect(mocks.status).not.toHaveBeenCalled()
+})
+
+/** Local on, one server on, one off, one offline, one too old. */
+function mixedFleet(): void {
+  mocks.environments = [
+    { id: 'on', name: 'build-01' },
+    { id: 'off', name: 'gpu-a' },
+    { id: 'gone', name: 'linux 1' },
+    { id: 'old', name: 'm4 air' }
+  ]
+  mocks.details = {
+    on: CONNECTED_DETAILS,
+    off: CONNECTED_DETAILS,
+    gone: OFFLINE_DETAILS,
+    old: CONNECTED_DETAILS
+  }
+  mocks.statusByHost = {
+    local: current,
+    'runtime:on': current,
+    'runtime:off': off,
+    'runtime:old': 'too-old'
+  }
+  statusByHost()
+}
+
+it('counts every computer in one line, leaving out the segments worth zero', async () => {
+  mixedFleet()
+  pane(true)
+  await act(async () => {})
+  expect(summaryLine()).toBe('On 2 of 5 computers · 1 offline · 1 need an update')
+  mocks.environments = [{ id: 'off', name: 'gpu-a' }]
+  mocks.details = { off: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:off': off }
+  statusByHost()
+  cleanup()
+  pane(true)
+  await act(async () => {})
+  expect(summaryLine()).toBe('On 1 of 2 computers')
+})
+
+it('turns on every reachable computer and skips the ones it cannot', async () => {
+  mixedFleet()
+  const confirm = vi.fn().mockResolvedValue(true)
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(true, confirm, save)
+  await act(async () => {})
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+  })
+  expect(confirm).toHaveBeenCalledWith(
+    expect.objectContaining({ title: 'Turn on session search on every computer?' })
+  )
+  expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:off'])
+  expect(save).toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
+})
+
+it('turns this computer on as part of turning them all on', async () => {
+  mocks.environments = [{ id: 'off', name: 'gpu-a' }]
+  mocks.details = { off: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: off, 'runtime:off': off }
+  statusByHost()
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(false, vi.fn().mockResolvedValue(true), save)
+  await act(async () => {})
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+  })
+  expect(save).toHaveBeenCalledWith({ aiVaultSearch: { enabled: true, historyDays: null } })
+  expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:off', true)
+})
+
+it('keeps going after a host refuses, and withholds the standing consent', async () => {
+  mocks.environments = [
+    { id: 'a', name: 'gpu-a' },
+    { id: 'b', name: 'gpu-b' }
+  ]
+  mocks.details = { a: CONNECTED_DETAILS, b: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:a': off, 'runtime:b': off }
+  statusByHost()
+  mocks.setEnabled.mockRejectedValueOnce(new Error('relay down')).mockResolvedValue(current)
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(true, vi.fn().mockResolvedValue(true), save)
+  await act(async () => {})
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Turn on all' }))
+  })
+  expect(mocks.setEnabled.mock.calls.map((call) => call[0])).toEqual(['runtime:a', 'runtime:b'])
+  expect(screen.getByRole('alert')).toHaveTextContent('Could not change session search on gpu-a')
+  expect(save).not.toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: true })
+})
+
+it('hides the button and says so once nothing is left to turn on', async () => {
+  mocks.environments = [
+    { id: 'a', name: 'gpu-a' },
+    { id: 'gone', name: 'linux 1' }
+  ]
+  mocks.details = { a: CONNECTED_DETAILS, gone: OFFLINE_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:a': current }
+  statusByHost()
+  pane(true, undefined, undefined, null, true)
+  await act(async () => {})
+  expect(screen.queryByRole('button', { name: 'Turn on all' })).not.toBeInTheDocument()
+  expect(summaryLine()).toBe('On 2 of 3 computers · 1 offline New computers turn on when they can.')
+})
+
+it('turns on a newly reachable server while the standing consent holds', async () => {
+  mocks.environments = [{ id: 'a', name: 'gpu-a' }]
+  mocks.details = { a: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:a': off }
+  statusByHost()
+  pane(true, undefined, undefined, null, true)
+  await act(async () => {})
+  expect(mocks.setEnabled).toHaveBeenCalledWith('runtime:a', true)
+})
+
+it('drops the standing consent when a server is turned off by hand', async () => {
+  mocks.environments = [{ id: 'a', name: 'gpu-a' }]
+  mocks.details = { a: CONNECTED_DETAILS }
+  mocks.statusByHost = { local: current, 'runtime:a': current }
+  statusByHost()
+  const save = vi.fn().mockResolvedValue(undefined)
+  pane(true, vi.fn().mockResolvedValue(true), save, null, true)
+  await act(async () => {})
+  await act(async () => {
+    fireEvent.click(screen.getByRole('switch', { name: 'Search sessions on gpu-a' }))
+  })
+  expect(save).toHaveBeenCalledWith({ aiVaultSearchAutoEnableNewComputers: false })
+})
+
+it('folds the list past six computers and orders it by what the user can act on', async () => {
+  mocks.environments = [
+    { id: 'gone', name: 'zz-offline' },
+    { id: 'old', name: 'aa-old' },
+    { id: 'off1', name: 'bb-off' },
+    { id: 'off2', name: 'aa-off' },
+    { id: 'on1', name: 'zz-on' },
+    { id: 'on2', name: 'aa-on' }
+  ]
+  mocks.details = {
+    gone: OFFLINE_DETAILS,
+    old: CONNECTED_DETAILS,
+    off1: CONNECTED_DETAILS,
+    off2: CONNECTED_DETAILS,
+    on1: CONNECTED_DETAILS,
+    on2: CONNECTED_DETAILS
+  }
+  mocks.statusByHost = {
+    local: current,
+    'runtime:old': 'too-old',
+    'runtime:off1': off,
+    'runtime:off2': off,
+    'runtime:on1': current,
+    'runtime:on2': current
+  }
+  statusByHost()
+  pane(true)
+  await act(async () => {})
+  // The local row's label is the host's own name, which differs per platform; the servers are the order under test.
+  const serverNames = (): string[] =>
+    screen
+      .getAllByRole('switch')
+      .map((element) => element.getAttribute('aria-label') ?? '')
+      .filter((label) => label.startsWith('Search sessions on '))
+      .map((label) => label.replace('Search sessions on ', ''))
+      .slice(1)
+  expect(serverNames()).toEqual(['aa-on', 'zz-on', 'aa-off', 'bb-off', 'aa-old'])
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Show 1 more' }))
+  })
+  expect(serverNames()).toEqual(['aa-on', 'zz-on', 'aa-off', 'bb-off', 'aa-old', 'zz-offline'])
+  await act(async () => {
+    fireEvent.click(screen.getByRole('button', { name: 'Show fewer' }))
+  })
+  expect(screen.getByRole('button', { name: 'Show 1 more' })).toBeInTheDocument()
 })
