@@ -10,6 +10,7 @@
 import { discardPreHandlerPtyState, hasPreHandlerPtyExit } from './pty-pre-handler-buffer'
 import { parseRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
+import { releaseTerminalScrollIntentKey } from '../../lib/pane-manager/terminal-scroll-intent-key-store'
 
 export type ParkedTerminalPaneCapture = {
   ptyId: string | null
@@ -140,7 +141,16 @@ export function retireParkedTerminalTab(tabId: string): void {
   // Why: explicit tab retirement permanently invalidates both live parked
   // observers and unmounted-pane candidates; neither may reattach later.
   disposeParkedTabWatchers(tabId)
-  capturedPanesByTabId.delete(tabId)
+  const capture = capturedPanesByTabId.get(tabId)
+  if (capture) {
+    // Parked panes never run PaneManager's close teardown. Release their
+    // strong scroll-intent keys here or every closed parked tab leaks one per
+    // leaf for the renderer lifetime.
+    for (const pane of capture.panes) {
+      releaseTerminalScrollIntentKey(pane.leafId)
+    }
+    capturedPanesByTabId.delete(tabId)
+  }
 }
 
 /**
