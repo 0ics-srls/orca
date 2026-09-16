@@ -5,7 +5,7 @@
   "runnerVersion": 1,
   "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
   "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "recorderSha256": "b5f4b14e07fc7281b954ff5f16d5803e2dfb1bc2a97dcbe6a0991697a5980c49",
   "adapterSha256": "8f68885d57a9aa76d80ba0ee29a95bdbaa98cef29c79c68ce75d67202cde7bfe",
   "scenarioSha256": "fb0cdff9e02bac37b0bd8e1c47922474823d46fa735f3069ed70cdad41800be6",
   "platform": "darwin",
@@ -129,9 +129,10 @@
         }
       }
     },
-    "79a7f51f2a84": {
+    "9cd49fc064c7": {
       "name": "github.addIssueComment#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.addIssueComment\",\"params\":{\"repo\":\"id:repo-1\",\"number\":9,\"body\":\"a comment\",\"type\":\"issue\"}}"
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"github.addIssueComment\",\"params\":{\"repo\":\"id:repo-1\",\"number\":9,\"body\":\"a comment\",\"type\":\"issue\"}}",
+      "sent": 1
     },
     "9e263f5e91be": {
       "name": "error",
@@ -219,7 +220,7 @@
         "id": "comment-settled",
         "observation": {
           "sender": ["7297a232d830"],
-          "payloads": ["79a7f51f2a84"],
+          "payloads": ["9cd49fc064c7"],
           "settlements": {
             "mount": "eb79a9b3682a",
             "comment-0": "eb79a9b3682a"
