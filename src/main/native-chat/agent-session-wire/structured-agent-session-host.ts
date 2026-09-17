@@ -149,7 +149,7 @@ export class StructuredAgentSessionHost {
       onBarrierError: (sessionId, error) => deps.onEventSinkError?.({ sessionId, error })
     })
     this.restartResume = createStructuredAgentSessionRestartResume(deps, this.sessions, {
-      ...structuredAgentSessionRestartResumeSurfaces(this, this.now, deps.onEventSinkError),
+      ...structuredAgentSessionRestartResumeSurfaces(this, this.now),
       publish: this.subscribers.publish.bind(this.subscribers)
     })
     this.runtimeState.startLeaseRenewal()

@@ -65,27 +65,36 @@ async function dispatchSafely(
   body: AgentJournalMessageItem,
   requestedAt: number | undefined
 ): Promise<AgentSessionDispatchOutcome> {
-  if (ctx.beforeDispatch) {
-    const ready = await withTimeout(
-      ctx.flushStreamedEvents().then(() => true),
-      AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
-      false
-    )
-    // A fixed barrier may finish while newer events are still queued; never dispatch past them.
-    if (!ready || ctx.hasPendingStreamedEvents?.()) {
-      throw new AgentSessionPreDispatchError('agent_session_admission_evidence_unavailable')
-    }
-    ctx.beforeDispatch()
-  }
   try {
     return await ctx.adapter.dispatch({
       sessionId: ctx.sessionId,
       clientMessageId,
       body,
       fence: ctx.fence,
+      ...(ctx.beforeDispatch
+        ? {
+            beforeDispatch: async () => {
+              const ready = await withTimeout(
+                ctx.flushStreamedEvents().then(() => true),
+                AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
+                false
+              )
+              // A drained barrier may be followed by newer accepted events.
+              if (!ready || ctx.hasPendingStreamedEvents?.()) {
+                throw new AgentSessionPreDispatchError(
+                  'agent_session_admission_evidence_unavailable'
+                )
+              }
+              ctx.beforeDispatch?.()
+            }
+          }
+        : {}),
       ...(requestedAt === undefined ? {} : { requestedAt })
     })
   } catch (error) {
+    if (error instanceof AgentSessionPreDispatchError) {
+      throw error
+    }
     return { state: 'unknown', reason: error instanceof Error ? error.message : String(error) }
   }
 }

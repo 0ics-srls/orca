@@ -279,7 +279,8 @@ export function retireClaudeDispatchWaiters(session: ClaudeSession): void {
 
 export async function dispatchClaudeTurn(
   session: ClaudeSession,
-  input: { clientMessageId?: string; body: AgentJournalMessageItem; requestedAt?: number }
+  input: { clientMessageId?: string; body: AgentJournalMessageItem; requestedAt?: number },
+  beforeDispatch?: () => Promise<void>
 ): Promise<AgentSessionDispatchOutcome> {
   let content: unknown[]
   try {
@@ -287,6 +288,7 @@ export async function dispatchClaudeTurn(
   } catch (error) {
     return { state: 'rejected', reason: (error as Error).message }
   }
+  await beforeDispatch?.()
   if (session.dispatchWaiters.length >= MAX_ACTIVE_DISPATCH_WAITERS) {
     return { state: 'rejected', reason: DISPATCH_REJECTED_QUEUE_FULL }
   }

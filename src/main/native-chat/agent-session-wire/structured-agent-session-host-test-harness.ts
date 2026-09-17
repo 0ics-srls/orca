@@ -75,7 +75,10 @@ function adapter(): StructuredAgentSessionAdapter {
   return {
     acquire,
     releaseAcquisition,
-    dispatch,
+    dispatch: async (input) => {
+      await input.beforeDispatch?.()
+      return dispatch(input)
+    },
     cancelTurn,
     answerPrompt,
     setOption

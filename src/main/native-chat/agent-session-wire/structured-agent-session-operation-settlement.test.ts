@@ -83,7 +83,7 @@ it('returns a pre-dispatch refusal without waiting on redundant uncertainty pers
     await vi.advanceTimersByTimeAsync(AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS)
     expect(returned).toBe(true)
     expect(writes).toHaveBeenCalledOnce()
-    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
+    expect(hostTestState().dispatch).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   } finally {
     stalled.resolve()
@@ -168,13 +168,13 @@ it.each(['stalled', 'failed', 'stalled-with-refusal-write'] as const)(
     }
     expect(await result).toBeInstanceOf(AgentSessionPreDispatchError)
     expect(beforeRun).not.toHaveBeenCalled()
-    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
+    expect(hostTestState().dispatch).not.toHaveBeenCalled()
     expect(ctx.journal.submissions()[0]?.dispatchState).toBe(
       barrier === 'stalled-with-refusal-write' ? 'pending' : 'rejected'
     )
     pending.resolve()
     await vi.advanceTimersByTimeAsync(0)
-    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
+    expect(hostTestState().dispatch).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   }
 )

@@ -40,10 +40,7 @@ type RestartResumeHostBindings = {
 
 export function structuredAgentSessionRestartResumeSurfaces(
   host: RestartResumeHostBindings,
-  now: () => number,
-  /** The host's error sink. Absent on a host built without one, which only means a failed note goes
-   *  unreported — never that the continuation fails. */
-  reportError?: (input: { sessionId: string; error: Error }) => void
+  now: () => number
 ): Omit<StructuredAgentSessionRestartResumeSurfaces, 'publish'> {
   return {
     revealSession: host.revealSession,
@@ -52,11 +49,8 @@ export function structuredAgentSessionRestartResumeSurfaces(
     send: (params) =>
       host.send({ callerKey: STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER }, params),
     awaitSendSettlement: host.waitForSendSettlement,
-    onNoteFailed: (sessionId, error) =>
-      reportError?.({
-        sessionId,
-        error: error instanceof Error ? error : new Error(String(error))
-      }),
+    onNoteFailed: () =>
+      console.warn('[structured-agent-session] restart continuation attribution failed'),
     now
   }
 }

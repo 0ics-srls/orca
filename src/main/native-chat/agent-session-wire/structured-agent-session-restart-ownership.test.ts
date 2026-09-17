@@ -108,6 +108,31 @@ it('publishes continuation attribution to the subscribed chat without another pr
   }
 })
 
+it('reports a failed attribution note without an installed error sink or private details', async () => {
+  const { host } = await interruptedRestart()
+  const append = AgentSessionJournal.prototype.appendItem
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  const write = vi.spyOn(AgentSessionJournal.prototype, 'appendItem').mockImplementation(function (
+    this: AgentSessionJournal,
+    ...args
+  ) {
+    if (args[1].kind === 'status' && args[1].text === AGENT_SESSION_RESTART_CONTINUATION_NOTE) {
+      return Promise.reject(new Error('private recovery payload at /private/account/session.json'))
+    }
+    return append.apply(this, args)
+  })
+  try {
+    const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+    expect(result.continued).toMatchObject([{ outcome: 'continued' }])
+    expect(warning).toHaveBeenCalledExactlyOnceWith(
+      '[structured-agent-session] restart continuation attribution failed'
+    )
+  } finally {
+    write.mockRestore()
+    warning.mockRestore()
+  }
+})
+
 it.each(['turn', 'submission'] as const)(
   'does not continue a marked %s after the user submits new work without a provider echo',
   async (work) => {
