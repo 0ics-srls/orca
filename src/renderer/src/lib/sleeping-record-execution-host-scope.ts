@@ -23,7 +23,17 @@ import {
  *
  * Deliberately fails open. It reports only a positively-known disagreement about the machine,
  * because the alternative — refusing whenever the hosts cannot be compared — would strand every
- * legitimate resume whose capture predates the stamp:
+ * legitimate resume whose capture predates the stamp.
+ *
+ * "Fail open" names a direction for THIS decision, never a house style, and the safe direction is
+ * inverted a few files away. Here the destructive act is *attempting* a resume — a wrong one can
+ * fork a transcript, which is unrecoverable, while a refusal keeps the record and the user can
+ * resume by hand. So an unhydrated catalog must not be read as a host verdict. In
+ * `workspace-session-terminal-buffers.ts` the destructive act is the opposite: declining to capture
+ * loses the only scrollback copy, so an unknown repo is treated as remote. Same window, opposite
+ * default, both correct. A reader pattern-matching one onto the other will get this backwards.
+ *
+ * The three unknowns this fails open on:
  *
  *  - `undefined` is "never stamped", not "local" (#9030 leaves SSH orphans unstamped).
  *  - `null` is "local **or** paired runtime": a `remote:<env>@@<handle>` PTY is stamped null too
