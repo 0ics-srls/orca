@@ -22,6 +22,7 @@ export const STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER =
 type RestartResumeHostBindings = {
   revealSession: (sessionId: string) => Promise<{ readable: boolean }>
   hold: (sessionId: string, holderId: string) => Promise<void>
+  release: (sessionId: string, holderId: string) => void
   send: (
     caller: { callerKey: string },
     params: { envelope: AgentSessionMutationEnvelope; body: AgentJournalMessageItem }
@@ -43,6 +44,7 @@ export function structuredAgentSessionRestartResumeSurfaces(
   return {
     revealSession: host.revealSession,
     hold: host.hold,
+    release: host.release,
     send: (params) =>
       host.send({ callerKey: STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER }, params),
     awaitSendSettlement: host.waitForSendSettlement,

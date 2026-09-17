@@ -53,6 +53,7 @@ export type StructuredAgentSessionRestartResumeSurfaces = {
   revealSession: (sessionId: string) => Promise<{ readable: boolean }>
   /** The resume-capable hold; see the runner for why a hold and not a send. */
   hold: (sessionId: string, holderId: string) => Promise<void>
+  release: (sessionId: string, holderId: string) => void
   /** The host's own send. Reached ONLY from `continueAfterRestart` — `resume` never calls it, which
    *  is what makes "automatic reconnect can never continue" structural.
    *
@@ -111,6 +112,7 @@ export function createStructuredAgentSessionRestartResume(
 
   /** The claimed set: markers this launch owns, held only in memory. Null until the claim runs. */
   let claimed: AgentSessionResumeMarker[] | null = null
+  let claiming: Promise<void> | undefined
 
   /**
    * Claims the previous launch's markers exactly once, and deletes EVERY durable marker in the
@@ -124,17 +126,21 @@ export function createStructuredAgentSessionRestartResume(
     if (claimed) {
       return claimed
     }
-    const stored = deps.store.resumeMarkers.list(surfaces.now())
-    const adjacent =
-      launch.previous === null ? [] : stored.filter((marker) => marker.launchId === launch.previous)
-    try {
-      await deps.store.resumeMarkers.clear()
-    } catch {
-      claimed = []
-      return claimed
-    }
-    claimed = adjacent
-    return claimed
+    claiming ??= (async () => {
+      const stored = deps.store.resumeMarkers.list(surfaces.now())
+      const adjacent =
+        launch.previous === null
+          ? []
+          : stored.filter((marker) => marker.launchId === launch.previous)
+      try {
+        await deps.store.resumeMarkers.clear()
+        claimed = adjacent
+      } catch {
+        claimed = []
+      }
+    })()
+    await claiming
+    return claimed ?? []
   }
 
   /** Spends one claimed marker. In memory, because the durable copy is already gone. */
@@ -178,50 +184,49 @@ export function createStructuredAgentSessionRestartResume(
   const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> =>
     derive(await revealClaimed(), 'must-be-released')
 
-  const resume = async (
+  const run = async (
     sessionIds: readonly string[] | undefined,
-    owner: string
+    owner: string,
+    afterAcquire?: (marker: AgentSessionResumeMarker) => Promise<void>
   ): Promise<StructuredAgentSessionResumeOutcome[]> => {
     const markers = await revealClaimed()
     const requested = new Set(sessionIds ?? markers.map((entry) => entry.sessionId))
     // Re-derived at CLICK time, never taken from the caller: a client may name any session id,
     // and only the predicate decides which of them is allowed a provider child.
-    const candidates = derive(markers, 'must-be-released').filter((candidate) =>
-      requested.has(candidate.sessionId)
+    const released = new Set(derive(markers, 'must-be-released').map((entry) => entry.sessionId))
+    const candidates = derive(markers, 'may-be-held').filter(
+      (candidate) =>
+        requested.has(candidate.sessionId) &&
+        (released.has(candidate.sessionId) ||
+          sessions.get(candidate.sessionId)?.hasProviderChild === true)
     )
-    const outcomes = await resumeStructuredAgentSessionsFromRestart(
+    const markersBySession = new Map(markers.map((marker) => [marker.sessionId, marker]))
+    return resumeStructuredAgentSessionsFromRestart(
       {
         admission,
-        consumeMarker: async (sessionId) => spendClaimed(sessionId),
-        resume: (sessionId) => surfaces.hold(sessionId, `restart-resume:${sessionId}`)
+        consumeMarker: async (sessionId) => {
+          const marker = markersBySession.get(sessionId)
+          const leaseState =
+            sessions.get(sessionId)?.hasProviderChild === true ? 'may-be-held' : 'must-be-released'
+          return !!marker && derive([marker], leaseState).length === 1 && spendClaimed(sessionId)
+        },
+        resume: async (sessionId) => {
+          const holder = `restart-resume:${sessionId}`
+          try {
+            await surfaces.hold(sessionId, holder)
+            const marker = markersBySession.get(sessionId)
+            if (marker) {
+              await afterAcquire?.(marker)
+            }
+          } finally {
+            // Pane holds and active turns take over; otherwise the normal idle grace applies.
+            surfaces.release(sessionId, holder)
+          }
+        }
       },
       candidates,
       owner
     )
-    // A session whose own chat pane bound between the offer and the click is ALREADY resumed: the
-    // released-lease clause drops it, and reporting nothing-happened would leave the user pressing
-    // a dead button. It may be settled as the success it is — but ONLY if it satisfies every OTHER
-    // clause. Gating on the live child alone would let "Resume all", which targets every marker,
-    // spend markers the predicate rejected and count chats that were never eligible.
-    const eligibleIfHeld = new Set(
-      derive(markers, 'may-be-held').map((candidate) => candidate.sessionId)
-    )
-    const settled = new Set(outcomes.map((outcome) => outcome.sessionId))
-    for (const sessionId of requested) {
-      if (settled.has(sessionId) || !eligibleIfHeld.has(sessionId)) {
-        continue
-      }
-      if (sessions.get(sessionId)?.hasProviderChild !== true) {
-        continue
-      }
-      spendClaimed(sessionId)
-      outcomes.push({
-        sessionId,
-        outcome: 'resumed',
-        reason: 'agent_session_resume_already_live'
-      })
-    }
-    return outcomes
   }
 
   /** Reconnect first, then send. Continuation is a message ON TOP of a reconnect and reuses every
@@ -234,17 +239,8 @@ export function createStructuredAgentSessionRestartResume(
     resumed: StructuredAgentSessionResumeOutcome[]
     continued: StructuredAgentSessionContinuationOutcome[]
   }> => {
-    const resumed = await resume(sessionIds, owner)
     const continued: StructuredAgentSessionContinuationOutcome[] = []
-    for (const outcome of resumed) {
-      if (outcome.outcome !== 'resumed') {
-        continued.push({
-          sessionId: outcome.sessionId,
-          outcome: 'refused',
-          reason: outcome.reason ?? 'agent_session_resume_refused'
-        })
-        continue
-      }
+    const resumed = await run(sessionIds, owner, async (marker) => {
       continued.push(
         await continueStructuredAgentSessionAfterRestart(
           {
@@ -266,12 +262,21 @@ export function createStructuredAgentSessionRestartResume(
                 { kind: 'status', text },
                 { fence: session.fence }
               )
-            },
-            now: surfaces.now
+            }
           },
-          outcome.sessionId
+          marker.sessionId,
+          marker
         )
       )
+    })
+    for (const outcome of resumed) {
+      if (outcome.outcome !== 'resumed') {
+        continued.push({
+          sessionId: outcome.sessionId,
+          outcome: 'refused',
+          reason: outcome.reason ?? 'agent_session_resume_refused'
+        })
+      }
     }
     return { resumed, continued }
   }
@@ -303,7 +308,7 @@ export function createStructuredAgentSessionRestartResume(
       claimed = []
       return spent
     },
-    resume,
+    resume: (sessionIds, owner) => run(sessionIds, owner),
     continueAfterRestart
   }
 }

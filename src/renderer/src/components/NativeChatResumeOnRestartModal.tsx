@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Info, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from './ui/button'
@@ -124,7 +124,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   const structuredEnabled = useAppStore(
     (store) => store.settings?.experimentalStructuredNativeChat === true
   )
-  const autoResume = useAppStore((store) => store.settings?.nativeChatResumeWorkOnRestart === true)
+  const launchOffer = useRef<Promise<ResumeCandidate[]> | null>(null)
   const updateSettings = useAppStore((store) => store.updateSettings)
   const [candidates, setCandidates] = useState<ResumeCandidate[]>([])
   /** Clock stamped when the list arrived. Row ages read against this rather than a render-time
@@ -160,14 +160,16 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     }
     let cancelled = false
     // Fetched after mount, never awaited by startup: the workspace is usable first.
-    void (async () => {
+    const loadOffer = async (): Promise<ResumeCandidate[]> => {
+      // The preference belongs to this launch's request; later saves cannot dispatch another.
+      const autoResume = useAppStore.getState().settings?.nativeChatResumeWorkOnRestart === true
       try {
         const offered = await callStructuredAgentSession<{ sessions: ResumeCandidate[] }>(
           LOCAL,
           'agentSession.restartResumable'
         )
-        if (cancelled || offered.sessions.length === 0) {
-          return
+        if (offered.sessions.length === 0) {
+          return []
         }
         if (autoResume) {
           // Identical call to the buttons below; the host re-derives eligibility either way.
@@ -178,20 +180,26 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
           )
           // Automatic must never be silent: someone who ticked the box months ago still sees this.
           announceResumed(result.results.filter((entry) => entry.outcome === 'resumed').length)
-          return
+          return []
         }
-        setListedAt(Date.now())
-        setCandidates(offered.sessions)
-        // Default on, as asked: the common case is reconnecting everything that was working.
-        setSelected(new Set(allResumeSessionIds(offered.sessions)))
+        return offered.sessions
       } catch {
         // A host that cannot answer offers nothing. There is no failure worth a modal of its own.
+        return []
       }
-    })()
+    }
+    launchOffer.current ??= loadOffer()
+    void launchOffer.current.then((offered) => {
+      if (!cancelled) {
+        setListedAt(Date.now())
+        setCandidates(offered)
+        setSelected(new Set(allResumeSessionIds(offered)))
+      }
+    })
     return () => {
       cancelled = true
     }
-  }, [autoResume, resolved, structuredEnabled])
+  }, [resolved, structuredEnabled])
 
   /** Applied on whichever action the user takes, so the box means the same thing either way. */
   const persistPreference = useCallback(async (): Promise<void> => {
@@ -204,7 +212,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     async (sessionIds?: string[]): Promise<void> => {
       setBusy(true)
       try {
-        await persistPreference()
+        void persistPreference()
         const result = await callStructuredAgentSession<{ results: ResumeOutcome[] }>(
           LOCAL,
           'agentSession.restartResume',
@@ -237,7 +245,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
     async (sessionIds: string[]): Promise<void> => {
       setBusy(true)
       try {
-        await persistPreference()
+        void persistPreference()
         const result = await callStructuredAgentSession<{
           continued: { sessionId: string; outcome: 'continued' | 'refused' }[]
         }>(LOCAL, 'agentSession.restartContinue', { sessionIds })
@@ -253,7 +261,7 @@ export function NativeChatResumeOnRestartModal(): React.JSX.Element | null {
   /** Any close is a decline, and a decline spends the markers so this cannot return every launch. */
   const decline = useCallback(async (): Promise<void> => {
     setResolved(true)
-    await persistPreference()
+    void persistPreference()
     await callStructuredAgentSession(LOCAL, 'agentSession.restartResumableDismiss', {}).catch(
       () => undefined
     )

@@ -1,9 +1,0 @@
-# Source files that already contain a raw NUL byte, and are therefore classified as binary by git.
-#
-# Grandfathered, not blessed. Each one hides its own diff from review and is skipped silently by
-# `rg`. Both would read identically with the escape written out, and both should be fixed — in their
-# own change, not by whichever PR happens to add this gate.
-#
-# This list may only SHRINK. A new file with a raw NUL fails the check.
-src/main/runtime/browser-client-download-transfers.ts
-src/relay/dispatcher.test.ts

@@ -10,8 +10,10 @@
 // turn is actually running (not one that completed before quit), and the session has a provider
 // cursor to resume onto (not a conversation that never proved a thread).
 
-import { agentSessionProviderHandleChainHead } from '../../../shared/agent-session-provider-handle'
-import { agentSessionProviderHandleRoot } from '../../../shared/agent-session-provider-handle'
+import {
+  agentSessionProviderHandleChainHead,
+  agentSessionProviderHandleRoot
+} from '../../../shared/agent-session-provider-handle'
 import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type {

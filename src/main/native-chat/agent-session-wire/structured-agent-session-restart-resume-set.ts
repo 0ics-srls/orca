@@ -14,8 +14,10 @@ import type {
   AgentJournalSubmission,
   AgentJournalTurnLifecycle
 } from '../../../shared/agent-session-journal-types'
-import { agentSessionProviderHandleChainHead } from '../../../shared/agent-session-provider-handle'
-import { agentSessionProviderHandleRoot } from '../../../shared/agent-session-provider-handle'
+import {
+  agentSessionProviderHandleChainHead,
+  agentSessionProviderHandleRoot
+} from '../../../shared/agent-session-provider-handle'
 import {
   isExpiredAgentSessionResumeMarker,
   type AgentSessionResumeMarker,

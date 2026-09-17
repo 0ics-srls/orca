@@ -13,7 +13,8 @@ import {
   AGENT_SESSION_RESTART_CONTINUATION_MESSAGE,
   AGENT_SESSION_RESTART_CONTINUATION_NOTE
 } from '../../../shared/agent-session-restart-continuation'
-import { structuredAgentSessionResumeOperationId } from './structured-agent-session-resume-eligibility'
+import { createHash } from 'node:crypto'
+import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 
 /**
  * All four dispatch states are preserved, never collapsed into transport success.
@@ -47,15 +48,26 @@ export function restartContinuationBody(): AgentJournalMessageItem {
 export function restartContinuationEnvelope(
   sessionId: string,
   fence: number,
-  now: number
+  marker: AgentSessionResumeMarker
 ): { envelope: AgentSessionMutationEnvelope; body: AgentJournalMessageItem } {
   const body = restartContinuationBody()
   return {
     body,
     envelope: {
       sessionId,
-      // The operation id IS the client message id, so one continuation is one durable row.
-      clientOperationId: structuredAgentSessionResumeOperationId(now),
+      // The same interrupted work must reach the durable ledger with the same message identity.
+      clientOperationId: `${marker.recordedAt.toString().padStart(13, '0')}-${createHash('sha256')
+        .update(
+          JSON.stringify([
+            marker.launchId,
+            sessionId,
+            marker.work.kind,
+            marker.work.id,
+            marker.providerHandleRoot
+          ])
+        )
+        .digest('hex')
+        .slice(0, 32)}`,
       expectedRuntimeFence: fence,
       payloadFingerprint: computeAgentSessionPayloadFingerprint({
         method: 'agentSession.send',
@@ -94,7 +106,6 @@ export type StructuredAgentSessionContinuationDeps = {
   /** Reports a note that could not be written. The note is best effort, but its failure is not
    *  allowed to be silent — a swallowed append is how this regressed unnoticed once already. */
   onNoteFailed: (sessionId: string, error: unknown) => void
-  now: () => number
 }
 
 /**
@@ -106,13 +117,14 @@ export type StructuredAgentSessionContinuationDeps = {
  */
 export async function continueStructuredAgentSessionAfterRestart(
   deps: StructuredAgentSessionContinuationDeps,
-  sessionId: string
+  sessionId: string,
+  marker: AgentSessionResumeMarker
 ): Promise<StructuredAgentSessionContinuationOutcome> {
   const fence = deps.currentFence(sessionId)
   if (fence === null) {
     return { sessionId, outcome: 'refused', reason: 'agent_session_not_attached' }
   }
-  const { envelope, body } = restartContinuationEnvelope(sessionId, fence, deps.now())
+  const { envelope, body } = restartContinuationEnvelope(sessionId, fence, marker)
   const sent = await deps.send({ envelope, body })
   if (!sent.ok) {
     return {

@@ -108,6 +108,7 @@ function surface(input: {
       sessions as never,
       {
         revealSession: async () => ({ readable: true }),
+        release: () => {},
         hold: async (sessionId: string) => {
           if (input.holdFails) {
             throw new Error('provider refused the reconnect')
@@ -331,13 +332,10 @@ describe('the restart-resume surface', () => {
 
     const outcomes = await restartResume.resume([SESSION], 'modal')
 
-    expect(outcomes).toEqual([
-      { sessionId: SESSION, outcome: 'resumed', reason: 'agent_session_resume_already_live' }
-    ])
-    // Spent, so the prompt cannot offer it again, and no second hold was taken. The durable copy
-    // went at claim time, so what has to be empty now is the launch-scoped set.
+    expect(outcomes).toEqual([{ sessionId: SESSION, outcome: 'resumed' }])
+    // Already-live sessions consume the same offer and use the same temporary request hold.
     expect(await restartResume.dismiss()).toBe(0)
-    expect(held).toEqual([])
+    expect(held).toEqual([SESSION])
   })
 
   // Relaxing the lease clause must not relax the whole predicate. "Resume all" targets every
