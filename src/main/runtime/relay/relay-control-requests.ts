@@ -16,23 +16,21 @@ type PendingRequest = {
   resolve: (value: unknown) => void
   reject: (error: Error) => void
   timer: ReturnType<typeof setTimeout>
-  sentAt: number
 }
 
 export type RelayControlRequestTimeout = {
-  reqId: string
   kind: PendingRequest['kind']
   sentAt: number
 }
 
-/**
- * Notified when a request hits its deadline, so liveness can probe the socket
- * and log why it timed out. It must NOT alter the rejection: consumers classify
- * relay failures by exact-matching the error message against
- * `/^relay_[a-z0-9_]{1,74}$/` (src/shared/mobile-relay-mint-failure.ts), so any
- * suffix downgrades a precise code to the generic fallback.
- */
+/** Notified when a request hits its deadline, so liveness can probe the socket. */
 export type OnRelayControlRequestTimeout = (timeout: RelayControlRequestTimeout) => void
+
+// A classification key, not prose: consumers exact-match this against
+// /^relay_[a-z0-9_]{1,74}$/ (src/shared/mobile-relay-mint-failure.ts), so any
+// appended diagnostic downgrades a precise code to the generic fallback.
+// Diagnostics belong in the log — see RelayControlLiveness.noteRequestTimeout.
+const REQUEST_TIMEOUT_CODE = 'relay_control_request_timeout'
 
 export type DeviceCredentialInstallAuthorization =
   | { mode: 'relay-basis'; basisConnId: string }
@@ -193,12 +191,11 @@ export class RelayControlRequests {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.finish(reqId)
-        // Runs before the reject so the probe observes the socket as the
-        // deadline found it. The message stays bare — see the type's note.
-        this.onTimeout?.({ reqId, kind, sentAt })
-        reject(new Error('relay_control_request_timeout'))
+        // Runs before the reject so the probe observes the socket as the deadline found it.
+        this.onTimeout?.({ kind, sentAt })
+        reject(new Error(REQUEST_TIMEOUT_CODE))
       }, 10_000)
-      this.pending.set(reqId, { kind, resolve, reject, timer, sentAt })
+      this.pending.set(reqId, { kind, resolve, reject, timer })
       try {
         send(payload)
       } catch (error) {

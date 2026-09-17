@@ -19,7 +19,6 @@ import { RelayControlRequests } from './relay-control-requests'
 import type { DeviceCredentialInstallAuthorization } from './relay-control-requests'
 import { answerRelayHostChallenge } from './relay-host-proof'
 import { RelayControlLiveness } from './relay-control-liveness'
-import type { RelayControlLivenessTeardown } from './relay-control-liveness'
 import { closeRelayControlSocket } from './relay-control-socket-close'
 import { controlWebSocketUrl } from './relay-control-url'
 
@@ -32,32 +31,29 @@ export class RelayControlClient {
   private readonly relayOrigin: string
   private readonly controlUrl: string
   private readonly createSocket: NonNullable<RelayControlClientOptions['createSocket']>
+  private readonly liveness: RelayControlLiveness
   private readonly requests: RelayControlRequests
   private socket: WebSocket | null = null
   private state: RelayControlState = 'idle'
   private connectResolve: ((ack: RelayHostHelloAckMessage) => void) | null = null
   private connectReject: ((error: Error) => void) | null = null
   private connectTimer: ReturnType<typeof setTimeout> | null = null
-  private readonly liveness: RelayControlLiveness
 
   constructor(options: RelayControlClientOptions) {
     this.options = options
-    this.requests = new RelayControlRequests(options.onPendingChanged, (timeout) => {
-      this.liveness.noteRequestTimeout(timeout, this.isLive())
-    })
     const endpoint = controlWebSocketUrl(options.cellUrl)
     this.relayOrigin = endpoint.origin
     this.controlUrl = endpoint.url
     this.liveness = new RelayControlLiveness({
       cellUrl: this.relayOrigin,
       ping: () => this.socket?.ping(),
-      onDead: (reason) => this.terminateForLiveness(reason),
-      ...(options.silenceLimitMs !== undefined ? { silenceLimitMs: options.silenceLimitMs } : {}),
-      ...(options.probeIntervalMs !== undefined
-        ? { probeIntervalMs: options.probeIntervalMs }
-        : {}),
-      ...(options.livenessRandom !== undefined ? { random: options.livenessRandom } : {})
+      isLive: () => this.isLive(),
+      terminate: () => this.socket?.terminate(),
+      random: options.livenessRandom
     })
+    this.requests = new RelayControlRequests(options.onPendingChanged, (timeout) =>
+      this.liveness.noteRequestTimeout(timeout)
+    )
     this.createSocket =
       options.createSocket ??
       ((url, token) =>
@@ -274,14 +270,6 @@ export class RelayControlClient {
     this.liveness.start()
     this.connectResolve?.(ack.data)
     this.clearConnectPromise()
-  }
-
-  // A liveness teardown lands on the origin as an ordinary 1006 close, so name
-  // the cause here: without it a probe-driven reconnect is indistinguishable
-  // from any other drop, and a fleet-wide false positive would be invisible.
-  private terminateForLiveness(reason: RelayControlLivenessTeardown): void {
-    console.warn(`[relay] control torn down cell=${this.relayOrigin} reason=${reason}`)
-    this.socket?.terminate()
   }
 
   private sendActive(payload: Record<string, unknown>): void {
