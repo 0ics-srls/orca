@@ -12,12 +12,12 @@ import {
   journals
 } from './structured-agent-session-host-test-harness'
 import {
+  hostTestMessage,
   HOST_TEST_SESSION as SESSION,
   HOST_TEST_THREAD as THREAD
 } from './structured-agent-session-host-test-data'
 import type { AgentSessionTurnContext } from './structured-agent-session-turns'
 import { sendPlan } from './structured-agent-session-mutation-plans'
-import { hostTestMessage } from './structured-agent-session-host-test-data'
 
 async function context(): Promise<AgentSessionTurnContext> {
   return {
