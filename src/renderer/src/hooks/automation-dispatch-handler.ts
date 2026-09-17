@@ -165,12 +165,26 @@ export async function handleAutomationDispatchRequest({
       }
     }
     const result = await launchAgentBackgroundSession({
+      automationRunId: run.id,
       agent: automation.agentId,
       worktreeId: worktree.id,
       prompt: automation.prompt,
       launchSource: 'unknown',
       title: run.title,
-      onData: completion.appendOutput,
+      onPrepared:
+        automation.agentId === null
+          ? async ({ tabId, paneKey }) => {
+              await markDispatchResult({
+                runId: run.id,
+                status: 'dispatching',
+                workspaceId: worktree.id,
+                workspaceDisplayName: worktree.displayName,
+                terminalSessionId: tabId,
+                terminalPaneKey: paneKey
+              })
+            }
+          : undefined,
+      onData: automation.agentId === null ? undefined : completion.appendOutput,
       onAgentStatus: (payload) => {
         completion.captureAssistantMessage(payload.lastAssistantMessage)
         // Why: session-boundary done = launch connect, not run completion (see observeAgentStatus).
@@ -184,7 +198,11 @@ export async function handleAutomationDispatchRequest({
         completion.handleAgentDone()
       },
       onExit: (_ptyId, code) => {
-        completion.handleExit(code)
+        if (automation.agentId === null) {
+          releaseTerminalOwnership()
+        } else {
+          completion.handleExit(code)
+        }
       }
     })
     if (!result) {

@@ -94,6 +94,7 @@ export function createAutomationRun(
     workspaceId: automation.workspaceId,
     workspaceDisplayName: operations.getWorkspaceDisplayName(automation.workspaceId),
     sessionKind: 'terminal',
+    ...(automation.agentId === null ? { completionCondition: 'exit' as const } : {}),
     chatSessionId: null,
     terminalSessionId: null,
     terminalPaneKey: null,
@@ -166,6 +167,13 @@ export function updateAutomationRun(
   }
   const now = Date.now()
   const current = operations.state.automationRuns[index]
+  if (
+    current.completionCondition === 'exit' &&
+    isFinalAutomationRunStatus(current.status) &&
+    result.status !== current.status
+  ) {
+    return current
+  }
   const workspaceId = result.workspaceId ?? current.workspaceId
   const workspaceDisplayName = Object.hasOwn(result, 'workspaceDisplayName')
     ? normalizeAutomationRunWorkspaceDisplayName(result.workspaceDisplayName ?? null)
@@ -178,6 +186,8 @@ export function updateAutomationRun(
       workspaceDisplayName ??
       normalizeAutomationRunWorkspaceDisplayName(current.workspaceDisplayName ?? null) ??
       operations.getWorkspaceDisplayName(workspaceId),
+    terminalIncarnationId: result.terminalIncarnationId ?? current.terminalIncarnationId,
+    terminalCommandExitCode: result.terminalCommandExitCode ?? current.terminalCommandExitCode,
     terminalSessionId: Object.hasOwn(result, 'terminalSessionId')
       ? (result.terminalSessionId ?? null)
       : current.terminalSessionId,

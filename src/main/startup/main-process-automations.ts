@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto'
+import { makePaneKey } from '../../shared/stable-pane-id'
 import { AutomationService } from '../automations/service'
 import { createHeadlessAutomationOutputSnapshotBuffer } from '../automations/headless-dispatch'
 import { buildHeadlessAutomationWorktreeCreateArgs } from '../automations/headless-workspace-create'
@@ -49,10 +51,26 @@ export function initializeMainProcessAutomations(): AutomationService {
             if (!workspaceId) {
               throw new Error('The target workspace is no longer available.')
             }
+            const shellIdentity =
+              automation.agentId === null
+                ? { tabId: randomUUID(), leafId: randomUUID() }
+                : undefined
+            if (shellIdentity) {
+              await service.markDispatchResult({
+                runId: run.id,
+                status: 'dispatching',
+                workspaceId,
+                workspaceDisplayName,
+                terminalSessionId: shellIdentity.tabId,
+                terminalPaneKey: makePaneKey(shellIdentity.tabId, shellIdentity.leafId)
+              })
+            }
             const terminal = await runtime.launchAgentTerminal(`id:${workspaceId}`, {
               agent: automation.agentId,
+              automationRunId: run.id,
               prompt: automation.prompt,
-              title: run.title
+              title: run.title,
+              ...shellIdentity
             })
             terminalHandle = terminal.handle
             terminalSessionId = terminal.tabId ?? null
@@ -62,35 +80,33 @@ export function initializeMainProcessAutomations(): AutomationService {
             const worktree = await runtime.showManagedWorktree(`id:${workspaceId}`)
             workspaceDisplayName = worktree.displayName ?? null
           }
-          const completion = (async () => {
-            const wait = await runtime.waitForTerminal(terminalHandle, {
-              condition: automation.agentId === null ? 'exit' : 'tui-idle'
-            })
-            const read = await runtime.readTerminal(terminalHandle, {
-              limit: terminalSnapshotLimit
-            })
-            const snapshotBuffer = createHeadlessAutomationOutputSnapshotBuffer()
-            snapshotBuffer.append(read.tail.join('\n'))
-            if (wait.satisfied && (automation.agentId !== null || wait.exitCode === 0)) {
-              return {
-                status: 'completed' as const,
-                outputSnapshot: snapshotBuffer.snapshot(),
-                error: null
-              }
-            }
-            return {
-              status: 'dispatch_failed' as const,
-              outputSnapshot: snapshotBuffer.snapshot(),
-              error:
-                automation.agentId === null
-                  ? wait.exitCode !== null
-                    ? `Automation process exited with code ${wait.exitCode}.`
-                    : 'Automation process did not report completion.'
-                  : wait.blockedReason
-                    ? `Automation agent is blocked: ${wait.blockedReason}.`
-                    : 'Automation agent did not report completion.'
-            }
-          })()
+          const completion =
+            automation.agentId === null
+              ? undefined
+              : (async () => {
+                  const wait = await runtime.waitForTerminal(terminalHandle, {
+                    condition: 'tui-idle'
+                  })
+                  const read = await runtime.readTerminal(terminalHandle, {
+                    limit: terminalSnapshotLimit
+                  })
+                  const snapshotBuffer = createHeadlessAutomationOutputSnapshotBuffer()
+                  snapshotBuffer.append(read.tail.join('\n'))
+                  if (wait.satisfied) {
+                    return {
+                      status: 'completed' as const,
+                      outputSnapshot: snapshotBuffer.snapshot(),
+                      error: null
+                    }
+                  }
+                  return {
+                    status: 'dispatch_failed' as const,
+                    outputSnapshot: snapshotBuffer.snapshot(),
+                    error: wait.blockedReason
+                      ? `Automation agent is blocked: ${wait.blockedReason}.`
+                      : 'Automation agent did not report completion.'
+                  }
+                })()
           return {
             workspaceId,
             workspaceDisplayName,

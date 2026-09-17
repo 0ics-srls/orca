@@ -6,10 +6,12 @@ import type { AutomationTerminalOwnership } from '@/lib/automation-terminal-owne
 
 export type LaunchAgentBackgroundSessionArgs = {
   agent: TuiAgent | null
+  automationRunId?: string
   worktreeId: string
   prompt?: string
   launchSource?: LaunchSource
   title?: string
+  onPrepared?: (identity: { tabId: string; paneKey: string }) => Promise<void>
   onData?: (chunk: string) => void
   onExit?: (ptyId: string, code: number) => void
   onAgentStatus?: (payload: ParsedAgentStatusPayload) => void

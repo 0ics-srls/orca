@@ -146,7 +146,14 @@ export class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithC
 
   async launchAgentTerminal(
     worktreeSelector: string,
-    opts: { agent: TuiAgent | null; prompt: string; title?: string }
+    opts: {
+      agent: TuiAgent | null
+      automationRunId?: string
+      prompt: string
+      title?: string
+      tabId?: string
+      leafId?: string
+    }
   ): Promise<RuntimeTerminalCreate> {
     if (opts.agent === null) {
       const workspace = await this.resolveTerminalWorkspaceLaunchScope(worktreeSelector)
@@ -157,8 +164,14 @@ export class OrcaRuntimeWithTerminalCreateDeduplication extends OrcaRuntimeWithC
         terminalWindowsShell: this.store?.getSettings().terminalWindowsShell
       })
       return await this.createTerminal(worktreeSelector, {
-        ...buildAutomationShellStartup(opts.prompt, resolveStartupShell(platform, shell)),
-        title: opts.title
+        ...buildAutomationShellStartup(
+          opts.prompt,
+          resolveStartupShell(platform, shell),
+          opts.automationRunId
+        ),
+        title: opts.title,
+        tabId: opts.tabId,
+        leafId: opts.leafId
       })
     }
     const worktree = await this.resolveWorktreeSelector(worktreeSelector)

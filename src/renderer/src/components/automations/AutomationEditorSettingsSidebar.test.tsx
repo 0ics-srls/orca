@@ -23,6 +23,7 @@ const initialDraft: AutomationDraft = {
   time: '09:00',
   dayOfWeek: '1',
   customSchedule: '',
+  savedSchedule: null,
   missedRunGraceMinutes: '720',
   scheduleWarning: null
 }

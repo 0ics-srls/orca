@@ -105,7 +105,9 @@ describe('OrcaRuntimeService automation methods', () => {
   })
 
   it('launches a blank-terminal command on the resolved workspace host without an agent', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: This fixture supplies the store operations used by the launch path.
     const runtime = new OrcaRuntimeService(makeStore() as never)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Expose the real protected resolver solely to stub the remote workspace in this test.
     const scope = runtime as unknown as {
       resolveTerminalWorkspaceLaunchScope: (selector: string) => Promise<unknown>
     }
@@ -117,6 +119,7 @@ describe('OrcaRuntimeService automation methods', () => {
     })
     const createTerminal = vi
       .spyOn(runtime, 'createTerminal')
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The launch path returns this create result unchanged; only its handle is asserted.
       .mockResolvedValue({ handle: 'term-shell' } as never)
 
     await runtime.launchAgentTerminal('id:folder:remote', {

@@ -18,7 +18,12 @@ export type AutomationRunTerminalObserver = {
   resolveRunTerminal: (run: AutomationRun) => string | null
   observeCompletion: (
     handle: string,
-    options: { signal: AbortSignal }
+    options: {
+      signal: AbortSignal
+      run?: AutomationRun
+      onCommandExit?: (exitCode: number) => void
+      onUnverifiable?: (outputSnapshot: AutomationRunOutputSnapshot | null) => void
+    }
   ) => Promise<AutomationRunCompletionObservation>
 }
 
@@ -60,6 +65,7 @@ export class AutomationRunCompletionWatcher {
         const current = this.readRun(run.automationId, run.id)
         return Boolean(current && !isFinalAutomationRunStatus(current.status))
       },
+      canStrand: (run) => run.completionCondition !== 'exit',
       strand: (run) => {
         void this.finalize(run, {
           status: 'dispatch_failed',
@@ -83,7 +89,8 @@ export class AutomationRunCompletionWatcher {
     }
   }
 
-  private attachRetainedRun(run: AutomationRun): boolean {
+  private attachRetainedRun(retained: AutomationRun): boolean {
+    const run = this.readRun(retained.automationId, retained.id) ?? retained
     if (this.disposed) {
       return false
     }
@@ -114,10 +121,59 @@ export class AutomationRunCompletionWatcher {
     controller: AbortController
   ): Promise<void> {
     let observation: AutomationRunCompletionObservation
+    const recordUnverifiable = (outputSnapshot: AutomationRunOutputSnapshot | null): void => {
+      const current = this.readRun(run.automationId, run.id)
+      const error = 'Orca cannot verify this command’s completion. Waiting for its execution host.'
+      if (!current || isFinalAutomationRunStatus(current.status)) {
+        return
+      }
+      if (
+        current.error === error &&
+        current.outputSnapshot?.content === outputSnapshot?.content &&
+        current.outputSnapshot?.truncated === outputSnapshot?.truncated
+      ) {
+        return
+      }
+      void this.markDispatchResult({
+        runId: run.id,
+        status: current.status,
+        outputSnapshot,
+        error
+      }).catch((error) =>
+        console.error('[automations] Failed to save pending shell evidence:', error)
+      )
+    }
     try {
-      observation = await this.observer.observeCompletion(handle, { signal: controller.signal })
+      observation = await this.observer.observeCompletion(handle, {
+        signal: controller.signal,
+        run,
+        onCommandExit: (exitCode) => {
+          const current = this.readRun(run.automationId, run.id)
+          if (
+            !current ||
+            isFinalAutomationRunStatus(current.status) ||
+            current.terminalCommandExitCode === exitCode
+          ) {
+            return
+          }
+          void this.markDispatchResult({
+            runId: run.id,
+            status: current.status,
+            terminalCommandExitCode: exitCode
+          }).catch((error) =>
+            console.error('[automations] Failed to save command exit receipt:', error)
+          )
+        },
+        onUnverifiable: recordUnverifiable
+      })
     } catch (error) {
       if (controller.signal.aborted) {
+        return
+      }
+      if (run.completionCondition === 'exit') {
+        recordUnverifiable(this.readRun(run.automationId, run.id)?.outputSnapshot ?? null)
+        this.watching.delete(run.id)
+        this.reconciler.reconcile([run], true)
         return
       }
       observation = { status: 'dispatch_failed', error: describeObservationError(error) }

@@ -793,9 +793,15 @@ describe('useAutomationDispatchEvents setup launch', () => {
       await vi.waitFor(() => expect(mockReleaseTerminalOwnership).toHaveBeenCalledOnce())
 
       expect(mockFinalizeTerminalOwnership).not.toHaveBeenCalled()
-      expect(mockMarkDispatchResult).toHaveBeenCalledWith(
-        expect.objectContaining({ status: 'dispatch_failed' })
-      )
+      if (agentId === null) {
+        expect(mockMarkDispatchResult).not.toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'dispatch_failed' })
+        )
+      } else {
+        expect(mockMarkDispatchResult).toHaveBeenCalledWith(
+          expect.objectContaining({ status: 'dispatch_failed' })
+        )
+      }
     }
   )
 

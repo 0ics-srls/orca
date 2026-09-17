@@ -232,6 +232,37 @@ describe('reconciling retained runs against a graph that has not published yet',
     service.stop()
   })
 
+  it('keeps a shell run visibly uncertain after the host is lost, then reattaches without dispatching again', async () => {
+    const store = await createStore()
+    const automation = createAutomation(store)
+    const shellAutomation = store.updateAutomation(automation.id, { agentId: null })
+    const retained = retainDispatchedRun(store, shellAutomation)
+    const surface = createPaneSurface()
+    const dispatch = vi.fn(async () => ({ ...LAUNCH_TARGET }))
+    const service = new AutomationService(store, {
+      terminalObserver: surface.observer,
+      headlessDispatcher: dispatch
+    })
+
+    service.start()
+    await vi.advanceTimersByTimeAsync(AFTER_SETTLE_MS)
+
+    expect(readRun(store, automation.id, retained.id)).toMatchObject({
+      status: 'dispatched',
+      completionCondition: 'exit',
+      error: 'Orca is waiting for the execution host to confirm this command’s completion.'
+    })
+    expect(dispatch).not.toHaveBeenCalled()
+    surface.mountPane()
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(surface.observedHandles).toEqual(['handle-1'])
+    surface.settleObservation({ status: 'completed', error: null })
+    await vi.advanceTimersByTimeAsync(0)
+    expect(readRun(store, automation.id, retained.id).status).toBe('completed')
+    expect(dispatch).not.toHaveBeenCalled()
+    service.stop()
+  })
+
   it('still closes out a run the ready surface cannot find after the settle window', async () => {
     const store = await createStore()
     const automation = createAutomation(store)

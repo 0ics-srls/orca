@@ -16,6 +16,7 @@ import { resolveLocalWindowsAgentStartupShell } from '../../../shared/windows-te
 
 export function buildBackgroundSessionStartup(args: {
   agent: TuiAgent | null
+  automationRunId?: string
   prompt: string
   settings: GlobalSettings | null
   platform: NodeJS.Platform
@@ -59,7 +60,11 @@ export function buildBackgroundSessionStartup(args: {
           launchConfig: startupPlan.launchConfig,
           startupCommandDelivery: startupPlan.startupCommandDelivery
         }
-      : buildAutomationShellStartup(prompt, resolveStartupShell(platform, shell)),
+      : buildAutomationShellStartup(
+          prompt,
+          resolveStartupShell(platform, shell),
+          args.automationRunId
+        ),
     pasteDraftAfterLaunch: hasPrompt && isFollowup ? prompt : null
   }
 }

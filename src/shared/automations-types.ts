@@ -146,6 +146,10 @@ export type AutomationRun = {
    *  is deleted and its live metadata is gone. */
   workspaceDisplayName?: string | null
   sessionKind: 'terminal'
+  /** Captured at launch so editing the automation cannot change how this run settles. */
+  completionCondition?: 'exit'
+  terminalIncarnationId?: string | null
+  terminalCommandExitCode?: number | null
   chatSessionId: string | null
   terminalSessionId: string | null
   /** Why: a terminal tab can later point at a different pane/PTY. Automation
@@ -230,6 +234,8 @@ export type AutomationDispatchRequest = {
 }
 
 export type AutomationDispatchResult = {
+  terminalIncarnationId?: string | null
+  terminalCommandExitCode?: number | null
   runId: string
   status: AutomationRunStatus
   workspaceId?: string | null

@@ -3,6 +3,8 @@ import type {
   AutomationRunCompletionObservation,
   AutomationRunTerminalObserver
 } from './run-completion-watcher'
+import type { TerminalExitCause } from '../../shared/terminal-exit-cause'
+import { observeShellRunCompletion } from './shell-run-completion'
 import type { AutomationRunOutputSnapshot } from '../../shared/automations-types'
 
 const TERMINAL_SNAPSHOT_LIMIT = 2_000
@@ -27,11 +29,26 @@ const OBSERVE_DEADLINE_MS = 6 * 60 * 60 * 1000
 /** The runtime surface an authority uses to observe its own terminals. */
 export type AutomationRunTerminalHost = {
   getTerminalHandleForPaneKey(paneKey: string): string | null
+  resolveTerminalPane?(
+    paneKey: string,
+    workspaceId?: string
+  ): { handle: string; ptyId: string | null; incarnationId?: string | null; connected?: boolean }
+  subscribeToTerminalData?(ptyId: string, listener: (data: string) => void): () => void
+  subscribeToPtyExit?(ptyId: string, listener: () => void): () => void
   waitForTerminal(
     handle: string,
-    options?: { condition?: 'tui-idle'; timeoutMs?: number; signal?: AbortSignal }
-  ): Promise<{ satisfied: boolean; blockedReason?: string }>
-  readTerminal(handle: string, opts?: { limit?: number }): Promise<{ tail: string[] }>
+    options?: { condition?: 'tui-idle' | 'exit'; timeoutMs?: number; signal?: AbortSignal }
+  ): Promise<{
+    satisfied: boolean
+    blockedReason?: string
+    exitCode?: number | null
+    exitCause?: TerminalExitCause | null
+  }>
+  readTerminal(
+    handle: string,
+    opts?: { limit?: number },
+    snapshot?: { streamOnly?: boolean }
+  ): Promise<{ tail: string[]; truncated?: boolean; limited?: boolean }>
 }
 
 function isTerminalWaitTimeout(error: unknown): boolean {
@@ -149,9 +166,40 @@ export function createRuntimeAutomationRunTerminalObserver(
   runtime: AutomationRunTerminalHost
 ): AutomationRunTerminalObserver {
   return {
-    resolveRunTerminal: (run) =>
-      run.terminalPaneKey ? runtime.getTerminalHandleForPaneKey(run.terminalPaneKey) : null,
-    observeCompletion: async (handle, { signal }) => {
+    resolveRunTerminal: (run) => {
+      if (!run.terminalPaneKey) {
+        return null
+      }
+      if (run.completionCondition !== 'exit') {
+        return runtime.getTerminalHandleForPaneKey(run.terminalPaneKey)
+      }
+      if (!run.terminalPtyId || !run.terminalIncarnationId) {
+        return null
+      }
+      try {
+        const terminal = runtime.resolveTerminalPane?.(
+          run.terminalPaneKey,
+          run.workspaceId ?? undefined
+        )
+        return terminal?.ptyId === run.terminalPtyId &&
+          terminal.incarnationId === run.terminalIncarnationId
+          ? terminal.handle
+          : null
+      } catch {
+        return null
+      }
+    },
+    observeCompletion: async (handle, { signal, run, onUnverifiable, onCommandExit }) => {
+      if (run?.completionCondition === 'exit') {
+        return await observeShellRunCompletion(
+          runtime,
+          handle,
+          run,
+          signal,
+          onUnverifiable,
+          onCommandExit
+        )
+      }
       const startedAt = Date.now()
       // Why: tui-idle is level-triggered, so a reused pane still idle from the
       // PREVIOUS run satisfies it before this run's agent has typed a character.

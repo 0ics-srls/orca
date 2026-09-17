@@ -120,7 +120,7 @@ describe('authority-owned automation run completion', () => {
   })
 
   it.each(['renderer', 'headless', 'retained'] as const)(
-    'keeps %s shell runs out of the agent-idle completion watcher',
+    'routes %s shell runs through host completion observation',
     async (mode) => {
       const store = await createStore()
       const automation = createAutomation(store, null)
@@ -145,13 +145,76 @@ describe('authority-owned automation run completion', () => {
             service.start()
           }
         }
-        expect(resolveTerminal).not.toHaveBeenCalled()
-        expect(readRun(store, automation.id, run.id).status).toBe('dispatched')
+        expect(resolveTerminal).toHaveBeenCalledWith(
+          expect.objectContaining({ completionCondition: 'exit' })
+        )
+        await vi.waitFor(() =>
+          expect(readRun(store, automation.id, run.id).status).toBe('completed')
+        )
       } finally {
         service.stop()
       }
     }
   )
+
+  it('binds a reserved shell run before execution and refuses replacement identities or late acknowledgements', async () => {
+    const store = await createStore()
+    const automation = createAutomation(store, null)
+    const observer = createObserver(async () => ({
+      status: 'completed',
+      outputSnapshot: {
+        format: 'plain_text',
+        content: 'host output',
+        capturedAt: Date.now(),
+        truncated: false
+      }
+    }))
+    const observing = vi.spyOn(observer, 'observeCompletion')
+    const service = new AutomationService(store, { terminalObserver: observer })
+    const run = store.createAutomationRun(automation, Date.now(), 'manual')
+    await service.markDispatchResult({
+      runId: run.id,
+      status: 'dispatching',
+      workspaceId: 'wt1',
+      terminalPaneKey: LAUNCH_TARGET.terminalPaneKey
+    })
+    const historyReads = vi.spyOn(store, 'listAutomationRuns')
+    service.bindShellRunTerminal({
+      workspaceId: 'other',
+      paneKey: LAUNCH_TARGET.terminalPaneKey,
+      ptyId: 'pty-1',
+      incarnationId: 'original'
+    })
+    expect(observing).not.toHaveBeenCalled()
+    expect(historyReads).not.toHaveBeenCalled()
+    service.bindShellRunTerminal({
+      workspaceId: 'wt1',
+      paneKey: LAUNCH_TARGET.terminalPaneKey,
+      ptyId: 'pty-1',
+      incarnationId: 'original'
+    })
+    await vi.waitFor(() => expect(readRun(store, automation.id, run.id).status).toBe('completed'))
+    await service.markDispatchResult({ runId: run.id, status: 'dispatched', ...LAUNCH_TARGET })
+    await service.markDispatchResult({
+      runId: run.id,
+      status: 'dispatch_failed',
+      error: 'late renderer failure'
+    })
+    service.bindShellRunTerminal({
+      workspaceId: 'wt1',
+      paneKey: LAUNCH_TARGET.terminalPaneKey,
+      ptyId: 'pty-1',
+      incarnationId: 'replacement'
+    })
+    expect(readRun(store, automation.id, run.id)).toMatchObject({
+      status: 'completed',
+      terminalIncarnationId: 'original',
+      outputSnapshot: { content: 'host output' },
+      error: null
+    })
+    expect(observing).toHaveBeenCalledOnce()
+    service.stop()
+  })
 
   it('leaves a headless dispatched run alone when the authority cannot observe it', async () => {
     const store = await createStore()

@@ -9,8 +9,8 @@ describe.skipIf(process.platform !== 'win32').each(['off', 'on'])(
     it.each([
       { command: 'exit /b 0', expected: 0 },
       { command: 'exit /b 7', expected: 7 },
-      { command: 'orca_nonexistent_automation_command', expected: 9009 },
-      { command: 'cmd.exe /d /c exit 7 & echo recovered', expected: 7 },
+      { command: 'orca_nonexistent_automation_command', expected: 1 },
+      { command: 'cmd.exe /d /c exit 7 & echo recovered', expected: 0 },
       { command: 'echo literal!value! & exit /b 0', expected: 0, output: 'literal!value!' },
       {
         command: `"${process.execPath}" -e "process.stdout.write('quoted path works'); process.exit(7)"`,
@@ -18,6 +18,12 @@ describe.skipIf(process.platform !== 'win32').each(['off', 'on'])(
         output: 'quoted path works'
       }
     ])('preserves output and exit status: $command', async ({ command, expected, output }) => {
+      const direct = await runProcess({
+        program: 'cmd.exe',
+        args: ['/d', '/v:off', '/s', '/c', `"${command}"`],
+        windowsVerbatimArguments: true,
+        timeoutMs: 15_000
+      })
       const startup = buildAutomationShellStartup(command, 'cmd', 'native-cmd-run')
       const result = await runProcess({
         program: 'cmd.exe',
@@ -31,6 +37,8 @@ describe.skipIf(process.platform !== 'win32').each(['off', 'on'])(
         result.stdout
       )
       expect(result.timedOut).toBe(false)
+      expect(direct.timedOut).toBe(false)
+      expect(result.code).toBe(direct.code)
       expect(result.code).toBe(expected)
       expect(receipts).toEqual([expected])
       if (output) {

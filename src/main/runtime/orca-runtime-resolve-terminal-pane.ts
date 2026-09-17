@@ -197,6 +197,9 @@ export class OrcaRuntimeWithResolveTerminalPane extends OrcaRuntimeWithGetTermin
     const pty = this.getLivePtyForHandle(handle)
     if (pty) {
       const read = this.readPtyTerminal(handle, pty.pty, opts)
+      if (providerSnapshot.streamOnly) {
+        return labelTerminalReadSource(read)
+      }
       const visibleRead = opts.screen
         ? await this.readRenderedScreen(pty.pty.ptyId, read, opts)
         : await this.withVisibleSnapshotFallback(pty.pty.ptyId, read, opts, providerSnapshot)
@@ -216,7 +219,7 @@ export class OrcaRuntimeWithResolveTerminalPane extends OrcaRuntimeWithGetTermin
       cursor: opts.cursor,
       limit: opts.limit
     })
-    if (!leaf.ptyId) {
+    if (!leaf.ptyId || providerSnapshot.streamOnly) {
       return { ...read, source: opts.screen ? 'screen-unavailable' : 'stream' }
     }
     const visibleRead = opts.screen

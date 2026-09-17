@@ -11,6 +11,7 @@ function makeRequest(method: string, params?: unknown): RpcRequest {
 
 describe('automation RPC methods', () => {
   it('routes automation CRUD and run operations to the runtime server', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       listAutomations: vi.fn().mockReturnValue([{ id: 'auto-1', name: 'Daily review' }]),
@@ -108,6 +109,7 @@ describe('automation RPC methods', () => {
   })
 
   it('returns a cursor page when the caller requests a bounded run history', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       listAutomationRunsPage: vi.fn().mockReturnValue({
@@ -127,6 +129,7 @@ describe('automation RPC methods', () => {
   })
 
   it('preserves an explicit blank terminal when creating and updating an automation', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       createAutomation: vi.fn().mockResolvedValue({ id: 'auto-1', agentId: null }),
@@ -169,6 +172,7 @@ describe('automation RPC methods', () => {
       automationId: automation.id,
       selector: { kind: 'self' as const }
     }))
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       listAutomationsForScope: () => ({ automations, items }),
       showAutomation: () => automations[1],
@@ -184,14 +188,18 @@ describe('automation RPC methods', () => {
     })
     expect(() => show.handler({ id: 'shell' }, context)).toThrow('newer Orca client')
     expect(
-      list.handler({}, {
-        ...context,
-        clientCapabilities: [AUTOMATION_SHELL_RUNTIME_CAPABILITY]
-      })
+      list.handler(
+        {},
+        {
+          ...context,
+          clientCapabilities: [AUTOMATION_SHELL_RUNTIME_CAPABILITY]
+        }
+      )
     ).toEqual({ automations, items })
   })
 
   it('rejects unknown providers and invalid schedules', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       createAutomation: vi.fn()
@@ -226,6 +234,7 @@ describe('automation RPC methods', () => {
   })
 
   it('preserves null baseBranch update values through the RPC boundary', async () => {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: The fixture implements every runtime method exercised by these RPC requests.
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       updateAutomation: vi.fn().mockResolvedValue({ id: 'auto-1', baseBranch: null })

@@ -1,3 +1,7 @@
+import {
+  ShellRunTerminalBindings,
+  type ShellRunTerminalBinding
+} from './shell-run-terminal-binding'
 import type { WebContents } from 'electron'
 
 /** All the service asks of the renderer: is it still there, and take this message. Narrower
@@ -54,6 +58,7 @@ export class AutomationService {
   private readonly allowRemoteHostScheduling: boolean
   private readonly headlessDispatcher: HeadlessAutomationDispatcher | null
   private readonly publish: PublishAutomationsChanged | null
+  private readonly shellRunBindings = new ShellRunTerminalBindings()
   private readonly runs: AutomationRunWriter
   private readonly completionWatcher: AutomationRunCompletionWatcher | null
   /** Installed by desktop IPC registration, where external probes live; null on
@@ -117,9 +122,9 @@ export class AutomationService {
     this.timer = setInterval(() => {
       void this.evaluateDueRuns()
     }, this.tickMs)
-    this.completionWatcher?.reconcileRetainedRuns(
-      this.store.listAutomationRuns().filter((run) => this.isAgentRun(run))
-    )
+    const retained = this.store.listAutomationRuns()
+    this.shellRunBindings.restore(retained, this.runs)
+    this.completionWatcher?.reconcileRetainedRuns(retained)
     reportAutomationScheduleDrift(this.store.listAutomations())
     // Why: headless serve never gets a renderer-ready IPC, but due runs still
     // need the same startup catch-up pass desktop gets after renderer attach.
@@ -189,9 +194,10 @@ export class AutomationService {
 
   async markDispatchResult(result: AutomationDispatchResult): Promise<AutomationRun> {
     const run = this.runs.updateRun(result)
+    this.shellRunBindings.remember(run)
     clearAutomationDispatchTokens(run.automationId, run.id)
     if (!isFinalAutomationRunStatus(run.status)) {
-      if (run.status === 'dispatched' && this.completionWatcher && this.isAgentRun(run)) {
+      if (run.status === 'dispatched' && this.completionWatcher) {
         this.completionWatcher.watch(run)
       }
       return run
@@ -213,11 +219,11 @@ export class AutomationService {
     })
   }
 
-  private isAgentRun(run: AutomationRun): boolean {
-    return (
-      this.store.listAutomations().find((automation) => automation.id === run.automationId)
-        ?.agentId !== null
-    )
+  bindShellRunTerminal(binding: ShellRunTerminalBinding): void {
+    const run = this.shellRunBindings.bind(this.store, this.runs, binding)
+    if (run) {
+      this.completionWatcher?.watch(run)
+    }
   }
 
   private async evaluateDueRuns(): Promise<void> {
@@ -310,7 +316,7 @@ export class AutomationService {
           runPrecheck: () => this.runPrecheck(automation.id, run.id),
           markDispatchResult: (result) => this.markDispatchResult(result),
           watchRun: (dispatched) => {
-            if (this.completionWatcher && this.isAgentRun(dispatched)) {
+            if (this.completionWatcher) {
               this.completionWatcher.watch(dispatched)
             }
           }

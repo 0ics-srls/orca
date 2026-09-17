@@ -73,6 +73,7 @@ export async function launchAgentBackgroundSession(
   const hasPrompt = trimmedPrompt.length > 0
   const plan = buildBackgroundSessionStartup({
     agent,
+    automationRunId: args.automationRunId,
     prompt: trimmedPrompt,
     settings: store.settings,
     platform: launchHost.platform,
@@ -155,6 +156,7 @@ export async function launchAgentBackgroundSession(
     agentStatusConsumer?.consume(data)
   }
   try {
+    await args.onPrepared?.({ tabId: reservedTabId, paneKey })
     if (runtimeTarget.kind === 'environment') {
       const created = await createRuntimeAgentBackgroundTerminal({
         environmentId: runtimeTarget.environmentId,

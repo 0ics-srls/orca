@@ -55,6 +55,10 @@ export class RuntimeAutomationController {
     this.service = service
   }
 
+  bindShellRunTerminal(binding: Parameters<AutomationService['bindShellRunTerminal']>[0]): void {
+    this.service?.bindShellRunTerminal(binding)
+  }
+
   /** Keep runtime-owned automation work ahead of queued external probes. */
   withExternalProbePriority<T>(run: () => T): T {
     const wrap = this.service?.externalProbePriority
