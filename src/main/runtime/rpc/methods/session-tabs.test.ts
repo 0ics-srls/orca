@@ -500,7 +500,14 @@ describe('session tab RPC methods', () => {
     )
   })
 
-  it('passes split-group placement support to paired terminal creation', async () => {
+  it.each([
+    {
+      label: 'present',
+      clientCapabilities: [SESSION_TABS_SPLIT_GROUP_PLACEMENT_RUNTIME_CAPABILITY],
+      expectedSupport: true
+    },
+    { label: 'absent', clientCapabilities: [], expectedSupport: false }
+  ])('passes split-group placement support when the capability is $label', async (testCase) => {
     const runtime = {
       getRuntimeId: () => 'test-runtime',
       createMobileSessionTerminal: vi.fn().mockResolvedValue({
@@ -521,7 +528,7 @@ describe('session tab RPC methods', () => {
       {
         clientKind: 'runtime',
         pairedDeviceId: 'device-a',
-        clientCapabilities: [SESSION_TABS_SPLIT_GROUP_PLACEMENT_RUNTIME_CAPABILITY]
+        clientCapabilities: testCase.clientCapabilities
       }
     )
 
@@ -530,7 +537,7 @@ describe('session tab RPC methods', () => {
       expect.objectContaining({
         afterTabId: 'tab-1',
         clientNavigationId: 'device-a',
-        supportsSplitGroupPlacement: true
+        supportsSplitGroupPlacement: testCase.expectedSupport
       })
     )
   })

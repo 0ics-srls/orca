@@ -2,6 +2,21 @@
 
 This runbook applies to the stable Cloud Run director and the production-shaped GCE cells in both environments. It does not authorize a full Terraform apply: staging and production contain unrelated drift, so inspect a saved targeted plan and its destroy count before every apply.
 
+## PostgreSQL statement statistics
+
+Relay schema startup exposes `pg_stat_statements` when the server already preloads
+that collector and the schema identity can install its extension. Servers without
+the collector or the required privileges continue normally. Installation does not
+change preload settings, reset collected counters, or require a database restart;
+concurrent startups yield to one installer. An existing extension is left in place.
+
+For SQL incidents, inspect bounded aggregates of `calls`, `total_exec_time`,
+`shared_blks_read`, `shared_blks_dirtied`, and `wal_bytes`, scoped to the relay
+database and identified query IDs. Compare counter deltas over the same interval
+as fleet runtime metrics; retain the statistics reset timestamp. Do not export
+query text, identities, credentials, or invoke `pg_stat_statements_reset()` during
+an investigation. Treat an unavailable view as missing evidence, not zero work.
+
 The relay is automatically active for entitled signed-in desktops. There is no rollout flag, cohort, or user toggle. The emergency product kill switch is the auth plane refusing relay-token exchange; use cell drains only to move or terminate existing data-plane work.
 
 ## Safety rules
@@ -466,11 +481,16 @@ After a deployment traffic shift, preserve the old revision/tag until metrics an
 
 ## Regional rehoming
 
-Rehoming moves a host to a general cell in the region its desktop last reported, in either
-direction. Both roles need the drain protocol: a cell without it can be neither a source nor a
-target, and it is not part of the fleet whose telemetry gates the worker. Until the asia-east2
-cells run `regionalRehomeProtocol` 1 they are none of the three, so no host is moved into or out
-of Asia and an Asia cell in distress does not pause the worker.
+Idle regional correction requires both source and target cells to advertise
+`regionalRehomeProtocol >= 3`. PR #20105 introduced this capability version with
+the idle handoff implementation. With that runtime, both rehome trust environment
+settings must be configured to advertise 3; otherwise the cell advertises 0.
+An older trusted runtime can advertise 1: configuring trust alone does not upgrade
+its implementation. The separate `connectionCapacityProtocol: 2` health field does
+not establish regional-correction readiness. Verify the live runtime version and
+image, not only instance-template configuration, before rollout or enablement.
+Incompatible cells are excluded from correction selection; enabling the cohort
+cannot override this check. Director and cell deployments are separate operations.
 
 `host-cooldown-ms` is the minimum gap between two rehomes of one host. It bounds the damage from
 a desktop whose region probe flips: without it the host would be dragged back across the ocean on
