@@ -7,6 +7,15 @@
     "arch": "arm64"
   },
   "workingFlavor": "currentFixed",
+  "configurationAndFixtureHashes": {
+    "config/vitest.config.ts": "05c58f7f4f53008ba46800f5a14759751e0b4da2ccf35613931d2bc27ca5a1c9",
+    "config/scripts/ci-unit-sequencer.mjs": "fe7d421e2052d7d7d90678f7fde15b1f974e67459df7244d826b4a1d39cee730",
+    "config/scripts/happy-dom-offscreen-canvas.ts": "888cef91689976d56d944a2069cd4a163aac301936e20180ace8881cc0e4b2a0",
+    "config/scripts/happy-dom-mutation-observer-retention.ts": "15afb5c70ec9914313fbaea43942e974b77ef41ca672f27301daf93bc8dcec45",
+    "config/scripts/vitest-host-ports-setup.ts": "13bad1952f2da1a3c0042d06cbc375dc03ec112552d91661589ea2c64d159b21",
+    "src/main/ipc/runtime-environment-session-retirement.test.ts": "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5",
+    "config/scripts/ci-shard-assignment.mjs": "a7b57ff68bdbfab909b753bc117edbcc0da2029b552ab1176d815b2d2142f49b"
+  },
   "publicationCommit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
   "dependencyScope": "Complete evaluated src module graphs; Vitest/esbuild and other node_modules use installed working dependencies. File hashes normalize CRLF to LF.",
   "installedToolVersions": {
@@ -29,11 +38,11 @@
   },
   "artifactHashes": {
     "scenario.test.mjs": "4260a53478de7564fb80ddb9657ce06804af047fc19e4395b07b374132ed346c",
-    "sources.cjs": "78632a61c38ba7b6b71a424f3288254c064ee7bd6a9fc9c7674e864fa0e041b4",
+    "sources.cjs": "1909b4a86ed71b0cabc8da20753d58331c43004f90d7ea1f3913edf4febc7cf8",
     "phase.config.mjs": "b7f6dd1de0fefc7d10e5c473994f2196715bbdc3f75ecd83ad274682f67616f5",
     "before.config.mjs": "a5846749981bf533be223131ab5a787cef691448a58894806f5ef722b6c61195",
-    "reproduce.mjs": "4390e4c427490edc443c7261ce24f5e069d8e426e6a633dfb5035beea4800297",
-    "source-versions.json": "b63f0f65b5a29616ec88b5ab0bac788e1d73af18a7e3850ceb32d49cced235ed",
+    "reproduce.mjs": "e8bc1bc5efbf9dc1ae2deef05f48cf178785b155fe974e1e373d57144157c5e9",
+    "source-versions.json": "7ce0e4a36387779e24bd4f068621321682faf0fa14a9c38cce98db4cef1f0068",
     "fix.patch": "c8b37c7b72945d6889dd5afb99da4d9e7348965a04f6b9bfd914b65250a95fc4",
     "main-fix.patch": "b44976a0167c68ccbdfc6ca382e55ffe07454ba9e7d74a44b4e570bba3825530",
     "publication.patch": "2319a9224c9b2a87ae69921745ff506efde00bb6b4b160f2870550f13aa061d5"

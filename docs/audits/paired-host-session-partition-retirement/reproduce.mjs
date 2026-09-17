@@ -133,6 +133,7 @@ try {
       arch: process.arch
     },
     workingFlavor: loaded.flavor,
+    configurationAndFixtureHashes: loaded.runnerHashes,
     publicationCommit: versions.publicationCommit,
     dependencyScope: versions.scope,
     installedToolVersions: {
