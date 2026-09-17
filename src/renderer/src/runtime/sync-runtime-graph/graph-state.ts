@@ -209,7 +209,6 @@ function sameMembers(
   return true
 }
 
-
 // Structural equality under JSON-serialization semantics (undefined-valued keys are absent).
 export function jsonContentEquals(a: unknown, b: unknown): boolean {
   if (a === b) {

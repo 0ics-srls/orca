@@ -90,12 +90,9 @@ export function buildMobileSessionTabSnapshots(
     }
     const cached = graphState.mobileSessionSnapshotCacheByWorktree.get(worktreeId)
     const sourceRefs = collectMobileSessionWorktreeSourceRefs(state, worktreeId, publicationInputs)
-    // A worktree with no mounted TerminalPane has no live input outside the store, so unchanged
-    // sources prove the rebuild below would land on `canReuseMobileSessionSnapshot` anyway. Mounted
-    // worktrees still rebuild: their PaneManager/DOM state can move with no store mutation at all.
-    // Both mount conditions are load-bearing, because the source refs deliberately do not
-    // fingerprint that live capture: drop the registry check and a late mount is never seen; drop
-    // the capture-size check and a late unmount is never seen. See
+    // Only a worktree with no mounted TerminalPane then or now can skip the rebuild: source refs
+    // deliberately do not fingerprint the live PaneManager/DOM capture. Drop the registry check and
+    // a late mount is never seen; drop the capture-size check and a late unmount is never seen. See
     // `sync-runtime-graph-late-terminal-mount.test.ts`.
     if (
       cached &&

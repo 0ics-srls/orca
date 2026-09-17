@@ -4,28 +4,13 @@ import { tabKeyedRecordBucket } from './tab-keyed-record-partition'
 import type { MobileSessionPublicationInputs, MobileSessionWorktreeSourceRefs } from './types'
 
 /**
- * Every store and publication value one worktree's snapshot is derived from, at the granularity
- * that actually moves.
+ * The store and publication half of `MobileSessionWorktreeSourceRefs`; see that type for what the
+ * fingerprint does and does not cover.
  *
- * Why this exists: these cover every `AppState` and `MobileSessionPublicationInputs` read in
- * `buildMobileSessionWorktreeInputs`, so an unchanged set proves no *store* input moved this
- * worktree's snapshot — without building the inputs. That is the difference between per-publication
- * work proportional to every accumulated worktree and work proportional to what the frame changed.
- *
- * What is deliberately not fingerprinted: the builder also reads live PaneManager/DOM state through
- * `captureMountedTerminalSurfaces`, which no store reference can witness. Refs-equality is therefore
- * not sufficient alone, and `buildMobileSessionTabSnapshots` pairs it with a
- * `graphState.registeredTabIdsByWorktree` check and an empty cached capture map. Delete either guard
- * and a worktree cached before its pane mounted publishes its pre-mount snapshot permanently — that
- * is exactly what `sync-runtime-graph-late-terminal-mount.test.ts` pins.
- *
- * Granularity is load-bearing. Worktree-keyed slices contribute their own worktree's value, because
- * one tab title replaces the containing record but not its sibling entries. Tab-keyed records
- * contribute a partition bucket for the same reason. Everything else contributes the whole
- * reference, which is conservative: it can only force extra rebuilds, never skip a real change.
- *
- * `sync-runtime-graph-worktree-source-census.test.ts` proves the store/publication coverage by
- * recording every key the inputs builder reads and failing when this collector does not read it too.
+ * Granularity is load-bearing: worktree-keyed slices and tab-keyed partition buckets contribute
+ * their own worktree's entry, because one tab title replaces the containing record but not its
+ * siblings. Everything else contributes the whole reference, which can only over-rebuild.
+ * `sync-runtime-graph-worktree-source-census.test.ts` pins the coverage against the inputs builder.
  */
 export function collectMobileSessionWorktreeSourceRefs(
   state: AppState,
