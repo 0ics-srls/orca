@@ -1,4 +1,3 @@
-import type { AgentSessionClaimedSpawnResult } from './agent-session-host-authority'
 import type { AgentStatusExecutionBinding } from './agent-status-execution-binding'
 import {
   agentSessionSurfacesEqual,
@@ -10,6 +9,7 @@ import {
   type LiveAgentSessionOwner
 } from './claimed-agent-pty-owner-snapshot'
 import type {
+  AgentSessionClaimedSpawnResult,
   AgentSessionExecutionClaim,
   AgentSessionSurfaceBinding
 } from './agent-session-host-authority'

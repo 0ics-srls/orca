@@ -24,6 +24,7 @@ import {
 } from '../../../shared/agent-status-legacy-adapter'
 import { isValidPiProviderSessionOnly } from './server-status-identity'
 import { AgentHookServerIngestStructured } from './server-ingest-structured'
+import { parseAgentStatusReportedExecutionBinding } from '../../../shared/agent-status-execution-binding'
 
 export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestStructured {
   /** Ingest a payload from the relay JSON-RPC channel (not the local HTTP server); connectionId is stamped here. Main is still the SSH trust boundary, so re-run the canonical normalizer before caching. */
@@ -271,7 +272,10 @@ export abstract class AgentHookServerIngestRemote extends AgentHookServerIngestS
       paneKey,
       source,
       launchToken: statusDisposition === 'restart' ? undefined : envelope.launchToken,
-      reportedExecutionBinding: envelope.reportedExecutionBinding,
+      // Parsed here, not trusted: every sibling field on this envelope is re-validated because the
+      // relay crosses a trust boundary, and the WSL relay reaches this with a raw wire cast.
+      reportedExecutionBinding:
+        parseAgentStatusReportedExecutionBinding(envelope.reportedExecutionBinding) ?? undefined,
       tabId,
       worktreeId,
       connectionId: trimmedConnectionId,

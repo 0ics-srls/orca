@@ -4,15 +4,7 @@ import { parseWslPath } from '../wsl'
 import { resolvePathEnvKey } from '../pty/windows-environment-path'
 import { expandWindowsEnvironmentVariables } from '../../shared/windows-environment-expansion'
 import { resolveSafePtyDefaultCwd } from './pty-default-cwd'
-
-const PANE_IDENTITY_ENV_KEYS = [
-  'ORCA_PANE_KEY',
-  'ORCA_TAB_ID',
-  'ORCA_WORKTREE_ID',
-  'ORCA_AGENT_LAUNCH_TOKEN',
-  'ORCA_AGENT_STATUS_RUN_ID',
-  'ORCA_AGENT_STATUS_EXECUTION_ID'
-] as const
+import { PANE_IDENTITY_ENV_KEYS } from '../../shared/pane-identity-env'
 
 export function getDefaultCwd(): string {
   return resolveSafePtyDefaultCwd()
