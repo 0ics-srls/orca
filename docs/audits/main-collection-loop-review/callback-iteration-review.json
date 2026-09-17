@@ -1,0 +1,30 @@
+{
+  "scope": "Five targeted callback iteration reads plus one watcher teardown support path; static, no whole-program alias or reentrancy proof",
+  "head": "6ab6802df90553d2a26e9a4c7a519ae11d4b5e09",
+  "sources": [
+    {
+      "path": "src/main/daemon/degraded-daemon-pty-provider.ts",
+      "sha256": "a2b95e457bd7819bfe1a56f5dde2fd6785e5a731801d7f75d2f6ed657c9b50cd"
+    },
+    {
+      "path": "src/relay/relay-filesystem-watch-registry.ts",
+      "sha256": "aa0c123683c2622554e6650d8140ea60367d7ed2e9fb6f76057af2f771705a83"
+    },
+    {
+      "path": "src/shared/agent-status-legacy-adapter.ts",
+      "sha256": "402b9aa96a89952ee91f687134f3870f641bbbc67c6608e2e2f5b07541213b8e"
+    },
+    {
+      "path": "src/shared/browser-annotation-viewport-bridge.ts",
+      "sha256": "237a941df42a857fb8934b147effb5eac22555c9acf4f8e04d9cdc415ff3eefc"
+    },
+    {
+      "path": "src/relay/ssh-pty-source-credit-adapter.ts",
+      "sha256": "837728c4f0e1b881254744520d85ba213abf7b00034239f16822b3040fdb75d1"
+    },
+    {
+      "path": "src/relay/relay-watcher-teardown-tracker.ts",
+      "sha256": "75903e3fa326f85cec4cbb879bf164593f6f216c190d099fa1d5889ef74f0fbd"
+    }
+  ]
+}

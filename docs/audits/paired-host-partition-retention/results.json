@@ -1,0 +1,10 @@
+{
+  "cycles": 32,
+  "remainingEnvironments": 0,
+  "invalidatedTransports": 32,
+  "inMemoryPartitions": 32,
+  "persistedPartitions": 32,
+  "persistedPartitionJsonBytes": 18115,
+  "reloadedPartitions": 32,
+  "limits": "Real Store and GUI IPC removal; seeded sessions, inert transport retirement and browser storage; no network, UI, native PTY, RSS or incident attribution."
+}

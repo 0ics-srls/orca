@@ -29,15 +29,15 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25685,
-  "matchingFiles": 7888,
+  "sourceFilesSearched": 25717,
+  "matchingFiles": 7900,
   "counts": {
     "addEventListener": 1555,
     "removeEventListener": 1203,
-    "setTimeout": 3961,
-    "clearTimeout": 1857,
-    "setInterval": 383,
-    "clearInterval": 218,
+    "setTimeout": 3969,
+    "clearTimeout": 1858,
+    "setInterval": 384,
+    "clearInterval": 219,
     "requestAnimationFrame": 586,
     "cancelAnimationFrame": 381,
     "subscribe(": 738,
@@ -46,11 +46,11 @@
     "MutableDisposable": 1,
     "onWillDispose": 1,
     "onDidDispose": 17,
-    "new Map": 7604,
-    "new Set": 7276,
-    "Buffer.concat": 277,
+    "new Map": 7613,
+    "new Set": 7277,
+    "Buffer.concat": 279,
     "Promise.race": 215,
-    "Promise.withResolvers": 157
+    "Promise.withResolvers": 161
   },
   "files": {
     ".github/actions/cloud-sql-rollout-lease/renew.mjs": {
@@ -1295,6 +1295,9 @@
     "docs/audits/auth-filesystem-wait-retention/sources.cjs": {
       "new Map": 2
     },
+    "docs/audits/browser-closed-result-retention/sources.cjs": {
+      "new Map": 2
+    },
     "docs/audits/claude-branch-proof-streaming/parity-cases.cjs": {
       "Buffer.concat": 2
     },
@@ -1358,6 +1361,12 @@
     "docs/audits/nested-repo-processed-queue/reproduce.cjs": {
       "new Set": 1
     },
+    "docs/audits/osc133-carry-retention/reproduce.cjs": {
+      "setTimeout": 1
+    },
+    "docs/audits/paired-host-partition-retention/store-removal.test.mjs": {
+      "new Map": 1
+    },
     "docs/audits/pending-split-close/daemon-proof.test.ts": {
       "Promise.withResolvers": 2
     },
@@ -1399,6 +1408,19 @@
       "new Map": 1,
       "setTimeout": 1
     },
+    "docs/audits/runtime-memory-body-issues/fingerprint-repetition.test.mjs": {
+      "setTimeout": 2
+    },
+    "docs/audits/runtime-resource-body-review/local-rpc.test.mjs": {
+      "Promise.withResolvers": 1
+    },
+    "docs/audits/runtime-resource-body-review/long-poll.test.mjs": {
+      "Promise.withResolvers": 1,
+      "new Map": 1
+    },
+    "docs/audits/runtime-resource-body-review/vitest.config.mjs": {
+      "new Map": 1
+    },
     "docs/audits/runtime-rpc-consumed-queue/extended-controls.cjs": {
       "Promise.withResolvers": 2,
       "new Set": 1,
@@ -1419,6 +1441,20 @@
     },
     "docs/audits/speech-worker-audio-queue/reproduce.cjs": {
       "setTimeout": 1
+    },
+    "docs/audits/ssh-file-metadata-retention/relay-fixture.mjs": {
+      "new Map": 2,
+      "new Set": 1
+    },
+    "docs/audits/ssh-file-metadata-retention/scenario.test.mjs": {
+      "Buffer.concat": 1,
+      "clearInterval": 1,
+      "clearTimeout": 1,
+      "setInterval": 1,
+      "setTimeout": 5
+    },
+    "docs/audits/ssh-file-metadata-retention/sources.cjs": {
+      "new Map": 1
     },
     "docs/audits/ssh-writer-consumed-prefix/reproduce.cjs": {
       "clearTimeout": 1,
@@ -4518,6 +4554,10 @@
       "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
+    },
+    "src/main/browser/browser-manager-viewport-ownership.test.ts": {
+      "Promise.withResolvers": 2,
+      "new Map": 1
     },
     "src/main/browser/browser-manager-viewport-scroll-state.ts": {
       "new Map": 3
@@ -12888,6 +12928,9 @@
     },
     "src/main/ssh/ssh-filesystem-stream-reader.ts": {
       "unsubscribe": 7
+    },
+    "src/main/ssh/ssh-filesystem-stream-retention.test.ts": {
+      "Buffer.concat": 1
     },
     "src/main/ssh/ssh-g-config-resolution.ts": {
       "new Map": 1,

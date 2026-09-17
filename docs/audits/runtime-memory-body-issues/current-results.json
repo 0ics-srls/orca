@@ -1,0 +1,79 @@
+{
+  "numTotalTestSuites": 4,
+  "numPassedTestSuites": 4,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 3,
+  "numPassedTests": 3,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789622104441,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue 15098 current Linux silent child control"],
+          "fullName": "issue 15098 current Linux silent child control releases the RPC wait after init timeout, graceful drain and bounded hard-kill wait",
+          "status": "passed",
+          "title": "releases the RPC wait after init timeout, graceful drain and bounded hard-kill wait",
+          "duration": 3.631292000000002,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622104623,
+      "endTime": 1789622104626.6313,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/docs/audits/runtime-memory-body-issues/codex-probe-deadline.test.mjs"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue 19312 finite slow fingerprint repetition"],
+          "fullName": "issue 19312 finite slow fingerprint repetition repeats full scans for finite four-second probes despite unchanged contents",
+          "status": "passed",
+          "title": "repeats full scans for finite four-second probes despite unchanged contents",
+          "duration": 11.943542000000889,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue 19312 finite slow fingerprint repetition"],
+          "fullName": "issue 19312 finite slow fingerprint repetition returns to cache reuse when the next finite probe fits the deadline",
+          "status": "passed",
+          "title": "returns to cache reuse when the next finite probe fits the deadline",
+          "duration": 1.6750840000004246,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622112686,
+      "endTime": 1789622112699.675,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/docs/audits/runtime-memory-body-issues/fingerprint-repetition.test.mjs"
+    }
+  ]
+}

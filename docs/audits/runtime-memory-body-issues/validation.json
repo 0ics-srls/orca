@@ -1,0 +1,117 @@
+{
+  "reviewDate": "2026-09-16",
+  "validatedWorkingRevision": "49a8671f68a29f2d399ded065432361b9d62a4cb",
+  "runtime": {
+    "node": "v26.6.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "vitest": "4.1.11"
+  },
+  "commands": [
+    "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config docs/audits/runtime-memory-body-issues/config.mts --reporter=json --outputFile=docs/audits/runtime-memory-body-issues/current-results.json",
+    "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config docs/audits/runtime-memory-body-issues/historical.config.mts --reporter=json --outputFile=docs/audits/runtime-memory-body-issues/reported-results.json",
+    "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/github/github-repository-identity.fork-owner-repo.test.ts src/main/runtime/worktree-scan-admin-fingerprint-gate.test.ts src/main/runtime/terminal-model-query-authority.test.ts src/main/runtime/terminal-query-responder.test.ts --reporter=json --outputFile=docs/audits/runtime-memory-body-issues/controls-results.json"
+  ],
+  "tests": {
+    "current": {
+      "total": 3,
+      "passed": 3,
+      "failed": 0
+    },
+    "reported": {
+      "total": 2,
+      "passed": 2,
+      "failed": 0
+    },
+    "controls": {
+      "total": 138,
+      "passed": 138,
+      "failed": 0
+    }
+  },
+  "quality": {
+    "ordinaryOxlint": "passed",
+    "casting": "passed",
+    "typeAwareQuality": "passed",
+    "reactDoctor": "passed",
+    "designSystem": "passed",
+    "ordinaryTypeAwareOxlint": "passed",
+    "codeFiles": [
+      "docs/audits/runtime-memory-body-issues/codex-probe-deadline.test.mjs",
+      "docs/audits/runtime-memory-body-issues/config.mts",
+      "docs/audits/runtime-memory-body-issues/fingerprint-repetition.test.mjs",
+      "docs/audits/runtime-memory-body-issues/historical.config.mts",
+      "docs/audits/runtime-memory-body-issues/sources.cjs"
+    ]
+  },
+  "historicalSourceParity": {
+    "v1.4.197": {
+      "commit": "5ee4ace516080891731d100f843b074408a9ce0e",
+      "sources": {
+        "src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts": {
+          "historicalSha256": "66ef6ffc778f53c6899de22f8a5d388dc1cdca972cb232b8a2aef8b34e940474",
+          "currentSha256": "afdd59a68777f654643e21e2b644f2182afc18c26e37f17c3bbc70b1b91520ef",
+          "equal": false
+        },
+        "src/main/runtime/orca-runtime-postlude.ts": {
+          "historicalSha256": "392725586abb4631df7a62cbccb8e761c43a387eb25ac1302f490b29af942b04",
+          "currentSha256": "392725586abb4631df7a62cbccb8e761c43a387eb25ac1302f490b29af942b04",
+          "equal": true
+        },
+        "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts": {
+          "historicalSha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+          "currentSha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+          "equal": true
+        }
+      }
+    },
+    "v1.4.183": {
+      "commit": "49f57f83b4054aed486d365d4b277bb2a652f660",
+      "sources": {
+        "src/main/rate-limits/codex-fetcher.ts": {
+          "historicalSha256": "38a2779aacb5462ec1cab6494ebab7fc6074fe3ce777cb74837b7d3c36774892",
+          "currentSha256": "9c6f0a9f7f244478c55f41bbcb8dd65ea6ea380ef6317aec6cb6228a93fa5444",
+          "equal": false
+        },
+        "src/main/rate-limits/codex-probe-termination.ts": {
+          "historicalSha256": "1e2065708422d17f63a85759a8a3340ed4e86600619f059f073bb71cce5c8883",
+          "currentSha256": "2e20367628d35fa0fe4c3eddb6a7ae2f08fca508099319fbe2f836afa0f139c6",
+          "equal": false
+        }
+      }
+    },
+    "v1.4.187": {
+      "commit": "b5ed2d13e1348b1afe654a891794ca4bb68e4091",
+      "sources": {
+        "src/main/git/repo-default-base-ref.ts": {
+          "historicalAbsent": true
+        },
+        "src/main/git/remote-url-probe.ts": {
+          "historicalSha256": "42e2f3f775d759bae644e507e6ac5963656fe3c7c2552db2a5bffebe04d9cbd2",
+          "currentSha256": "d97ed523720648652a4de43b5cf66303c50990c9ff94de53015f1b8ca2ddcf44",
+          "equal": false
+        }
+      }
+    }
+  },
+  "scope": [
+    "No product changes. Source hashes fence thirty reviewed current boundary files, not every transitive import or installed dependency.",
+    "Reported v1.4.197 execution overlays only the exact refresh module; all other dependencies are current.",
+    "No affected-host, RSS, heap, CPU, real filesystem pressure, real Git subprocess or terminal transcript reproduction.",
+    "Finite fake-timer delays demonstrate control flow, not wall-clock deadlines under starvation.",
+    "Other historical source hashes and fix ancestry are static review provenance, not historical application execution."
+  ],
+  "artifactSha256": {
+    "docs/audits/runtime-memory-body-issues/README.md": "0dfa294773e2a9075037f1e8f1784d9d4a9b167507499967b1eb6b01cc16a403",
+    "docs/audits/runtime-memory-body-issues/codex-probe-deadline.test.mjs": "b6aeb8b5bcca5aba9ac6b28df90f87aa6074aa8d99617b2e62fa138c58893b4a",
+    "docs/audits/runtime-memory-body-issues/config.mts": "8d80d2497060ee5571686483fbcee219fd5d6f0b3064f6a430af22dbbe84c3d9",
+    "docs/audits/runtime-memory-body-issues/controls-results.json": "c1790b41b00dde748392ded4e430c6a29291a17415fbfa121b454202e94937bc",
+    "docs/audits/runtime-memory-body-issues/current-results.json": "96a812dc8ce55de0adbfbc3ac52faae1b5f441339629b055bca80754c1e12c0b",
+    "docs/audits/runtime-memory-body-issues/fingerprint-repetition.test.mjs": "cdb9fb2504f9edede7ce285926110c1c94210b18e14b475e9e16dcb8f43e2c62",
+    "docs/audits/runtime-memory-body-issues/historical.config.mts": "b7d4c88a64dc1206a2b75219368d4006f27f4547b22c08c1cc8e24757f0384ea",
+    "docs/audits/runtime-memory-body-issues/reported-results.json": "43aad579bf8c72255ac627bdeea597d5b593fcd12ed908457a503c80251fc573",
+    "docs/audits/runtime-memory-body-issues/reported.patch": "b544fdf830bd8d92eb7601c4739d33f8529eb23cdfaea334ecb8bd9702d2c238",
+    "docs/audits/runtime-memory-body-issues/source-versions.json": "3a61cff279a5e7e1279fb53976f91e953b72f6bf379ee25cf5f292bc78695f85",
+    "docs/audits/runtime-memory-body-issues/sources.cjs": "0e68086b0bc4e6014835cdc3a930944113ac018b5f3ce198314e64b53d258376"
+  }
+}

@@ -1,0 +1,1455 @@
+{
+  "numTotalTestSuites": 22,
+  "numPassedTestSuites": 22,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 138,
+  "numPassedTests": 138,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789622106934,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution getOwnerRepo prefers the upstream parent on a fork checkout",
+          "status": "passed",
+          "title": "getOwnerRepo prefers the upstream parent on a fork checkout",
+          "duration": 1.8255830000000515,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution getOwnerRepo and getIssueOwnerRepo agree on a fork checkout",
+          "status": "passed",
+          "title": "getOwnerRepo and getIssueOwnerRepo agree on a fork checkout",
+          "duration": 0.2878329999998641,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution getOwnerRepo falls back to origin when there is no upstream remote",
+          "status": "passed",
+          "title": "getOwnerRepo falls back to origin when there is no upstream remote",
+          "duration": 0.14737500000001091,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution skips git remote get-url upstream on origin-only clones and caches the listing",
+          "status": "passed",
+          "title": "skips git remote get-url upstream on origin-only clones and caches the listing",
+          "duration": 0.23550000000000182,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution resolves the upstream parent for SSH-style remote URLs",
+          "status": "passed",
+          "title": "resolves the upstream parent for SSH-style remote URLs",
+          "duration": 0.14937499999996362,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution getOwnerRepoForRemote(origin) still resolves the fork itself",
+          "status": "passed",
+          "title": "getOwnerRepoForRemote(origin) still resolves the fork itself",
+          "duration": 0.09704099999999016,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue #7331: fork PR owner/repo resolution"],
+          "fullName": "issue #7331: fork PR owner/repo resolution getRepoUpstream still resolves the fork parent offline (regression)",
+          "status": "passed",
+          "title": "getRepoUpstream still resolves the fork parent offline (regression)",
+          "duration": 0.4757090000000517,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622109763,
+      "endTime": 1789622109766.4758,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/github/github-repository-identity.fork-owner-repo.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["isTerminalModelQueryAuthorityEnabled"],
+          "fullName": "isTerminalModelQueryAuthorityEnabled defaults on, including for absent settings",
+          "status": "passed",
+          "title": "defaults on, including for absent settings",
+          "duration": 1.0285840000000235,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["isTerminalModelQueryAuthorityEnabled"],
+          "fullName": "isTerminalModelQueryAuthorityEnabled is an independent off switch for the responder alone",
+          "status": "passed",
+          "title": "is an independent off switch for the responder alone",
+          "duration": 0.12070900000003348,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["isTerminalModelQueryAuthorityEnabled"],
+          "fullName": "isTerminalModelQueryAuthorityEnabled requires both Phase-4 gate switches — no marks exist without them",
+          "status": "passed",
+          "title": "requires both Phase-4 gate switches — no marks exist without them",
+          "duration": 0.10924999999997453,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["shouldModelAnswerHiddenPtyQueries"],
+          "fullName": "shouldModelAnswerHiddenPtyQueries answers only for hidden-marked PTYs (the delivery decision is the reply decision)",
+          "status": "passed",
+          "title": "answers only for hidden-marked PTYs (the delivery decision is the reply decision)",
+          "duration": 0.21704199999999219,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["shouldModelAnswerHiddenPtyQueries"],
+          "fullName": "shouldModelAnswerHiddenPtyQueries yields to registered renderer delivery interest (chunk is delivered to a sidecar)",
+          "status": "passed",
+          "title": "yields to registered renderer delivery interest (chunk is delivered to a sidecar)",
+          "duration": 0.09733400000004622,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["shouldModelAnswerHiddenPtyQueries"],
+          "fullName": "shouldModelAnswerHiddenPtyQueries yields while a remote view subscriber is attached",
+          "status": "passed",
+          "title": "yields while a remote view subscriber is attached",
+          "duration": 0.059542000000021744,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["shouldModelAnswerHiddenPtyQueries"],
+          "fullName": "shouldModelAnswerHiddenPtyQueries stays silent under any kill switch",
+          "status": "passed",
+          "title": "stays silent under any kill switch",
+          "duration": 0.07008400000000847,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty)"
+          ],
+          "fullName": "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty) matches local native Windows spawns",
+          "status": "passed",
+          "title": "matches local native Windows spawns",
+          "duration": 0.20141699999999219,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty)"
+          ],
+          "fullName": "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty) rejects non-Windows hosts",
+          "status": "passed",
+          "title": "rejects non-Windows hosts",
+          "duration": 0.07658299999997098,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty)"
+          ],
+          "fullName": "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty) rejects SSH-backed spawns",
+          "status": "passed",
+          "title": "rejects SSH-backed spawns",
+          "duration": 0.08820800000000872,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [
+            "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty)"
+          ],
+          "fullName": "isNativeWindowsLocalPtySpawn (main-side mirror of isLocalNativeWindowsPty) rejects WSL cwds and WSL shell overrides",
+          "status": "passed",
+          "title": "rejects WSL cwds and WSL shell overrides",
+          "duration": 0.12420800000001009,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["native-Windows ConPTY spawn record"],
+          "fullName": "native-Windows ConPTY spawn record marks, reads, and clears per PTY",
+          "status": "passed",
+          "title": "marks, reads, and clears per PTY",
+          "duration": 0.09087499999998272,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622108220,
+      "endTime": 1789622108222.2014,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/runtime/terminal-model-query-authority.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DA1 CSI c",
+          "status": "passed",
+          "title": "DA1 CSI c",
+          "duration": 11.07800000000043,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DA1 CSI 0 c variant",
+          "status": "passed",
+          "title": "DA1 CSI 0 c variant",
+          "duration": 1.5027499999996508,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DA2",
+          "status": "passed",
+          "title": "DA2",
+          "duration": 1.0246250000000146,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DSR 5n operating status",
+          "status": "passed",
+          "title": "DSR 5n operating status",
+          "duration": 0.9416250000003856,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks CPR 6n at origin",
+          "status": "passed",
+          "title": "CPR 6n at origin",
+          "duration": 0.9132079999999405,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks CPR 6n reports the model cursor position",
+          "status": "passed",
+          "title": "CPR 6n reports the model cursor position",
+          "duration": 1.3610420000004524,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECXCPR ?6n",
+          "status": "passed",
+          "title": "DECXCPR ?6n",
+          "duration": 1.5001669999992373,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?1 DECCKM default",
+          "status": "passed",
+          "title": "DECRPM ?1 DECCKM default",
+          "duration": 0.9611669999994774,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?6 DECOM default",
+          "status": "passed",
+          "title": "DECRPM ?6 DECOM default",
+          "duration": 0.8464169999997466,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?7 DECAWM default",
+          "status": "passed",
+          "title": "DECRPM ?7 DECAWM default",
+          "duration": 1.1523329999999987,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?25 DECTCEM default",
+          "status": "passed",
+          "title": "DECRPM ?25 DECTCEM default",
+          "duration": 0.7367089999997916,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?1004 focus events default",
+          "status": "passed",
+          "title": "DECRPM ?1004 focus events default",
+          "duration": 0.597833000000719,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?1006 SGR mouse default",
+          "status": "passed",
+          "title": "DECRPM ?1006 SGR mouse default",
+          "duration": 0.4968750000007276,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?1016 SGR pixels default",
+          "status": "passed",
+          "title": "DECRPM ?1016 SGR pixels default",
+          "duration": 0.46124999999938154,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?1049 alt screen default",
+          "status": "passed",
+          "title": "DECRPM ?1049 alt screen default",
+          "duration": 0.4440420000000813,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?2004 bracketed paste default",
+          "status": "passed",
+          "title": "DECRPM ?2004 bracketed paste default",
+          "duration": 0.4390000000003056,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM ?2026 synchronized output default",
+          "status": "passed",
+          "title": "DECRPM ?2026 synchronized output default",
+          "duration": 0.44183300000076997,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM reports a set mode as enabled",
+          "status": "passed",
+          "title": "DECRPM reports a set mode as enabled",
+          "duration": 0.548584000000119,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRPM unknown mode reports 0",
+          "status": "passed",
+          "title": "DECRPM unknown mode reports 0",
+          "duration": 0.42254199999933917,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQM ANSI insert mode",
+          "status": "passed",
+          "title": "DECRQM ANSI insert mode",
+          "duration": 0.43220800000017334,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQSS DECSTBM default margins",
+          "status": "passed",
+          "title": "DECRQSS DECSTBM default margins",
+          "duration": 0.6060410000000047,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQSS DECSTBM after margin set",
+          "status": "passed",
+          "title": "DECRQSS DECSTBM after margin set",
+          "duration": 0.5306250000003274,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQSS DECSCUSR default cursor",
+          "status": "passed",
+          "title": "DECRQSS DECSCUSR default cursor",
+          "duration": 0.4295830000000933,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQSS DECSCA",
+          "status": "passed",
+          "title": "DECRQSS DECSCA",
+          "duration": 0.4437920000000304,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks DECRQSS SGR",
+          "status": "passed",
+          "title": "DECRQSS SGR",
+          "duration": 0.4727499999999054,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks XTVERSION",
+          "status": "passed",
+          "title": "XTVERSION",
+          "duration": 0.4789170000003651,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks kitty CSI ? u default flags",
+          "status": "passed",
+          "title": "kitty CSI ? u default flags",
+          "duration": 0.50262500000008,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks kitty CSI ? u reports pushed flags",
+          "status": "passed",
+          "title": "kitty CSI ? u reports pushed flags",
+          "duration": 0.5262499999998909,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for XTWINOPS",
+          "status": "passed",
+          "title": "stays silent for XTWINOPS",
+          "duration": 0.5118340000008175,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for XTGETTCAP",
+          "status": "passed",
+          "title": "stays silent for XTGETTCAP",
+          "duration": 0.47704200000043784,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for DSR ?15n printer status",
+          "status": "passed",
+          "title": "stays silent for DSR ?15n printer status",
+          "duration": 0.4498749999993379,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for DSR ?25n UDK status",
+          "status": "passed",
+          "title": "stays silent for DSR ?25n UDK status",
+          "duration": 0.43208299999969313,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for DSR ?26n keyboard status",
+          "status": "passed",
+          "title": "stays silent for DSR ?26n keyboard status",
+          "duration": 0.5688330000002679,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for DSR ?53n locator status",
+          "status": "passed",
+          "title": "stays silent for DSR ?53n locator status",
+          "duration": 0.4999579999994239,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for OSC 10 foreground query",
+          "status": "passed",
+          "title": "stays silent for OSC 10 foreground query",
+          "duration": 3.328791999999339,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for OSC 11 background query",
+          "status": "passed",
+          "title": "stays silent for OSC 11 background query",
+          "duration": 0.6610420000006343,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for OSC 12 cursor-color query",
+          "status": "passed",
+          "title": "stays silent for OSC 12 cursor-color query",
+          "duration": 0.49570800000037707,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for OSC 4 palette query",
+          "status": "passed",
+          "title": "stays silent for OSC 4 palette query",
+          "duration": 0.47754099999929167,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply parity for hidden-dropped chunks"],
+          "fullName": "reply parity for hidden-dropped chunks stays silent for DSR ?996n color-scheme query",
+          "status": "passed",
+          "title": "stays silent for DSR ?996n color-scheme query",
+          "duration": 0.39158300000053714,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix never answers delivered (unmarked) chunks — the visible xterm owns them",
+          "status": "passed",
+          "title": "never answers delivered (unmarked) chunks — the visible xterm owns them",
+          "duration": 0.40366700000049605,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix never answers while renderer delivery interest holds the chunk delivered",
+          "status": "passed",
+          "title": "never answers while renderer delivery interest holds the chunk delivered",
+          "duration": 0.41225000000031287,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix never answers with kill switch terminalModelQueryAuthority off",
+          "status": "passed",
+          "title": "never answers with kill switch terminalModelQueryAuthority off",
+          "duration": 0.38712500000019645,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix never answers with kill switch terminalHiddenDeliveryGate off",
+          "status": "passed",
+          "title": "never answers with kill switch terminalHiddenDeliveryGate off",
+          "duration": 0.3873329999996713,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix never answers with kill switch terminalMainSideEffectAuthority off",
+          "status": "passed",
+          "title": "never answers with kill switch terminalMainSideEffectAuthority off",
+          "duration": 0.36587499999950523,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix yields while a remote view subscriber is attached and resumes on release",
+          "status": "passed",
+          "title": "yields while a remote view subscriber is attached and resumes on release",
+          "duration": 0.6165000000000873,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix counts overlapping remote view subscribers",
+          "status": "passed",
+          "title": "counts overlapping remote view subscribers",
+          "duration": 0.2702500000004875,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix keeps raw preview presence separate from terminal query authority",
+          "status": "passed",
+          "title": "keeps raw preview presence separate from terminal query authority",
+          "duration": 0.49854099999993196,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix treats mobile subscriber records as remote view subscribers",
+          "status": "passed",
+          "title": "treats mobile subscriber records as remote view subscribers",
+          "duration": 0.5757919999996375,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["reply ownership matrix"],
+          "fullName": "reply ownership matrix answers a dropped-chunk query exactly once",
+          "status": "passed",
+          "title": "answers a dropped-chunk query exactly once",
+          "duration": 0.7166250000000218,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["main-side replay guard"],
+          "fullName": "main-side replay guard never answers queries embedded in a seeded snapshot, then answers live bytes",
+          "status": "passed",
+          "title": "never answers queries embedded in a seeded snapshot, then answers live bytes",
+          "duration": 0.6292079999993803,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["main-side replay guard"],
+          "fullName": "main-side replay guard never answers queries replayed by renderer-buffer hydration",
+          "status": "passed",
+          "title": "never answers queries replayed by renderer-buffer hydration",
+          "duration": 0.5266670000000886,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["kitty flag re-seed parity (terminal-query-authority.md §kitty)"],
+          "fullName": "kitty flag re-seed parity (terminal-query-authority.md §kitty) answers ?u with the persisted snapshot flags after a re-seed, silently applied",
+          "status": "passed",
+          "title": "answers ?u with the persisted snapshot flags after a re-seed, silently applied",
+          "duration": 0.5582500000000437,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["kitty flag re-seed parity (terminal-query-authority.md §kitty)"],
+          "fullName": "kitty flag re-seed parity (terminal-query-authority.md §kitty) answers ?0u when the snapshot carried no flags (fresh-shell paths)",
+          "status": "passed",
+          "title": "answers ?0u when the snapshot carried no flags (fresh-shell paths)",
+          "duration": 0.44187500000043656,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ingestion-time ownership capture"],
+          "fullName": "ingestion-time ownership capture still answers when the hidden mark flips off between ingestion and the async write",
+          "status": "passed",
+          "title": "still answers when the hidden mark flips off between ingestion and the async write",
+          "duration": 0.4491250000000946,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ingestion-time ownership capture"],
+          "fullName": "ingestion-time ownership capture stays silent when the hidden mark lands after ingestion",
+          "status": "passed",
+          "title": "stays silent when the hidden mark lands after ingestion",
+          "duration": 0.4196250000004511,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["stale writeChain links after dispose"],
+          "fullName": "stale writeChain links after dispose never forwards a queued reply once the PTY state is disposed",
+          "status": "passed",
+          "title": "never forwards a queued reply once the PTY state is disposed",
+          "duration": 5.123625000000175,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["stale writeChain links after dispose"],
+          "fullName": "stale writeChain links after dispose never injects a stale reply into a successor PTY reusing the session id",
+          "status": "passed",
+          "title": "never injects a stale reply into a successor PTY reusing the session id",
+          "duration": 1.090208999999959,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ConPTY DA1 override"],
+          "fullName": "ConPTY DA1 override retrofits the override when the spawn mark lands after data created the emulator",
+          "status": "passed",
+          "title": "retrofits the override when the spawn mark lands after data created the emulator",
+          "duration": 0.6272500000004584,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ConPTY DA1 override"],
+          "fullName": "ConPTY DA1 override keeps the override single-reply when installed at creation and marked again",
+          "status": "passed",
+          "title": "keeps the override single-reply when installed at creation and marked again",
+          "duration": 0.45724999999947613,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ConPTY DA1 override"],
+          "fullName": "ConPTY DA1 override answers CSI ?61;4c for marked native-Windows PTYs, suppressing the core ?1;2c",
+          "status": "passed",
+          "title": "answers CSI ?61;4c for marked native-Windows PTYs, suppressing the core ?1;2c",
+          "duration": 0.39949999999953434,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ConPTY DA1 override"],
+          "fullName": "ConPTY DA1 override lets non-primary device-attribute queries fall through to the core",
+          "status": "passed",
+          "title": "lets non-primary device-attribute queries fall through to the core",
+          "duration": 0.3947909999997137,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["ConPTY DA1 override"],
+          "fullName": "ConPTY DA1 override keeps the override silent for delivered chunks",
+          "status": "passed",
+          "title": "keeps the override silent for delivered chunks",
+          "duration": 0.37295799999992596,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["HeadlessEmulator forwarding window"],
+          "fullName": "HeadlessEmulator forwarding window forwards replies only for writes flagged forwardQueryReplies",
+          "status": "passed",
+          "title": "forwards replies only for writes flagged forwardQueryReplies",
+          "duration": 0.6773339999999735,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["HeadlessEmulator forwarding window"],
+          "fullName": "HeadlessEmulator forwarding window scopes the async-fallback forwarding window to the flagged chunk parse",
+          "status": "passed",
+          "title": "scopes the async-fallback forwarding window to the flagged chunk parse",
+          "duration": 0.37062499999956344,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["HeadlessEmulator forwarding window"],
+          "fullName": "HeadlessEmulator forwarding window keeps the ConPTY override inside the forwarding window",
+          "status": "passed",
+          "title": "keeps the ConPTY override inside the forwarding window",
+          "duration": 0.2430000000003929,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 10 foreground",
+          "status": "passed",
+          "title": "OSC 10 foreground",
+          "duration": 0.7975829999995767,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 11 background",
+          "status": "passed",
+          "title": "OSC 11 background",
+          "duration": 0.4550840000001699,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 12 cursor color",
+          "status": "passed",
+          "title": "OSC 12 cursor color",
+          "duration": 0.41745799999989686,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 4 named palette slot",
+          "status": "passed",
+          "title": "OSC 4 named palette slot",
+          "duration": 0.4250000000001819,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 4 extended palette slot",
+          "status": "passed",
+          "title": "OSC 4 extended palette slot",
+          "duration": 0.3949170000005324,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 4 multiple slots in one sequence",
+          "status": "passed",
+          "title": "OSC 4 multiple slots in one sequence",
+          "duration": 0.3975829999999405,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) OSC 10 stacked params report foreground then background",
+          "status": "passed",
+          "title": "OSC 10 stacked params report foreground then background",
+          "duration": 0.39741700000013225,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) DSR ?996n dark",
+          "status": "passed",
+          "title": "DSR ?996n dark",
+          "duration": 0.4275840000000244,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) DECRQSS DECSCUSR from pushed cursor options",
+          "status": "passed",
+          "title": "DECRQSS DECSCUSR from pushed cursor options",
+          "duration": 0.3959580000000642,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) DECRQM ?12 from pushed cursorBlink",
+          "status": "passed",
+          "title": "DECRQM ?12 from pushed cursorBlink",
+          "duration": 0.4099579999992784,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) answers ?996n from palette luminance, not the pushed app mode (dark palette, light app mode)",
+          "status": "passed",
+          "title": "answers ?996n from palette luminance, not the pushed app mode (dark palette, light app mode)",
+          "duration": 0.4115410000003976,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) answers ?996n light for a light palette regardless of the pushed app mode",
+          "status": "passed",
+          "title": "answers ?996n light for a light palette regardless of the pushed app mode",
+          "duration": 0.40179100000023027,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) answers ?996n from OSC-SET-mutated colors like a visible xterm",
+          "status": "passed",
+          "title": "answers ?996n from OSC-SET-mutated colors like a visible xterm",
+          "duration": 0.5341669999997976,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) stays silent before the first push, then answers the same query after it",
+          "status": "passed",
+          "title": "stays silent before the first push, then answers the same query after it",
+          "duration": 0.49633300000004965,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute bridge replies (after renderer push)"],
+          "fullName": "view-attribute bridge replies (after renderer push) retrofits cursor options onto already-live emulators when the push lands late",
+          "status": "passed",
+          "title": "retrofits cursor options onto already-live emulators when the push lands late",
+          "duration": 0.5009170000002996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering layers an OSC 4 SET over the pushed base, isolated per PTY",
+          "status": "passed",
+          "title": "layers an OSC 4 SET over the pushed base, isolated per PTY",
+          "duration": 0.6520419999997102,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering restores a single indexed color via OSC 104;<idx>",
+          "status": "passed",
+          "title": "restores a single indexed color via OSC 104;<idx>",
+          "duration": 0.4664169999996375,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering restores the whole indexed table via bare OSC 104",
+          "status": "passed",
+          "title": "restores the whole indexed table via bare OSC 104",
+          "duration": 0.43816699999933917,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering layers OSC 10/11/12 SETs and restores them via 110/111/112",
+          "status": "passed",
+          "title": "layers OSC 10/11/12 SETs and restores them via 110/111/112",
+          "duration": 0.5629159999998592,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering tracks SET mutations parsed from a seed without replying, like renderer replay",
+          "status": "passed",
+          "title": "tracks SET mutations parsed from a seed without replying, like renderer replay",
+          "duration": 0.500875000000633,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering preserves per-PTY overrides on an identical re-push (fresh renderer process)",
+          "status": "passed",
+          "title": "preserves per-PTY overrides on an identical re-push (fresh renderer process)",
+          "duration": 0.538792000000285,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["per-PTY OSC color SET layering"],
+          "fullName": "per-PTY OSC color SET layering clears per-PTY overrides when a new push lands (theme apply parity)",
+          "status": "passed",
+          "title": "clears per-PTY overrides when a new push lands (theme apply parity)",
+          "duration": 0.4968749999998181,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers view-attribute queries embedded in a seeded snapshot",
+          "status": "passed",
+          "title": "never answers view-attribute queries embedded in a seeded snapshot",
+          "duration": 0.5233330000000933,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers view-attribute queries replayed by renderer-buffer hydration",
+          "status": "passed",
+          "title": "never answers view-attribute queries replayed by renderer-buffer hydration",
+          "duration": 0.4355409999998301,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers a delivered (unmarked) view-attribute query — the visible xterm owns it",
+          "status": "passed",
+          "title": "never answers a delivered (unmarked) view-attribute query — the visible xterm owns it",
+          "duration": 0.3982500000001892,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers while renderer delivery interest holds the chunk delivered",
+          "status": "passed",
+          "title": "never answers while renderer delivery interest holds the chunk delivered",
+          "duration": 0.3890419999997903,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression yields view-attribute replies while a remote view subscriber is attached",
+          "status": "passed",
+          "title": "yields view-attribute replies while a remote view subscriber is attached",
+          "duration": 0.47479199999997945,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers view-attribute queries with kill switch terminalModelQueryAuthority off",
+          "status": "passed",
+          "title": "never answers view-attribute queries with kill switch terminalModelQueryAuthority off",
+          "duration": 0.4094999999997526,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers view-attribute queries with kill switch terminalHiddenDeliveryGate off",
+          "status": "passed",
+          "title": "never answers view-attribute queries with kill switch terminalHiddenDeliveryGate off",
+          "duration": 0.4089169999997466,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["view-attribute replay guard and suppression"],
+          "fullName": "view-attribute replay guard and suppression never answers view-attribute queries with kill switch terminalMainSideEffectAuthority off",
+          "status": "passed",
+          "title": "never answers view-attribute queries with kill switch terminalMainSideEffectAuthority off",
+          "duration": 0.3812499999994543,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622114738,
+      "endTime": 1789622114808.409,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/runtime/terminal-query-responder.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate skips the Git scan past the TTL while the admin fingerprint is unchanged",
+          "status": "passed",
+          "title": "skips the Git scan past the TTL while the admin fingerprint is unchanged",
+          "duration": 6.77087500000016,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate rescans at the TTL once the admin fingerprint changes",
+          "status": "passed",
+          "title": "rescans at the TTL once the admin fingerprint changes",
+          "duration": 0.873250000000553,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate reconciles with a real scan once the bounded interval elapses",
+          "status": "passed",
+          "title": "reconciles with a real scan once the bounded interval elapses",
+          "duration": 1.1628749999999854,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate still rescans immediately when an event invalidates the repo",
+          "status": "passed",
+          "title": "still rescans immediately when an event invalidates the repo",
+          "duration": 0.6737919999995938,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate resolves a just-created id after invalidation even within both cache TTLs",
+          "status": "passed",
+          "title": "resolves a just-created id after invalidation even within both cache TTLs",
+          "duration": 1.6558329999998023,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate scans when the probe cannot describe the repo",
+          "status": "passed",
+          "title": "scans when the probe cannot describe the repo",
+          "duration": 0.5441249999994398,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate never probes a repo whose scan TTL already reaches the reconcile interval",
+          "status": "passed",
+          "title": "never probes a repo whose scan TTL already reaches the reconcile interval",
+          "duration": 0.6053750000000946,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate never consults the probe for SSH repos",
+          "status": "passed",
+          "title": "never consults the probe for SSH repos",
+          "duration": 0.578125,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate does not extend a failed scan on an unchanged fingerprint",
+          "status": "passed",
+          "title": "does not extend a failed scan on an unchanged fingerprint",
+          "duration": 0.5771250000007058,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate bounds Git fan-out under a sustained 1 Hz polling workload",
+          "status": "passed",
+          "title": "bounds Git fan-out under a sustained 1 Hz polling workload",
+          "duration": 160.12145899999996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate keeps refreshing when a probe on a wedged filesystem never settles",
+          "status": "passed",
+          "title": "keeps refreshing when a probe on a wedged filesystem never settles",
+          "duration": 0.9733329999999114,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate issues no further probes while one is still outstanding",
+          "status": "passed",
+          "title": "issues no further probes while one is still outstanding",
+          "duration": 0.661750000000211,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate resumes gating once the filesystem recovers",
+          "status": "passed",
+          "title": "resumes gating once the filesystem recovers",
+          "duration": 0.42745800000011513,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate scans when the awaited probe outlives its deadline",
+          "status": "passed",
+          "title": "scans when the awaited probe outlives its deadline",
+          "duration": 1.0152500000003783,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate bounds the awaited probe by the caller per-repo budget",
+          "status": "passed",
+          "title": "bounds the awaited probe by the caller per-repo budget",
+          "duration": 0.06624999999985448,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate still reuses the scan when a slow probe answers inside its deadline",
+          "status": "passed",
+          "title": "still reuses the scan when a slow probe answers inside its deadline",
+          "duration": 0.3704999999999927,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate still returns scanned rows within the per-repo budget when the probe stalls",
+          "status": "passed",
+          "title": "still returns scanned rows within the per-repo budget when the probe stalls",
+          "duration": 0.49516699999912817,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate does not publish an already-expired snapshot after a slow compute",
+          "status": "passed",
+          "title": "does not publish an already-expired snapshot after a slow compute",
+          "duration": 0.5049589999998716,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["worktree scan admin-fingerprint gate"],
+          "fullName": "worktree scan admin-fingerprint gate shares one probe and one scan across concurrent callers",
+          "status": "passed",
+          "title": "shares one probe and one scan across concurrent callers",
+          "duration": 0.27537499999925785,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["scoped explicit worktree-id resolution"],
+          "fullName": "scoped explicit worktree-id resolution scans only the owning repo for an id: selector on a cold cache",
+          "status": "passed",
+          "title": "scans only the owning repo for an id: selector on a cold cache",
+          "duration": 0.3257499999999709,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["scoped explicit worktree-id resolution"],
+          "fullName": "scoped explicit worktree-id resolution resolves an exact canonical identity without relying on the mutable locator",
+          "status": "passed",
+          "title": "resolves an exact canonical identity without relying on the mutable locator",
+          "duration": 0.4464170000001104,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["scoped explicit worktree-id resolution"],
+          "fullName": "scoped explicit worktree-id resolution still finds worktrees in other repos through the fleet path",
+          "status": "passed",
+          "title": "still finds worktrees in other repos through the fleet path",
+          "duration": 0.28291600000011385,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["scoped explicit worktree-id resolution"],
+          "fullName": "scoped explicit worktree-id resolution keeps cross-repo selectors on the fleet path so ambiguity still throws",
+          "status": "passed",
+          "title": "keeps cross-repo selectors on the fleet path so ambiguity still throws",
+          "duration": 0.4710000000004584,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["scoped explicit worktree-id resolution"],
+          "fullName": "scoped explicit worktree-id resolution falls back to the fleet path when the id names no registered repo",
+          "status": "passed",
+          "title": "falls back to the fleet path when the id names no registered repo",
+          "duration": 0.4196249999995416,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622114736,
+      "endTime": 1789622114916.471,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/runtime/worktree-scan-admin-fingerprint-gate.test.ts"
+    }
+  ]
+}

@@ -1,0 +1,74 @@
+{
+  "checkpoint": "49a8671f68a29f2d399ded065432361b9d62a4cb",
+  "scope": "Selected reviewed boundaries; current dependencies, not an exhaustive module graph.",
+  "files": [
+    {
+      "path": "src/main/ipc/runtime-environment-connectivity-handlers.ts",
+      "sha256": "4255f74d7e2ff9763bf13dc7c9837f89f2bb65e1e4702f32fc3a779e15ab08de"
+    },
+    {
+      "path": "src/shared/runtime-environment-store.ts",
+      "sha256": "2e09aab22fa5711f769cdaf93682cc158c8d0323e6f5c085d1557a9a24f88876"
+    },
+    {
+      "path": "src/main/persistence/loading-store/session-host-partitions.ts",
+      "sha256": "3f972064e20f44a77c25b3f03deca945f651e27d7316075538c5ea87e999d0fc"
+    },
+    {
+      "path": "src/main/persistence/loading-store/session-snapshot-operations.ts",
+      "sha256": "a4853339e8484ea2d7346481027bd232730fc0a1f7f759d0caa1d3920c2b06e6"
+    },
+    {
+      "path": "src/main/persistence/loading-store/workspace-session-partitions.ts",
+      "sha256": "992f413dfeff19ae2b5b11dacc7038a088d4c595929f58664ab4cfcb945c0016"
+    },
+    {
+      "path": "src/main/persistence/loading-store/pty-binding-persistence.ts",
+      "sha256": "173b12bd84906e0265e237137004eb1bb614ce9b101b67658ba66d4dca248eb7"
+    },
+    {
+      "path": "src/main/ipc/session.ts",
+      "sha256": "a64b26e098082378435b913f9d06e8cd4e400f88900ac700d96ce7f066401f17"
+    },
+    {
+      "path": "src/main/ipc/renderer-shutdown-checkpoint.ts",
+      "sha256": "ed8d98e2e6bfaeb426013d7dc3b721c68415019ef9abbc48bc0054c11375ea15"
+    },
+    {
+      "path": "src/renderer/src/lib/workspace-session-host-persistence.ts",
+      "sha256": "cc4edd0b06b6bda36bf76e0ff38962768f7e0780944335483724d0ed000041e1"
+    },
+    {
+      "path": "src/renderer/src/store/slices/runtime-status.ts",
+      "sha256": "f26aa1c59471d507690c06a3e2341dbf04bac56478303fae6a5bb881eaf1a061"
+    },
+    {
+      "path": "src/renderer/src/store/slices/worktrees/teardown/purge-stale-runtime-host-state.ts",
+      "sha256": "348493e7870366fe623d401a6567882a7b41ce1b65749a13dc4cc3a78f30adbb"
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/load-initial.ts",
+      "sha256": "8dc25929afee0dd74d58e698d910e3701168bdb25274741cdde7e4dd70d18988"
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/global-session-subscription.ts",
+      "sha256": "bfb8cec7803196b9f6a55f6b6888430bd5e422e9bca47ab086bb3bc83a9c41b9"
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/snapshot-api.ts",
+      "sha256": "b748bd0d8b99a23be6b8f7ab413d4f2b934e580739a6270541539d6049b5f0ba"
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/mirror-settle.ts",
+      "sha256": "753ac414994d03eab5db6fb88e9a45ff1020e2437f2915ee3e7ceb2830ac6421"
+    },
+    {
+      "path": "src/shared/remote-workspace-session-projection.ts",
+      "sha256": "f77dd43ee4d9815f51e293784d83c2858151244ec72cb35be170c7b436a9b247"
+    },
+    {
+      "path": "src/renderer/src/hooks/remote-workspace-snapshot-apply.ts",
+      "sha256": "cb01a900957c32ed034ac58f116b6f62fb98d0ace5f392a0c1203f710d7d84f0"
+    }
+  ]
+}

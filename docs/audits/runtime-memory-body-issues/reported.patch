@@ -1,0 +1,8 @@
+--- a/src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts
++++ b/src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts
+@@ -155,0 +156,5 @@
++  invalidateWorktreeCatalog(repoId: string): void {
++    this.invalidateResolvedWorktreeCache()
++    this.invalidateWorktreeScanCacheForRepo(repoId)
++  }
++

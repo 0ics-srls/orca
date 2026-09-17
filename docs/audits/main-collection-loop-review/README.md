@@ -113,3 +113,10 @@ These are targeted source observations, recorded in
 `consumed-prefix-comparison.json`, not a universal capacity proof or a claim that
 native operations always finish. The SSH scheduler's distinct completed-entry
 path has its own actual-source before/after proof.
+
+The [callback iteration review](./callback-iteration-review.md) adds five selected
+sites and one supporting source. The [next twenty-site review](./next-twenty-loop-sites.md)
+records 90 source/caller hashes, including the now-fixed OSC 133 carry and separate
+SSH pre-metadata, plugin audit-write and forced skill-refresh leads. The saved
+518-hit search inventory is a candidate list; the earlier 216-site selection was
+not recovered, so these reviews do not establish that all 216 sites were read.

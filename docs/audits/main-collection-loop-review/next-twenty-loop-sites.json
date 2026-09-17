@@ -1,0 +1,690 @@
+{
+  "reviewedHead": "4a09b1d108cfd8b57ffcc5d727b3a3bd71ae71fb",
+  "inventory": {
+    "path": "notes/main-growth-producers/synchronous-loops.txt",
+    "lines": 518,
+    "sha256": "3a6f53f84ca6502737f78d1af526a4a2bc191cf6c23367c52f906a50fd1f6857"
+  },
+  "scope": "20 production owner files manually reviewed; supporting dependencies are not additional sites. Separate 216 inventory not recovered; no all-sites coverage claim. Runtime proof only for OSC133; other19 static source/caller review.",
+  "selectionSha256": "a1b8d434319e817fc40cb79cc33c60e123a1758919f405a21e6cde00fbca324e",
+  "proseSha256": "eb35aa02be6ea9ebdeeb8f0d8e52b51a4dfb2b6f110d56e743c651ea0fa60613",
+  "sites": [
+    {
+      "site": 1,
+      "path": "src/main/automations/hermes-cron-output-markdown.ts",
+      "sha256": "0f7f1612bc687c84d3cc427ffed4e47081c5e6a4b206bf8c2f2c6fbf1f50e227",
+      "savedInventorySites": [
+        "src/main/automations/hermes-cron-output-markdown.ts:91: while (index < end && text.length <= RUN_PREVIEW_LIMIT) {",
+        "src/main/automations/hermes-cron-output-markdown.ts:162: while (lineStart < content.length) {",
+        "src/main/automations/hermes-cron-output-markdown.ts:181: while (lineStart < content.length) {",
+        "src/main/automations/hermes-cron-output-markdown.ts:216: while (lineStart < content.length) {",
+        "src/main/automations/hermes-cron-output-markdown.ts:229: while (lineStart < content.length) {",
+        "src/main/automations/hermes-cron-output-markdown.ts:260: while (index < endIndex && isPreviewWhitespace(value.charCodeAt(index))) {"
+      ],
+      "supportingPaths": [
+        "src/main/automations/hermes-cron-output.ts",
+        "src/main/automations/hermes-cron-run-content.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Hermes output Markdown\n\n`src/main/automations/hermes-cron-output-markdown.ts` scans text without splitting every line: each heading loop advances to the next newline or the end; whitespace scanning increments its index; fence skipping advances beyond a complete fence or returns the end. Preview accumulation stops just above 180 characters, then clips. No persistent collection or non-progressing input branch was found.\n\nCaller `src/main/automations/hermes-cron-output.ts` reads the **whole output file** before parsing, retains `outputContent` deliberately, and hydrates a requested page through `Promise.all`. The page-size-zero badge path reads references/counts only. The 5 MiB referenced-log constant is not a limit on the primary Markdown file. This leaves file/page-sized transient and returned allocations; a short preview does not bound those allocations. No stale-owner leak was established."
+    },
+    {
+      "site": 2,
+      "path": "src/main/browser/browser-client-host-command-result-cache.ts",
+      "sha256": "9ec3dad78c83f864f74957cad766cbcf41863e92d81d7e7a471702b0f9ab2f34",
+      "savedInventorySites": [
+        "src/main/browser/browser-client-host-command-result-cache.ts:14: while (page.settledSequences.length > this.maxPerPage) {",
+        "src/main/browser/browser-client-host-command-result-cache.ts:18: while (this.pagesByRecord.size > this.maxTotal) {"
+      ],
+      "supportingPaths": [
+        "src/main/browser/browser-client-host-command-dispatcher.ts",
+        "src/main/browser/browser-client-host-command-page.ts",
+        "src/main/browser/browser-client-host-command-state.ts",
+        "src/shared/browser-client-host-protocol.ts",
+        "src/shared/browser-client-automation-protocol.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Browser command result cache\n\n`src/main/browser/browser-client-host-command-result-cache.ts` evicts settled records by removing the record from all three indexes and the page's sequence array. An artificial mismatched PageState could make the loop fail to progress, but the real dispatcher/page helpers create a single record for each admitted monotonic sequence, reject sequence/command conflicts, set `settled` before caching, and only cache when removing the record from the active queue succeeds. Cache insertion/eviction is synchronous; Promise continuations do not interrupt the invariant.\n\n`browser-client-host-command-dispatcher.ts` defaults to 64 cached results per page and 1,024 globally, 256 pages/active commands, eight running handlers, and 32 queued per page. Page retirement/replacement releases its cached records. Close drains to settlement or its join deadline; unresolved handlers retain their own custody. `src/shared/browser-client-automation-protocol.ts` allows results up to 768 KiB serialized and automation parameters up to 256 KiB. Therefore count bounds can still allow large memory, and serialized-byte limits are not exact heap limits. No cache-index non-progress bug was reachable through the reviewed dispatcher."
+    },
+    {
+      "site": 3,
+      "path": "src/main/native-chat/transcript-incremental-reader.ts",
+      "sha256": "20028b3c85a5da8ed062b528e357e0412d668d18b0d092268ce4343829284b30",
+      "savedInventorySites": [
+        "src/main/native-chat/transcript-incremental-reader.ts:63: while (newline >= 0) {"
+      ],
+      "supportingPaths": [
+        "src/main/native-chat/transcript-watch-engine.ts",
+        "src/main/native-chat/transcript-tail-reader.ts",
+        "src/main/native-chat/wsl-transcript-fs-access.ts",
+        "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Incremental transcript reader\n\n`src/main/native-chat/transcript-incremental-reader.ts` reads to a captured file end. Newline search and chunk offsets progress; per-record pending buffers are cleared on completion or on exceeding the 2 MiB record cap, with oversize bytes discarded until a newline. Empty slices cannot accumulate across records. The stream is destroyed in `finally`, and reset drops partial buffers.\n\n`transcript-watch-engine.ts` supplies a callback for normal append delivery, draining batches of 40 messages. Its initial read without a supplied snapshot and `agent-session-wire/structured-tui-transcript-catchup.ts` recovery-gap read omit the callback and collect the full captured segment. Thus the record limit is not a total-message/output limit. Buffer subarrays can also keep their source chunk alive; reviewed WSL reads use 1 MiB chunks and local ReadStream chunking, so the partial-record logical count is not exact owned backing size. This is bounded by record/chunk input plus the selected segment, not a proven post-completion leak."
+    },
+    {
+      "site": 4,
+      "path": "src/main/automations/headless-dispatch.ts",
+      "sha256": "e58ef8a70034d07dc5b765fc50404fbd37e698326b0af42b6611fcb5c73a98e3",
+      "savedInventorySites": [
+        "src/main/automations/headless-dispatch.ts:45: while (overflowChars > 0 && chunks.length > 0) {"
+      ],
+      "supportingPaths": [
+        "src/main/startup/main-process-automations.ts",
+        "src/main/automations/runtime-terminal-run-observer.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Headless automation output snapshot\n\n`src/main/automations/headless-dispatch.ts` ignores empty appends, counts positive-length chunks, and removes a complete head or trims a positive excess on every overflow iteration. Logical text stays within 256 Ki characters. The boundary slice can share its parent, so the cap is not by itself a backing-memory guarantee.\n\nBoth production callers (`startup/main-process-automations.ts` and `automations/runtime-terminal-run-observer.ts`) create a local buffer, append one `readTerminal(..., {limit: 2000}).tail.join('\\n')`, and immediately return its snapshot. This is not a demonstrated long-lived accumulated queue. The upstream terminal read/history owners have separate existing audits; this review does not reclassify a line count as a byte cap."
+    },
+    {
+      "site": 5,
+      "path": "src/main/ai-vault-search/session-search-retrieval.ts",
+      "sha256": "71e5dd99cc544205f02e39fb76b63828d943f74f169751d6834a88bc9049eb02",
+      "savedInventorySites": [
+        "src/main/ai-vault-search/session-search-retrieval.ts:141: while (sessions.length < scope.candidateLimit) {"
+      ],
+      "supportingPaths": ["src/main/ai-vault-search/session-search-engine.ts"],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Session search retrieval\n\n`src/main/ai-vault-search/session-search-retrieval.ts` pages recent rows in groups of 512. Each nonempty page increases the scanned offset; it stops at the candidate limit, an empty page, or 20 times the candidate limit. Session-ID lookup advances in batches of 500. The production engine defaults to 600 candidates. Returned arrays are call-local; later routes replace their predecessors.\n\nThe FTS query explicitly materializes/group-sorts every matching row before limiting distinct sessions. Its SQL temporary structures are not bounded by the returned 600 candidates. Recent `SELECT *` also materializes one 512-row page at a time. These are query/input-sized transient/native allocations, not evidence of persistent JavaScript owner growth. Constructor overrides are not independently normalized in this module; the production default is the bound traced here."
+    },
+    {
+      "site": 6,
+      "path": "src/main/ports/advertised-url-watcher.ts",
+      "sha256": "444fef7f145aa9b549a00bcf5f5fd617f7fb8fdf39b840c5042e9656c6be7d32",
+      "savedInventorySites": [
+        "src/main/ports/advertised-url-watcher.ts:152: while (this.pending.size > MAX_PENDING_ENTRIES) {"
+      ],
+      "supportingPaths": [
+        "src/main/ports/advertised-url-parsing.ts",
+        "src/main/ports/advertised-url-cache-update.ts",
+        "src/main/ports/advertised-url-reconciliation.ts",
+        "src/main/runtime/orca-runtime-on-pty-exit.ts",
+        "src/main/runtime/orca-runtime-resolve-worktree-removal-target.ts",
+        "src/main/ipc/pty/provider/state-cleanup.ts",
+        "src/main/ipc/worktrees/removal/worktree-removal-ownership.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Advertised terminal URLs\n\n`src/main/ports/advertised-url-watcher.ts` bounds never-bound PTYs to 32 entries of 16 Ki characters, evicting an actual oldest key on every loop. Existing `ownRetainedString` calls sever oversized pending input parents. Its `advertised-url-parsing.ts` per-PTY buffer keeps 4 Ki characters, copies oversized inputs, and bounds accepted URL candidates to 2,048 characters. The completed URL cache defaults to 256 entries.\n\nLive bindings/buffers belong to PTYs; `orca-runtime-on-pty-exit.ts` and `ipc/pty/provider/state-cleanup.ts` unbind them. Runtime/worktree removal calls `forgetWorktree`, removing cache and scan metadata. `scanSnapshots` intentionally stores a fresh listener map per scanned worktree, so it scales with worktrees times observed ports and is not covered by the 256 URL-entry bound. Existing buffer-ownership fixes are supporting evidence, not a new mechanism in this batch. No new lost cleanup was established."
+    },
+    {
+      "site": 7,
+      "path": "src/main/plugins/plugin-audit-log.ts",
+      "sha256": "5a0df339053341d1c7defa7a10279d66033cad67c05dac7876ab786694c4eb02",
+      "savedInventorySites": [
+        "src/main/plugins/plugin-audit-log.ts:98: while (end > 0 && lines.length < count) {"
+      ],
+      "supportingPaths": [
+        "src/main/plugins/plugin-host-methods.ts",
+        "src/main/plugins/plugin-host-process.ts",
+        "src/main/plugins/plugin-host-runtime.ts",
+        "src/main/plugins/plugin-service.ts"
+      ],
+      "conclusion": "conditional admission follow-up",
+      "review": "Plugin audit log\n\n`src/main/plugins/plugin-audit-log.ts` reads recent lines backwards with a strictly decreasing end index. Normal records rotate a 10 MiB file to one predecessor. Recent output parsing is call-local. Rotation is not a bound on externally enlarged files or one individually oversized record; primary reads still materialize both files.\n\nThe write path chains each record behind `writeChain`. `plugin-host-methods.ts` awaits the intent write before mutating and awaits outcome recording; `plugin-host-process.ts` accepts each worker host call without a main-side concurrency counter and launches it asynchronously. The worker can issue concurrent host calls. Consequently a stalled first filesystem write can hold later validated calls/arguments and audit closures. No ordinary never-settling filesystem trigger or bounded actual-caller retention proof was run here. This is a **conditional admission lead**, not a claim that completed writes leak. Adding an arbitrary log-record drop would change the required audit-before-mutation semantics."
+    },
+    {
+      "site": 8,
+      "path": "src/main/skills/skill-delete/wsl-enumeration-protocol.ts",
+      "sha256": "20145a021266869c17d722eaf0870cfd431272fe3625d3e0f8c1efa5ec4cbf48",
+      "savedInventorySites": [
+        "src/main/skills/skill-delete/wsl-enumeration-protocol.ts:97: while (index < fields.length) {",
+        "src/main/skills/skill-delete/wsl-enumeration-protocol.ts:132: while (index < fields.length) {"
+      ],
+      "supportingPaths": ["src/main/skills/skill-wsl-install-filesystem.ts"],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "WSL skill enumeration protocol\n\n`src/main/skills/skill-delete/wsl-enumeration-protocol.ts` parses NUL-delimited D/E/P records. Every valid record advances the index by its field count; malformed/unknown records throw. List-entry arrays scale with emitted entries; path inspections overwrite a map keyed by requested path. No retained parser state survives the call.\n\nThe actual `skill-wsl-install-filesystem.ts` caller executes batched read-only guest scripts with a 30-second timeout and a **128 MiB output bound** for enumeration, versus 64 KiB for ordinary mutation-command output. Splitting fields and constructing entries can consume substantially more heap than the wire string. This is finite but potentially large input amplification; it is not a small constant-memory parser or a proven lifetime leak. Reads use guest argv/path validation and the shared WSL runner."
+    },
+    {
+      "site": 9,
+      "path": "src/shared/agent-hook-listener/command-code-transcript.ts",
+      "sha256": "4f887c2a188012433f78b6289b1c4d82d14e6938297dc2e8ec7aa557213acfd2",
+      "savedInventorySites": [
+        "src/shared/agent-hook-listener/command-code-transcript.ts:78: while (scanEnd > 0 && bytesRead < TRANSCRIPT_MAX_SCAN_BYTES) {",
+        "src/shared/agent-hook-listener/command-code-transcript.ts:87: while (filled < chunkSize) {"
+      ],
+      "supportingPaths": [
+        "src/shared/agent-hook-listener/provider-dispatch.ts",
+        "src/shared/agent-hook-listener/providers/command-code-tool-fields.ts",
+        "src/shared/agent-hook-listener.ts",
+        "src/shared/agent-hook-listener/transcript-reader.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Command Code transcript tail\n\n`src/shared/agent-hook-listener/command-code-transcript.ts` scans backwards through at most 4 MiB in 64 KiB chunks. The outer offset decreases, partial-read offset increases, and a short/zero read stops. At most the scanned window is assembled for newline-free carry; an incomplete leading record at the budget boundary is not published. The descriptor closes in `finally`.\n\n`provider-dispatch.ts` uses this reader from the transport-neutral `src/shared/agent-hook-listener.ts` normalizer, shared by main and relay listeners. It is not exclusively an external hook subprocess. Returned prompt text may approach the scan budget; downstream state ownership is separate. Synchronous filesystem delay blocks this call and does not itself create an asynchronous queue here. No new unbounded read or orphaned descriptor was found."
+    },
+    {
+      "site": 10,
+      "path": "src/main/skills/skill-discovery-wsl-observation.ts",
+      "sha256": "3b7b496e50ada19cdab571b271a881b33b92a968d7969828add7f14d082ae805",
+      "savedInventorySites": [
+        "src/main/skills/skill-discovery-wsl-observation.ts:42: while (index < fields.length && fields[index]) {"
+      ],
+      "supportingPaths": [
+        "src/main/skills/skill-discovery-wsl.ts",
+        "src/main/skills/skill-discovery-target.ts",
+        "src/shared/skill-metadata.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "WSL skill observations\n\n`src/main/skills/skill-discovery-wsl-observation.ts` consumes fields on every R/S record and rejects malformed input. Base64 Markdown is decoded then reduced to a summary; returned rows retain summaries/paths/provider metadata, not an intentional whole-Markdown field. Projection creates new filtered/deduplicated rows and copies mergeable arrays.\n\n`skill-discovery-wsl.ts` executes a 10-second guest scan, reads at most 256 KiB Markdown per skill, and caps combined command output at 128 MiB. Whole-output splitting/base64 decoding can still be large. `skill-discovery-target.ts` caches up to 32 target observations for ten seconds; root-level native cache capacity is separately 1,024. TTL expires on access rather than a proactive timer. Results scale with the number of skills in an accepted scan; no byte bound per cached observation was established."
+    },
+    {
+      "site": 11,
+      "path": "src/shared/commit-message-prompt.ts",
+      "sha256": "4c55ddd620183876b170a114576b9a770c4225311eb1b66dda0b3409fb4934d3",
+      "savedInventorySites": [
+        "src/shared/commit-message-prompt.ts:47: while (next !== -1) {",
+        "src/shared/commit-message-prompt.ts:92: while (active.length > 0 && remaining > 0) {",
+        "src/shared/commit-message-prompt.ts:179: while (i < template.length) {"
+      ],
+      "supportingPaths": [
+        "src/shared/commit-message-generation.ts",
+        "src/shared/pull-request-generation.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Commit-message prompt preparation\n\n`src/shared/commit-message-prompt.ts` advances section boundaries and tokenizer indices on every branch. Fair allocation either lowers remaining allowance, removes satisfied sections, or stops when no whole share remains. The local token/section arrays disappear with the call. `commit-message-generation.ts` and `pull-request-generation.ts` use the same truncator.\n\nThe nominal `STAGED_DIFF_BYTE_BUDGET` of 200,000 is implemented with JavaScript string length, so it bounds UTF-16 code units rather than UTF-8 bytes. Full diff splitting and section sizing occur before clipping. Input-sized transient arrays and the returned prompt remain possible; no immortal cache or non-progress loop was found. This review records the units without changing the established prompt semantics."
+    },
+    {
+      "site": 12,
+      "path": "src/shared/text-search.ts",
+      "sha256": "c291574e05874440601a6a043b5d065ca172072f4146568d9c9818829abbc185",
+      "savedInventorySites": [
+        "src/shared/text-search.ts:306: while ((m = submatchRegex.exec(lineContent)) !== null) {"
+      ],
+      "supportingPaths": [
+        "src/shared/text-search-match-accumulator.ts",
+        "src/shared/search-subprocess-lines.ts",
+        "src/main/ipc/filesystem-search-git.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Shared text search\n\n`src/shared/text-search.ts` resets its global regex before each line and explicitly increments `lastIndex` after a zero-length match, preventing that input from trapping the match loop. Accepted output uses the match accumulator's count/context limits: defaults 2,000 total matches and 500 context characters plus truncation markers. The rg argv also requests at most 100 matching lines per file; that is not a universal 100-submatch cap. Local and SSH callers reuse this parser.\n\nThe local git-grep fallback (`ipc/filesystem-search-git.ts`) detaches listeners and clears line state on completion/error/15-second deadline, even if child termination does not settle. Its line accumulator is instantiated with `Number.MAX_SAFE_INTEGER`; result caps therefore do **not** bound a raw newline-free input before parsing. That transport/input-frame mechanism is already covered by broader search-line audits and is not counted as a new fix here. User regex CPU cost is also separate from the loop's demonstrated progress invariant."
+    },
+    {
+      "site": 13,
+      "path": "src/main/source-control/hosted-review-branch-cache.ts",
+      "sha256": "1e6919678fcd026536dd9b42fbc93ca78411dcf17428e408cd74596554dd0ab8",
+      "savedInventorySites": [
+        "src/main/source-control/hosted-review-branch-cache.ts:152: while (entries.size > MAX_ENTRIES) {",
+        "src/main/source-control/hosted-review-branch-cache.ts:194: while (inflight.size > MAX_INFLIGHT_LOOKUPS) {"
+      ],
+      "supportingPaths": [
+        "src/main/source-control/hosted-review-unsettled-lookups.ts",
+        "src/main/source-control/hosted-review-refresh-pacing.ts",
+        "src/main/source-control/hosted-review.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Hosted-review branch cache\n\n`src/main/source-control/hosted-review-branch-cache.ts` bounds completed entries and joinable in-flight slots to 500 each. Eviction deletes oldest slots. In-flight entries have two-minute deadlines; token identity prevents an old completion deleting or publishing over its replacement. Keys include execution-host identity and options, avoiding local/remote collisions.\n\nImportantly, removing a joinable slot does not erase underlying-work accounting: its companion unsettled-counter module limits two unresolved operations per key and 1,000 active keys; detached work has a separate 64 threshold for starting further work. These are not a single global limit of 64 existing operations. Actual settlement decrements counters. Cache invalidation preserves unsettled custody. Returned provider rows/keys are count-bounded, not given an exact byte budget. No new lost-ownership path was found in the reviewed call flow."
+    },
+    {
+      "site": 14,
+      "path": "src/main/jira/attachment-image-cache.ts",
+      "sha256": "2ef1037ab7694efd6e1ea592b45ca6dd3221bf0dfb2c375786267d2d4804175a",
+      "savedInventorySites": [
+        "src/main/jira/attachment-image-cache.ts:54: while (cache.size > MAX_CACHE_ENTRIES || totalCachedBytes() > MAX_CACHE_BYTES) {"
+      ],
+      "supportingPaths": [
+        "src/main/jira/attachment-images.ts",
+        "src/main/jira/attachment-meta.ts",
+        "src/main/jira/authenticated-request.ts",
+        "src/main/network/http-client.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Jira image cache\n\n`src/main/jira/attachment-image-cache.ts` evicts an actual oldest completed entry until it satisfies 96 entries/24 MiB charged binary bytes, and checks a 30-minute TTL on access. Base64 data URLs require additional encoded/string overhead. Global/site epochs prevent cleared or superseded requests publishing a stale entry or deleting a replacement.\n\n`attachment-images.ts` selects at most 12 images, runs three downloads per issue call, enforces 2 MiB per completed image and 5 MiB per returned selection. However, `authenticated-request.ts` calls `response.arrayBuffer()` **before** checking those completed-image limits and supplies no task-specific abort deadline; the shared HTTP port adds none. The in-flight map coalesces a key but has no global key count. This leaves an input-sized response/allocation and concurrent-request boundary, not a leak of already-evicted completed cache entries. It overlaps the broader HTTP response-body audit; no novel stalled-network proof was added here."
+    },
+    {
+      "site": 15,
+      "path": "src/main/ssh/ssh-filesystem-stream-reader.ts",
+      "sha256": "b8586de1412df98428939a0a4870c5f8ccab22f506a188b2eb1c7a38c317b1ef",
+      "savedInventorySites": [
+        "src/main/ssh/ssh-filesystem-stream-reader.ts:54: while (unsubscribers.length > 0) {",
+        "src/main/ssh/ssh-filesystem-stream-reader.ts:233: while (!settled && pending.length > 0) {"
+      ],
+      "supportingPaths": [
+        "src/main/providers/ssh-filesystem-provider.ts",
+        "src/main/ssh/ssh-channel-multiplexer.ts",
+        "src/main/ssh/ssh-file-stream-read-cap.ts",
+        "src/main/ssh/ssh-file-stream-inactivity-deadline.ts",
+        "src/relay/fs-handler-file-read.ts",
+        "src/relay/fs-stream-registry.ts",
+        "src/relay/protocol.ts"
+      ],
+      "conclusion": "conditional admission follow-up",
+      "review": "SSH filesystem stream reader\n\n`src/main/ssh/ssh-filesystem-stream-reader.ts` drains pending frames with `shift`, and subscription cleanup with `pop`; each loop shrinks its collection. Once metadata arrives, it rejects oversized advertised files before allocating (10 MiB text/50 MiB binary, tightened by caller limits), checks sequence and exact decoded chunk length, copies into the target buffer, acknowledges, and releases subscriptions/timers on success/failure/disposal. Metadata RPC defaults to 30 seconds; active streams have a suspend-aware 60-second inactivity deadline.\n\nThe **pre-metadata pending array receives every fs.streamChunk/end/error notification**, before it knows its own stream ID. Unrelated active streams can therefore contribute frames while this request's stat/metadata is delayed. Current relay production code has 16 stream slots, 256 KiB chunks, four-chunk acknowledgement pacing and writer backpressure; compatibility with older relays intentionally has no acknowledgement pacing. These limits and deadlines do not constitute a byte count on the pre-metadata array. After metadata it filters/drains; after timeout subscriptions disappear. This is a concrete **time-window retention/admission lead**, not demonstrated unlimited lifetime growth or permission to cancel other streams. A bounded delayed-metadata/foreign-stream caller proof remains future work."
+    },
+    {
+      "site": 16,
+      "path": "src/main/skills/skill-scan-coalescer.ts",
+      "sha256": "d41e0bffa347734fc0b33ecc7e477b2038ea8fda0e85660edf9438342b2e0df2",
+      "savedInventorySites": [
+        "src/main/skills/skill-scan-coalescer.ts:178: while (this.cache.size > this.maximumEntries) {"
+      ],
+      "supportingPaths": [
+        "src/main/skills/discovery.ts",
+        "src/main/skills/skill-discovery-target.ts",
+        "src/main/skills/skill-discovery-wsl.ts",
+        "src/main/skills/skill-install-discovery-verification.ts"
+      ],
+      "conclusion": "conditional admission follow-up",
+      "review": "Skill-scan coalescer\n\n`src/main/skills/skill-scan-coalescer.ts` evicts completed LRU entries monotonically. Ordinary same-key calls join for 30 seconds; aged replacement aborts the old signal and counts it against 16 abandoned scans until real settlement. Promise identity fences publication and cleanup after replacement/clear. Production capacities are 1,024 native roots and 32 targets; ordinary native completed target results use TTL zero.\n\nThe comments and code deliberately exempt `refresh:true` from joining and abandonment accounting, and `clear()` drops pending slots without aborting work. Actual callers pass refresh after install/explicit rechecks. A native root `stat` can remain pending before abortable traversal begins; repeated forced refresh could supersede unresolved work. WSL scans instead run under a ten-second guest-command timeout. This is a **conditional forced-refresh/native-I/O lead**; no realistic repeated-trigger proof or overall install/recheck admission bound was established. Do not describe the 16 aged-scan budget as a universal live-scan cap."
+    },
+    {
+      "site": 17,
+      "path": "src/main/ssh/ssh-connection-generation.ts",
+      "sha256": "9f755814d5282f64f62ff7e181c1894811d89551372ad04ded4e22516874ad48",
+      "savedInventorySites": [
+        "src/main/ssh/ssh-connection-generation.ts:47: while (usedSessionScopes.has(nextSessionScope)) {"
+      ],
+      "supportingPaths": ["src/main/ssh/ssh-provider-authority.ts", "src/main/ipc/ssh.ts"],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "SSH connection generations\n\n`src/main/ssh/ssh-connection-generation.ts` retains the latest generation per target and all previously used session scopes. A scope rotates after 8,192 generation steps; search advances through already-used scopes until it finds a fresh one, then clears the target map. The huge finite scope namespace is checked for safe-integer tokens; exhaustion is not an observed ordinary trigger.\n\n`ssh-provider-authority.ts` rotates tokens and aborts old registered requests; these retained generations prevent stale authorities becoming valid again. `ipc/ssh.ts` resets this state only in its explicitly named test teardown. The per-target map and used-scope set can grow with lifetime target/generation history. This is intentional anti-reuse authority state, not proven dead payload retention. Pruning by disconnection or treating loss of contact as process exit would be unsafe."
+    },
+    {
+      "site": 18,
+      "path": "src/main/runtime/wait-blocked-check-state.ts",
+      "sha256": "b8bdbb0c2ce42633c5b33bae83397937b0d902c1eb54a087fa5ea3b469f749a7",
+      "savedInventorySites": [
+        "src/main/runtime/wait-blocked-check-state.ts:57: while (excess > 0 && dropCount < carry.chunks.length) {"
+      ],
+      "supportingPaths": [
+        "src/main/runtime/orca-runtime-schedule-wait-blocked-check.ts",
+        "src/main/runtime/terminal-tail-limits.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Wait-blocked scan carry\n\n`src/main/runtime/wait-blocked-check-state.ts` ignores empty chunks and removes or shortens a positive-length head on every overflow iteration. It preserves 256 Ki characters and discards consumed array entries. The partial head can share a larger input backing string, so the character bound is not an exact heap bound.\n\nThe actual `orca-runtime-schedule-wait-blocked-check.ts` scans immediately on keywords or after its minimum 50 ms interval, otherwise owns one timer; the run clears appended carry, and state teardown clears the timer/map. This makes the append carry a short-lived throttle window under a progressing event loop, unlike the indefinite incomplete OSC carry. Existing owned keyword carry is separate. No new post-flush retention was shown."
+    },
+    {
+      "site": 19,
+      "path": "src/main/ai-vault/session-newest-files.ts",
+      "sha256": "5061175cfe13d6160bca0b3adbcd1fec2be28fc0e61f4b10c8d530cf46164a76",
+      "savedInventorySites": ["src/main/ai-vault/session-newest-files.ts:28: while (low < high) {"],
+      "supportingPaths": [
+        "src/main/ai-vault/session-scanner-discovery.ts",
+        "src/main/ai-vault/session-scanner-source-discovery.ts",
+        "src/main/ai-vault/session-scanner.ts"
+      ],
+      "conclusion": "no new lifetime leak established; input and ownership limits recorded",
+      "review": "Newest transcript-file selection\n\n`src/main/ai-vault/session-newest-files.ts` uses a strictly narrowing binary-search interval, then one splice/pop, and refuses older candidates when full. Finite positive capacity preserves at most that many file records. `session-scanner-discovery.ts` streams discovered files to it rather than accumulating all matches first; recursive directory arrays themselves remain input-sized while their children are traversed.\n\n`session-scanner.ts` deliberately chooses Infinity when `options.unlimited` is requested, otherwise positive limits; `session-scanner-source-discovery.ts` passes the per-agent limit through. The unlimited branch collects all discovered candidates for that requested scan. This is explicit whole-corpus work, not a hidden failure of the finite selector or a persistent selector owner after discovery returns."
+    },
+    {
+      "site": 20,
+      "path": "src/shared/terminal-osc133-command-finished.ts",
+      "sha256": "1790083b5200d11e68257556dffb49d2e8700841dccc6ccbbaa2c30b11b1efcd",
+      "savedInventorySites": [
+        "src/shared/terminal-osc133-command-finished.ts:80: while (combined.length > 0) {"
+      ],
+      "supportingPaths": [
+        "src/shared/terminal-output-side-effects.ts",
+        "src/shared/terminal-mode-2031-final-state.test.ts",
+        "src/shared/own-retained-string.ts",
+        "src/main/daemon/daemon-background-transient-facts.ts",
+        "src/main/daemon/daemon-terminal-admission.ts",
+        "src/main/daemon/pty-subprocess/subprocess-handle.ts",
+        "src/main/daemon/session.ts",
+        "src/main/runtime/orca-runtime-get-unpersisted-tracked-title-for-pty.ts",
+        "src/main/runtime/orca-runtime-apply-tracked-pty-title.ts"
+      ],
+      "conclusion": "reproduced retained-parent candidate",
+      "review": "OSC 133 incomplete carry \u2014 reproduced\n\n`src/shared/terminal-osc133-command-finished.ts` makes progress over completed terminators and bounds its retained suffix to 4,096 characters, but retains `combined.slice(...)` without owning its backing string. Longer incomplete OSC 133 metadata can retain a large preceding PTY chunk until another chunk completes/replaces it or reset/disposal runs. This is distinct from the already fixed agent-status OSC, kitty, and mouse suffixes.\n\nThe ordinary sequence bytes come from the fish 4.7.1 capture documented in `src/shared/terminal-mode-2031-final-state.test.ts`: `A;click_events=1` and `C;cmdline_url=npx`. The diagnostic places those exact sequence bytes after a synthetic large plain-output prefix and splits before the terminator. It does not claim that the capture itself had that boundary or size.\n\n`notes/osc133-carry-retention/probe.cjs` loads the actual scanner, actual `createTerminalTitleTracker`, and actual `BackgroundTransientFactRelay`, comparing unmodified source against an in-memory projection that applies existing `ownRetainedString` only to incomplete carry. Both Node 26.6 and Electron 43.7 / Node 24.21 pass **117 cases each**. Thirty-two 64 Ki-character parents retain roughly 2 MiB; eight 1 Mi-character parents retain roughly 8 MiB. The candidate releases those parents while preserving emitted callback/fact values. Short standard D;0 partials, completed frames, plain input, completion, reset, and relay lifecycle transitions are negative/cleanup controls. Oversized incomplete input is separately labelled malformed-protocol stress.\n\nActual daemon admission calls the relay before output batching; runtime creates a per-PTY tracker with `onCommandFinished`, subject to transient-fact authority/consumer enablement. Session exit/background retirement and runtime tracker disposal reset or drop owners. This is at most an incomplete-parent retention per live scanner, not cumulative retention of every historical chunk, not proof of native PTY chunk-size limits, and not incident/RSS attribution. No product edits have been made."
+    }
+  ],
+  "sourceHashes": [
+    {
+      "path": "src/main/ai-vault-search/session-search-engine.ts",
+      "sha256": "fbb9c0e15ca6999a2dd10994ad28783c4f16a3130d86e36874398c15ed8a2c7a"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-retrieval.ts",
+      "sha256": "71e5dd99cc544205f02e39fb76b63828d943f74f169751d6834a88bc9049eb02"
+    },
+    {
+      "path": "src/main/ai-vault/session-newest-files.ts",
+      "sha256": "5061175cfe13d6160bca0b3adbcd1fec2be28fc0e61f4b10c8d530cf46164a76"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-discovery.ts",
+      "sha256": "b18a43d0be14b2e9d78cae261b27e8e86316700907c4a7775d95aba055bf1af5"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-source-discovery.ts",
+      "sha256": "70b3c3242a6b4873f2bd50e98df3d5f4ad0449bea628296de2df9237b9c19247"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner.ts",
+      "sha256": "f5ea702e3208a2d828fc65eda76042e902edc44f78cbf400d7546dea624e5b6c"
+    },
+    {
+      "path": "src/main/automations/headless-dispatch.ts",
+      "sha256": "e58ef8a70034d07dc5b765fc50404fbd37e698326b0af42b6611fcb5c73a98e3"
+    },
+    {
+      "path": "src/main/automations/hermes-cron-output-markdown.ts",
+      "sha256": "0f7f1612bc687c84d3cc427ffed4e47081c5e6a4b206bf8c2f2c6fbf1f50e227"
+    },
+    {
+      "path": "src/main/automations/hermes-cron-output.ts",
+      "sha256": "10689f7aaa4c4f68b0b555a675f226e9e67898b1b9fb004f2e5a7f4277bbff2f"
+    },
+    {
+      "path": "src/main/automations/hermes-cron-run-content.ts",
+      "sha256": "699cc4cec98912ad3afd3a18d3f34f89d32078893322caad4721be35ff0fd6e3"
+    },
+    {
+      "path": "src/main/automations/runtime-terminal-run-observer.ts",
+      "sha256": "ea7b21434185718a7dd11888351da33f6e845f288096c2a721836dbb80705ef9"
+    },
+    {
+      "path": "src/main/browser/browser-client-host-command-dispatcher.ts",
+      "sha256": "f8c610a54f7d16c59043250dde5ef399f70e1a974c9492d09d403138e46c1da3"
+    },
+    {
+      "path": "src/main/browser/browser-client-host-command-page.ts",
+      "sha256": "f5ca7f90511ee0290d2a1d0b3c5c39d3c9841ebcf90a5564bce83fbc9aca06bb"
+    },
+    {
+      "path": "src/main/browser/browser-client-host-command-result-cache.ts",
+      "sha256": "9ec3dad78c83f864f74957cad766cbcf41863e92d81d7e7a471702b0f9ab2f34"
+    },
+    {
+      "path": "src/main/browser/browser-client-host-command-state.ts",
+      "sha256": "a5f6b7a3737f86b2953fc43fa0e3ed5faaa141814d5f94fd192da1bb510f355f"
+    },
+    {
+      "path": "src/main/daemon/daemon-background-transient-facts.ts",
+      "sha256": "6be5c76683a0beb46a205d2f3d343f4e5570ff61b330b73213c72b62a7e7c5b2"
+    },
+    {
+      "path": "src/main/daemon/daemon-terminal-admission.ts",
+      "sha256": "14d1d8bbf4b662c98db123719741daffc3d0fe911d3a6a08d3516be666068251"
+    },
+    {
+      "path": "src/main/daemon/pty-subprocess/subprocess-handle.ts",
+      "sha256": "e28a2043f9c68c365109aab0550f97c49ee76fbbadc14c81dd7eb7b9aae6fc7a"
+    },
+    {
+      "path": "src/main/daemon/session.ts",
+      "sha256": "ddd71285f6e72bcee012e7a9955170be4fb59c8e41e70971bc629c13504a4338"
+    },
+    {
+      "path": "src/main/ipc/filesystem-search-git.ts",
+      "sha256": "5cecd2bed6eea1b2945309e5e4e827d9d457cff7f09db9b18af19e586a26d727"
+    },
+    {
+      "path": "src/main/ipc/pty/provider/state-cleanup.ts",
+      "sha256": "d368d6c6d097ea2dceefa5347277db62d35033e00dee511e0c7f5287403698b8"
+    },
+    {
+      "path": "src/main/ipc/ssh.ts",
+      "sha256": "ec5f7d27ed8773854b587c10705564bcb0341478a830f2512f4ebf90406203b7"
+    },
+    {
+      "path": "src/main/ipc/worktrees/removal/worktree-removal-ownership.ts",
+      "sha256": "76a47936e1473cb5f3dd0bfa5d3cd7d42377d54383c6cf5c7f43eba0f355e67e"
+    },
+    {
+      "path": "src/main/jira/attachment-image-cache.ts",
+      "sha256": "2ef1037ab7694efd6e1ea592b45ca6dd3221bf0dfb2c375786267d2d4804175a"
+    },
+    {
+      "path": "src/main/jira/attachment-images.ts",
+      "sha256": "c9685b150f255fb026e0f243dff601549eba1e96fdf4f98fd461b5f799c64c51"
+    },
+    {
+      "path": "src/main/jira/attachment-meta.ts",
+      "sha256": "d6cae38e1abc3075da053eec85c1167f61a2314ef1a6b84002772435d77f24d8"
+    },
+    {
+      "path": "src/main/jira/authenticated-request.ts",
+      "sha256": "bcbf9263771b6cea60e9930c6173487b85fb5e1ac12150a4afa1a5a90dc82780"
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts",
+      "sha256": "2d0dc6dcfbfba666a0bdebb229b78706c8a137b8427aa2a8b8bc679f0d43749b"
+    },
+    {
+      "path": "src/main/native-chat/transcript-incremental-reader.ts",
+      "sha256": "20028b3c85a5da8ed062b528e357e0412d668d18b0d092268ce4343829284b30"
+    },
+    {
+      "path": "src/main/native-chat/transcript-tail-reader.ts",
+      "sha256": "2ed803c74924fecd5332c4b241cda0a88fbf39b253ae5fc39f71fa990301c4aa"
+    },
+    {
+      "path": "src/main/native-chat/transcript-watch-engine.ts",
+      "sha256": "e9a4efbe34931fb2d14cb0e3411ea4a9023ae33fdacd5a9a5fe28da8577b399a"
+    },
+    {
+      "path": "src/main/native-chat/wsl-transcript-fs-access.ts",
+      "sha256": "707125ebdd120e342255d12660249bf0bdfd72b8335701f5efff028f4e66dab5"
+    },
+    {
+      "path": "src/main/network/http-client.ts",
+      "sha256": "110e521e751b1d0b2fa6612e2bc54da388ea2bc29d82b95ab1bd771b0d1934bb"
+    },
+    {
+      "path": "src/main/plugins/plugin-audit-log.ts",
+      "sha256": "5a0df339053341d1c7defa7a10279d66033cad67c05dac7876ab786694c4eb02"
+    },
+    {
+      "path": "src/main/plugins/plugin-host-methods.ts",
+      "sha256": "420c27d21e87490b98543bbcec2894e0e0e65b77b8130f9ae21201f2ee6dfdbf"
+    },
+    {
+      "path": "src/main/plugins/plugin-host-process.ts",
+      "sha256": "825b938a5fe510944c26e9b503afeb3a0da13b570558a111adc2f9edc21cce6b"
+    },
+    {
+      "path": "src/main/plugins/plugin-host-runtime.ts",
+      "sha256": "e11869c6c1d303c331e6f82ab4d9f7852da57b49bdee46440076664de7c652e1"
+    },
+    {
+      "path": "src/main/plugins/plugin-service.ts",
+      "sha256": "057bcb8af5067112f8aec498ad7824b005dfe9ed7880b3e0745ed54fcfb75420"
+    },
+    {
+      "path": "src/main/ports/advertised-url-cache-update.ts",
+      "sha256": "453c9be9dad279c88fc14f6de714f73ef6eb07fe9468af17736cab527d0f8242"
+    },
+    {
+      "path": "src/main/ports/advertised-url-parsing.ts",
+      "sha256": "075dbec5b8c14cdb0d56fba9f8995156578d9b7ee7daa0511b4de478ebbd32c3"
+    },
+    {
+      "path": "src/main/ports/advertised-url-reconciliation.ts",
+      "sha256": "4f381e4d23b1a41da19e4a2631c85c89a92255f3c69ddf927b256df6113b54e4"
+    },
+    {
+      "path": "src/main/ports/advertised-url-watcher.ts",
+      "sha256": "444fef7f145aa9b549a00bcf5f5fd617f7fb8fdf39b840c5042e9656c6be7d32"
+    },
+    {
+      "path": "src/main/providers/ssh-filesystem-provider.ts",
+      "sha256": "de6051f43ea272fe0a15b7ef5c6df5c8caedfa7adaada205386c4f19be7f04f2"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-apply-tracked-pty-title.ts",
+      "sha256": "3c2ba07ff330875c5a9a07e44c0ffbcb1ebee1ae4af1952502ec733d6c7f7bea"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-get-unpersisted-tracked-title-for-pty.ts",
+      "sha256": "107666bcc7e4bc744db51e9a023d659425947b134b9f420a0f11fb9ff0a7ba33"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-on-pty-exit.ts",
+      "sha256": "75f108950c55d77d5e2b4ee89fb677ae9be2bb6b94d62a3085996cb201259db2"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-resolve-worktree-removal-target.ts",
+      "sha256": "dfbb892c152e85b72da8fabe23d23d4868117321cad042624ea13d6209e33f0a"
+    },
+    {
+      "path": "src/main/runtime/orca-runtime-schedule-wait-blocked-check.ts",
+      "sha256": "cfd5aadcd4fa7388ea600e66135fdad1e0d7883dac81a0222afb2fd33f487c99"
+    },
+    {
+      "path": "src/main/runtime/terminal-tail-limits.ts",
+      "sha256": "b719995138748b5b9c519b00ab92c2f63d3089508075ea3a2a4692006b0c0bad"
+    },
+    {
+      "path": "src/main/runtime/wait-blocked-check-state.ts",
+      "sha256": "b8bdbb0c2ce42633c5b33bae83397937b0d902c1eb54a087fa5ea3b469f749a7"
+    },
+    {
+      "path": "src/main/skills/discovery.ts",
+      "sha256": "6a8320d9e4c7036b29c88ffd68d7fb3a1993c48b18cf3cc204b3ac6dac31cc61"
+    },
+    {
+      "path": "src/main/skills/skill-delete/wsl-enumeration-protocol.ts",
+      "sha256": "20145a021266869c17d722eaf0870cfd431272fe3625d3e0f8c1efa5ec4cbf48"
+    },
+    {
+      "path": "src/main/skills/skill-discovery-target.ts",
+      "sha256": "a2b762e966ce575362a29e3c08340fbcf0aa01da756bc1d006013b172cc7fa58"
+    },
+    {
+      "path": "src/main/skills/skill-discovery-wsl-observation.ts",
+      "sha256": "3b7b496e50ada19cdab571b271a881b33b92a968d7969828add7f14d082ae805"
+    },
+    {
+      "path": "src/main/skills/skill-discovery-wsl.ts",
+      "sha256": "773fc37c65c9589073e2da93de658c78817b56832e588453771235a949fd103f"
+    },
+    {
+      "path": "src/main/skills/skill-install-discovery-verification.ts",
+      "sha256": "112a3f563c02f4d7ca4b05fc15ba781d676f3403d5fd1b8288adab8dda25825e"
+    },
+    {
+      "path": "src/main/skills/skill-scan-coalescer.ts",
+      "sha256": "d41e0bffa347734fc0b33ecc7e477b2038ea8fda0e85660edf9438342b2e0df2"
+    },
+    {
+      "path": "src/main/skills/skill-wsl-install-filesystem.ts",
+      "sha256": "dad1bfb8d3202dc026347f80b77795abbb7ccb37db45ee95f2804c7c6130a702"
+    },
+    {
+      "path": "src/main/source-control/hosted-review-branch-cache.ts",
+      "sha256": "1e6919678fcd026536dd9b42fbc93ca78411dcf17428e408cd74596554dd0ab8"
+    },
+    {
+      "path": "src/main/source-control/hosted-review-refresh-pacing.ts",
+      "sha256": "6b30c99db7b7064bc79b7116c1178b7f64eed7b0ddeccc7ab441771df0115475"
+    },
+    {
+      "path": "src/main/source-control/hosted-review-unsettled-lookups.ts",
+      "sha256": "54ddc33f8f98da879c26ed856f504fe04f888552562f64e27c3e48b8c67825e6"
+    },
+    {
+      "path": "src/main/source-control/hosted-review.ts",
+      "sha256": "111015db9f9134614647ad61c7aa8a1d31f6d704091bc3a96d247cf32012176f"
+    },
+    {
+      "path": "src/main/ssh/ssh-channel-multiplexer.ts",
+      "sha256": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108"
+    },
+    {
+      "path": "src/main/ssh/ssh-connection-generation.ts",
+      "sha256": "9f755814d5282f64f62ff7e181c1894811d89551372ad04ded4e22516874ad48"
+    },
+    {
+      "path": "src/main/ssh/ssh-file-stream-inactivity-deadline.ts",
+      "sha256": "0554419b22356efa60065b15640d8bf0d8d166bf345e30b492b2305767ea603a"
+    },
+    {
+      "path": "src/main/ssh/ssh-file-stream-read-cap.ts",
+      "sha256": "83b714af0c87da4c855762ffb827f529302ebc426ab5cde59458206a64cb07b1"
+    },
+    {
+      "path": "src/main/ssh/ssh-filesystem-stream-reader.ts",
+      "sha256": "b8586de1412df98428939a0a4870c5f8ccab22f506a188b2eb1c7a38c317b1ef"
+    },
+    {
+      "path": "src/main/ssh/ssh-provider-authority.ts",
+      "sha256": "52528a4726dd154712eca963a7fd12c9533b5ea94c838e80b1b9c98543535ed6"
+    },
+    {
+      "path": "src/main/startup/main-process-automations.ts",
+      "sha256": "8ae25dc1e03a4b628effca126430ab18f3df0f74e97df2393b56bfd977c979df"
+    },
+    {
+      "path": "src/relay/fs-handler-file-read.ts",
+      "sha256": "2d70577839cb150ad0977981d54904b1a25bd8b5de7cfe19e018c08c36f41cd2"
+    },
+    {
+      "path": "src/relay/fs-stream-registry.ts",
+      "sha256": "d723dd0b6419a7937225bdacbc572ef004c49d850cbc616e9168e48f5e63b8fd"
+    },
+    {
+      "path": "src/relay/protocol.ts",
+      "sha256": "faebaded7e8c8b98f021c791b4519d78d58be3879937fe2ed2cef68b22404060"
+    },
+    {
+      "path": "src/shared/agent-hook-listener.ts",
+      "sha256": "fbd33232f9a55dcf43d59127d145012f8416605b032b97a5df88535401a595fe"
+    },
+    {
+      "path": "src/shared/agent-hook-listener/command-code-transcript.ts",
+      "sha256": "4f887c2a188012433f78b6289b1c4d82d14e6938297dc2e8ec7aa557213acfd2"
+    },
+    {
+      "path": "src/shared/agent-hook-listener/provider-dispatch.ts",
+      "sha256": "4c572a4b629b69ff442e14c62d5375ad739c99c99fb390166f34698852f31e74"
+    },
+    {
+      "path": "src/shared/agent-hook-listener/providers/command-code-tool-fields.ts",
+      "sha256": "d0c8dc513cd20b5f500c6ca156a5fc8f1ce0f6edaef9d8b92b3e81dc2cbddde4"
+    },
+    {
+      "path": "src/shared/agent-hook-listener/transcript-reader.ts",
+      "sha256": "ec33153bfcc61e497ff75eb58f5a132cd9cec7688b1cb9aaf5aed11bac6a4207"
+    },
+    {
+      "path": "src/shared/browser-client-automation-protocol.ts",
+      "sha256": "f93331c39fd0f8e08518d7a11a461bf5108c1a65be8f213ab2e2eff2ab977e58"
+    },
+    {
+      "path": "src/shared/browser-client-host-protocol.ts",
+      "sha256": "712fe3eaed30c2de322466f316c966e526dcb60cf387cc0f6ba48012c70a7956"
+    },
+    {
+      "path": "src/shared/commit-message-generation.ts",
+      "sha256": "22e29f744150871be1546c6960da29163f4cd98bfe31f5e424bddc84633e558a"
+    },
+    {
+      "path": "src/shared/commit-message-prompt.ts",
+      "sha256": "4c55ddd620183876b170a114576b9a770c4225311eb1b66dda0b3409fb4934d3"
+    },
+    {
+      "path": "src/shared/own-retained-string.ts",
+      "sha256": "addea88bc11c725192be2ff617b91315a875113844c95de03e5529cf3d7ef2e2"
+    },
+    {
+      "path": "src/shared/pull-request-generation.ts",
+      "sha256": "46e48e449186aadfca858d3d73a94cdde9bd0c54c75e3cded186fb1e18646473"
+    },
+    {
+      "path": "src/shared/search-subprocess-lines.ts",
+      "sha256": "b860de84a4081fb86515bb31910f0f1d4b0a6606370490c4f60aa9d2e9d5eee3"
+    },
+    {
+      "path": "src/shared/skill-metadata.ts",
+      "sha256": "80871481ffb47061f5f38317c88675256de8affce905050d3caeee290ff5a802"
+    },
+    {
+      "path": "src/shared/terminal-mode-2031-final-state.test.ts",
+      "sha256": "42f3ff8839969f36a98f05c36d93abb7da291a9c3d2923a185a4933f4f245e10"
+    },
+    {
+      "path": "src/shared/terminal-osc133-command-finished.ts",
+      "sha256": "1790083b5200d11e68257556dffb49d2e8700841dccc6ccbbaa2c30b11b1efcd"
+    },
+    {
+      "path": "src/shared/terminal-output-side-effects.ts",
+      "sha256": "f609970e2ea7e53fc9e1ab0e0caca038b910dee3c092a9297377689871845f49"
+    },
+    {
+      "path": "src/shared/text-search-match-accumulator.ts",
+      "sha256": "1229c755abc94608e211c6e403d529905f577a991871eadfed5eb18821d6e88b"
+    },
+    {
+      "path": "src/shared/text-search.ts",
+      "sha256": "c291574e05874440601a6a043b5d065ca172072f4146568d9c9818829abbc185"
+    }
+  ]
+}

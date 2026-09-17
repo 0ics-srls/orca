@@ -1,6 +1,6 @@
 # Memory leak audit (2026-09-15)
 
-The audit produced **52 separate PRs**: 47 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
+The audit produced **56 separate PRs**: 51 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
 reproduced mechanisms are terminal hyperlink metadata retention, stalled daemon
 output, stalled CDP delivery, oversized strings retained by small text tails,
 unbounded transcript record assembly, invisible WebGL glyph caches, and contrast-color caches. They establish real defects in code paths that
@@ -74,6 +74,13 @@ covers current/main/reported-release source selections with other dependencies
 current. The report does not establish the required pending-activation trigger;
 safe cleanup must also protect a newer live owner.
 
+The [expanded body-search index](./expanded-memory-body-review/README.md) now
+tracks 201 discovery candidates, including the old catalog and lexical false
+positives. Its 147 `memory` body matches were fully paginated, and 134 additional
+bodies/comments were fetched. Pending rows are explicitly unreviewed; the earlier
+title catalog is not presented as complete body coverage. Reporter corrections
+for #18839 and #16630 identify test-runner children as the incident memory owners.
+
 The ledger separates reproduced retaining paths, ownership/cleanup gaps,
 intentional resource policies, historical fixes, and incidents without enough
 attribution evidence. It also records existing PRs rather than duplicating them.
@@ -130,20 +137,20 @@ because the retaining path crosses that boundary.
 
 | Category       | Inventoried files |
 | -------------- | ----------------: |
-| Source         |            25,685 |
-| Config         |               920 |
-| Documentation  |               311 |
-| Asset/other    |               231 |
-| **Total rows** |        **27,147** |
+| Source         |            25,717 |
+| Config         |               963 |
+| Documentation  |               324 |
+| Asset/other    |               238 |
+| **Total rows** |        **27,242** |
 
 The [file inventory](./memory-leak-file-inventory-2026-09-15.tsv) records size and
 SHA-256 for every tracked path except the inventory itself. That self-exclusion
-avoids a circular hash; symlinks are hashed as link text. Thus 27,147 rows plus
-the inventory account for 27,148 tracked paths. Hashes describe the final
+avoids a circular hash; symlinks are hashed as link text. Thus 27,242 rows plus
+the inventory account for 27,243 tracked paths. Hashes describe the final
 worktree contents, including staged evidence files, rather than only HEAD.
 
 The [mechanical search results](./memory-pattern-scan-2026-09-15.json) record
-25,685 source files searched, including 7,888 matching files, and per-file hits for
+25,717 source files searched, including 7,900 matching files, and per-file hits for
 listener, timer, subscription, disposal, Map/Set, buffer-concatenation and shared-promise signals. Zero-hit source
 files remain represented in the inventory. These searches include comments and
 tests; unequal add/remove counts do not establish a leak. Candidate review traced
@@ -238,3 +245,38 @@ Node writable control preserves the in-flight buffer and releases 127 completed
 ones. Thirty-one tests, independent scheduling review and both runtime proofs
 pass. This SSH mechanism does not explain #19831's all-local workload.
 [Artifacts](./ssh-writer-consumed-prefix/README.md).
+
+## Browser and daemon owner retirement
+
+[#21160](https://github.com/stablyai/orca/pull/21160) fences viewport user-agent
+state by the captured guest identity. Sixteen controlled late clear rejections
+recreate 16 retired boolean entries before the fix and zero afterward. Forty-two
+tests preserve same-owner rollback and replacement guests. This is small metadata,
+not retained guest heaps. [Artifacts](./browser-viewport-owner-retention/README.md).
+
+[#21162](https://github.com/stablyai/orca/pull/21162) removes retired incarnation
+entries from a resolver after another resolver has deleted their shared routes.
+Thirty-two authenticated daemon replacements leave 32 private entries before and
+zero after. Fifty-four tests and both Node/Electron source graphs pass. Live
+ownership and direct attach remain intact. [Artifacts](./daemon-shared-owner-incarnation-retention/README.md).
+
+[#21164](https://github.com/stablyai/orca/pull/21164) releases settled browser
+results at host close while pending native handlers remain owned. Thirty-two
+completed payload objects remain before and zero after; 77 tests and all four
+Node/Electron variants pass. An independent reentrant-close test preserves sibling
+handler custody. A controlled delay establishes the retaining path, not natural
+stall duration or incident magnitude. [Artifacts](./browser-closed-result-retention/README.md).
+
+The fifteenth retained-string boundary in [#20960](https://github.com/stablyai/orca/pull/20960)
+copies the final bounded OSC 133 carry. Fish command-prefix syntax comes from an
+existing captured fixture; the large prefix placement and chunk split are synthetic.
+Forty-five tests and 117 cases in each runtime preserve completion/reset behavior.
+[Artifacts](./osc133-carry-retention/README.md).
+
+[#21167](https://github.com/stablyai/orca/pull/21167) installs SSH file metadata
+synchronously and removes the queue of unrelated stream frames. Four deliberately
+delayed readers retain 44,739,584 logical base64 bytes shared across completed
+foreign transfers before the fix and none afterward. Seventy-three focused tests
+and 80 portable controls pass across Node/Electron and both source graphs. The
+metadata deadline bounds ordinary duration; this proves a conditional retention
+mechanism, not an SSH cause for #19831. [Artifacts](./ssh-file-metadata-retention/README.md).

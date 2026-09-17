@@ -1,0 +1,79 @@
+{
+  "numTotalTestSuites": 4,
+  "numPassedTestSuites": 4,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 3,
+  "numPassedTests": 3,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789622327366,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue19660 current local RPC options"],
+          "fullName": "issue19660 current local RPC options stays pending beyond caller deadline and abort until underlying IPC resolves",
+          "status": "passed",
+          "title": "stays pending beyond caller deadline and abort until underlying IPC resolves",
+          "duration": 2.7406669999999878,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue19660 current local RPC options"],
+          "fullName": "issue19660 current local RPC options rejects pre-aborted input before local dispatch",
+          "status": "passed",
+          "title": "rejects pre-aborted input before local dispatch",
+          "duration": 0.4929170000000056,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622330189,
+      "endTime": 1789622330192.493,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/docs/audits/runtime-resource-body-review/local-rpc.test.mjs"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue19342 check and workerStart share wait admission"],
+          "fullName": "issue19342 check and workerStart share wait admission refuses workerStart at16 held checks, still permits short checks and recovers after one settles",
+          "status": "passed",
+          "title": "refuses workerStart at16 held checks, still permits short checks and recovers after one settles",
+          "duration": 2.0600000000004,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789622330098,
+      "endTime": 1789622330100.06,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/docs/audits/runtime-resource-body-review/long-poll.test.mjs"
+    }
+  ]
+}

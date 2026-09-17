@@ -1,0 +1,80 @@
+{
+  "checkpoint": "49a8671f68a29f2d399ded065432361b9d62a4cb",
+  "scope": "Three exercised target fences; surrounding dependencies current. Other sources were manually read, not all executed.",
+  "revisions": {
+    "291b4ddd6f1c1af480169885e0fda7f9c78ff053": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "v1.4.197": "5ee4ace516080891731d100f843b074408a9ce0e",
+    "v1.4.198": "e0826956fcfc532f5a1e55b5e081f2e57e553c43"
+  },
+  "executedTargets": [
+    {
+      "path": "src/main/runtime/runtime-rpc/runtime-rpc-request-admission.ts",
+      "currentSha256": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39",
+      "namedHashes": {
+        "291b4ddd6f1c1af480169885e0fda7f9c78ff053": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39",
+        "v1.4.197": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39",
+        "v1.4.198": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39"
+      }
+    },
+    {
+      "path": "src/main/runtime/runtime-rpc/runtime-rpc-long-poll.ts",
+      "currentSha256": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f",
+      "namedHashes": {
+        "291b4ddd6f1c1af480169885e0fda7f9c78ff053": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f",
+        "v1.4.197": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f",
+        "v1.4.198": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f"
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/runtime-rpc-client.ts",
+      "currentSha256": "37912cebd375be8378a8a882cf5677663d435414cb81bec5180637df7165f2b9",
+      "namedHashes": {
+        "291b4ddd6f1c1af480169885e0fda7f9c78ff053": "d0ae689153ba0d972ba7a10484c2024bf9fd08c8628bd43009396aa0f653058e",
+        "v1.4.197": "1d0e9b443c4080c3e464c5bccea0b10e2db07d09fb333258f257458d0085e950",
+        "v1.4.198": "1d0e9b443c4080c3e464c5bccea0b10e2db07d09fb333258f257458d0085e950"
+      }
+    }
+  ],
+  "readSources": [
+    {
+      "path": "src/main/runtime/runtime-rpc/runtime-rpc-state.ts",
+      "sha256": "27db1326ad64194c08fecc4bcc17a185324679377965b5ab730cc7fdbf85542a"
+    },
+    {
+      "path": "src/main/ipc/runtime.ts",
+      "sha256": "aa86d900aa8658ff7c6beaab8a915857bfe57f029f0df553b65eae78eac67198"
+    },
+    {
+      "path": "src/preload/api/runtime-api.ts",
+      "sha256": "3ed8adf2866671779561399d391da2e30c316c9fc3590cc573d05d27cdea2b25"
+    },
+    {
+      "path": "src/preload/api/runtime-bridge.ts",
+      "sha256": "670533856326cd427516f3f56f6d3aa752f8e1ee38538605ef4fee7a9e8b21c3"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/orchestration/worker/worker-release.ts",
+      "sha256": "0027895577f85dac846aed1215508bfd5afb25f370fa77be8902942d134c9797"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/orchestration/worker/worker-release-completion.ts",
+      "sha256": "1df44c2da0daa2967d23ca6a388bff3e6261b2a11fd86c8d27e07ccadd5c72fb"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/orchestration/worker/worker-list-method.ts",
+      "sha256": "b4e3a76aad68d94c2f1b59e42d7dbb5f8f2085b3a9567b058d63d817df0f31d6"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/orchestration/worker/worker-list-snapshot-store.ts",
+      "sha256": "8dfc98f79e12960339938458489c783851dfcffb9c006ac3940609f31c1d80f1"
+    },
+    {
+      "path": "src/main/runtime/orchestration/worker-terminal-ownership.ts",
+      "sha256": "64533ec724deecc8c5b509a3485f9f7202f54b57b152258dc1345fe270a1e42a"
+    },
+    {
+      "path": "src/main/runtime/orchestration/db/worker-terminal/worker-terminal-archive.ts",
+      "sha256": "c9b080460df8f518a3f8ad5a8a82a699bb1a317334bcff293ad867410343ca57"
+    }
+  ]
+}

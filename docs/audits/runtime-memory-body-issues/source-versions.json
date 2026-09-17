@@ -1,0 +1,77 @@
+{
+  "workingRevision": "fa13d22d4f0668f042929ea41916e1405f6bc63a",
+  "sourceHashes": {
+    "src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts": "afdd59a68777f654643e21e2b644f2182afc18c26e37f17c3bbc70b1b91520ef",
+    "src/main/runtime/orca-runtime-postlude.ts": "392725586abb4631df7a62cbccb8e761c43a387eb25ac1302f490b29af942b04",
+    "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+    "src/main/runtime/runtime-worktree-scan-cache.ts": "b066a180b30a930f0b7c92be99de2b5af82525a78b903d137691d6cf008f0d1a",
+    "src/main/runtime/repo-worktree-row-resolution.ts": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+    "src/main/runtime/worktree-scan-admin-fingerprint-gate.test.ts": "0e48c5952380c324902e584f118d30e67f6816853682bebdb75116cabeed5eaa",
+    "src/main/git/command-runner/git-admission-state.ts": "1ba9c4124d7d80390ac3d773def41e93cab8713c674d601658d9d833024fd27e",
+    "src/main/rate-limits/codex-fetcher.ts": "9c6f0a9f7f244478c55f41bbcb8dd65ea6ea380ef6317aec6cb6228a93fa5444",
+    "src/main/rate-limits/codex-rpc-rate-limit-probe.ts": "c538a33de029dbbaeb471559ea88d82eaccd60b25915ea79acc8aee31fc912cd",
+    "src/main/rate-limits/codex-probe-termination.ts": "2e20367628d35fa0fe4c3eddb6a7ae2f08fca508099319fbe2f836afa0f139c6",
+    "src/main/startup/main-window-core-services.ts": "be2b0aa74a3067f3dbdd4b64b0473bba8e40228e7d6c3a155eefa46add2f8f27",
+    "src/main/rate-limits/service/service-configuration.ts": "5a6298ffd26594c50a269d2b4ecdf7c7b432165142a5be307f3ebd83c4863613",
+    "src/main/git/remote-name-listing.ts": "86180170dcf53d51c9d16cae1a0550835ebd006641423f7b0d93fba309e4221b",
+    "src/main/github/github-repository-identity.ts": "0744400d378cb8b9447bfe0a118e31305a526e09b0f709ddf0caffea40597fbe",
+    "src/main/github/github-repository-identity.fork-owner-repo.test.ts": "720e1b0fbaa2c1a1a6bb050f3d6189b6f59fb0d21736023d3c0a3872b762c768",
+    "src/main/git/repo-default-base-ref.ts": "2103a4e036720a7cf66e137f3c2fe26af5bb4f2cccf7a6a84aba90edbf7155e2",
+    "src/main/source-control/repo-default-branch.ts": "43adc393cd7aa2ac197577a58bb470a449d28381d8f7febbb328adf951486e00",
+    "src/main/runtime/runtime-repository-ref-queries.ts": "37658eb3026ee52fa83fc0f16f7a348614e31349e6d506da241b0009d3e86dbc",
+    "src/main/ipc/repos/base-ref-query-handlers.ts": "f27157dbb70b6a96695428406f73d7a6e45cce73d7e796e12d010fb480e84e3c",
+    "src/renderer/src/components/right-sidebar/source-control/sync/use-base-ref-default.ts": "eeb5795cfc318aaf791eca7ee85a9a9803ad4e65db0a95c9b0c01fd7f45e7732",
+    "src/main/providers/ssh-pty-notification-routing.ts": "0d4f926dee5bc72d57c4bbf25f4b7a5f1ca70f7ebd3faddb2fc09e93d6d671d1",
+    "src/main/ssh/ssh-channel-multiplexer.ts": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108",
+    "src/main/runtime/orca-runtime-on-pty-data.ts": "4341b00820e7af1ad280e6132ac4dc9b9e198792c482758213d9286cf24b883e",
+    "src/main/runtime/orca-runtime-maybe-hydrate-headless-from-renderer.ts": "5ba68552f81a9dfba1e4f8756732b958a91ecf60b14a62c1c536cca61c5c55e7",
+    "src/main/runtime/orca-runtime-create-pty-headless-terminal-state.ts": "21a9aef91c4debaf91aa2bd3a7d7b77bc46769cc7cead0609b8425350ea78636",
+    "src/main/runtime/terminal-model-query-authority.ts": "a66d2cbcc66d651187ee9532a5b0437d78f19fcb65886d3dd540057d0b17d915",
+    "src/main/runtime/terminal-model-query-authority.test.ts": "554eecf1284af044088aa5cd9b90616b6db631cbf7d815a865b784d00cacc531",
+    "src/main/runtime/terminal-query-responder.test.ts": "a8f6fa20d9dbecf32c17aeaa8f033f38496c4694f8b7dd815c1712000a932f5d",
+    "src/renderer/src/components/terminal-pane/pty-connection/hidden-output-restore-limits.ts": "de3021212cd5052036585940f6f308a53e2a307e7189c984419ff786faeb6f4b",
+    "src/renderer/src/components/terminal-pane/pty-connection-hidden-backlog-reconciliation.test.ts": "2dd068df3988c248a60cbdc75fcc7d69ca292b7b87d209c28dfe59110c222aeb"
+  },
+  "historicalSources": {
+    "v1.4.160-rc.5": {
+      "revision": "c8dba6d72caa60aeb663ec0cd525d0216e485f63",
+      "sourceHashes": {
+        "src/main/runtime/orca-runtime.ts": "b21ab7b653dc4841dc932b56d0b20e8806c71771ba3807d8a72f63dcbe247aa7",
+        "src/main/providers/ssh-pty-notification-routing.ts": "4bdf40d0994e148899140d1b3b6b1e805d52a9ff3e0e956d804c8ede5faef907",
+        "src/main/runtime/terminal-model-query-authority.ts": "b0f01600668410e76afb290f7c622b3415ddef134b7587315e62b8005d99959e",
+        "src/renderer/src/components/terminal-pane/pty-connection.ts": "ac382c4cae26c61172a13d21eaba914d26acc4258367ae3fd247a55fd3c1b7d6"
+      }
+    },
+    "v1.4.183": {
+      "revision": "49f57f83b4054aed486d365d4b277bb2a652f660",
+      "sourceHashes": {
+        "src/main/index.ts": "82e27d6021f3d5dca3fac6a8e6e714be523918ff11d8c1de934db2c0c48399ea",
+        "src/main/rate-limits/codex-fetcher.ts": "38a2779aacb5462ec1cab6494ebab7fc6074fe3ce777cb74837b7d3c36774892",
+        "src/main/rate-limits/codex-probe-termination.ts": "1e2065708422d17f63a85759a8a3340ed4e86600619f059f073bb71cce5c8883"
+      }
+    },
+    "v1.4.187": {
+      "revision": "b5ed2d13e1348b1afe654a891794ca4bb68e4091",
+      "sourceHashes": {
+        "src/main/github/github-repository-identity.ts": "a9feb8334218cde34f2d7e0197248c7c8c2cd41dc493936671f700537e866317",
+        "src/main/git/repo.ts": "2b338618b9715383616e5fc6f749d6a4b473e56488dec10cf6a184b359a8cc62",
+        "src/main/runtime/repo-worktree-row-resolution.ts": "893270e00dcff794de428cde58613e503321f13d799db3f73c1b8c41724552db"
+      }
+    },
+    "v1.4.197": {
+      "revision": "5ee4ace516080891731d100f843b074408a9ce0e",
+      "sourceHashes": {
+        "src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts": "66ef6ffc778f53c6899de22f8a5d388dc1cdca972cb232b8a2aef8b34e940474"
+      }
+    }
+  },
+  "existingFixesAbsentFromV187": {
+    "67f2fc9e7c7550cd75ae7ffe8f0927b3a7db686b": true,
+    "31db2774f8636fa46af1105e84353030bc06ac53": true
+  },
+  "targetPath": "src/main/runtime/orca-runtime-refresh-repo-worktree-scan.ts",
+  "reportedTargetRevision": "5ee4ace516080891731d100f843b074408a9ce0e",
+  "reportedTargetSha256": "66ef6ffc778f53c6899de22f8a5d388dc1cdca972cb232b8a2aef8b34e940474",
+  "currentTargetSha256": "afdd59a68777f654643e21e2b644f2182afc18c26e37f17c3bbc70b1b91520ef",
+  "scope": "Thirty manual source boundary hashes and eleven historical source hashes, not an exhaustive bundled dependency lock. Tests use installed dependencies."
+}
