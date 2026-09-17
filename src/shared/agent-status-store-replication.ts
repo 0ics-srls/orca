@@ -1,11 +1,14 @@
+import { AGENT_STATUS_STORE_LIMITS } from './agent-status-store-contract'
 import { normalizeAgentStatusPayload, type AgentStatusIpcPayload } from './agent-status-types'
 import { normalizeExecutionHostId, type ExecutionHostId } from './execution-host'
 
 export const AGENT_STATUS_STORE_REPLICA_CAPABILITY = 'agent-status.store-replica.v1' as const
 export const AGENT_STATUS_STORE_REPLICA_BUFFER_MAX = 256
-/** Ceiling on rows/changes in one frame. Above every producer's own pane cap (relay 256, hook cache
- *  500), so a legitimate host cannot reach it and an oversized frame is a peer defect, not a census. */
-export const AGENT_STATUS_STORE_FRAME_ENTRIES_MAX = 1024
+/** Peer-defect guard on one frame's entry count, not an inventory limit. The main hook server's pane
+ *  map is uncapped, so no constant here can bound a legitimate census; this only has to sit clear of
+ *  the largest bound that is actually enforced, so a frame that reaches it is malformed or hostile.
+ *  Derived rather than literal because that bound and this ceiling live in different files. */
+export const AGENT_STATUS_STORE_FRAME_ENTRIES_MAX = AGENT_STATUS_STORE_LIMITS.parents * 2
 export const AGENT_STATUS_STORE_FRAME_NOTIFICATION = 'agentStatus.storeFrame' as const
 export const AGENT_STATUS_STORE_SUBSCRIBE_METHOD = 'agentStatus.subscribeStore' as const
 export const AGENT_STATUS_STORE_SNAPSHOT_METHOD = 'agentStatus.getStoreSnapshot' as const
