@@ -281,15 +281,17 @@ export class RelayAgentHookServer {
         // TODO: once normalizeHookPayload returns validated env/version, drop bodyEnv/bodyVersion and source them from the listener result.
         const env = hookBodyEnv(hookBody)
         const version = hookBodyVersion(hookBody)
+        this.applyEvent(event, source, env, version)
+        // Why after applyEvent: the receipt is diagnostics and does synchronous filesystem
+        // work, so it must not sit in front of status ingestion.
         recordIntegrationDelivery({
           source,
           body: hookBody,
           executionId: event.launchToken,
           paneKey: event.paneKey,
           host: 'remote',
-          healthFilePath: join(this.endpointDir, 'integration-health.json')
+          healthDir: this.endpointDir
         })
-        this.applyEvent(event, source, env, version)
         this.retryScheduler.scheduleAssistantMessageRetry(source, hookBody, event, env, version)
         this.retryScheduler.scheduleCodexSubagentPoll(source, hookBody, event, env, version)
       }

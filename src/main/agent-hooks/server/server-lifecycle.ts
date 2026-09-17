@@ -18,7 +18,6 @@ import { drainAgentHookSpool, type SpoolRecord } from '../../../shared/agent-hoo
 import { clearAllListenerCaches } from '../../../shared/agent-hook-listener/listener-state'
 import { trackEmptyPaneKeyHook } from './server-transport-rules'
 import { AgentHookServerRuntimeEnv } from './server-runtime-env'
-import { dirname, join } from 'node:path'
 import { recordIntegrationDelivery } from '../integration-health-receipts'
 
 export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv {
@@ -127,17 +126,17 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
             this.scheduleCodexSubagentPoll(source, aliasedBody, enriched)
           }
         }
-        // Why: a delivery receipt is diagnostics, so it runs after status is applied and
-        // never from an expression that can throw — the endpoint path is null until the
-        // endpoint is set up and again after stop(), which would drop the event entirely.
-        if (normalized.event && this.lastStatusFilePath) {
+        // Why after the status block: a delivery receipt is diagnostics and must not sit in
+        // front of ingestion. The endpoint dir is null until setup and again after stop();
+        // the receipt owns that check so no call site can throw an event away.
+        if (normalized.event) {
           recordIntegrationDelivery({
             source,
             body: aliasedBody,
             executionId: normalized.event.launchToken,
             paneKey: normalized.event.paneKey,
             host: this.env === 'remote' ? 'remote' : 'local',
-            healthFilePath: join(dirname(this.lastStatusFilePath), 'integration-health.json')
+            healthDir: this.endpointDir
           })
         }
         res.writeHead(204)

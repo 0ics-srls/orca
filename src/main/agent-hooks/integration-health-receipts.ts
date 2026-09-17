@@ -1,15 +1,27 @@
+import { join } from 'node:path'
+
 import { IntegrationHealthStore, readIntegrationHealthMetadata } from './integration-health'
 
-/** Persist a loader/delivery receipt emitted by the host's validated hook receiver. */
+const INTEGRATION_HEALTH_FILE = 'integration-health.json'
+
+/** Persist a loader/delivery receipt emitted by the host's validated hook receiver.
+ *
+ *  Takes the endpoint directory rather than a file path on purpose: a caller that builds
+ *  the path itself evaluates that expression outside this guard, and one such call site
+ *  threw on a null endpoint and dropped the hook event it was only meant to observe.
+ *  Resolving it here makes every caller safe by construction. */
 export function recordIntegrationDelivery(input: {
   source: string
   body: unknown
   executionId: string | undefined
   paneKey: string
   host: 'local' | 'remote'
-  healthFilePath: string
+  healthDir: string | null | undefined
 }): void {
   if (input.source !== 'opencode' && input.source !== 'auggie') {
+    return
+  }
+  if (!input.healthDir) {
     return
   }
   try {
@@ -24,7 +36,9 @@ export function recordIntegrationDelivery(input: {
         : version
           ? `${input.source}:${version}`
           : undefined
-    new IntegrationHealthStore({ filePath: input.healthFilePath }).recordDeliveryEvidence({
+    new IntegrationHealthStore({
+      filePath: join(input.healthDir, INTEGRATION_HEALTH_FILE)
+    }).recordDeliveryEvidence({
       integration: input.source,
       host: input.host,
       scope: input.paneKey,

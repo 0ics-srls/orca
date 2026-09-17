@@ -31,6 +31,7 @@ import {
 } from './hook-config'
 import type { HooksConfig } from '../agent-hooks/installer-utils'
 import { createIntegrationHealthStore } from '../agent-hooks/integration-health'
+import { ORCA_HOOK_PROTOCOL_VERSION } from '../../shared/agent-hook-types'
 import { getAppEnvironment } from '../../shared/app-environment'
 import { refreshManagedScriptIfPresent } from '../agent-hooks/managed-hook-script-refresh'
 
@@ -174,18 +175,23 @@ export class AuggieHookService {
       process.platform === 'win32' ? buildAuggieWindowsManagedScript() : buildAuggieManagedScript()
     )
     writeHooksJson(path, applyAuggieManagedHooks(config, command))
-    createIntegrationHealthStore(
-      join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
-    ).recordArtifact({
-      integration: 'auggie',
-      host: 'local',
-      scope: path,
-      bytes:
-        process.platform === 'win32'
-          ? buildAuggieWindowsManagedScript()
-          : buildAuggieManagedScript(),
-      version: '1'
-    })
+    try {
+      createIntegrationHealthStore(
+        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
+      ).recordArtifact({
+        integration: 'auggie',
+        host: 'local',
+        scope: path,
+        bytes:
+          process.platform === 'win32'
+            ? buildAuggieWindowsManagedScript()
+            : buildAuggieManagedScript(),
+        version: ORCA_HOOK_PROTOCOL_VERSION
+      })
+    } catch {
+      // Why: the hook is already written. getAppEnvironment() throws by contract outside an
+      // installed environment, and a diagnostics write must not report a real install as failed.
+    }
     return this.getStatus()
   }
   remove(): AuggieInstallStatus {
