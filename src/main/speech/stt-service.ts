@@ -1,4 +1,5 @@
 import type { ModelManager } from './model-manager'
+import { STT_AUDIO_OVERLOAD_ERROR } from './stt-audio-pending-budget'
 import { startSttDictation } from './stt-session-start'
 import { createSttSessionState, type SttSessionState } from './stt-session-state'
 import { prepareSttModelForDeletion, stopSttDictation } from './stt-session-stop'
@@ -45,9 +46,12 @@ export class SttService {
       this.state.cloudSession.feedAudio(samples, sampleRate)
       return
     }
-    this.state.worker?.postMessage({ type: 'feed', samples, sampleRate }, [
-      samples.buffer as ArrayBuffer
-    ])
+    const worker = this.state.worker
+    if (worker && !this.state.audioPending.tryPost(worker, samples, sampleRate)) {
+      const sink = this.state.eventSink
+      void stopSttDictation(this.state, owner).catch(() => undefined)
+      sink?.({ type: 'error', error: STT_AUDIO_OVERLOAD_ERROR })
+    }
   }
 
   stopDictation(
