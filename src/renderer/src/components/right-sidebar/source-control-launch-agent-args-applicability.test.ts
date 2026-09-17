@@ -1,59 +1,49 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  structuredAgentSessionLaunchFeasible: vi.fn(),
+  planAgentSessionLaunch: vi.fn(),
   getState: vi.fn(() => ({}))
 }))
 
 vi.mock('@/lib/agent-session-launch-plan', () => ({
-  structuredAgentSessionLaunchFeasible: mocks.structuredAgentSessionLaunchFeasible
+  planAgentSessionLaunch: mocks.planAgentSessionLaunch
 }))
 vi.mock('@/store', () => ({ useAppStore: { getState: mocks.getState } }))
 
 import { sourceControlLaunchAppliesAgentArgs } from './source-control-launch-agent-args-applicability'
 
-const CHAT_BY_DEFAULT = {
-  experimentalNativeChat: true,
-  openAgentTabsInChatByDefault: true,
-  experimentalStructuredNativeChat: true
-}
-
 describe('sourceControlLaunchAppliesAgentArgs', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mocks.planAgentSessionLaunch.mockReturnValue({ route: 'terminal-tui' })
   })
 
   it('applies arguments when the user launches into a terminal by default', () => {
     expect(
       sourceControlLaunchAppliesAgentArgs({
         agent: 'codex',
-        worktreeId: 'wt-1',
-        settings: { experimentalNativeChat: false, openAgentTabsInChatByDefault: false }
+        worktreeId: 'wt-1'
       })
     ).toBe(true)
-    // The route never has to be resolved: the default alone settles it.
-    expect(mocks.structuredAgentSessionLaunchFeasible).not.toHaveBeenCalled()
   })
 
   it('drops arguments only when this launch would really be a structured session', () => {
-    mocks.structuredAgentSessionLaunchFeasible.mockReturnValue(true)
+    mocks.planAgentSessionLaunch.mockReturnValue({ route: 'structured-native-chat' })
     expect(
       sourceControlLaunchAppliesAgentArgs({
         agent: 'codex',
-        worktreeId: 'wt-1',
-        settings: CHAT_BY_DEFAULT
+        worktreeId: 'wt-1'
       })
     ).toBe(false)
   })
 
   it('keeps arguments for a chat-by-default user whose launch falls back to a terminal', () => {
     // A remote host, an agent without a structured session, or a floating workspace all land here.
-    mocks.structuredAgentSessionLaunchFeasible.mockReturnValue(false)
+    mocks.planAgentSessionLaunch.mockReturnValue({ route: 'legacy-native-chat' })
     expect(
       sourceControlLaunchAppliesAgentArgs({
         agent: 'codex',
-        worktreeId: 'wt-1',
-        settings: CHAT_BY_DEFAULT
+        worktreeId: 'wt-1'
       })
     ).toBe(true)
   })
@@ -62,23 +52,27 @@ describe('sourceControlLaunchAppliesAgentArgs', () => {
     expect(
       sourceControlLaunchAppliesAgentArgs({
         agent: null,
-        worktreeId: 'wt-1',
-        settings: CHAT_BY_DEFAULT
+        worktreeId: 'wt-1'
       })
     ).toBe(true)
-    expect(mocks.structuredAgentSessionLaunchFeasible).not.toHaveBeenCalled()
+    expect(mocks.planAgentSessionLaunch).not.toHaveBeenCalled()
   })
 
-  it('names the repo when the workspace does not exist yet', () => {
-    mocks.structuredAgentSessionLaunchFeasible.mockReturnValue(true)
+  it('names the repo and its host when the workspace does not exist yet', () => {
     sourceControlLaunchAppliesAgentArgs({
       agent: 'codex',
       repoId: 'repo-1',
-      settings: CHAT_BY_DEFAULT
+      executionHostId: 'ssh:build-box'
     })
-    expect(mocks.structuredAgentSessionLaunchFeasible).toHaveBeenCalledWith(
+    expect(mocks.planAgentSessionLaunch).toHaveBeenCalledWith(
       expect.anything(),
-      expect.objectContaining({ workspace: { kind: 'git-worktree', repoId: 'repo-1' } })
+      expect.objectContaining({
+        workspace: {
+          kind: 'git-worktree',
+          repoId: 'repo-1',
+          executionHostId: 'ssh:build-box'
+        }
+      })
     )
   })
 })

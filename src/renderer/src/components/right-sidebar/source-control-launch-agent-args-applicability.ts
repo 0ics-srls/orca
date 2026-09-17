@@ -1,20 +1,17 @@
-import { prefersStructuredNativeChatByDefault } from '../../../../shared/structured-native-chat-launch-route'
 import type { TuiAgent } from '../../../../shared/tui-agent'
+import type { ExecutionHostId } from '../../../../shared/execution-host'
 import {
   workspaceKindForWorktreeId,
   type ProspectiveWorkspace
 } from '@/lib/agent-launch-route-input'
-import {
-  structuredAgentSessionLaunchFeasible,
-  type AgentSessionStructuredFeasibilityRequest
-} from '@/lib/agent-session-launch-plan'
+import { planAgentSessionLaunch } from '@/lib/agent-session-launch-plan'
 import { useAppStore } from '@/store'
 
 export type SourceControlLaunchAgentArgsApplicabilityInput = {
   agent: TuiAgent | null
   worktreeId?: string | null
   repoId?: string | null
-  settings: AgentSessionStructuredFeasibilityRequest['settings']
+  executionHostId?: ExecutionHostId
 }
 
 function prospectiveWorkspace(
@@ -23,7 +20,11 @@ function prospectiveWorkspace(
   if (input.worktreeId) {
     return { kind: workspaceKindForWorktreeId(input.worktreeId), worktreeId: input.worktreeId }
   }
-  return { kind: 'git-worktree', ...(input.repoId ? { repoId: input.repoId } : {}) }
+  return {
+    kind: 'git-worktree',
+    ...(input.repoId ? { repoId: input.repoId } : {}),
+    ...(input.executionHostId ? { executionHostId: input.executionHostId } : {})
+  }
 }
 
 /**
@@ -45,12 +46,10 @@ export function sourceControlLaunchAppliesAgentArgs(
   if (!input.agent) {
     return true
   }
-  if (!prefersStructuredNativeChatByDefault(input.settings)) {
-    return true
-  }
-  return !structuredAgentSessionLaunchFeasible(useAppStore.getState(), {
-    agent: input.agent,
-    workspace: prospectiveWorkspace(input),
-    settings: input.settings
-  })
+  return (
+    planAgentSessionLaunch(useAppStore.getState(), {
+      agent: input.agent,
+      workspace: prospectiveWorkspace(input)
+    }).route !== 'structured-native-chat'
+  )
 }
