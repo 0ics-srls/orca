@@ -267,6 +267,26 @@ describe('OpenCodeHookService buildPtyEnv / clearPty round-trip', () => {
     expect(pluginSource).toContain('messageID: part.messageID')
   })
 
+  // Why: the health receipt is diagnostics. A failed write must not cost the user the config
+  // dir carrying the status plugin — that would be the very outage this service exists to stop.
+  it('still installs the plugin when the integration-health write fails', () => {
+    const healthDir = join(userDataDir, 'agent-hooks')
+    rmSync(healthDir, { recursive: true, force: true })
+    // A regular file where the health store needs a directory makes its mkdir throw.
+    writeFileSync(healthDir, '')
+    try {
+      const service = new OpenCodeHookService()
+      const env = service.buildPtyEnv(daemonSessionId)
+
+      expect(env.OPENCODE_CONFIG_DIR).toBe(join(userDataDir, 'opencode-hooks', 'shared'))
+      expect(existsSync(join(env.OPENCODE_CONFIG_DIR!, 'plugins', 'orca-opencode-status.js'))).toBe(
+        true
+      )
+    } finally {
+      rmSync(healthDir, { force: true })
+    }
+  })
+
   it('clearPty leaves the shared OpenCode config dir off the teardown hot path', () => {
     const service = new OpenCodeHookService()
     const env = service.buildPtyEnv(daemonSessionId)

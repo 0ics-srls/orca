@@ -64,7 +64,10 @@ describe('OMP launch scope', () => {
 
     expect(
       resolvePiAgentSourceDir(
-        { HOME: homeDir, SHELL: '/bin/zsh' },
+        // Why XDG_CONFIG_HOME is explicit: the probe falls back to the main process's
+        // value when the session env omits it, so leaving it out makes this assertion
+        // depend on whether the developer's own machine happens to export one.
+        { HOME: homeDir, SHELL: '/bin/zsh', XDG_CONFIG_HOME: join(homeDir, '.config') },
         'omp',
         'omp',
         '/opt/homebrew/bin/fish'
