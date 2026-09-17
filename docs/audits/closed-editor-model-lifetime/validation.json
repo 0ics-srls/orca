@@ -69,7 +69,7 @@
     }
   },
   "artifactHashes": {
-    "README.md": "98c70235ea153998380e79d367072ad2eb6d5a3ea8042e1138d2b4378d4ada4f",
+    "README.md": "f1a1b5fd46003314bb75bc241b5bb91cf5f30a3abbd9365093322734c8d87983",
     "fix.patch": "c725f2a6c8ff66ea2a59a3fdc4bba24773d1b42eb371ae54e3c135ae9d6593cd",
     "lifecycle.test.mjs": "afc0b7e45e056d1f730ac58f266094471b58187646c91b4436b909544a3a4e29",
     "loader-controls.cjs": "4cdcf0309ff0acce00cff5f5b17ce91236f5eaa27245de65c651dd4c6535a352",
@@ -94,5 +94,25 @@
   "sourceFormatting": {
     "files": 13,
     "exitCode": 0
+  },
+  "ciFixtureCorrection": {
+    "failedPublishedHead": "082e8659238d59ae4d12ad78607408264226e06a",
+    "failedJob": "https://github.com/stablyai/orca/actions/runs/35191331126/job/105104807447",
+    "cause": "Reflect.get/Reflect.apply in actual-model attachment fixture violate separate CI anti-slop gate",
+    "fix": "Checked attachment port and direct receiver-preserving calls; no product or portable proof changes",
+    "tests": {
+      "files": 7,
+      "cases": 46,
+      "exitCode": 0
+    },
+    "webTypecheck": {
+      "command": "ORCA_BACKGROUND_LAUNCH=1 node node_modules/typescript/bin/tsc --noEmit -p config/tsconfig.tc.web.json",
+      "exitCode": 0
+    },
+    "antiSlop": {
+      "files": 13,
+      "scope": "All published src paths; CI scans src config tests mobile, not portable docs MJS boundary mocks",
+      "exitCode": 0
+    }
   }
 }

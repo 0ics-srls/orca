@@ -38,6 +38,10 @@ The controller remembers minimal closed-owner descriptors and exact model identi
 
 The comparative test executes the actual legacy surface, old/new cleanup hook, disposal functions, store close action and model registry. It supplies controlled Panel/Shell ports and a fixture store to the hook. Actual app-shell placement, first lazy registration, conditional panel callers and `keepCurrentModel` wiring are source-fenced static checks; it does not render the entire application or exercise HMR through Vite itself. It opens no Electron window, starts no native editor widget, and measures no RSS, heap bytes, or incident allocation rate.
 
+## CI fixture correction
+
+The first published head failed the separate anti-slop gate because the attachment fixture used `Reflect.get` and `Reflect.apply`. The fixture now checks Monaco's attachment port and calls it directly with the model as receiver. Product behavior and portable source graphs are unchanged. The correction passes 46 tests across seven selected lifetime/disposal/cache suites, the actual Web typecheck (`config/tsconfig.tc.web.json`), and anti-slop over all 13 published source files. The five general quality configurations also pass on the changed fixture. The portable MJS proof's existing boundary mocks are outside the CI anti-slop command's `src config tests mobile` scope.
+
 ## Reproduce
 
 From the repository root with its installed dependencies:

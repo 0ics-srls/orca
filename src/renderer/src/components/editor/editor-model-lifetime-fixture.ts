@@ -70,16 +70,30 @@ export function modelLifetimeTextModel(
   return model
 }
 
+type ModelAttachmentPort = {
+  onBeforeAttached(): unknown
+  onBeforeDetached(view: unknown): void
+}
+
+function hasModelAttachmentPort(
+  model: monaco.editor.ITextModel
+): model is monaco.editor.ITextModel & ModelAttachmentPort {
+  return (
+    'onBeforeAttached' in model &&
+    typeof model.onBeforeAttached === 'function' &&
+    'onBeforeDetached' in model &&
+    typeof model.onBeforeDetached === 'function'
+  )
+}
+
 export function attachModelLifetimeView(model: monaco.editor.ITextModel): () => void {
   // Exercise the installed model's real attachment event without constructing an editor widget.
-  const attach: unknown = Reflect.get(model, 'onBeforeAttached')
-  const detach: unknown = Reflect.get(model, 'onBeforeDetached')
-  if (typeof attach !== 'function' || typeof detach !== 'function') {
+  if (!hasModelAttachmentPort(model)) {
     throw new Error('Installed Monaco does not expose the expected attachment port')
   }
-  const view: unknown = Reflect.apply(attach, model, [])
+  const view = model.onBeforeAttached()
   return () => {
-    Reflect.apply(detach, model, [view])
+    model.onBeforeDetached(view)
   }
 }
 
