@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import type { AgentSessionConversationCommand } from '../../../shared/agent-session-conversation-command'
-import { hostTestMessage } from './structured-agent-session-host-test-data'
+import { HOST_TEST_SESSION, hostTestMessage } from './structured-agent-session-host-test-data'
 import {
   CALLER,
   attach,
@@ -13,6 +13,7 @@ import type { StructuredAgentSessionHost } from './structured-agent-session-host
 const compact = vi.fn<NonNullable<StructuredAgentSessionAdapter['compact']>>()
 let host: StructuredAgentSessionHost
 let dispatch: Mock<StructuredAgentSessionAdapter['dispatch']>
+let store: ReturnType<typeof hostTestState>['store']
 
 function commandParams(command: AgentSessionConversationCommand) {
   return {
@@ -22,7 +23,16 @@ function commandParams(command: AgentSessionConversationCommand) {
 }
 
 beforeEach(async () => {
-  ;({ host, dispatch } = hostTestState())
+  const state = hostTestState()
+  ;({ host, dispatch, store } = state)
+  const acquire = state.acquire.getMockImplementation()
+  if (!acquire) {
+    throw new Error('host harness has no acquisition implementation')
+  }
+  state.acquire.mockImplementation(async (input) => ({
+    ...(await acquire(input)),
+    acquisitionGeneration: 'generation-1'
+  }))
   compact.mockReset().mockResolvedValue({})
   host.deps.adapter.compact = compact
   await attach()
@@ -83,5 +93,37 @@ describe('host conversation command concurrency', () => {
       refusal: { code: 'agent_session_operation_invalid' }
     })
     expect(compact).toHaveBeenCalledTimes(1)
+  })
+
+  it('retires an old command after provider recovery advances the session generation', async () => {
+    await host.hold(HOST_TEST_SESSION, 'conversation-surface')
+    let rejectFlush!: (error: Error) => void
+    const flush = vi.spyOn(host, 'flushStreamedEvents').mockImplementationOnce(
+      () =>
+        new Promise<void>((_resolve, reject) => {
+          rejectFlush = reject
+        })
+    )
+    const params = commandParams('compact')
+    const running = host.conversationCommand(CALLER, params)
+    await vi.waitFor(() => expect(rejectFlush).toBeTypeOf('function'))
+    const fence = store.getRecord(params.envelope.sessionId)!.lease.runtimeFence
+
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: params.envelope.sessionId,
+      reason: 'provider exited',
+      cause: 'unexpected-exit',
+      fence,
+      acquisitionGeneration: 'generation-1'
+    })
+    expect(store.getRecord(params.envelope.sessionId)?.lease.runtimeFence).toBeGreaterThan(fence)
+    rejectFlush(new Error('old event sink failed'))
+
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    flush.mockRestore()
+    await expect(host.conversationCommand(CALLER, commandParams('compact'))).resolves.toMatchObject(
+      { ok: true, value: { state: 'completed' } }
+    )
   })
 })

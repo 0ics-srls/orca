@@ -232,29 +232,32 @@ export class StructuredConversationCommandExecution {
     retire = false
   ): Promise<void> {
     const execution = entry.execution
-    if (!execution || !this.ownsExecution(entry, execution)) {
+    if (!execution) {
       return
     }
     const error = cause instanceof Error ? cause.message : COMPACTION_UNCONFIRMED
+    const value: AgentSessionConversationCommandResult = {
+      command: entry.command,
+      state: 'unknown',
+      error: entry.command === 'compact' ? COMPACTION_UNCONFIRMED : error.slice(0, 4096)
+    }
+    const result = conversationCommandResult(execution, value)
+    if (!this.ownsExecution(entry, execution)) {
+      if (this.owner.isCurrent(entry)) {
+        this.owner.finish(entry, result)
+      }
+      return
+    }
     try {
       await this.context().deps.store.recordOperationOutcome({
         callerKey: execution.operationCallerKey,
         operationId: execution.prepared.operationId,
         outcome: { status: 'unknown' }
       })
-      await this.publishLifecycle(
-        entry,
-        { ...execution.prepared, error },
-        retire ? 'unverifiable' : 'running'
-      )
+      await this.publishLifecycle(entry, value, retire ? 'unverifiable' : 'running')
     } catch (persistError) {
       this.owner.report(entry, persistError)
     }
-    const result = conversationCommandResult(execution, {
-      command: entry.command,
-      state: 'unknown',
-      error: entry.command === 'compact' ? COMPACTION_UNCONFIRMED : error
-    })
     if (retire) {
       this.owner.finish(entry, result)
     } else {

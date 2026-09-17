@@ -39,8 +39,11 @@ export function compactClaudeSession(
 export function observeClaudeCompaction(
   compactions: StructuredSessionCompaction,
   event: ClaudeStructuredSessionEvent,
-  translator: ClaudeSession['translator'] | undefined
+  translator: Pick<NonNullable<ClaudeSession['translator']>, 'handle'> | null | undefined
 ): void {
+  if (event.type === 'message' && event.startsTurn) {
+    compactions.claudeTurnStarted(event.sessionId, event.message)
+  }
   if (!isClaudeCompactionContent(compactions, event)) {
     translator?.handle(event)
   }

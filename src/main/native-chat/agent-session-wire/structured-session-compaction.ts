@@ -56,7 +56,7 @@ export class StructuredSessionCompaction {
           return
         }
         this.pending.delete(sessionId)
-        if (expired && onLateResult) {
+        if ((expired || pending.interrupted) && onLateResult) {
           void onLateResult(result).catch((error) =>
             console.warn('Could not persist late compaction completion', error)
           )
@@ -139,6 +139,26 @@ export class StructuredSessionCompaction {
   /** Reject the waiter but retain its generation until the provider emits a terminal frame. */
   interrupted(sessionId: string): void {
     this.pending.get(sessionId)?.interrupt()
+  }
+
+  /** A provider-acknowledged later turn proves an interrupted command no longer owns output. */
+  claudeTurnStarted(sessionId: string, message: Record<string, unknown>): void {
+    const pending = this.pending.get(sessionId)
+    if (!pending?.interrupted) {
+      return
+    }
+    const envelope = record(message.message)
+    const content = Array.isArray(envelope.content) ? envelope.content : [envelope.content]
+    const last = content.at(-1)
+    const prompt = typeof last === 'string' ? last : record(last).text
+    if (
+      message.user_message_uuid === pending.turnId ||
+      message.uuid === pending.turnId ||
+      prompt === '/compact'
+    ) {
+      return
+    }
+    pending.finish({ error: 'Compaction was interrupted.' })
   }
 
   codex(sessionId: string, method: string, value: unknown): void {

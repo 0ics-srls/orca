@@ -713,11 +713,16 @@ describe('host conversation commands', () => {
   })
 
   it('retires a failed clear that has no provider callback to settle it later', async () => {
-    vi.spyOn(host, 'attach').mockRejectedValueOnce(new Error('replacement transport failed'))
-    await expect(host.conversationCommand(caller, commandParams('clear'))).resolves.toMatchObject({
+    vi.spyOn(host, 'attach').mockRejectedValueOnce(new Error('x'.repeat(5_000)))
+    const result = await host.conversationCommand(caller, commandParams('clear'))
+    expect(result).toMatchObject({
       ok: true,
       value: { state: 'unknown' }
     })
+    if (!result.ok) {
+      throw new Error('clear was refused')
+    }
+    expect(result.value.error).toHaveLength(4_096)
     const status = host
       .history({ sessionId: HOST_TEST_SESSION, direction: 'tail' })
       .page.items.find((item) => item.body.kind === 'status')
