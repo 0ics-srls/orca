@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+ ❯ notes/pr-risk-review/renderer/21010.control.test.tsx (1 test | 1 failed) 6ms
+   × does not cancel a page-owned download solely because its guest is destroyed 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  notes/pr-risk-review/renderer/21010.control.test.tsx > does not cancel a page-owned download solely because its guest is destroyed
+AssertionError: expected 1 to be +0 // Object.is equality
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ notes/pr-risk-review/renderer/21010.control.test.tsx:26:21
+     24|   manager.unregisterAll()
+     25|   mocks.guests.clear()
+     26|   expect(cancelled).toBe(0)
+       |                     ^
+     27| })
+     28|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:09:36
+   Duration  519ms (transform 268ms, setup 28ms, import 321ms, tests 6ms, environment 99ms)
+

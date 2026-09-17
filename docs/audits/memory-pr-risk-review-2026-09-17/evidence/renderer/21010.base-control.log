@@ -1,0 +1,9 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+
+ Test Files  1 passed (1)
+      Tests  1 passed (1)
+   Start at  02:09:24
+   Duration  415ms (transform 185ms, setup 25ms, import 228ms, tests 3ms, environment 91ms)
+

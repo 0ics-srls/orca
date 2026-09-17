@@ -1,0 +1,431 @@
+{
+  "schemaVersion": 1,
+  "number": 20981,
+  "url": "https://github.com/stablyai/orca/pull/20981",
+  "title": "Bound terminal contrast-color caches",
+  "finalDisposition": {
+    "category": "extra-review",
+    "recommendation": "Focused performance/API review",
+    "userVisibleBeforeAfter": "A shared 4096-entry contrast-cache bound evicts derived values only. Colors and history stay; cache churn recomputes results. Desktop/mobile patch integration is included.",
+    "currentHead": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "snapshotHead": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671330/job/105147436404"
+        },
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147437449"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671294/job/105147436827"
+        },
+        {
+          "name": "RPC recording pin",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671330/job/105147436722"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147437672"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581776"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581757"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581912"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581830"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581843"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581880"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581955"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581914"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581930"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581993"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581860"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147581897"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147582312"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147582394"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147583823"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147904707"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147903225"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147904520"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147905061"
+        },
+        {
+          "name": "real IME / Linux X11 terminal IME",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147582313"
+        },
+        {
+          "name": "real IME / Linux Wayland Hangul terminating digit",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147582368"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147583089"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809480"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809500"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809504"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809767"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809492"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809532"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809609"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105147809479"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671588/job/105150147383"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204673397"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "number": 20981,
+      "oldHead": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+      "mergedParent": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "tree": "c167384cba8c13aec60d22d5608d4b0e7d77c8c4",
+      "candidate": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "patchHash": "3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163",
+      "conflictsResolved": ["mobile/pnpm-lock.yaml"],
+      "sourceArtifact": "integration/xterm-published.json"
+    },
+    "publishedUpdateEvidence": "evidence/integration/xterm-published.json",
+    "currentMainMergeCheck": {
+      "number": 20981,
+      "head": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "tree": "c167384cba8c13aec60d22d5608d4b0e7d77c8c4",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20981.json",
+    "sha256": "1af3d4e104da6e53562aa4bcc811d2e602ceae7cfdbd7cc26f35dfe8554d2e80",
+    "reviewedHead": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20981,
+    "url": "https://github.com/stablyai/orca/pull/20981",
+    "title": "Bound terminal contrast-color caches",
+    "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+    "base": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+    "recordedBaseOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": ".github/workflows/mobile.yml",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "bdf839b5af6c72cc0697cc01d2d1108fd4296474e82b30ee71d7dcd18337f6a8",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": ".github/workflows/pr.yml",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "719840ed86e38565a423898f2c16fc4168b4df7d96db8628b6a7fd690f82b160",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "config/patches/@xterm__xterm@6.1.0-beta.303.patch",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "6601602d8b599cdffec11956acdc7e70a8297422d70ebdbce35c653899d93a96",
+        "inspection": "Generated integration diff; semantics reviewed in source patch, not a claim of line-by-line review of minified bundles"
+      },
+      {
+        "path": "config/patches/xterm-src/@xterm__xterm@6.1.0-beta.303.src.patch",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "c8b450dcd00bd9d345192c8a488e226c7793f0c7da51fb67fb5b13d55eb7fcfb",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "config/scripts/regenerate-xterm-patches-mobile.mjs",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "438ffb0f5555c9ff3c26c50ef4a2e73767d849c3180d7f80f01f6aa1c3ab93c8",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "config/scripts/regenerate-xterm-patches.mjs",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "2475c7d7fd61cf51bbe1bff9f964e7a57479567836299d6e1f8568dbe0916dfd",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "mobile/patches/@xterm__xterm@6.1.0-beta.303.patch",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163",
+        "inspection": "Generated integration diff; semantics reviewed in source patch, not a claim of line-by-line review of minified bundles"
+      },
+      {
+        "path": "mobile/patches/xterm-src/@xterm__xterm@6.1.0-beta.303.src.patch",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "2593101d167b15408a5fe5b028527f6b0837895fd4c59888376d4b0f72749a36",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "mobile/pnpm-lock.yaml",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "ede5ab8453394c219c859382ce5e55ced1f9374849921c4ae421cd212d49ae87",
+        "inspection": "Dependency or workflow integration diff inspected"
+      },
+      {
+        "path": "mobile/pnpm-workspace.yaml",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "de74896a489ce730182ca4b70df124b4a8869433a95158ac1a0a3005bef25d22",
+        "inspection": "Dependency or workflow integration diff inspected"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "b192f621a0c790a49bb955e633fc826d164caa6af22b34bf3189826c9fa9456b",
+        "inspection": "Dependency or workflow integration diff inspected"
+      },
+      {
+        "path": "config/scripts/regenerate-xterm-patches-mobile.test.mjs",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "7f9812bb526f55216b6318262601c8fe3a7e9ab6b966f43f4f451dee5c79ca41",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "config/scripts/regenerate-xterm-patches.test.mjs",
+        "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+        "sha256": "8bacc4ec91982777d0fd0745a1b9d3ecfdf04c14f51a822502c4832df369acc1",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "ColorContrastCache shares a 4096-entry allowance across color and CSS caches. Existing-key updates do not increase the count, cached null is distinguished from absent undefined, and a new admission at capacity clears both derived caches."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Actual contrast/color calculation and terminal cell content are unchanged. Cache eviction causes recomputation rather than a loss of colors or terminal history."
+      },
+      {
+        "severity": "informational",
+        "assessment": "The mobile generation profile selects only the intended ColorContrastCache source stanza from the desktop patch, checks the pinned mobile package version, and rejects missing or duplicate source stanzas. Mobile patch, root/mobile lock hashes, and CI check commands are integrated."
+      }
+    ],
+    "userVisibleBeforeAfter": "Terminal contrast and colors remain the same. Workloads cycling more than 4096 unique contrast cache entries may spend extra CPU recomputing results.",
+    "capacityAndDataLoss": "Derived cache capacity only; no cap on visible colors, terminal input, scrollback, or stored user data.",
+    "platformEvidence": {
+      "assessment": "The cache is shared JavaScript used by desktop and mobile xterm. Generator source selection and lockfile integration are platform-neutral Node operations. This review does not execute native display/GPU behavior across macOS, Linux, and Windows.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Remote terminal cells render through the same cache without wire or host changes. Folder workspaces do not require special handling.",
+    "regressionCoverage": {
+      "description": "Published generator controls verify selected mobile sources, CJS/ESM emitted bundles and maps, patch hashes/resolution hashes, and version-drift rejection. Product source and generation diffs were inspected. Root separately regenerated and integrated the xterm stack onto current main.",
+      "rootFocusedBatch": {
+        "applies": false,
+        "boundary": "No fresh test execution assigned to this PR in the capacity batch. Historical artifacts and published controls are described separately."
+      },
+      "limitations": "Low observed product risk does not remove the CPU cost of cache misses or the need for patch reproducibility checks. Original base mobile lockfile conflicted with current main; root has published the explicit resolution at a new head."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "reviewedMergeBase": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Original lockfile conflict has a published integration resolution; this report does not mark old heads clean or treat pending CI as success.",
+      "integratedPublishedHead": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "integrationArtifact": "notes/pr-risk-review/integration/xterm-published.json",
+      "integrationChangedReviewedPaths": [
+        ".github/workflows/mobile.yml",
+        ".github/workflows/pr.yml",
+        "mobile/pnpm-lock.yaml",
+        "pnpm-lock.yaml"
+      ],
+      "integrationIdenticalReviewedPaths": [
+        "config/patches/@xterm__xterm@6.1.0-beta.303.patch",
+        "config/patches/xterm-src/@xterm__xterm@6.1.0-beta.303.src.patch",
+        "config/scripts/regenerate-xterm-patches-mobile.mjs",
+        "config/scripts/regenerate-xterm-patches.mjs",
+        "mobile/patches/@xterm__xterm@6.1.0-beta.303.patch",
+        "mobile/patches/xterm-src/@xterm__xterm@6.1.0-beta.303.src.patch",
+        "mobile/pnpm-workspace.yaml"
+      ],
+      "integrationAssessment": "Root published current-main integration. Product source patches and emitted patches remain byte-identical; changed lock/workflow context belongs to the integration review. Fresh CI is pending root final snapshot."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Review the integrated head and require fresh patch-sync/CI results. Merge this parent before #20992 and #21112, preserving source/lockfile correspondence."
+  }
+}

@@ -1,0 +1,531 @@
+﻿2026-09-17T09:38:29.8560299Z Current runner version: '2.337.0'
+2026-09-17T09:38:29.8584917Z ##[group]Runner Image Provisioner
+2026-09-17T09:38:29.8585804Z Hosted Compute Agent
+2026-09-17T09:38:29.8586414Z Version: 20260828.587
+2026-09-17T09:38:29.8587050Z Commit: abac92662cab4cc7352de4f9f9d2e2419aad9c29
+2026-09-17T09:38:29.8587846Z Build Date: 2026-08-28T16:44:25Z
+2026-09-17T09:38:29.8588564Z Worker ID: {6e311069-5a33-446b-9b35-44dc65f8d416}
+2026-09-17T09:38:29.8589260Z Azure Region: eastus
+2026-09-17T09:38:29.8589926Z ##[endgroup]
+2026-09-17T09:38:29.8591700Z ##[group]Operating System
+2026-09-17T09:38:29.8592463Z Ubuntu
+2026-09-17T09:38:29.8592982Z 24.04.5
+2026-09-17T09:38:29.8593665Z LTS
+2026-09-17T09:38:29.8594269Z ##[endgroup]
+2026-09-17T09:38:29.8594816Z ##[group]Runner Image
+2026-09-17T09:38:29.8595435Z Image: ubuntu-24.04
+2026-09-17T09:38:29.8596045Z Version: 20260907.300.1
+2026-09-17T09:38:29.8597393Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20260907.300/images/ubuntu/Ubuntu2404-Readme.md
+2026-09-17T09:38:29.8598969Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20260907.300
+2026-09-17T09:38:29.8600072Z ##[endgroup]
+2026-09-17T09:38:29.8601168Z ##[group]GITHUB_TOKEN Permissions
+2026-09-17T09:38:29.8603362Z Contents: read
+2026-09-17T09:38:29.8604348Z Metadata: read
+2026-09-17T09:38:29.8604985Z ##[endgroup]
+2026-09-17T09:38:29.8607096Z Secret source: Actions
+2026-09-17T09:38:29.8607993Z Cache mode: write
+2026-09-17T09:38:29.8609133Z Prepare workflow directory
+2026-09-17T09:38:29.8933928Z Prepare all required actions
+2026-09-17T09:38:29.8981083Z Getting action download info
+2026-09-17T09:38:30.1265136Z Download action repository 'actions/checkout@v6' (SHA:d23441a48e516b6c34aea4fa41551a30e30af803)
+2026-09-17T09:38:30.2243281Z Download action repository 'actions/cache@v5' (SHA:caa296126883cff596d87d8935842f9db880ef25)
+2026-09-17T09:38:30.4308709Z Complete job name: typecheck
+2026-09-17T09:38:30.5057898Z ##[group]Run actions/checkout@v6
+2026-09-17T09:38:30.5058776Z with:
+2026-09-17T09:38:30.5059260Z   persist-credentials: false
+2026-09-17T09:38:30.5059794Z   repository: stablyai/orca
+2026-09-17T09:38:30.5063718Z   token: ***
+2026-09-17T09:38:30.5064155Z   ssh-strict: true
+2026-09-17T09:38:30.5064587Z   ssh-user: git
+2026-09-17T09:38:30.5065014Z   clean: true
+2026-09-17T09:38:30.5065463Z   sparse-checkout-cone-mode: true
+2026-09-17T09:38:30.5066001Z   fetch-depth: 1
+2026-09-17T09:38:30.5066430Z   fetch-tags: false
+2026-09-17T09:38:30.5066873Z   show-progress: true
+2026-09-17T09:38:30.5067318Z   lfs: false
+2026-09-17T09:38:30.5067732Z   submodules: false
+2026-09-17T09:38:30.5068183Z   set-safe-directory: true
+2026-09-17T09:38:30.5068690Z   allow-unsafe-pr-checkout: false
+2026-09-17T09:38:30.5069471Z ##[endgroup]
+2026-09-17T09:38:30.6067605Z Syncing repository: stablyai/orca
+2026-09-17T09:38:30.6069455Z ##[group]Getting Git version info
+2026-09-17T09:38:30.6070356Z Working directory is '/home/runner/work/orca/orca'
+2026-09-17T09:38:30.6071340Z [command]/usr/bin/git version
+2026-09-17T09:38:30.6123217Z git version 2.55.0
+2026-09-17T09:38:30.6146029Z ##[endgroup]
+2026-09-17T09:38:30.6162018Z Temporarily overriding HOME='/home/runner/work/_temp/ee19fbbb-fdcf-4406-a51e-1663da7a1d12' before making global git config changes
+2026-09-17T09:38:30.6164760Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T09:38:30.6167788Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/orca/orca
+2026-09-17T09:38:30.6211788Z Deleting the contents of '/home/runner/work/orca/orca'
+2026-09-17T09:38:30.6216336Z ##[group]Determining repository object format
+2026-09-17T09:38:30.6219171Z ##[endgroup]
+2026-09-17T09:38:30.6220061Z ##[group]Initializing the repository
+2026-09-17T09:38:30.6225259Z [command]/usr/bin/git init /home/runner/work/orca/orca
+2026-09-17T09:38:30.6311092Z hint: Using 'master' as the name for the initial branch. This default branch name
+2026-09-17T09:38:30.6312599Z hint: will change to "main" in Git 3.0. To configure the initial branch name
+2026-09-17T09:38:30.6315151Z hint: to use in all of your new repositories, which will suppress this warning,
+2026-09-17T09:38:30.6317207Z hint: call:
+2026-09-17T09:38:30.6318417Z hint:
+2026-09-17T09:38:30.6319789Z hint: 	git config --global init.defaultBranch <name>
+2026-09-17T09:38:30.6321380Z hint:
+2026-09-17T09:38:30.6322723Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2026-09-17T09:38:30.6325094Z hint: 'development'. The just-created branch can be renamed via this command:
+2026-09-17T09:38:30.6326921Z hint:
+2026-09-17T09:38:30.6328097Z hint: 	git branch -m <name>
+2026-09-17T09:38:30.6329334Z hint:
+2026-09-17T09:38:30.6330741Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2026-09-17T09:38:30.6332739Z Initialized empty Git repository in /home/runner/work/orca/orca/.git/
+2026-09-17T09:38:30.6367551Z [command]/usr/bin/git remote add origin https://github.com/stablyai/orca
+2026-09-17T09:38:30.6369340Z ##[endgroup]
+2026-09-17T09:38:30.6370296Z ##[group]Disabling automatic garbage collection
+2026-09-17T09:38:30.6371517Z [command]/usr/bin/git config --local gc.auto 0
+2026-09-17T09:38:30.6399347Z ##[endgroup]
+2026-09-17T09:38:30.6400657Z ##[group]Setting up auth
+2026-09-17T09:38:30.6401499Z Removing SSH command configuration
+2026-09-17T09:38:30.6406223Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T09:38:30.6436535Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T09:38:30.6752920Z Removing HTTP extra header
+2026-09-17T09:38:30.6758259Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T09:38:30.6787599Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T09:38:30.7005329Z Removing includeIf entries pointing to credentials config files
+2026-09-17T09:38:30.7010760Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-17T09:38:30.7044336Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-17T09:38:30.7266182Z [command]/usr/bin/git config --file /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2026-09-17T09:38:30.7302087Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/orca/orca/.git.path /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:30.7330952Z [command]/usr/bin/git config --local includeIf.gitdir:/home/runner/work/orca/orca/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:30.7364473Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:30.7396030Z [command]/usr/bin/git config --local includeIf.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:30.7423068Z ##[endgroup]
+2026-09-17T09:38:30.7424356Z ##[group]Fetching the repository
+2026-09-17T09:38:30.7432716Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +241c550dcdc20ca062ce645010eb1553e65cfb8d:refs/remotes/pull/21175/merge
+2026-09-17T09:38:32.8225829Z From https://github.com/stablyai/orca
+2026-09-17T09:38:32.8227797Z  * [new ref]           241c550dcdc20ca062ce645010eb1553e65cfb8d -> pull/21175/merge
+2026-09-17T09:38:32.8232678Z ##[endgroup]
+2026-09-17T09:38:32.8234653Z ##[group]Determining the checkout info
+2026-09-17T09:38:32.8236435Z ##[endgroup]
+2026-09-17T09:38:32.8239176Z [command]/usr/bin/git sparse-checkout disable
+2026-09-17T09:38:32.8288109Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2026-09-17T09:38:32.8315533Z ##[group]Checking out the ref
+2026-09-17T09:38:32.8317996Z [command]/usr/bin/git checkout --progress --force refs/remotes/pull/21175/merge
+2026-09-17T09:38:33.8580844Z Updating files:  51% (13954/26933)
+2026-09-17T09:38:33.8730547Z Updating files:  52% (14006/26933)
+2026-09-17T09:38:33.8883994Z Updating files:  53% (14275/26933)
+2026-09-17T09:38:33.9025352Z Updating files:  54% (14544/26933)
+2026-09-17T09:38:33.9174138Z Updating files:  55% (14814/26933)
+2026-09-17T09:38:33.9314831Z Updating files:  56% (15083/26933)
+2026-09-17T09:38:33.9478153Z Updating files:  57% (15352/26933)
+2026-09-17T09:38:33.9621799Z Updating files:  58% (15622/26933)
+2026-09-17T09:38:33.9776609Z Updating files:  59% (15891/26933)
+2026-09-17T09:38:33.9932256Z Updating files:  60% (16160/26933)
+2026-09-17T09:38:34.0086489Z Updating files:  61% (16430/26933)
+2026-09-17T09:38:34.0250744Z Updating files:  62% (16699/26933)
+2026-09-17T09:38:34.0398484Z Updating files:  63% (16968/26933)
+2026-09-17T09:38:34.0547838Z Updating files:  64% (17238/26933)
+2026-09-17T09:38:34.0710911Z Updating files:  65% (17507/26933)
+2026-09-17T09:38:34.0860685Z Updating files:  66% (17776/26933)
+2026-09-17T09:38:34.1027173Z Updating files:  67% (18046/26933)
+2026-09-17T09:38:34.1180027Z Updating files:  68% (18315/26933)
+2026-09-17T09:38:34.1330430Z Updating files:  69% (18584/26933)
+2026-09-17T09:38:34.1478057Z Updating files:  70% (18854/26933)
+2026-09-17T09:38:34.1630554Z Updating files:  71% (19123/26933)
+2026-09-17T09:38:34.1781598Z Updating files:  72% (19392/26933)
+2026-09-17T09:38:34.1963145Z Updating files:  73% (19662/26933)
+2026-09-17T09:38:34.2133751Z Updating files:  74% (19931/26933)
+2026-09-17T09:38:34.2291551Z Updating files:  75% (20200/26933)
+2026-09-17T09:38:34.2443114Z Updating files:  76% (20470/26933)
+2026-09-17T09:38:34.2587876Z Updating files:  77% (20739/26933)
+2026-09-17T09:38:34.2928509Z Updating files:  78% (21008/26933)
+2026-09-17T09:38:34.3074261Z Updating files:  79% (21278/26933)
+2026-09-17T09:38:34.3236508Z Updating files:  80% (21547/26933)
+2026-09-17T09:38:34.3392799Z Updating files:  81% (21816/26933)
+2026-09-17T09:38:34.3538546Z Updating files:  82% (22086/26933)
+2026-09-17T09:38:34.3690917Z Updating files:  83% (22355/26933)
+2026-09-17T09:38:34.3852786Z Updating files:  84% (22624/26933)
+2026-09-17T09:38:34.4006043Z Updating files:  85% (22894/26933)
+2026-09-17T09:38:34.4163399Z Updating files:  86% (23163/26933)
+2026-09-17T09:38:34.4337462Z Updating files:  87% (23432/26933)
+2026-09-17T09:38:34.4484273Z Updating files:  88% (23702/26933)
+2026-09-17T09:38:34.4619729Z Updating files:  89% (23971/26933)
+2026-09-17T09:38:34.4763943Z Updating files:  90% (24240/26933)
+2026-09-17T09:38:34.4904868Z Updating files:  91% (24510/26933)
+2026-09-17T09:38:34.5045529Z Updating files:  92% (24779/26933)
+2026-09-17T09:38:34.5182356Z Updating files:  93% (25048/26933)
+2026-09-17T09:38:34.5317713Z Updating files:  94% (25318/26933)
+2026-09-17T09:38:34.5464491Z Updating files:  95% (25587/26933)
+2026-09-17T09:38:34.5608238Z Updating files:  96% (25856/26933)
+2026-09-17T09:38:34.5765186Z Updating files:  97% (26126/26933)
+2026-09-17T09:38:34.5957162Z Updating files:  98% (26395/26933)
+2026-09-17T09:38:34.6139959Z Updating files:  99% (26664/26933)
+2026-09-17T09:38:34.6140395Z Updating files: 100% (26933/26933)
+2026-09-17T09:38:34.6140792Z Updating files: 100% (26933/26933), done.
+2026-09-17T09:38:34.6378427Z Note: switching to 'refs/remotes/pull/21175/merge'.
+2026-09-17T09:38:34.6378843Z 
+2026-09-17T09:38:34.6379273Z You are in 'detached HEAD' state. You can look around, make experimental
+2026-09-17T09:38:34.6379841Z changes and commit them, and you can discard any commits you make in this
+2026-09-17T09:38:34.6380360Z state without impacting any branches by switching back to a branch.
+2026-09-17T09:38:34.6380630Z 
+2026-09-17T09:38:34.6381146Z If you want to create a new branch to retain commits you create, you may
+2026-09-17T09:38:34.6381597Z do so (now or later) by using -c with the switch command. Example:
+2026-09-17T09:38:34.6381859Z 
+2026-09-17T09:38:34.6381962Z   git switch -c <new-branch-name>
+2026-09-17T09:38:34.6382140Z 
+2026-09-17T09:38:34.6382235Z Or undo this operation with:
+2026-09-17T09:38:34.6382395Z 
+2026-09-17T09:38:34.6382480Z   git switch -
+2026-09-17T09:38:34.6382593Z 
+2026-09-17T09:38:34.6382803Z Turn off this advice by setting config variable advice.detachedHead to false
+2026-09-17T09:38:34.6383105Z 
+2026-09-17T09:38:34.6383643Z HEAD is now at 241c550d Merge c86d273251cad3c9bc4a731651443659dab7e6d1 into 718ead7ea9f6296d69ceb7d1460a3579116fe85f
+2026-09-17T09:38:34.6420078Z ##[endgroup]
+2026-09-17T09:38:34.6499667Z [command]/usr/bin/git log -1 --format=%H
+2026-09-17T09:38:34.6523607Z 241c550dcdc20ca062ce645010eb1553e65cfb8d
+2026-09-17T09:38:34.6533928Z ##[group]Removing auth
+2026-09-17T09:38:34.6534354Z Removing SSH command configuration
+2026-09-17T09:38:34.6537832Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T09:38:34.6568163Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T09:38:34.6802351Z Removing HTTP extra header
+2026-09-17T09:38:34.6806948Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T09:38:34.6837461Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T09:38:34.7068312Z Removing includeIf entries pointing to credentials config files
+2026-09-17T09:38:34.7072486Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-17T09:38:34.7098141Z includeif.gitdir:/home/runner/work/orca/orca/.git.path
+2026-09-17T09:38:34.7098999Z includeif.gitdir:/home/runner/work/orca/orca/.git/worktrees/*.path
+2026-09-17T09:38:34.7099683Z includeif.gitdir:/github/workspace/.git.path
+2026-09-17T09:38:34.7100261Z includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-17T09:38:34.7109068Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/orca/orca/.git.path
+2026-09-17T09:38:34.7130247Z /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7139479Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/orca/orca/.git.path /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7170559Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/home/runner/work/orca/orca/.git/worktrees/*.path
+2026-09-17T09:38:34.7193727Z /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7203723Z [command]/usr/bin/git config --local --unset includeif.gitdir:/home/runner/work/orca/orca/.git/worktrees/*.path /home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7241207Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git.path
+2026-09-17T09:38:34.7262194Z /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7270905Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git.path /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7311220Z [command]/usr/bin/git config --local --get-all includeif.gitdir:/github/workspace/.git/worktrees/*.path
+2026-09-17T09:38:34.7332333Z /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7339990Z [command]/usr/bin/git config --local --unset includeif.gitdir:/github/workspace/.git/worktrees/*.path /github/runner_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config
+2026-09-17T09:38:34.7370404Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-17T09:38:34.7599182Z Removing credentials config '/home/runner/work/_temp/git-credentials-8a73418a-1dbd-40cc-a874-e39518a97926.config'
+2026-09-17T09:38:34.7676531Z ##[endgroup]
+2026-09-17T09:38:34.8052891Z Prepare all required actions
+2026-09-17T09:38:34.8053828Z Getting action download info
+2026-09-17T09:38:34.8906218Z Download action repository 'pnpm/setup@v2' (SHA:84cb39b217b10273981911c288cd62326dc7c6d2)
+2026-09-17T09:38:35.0122615Z Download action repository 'actions/setup-node@v6' (SHA:249970729cb0ef3589644e2896645e5dc5ba9c38)
+2026-09-17T09:38:35.2096507Z ##[group]Run ./.github/actions/install-node-dependencies
+2026-09-17T09:38:35.2096842Z with:
+2026-09-17T09:38:35.2097039Z   native-runtime: none
+2026-09-17T09:38:35.2097283Z   cache-dependency-path: pnpm-lock.yaml
+2026-09-17T09:38:35.2097591Z   persist-native-cache: true
+2026-09-17T09:38:35.2097875Z   cache-electron-package: false
+2026-09-17T09:38:35.2098130Z ##[endgroup]
+2026-09-17T09:38:35.2160376Z ##[start-action display=Setup pnpm;id=__self.__pnpm_setup]
+2026-09-17T09:38:35.2221004Z ##[group]Run pnpm/setup@v2
+2026-09-17T09:38:35.2221248Z with:
+2026-09-17T09:38:35.2221438Z   install: false
+2026-09-17T09:38:35.2221688Z   dest: ~/setup-pnpm
+2026-09-17T09:38:35.2221907Z   cache: false
+2026-09-17T09:38:35.2222131Z   cache-dependency-path: pnpm-lock.yaml
+2026-09-17T09:38:35.2222428Z   package-json-file: package.json
+2026-09-17T09:38:35.2222674Z ##[endgroup]
+2026-09-17T09:38:35.4265358Z ##[group]Installing pnpm...
+2026-09-17T09:38:35.4274666Z Downloading pnpm 12.0.0 from the npm registry
+2026-09-17T09:38:35.5765323Z ==> Downloading pnpm 12.0.0
+2026-09-17T09:38:36.3212537Z ##[endgroup]
+2026-09-17T09:38:36.3213122Z Installation Completed!
+2026-09-17T09:38:36.3219821Z No runtime requested (no `runtime` input and no `devEngines.runtime` in package.json). Skipping runtime install.
+2026-09-17T09:38:36.3360583Z ##[end-action id=__self.__pnpm_setup;outcome=success;conclusion=success;duration_ms=1119]
+2026-09-17T09:38:36.3364081Z ##[start-action display=Setup Node.js;id=__self.default-node]
+2026-09-17T09:38:36.3482191Z ##[group]Run actions/setup-node@v6
+2026-09-17T09:38:36.3482444Z with:
+2026-09-17T09:38:36.3482669Z   node-version-file: package.json
+2026-09-17T09:38:36.3482919Z   cache: pnpm
+2026-09-17T09:38:36.3483139Z   cache-dependency-path: pnpm-lock.yaml
+2026-09-17T09:38:36.3483610Z   check-latest: false
+2026-09-17T09:38:36.3486022Z   token: ***
+2026-09-17T09:38:36.3486242Z   package-manager-cache: true
+2026-09-17T09:38:36.3486483Z env:
+2026-09-17T09:38:36.3486692Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:36.3486949Z ##[endgroup]
+2026-09-17T09:38:36.4848518Z Resolved package.json as 24
+2026-09-17T09:38:36.4917341Z Found in cache @ /opt/hostedtoolcache/node/24.20.0/x64
+2026-09-17T09:38:36.4920423Z ##[group]Environment details
+2026-09-17T09:38:36.9069717Z node: v24.20.0
+2026-09-17T09:38:36.9069989Z npm: 11.19.0
+2026-09-17T09:38:36.9070184Z yarn: 1.22.22
+2026-09-17T09:38:36.9070810Z ##[endgroup]
+2026-09-17T09:38:36.9091000Z [command]/home/runner/setup-pnpm/pnpm store path --silent
+2026-09-17T09:38:36.9205432Z /home/runner/setup-pnpm/store/v11
+2026-09-17T09:38:36.9997981Z pnpm cache is not found
+2026-09-17T09:38:37.0109238Z ##[end-action id=__self.default-node;outcome=success;conclusion=success;duration_ms=674]
+2026-09-17T09:38:37.0114848Z ##[start-action display=Setup requested Node.js;id=__self.requested-node]
+2026-09-17T09:38:37.0123854Z ##[end-action id=__self.requested-node;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:37.0126740Z ##[start-action display=Validate native runtime;id=__self.__run]
+2026-09-17T09:38:37.0156435Z ##[group]Run case "$NATIVE_RUNTIME" in
+2026-09-17T09:38:37.0156788Z [36;1mcase "$NATIVE_RUNTIME" in[0m
+2026-09-17T09:38:37.0157061Z [36;1m  none|node|electron) ;;[0m
+2026-09-17T09:38:37.0157512Z [36;1m  *)[0m
+2026-09-17T09:38:37.0157824Z [36;1m    echo "::error::native-runtime must be none, node, or electron"[0m
+2026-09-17T09:38:37.0158207Z [36;1m    exit 2[0m
+2026-09-17T09:38:37.0158411Z [36;1m    ;;[0m
+2026-09-17T09:38:37.0158597Z [36;1mesac[0m
+2026-09-17T09:38:37.0205942Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:38:37.0206310Z env:
+2026-09-17T09:38:37.0206747Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:37.0207042Z   NATIVE_RUNTIME: none
+2026-09-17T09:38:37.0207267Z ##[endgroup]
+2026-09-17T09:38:37.0294776Z ##[end-action id=__self.__run;outcome=success;conclusion=success;duration_ms=16]
+2026-09-17T09:38:37.0296668Z ##[start-action display=Prepare dependency install;id=__self.__run_2]
+2026-09-17T09:38:37.0312701Z ##[group]Run if [ -e node_modules ]; then
+2026-09-17T09:38:37.0313024Z [36;1mif [ -e node_modules ]; then[0m
+2026-09-17T09:38:37.0313292Z [36;1m  ls -ld node_modules[0m
+2026-09-17T09:38:37.0313814Z [36;1m  rm -rf node_modules[0m
+2026-09-17T09:38:37.0314057Z [36;1mfi[0m
+2026-09-17T09:38:37.0347501Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:38:37.0347848Z env:
+2026-09-17T09:38:37.0348051Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:37.0348317Z ##[endgroup]
+2026-09-17T09:38:37.0410811Z ##[end-action id=__self.__run_2;outcome=success;conclusion=success;duration_ms=11]
+2026-09-17T09:38:37.0412671Z ##[start-action display=Install dependencies;id=__self.__run_3]
+2026-09-17T09:38:37.0428916Z ##[group]Run pnpm install --frozen-lockfile --ignore-scripts
+2026-09-17T09:38:37.0429343Z [36;1mpnpm install --frozen-lockfile --ignore-scripts[0m
+2026-09-17T09:38:37.0429804Z [36;1m# Job containers can run composite steps from a source mirror without .git.[0m
+2026-09-17T09:38:37.0430423Z [36;1mif [ "$(git -C "$GITHUB_WORKSPACE" rev-parse --is-inside-work-tree 2>/dev/null)" = true ]; then[0m
+2026-09-17T09:38:37.0431110Z [36;1m  git -C "$GITHUB_WORKSPACE" diff --exit-code -- package.json pnpm-lock.yaml pnpm-workspace.yaml[0m
+2026-09-17T09:38:37.0431614Z [36;1mfi[0m
+2026-09-17T09:38:37.0465347Z shell: /usr/bin/bash --noprofile --norc -e -o pipefail {0}
+2026-09-17T09:38:37.0465694Z env:
+2026-09-17T09:38:37.0465904Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:37.0466169Z ##[endgroup]
+2026-09-17T09:38:37.0796283Z Scope: all 2 workspace projects
+2026-09-17T09:38:37.1987048Z ? Verifying lockfile against supply-chain policies (1475 entries)...
+2026-09-17T09:38:37.3772781Z Downloading cytoscape-fcose@2.2.0: 0.00 B/7.60 MB
+2026-09-17T09:38:37.4168456Z Downloading sherpa-onnx-linux-x64@1.12.37: 0.00 B/10.02 MB
+2026-09-17T09:38:37.4411797Z Packages are hard linked from the content-addressable store to the virtual store.
+2026-09-17T09:38:37.4418239Z   Content-addressable store is at: /home/runner/setup-pnpm/store/v11
+2026-09-17T09:38:37.4419483Z   Virtual store is at:             node_modules/.pnpm
+2026-09-17T09:38:37.8067516Z Downloading monaco-editor@0.55.1: 0.00 B/13.67 MB
+2026-09-17T09:38:37.8459279Z Downloading @typescript/typescript-linux-x64@7.0.2: 0.00 B/9.66 MB
+2026-09-17T09:38:38.8253223Z Downloading @oxlint-tsgolint/linux-x64@7.0.2001: 0.00 B/7.71 MB
+2026-09-17T09:38:38.8370037Z Downloading agent-browser@0.27.0: 0.00 B/34.08 MB
+2026-09-17T09:38:39.3037052Z Downloading emojibase-data@17.0.0: 0.00 B/6.71 MB
+2026-09-17T09:38:39.8041579Z Downloading @oxlint/binding-linux-x64-gnu@1.80.0: 0.00 B/6.53 MB
+2026-09-17T09:38:39.9775125Z Downloading @napi-rs/canvas-linux-x64-gnu@1.0.3: 0.00 B/14.03 MB
+2026-09-17T09:38:40.0365179Z Downloading @swc/core-linux-x64-gnu@1.15.46: 0.00 B/12.04 MB
+2026-09-17T09:38:40.1089572Z Downloading node-pty@1.1.0: 0.00 B/15.46 MB
+2026-09-17T09:38:40.1470871Z Downloading electron-winstaller@5.4.0: 0.00 B/9.14 MB
+2026-09-17T09:38:40.1670136Z Downloading pdfjs-dist@6.3.289: 0.00 B/8.50 MB
+2026-09-17T09:38:40.2090457Z Downloading mermaid@11.17.2: 0.00 B/17.79 MB
+2026-09-17T09:38:40.2909090Z Downloading emoji-picker-react@4.19.1: 0.00 B/6.53 MB
+2026-09-17T09:38:40.3144960Z Downloading react-grab@0.1.34: 0.00 B/7.92 MB
+2026-09-17T09:38:40.4158662Z Downloading @rolldown/binding-linux-x64-gnu@1.0.0-beta.53: 0.00 B/8.56 MB
+2026-09-17T09:38:41.5028638Z Progress: resolved 1272, reused 0, downloaded 895, added 879
+2026-09-17T09:38:41.9495181Z ✓ Lockfile passes supply-chain policies (1475 entries in 4.7s)
+2026-09-17T09:38:41.9524272Z Lockfile is up to date, resolution step is skipped
+2026-09-17T09:38:42.9965042Z Progress: resolved 1272, reused 0, downloaded 1258, added 1248
+2026-09-17T09:38:43.9511532Z Packages: +1272
+2026-09-17T09:38:43.9511987Z ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+2026-09-17T09:38:44.2407798Z Progress: resolved 1272, reused 0, downloaded 1270, added 1272, done
+2026-09-17T09:38:44.6371875Z 
+2026-09-17T09:38:44.6372703Z dependencies:
+2026-09-17T09:38:44.6373918Z + @anthropic-ai/claude-agent-sdk 0.3.251
+2026-09-17T09:38:44.6374585Z + @electron-toolkit/utils 4.0.0
+2026-09-17T09:38:44.6375017Z + @floating-ui/dom 1.7.6
+2026-09-17T09:38:44.6375519Z + @linear/sdk 82.1.0
+2026-09-17T09:38:44.6375789Z + @parcel/watcher 2.5.6
+2026-09-17T09:38:44.6376047Z + @streamparser/json 0.0.26
+2026-09-17T09:38:44.6376358Z + @xterm/addon-serialize 0.15.0-beta.300
+2026-09-17T09:38:44.6376694Z + @xterm/headless 6.1.0-beta.302
+2026-09-17T09:38:44.6376971Z + agent-browser 0.27.0
+2026-09-17T09:38:44.6377215Z + electron-updater 6.8.9
+2026-09-17T09:38:44.6377464Z + i18next 26.3.1
+2026-09-17T09:38:44.6377697Z + jsonc-parser 3.3.1
+2026-09-17T09:38:44.6377924Z + node-pty 1.1.0
+2026-09-17T09:38:44.6378151Z + posthog-node 5.33.3
+2026-09-17T09:38:44.6378394Z + proper-lockfile 4.1.2
+2026-09-17T09:38:44.6378617Z + qrcode 1.5.4
+2026-09-17T09:38:44.6378832Z + react-i18next 17.0.13
+2026-09-17T09:38:44.6379059Z + serve-sim 0.1.40
+2026-09-17T09:38:44.6379287Z + sherpa-onnx 1.12.37
+2026-09-17T09:38:44.6379492Z + ssh2 1.17.0
+2026-09-17T09:38:44.6379682Z + tldts 7.4.12
+2026-09-17T09:38:44.6379889Z + tweetnacl 1.0.3
+2026-09-17T09:38:44.6380089Z + ws 8.21.3
+2026-09-17T09:38:44.6380278Z + yaml 2.8.4
+2026-09-17T09:38:44.6380466Z + zod 4.5.4
+2026-09-17T09:38:44.6380577Z 
+2026-09-17T09:38:44.6380696Z optionalDependencies:
+2026-09-17T09:38:44.6381041Z + @orca/windows-registry link:native/windows-registry
+2026-09-17T09:38:44.6381430Z + sherpa-onnx-linux-x64 1.12.37
+2026-09-17T09:38:44.6381604Z 
+2026-09-17T09:38:44.6381690Z devDependencies:
+2026-09-17T09:38:44.6381909Z + @dnd-kit/core 6.3.1
+2026-09-17T09:38:44.6382157Z + @dnd-kit/sortable 10.0.0
+2026-09-17T09:38:44.6382439Z + @electron-toolkit/tsconfig 2.0.0
+2026-09-17T09:38:44.6382715Z + @electron/rebuild 4.2.0
+2026-09-17T09:38:44.6382967Z + @monaco-editor/react 4.7.0
+2026-09-17T09:38:44.6383219Z + @oxlint/plugins 1.80.0
+2026-09-17T09:38:44.6383804Z + @playwright/test 1.59.1
+2026-09-17T09:38:44.6384311Z + @sanity/diff-match-patch 3.2.0
+2026-09-17T09:38:44.6384783Z + @shadcn/lint 0.1.0
+2026-09-17T09:38:44.6385257Z + @stablyai/playwright-test 2.1.14
+2026-09-17T09:38:44.6385745Z + @tailwindcss/vite 4.2.4
+2026-09-17T09:38:44.6386225Z + @tanstack/react-virtual 3.14.10
+2026-09-17T09:38:44.6386763Z + @testing-library/jest-dom 6.9.1
+2026-09-17T09:38:44.6387290Z + @testing-library/react 16.3.2
+2026-09-17T09:38:44.6387823Z + @testing-library/user-event 14.6.1
+2026-09-17T09:38:44.6388398Z + @tiptap/extension-code-block 3.31.3
+2026-09-17T09:38:44.6389023Z + @tiptap/extension-code-block-lowlight 3.31.3
+2026-09-17T09:38:44.6389651Z + @tiptap/extension-details 3.31.3
+2026-09-17T09:38:44.6390199Z + @tiptap/extension-image 3.31.3
+2026-09-17T09:38:44.6390713Z + @tiptap/extension-link 3.31.3
+2026-09-17T09:38:44.6391223Z + @tiptap/extension-list 3.31.3
+2026-09-17T09:38:44.6391756Z + @tiptap/extension-mathematics 3.31.3
+2026-09-17T09:38:44.6392335Z + @tiptap/extension-placeholder 3.31.3
+2026-09-17T09:38:44.6392891Z + @tiptap/extension-table 3.31.3
+2026-09-17T09:38:44.6393785Z + @tiptap/extension-table-cell 3.31.3
+2026-09-17T09:38:44.6394432Z + @tiptap/extension-table-header 3.31.3
+2026-09-17T09:38:44.6395040Z + @tiptap/extension-table-row 3.31.3
+2026-09-17T09:38:44.6395909Z + @tiptap/extension-task-item 3.31.3
+2026-09-17T09:38:44.6396477Z + @tiptap/extension-task-list 3.31.3
+2026-09-17T09:38:44.6396980Z + @tiptap/markdown 3.31.3
+2026-09-17T09:38:44.6397412Z + @tiptap/pm 3.31.3
+2026-09-17T09:38:44.6397812Z + @tiptap/react 3.31.3
+2026-09-17T09:38:44.6398240Z + @tiptap/starter-kit 3.31.3
+2026-09-17T09:38:44.6398689Z + @types/node 25.9.5
+2026-09-17T09:38:44.6399333Z + @types/proper-lockfile 4.1.4
+2026-09-17T09:38:44.6399832Z + @types/qrcode 1.5.6
+2026-09-17T09:38:44.6400361Z + @types/react 19.2.17
+2026-09-17T09:38:44.6400795Z + @types/react-dom 19.2.3
+2026-09-17T09:38:44.6401220Z + @types/ssh2 1.15.5
+2026-09-17T09:38:44.6401567Z + @types/ws 8.18.1
+2026-09-17T09:38:44.6401951Z + @vitejs/plugin-react 5.2.0
+2026-09-17T09:38:44.6402445Z + @xterm/addon-fit 0.12.0-beta.300
+2026-09-17T09:38:44.6402987Z + @xterm/addon-ligatures 0.11.0-beta.300
+2026-09-17T09:38:44.6403780Z + @xterm/addon-search 0.17.0-beta.300
+2026-09-17T09:38:44.6404444Z + @xterm/addon-unicode11 0.10.0-beta.300
+2026-09-17T09:38:44.6405026Z + @xterm/addon-web-links 0.13.0-beta.300
+2026-09-17T09:38:44.6405590Z + @xterm/addon-webgl 0.20.0-beta.299
+2026-09-17T09:38:44.6406077Z + @xterm/xterm 6.1.0-beta.303
+2026-09-17T09:38:44.6406587Z + class-variance-authority 0.7.1
+2026-09-17T09:38:44.6407020Z + clsx 2.1.1
+2026-09-17T09:38:44.6407376Z + cmdk 1.1.1
+2026-09-17T09:38:44.6407737Z + dompurify 3.4.14
+2026-09-17T09:38:44.6408131Z + electron 43.7.0
+2026-09-17T09:38:44.6408534Z + electron-builder 26.15.3
+2026-09-17T09:38:44.6409092Z + electron-builder-squirrel-windows 26.15.3
+2026-09-17T09:38:44.6409631Z + electron-vite 5.0.0
+2026-09-17T09:38:44.6410054Z + emoji-picker-react 4.19.1
+2026-09-17T09:38:44.6410509Z + emojibase-data 17.0.0
+2026-09-17T09:38:44.6410919Z + esbuild 0.25.12
+2026-09-17T09:38:44.6411301Z + happy-dom 20.11.8
+2026-09-17T09:38:44.6411697Z + html-to-image 1.11.13
+2026-09-17T09:38:44.6412077Z + husky 9.1.7
+2026-09-17T09:38:44.6412437Z + i18next-cli 1.65.0
+2026-09-17T09:38:44.6412808Z + katex 0.16.45
+2026-09-17T09:38:44.6413185Z + lint-staged 16.4.0
+2026-09-17T09:38:44.6413771Z + lowlight 3.3.0
+2026-09-17T09:38:44.6414165Z + lucide-react 0.577.0
+2026-09-17T09:38:44.6414543Z + marked 17.0.6
+2026-09-17T09:38:44.6414905Z + mermaid 11.17.2
+2026-09-17T09:38:44.6415281Z + monaco-editor 0.55.1
+2026-09-17T09:38:44.6415661Z + oxfmt 0.65.0
+2026-09-17T09:38:44.6415998Z + oxlint 1.80.0
+2026-09-17T09:38:44.6416456Z + oxlint-plugin-anti-slop 0.1.2
+2026-09-17T09:38:44.6417008Z + oxlint-plugin-react-doctor 0.9.1
+2026-09-17T09:38:44.6417512Z + oxlint-tsgolint 7.0.2001
+2026-09-17T09:38:44.6417942Z + pdfjs-dist 6.3.289
+2026-09-17T09:38:44.6418316Z + pngjs 7.0.0
+2026-09-17T09:38:44.6418657Z + radix-ui 1.6.2
+2026-09-17T09:38:44.6419004Z + react 19.2.8
+2026-09-17T09:38:44.6419380Z + react-colorful 5.7.0
+2026-09-17T09:38:44.6419783Z + react-dom 19.2.8
+2026-09-17T09:38:44.6420163Z + react-grab 0.1.34
+2026-09-17T09:38:44.6420557Z + react-markdown 10.1.0
+2026-09-17T09:38:44.6420981Z + react-refresh 0.18.0
+2026-09-17T09:38:44.6421420Z + rehype-highlight 7.0.2
+2026-09-17T09:38:44.6421853Z + rehype-katex 7.0.1
+2026-09-17T09:38:44.6422250Z + rehype-raw 7.0.0
+2026-09-17T09:38:44.6422644Z + rehype-sanitize 6.0.0
+2026-09-17T09:38:44.6423055Z + rehype-slug 6.0.0
+2026-09-17T09:38:44.6423646Z + remark-breaks 4.0.0
+2026-09-17T09:38:44.6424098Z + remark-frontmatter 5.0.0
+2026-09-17T09:38:44.6424566Z + remark-gfm 4.0.1
+2026-09-17T09:38:44.6424959Z + remark-math 6.0.0
+2026-09-17T09:38:44.6425351Z + remark-parse 11.0.0
+2026-09-17T09:38:44.6425743Z + shadcn 4.13.1
+2026-09-17T09:38:44.6426072Z + sonner 2.0.7
+2026-09-17T09:38:44.6426377Z + tailwind-merge 3.5.0
+2026-09-17T09:38:44.6426602Z + tailwindcss 4.2.4
+2026-09-17T09:38:44.6426822Z + tw-animate-css 1.4.0
+2026-09-17T09:38:44.6427045Z + typescript 7.0.2
+2026-09-17T09:38:44.6427340Z + typescript-api <- typescript 6.0.3
+2026-09-17T09:38:44.6427817Z + unified 11.0.5
+2026-09-17T09:38:44.6428182Z + vite <- rolldown-vite 7.3.1
+2026-09-17T09:38:44.6428432Z + vitest 4.1.11
+2026-09-17T09:38:44.6428650Z + vscode-oniguruma 2.0.1
+2026-09-17T09:38:44.6429062Z + vscode-textmate 9.3.2
+2026-09-17T09:38:44.6429279Z + zustand 5.0.14
+2026-09-17T09:38:44.6429400Z 
+2026-09-17T09:38:44.6582815Z Done in 7.6s using pnpm v12.0.0
+2026-09-17T09:38:44.7044007Z ##[end-action id=__self.__run_3;outcome=success;conclusion=success;duration_ms=7663]
+2026-09-17T09:38:44.7047003Z ##[start-action display=Resolve Electron package cache;id=__self.electron-package-cache]
+2026-09-17T09:38:44.7054278Z ##[end-action id=__self.electron-package-cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7056388Z ##[start-action display=Cache Electron package archive;id=__self.__actions_cache]
+2026-09-17T09:38:44.7061391Z ##[end-action id=__self.__actions_cache;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7064263Z ##[start-action display=Resolve native cache scope;id=__self.native-cache-scope]
+2026-09-17T09:38:44.7126278Z ##[end-action id=__self.native-cache-scope;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7128288Z ##[start-action display=Restore compiled native modules;id=__self.native-cache-restore]
+2026-09-17T09:38:44.7134332Z ##[end-action id=__self.native-cache-restore;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7136540Z ##[start-action display=Restore compiled native modules without saving;id=__self.native-cache-restore-only]
+2026-09-17T09:38:44.7140352Z ##[end-action id=__self.native-cache-restore-only;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7144668Z ##[start-action display=Use external node-gyp;id=__self.__run_4]
+2026-09-17T09:38:44.7149092Z ##[end-action id=__self.__run_4;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.7151285Z ##[start-action display=Prepare native runtime;id=__self.__run_5]
+2026-09-17T09:38:44.7154883Z ##[end-action id=__self.__run_5;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:38:44.8568404Z ##[group]Run actions/cache@v5
+2026-09-17T09:38:44.8568673Z with:
+2026-09-17T09:38:44.8568900Z   path: config/*.tsbuildinfo
+2026-09-17T09:38:44.8569519Z   key: tsbuildinfo-Linux-38a442090d76725d43eaee08fa6aef611778d6ad394dfdadd739de9c6d679640-560c42e1d196f53299b49bf248bdb807f2ffe45b
+2026-09-17T09:38:44.8570411Z   restore-keys: tsbuildinfo-Linux-38a442090d76725d43eaee08fa6aef611778d6ad394dfdadd739de9c6d679640-
+
+2026-09-17T09:38:44.8570932Z   enableCrossOsArchive: false
+2026-09-17T09:38:44.8571179Z   fail-on-cache-miss: false
+2026-09-17T09:38:44.8571411Z   lookup-only: false
+2026-09-17T09:38:44.8571620Z   save-always: false
+2026-09-17T09:38:44.8571814Z env:
+2026-09-17T09:38:44.8572010Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:44.8572263Z ##[endgroup]
+2026-09-17T09:38:45.0452786Z Cache not found for input keys: tsbuildinfo-Linux-38a442090d76725d43eaee08fa6aef611778d6ad394dfdadd739de9c6d679640-560c42e1d196f53299b49bf248bdb807f2ffe45b, tsbuildinfo-Linux-38a442090d76725d43eaee08fa6aef611778d6ad394dfdadd739de9c6d679640-
+2026-09-17T09:38:45.0527339Z ##[group]Run pnpm run typecheck
+2026-09-17T09:38:45.0527671Z [36;1mpnpm run typecheck[0m
+2026-09-17T09:38:45.0567357Z shell: /usr/bin/bash -e {0}
+2026-09-17T09:38:45.0567608Z env:
+2026-09-17T09:38:45.0567825Z   PNPM_HOME: /home/runner/setup-pnpm
+2026-09-17T09:38:45.0568108Z ##[endgroup]
+2026-09-17T09:38:45.0755625Z $ node config/scripts/run-typecheck-projects-in-parallel.mjs
+2026-09-17T09:39:33.5227305Z ##[error]src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx(12,15): error TS6196: 'NativeChatMessage' is declared but never used.
+2026-09-17T09:39:41.7413232Z tsc tsconfig.tc.web.json exited with code 1
+2026-09-17T09:39:41.7447443Z [ELIFECYCLE] Command failed with exit code 1.
+2026-09-17T09:39:41.7472596Z ##[error]Process completed with exit code 1.
+2026-09-17T09:39:41.7680032Z Post job cleanup.
+2026-09-17T09:39:41.7684785Z ##[start-action display=Setup Node.js;id=__9b683447-f213-41af-9478-4eca3ba2da9a.default-node]
+2026-09-17T09:39:41.7687078Z ##[end-action id=__9b683447-f213-41af-9478-4eca3ba2da9a.default-node;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-17T09:39:41.7689182Z ##[start-action display=Setup pnpm;id=__9b683447-f213-41af-9478-4eca3ba2da9a.__pnpm_setup]
+2026-09-17T09:39:41.7725157Z Post job cleanup.
+2026-09-17T09:39:42.1278651Z ##[end-action id=__9b683447-f213-41af-9478-4eca3ba2da9a.__pnpm_setup;outcome=success;conclusion=success;duration_ms=358]
+2026-09-17T09:39:42.1375472Z Post job cleanup.
+2026-09-17T09:39:42.2298506Z [command]/usr/bin/git version
+2026-09-17T09:39:42.2340317Z git version 2.55.0
+2026-09-17T09:39:42.2390673Z Temporarily overriding HOME='/home/runner/work/_temp/8ad13a6c-e176-432c-b52a-66d433caad9b' before making global git config changes
+2026-09-17T09:39:42.2391749Z Adding repository directory to the temporary git global config as a safe directory
+2026-09-17T09:39:42.2395703Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/orca/orca
+2026-09-17T09:39:42.2426250Z Removing SSH command configuration
+2026-09-17T09:39:42.2433834Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2026-09-17T09:39:42.2466906Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2026-09-17T09:39:42.2733764Z Removing HTTP extra header
+2026-09-17T09:39:42.2739141Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2026-09-17T09:39:42.2771850Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2026-09-17T09:39:42.2999548Z Removing includeIf entries pointing to credentials config files
+2026-09-17T09:39:42.3006226Z [command]/usr/bin/git config --local --name-only --get-regexp ^includeIf\.gitdir:
+2026-09-17T09:39:42.3037180Z [command]/usr/bin/git submodule foreach --recursive git config --local --show-origin --name-only --get-regexp remote.origin.url
+2026-09-17T09:39:42.3419884Z Cleaning up orphan processes

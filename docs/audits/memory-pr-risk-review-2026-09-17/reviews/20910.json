@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "number": 20910,
+  "url": "https://github.com/stablyai/orca/pull/20910",
+  "title": "fix(main): release hang watchdog quit listener on shutdown",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "A stopped or exited macOS watchdog releases its quit listener; heartbeat and shutdown behavior stay unchanged. Linux/Windows bypass this path.",
+    "currentHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "snapshotHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547782"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547780"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104714299505"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710356053"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408724/job/104710354107"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710355813"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547782"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547780"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548706"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549030"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549185"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549674"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549117"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549721"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549055"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549591"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710547818"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548033"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549462"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549427"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710549070"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548621"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548568"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548600"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548622"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548562"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548570"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548602"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104710548613"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408957/job/104714299505"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070410574"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20910,
+      "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "tree": "c8d1e4f7c4edb73fb595db8b285fd190f8a25d8e",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20910.json",
+    "sha256": "85ec0f9748078f1831ab1685ede8334a0874dd6f06c5822e6c6a7ec9bf35ca0b",
+    "reviewedHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20910,
+    "url": "https://github.com/stablyai/orca/pull/20910",
+    "title": "fix(main): release hang watchdog quit listener on shutdown",
+    "exactHead": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+    "reviewBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/main/hang-watchdog/main-thread-hang-watchdog.test.ts",
+        "publishedSha256": "30a7ac759b6cbcc3ed36cfb7c683775ef717321ae4071e668d80d50227cbaa9a",
+        "workingSha256": "30a7ac759b6cbcc3ed36cfb7c683775ef717321ae4071e668d80d50227cbaa9a",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/hang-watchdog/main-thread-hang-watchdog.ts",
+        "publishedSha256": "a2d9a4030c53c4310e1b87f26db745dc3babaa503b8865c72e43f521cd04a01c",
+        "workingSha256": "a2d9a4030c53c4310e1b87f26db745dc3babaa503b8865c72e43f521cd04a01c",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/hang-watchdog/hang-watchdog-worker-protocol.ts",
+        "publishedSha256": "d5d19a7d0411180e2290135efbd7b1a56fd89371bdb635fe8222d547725c0c55",
+        "workingSha256": "d5d19a7d0411180e2290135efbd7b1a56fd89371bdb635fe8222d547725c0c55",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "low-observed-risk",
+    "correctnessFindings": [
+      "stop() and worker exit now unregister the exact app will-quit callback. Existing stopped guard preserves idempotence and stops heartbeat; app-level retention of the retired worker closure ends."
+    ],
+    "userVisibleBehavior": {
+      "before": "Stopped/exited watchdog remains reachable from app's quit listener.",
+      "after": "Listener released on stop/exit, same worker shutdown message and heartbeat policy.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Actual process guard permits this path only on Darwin. Unit lifecycle ports exercised on macOS; native watchdog not launched.",
+      "Linux": "Existing runtime guard returns null; added code is not reached.",
+      "Windows": "Existing runtime guard returns null; added code is not reached."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Existing watchdog unit suite passed in89-test batch, including repeated stop and worker-exit paths. Native worker/deadlock sampling not rerun.",
+    "dependencyAndMergeRisks": "Runtime platform guard confines behavior to macOS. Linux/Windows return null before this code.",
+    "nextAction": "Suitable for low-risk review.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

@@ -1,0 +1,278 @@
+{
+  "schemaVersion": 1,
+  "number": 21136,
+  "url": "https://github.com/stablyai/orca/pull/21136",
+  "title": "fix: retire stale GitLab host cache generations",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "A reconnect reuses one successful GitLab host list for its execution generation. Native, WSL distro, and other SSH-host caches remain isolated.",
+    "currentHead": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "snapshotHead": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053389229"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174593906/job/105053388528"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174593813/job/105053387801"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053389061"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053479497"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053479428"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480478"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480448"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480429"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480218"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480505"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480593"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480511"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480587"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053479481"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053479492"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480237"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480735"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480415"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480291"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480264"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480249"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480450"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480309"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480282"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480265"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105053480280"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174594093/job/105054908686"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174596683"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21136,
+      "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "tree": "a3d4ed80c9560bd66cf79e140dc7afb03d3ece2c",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21136.json",
+    "sha256": "3d9ef6320701675266aa8b2984a708669410f82b1e0d94d12b2e1a2bc13b0655",
+    "reviewedHead": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21136,
+    "url": "https://github.com/stablyai/orca/pull/21136",
+    "title": "fix: retire stale GitLab host cache generations",
+    "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/gitlab/gitlab-known-host-probe.ts",
+        "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+        "sha256": "ecf0d67f68cf4b7b1bc7d6ff19a1815a8b95fc9721962d3cd873702f98831bad"
+      },
+      {
+        "path": "src/main/providers/ssh-git-dispatch.ts",
+        "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+        "sha256": "c1b2820bbc197bd48fce4342e3bb08bc7f2096e92f8be87d7e4b2ebd49860a0b"
+      },
+      {
+        "path": "src/main/git/coalesced-probe.ts",
+        "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+        "sha256": "e5a13820a7d8b5f501a3804961ea26526bd6ad9144ecf597d5d83a70d81885e1"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Cache storage key is stable per connection, but its stored execution key must match the current provider generation. A result publishes only if it still owns its coalesced probe and generation; stale completions still answer their original caller without replacing the successor cache."
+      }
+    ],
+    "userVisibleBeforeAfter": "A reconnect retains one successful GitLab host array for the current execution generation; native, each WSL distro and other SSH connections keep their own caches.",
+    "capacityAndDataLoss": "No host-count cap reduced. Previous generations were already ineligible for lookup; removing them changes retention, not which authenticated hosts current users see.",
+    "platformEvidence": {
+      "assessment": "Native/Ubuntu/Debian/SSH contexts are simulated explicitly. glab command arguments and host routing are unchanged on Linux/macOS/Windows.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. Native/Ubuntu/Debian/SSH contexts are simulated explicitly. glab command arguments and host routing are unchanged on Linux/macOS/Windows.",
+    "regressionCoverage": {
+      "description": "32 reconnect generations, remembered hosts, delayed old probes, reset/old successor ordering, stale same-generation probe, native/WSL/connection isolation and failure/recovery.",
+      "focusedPassingCases": 8,
+      "log": "notes/pr-risk-review/queues/21136.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21136.graph.json",
+      "limitations": "No host-count cap reduced. Previous generations were already ineligible for lookup; removing them changes retention, not which authenticated hosts current users see."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

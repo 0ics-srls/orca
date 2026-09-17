@@ -1,0 +1,497 @@
+{
+  "numTotalTestSuites": 7,
+  "numPassedTestSuites": 7,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 43,
+  "numPassedTests": 43,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789637185382,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves page download until native completed and then releases its routing entry",
+          "status": "passed",
+          "title": "preserves page download until native completed and then releases its routing entry",
+          "duration": 7.544749999999965,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves page download until native cancelled and then releases its routing entry",
+          "status": "passed",
+          "title": "preserves page download until native cancelled and then releases its routing entry",
+          "duration": 1.6297089999999912,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves page download until native interrupted and then releases its routing entry",
+          "status": "passed",
+          "title": "preserves page download until native interrupted and then releases its routing entry",
+          "duration": 0.6484169999999949,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "still cancels a download when its logical page closes after guest destruction",
+          "status": "passed",
+          "title": "still cancels a download when its logical page closes after guest destruction",
+          "duration": 0.44691599999998743,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "keeps progress routing until the last of multiple downloads settles",
+          "status": "passed",
+          "title": "keeps progress routing until the last of multiple downloads settles",
+          "duration": 0.3878750000000082,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "keeps the replacement guest and its routing when an old download settles",
+          "status": "passed",
+          "title": "keeps the replacement guest and its routing when an old download settles",
+          "duration": 0.4522500000000491,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "releases current routing after two guest destructions and the final old download settles",
+          "status": "passed",
+          "title": "releases current routing after two guest destructions and the final old download settles",
+          "duration": 0.3022919999999658,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "does not erase a replacement routing owner installed during completion delivery",
+          "status": "passed",
+          "title": "does not erase a replacement routing owner installed during completion delivery",
+          "duration": 0.29683299999999235,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "releases download state after renderer loss without sending to a destroyed renderer",
+          "status": "passed",
+          "title": "releases download state after renderer loss without sending to a destroyed renderer",
+          "duration": 0.26458399999995663,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637196790,
+      "endTime": 1789637196802.3022,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/browser/browser-manager-destroyed-guest-downloads.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership releases registered callbacks and ownership after 1000 distinct guest destructions",
+          "status": "passed",
+          "title": "releases registered callbacks and ownership after 1000 distinct guest destructions",
+          "duration": 22.132666999999856,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership leaves no dead-guest callbacks for the window-close unregisterAll path",
+          "status": "passed",
+          "title": "leaves no dead-guest callbacks for the window-close unregisterAll path",
+          "duration": 18.98999999999978,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership keeps explicit unregister before destruction idempotent",
+          "status": "passed",
+          "title": "keeps explicit unregister before destruction idempotent",
+          "duration": 0.2400419999994483,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership does not let a captured old destroyed callback retire a replacement guest",
+          "status": "passed",
+          "title": "does not let a captured old destroyed callback retire a replacement guest",
+          "duration": 0.2270410000000993,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership cleans a popup without retiring its live primary page",
+          "status": "passed",
+          "title": "cleans a popup without retiring its live primary page",
+          "duration": 0.11266600000089966,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership cleans policies for a guest destroyed before registration",
+          "status": "passed",
+          "title": "cleans policies for a guest destroyed before registration",
+          "duration": 0.06804200000078708,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership preserves live guest ownership when its renderer process needs reload recovery",
+          "status": "passed",
+          "title": "preserves live guest ownership when its renderer process needs reload recovery",
+          "duration": 0.10758300000088639,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership rebuilds ownership when a restored page registers its fresh guest",
+          "status": "passed",
+          "title": "rebuilds ownership when a restored page registers its fresh guest",
+          "duration": 0.1156250000003638,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browser guest destruction ownership"],
+          "fullName": "browser guest destruction ownership preserves a sibling page using the same browser session profile",
+          "status": "passed",
+          "title": "preserves a sibling page using the same browser session profile",
+          "duration": 0.13279099999999744,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637195330,
+      "endTime": 1789637195372.1328,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/browser/browser-manager-destroyed-guest.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager queues permission denials and download requests until the guest registers",
+          "status": "passed",
+          "title": "queues permission denials and download requests until the guest registers",
+          "duration": 4.470083000000045,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager sets the download save path immediately and reports progress and completion",
+          "status": "passed",
+          "title": "sets the download save path immediately and reports progress and completion",
+          "duration": 1.428875000000005,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager flushes started and terminal snapshots for downloads that finish before registration",
+          "status": "passed",
+          "title": "flushes started and terminal snapshots for downloads that finish before registration",
+          "duration": 0.5509579999999801,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager drops pending download records when an unregistered guest is destroyed",
+          "status": "passed",
+          "title": "drops pending download records when an unregistered guest is destroyed",
+          "duration": 0.38562500000000455,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager cancels active downloads when the owning browser tab closes",
+          "status": "passed",
+          "title": "cancels active downloads when the owning browser tab closes",
+          "duration": 0.7010000000000218,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager reports setSavePath failures without leaving a hidden download running",
+          "status": "passed",
+          "title": "reports setSavePath failures without leaving a hidden download running",
+          "duration": 3.060457999999983,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637195825,
+      "endTime": 1789637195836.0605,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/browser/browser-manager-downloads.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager remembers the registered session profile for a browser page",
+          "status": "passed",
+          "title": "remembers the registered session profile for a browser page",
+          "duration": 1.9471660000000384,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses registerGuest for a page the document registry already holds",
+          "status": "passed",
+          "title": "refuses registerGuest for a page the document registry already holds",
+          "duration": 0.8454170000001113,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses registerOffscreenGuest for a page the document registry already holds",
+          "status": "passed",
+          "title": "refuses registerOffscreenGuest for a page the document registry already holds",
+          "duration": 0.31454100000007656,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses registerOffscreenGuest when the named guest is missing",
+          "status": "passed",
+          "title": "refuses registerOffscreenGuest when the named guest is missing",
+          "duration": 0.11845800000003237,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses registerOffscreenGuest when the named guest is destroyed",
+          "status": "passed",
+          "title": "refuses registerOffscreenGuest when the named guest is destroyed",
+          "duration": 0.09691700000007586,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses devtools for an offscreen guest instead of opening it on the host display",
+          "status": "passed",
+          "title": "refuses devtools for an offscreen guest instead of opening it on the host display",
+          "duration": 0.50649999999996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager keeps devtools available for a desktop webview guest",
+          "status": "passed",
+          "title": "keeps devtools available for a desktop webview guest",
+          "duration": 0.7994999999999663,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager refuses unregisterGuest for a page the document registry holds",
+          "status": "passed",
+          "title": "refuses unregisterGuest for a page the document registry holds",
+          "duration": 0.424082999999996,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager blocks non-web guest navigations after attach",
+          "status": "passed",
+          "title": "blocks non-web guest navigations after attach",
+          "duration": 0.23870899999997164,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager unregisterAll clears tracked guests and context-menu listeners",
+          "status": "passed",
+          "title": "unregisterAll clears tracked guests and context-menu listeners",
+          "duration": 0.9238750000000664,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager rejects non-webview guest types to prevent privilege escalation",
+          "status": "passed",
+          "title": "rejects non-webview guest types to prevent privilege escalation",
+          "duration": 0.16729099999997743,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager rejects registration for guests that never received attach-time policy wiring",
+          "status": "passed",
+          "title": "rejects registration for guests that never received attach-time policy wiring",
+          "duration": 0.14416700000003857,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager does not duplicate guest policy listeners when attach is reported twice",
+          "status": "passed",
+          "title": "does not duplicate guest policy listeners when attach is reported twice",
+          "duration": 0.5304580000000669,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager cleans attached guest policy state when a guest is destroyed before registration",
+          "status": "passed",
+          "title": "cleans attached guest policy state when a guest is destroyed before registration",
+          "duration": 0.21262500000000273,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager removes a destroyed primary guest from its tab registration maps",
+          "status": "passed",
+          "title": "removes a destroyed primary guest from its tab registration maps",
+          "duration": 0.17983399999991434,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager fully unregisters stale guests discovered during authorization",
+          "status": "passed",
+          "title": "fully unregisters stale guests discovered during authorization",
+          "duration": 0.33295799999996234,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager retires stale guest mappings when a page re-registers after a process swap",
+          "status": "passed",
+          "title": "retires stale guest mappings when a page re-registers after a process swap",
+          "duration": 0.7120419999999967,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager cleans up prior guest listeners before re-registering the same tab",
+          "status": "passed",
+          "title": "cleans up prior guest listeners before re-registering the same tab",
+          "duration": 0.30299999999999727,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["browserManager"],
+          "fullName": "browserManager never attaches a debugger to a browsing guest and drops its detach listener on unregister",
+          "status": "passed",
+          "title": "never attaches a debugger to a browsing guest and drops its detach listener on unregister",
+          "duration": 0.30054199999995035,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637196363,
+      "endTime": 1789637196372.3005,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/main/browser/browser-manager-guest-lifecycle.test.ts"
+    }
+  ]
+}

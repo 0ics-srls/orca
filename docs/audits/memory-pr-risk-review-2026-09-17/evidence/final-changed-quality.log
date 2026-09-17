@@ -1,0 +1,8 @@
+$ node config/scripts/check-changed-code-quality.mjs -- 4a1c9106e84d21c6c891a623652152e2022dd528
+code quality: 0 new finding(s) across 21 changed file(s).
+casting code quality: 0 new finding(s) across 21 changed file(s).
+type-aware code quality: 0 new finding(s) across 21 changed file(s).
+React Doctor: 0 new finding(s) across 21 changed file(s).
+design system: 0 new finding(s) across 21 changed file(s).
+casting SAFETY: rationale: 0 new finding(s) across 21 changed file(s).
+Changed-code quality gate passed since 4a1c9106e84d.

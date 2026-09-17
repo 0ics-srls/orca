@@ -1,0 +1,433 @@
+{
+  "schemaVersion": 1,
+  "number": 21001,
+  "url": "https://github.com/stablyai/orca/pull/21001",
+  "title": "fix(terminal): retire explicitly closed pending split connections",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; corrected; await green CI",
+    "userVisibleBeforeAfter": "Explicit close can retire a captured local/SSH PTY while attach is pending. Published correction restores running-work confirmation; ordinary detach preserves the process.",
+    "currentHead": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "pending",
+      "label": "Pending (13 checks)",
+      "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "snapshotHead": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "rollupState": "PENDING",
+      "failed": [],
+      "pending": [
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457020"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457035"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150889051"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150888971"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458080"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458197"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458115"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458096"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458121"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458036"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458206"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458123"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "url": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bth3w000k0agmnxsg7kks"
+        }
+      ],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149287052"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241059/job/105149284900"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149286689"
+        },
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457020"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149456506"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458353"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458467"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457787"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458677"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458663"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458240"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458521"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458705"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457035"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149456991"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457269"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457244"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458821"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150891517"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150889051"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150888971"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105150890162"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458762"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149457954"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458080"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458197"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458115"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458096"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458121"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458036"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458206"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205241534/job/105149458123"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bth3w000k0agmnxsg7kks"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "tree": "72c2e230c87dd5dc888c0ea38484d38825ebc844",
+      "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "paths": [
+        "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+        "src/renderer/src/components/terminal-pane/terminal-pane-close-admission.ts",
+        "src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts",
+        "docs/audits/pending-split-close/README.md"
+      ],
+      "number": 21001,
+      "oldHead": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+      "verifiedLoadedSources": 213,
+      "focusedTests": 40,
+      "sourceArtifact": "terminal/corrections-published.json"
+    },
+    "publishedUpdateEvidence": "evidence/terminal/corrections-published.json",
+    "currentMainMergeCheck": {
+      "number": 21001,
+      "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "tree": "a67543f5f34356872fe73c87df7dfc6f836de6ec",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    },
+    "correction": "Restored running-work probing and confirmation for pending local/SSH split closes, with captured owner checks and stale-confirmation rejection."
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/terminal/21001.json",
+    "sha256": "9e79be410ee853df2b7dcd75442ede2704c5db896b4d8edd3df6f656a57f1191",
+    "reviewedHead": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21001,
+    "url": "https://github.com/stablyai/orca/pull/21001",
+    "title": "fix(terminal): retire explicitly closed pending split connections",
+    "reviewedHead": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+    "recordedGithubBase": "170ebce1f2bd4474a48b40694d46a6b27e4ba767",
+    "baseRefName": "main",
+    "diffBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "diffBoundaryExplanation": "Exact full PR content is reviewed from the shared named-main ancestor, or exact parent topic head for a stack. This is not HEAD^ and is not a claim of clean merge into current main.",
+    "productDiffFile": "notes/pr-risk-review/terminal/21001.diff",
+    "allChangedPaths": [
+      "docs/audits/pending-split-close/README.md",
+      "docs/audits/pending-split-close/daemon-proof.test.ts",
+      "docs/audits/pending-split-close/fix.patch",
+      "docs/audits/pending-split-close/reproduce.mjs",
+      "docs/audits/pending-split-close/results.json",
+      "src/renderer/src/components/terminal-pane/ipc-pty-connect.ts",
+      "src/renderer/src/components/terminal-pane/pending-split-close-test-fixture.ts",
+      "src/renderer/src/components/terminal-pane/pending-split-close.test.ts",
+      "src/renderer/src/components/terminal-pane/pty-transport-types.ts",
+      "src/renderer/src/components/terminal-pane/pty-transport.ts",
+      "src/renderer/src/components/terminal-pane/retire-unbound-ipc-terminal-pane.ts",
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+      "src/renderer/src/store/slices/terminal-pane-retirement-ownership.test.ts",
+      "src/renderer/src/store/slices/terminal-tab-retirement.ts"
+    ],
+    "productSourcesInspected": [
+      "src/renderer/src/components/terminal-pane/ipc-pty-connect.ts",
+      "src/renderer/src/components/terminal-pane/pty-transport-types.ts",
+      "src/renderer/src/components/terminal-pane/pty-transport.ts",
+      "src/renderer/src/components/terminal-pane/retire-unbound-ipc-terminal-pane.ts",
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+      "src/renderer/src/store/slices/terminal-tab-retirement.ts"
+    ],
+    "callersAndContractsInspected": [
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+      "src/renderer/src/components/terminal/pty-running-work-probe.ts",
+      "src/renderer/src/components/terminal-pane/terminal-pane-pane-closed.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close-providers.ts",
+      "docs/reference/ssh-execution-boundary.md",
+      "docs/reference/remote-wire-compatibility.md",
+      "docs/reference/agent-status-store.md"
+    ],
+    "worktreeProductMatchesPublishedAtReadOnlyStart": {
+      "src/renderer/src/components/terminal-pane/ipc-pty-connect.ts": true,
+      "src/renderer/src/components/terminal-pane/pty-transport-types.ts": true,
+      "src/renderer/src/components/terminal-pane/pty-transport.ts": true,
+      "src/renderer/src/components/terminal-pane/retire-unbound-ipc-terminal-pane.ts": false,
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts": false,
+      "src/renderer/src/store/slices/terminal-tab-retirement.ts": true
+    },
+    "correctnessFindings": [
+      {
+        "severity": "high",
+        "status": "fixed locally; publication and independent review pending",
+        "title": "Pending restored split could stop running work without configured confirmation",
+        "evidence": "Published use-terminal-pane-close-actions.handleRequestClosePane calls executeClosePane when transport.getPtyId() is null. New retireUnbound* helper then has destructive authority from persisted ID. Fresh public-callback reproduction observes zero probe/dialog calls and local kill or paired terminal.close with skip-confirmation=false.",
+        "reproduction": "notes/pr-risk-review/terminal/pending-close-confirmation.test.ts",
+        "originalResult": "notes/pr-risk-review/terminal/pending-close-confirmation.log",
+        "correction": [
+          "src/renderer/src/components/terminal-pane/terminal-pane-close-admission.ts",
+          "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+          "src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts"
+        ],
+        "validation": "65 tests/4 suites and repository renderer typecheck pass; parent projection48 tests/3 suites pass. Cancel also defeats a stale Confirm callback."
+      }
+    ],
+    "userVisibleBeforeAfter": "Explicitly closing a restored split during a pending local/SSH attach now retires its captured persisted PTY, including a late same-ID attach result. Ordinary detach still preserves the process for remount.",
+    "retentionPolicy": "No cap reduction. The process is stopped only by explicit split close after the corrected confirmation flow; shared/successor ownership suppresses retirement. Published head has the confirmation bypass described in findings.",
+    "crossPlatform": {
+      "observed": "macOS background Node unit suite:23 files/238 tests passed before edits, recorded in focused-tests.log. No visible app or native window launched.",
+      "reasoning": "Renderer ownership logic and existing IPC shutdown routing are platform neutral. macOS fake transport/socket proof exists; no new direct OS command. New confirmation tests exercise no windows.",
+      "linux": "No native Linux execution by this reviewer. Root separately checks exact-head Linux CI; do not equate passing tests on a mocked host with every Linux kernel/provider path.",
+      "windows": "No native Windows execution by this reviewer. Packaging/typecheck can establish a narrower property than runtime correctness."
+    },
+    "sshAndFolderCompatibility": "Inspected execution-host ownership and existing routes. The public-callback correction includes direct SSH and paired-host cases; original regression suite includes folder-workspace retirement.",
+    "wireCompatibility": "No stream opcode, RPC shape, capability requirement, or payload truncation is introduced. Existing lifecycle content can change only for the retired/stale owner described above.",
+    "regressionControls": [
+      "public handleRequestClosePane newly reproduced bypass",
+      "eager and late reattach/cold-restore retirement",
+      "ordinary remount preservation",
+      "sibling, other-tab, same-leaf and replacement-map ownership",
+      "SSH and folder routes"
+    ],
+    "localTestEvidence": {
+      "log": "notes/pr-risk-review/terminal/focused-tests.log",
+      "files": 23,
+      "tests": 238,
+      "scope": "Combined worktree with published product hash comparison above; overlapping modules are not claimed to equal each isolated PR head. These results supplement exact-diff review, not substitute for it."
+    },
+    "missingEvidenceAndLimits": [
+      "A kill request is not an observation of process death.",
+      "Unbound renderer ownership has no standalone incarnation field; the correction captures tab generation, exact transport/leaf/manager, binding, host, and pairing revision instead."
+    ],
+    "dependencyAndMergeRisks": {
+      "requires": [],
+      "findings": [],
+      "ci": "Root owns current exact-head CI classification; no blanket merge-ready claim is made here.",
+      "currentMain": "Not evaluated by this subgroup; root fetched named current main separately."
+    },
+    "classification": "fixable-issue",
+    "nextAction": "Publish reviewed parent and child confirmation corrections, verify each projected head, then reclassify.",
+    "confidence": "No universal zero-regression claim. Conclusions are scoped to inspected owners, callers, and listed controls.",
+    "reviewedAt": "2026-09-17T09:17:17.305833+00:00"
+  }
+}

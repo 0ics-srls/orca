@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "number": 21128,
+  "url": "https://github.com/stablyai/orca/pull/21128",
+  "title": "fix: enforce the crash dump size limit during reading",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "The existing 64 MiB crash-dump bound applies during reading. Dumps that grow beyond it are skipped without deleting their source file.",
+    "currentHead": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "snapshotHead": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046421096"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321505/job/105046420267"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321477/job/105046419960"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046420857"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511066"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511060"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511873"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046512041"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046512122"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046512063"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511750"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511956"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511987"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046512010"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511094"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511089"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511769"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046512320"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511886"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511629"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511608"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511601"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511640"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511665"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511664"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511646"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105046511691"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172321654/job/105047965323"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172325093"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21128,
+      "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "tree": "7400e8196900f33eb194cdfc85d58fd748fbd255",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/21128.json",
+    "sha256": "2f01a645dcf91dbab00cb9965ad1d9280456d327d72fbd020ae844a476f6b531",
+    "reviewedHead": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21128,
+    "url": "https://github.com/stablyai/orca/pull/21128",
+    "title": "fix: enforce the crash dump size limit during reading",
+    "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "recordedBaseOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/crash-reporting/crashpad-capture.ts",
+        "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+        "sha256": "3d6ec639f4849944dc73f7c9d73c243bc34375ce8e2ba1584d6350e91763edbd",
+        "inspection": "Product diff read at the named head"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Crashpad already rejected dumps over 64 MiB at stat time. The capture now reads through the shared bounded reader before parsing, preventing a growing dump from bypassing that existing allowance."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Captured sizeBytes uses the actual buffer length rather than stale stat size. Read failure follows the existing null-result path, and the reservation is released in finally."
+      }
+    ],
+    "userVisibleBeforeAfter": "Normal accepted crash reports are unchanged. A dump that grows beyond the existing 64 MiB allowance during capture is skipped instead of being fully read and parsed.",
+    "capacityAndDataLoss": "Existing dump-source limit enforced during read. The source dump is not deleted or uploaded by this change, and no new privacy or process-liveness policy is introduced.",
+    "platformEvidence": {
+      "assessment": "The common file reader and minidump parsing path use portable Node APIs. Fresh macOS tests run controlled dump reads; a real native crash and file growth were not reproduced on Linux or Windows.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Crash reporting remains scoped to the existing runtime; this does not move remote files to the local host or infer remote process death. Workspace type is unrelated.",
+    "regressionCoverage": {
+      "description": "The fresh batch includes crashpad-capture-read-limit, with exact-head review of reservation release, size reporting, and read error handling.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": ["src/main/crash-reporting/crashpad-capture-read-limit.test.ts"],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "No fresh native Crashpad incident or target-platform file-lock test. The bound concerns input bytes, not every parser allocation."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "reviewedMergeBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review after current CI/integration."
+  }
+}

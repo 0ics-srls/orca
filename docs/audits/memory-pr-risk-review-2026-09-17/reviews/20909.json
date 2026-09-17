@@ -1,0 +1,307 @@
+{
+  "schemaVersion": 1,
+  "number": 20909,
+  "url": "https://github.com/stablyai/orca/pull/20909",
+  "title": "fix(main,preload): tear down renderer relay and preload listeners",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "Dead renderer requests reject promptly instead of waiting up to 20 seconds. Repeated preload installation stops duplicating drop/find listeners.",
+    "currentHead": "c2e588e985b139995538e3e57cd48915357e9eea",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "snapshotHead": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661980"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661987"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104714063147"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710355716"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070407575/job/104710352879"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710355918"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661980"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710661987"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663173"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663937"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663701"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663050"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663800"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663521"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663278"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663128"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710662143"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710662064"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663655"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710662938"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663993"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663123"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663048"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710662976"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663028"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663092"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663054"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663122"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104710663148"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070408732/job/104714063147"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070406686"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20909,
+      "head": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "tree": "914839b987304206de1817393d361de3879e1b16",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20909.json",
+    "sha256": "792f615aed1cae1e0b0bbc8a40c0e218f5a76b7bad0806e4184477f113b85d2d",
+    "reviewedHead": "c2e588e985b139995538e3e57cd48915357e9eea",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20909,
+    "url": "https://github.com/stablyai/orca/pull/20909",
+    "title": "fix(main,preload): tear down renderer relay and preload listeners",
+    "exactHead": "c2e588e985b139995538e3e57cd48915357e9eea",
+    "reviewBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/main/window/mobile-markdown-request-relay.test.ts",
+        "publishedSha256": "99d5fa11a0feb786c8b042b2d789d7cb3a89349d29a84ec85cd8e045790fd92e",
+        "workingSha256": "99d5fa11a0feb786c8b042b2d789d7cb3a89349d29a84ec85cd8e045790fd92e",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/window/mobile-markdown-request-relay.ts",
+        "publishedSha256": "1930f58c5a387032d963c468b0dae1421076d220cf3236f19f042cd630c98e53",
+        "workingSha256": "1930f58c5a387032d963c468b0dae1421076d220cf3236f19f042cd630c98e53",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/window/terminal-tab-close-request-relay.test.ts",
+        "publishedSha256": "d62b6db43d3f5968260a0d647da30e5babe1993a584b115b7b517cadc36d06c8",
+        "workingSha256": "d62b6db43d3f5968260a0d647da30e5babe1993a584b115b7b517cadc36d06c8",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/window/terminal-tab-close-request-relay.ts",
+        "publishedSha256": "c9cfac8fcf5256e12243d848ee0501cb86eb3b060e1dd58cc1fe665254b50efa",
+        "workingSha256": "c9cfac8fcf5256e12243d848ee0501cb86eb3b060e1dd58cc1fe665254b50efa",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/preload/preload-runtime-support.ts",
+        "publishedSha256": "c8688a1ad871dca5c27e93d6dacc88d7b451aa116d1f966d9f9dd6dd2f2ca78b",
+        "workingSha256": "c8688a1ad871dca5c27e93d6dacc88d7b451aa116d1f966d9f9dd6dd2f2ca78b",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/native-chat/native-chat-composer-drop-scope.test.tsx",
+        "publishedSha256": "545289798ca2b67de34e2c37045500baead2b52caff5225b13929f80548c5f1f",
+        "workingSha256": "545289798ca2b67de34e2c37045500baead2b52caff5225b13929f80548c5f1f",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/preload/index.ts",
+        "publishedSha256": "ef7af8a1a4aeeadd4b778eb86bafab195691eec8ecaf7113ea3f394250918c68",
+        "workingSha256": "ef7af8a1a4aeeadd4b778eb86bafab195691eec8ecaf7113ea3f394250918c68",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "low-observed-risk",
+    "correctnessFindings": [
+      "Relay settle-once helper consistently removes IPC/window/webContents listeners and timeout on response, send failure, destruction or renderer exit. Sender and request identity checks remain. Preload install guards make repeated setup idempotent."
+    ],
+    "userVisibleBehavior": {
+      "before": "Dead renderer requests wait up to20s; repeated preload setup installs duplicate drop/find listeners.",
+      "after": "Unavailable renderer requests reject promptly with renderer_unavailable; normal results/timeouts and drop/find behavior remain. No destructive action is retried or inferred successful.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Selected existing relay and native-chat drop suites passed in89-test batch; fixtures use EventEmitter/DOM ports rather than physical native drag/drop.",
+    "dependencyAndMergeRisks": "Earlier failure reporting is observable but appropriate after renderer loss. No wire shapes or timeout limits change.",
+    "nextAction": "Suitable for low-risk review after refreshed exact-head CI.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

@@ -1,0 +1,337 @@
+{
+  "schemaVersion": 1,
+  "number": 20906,
+  "url": "https://github.com/stablyai/orca/pull/20906",
+  "title": "fix(renderer): cancel copied prompt reset on unmount",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; corrected; await green CI",
+    "userVisibleBeforeAfter": "Copy feedback resets 1.5 seconds after the latest completed copy. Correction preserves clipboard write/telemetry but prevents late completion from creating an unmounted timer.",
+    "currentHead": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "pending",
+      "label": "Pending (11 checks)",
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "snapshotHead": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "rollupState": "PENDING",
+      "failed": [],
+      "pending": [
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149057448"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149057406"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058173"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058218"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058349"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058198"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058158"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058236"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058283"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058351"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "url": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bqsn400010agm09wzf2oc"
+        }
+      ],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105148665324"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205054809/job/105148664216"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105148665160"
+        },
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149057448"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149056936"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058296"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059956"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059609"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058603"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059146"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058398"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058911"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059149"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149057406"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149057403"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059213"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058354"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149059200"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058173"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058218"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058349"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058198"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058158"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058236"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058283"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205055189/job/105149058351"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bqsn400010agm09wzf2oc"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "number": 20906,
+      "oldHead": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "paths": [
+        "src/renderer/src/components/settings/EphemeralVmsPane.tsx",
+        "src/renderer/src/components/settings/EphemeralVmsPane.test.tsx"
+      ],
+      "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643",
+      "sourceArtifact": "corrections-published.json"
+    },
+    "publishedUpdateEvidence": "evidence/corrections-published.json",
+    "currentMainMergeCheck": {
+      "number": 20906,
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "tree": "3e4d81a8532d87ac6ae59ea89e0b532b08d1d08a",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    },
+    "correction": "Guarded clipboard Promise completion after unmount with the existing mounted owner; clipboard write and telemetry remain."
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20906.json",
+    "sha256": "0fa46d082c7bd68d0d50b9becc060b8e1b5c5931b4f800cb594e2a9726ee1cb1",
+    "reviewedHead": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20906,
+    "url": "https://github.com/stablyai/orca/pull/20906",
+    "title": "fix(renderer): cancel copied prompt reset on unmount",
+    "exactHead": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
+    "reviewBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/components/settings/EphemeralVmsPane.tsx",
+        "publishedSha256": "dc05bdcb8e2abae1df1e64684960d1780cf0806ac406eb0d8de81f46fc27477a",
+        "workingSha256": "67befd6c95c7c8a6561f145ec7d794b0dcc613d5e50bfdb9efdedf413433ff1b",
+        "sameAsWorking": false
+      },
+      {
+        "path": "src/renderer/src/hooks/useMountedRef.ts",
+        "publishedSha256": "2db5c09deb3c596b816f908666cf690d1b1dcfb60f2e63377af081033a891d3b",
+        "workingSha256": "2db5c09deb3c596b816f908666cf690d1b1dcfb60f2e63377af081033a891d3b",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "fixable-issue",
+    "correctnessFindings": [
+      "Published cleanup misses clipboard Promise completion after unmount; that continuation starts a new1500ms timer after its cleanup has already run. Corrected locally using the existing mountedRef after clipboard telemetry."
+    ],
+    "userVisibleBehavior": {
+      "before": "Repeated copies each create feedback reset timers; late clipboard completion can schedule after unmount.",
+      "after": "Published head coalesces feedback and cleans existing timer, but initially leaves late-admission gap. Correction preserves clipboard write/telemetry and skips only unmounted state/timer work.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Pre-correction late-resolution control fails (1 new timer). Corrected permanent suite5/5 pass, ordinary lint/anti-slop pass, real Web TC config/tsconfig.tc.web.json pass.",
+    "dependencyAndMergeRisks": "No history or feature capacity reduction. Repeated clicks now keep feedback visible1500ms from latest completed copy rather than earliest timer.",
+    "nextAction": "Publish bounded mountedRef correction and rerun exact-head CI.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ],
+    "latestPublishedReview": {
+      "pr": 20906,
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "passedTests": 5,
+      "failedTests": 0,
+      "loadedRepositorySources": 1745,
+      "verifiedAssets": 25,
+      "allSourceHashesVerified": true,
+      "classification": "low-observed-risk",
+      "correctionFilesMatchReadyManifest": true,
+      "validation": "notes/pr-risk-review/renderer/published-validation.json",
+      "remainingGate": "Refreshed GitHub CI and current-main integration; native cross-platform execution remains unproved."
+    }
+  }
+}

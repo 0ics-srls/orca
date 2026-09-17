@@ -1,0 +1,406 @@
+{
+  "observedAt": "2026-09-17T09:35:34.738777+00:00",
+  "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+  "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior.",
+  "pullRequests": [
+    {
+      "number": 20905,
+      "head": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
+      "tree": "c7e380574a147202c73ff88b441cc558dae91d52",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20906,
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "tree": "3e4d81a8532d87ac6ae59ea89e0b532b08d1d08a",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20908,
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "tree": "1646d3289aa9004ae2cb00b6807e215d49afa90e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20909,
+      "head": "c2e588e985b139995538e3e57cd48915357e9eea",
+      "tree": "914839b987304206de1817393d361de3879e1b16",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20910,
+      "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
+      "tree": "c8d1e4f7c4edb73fb595db8b285fd190f8a25d8e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20924,
+      "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "tree": "1a27331eb63a112bf69aeb6209df86c435d6417d",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20941,
+      "head": "b34a5d921a66f9a26388fe32273732d48303dcf7",
+      "tree": "7fc2916989bb96d0f762fda1050a075ad8083a8d",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20946,
+      "head": "47a50b69344148ad965a4334ce4f10124bbeeda6",
+      "tree": "d4377c2663390ecc47079210f6806e1709f9bccc",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20947,
+      "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "tree": "9a9ac293ce8b82b34bdbf869ab9062c115848eca",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20949,
+      "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "tree": "2b62073c18e09910072c8cc4ea4ad60dab5de748",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20955,
+      "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "tree": "eb473d45f162bf3e470999fc2d272955b58b0130",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20960,
+      "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "tree": "36538cdab23efda918ed3fed35e499bb15bac8ea",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20963,
+      "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "tree": "8efe233c8e40ad17a0de1888c55ecf6849c75e73",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20965,
+      "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "tree": "de81f503711d7096bd3af39c77a145b0895bc3b1",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20976,
+      "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "tree": "48dc88424ded76ebc43da7592e7ffaee6dfd627f",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20978,
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "tree": "16868e77581f9e5b8873010ea8a37c8e1af7c8f9",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20980,
+      "head": "87b2d00025337e5d7e5fac0a72245a89702853ec",
+      "tree": "3ec2f3c71e595c1a49e588a9f1d36f9ff2cb12ad",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20981,
+      "head": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "tree": "c167384cba8c13aec60d22d5608d4b0e7d77c8c4",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20986,
+      "head": "03270639f008359752ba0b4c5a45339ac39eeeb7",
+      "tree": "0a39df8ba6f7b20c654e8b910232422539b42025",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20992,
+      "head": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "tree": "7af25d82c52c465d1ac1dc211b6afc656a8ad13e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 20996,
+      "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
+      "tree": "ac6061650f41e82214f57d39b8e9c3d135720200",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21000,
+      "head": "827dabf9582a92820d340c58452b66468f5e2199",
+      "tree": "8f4ca08bc7fa1f6536eb3b17f83dc0ec8bb43c3d",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21001,
+      "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+      "tree": "a67543f5f34356872fe73c87df7dfc6f836de6ec",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21002,
+      "head": "bbab979c73c81c90a6096626195ae244a1dedd9c",
+      "tree": "458376bfe0db5202d3ab786667693c9566e51b80",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21005,
+      "head": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+      "tree": "74e9bfde689fbb36e2e8b9c71c72e918b543b231",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21006,
+      "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "tree": "955560f3e19f6067c243e2d5cc616ca322b0be06",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21009,
+      "head": "8da602c7e3a74655f98039705bbfede174078e79",
+      "tree": "13bf272e2b3d2c2b0257c1fc32bc2ef955fc9183",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21010,
+      "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "tree": "583f8a3feff8174f5b88c9c16fbce60c5cd9ae97",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21011,
+      "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
+      "tree": "614093f5173e6e2f16dc29a84cbddac3bb458995",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21012,
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "tree": "c43b2efd148cbf13c59bdc1752d1718c6626e57e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21014,
+      "head": "099f3396524554fc6725a7f0b727434dc7369527",
+      "tree": "e319622a1da9b40d2f0398b8937298853f534096",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21018,
+      "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
+      "tree": "9437e34bb5977453f5eaf24e815be2aa2e0813cc",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21019,
+      "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
+      "tree": "f5a9a8ada516722da2fbcff10f145c0ed1833713",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21020,
+      "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
+      "tree": "92e9d3ab687e42b8372ac28d4010460dda8eea9f",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21021,
+      "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "tree": "ac31669370ff3405f69fb3789982a23a3d75d7a0",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21022,
+      "head": "97338c35d95151b744cc653f328a1180f17dd182",
+      "tree": "20c371e71d099f01ceeab933bb9747c593d86a6c",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21024,
+      "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "tree": "9e3fefd180284679079e164eb04585804fa947e2",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21112,
+      "head": "061913804c35af189d00f8a9574dcb226b971ba6",
+      "tree": "dad4302b90449412a9ed2b0cf1e089af2c62bf19",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21113,
+      "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "tree": "90bc6b20b4681b932d713676fe47671661ecb81c",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21128,
+      "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "tree": "7400e8196900f33eb194cdfc85d58fd748fbd255",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21129,
+      "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "tree": "6db46ce98af7b9a7c384c997bf1ef2529c36f846",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21131,
+      "head": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "tree": "0e91fc3e5d69f2d0cf314d03dd29d4a0ed6c2e0e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21135,
+      "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "tree": "790e4f44a4b4c8ddd79c6b97a75c04bdb09ea6d7",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21136,
+      "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "tree": "a3d4ed80c9560bd66cf79e140dc7afb03d3ece2c",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21138,
+      "head": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "tree": "4637c32ba6380fb805f9aad31e8db9f78707368e",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21139,
+      "head": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "tree": "506457337af50b6043bbe8cc2ea2f99d15162591",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21140,
+      "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "tree": "b0cdf091f980cbf9a55f24e3e47d12e58c472e56",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21142,
+      "head": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
+      "tree": "328423b12ab121c7a82a6a114bea1a023a478069",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21144,
+      "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "tree": "dfa3a3aaf8e961ec2a35ae299b4acc5d60e45990",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21150,
+      "head": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
+      "tree": "d35deef83e185835623c768d0551cb972a3ef0a4",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21160,
+      "head": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "tree": "bb25a4cc12efeb6f0578037e3a272362d5623447",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21162,
+      "head": "4e106236a8baa4a160ca8a8b97dda22fee766013",
+      "tree": "7d1b805049e8cb18926626d9f37d059b57048fa7",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21164,
+      "head": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
+      "tree": "31200a1c11bb649a990eaaba3f8554a248bf38d9",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21167,
+      "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "tree": "4ba7f8925e30543f98096abf8620e733a574743d",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21175,
+      "head": "c86d273251cad3c9bc4a731651443659dab7e6d1",
+      "tree": "fae68308a6b4d74ac5800a59fdb11238225f7f3b",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21178,
+      "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "tree": "ab91f238e0bde07f83730db59cd1e5c9565b97ad",
+      "exitCode": 0,
+      "conflicts": []
+    },
+    {
+      "number": 21185,
+      "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "tree": "ccaa3682c2cde6642166d967ebe5e2751e818211",
+      "exitCode": 0,
+      "conflicts": []
+    }
+  ]
+}

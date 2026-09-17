@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "number": 21012,
+  "url": "https://github.com/stablyai/orca/pull/21012",
+  "title": "fix(browser): fence late registration replies to their guest owner",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "Late registration/repair replies cannot mutate closed or replacement browser guests. Hidden current guests and current success/failure paths still work.",
+    "currentHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "snapshotHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524211"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524270"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104741812157"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739363649"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363123/job/104739360562"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363217/job/104739360852"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739363347"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524211"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524270"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526589"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526081"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525645"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526193"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526063"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526003"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525949"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526145"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524364"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739524281"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526702"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526436"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739526592"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525362"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525374"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525430"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525456"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525383"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525394"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525361"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104739525416"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079363682/job/104741812157"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35079367327"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21012,
+      "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+      "tree": "c43b2efd148cbf13c59bdc1752d1718c6626e57e",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/21012.json",
+    "sha256": "61af8445f3701c3b568d1e893ed973b3d4385ffa9d16e43708f1864b439fe0f5",
+    "reviewedHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 21012,
+    "url": "https://github.com/stablyai/orca/pull/21012",
+    "title": "fix(browser): fence late registration replies to their guest owner",
+    "exactHead": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
+    "reviewBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-guest-recovery.ts",
+        "publishedSha256": "2efdea1c4223b2f4114548a7f6ec4b576e1c6bde7819a07dc096d5167c2ba42c",
+        "workingSha256": "2efdea1c4223b2f4114548a7f6ec4b576e1c6bde7819a07dc096d5167c2ba42c",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-registration-ownership.test.ts",
+        "publishedSha256": "992b4730cd5546720b8b52366955386ad900d057f95c13beb6b92e5369bf5c1e",
+        "workingSha256": "992b4730cd5546720b8b52366955386ad900d057f95c13beb6b92e5369bf5c1e",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/browser-pane/host-guest/browser-page-webview-guest-session.ts",
+        "publishedSha256": "a78cc98873e93834bf07b47bbf5d92da888dfbccef06551aa6ac3c8f6e9f29f8",
+        "workingSha256": "a78cc98873e93834bf07b47bbf5d92da888dfbccef06551aa6ac3c8f6e9f29f8",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/browser-pane/host-guest/webview-registry.ts",
+        "publishedSha256": "d8bfe19423725fcbd1da765d2b161211b90f82211a4f28c2b1f0726f834ef5eb",
+        "workingSha256": "d8bfe19423725fcbd1da765d2b161211b90f82211a4f28c2b1f0726f834ef5eb",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "low-observed-risk",
+    "correctnessFindings": [
+      "Late registration, validation and repair results require current session, DOM webview, registry owner and native guest ID. Same persistent webview with a new session is protected by disposed state; hidden current guest remains valid."
+    ],
+    "userVisibleBehavior": {
+      "before": "Successful old IPC replies can restore closed IDs or mutate replacement recovery state.",
+      "after": "Retired replies are ignored without unregistering current guest; current successful/false/rejected registration and repair continue.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Ownership cases in89-test batch include1000closed IDs, same-element guest swap, disposed session reuse, hidden guest, repair loss, current success/failure.",
+    "dependencyAndMergeRisks": "No protocol or DOM capacity changes; DOM fixture does not prove Electron native event ordering on each OS.",
+    "nextAction": "Suitable for low-risk review after refreshed CI.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

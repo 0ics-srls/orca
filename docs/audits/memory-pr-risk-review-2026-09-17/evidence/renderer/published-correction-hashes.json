@@ -1,0 +1,101 @@
+[
+  {
+    "pr": 20906,
+    "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+    "allMatch": true,
+    "files": [
+      {
+        "path": "src/renderer/src/components/settings/EphemeralVmsPane.tsx",
+        "publishedSha256": "67befd6c95c7c8a6561f145ec7d794b0dcc613d5e50bfdb9efdedf413433ff1b",
+        "readySha256": "67befd6c95c7c8a6561f145ec7d794b0dcc613d5e50bfdb9efdedf413433ff1b",
+        "matches": true
+      },
+      {
+        "path": "src/renderer/src/components/settings/EphemeralVmsPane.test.tsx",
+        "publishedSha256": "e6784387287af714beb5956cca4cf58655b9c059053d8d1dc2d8869f27f202de",
+        "readySha256": "e6784387287af714beb5956cca4cf58655b9c059053d8d1dc2d8869f27f202de",
+        "matches": true
+      }
+    ]
+  },
+  {
+    "pr": 20908,
+    "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+    "allMatch": true,
+    "files": [
+      {
+        "path": "src/renderer/src/components/activity/activity-clear-completed.ts",
+        "publishedSha256": "801bee8474f9b19dfa1056446cce12f209d6a963a6d5632eacd0caed88a19372",
+        "readySha256": "801bee8474f9b19dfa1056446cce12f209d6a963a6d5632eacd0caed88a19372",
+        "matches": true
+      },
+      {
+        "path": "src/renderer/src/components/activity/activity-clear-completed-hmr.test.ts",
+        "publishedSha256": "cca032b0d7ffb3511fadc6558e4eb5c4e4cd9515c312439f2f3eddb88526bd04",
+        "readySha256": "cca032b0d7ffb3511fadc6558e4eb5c4e4cd9515c312439f2f3eddb88526bd04",
+        "matches": true
+      }
+    ]
+  },
+  {
+    "pr": 21010,
+    "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+    "allMatch": true,
+    "files": [
+      {
+        "path": "src/main/browser/browser-manager-state.ts",
+        "publishedSha256": "1d82e875461984b3bee2d9dc9b477be7518e9394ace77b24e9b513766cc8a210",
+        "readySha256": "1d82e875461984b3bee2d9dc9b477be7518e9394ace77b24e9b513766cc8a210",
+        "matches": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-guest-navigation-policy.ts",
+        "publishedSha256": "741ac6d9f30fcf82993fa5c11f40093ba8a75483866407776c983538453f9b32",
+        "readySha256": "741ac6d9f30fcf82993fa5c11f40093ba8a75483866407776c983538453f9b32",
+        "matches": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-registration.ts",
+        "publishedSha256": "55d66285b1d3ad29a7be596b1ca3536f333f2e3b2580e4d2a41090928ca8edd1",
+        "readySha256": "55d66285b1d3ad29a7be596b1ca3536f333f2e3b2580e4d2a41090928ca8edd1",
+        "matches": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-download-lifecycle.ts",
+        "publishedSha256": "8c8d0dd488d31f6098f7ea1000ed8d6ffd8b23704a097db974207c9732d77c2a",
+        "readySha256": "8c8d0dd488d31f6098f7ea1000ed8d6ffd8b23704a097db974207c9732d77c2a",
+        "matches": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-destroyed-guest-test-fixture.ts",
+        "publishedSha256": "4e6bf3589a3888860e6cfa8b6c83e8e50b4344650a5aaa85f221930ee8f9c0fd",
+        "readySha256": "4e6bf3589a3888860e6cfa8b6c83e8e50b4344650a5aaa85f221930ee8f9c0fd",
+        "matches": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-destroyed-guest-downloads.test.ts",
+        "publishedSha256": "3a579577b0f182a204d1313409b86a40adfde9a892118de588fd7d5172a3e5b4",
+        "readySha256": "3a579577b0f182a204d1313409b86a40adfde9a892118de588fd7d5172a3e5b4",
+        "matches": true
+      },
+      {
+        "path": "docs/audits/browser-destroyed-guest-retention/README.md",
+        "publishedSha256": "fa4e5172f614e34f384c95b070a39635e0854ec69f5a5015d32453f6b4c1c3b8",
+        "readySha256": "fa4e5172f614e34f384c95b070a39635e0854ec69f5a5015d32453f6b4c1c3b8",
+        "matches": true
+      },
+      {
+        "path": "docs/audits/browser-destroyed-guest-retention/reproduce.mjs",
+        "publishedSha256": "8a9b3316089cdae9409a6375b29a0a9f51742e2f78cd4558b4ab6a9027cf2752",
+        "readySha256": "8a9b3316089cdae9409a6375b29a0a9f51742e2f78cd4558b4ab6a9027cf2752",
+        "matches": true
+      },
+      {
+        "path": "docs/audits/browser-destroyed-guest-retention/results.json",
+        "publishedSha256": "9b121dbb0a0001298ac228fad3a53e5345bc8f786a94bf6af11e2a900db064bd",
+        "readySha256": "9b121dbb0a0001298ac228fad3a53e5345bc8f786a94bf6af11e2a900db064bd",
+        "matches": true
+      }
+    ]
+  }
+]

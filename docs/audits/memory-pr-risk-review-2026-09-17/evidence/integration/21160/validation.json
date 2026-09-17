@@ -1,0 +1,41 @@
+{
+  "pr": 21160,
+  "publishedHead": "d83da0060426ef3ceeb1052a4feb4bb9119901f1",
+  "targetMain": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+  "mergeTreeBeforeResolution": "3213a171fd52b53f9c455159ad506da69d3712b2",
+  "candidateTree": "bb25a4cc12efeb6f0578037e3a272362d5623447",
+  "resolution": "Keep current main process-wide user-agent write; add exact registered guest ownership check before it. Preserve the PR clear-side owner and failure-rollback checks. Do not restore removed per-profile native-UA gate.",
+  "testAdaptation": "Existing PR test now supplies current process identity, no retired profile field, and native desktop/mobile assertions follow current main semantics. Native replacement remains fenced. Replaced forbidden Reflect.get access with checked static-key union.",
+  "paths": {
+    "src/main/browser/browser-manager-viewport.ts": {
+      "projection": "notes/pr-risk-review/integration/21160/src/main/browser/browser-manager-viewport.ts",
+      "sha256": "96fbc4290ca0796e979bd9d749a439b6b029f8b7bc631bfaf3cd26f082c2a556",
+      "blob": "a4e263dcceda2d3fd75a8a804b368643475bed7d"
+    },
+    "src/main/browser/browser-manager-viewport-ownership.test.ts": {
+      "projection": "notes/pr-risk-review/integration/21160/src/main/browser/browser-manager-viewport-ownership.test.ts",
+      "sha256": "35e29ec70c1e9bc3437d54c9cdccf6fd646a5b978a9543f12d26786e86b00e5f",
+      "blob": "8b4492f36fd5143c18ada28af1431a127480ad98"
+    }
+  },
+  "validation": {
+    "exactTreeVitest": {
+      "suites": 4,
+      "tests": 43,
+      "result": "passed",
+      "log": "notes/pr-risk-review/integration/21160/exact-tree-tests.log"
+    },
+    "sourceFence": {
+      "head": "bb25a4cc12efeb6f0578037e3a272362d5623447",
+      "evaluatedSourceCount": 146,
+      "allSourceHashesRechecked": true,
+      "graph": "notes/pr-risk-review/integration/21160/evaluated-graph.json"
+    },
+    "ordinaryLint": "passed",
+    "antiSlopLint": "passed",
+    "typecheck": "not run against the complete candidate tree",
+    "platform": "macOS Node with mocked Electron/CDP; no app/window/native browser launch"
+  },
+  "primaryWorktreeSourceEdited": false,
+  "gitRefsUpdated": false
+}

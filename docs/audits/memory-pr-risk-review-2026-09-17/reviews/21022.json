@@ -1,0 +1,299 @@
+{
+  "schemaVersion": 1,
+  "number": 21022,
+  "url": "https://github.com/stablyai/orca/pull/21022",
+  "title": "fix(projects): release processed repository scan records",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "Consumed breadth-first discovery slots release paths and ignore arrays. Traversal order, ignore inheritance, limits, and progress results remain.",
+    "currentHead": "97338c35d95151b744cc653f328a1180f17dd182",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+3)",
+      "head": "97338c35d95151b744cc653f328a1180f17dd182",
+      "snapshotHead": "97338c35d95151b744cc653f328a1180f17dd182",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697205"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697107"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701211"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701210"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104759725492"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757557673"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084977969/job/104757556825"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084977953/job/104757556464"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757557503"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697205"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697107"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697958"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698521"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698635"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698622"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698018"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698508"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698338"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698208"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697134"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697058"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757697970"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698259"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757698376"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701211"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701330"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701332"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701210"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701339"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701206"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701385"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104757701293"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084978035/job/104759725492"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084984227"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21022,
+      "head": "97338c35d95151b744cc653f328a1180f17dd182",
+      "tree": "20c371e71d099f01ceeab933bb9747c593d86a6c",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21022.json",
+    "sha256": "1f7d91203bb9bc27df70f5b3791634103e38d0d78ecf628e35701cfa2ea54344",
+    "reviewedHead": "97338c35d95151b744cc653f328a1180f17dd182",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21022,
+    "url": "https://github.com/stablyai/orca/pull/21022",
+    "title": "fix(projects): release processed repository scan records",
+    "head": "97338c35d95151b744cc653f328a1180f17dd182",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/project-groups/nested-repo-discovery.ts",
+        "head": "97338c35d95151b744cc653f328a1180f17dd182",
+        "sha256": "8517a2bc2220e5fb3e96f063e1714911235ab040ee21487ca537d5c34d3cc81d"
+      },
+      {
+        "path": "src/main/project-groups/nested-repo-scan-rules.ts",
+        "head": "97338c35d95151b744cc653f328a1180f17dd182",
+        "sha256": "4613599bf5382edd86ae33bc84548f247018f26acbf2f7db072d847fa5533660"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "The dequeued folder is saved locally before clearing its slot. Prefix compaction preserves the unprocessed suffix and resets the cursor before appending any new children. No still-pending folder is discarded."
+      }
+    ],
+    "userVisibleBeforeAfter": "Repository discovery visits the same breadth-first directories with the same ignore inheritance, result/depth limits and progress results. Consumed queue slots release paths and ignore arrays immediately.",
+    "capacityAndDataLoss": "This does not reduce maxRepos/maxDepth or skip additional folders. Historical-path loader resolution was corrected before the successful exact-head rerun.",
+    "platformEvidence": {
+      "assessment": "Windows path.join/basename semantics and SSH POSIX semantics are explicitly exercised with filesystem ports; actual remote or Windows filesystem access is not executed.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. Windows path.join/basename semantics and SSH POSIX semantics are explicitly exercised with filesystem ports; actual remote or Windows filesystem access is not executed.",
+    "regressionCoverage": {
+      "description": "160-branch BFS with win32 and POSIX path functions, inherited ignores, depth/result caps, cancellation and optional timeout.",
+      "focusedPassingCases": 6,
+      "log": "notes/pr-risk-review/queues/21022.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21022.graph.json",
+      "limitations": "This does not reduce maxRepos/maxDepth or skip additional folders. Historical-path loader resolution was corrected before the successful exact-head rerun."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

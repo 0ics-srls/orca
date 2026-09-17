@@ -1,0 +1,261 @@
+{
+  "schemaVersion": 1,
+  "number": 21144,
+  "url": "https://github.com/stablyai/orca/pull/21144",
+  "title": "fix: release canceled working-directory waiter references",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Canceled cwd callers release signal/error/resolver references; the shared native stat stays owned and later callers can still join it.",
+    "currentHead": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "snapshotHead": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072805912"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962619/job/105072805178"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072805812"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889400"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889419"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890504"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890645"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890580"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890938"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890690"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890732"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890683"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890676"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889428"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889461"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890692"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890670"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890430"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889921"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890022"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890018"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889975"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072890221"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889951"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889959"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105072889953"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35180962757/job/105074708392"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21144,
+      "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+      "tree": "dfa3a3aaf8e961ec2a35ae299b4acc5d60e45990",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21144.json",
+    "sha256": "a14620a1046f6ba828c5e97557953563798cfaf51e09d7ac0e77d52b110560b6",
+    "reviewedHead": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21144,
+    "url": "https://github.com/stablyai/orca/pull/21144",
+    "title": "fix: release canceled working-directory waiter references",
+    "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/providers/working-directory-validation.ts",
+        "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+        "sha256": "0ef75b5d5242ad7e5423bde2cb7fe633a8f437fc545f22ca04612782fc2de212"
+      },
+      {
+        "path": "src/main/daemon/pty-subprocess/spawn-preflight.ts",
+        "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
+        "sha256": "54b19c44a2f7beabb7a1dcb817efc26be1c9b13462a410e82c2da88f5550ceb2"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Each original Promise reaction remains ordered at its registration point, but references only a nullable holder. Abort empties holder and removes the listener synchronously. The original map settlement observer already handles native rejection, including a pre-aborted first caller."
+      }
+    ],
+    "userVisibleBeforeAfter": "Cancelled cwd validation callers release signals, error objects and resolvers; the shared native stat remains owned and later callers still join it.",
+    "capacityAndDataLoss": "A tiny empty holder/reaction per abandoned caller remains until stat settles; the PR honestly releases heavyweight references rather than claiming to detach Promise reactions. No timeout/cancellation-policy tradeoff.",
+    "platformEvidence": {
+      "assessment": "UNC/WSL route limits and probe code remain unchanged; simulated UNC paths test queue occupancy. No actual disconnected SMB/WSL or NFS mount was used.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. UNC/WSL route limits and probe code remain unchanged; simulated UNC paths test queue occupancy. No actual disconnected SMB/WSL or NFS mount was used.",
+    "regressionCoverage": {
+      "description": "First and subsequent cancelled calls, live success/failure, pre-aborted caller, late rejection, two-slot UNC occupancy, external raw observers before/between/after waiters.",
+      "focusedPassingCases": 12,
+      "log": "notes/pr-risk-review/queues/21144.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21144.graph.json",
+      "limitations": "A tiny empty holder/reaction per abandoned caller remains until stat settles; the PR honestly releases heavyweight references rather than claiming to detach Promise reactions. No timeout/cancellation-policy tradeoff."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

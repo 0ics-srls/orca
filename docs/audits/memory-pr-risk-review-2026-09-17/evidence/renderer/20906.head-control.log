@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+ ❯ notes/pr-risk-review/renderer/20906.control.test.tsx (4 tests | 1 failed) 47ms
+     × does not admit a reset timer when clipboard completion arrives after unmount 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  notes/pr-risk-review/renderer/20906.control.test.tsx > clipboard lifetime > does not admit a reset timer when clipboard completion arrives after unmount
+AssertionError: expected [ [ [Function], 1500 ] ] to have a length of +0 but got 1
+
+- Expected
++ Received
+
+- 0
++ 1
+
+ ❯ notes/pr-risk-review/renderer/20906.control.test.tsx:229:20
+    227|   const admitted = reset.mock.calls.filter(([, delay]) => delay === 15…
+    228|   reset.mockRestore()
+    229|   expect(admitted).toHaveLength(0)
+       |                    ^
+    230| })
+    231|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 3 passed (4)
+   Start at  02:04:55
+   Duration  3.11s (transform 2.02s, setup 23ms, import 2.89s, tests 47ms, environment 87ms)
+

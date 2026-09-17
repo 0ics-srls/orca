@@ -1,0 +1,345 @@
+{
+  "schemaVersion": 1,
+  "number": 21178,
+  "url": "https://github.com/stablyai/orca/pull/21178",
+  "title": "fix: retire closed editor models from the app shell",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "Last/hidden editor close now releases models like ordinary close. Reopen no longer accidentally preserves closed-model undo or view caches; live drafts/history remain.",
+    "currentHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "snapshotHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105113186061"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194113786/job/105113184337"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105113185901"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115543703"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115543588"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545948"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544673"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545037"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544909"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545626"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545489"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545290"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545904"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115543622"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115543699"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545143"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545056"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115545392"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544757"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544748"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544712"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544934"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544808"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544809"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544741"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105115544786"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35194114104/job/105122277841"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21178,
+      "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "tree": "ab91f238e0bde07f83730db59cd1e5c9565b97ad",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/21178.json",
+    "sha256": "0f4b8eea1726dad1218109b793f70b47e86f67b992d51ad09e811f509713071d",
+    "reviewedHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 21178,
+    "url": "https://github.com/stablyai/orca/pull/21178",
+    "title": "fix: retire closed editor models from the app shell",
+    "exactHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+    "reviewBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/app-shell/use-app-shell-services.ts",
+        "publishedSha256": "a8bd8152d51653b143458c958b0de63854fddcfa8dd06b20fef7b010e6707ee9",
+        "workingSha256": "a8bd8152d51653b143458c958b0de63854fddcfa8dd06b20fef7b010e6707ee9",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/EditorPanel.tsx",
+        "publishedSha256": "6f2f14cca7ebeec44e4a627f65c8005d93964738629ac1c8fd11baa6878ac8b7",
+        "workingSha256": "6f2f14cca7ebeec44e4a627f65c8005d93964738629ac1c8fd11baa6878ac8b7",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-model-lifetime.test.ts",
+        "publishedSha256": "e07d34c3f0b93935c4a99eea3c831a5da6c83594ae3e197022e4684467426bce",
+        "workingSha256": "e07d34c3f0b93935c4a99eea3c831a5da6c83594ae3e197022e4684467426bce",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-model-reentrancy.test.ts",
+        "publishedSha256": "8c0e44a14ed446c91222da38fd691abd6b7eac82b1a253341488f0a100e45e78",
+        "workingSha256": "8c0e44a14ed446c91222da38fd691abd6b7eac82b1a253341488f0a100e45e78",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-model-registry.test.ts",
+        "publishedSha256": "40cbc18f87c73ed6266354bfda1f913a8fbc62c931a7fe936ee7b52578363ce7",
+        "workingSha256": "40cbc18f87c73ed6266354bfda1f913a8fbc62c931a7fe936ee7b52578363ce7",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-model-shell.test.tsx",
+        "publishedSha256": "5878d3d723ce7da1c6ece66256dee01005673fcd2079b8052fc0fae7462dd365",
+        "workingSha256": "5878d3d723ce7da1c6ece66256dee01005673fcd2079b8052fc0fae7462dd365",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-tab-controller.ts",
+        "publishedSha256": "dc72bdb2f483224cfa638e0893c1089c54544331e20cc8cd499f71a4dc5156e7",
+        "workingSha256": "dc72bdb2f483224cfa638e0893c1089c54544331e20cc8cd499f71a4dc5156e7",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-tab-disposal.ts",
+        "publishedSha256": "5629ea319bdbc5f49551999fcace4c3d6550f40462832a5dff8def5fd9184cde",
+        "workingSha256": "5629ea319bdbc5f49551999fcace4c3d6550f40462832a5dff8def5fd9184cde",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/diff-monaco-model-disposal.ts",
+        "publishedSha256": "885dc5f5ff4a531e70063a7613570d26fbe902458569ae2e927997a19b84d01f",
+        "workingSha256": "885dc5f5ff4a531e70063a7613570d26fbe902458569ae2e927997a19b84d01f",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/editor-model-lifetime-fixture.ts",
+        "publishedSha256": "9a8332c2033cad1fb79432feec80cfba80a44ebcf16dbac2b7eeed43ebb517a9",
+        "workingSha256": "9a8332c2033cad1fb79432feec80cfba80a44ebcf16dbac2b7eeed43ebb517a9",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/useClosedEditorTabCleanup.ts",
+        "publishedSha256": "84b166f0c71cd1582b4e7edadf430a04198da1f5a769bad67483278cc6129102",
+        "workingSha256": "84b166f0c71cd1582b4e7edadf430a04198da1f5a769bad67483278cc6129102",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/lib/editor-model-registry.ts",
+        "publishedSha256": "e5a24689a05c1b195d14da120c1422db8b10b62b8bfb2975dfd4f1ab78bddd78",
+        "workingSha256": "e5a24689a05c1b195d14da120c1422db8b10b62b8bfb2975dfd4f1ab78bddd78",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/lib/monaco-setup.ts",
+        "publishedSha256": "c451980faf7956225e372b4a15dd2b4936eef1fc4a30cdb5de49799dfbd28ca9",
+        "workingSha256": "2071dcbb3c870219921e0f9430a704a32596d4b24be04fec8df726350b7fe154",
+        "sameAsWorking": false
+      },
+      {
+        "path": "src/renderer/src/components/editor/MonacoEditor.tsx",
+        "publishedSha256": "a92b67e41bcb4e09265168de41093bffa1270e63de9275bfc009d37d5c159d85",
+        "workingSha256": "a92b67e41bcb4e09265168de41093bffa1270e63de9275bfc009d37d5c159d85",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/closed-editor-tab-cache-sweep.ts",
+        "publishedSha256": "ec8776a410380aac244be21c51cfcbced5eccd19d8a3bd7d83e349ecffac16f4",
+        "workingSha256": "ec8776a410380aac244be21c51cfcbced5eccd19d8a3bd7d83e349ecffac16f4",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/store/slices/editor/actions/close-file-action.ts",
+        "publishedSha256": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+        "workingSha256": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/store/slices/editor/actions/recently-closed-editor-tabs.ts",
+        "publishedSha256": "95009234662cd275980584e0ce279d293c850303d275a907dccdeee751151ac7",
+        "workingSha256": "95009234662cd275980584e0ce279d293c850303d275a907dccdeee751151ac7",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "intentional-tradeoff",
+    "correctnessFindings": [
+      "App-shell owner correctly observes last/hidden editor closes; exact model/URI/reopen/attachment/reentrancy fences protect live owners. It newly releases previously orphaned closed-tab Monaco models and their scroll/selection/PDF caches."
+    ],
+    "userVisibleBehavior": {
+      "before": "Ordinary close with another editor mounted already clears model/caches, but last/hidden close accidentally retains them.",
+      "after": "Last/hidden close now follows same cleanup policy as ordinary close. Reopening a fully closed tab can no longer incidentally retain old Monaco undo history or closed-tab view cache; live editors, drafts and recently-closed tab metadata/count remain.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Reviewed17 permanent ownership cases,37initial/46corrected selected-suite evidence and32 portable comparisons. Existing source-fenced proof covers actual installed Monaco models and store close actions; no full native editor UI opened in this review.",
+    "dependencyAndMergeRisks": "Cross-platform URI canonicalization uses Monaco.Uri with exact identity; no new path separators. Main publication intentionally preserves shell markdown aliases. React/Monaco lifecycle and close-history semantics warrant review despite strong unit evidence.",
+    "nextAction": "Review/accept this explicit close semantics normalization before calling it zero user-facing tradeoff. No arbitrary live-history reduction; avoiding all closed-model loss would require a separate bounded reopen-history design.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

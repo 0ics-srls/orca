@@ -1,0 +1,26 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+ ❯ docs/audits/memory-pr-risk-review-2026-09-17/controls/20904.control.test.tsx (1 test | 1 failed) 9ms
+   × retires both kept section models after React unmount 9ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  docs/audits/memory-pr-risk-review-2026-09-17/controls/20904.control.test.tsx > retires both kept section models after React unmount
+AssertionError: expected "vi.fn()" to be called 2 times, but got 0 times
+ ❯ docs/audits/memory-pr-risk-review-2026-09-17/controls/20904.control.test.tsx:23:25
+     21|   await act(async () => root.unmount())
+     22|   await vi.runAllTimersAsync()
+     23|   expect(state.dispose).toHaveBeenCalledTimes(2)
+       |                         ^
+     24| })
+     25|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:33:07
+   Duration  213ms (transform 21ms, setup 0ms, import 43ms, tests 9ms, environment 95ms)
+

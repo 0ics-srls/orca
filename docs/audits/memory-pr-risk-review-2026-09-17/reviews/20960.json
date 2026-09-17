@@ -1,0 +1,447 @@
+{
+  "schemaVersion": 1,
+  "number": 20960,
+  "url": "https://github.com/stablyai/orca/pull/20960",
+  "title": "Detach retained CI and terminal tails from oversized strings",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Bounded retained tails own their string bytes instead of pinning large parents. Text and existing limits remain unchanged; copying adds bounded work.",
+    "currentHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "snapshotHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "native-smoke (ubuntu-22.04)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283310/job/105079865772"
+        },
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079866375"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283323/job/105079865840"
+        },
+        {
+          "name": "native-smoke (windows-latest)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283310/job/105079865693"
+        },
+        {
+          "name": "mac-native-owner-smoke",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283310/job/105079865763"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079866684"
+        },
+        {
+          "name": "linux",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283310/job/105079866793"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079947997"
+        },
+        {
+          "name": "windows",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283310/job/105079866715"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948045"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948815"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948854"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949549"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949080"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949197"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948788"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949011"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948846"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948037"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948079"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948298"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948256"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949213"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105080143723"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105080142795"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105080142932"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105080143948"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079949120"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948741"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948835"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948795"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948847"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948848"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948818"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948837"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948871"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105079948884"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283437/job/105081289779"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35183283151"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20960,
+      "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+      "tree": "36538cdab23efda918ed3fed35e499bb15bac8ea",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20960.json",
+    "sha256": "a409f997f93bfc42fba3fb8602df9218a6fb7da416906138f186a8c873da352e",
+    "reviewedHead": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20960,
+    "url": "https://github.com/stablyai/orca/pull/20960",
+    "title": "Detach retained CI and terminal tails from oversized strings",
+    "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+    "base": "96d77b37c5371f15f8dc9263f70c6d4e47be221f",
+    "recordedBaseOid": "9ed561c1d2505184946b39a27614002f0145de40",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/claude/claude-background-task-frames.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "7a7f2f4e6445cf4252e7fd0754d1558711292da9a05d2a0dd7d2e5595aba74c1",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/terminal-mouse-mode-mirror.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "e8f4888dabee5c4cc50b0f15584b3b1b5e2da4db1ba25695dd5762ef9c4a6fb3",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/plugins/plugin-worker-output-buffer.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "4c7fd9e66d1b2aa948dab72196c3e6fd9df7c646dcf0a15279ee5520bb0a2a7b",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/ports/advertised-url-parsing.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "075dbec5b8c14cdb0d56fba9f8995156578d9b7ee7daa0511b4de478ebbd32c3",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/ports/advertised-url-watcher.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "444fef7f145aa9b549a00bcf5f5fd617f7fb8fdf39b840c5042e9656c6be7d32",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/runtime/recent-pty-output-buffer.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "3c02b54567850b4f94a25e06142eef247c383a74fb702fe8f45fbfeb1a2488b8",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/components/terminal-pane/deferred-reattach-live-data-queue.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "b8a403636f9981e0b6354459805bb8041afabf6fb53ccdb7c43ce26ecf4560b1",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/components/terminal-pane/pty-eager-buffer-clamp.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "5936f9c464038b331491e4346311b0582c638d4075c51a823b11b3f0e98867ed",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/components/terminal-pane/terminal-error-accumulation.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "b40c8dd0d612f01c9f0c6a557f5144d694f67ce287a04871fdd8d0a3f06a85f1",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/check-job-log-tail-slice.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "24ccf1fc3a0a5b2da7eb3a218a7b3fb7e85e6100e8b60e0b7f6c9fe5665413e4",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/command-code-output-status.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "a3454f6663233cf4d7b7d092cfcc2669e4f58418882fbaf5f35c7a32955256a7",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/terminal-kitty-keyboard-mode-tracker.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "a8da704564b9ab97aa344f380940021d3fa98f80af817751824d14271acb8a84",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/terminal-osc133-command-finished.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "92bc1aa5eb975672c3b8761cce0da37d7ff6263c8f38c69d0715f73bd8e075d0",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/workspace-session-terminal-buffers.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "942a5d6d60299434241101aef5a760f196700f7c5840bba80a51ab886c1011dc",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/own-retained-string.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "addea88bc11c725192be2ff617b91315a875113844c95de03e5529cf3d7ef2e2",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "src/renderer/src/lib/flatten-retained-slice.ts",
+        "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
+        "sha256": "1280471873b1858c9c4b0feebc811bd4aca49e09b5eca05284da4cf4a437521b",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Existing bounded tails and parser carries now own their retained string bytes instead of retaining a substring that can pin a much larger parent allocation. Existing text, tail thresholds, and carry semantics are unchanged."
+      },
+      {
+        "severity": "informational",
+        "assessment": "The shared helper preserves UTF-16 code units, including lone surrogates and NUL, with its Node copy path and browser fallback. Renderer code reuses its existing retained-slice helper."
+      },
+      {
+        "severity": "informational",
+        "assessment": "The changed paths cover task text, mouse/kitty/OSC carries, plugin output, advertised URLs, recent PTY output, deferred reattach/error tails, check-job logs, command code output, and recovered session buffers."
+      }
+    ],
+    "userVisibleBeforeAfter": "Users retain the same text within the same pre-existing limits. The implementation releases large source strings earlier by copying the bounded retained part.",
+    "capacityAndDataLoss": "No new cap, cancellation, output dropping, or process policy. Copying adds work proportional to the retained tail; this is not a promise of zero CPU cost.",
+    "platformEvidence": {
+      "assessment": "The Node helper and browser fallback preserve JavaScript code units and do not modify path or native process behavior. Fresh Node tests ran on macOS; real Windows/Linux terminal I/O was not executed.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Local and SSH output passes through the same existing string ownership points. There is no host-side status inference or Git-worktree requirement.",
+    "regressionCoverage": {
+      "description": "The fresh batch contains the targeted retention tests for background tasks, mouse mode, plugins, URLs, recent PTY output, renderer capped buffers, check-job logs, command code, kitty keyboard, and OSC 133. The helper semantics were also inspected.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": [
+          "src/main/claude/claude-background-task-retention.test.ts",
+          "src/main/daemon/terminal-mouse-tail-retention.test.ts",
+          "src/main/plugins/plugin-worker-output-retention.test.ts",
+          "src/main/ports/advertised-url-retention.test.ts",
+          "src/main/runtime/recent-pty-output-retention.test.ts",
+          "src/renderer/src/components/terminal-pane/terminal-capped-buffer-retention.test.ts",
+          "src/shared/check-job-log-retention.test.ts",
+          "src/shared/command-code-output-retention.test.ts",
+          "src/shared/terminal-kitty-keyboard-tail-retention.test.ts",
+          "src/shared/terminal-osc133-carry-retention.test.ts"
+        ],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "Fresh tests run current installed dependencies and are not a complete historical source-graph execution. Engine allocation observations are evidence about tested runtimes, not a universal substring representation guarantee."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "9ed561c1d2505184946b39a27614002f0145de40",
+      "reviewedMergeBase": "96d77b37c5371f15f8dc9263f70c6d4e47be221f",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review after current CI/integration; keep the same-limit and same-content characterization."
+  }
+}

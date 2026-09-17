@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "number": 21140,
+  "url": "https://github.com/stablyai/orca/pull/21140",
+  "title": "fix: release native PTY spawn environment after setup",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "The PTY exit closure captures its spawn-time boolean instead of the entire arguments/environment object. PATH and returned process operations stay available.",
+    "currentHead": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "snapshotHead": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "native-smoke (ubuntu-22.04)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882771/job/105060427802"
+        },
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060428382"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882812/job/105060427962"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882753/job/105060427600"
+        },
+        {
+          "name": "native-smoke (windows-latest)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882771/job/105060427998"
+        },
+        {
+          "name": "mac-native-owner-smoke",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882771/job/105060428003"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060428560"
+        },
+        {
+          "name": "linux",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882771/job/105060428950"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512277"
+        },
+        {
+          "name": "windows",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882771/job/105060428429"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512267"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513424"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513533"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513732"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513277"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513739"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513737"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513546"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513108"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512260"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512378"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513355"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513387"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513088"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512956"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512885"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512893"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512915"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512875"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512917"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060513028"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105060512907"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176882933/job/105061874936"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35176885444"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21140,
+      "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "tree": "b0cdf091f980cbf9a55f24e3e47d12e58c472e56",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21140.json",
+    "sha256": "ee5bc62bbbaeaa643f093248ed4401e09104c8d97342a82ff9b1622e2fed59f8",
+    "reviewedHead": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21140,
+    "url": "https://github.com/stablyai/orca/pull/21140",
+    "title": "fix: release native PTY spawn environment after setup",
+    "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/daemon/pty-subprocess/subprocess-handle.ts",
+        "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+        "sha256": "e28a2043f9c68c365109aab0550f97c49ee76fbbadc14c81dd7eb7b9aae6fc7a"
+      },
+      {
+        "path": "src/main/daemon/pty-subprocess.ts",
+        "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+        "sha256": "9f32c99c79fd3a23fd61d572146f81c3680fb5cbc13337e4fb3179856a0d7dc1"
+      },
+      {
+        "path": "src/main/daemon/pty-subprocess/native-pty-spawn.ts",
+        "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+        "sha256": "3752b779e06d7c004bb6acfba3188f1e5dfb589bc6a9bbe024f8b5e80dad68a5"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "The synchronous native spawn completes before createDaemonPtySubprocessHandle is called. The boolean is captured before callback installation and is never mutated by the caller. No env keys are deleted or changed; node-pty has already consumed its copied environment."
+      }
+    ],
+    "userVisibleBeforeAfter": "The native PTY exit callback retains the spawn-time exit-status boolean instead of the entire wrapper argument object and environment. PATH and all returned process operations stay available.",
+    "capacityAndDataLoss": "No actual ConPTY spawn or Linux PTY environment probe was performed. Product diff is one local capture and one callback substitution; no shell/environment usability tradeoff observed.",
+    "platformEvidence": {
+      "assessment": "Inspected POSIX and Windows node-pty JS constructors: both copy opt.env and pass parsed env into their native spawn/connect before returning. Windows conout readiness remains asynchronous but does not read this Orca wrapper argument. Installed dependency inspection is supplemental, not a Windows execution result.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. Inspected POSIX and Windows node-pty JS constructors: both copy opt.env and pass parsed env into their native spawn/connect before returning. Windows conout readiness remains asynchronous but does not read this Orca wrapper argument. Installed dependency inspection is supplemental, not a Windows execution result.",
+    "regressionCoverage": {
+      "description": "WeakRef release with live fake native handle, early output, write/exit/dispose behavior, both exit-status meanings.",
+      "focusedPassingCases": 3,
+      "log": "notes/pr-risk-review/queues/21140.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21140.graph.json",
+      "limitations": "No actual ConPTY spawn or Linux PTY environment probe was performed. Product diff is one local capture and one callback substitution; no shell/environment usability tradeoff observed."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

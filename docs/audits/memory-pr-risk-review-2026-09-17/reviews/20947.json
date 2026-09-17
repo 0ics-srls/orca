@@ -1,0 +1,382 @@
+{
+  "schemaVersion": 1,
+  "number": 20947,
+  "url": "https://github.com/stablyai/orca/pull/20947",
+  "title": "fix(daemon): pause producers when stream backlogs grow",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "A stalled viewer now pauses output producers. If it remains connected without draining, the child can block indefinitely; detach or drain permits resumption.",
+    "currentHead": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "snapshotHead": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "native-smoke (ubuntu-22.04)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442592/job/104658539460"
+        },
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658540494"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442682/job/104658539767"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442522/job/104658539033"
+        },
+        {
+          "name": "native-smoke (windows-latest)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442592/job/104658539343"
+        },
+        {
+          "name": "mac-native-owner-smoke",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442592/job/104658539511"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658540247"
+        },
+        {
+          "name": "linux",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442592/job/104658540182"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625618"
+        },
+        {
+          "name": "windows",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442592/job/104658540529"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625643"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626535"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626734"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626599"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626245"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626653"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626494"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626473"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626577"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625740"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625608"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626810"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626506"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626492"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625939"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625962"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625981"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625978"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625931"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625946"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658625941"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104658626022"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053442721/job/104659878276"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35053444816"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20947,
+      "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+      "tree": "9a9ac293ce8b82b34bdbf869ab9062c115848eca",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20947.json",
+    "sha256": "9ffa41ecb915809592c3e3538b62a2e76d3a3e9de6e92e3717f49f3384dc31ab",
+    "reviewedHead": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20947,
+    "url": "https://github.com/stablyai/orca/pull/20947",
+    "title": "fix(daemon): pause producers when stream backlogs grow",
+    "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+    "base": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+    "recordedBaseOid": "7f23d4463d79d6180f180947d0b5bf4fe20931de",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/daemon/daemon-client-connections.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "af06f85c2d7aea93ca575a1281a9b2687aa84d4039ec3cbd8cd9ca535589b51c",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-server.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "ec22c8766052791fd704f461b8bcc8cc32cfede48196cf6b36d6eb37af6a0eba",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-backpressure.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "d8b38eea227577a96f68c2e685913bc7307fa7444627d666ea7f7de2557341a3",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-data-batcher.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "56d4e6b8b461d45791ce1d4cc2185109554ecc57cc3163e68ad43c3001e91fbe",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-data-entry.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "8f69d732ecda374abb834f62e36cf1bccb0e58c52d4f181ca88bec0f721ce54d",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-data-split.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "65e713a7ae8689eba3d86bd74dd4f9861449d8edce0e11dcb257b77e86fb23e8",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-entry-accounting.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "011669d59609a41530db55126a21f7482eab02137e811edf7ffe79325a414d1e",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-held-refill.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "9af9434c1e2d11576fe4f4fcb315dd857078c9c27f717f36b60f367ac3ccd5e5",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/daemon-stream-keep-tail-drop.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "2e5c92f9b137fa075d233db7f1ce1d5d8465c3e8fdf51984873480d380f0d3b9",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/session-producer-pause.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "74b5d842a94be232d7387495c483365be8e8a44eed7c6aeba655d1ccf955af98",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/session.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "ddd71285f6e72bcee012e7a9955170be4fb59c8e41e70971bc629c13504a4338",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/terminal-host.ts",
+        "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
+        "sha256": "8cd6804b249ffb0d82da7f5a7ec8faa66514b0d6e3e36472cd81e6409c3edbc4",
+        "inspection": "Product diff read at the named head"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Backpressure accounts for retained UTF-16 text, entry overhead, and outstanding socket write bytes. It applies 4 MiB/1 MiB global high/low watermarks and 64 KiB/32 KiB per-session watermarks, with owner checks protecting replacement clients."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The stream pause owner is independent of the prior client pause timeout. The existing five-second client failsafe cannot resume a producer while stream backpressure remains asserted. Detach, disconnect, and control replacement retire their pressure ownership and permit resumption."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Native PTY pause/resume controls reading from the PTY endpoint. When a viewer stays connected but never drains, the producer can remain paused indefinitely, and the child can block after native output buffers fill. This is a progress and latency tradeoff, not evidence that the process exited."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Existing background keep-tail dropping remains the data-loss policy for droppable traffic. Unsupported pause handles retain the existing 32 MiB write-through safety valve; the new user-space target is not a universal native-memory bound."
+      }
+    ],
+    "userVisibleBeforeAfter": "A terminal with a stalled stream previously allowed retained output to grow. It now slows or stops the terminal producer until the stream drains or its owner detaches. A permanently stalled viewer can therefore stop command progress indefinitely.",
+    "capacityAndDataLoss": "No new terminal scrollback capacity or output-drop threshold is introduced here. Applying persistent backpressure trades producer progress for retained output memory. Native buffers and unsupported-pause fallback behavior remain outside a strict global bound.",
+    "platformEvidence": {
+      "assessment": "The reviewed host/session wrappers use PTY pause/resume rather than POSIX signals. POSIX PTY and Windows ConPTY both expose endpoint reads, but their native buffering and producer-blocking behavior need target-platform validation. Existing real TCP reproduction uses a callback producer honoring pause; it does not execute a native Windows, Linux, or macOS PTY.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Pressure belongs to the daemon/session on the execution host and the current client owner. A disconnected or stalled SSH path does not establish process death. Folder workspaces use the same terminal ownership and require no Git metadata.",
+    "regressionCoverage": {
+      "description": "Published tests cover accounting, small writes, owner replacement, socket drain, stale refill callbacks, and session pause controls. The historical real TCP artifact demonstrates bounded 8 MiB producers that resume after drain; visible 64 KiB/1 KiB and hidden cases are documented.",
+      "rootFocusedBatch": {
+        "applies": false,
+        "boundary": "No fresh test execution assigned to this PR in the capacity batch. Historical artifacts and published controls are described separately."
+      },
+      "limitations": "No new native PTY execution was performed in this review. A finite drain test cannot establish eventual progress for a client that never drains. Watermarks bound selected user-space ownership, not all kernel, PTY, or renderer memory."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "7f23d4463d79d6180f180947d0b5bf4fe20931de",
+      "reviewedMergeBase": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "intentional-tradeoff",
+    "nextAction": "Hold for explicit acceptance of indefinite producer stalls under a permanently stalled viewer. Require representative native PTY pause/resume validation before describing the behavior as proven on all three desktop platforms."
+  }
+}

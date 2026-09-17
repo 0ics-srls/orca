@@ -1,0 +1,313 @@
+{
+  "schemaVersion": 1,
+  "number": 21167,
+  "url": "https://github.com/stablyai/orca/pull/21167",
+  "title": "fix: avoid retaining foreign SSH file frames before metadata",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Pending file reads no longer retain unrelated stream frames. Their own metadata is installed before subsequent chunk/end frames in the same receive batch.",
+    "currentHead": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "snapshotHead": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099415445"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726554/job/105099414202"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099415306"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533174"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533286"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534053"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534386"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533841"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534858"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534289"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534754"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534579"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534624"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533336"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534002"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533568"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099533576"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534671"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099751610"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099750512"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099750469"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099751613"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534437"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534721"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534174"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534172"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534233"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534178"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534194"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534177"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534153"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105099534234"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189726755/job/105101109954"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35189727527"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21167,
+      "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "tree": "4ba7f8925e30543f98096abf8620e733a574743d",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21167.json",
+    "sha256": "c379a810a6d6a8573f8ff9c1ba7d3b5954c3ff97faa31c5126e362bc98636db9",
+    "reviewedHead": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21167,
+    "url": "https://github.com/stablyai/orca/pull/21167",
+    "title": "fix: avoid retaining foreign SSH file frames before metadata",
+    "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/ssh/ssh-filesystem-stream-reader.ts",
+        "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+        "sha256": "333b0ba796edbd0a07b483cc65fb9f0c46f6f5488361bce08c488ea72543825a"
+      },
+      {
+        "path": "src/main/ssh/ssh-channel-multiplexer.ts",
+        "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+        "sha256": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108"
+      },
+      {
+        "path": "src/relay/fs-handler-file-read.ts",
+        "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+        "sha256": "2d70577839cb150ad0977981d54904b1a25bd8b5de7cfe19e018c08c36f41cd2"
+      },
+      {
+        "path": "src/main/providers/ssh-filesystem-provider.ts",
+        "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+        "sha256": "de6051f43ea272fe0a15b7ef5c6df5c8caedfa7adaada205386c4f19be7f04f2"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "SshChannelMultiplexer.handleResponse invokes the existing beforeResolve callback before resolving the Promise. The relay schedules pumpChunks with setImmediate after returning metadata, and ordered transport writes keep its metadata ahead of its chunks. No new relay capability is required."
+      }
+    ],
+    "userVisibleBeforeAfter": "A pending file read drops other streams' frames before its metadata instead of storing them. Its own metadata is installed synchronously during response dispatch, before following chunk/end frames in the same receive buffer.",
+    "capacityAndDataLoss": "A nonconforming peer which sends its own chunks before metadata would now lose them; the shipped relay contract already requires metadata-first. Existing text/binary caps and ack behavior are unchanged.",
+    "platformEvidence": {
+      "assessment": "Filesystem content is host-authored; client JSON/frame ordering is shared JS on Linux/macOS/Windows. File paths remain opaque to this change. Native SSH connections were not opened.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. Filesystem content is host-authored; client JSON/frame ordering is shared JS on Linux/macOS/Windows. File paths remain opaque to this change. Native SSH connections were not opened.",
+    "regressionCoverage": {
+      "description": "Real multiplexer parsing tests: foreign frame WeakRefs, same-decoder-turn metadata/chunk/end, empty image, malformed/capped metadata, teardown, legacy fallback and provider integration.",
+      "focusedPassingCases": 76,
+      "log": "notes/pr-risk-review/queues/21167.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21167.graph.json",
+      "limitations": "A nonconforming peer which sends its own chunks before metadata would now lose them; the shipped relay contract already requires metadata-first. Existing text/binary caps and ack behavior are unchanged."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

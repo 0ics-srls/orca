@@ -1,0 +1,90 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 5,
+  "numPassedTests": 5,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789637403244,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["EphemeralVmsPane"],
+          "fullName": "EphemeralVmsPane renders the skill panel and recipe, and opens the composer with the recipe selected",
+          "status": "passed",
+          "title": "renders the skill panel and recipe, and opens the composer with the recipe selected",
+          "duration": 26.272208000009414,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["EphemeralVmsPane"],
+          "fullName": "EphemeralVmsPane does not schedule a reset when clipboard completion arrives after unmount",
+          "status": "passed",
+          "title": "does not schedule a reset when clipboard completion arrives after unmount",
+          "duration": 8.891541999997571,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["EphemeralVmsPane"],
+          "fullName": "EphemeralVmsPane shows copied feedback while mounted and releases its reset on unmount",
+          "status": "passed",
+          "title": "shows copied feedback while mounted and releases its reset on unmount",
+          "duration": 10.029750000016065,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["EphemeralVmsPane"],
+          "fullName": "EphemeralVmsPane refreshes the catalog when plugin content changes",
+          "status": "passed",
+          "title": "refreshes the catalog when plugin content changes",
+          "duration": 9.143375000014203,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["EphemeralVmsPane"],
+          "fullName": "EphemeralVmsPane ignores an older refresh that finishes after a plugin-content refresh",
+          "status": "passed",
+          "title": "ignores an older refresh that finishes after a plugin-content refresh",
+          "duration": 10.20570800002315,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637588750,
+      "endTime": 1789637588814.2058,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/renderer/src/components/settings/EphemeralVmsPane.test.tsx"
+    }
+  ]
+}

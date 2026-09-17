@@ -1,0 +1,46 @@
+{
+  "observedAt": "2026-09-17T09:33:22.990744+00:00",
+  "platform": "macOS-26.6.2-arm64-arm-64bit",
+  "node": "v26.6.0",
+  "results": [
+    {
+      "pr": 20906,
+      "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+      "passedTests": 5,
+      "failedTests": 0,
+      "loadedRepositorySources": 1745,
+      "verifiedAssets": 25,
+      "allSourceHashesVerified": true
+    },
+    {
+      "pr": 20908,
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "passedTests": 20,
+      "failedTests": 0,
+      "loadedRepositorySources": 885,
+      "verifiedAssets": 25,
+      "allSourceHashesVerified": true
+    },
+    {
+      "pr": 21010,
+      "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+      "passedTests": 43,
+      "failedTests": 0,
+      "loadedRepositorySources": 143,
+      "verifiedAssets": 0,
+      "allSourceHashesVerified": true
+    }
+  ],
+  "limitations": "Published repository JS/TS/JSON modules are loaded from exact commits. Asset byte equality is checked where the wrapper is used. Installed packages and controlled DOM/Electron ports remain local dependencies. No native Electron windows or Windows/Linux hosts were launched.",
+  "loader": "notes/pr-risk-review/queues/exact-head.config.mjs",
+  "assetQueryWrapper": "notes/pr-risk-review/renderer/published-corrections.config.mjs",
+  "harnessAndPackageHashes": {
+    "notes/pr-risk-review/queues/exact-head.config.mjs": "6900e1cd4a09e0a0c001ff951af281576df24884aa80b761e0026f112809a251",
+    "notes/pr-risk-review/renderer/published-corrections.config.mjs": "19316e66fdda95ed8a74e9e8da1b1913d8a8af33b875d56501b16c8194932929",
+    "node_modules/vitest/package.json": "a28126d97bcaf567da5bed69443b7f3bcd9a7a8c38c8b66e554686b6bb2c10e0",
+    "node_modules/vite/package.json": "a7fba3ad4f2cd557f00045a45cf90b4499a5abf2fecc2b5ad4a244fd499eaf21",
+    "node_modules/react/package.json": "e40c3ed9b633c9ecf188e09a4be309780a1ea0a9c068278a30ff6a27e7b2dbb6",
+    "node_modules/react-dom/package.json": "7c82f0967114d4b5d38b1f07e543af87c9919e8d3243f9604004819319cb2200",
+    "node_modules/happy-dom/package.json": "a60eeb9edb492d01d10923ff47e32ef55dfe076881dc85fe7f380712aa0466e3"
+  }
+}

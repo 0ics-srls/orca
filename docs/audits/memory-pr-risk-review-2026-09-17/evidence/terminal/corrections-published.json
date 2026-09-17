@@ -1,0 +1,32 @@
+[
+  {
+    "tree": "72c2e230c87dd5dc888c0ea38484d38825ebc844",
+    "head": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+    "paths": [
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+      "src/renderer/src/components/terminal-pane/terminal-pane-close-admission.ts",
+      "src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts",
+      "docs/audits/pending-split-close/README.md"
+    ],
+    "number": 21001,
+    "oldHead": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
+    "verifiedLoadedSources": 213,
+    "focusedTests": 40
+  },
+  {
+    "tree": "10fbdf83e030ddb314a8b3edab4af27e70bb428a",
+    "head": "649b8b7fa74c7784be5fed6a70970915e4d96dc9",
+    "paths": [
+      "src/renderer/src/components/terminal-pane/use-terminal-pane-close-actions.ts",
+      "src/renderer/src/components/terminal-pane/terminal-pane-close-admission.ts",
+      "src/renderer/src/components/terminal-pane/pending-pane-close-confirmation.test.ts",
+      "docs/audits/pending-runtime-pane-close/README.md"
+    ],
+    "number": 21005,
+    "oldHead": "9effc47aacec86d2be4a44c94249073ac5adda09",
+    "mergedParent": "7dfc08f40d3fc6185a2a50a2d63fb52775e2650a",
+    "conflictsResolved": [],
+    "verifiedLoadedSources": 236,
+    "focusedTests": 57
+  }
+]

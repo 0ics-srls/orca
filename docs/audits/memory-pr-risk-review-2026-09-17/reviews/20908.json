@@ -1,0 +1,332 @@
+{
+  "schemaVersion": 1,
+  "number": 20908,
+  "url": "https://github.com/stablyai/orca/pull/20908",
+  "title": "fix(renderer): dispose global listeners during HMR",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; corrected; await green CI",
+    "userVisibleBeforeAfter": "Dev hot reload releases old listeners. Correction keeps the pagehide flush while pending Clear/Undo transactions still need it, then retires it.",
+    "currentHead": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "pending",
+      "label": "Pending (4 checks)",
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "snapshotHead": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "rollupState": "PENDING",
+      "failed": [],
+      "pending": [
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148906842"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908365"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908302"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "url": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bquji00080cgmzvrr4jgb"
+        }
+      ],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148681310"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059288/job/105148679631"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148681478"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148906608"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148906464"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908104"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148907480"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148907545"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908093"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148907815"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908179"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908203"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908656"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148906842"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148906771"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908556"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908092"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908651"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908243"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908252"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908268"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908365"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908302"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908278"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908263"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205059673/job/105148908291"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bquji00080cgmzvrr4jgb"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "number": 20908,
+      "oldHead": "04a81de660dba6595c047b152f4da97a660f031c",
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "paths": [
+        "src/renderer/src/components/activity/activity-clear-completed.ts",
+        "src/renderer/src/components/activity/activity-clear-completed-hmr.test.ts"
+      ],
+      "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643",
+      "sourceArtifact": "corrections-published.json"
+    },
+    "publishedUpdateEvidence": "evidence/corrections-published.json",
+    "currentMainMergeCheck": {
+      "number": 20908,
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "tree": "1646d3289aa9004ae2cb00b6807e215d49afa90e",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    },
+    "correction": "Preserved the pagehide owner until pending activity Clear/Undo transactions settle during HMR; no production capacity policy change."
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20908.json",
+    "sha256": "102a051c24a5f49a75860dcff2f5af79aab17fd53b8b3c1f6eb46c23c284b373",
+    "reviewedHead": "04a81de660dba6595c047b152f4da97a660f031c",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20908,
+    "url": "https://github.com/stablyai/orca/pull/20908",
+    "title": "fix(renderer): dispose global listeners during HMR",
+    "exactHead": "04a81de660dba6595c047b152f4da97a660f031c",
+    "reviewBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/components/activity/activity-clear-completed.ts",
+        "publishedSha256": "ec2078d4cf9426f4d7d0cdc532dba0a7e9e67b5503fa7ae479fffdb5875ec00a",
+        "workingSha256": "80c11666981f2e149461f2b6703219f19be34d2b2e6b23b962b6afc40f6d9204",
+        "sameAsWorking": false
+      },
+      {
+        "path": "src/renderer/src/components/contextual-tours/ContextualTourOverlaySurface.tsx",
+        "publishedSha256": "010f63896b65ef24d9ed15cef6086845df6f21c2b81dcb1d8673f06144c81aa0",
+        "workingSha256": "010f63896b65ef24d9ed15cef6086845df6f21c2b81dcb1d8673f06144c81aa0",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/combined-diff/remember-view/combined-diff-view-memory.ts",
+        "publishedSha256": "b6ea3732aae1e1e53974b8b2d8517aca16b8888e3b2178858842da9e34f38491",
+        "workingSha256": "b6ea3732aae1e1e53974b8b2d8517aca16b8888e3b2178858842da9e34f38491",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/terminal-pane/terminal-render-desync-trigger.ts",
+        "publishedSha256": "f2113aec88223fcece7de20380e192518bb722047925b9c681414bf9cb522966",
+        "workingSha256": "f2113aec88223fcece7de20380e192518bb722047925b9c681414bf9cb522966",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/lib/input-quiet-scheduler.ts",
+        "publishedSha256": "0f55c8da9101e8578108cfb813e141aa761cf82cc9deb1f3ff4d7193a4da35fe",
+        "workingSha256": "0f55c8da9101e8578108cfb813e141aa761cf82cc9deb1f3ff4d7193a4da35fe",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/lib/keyboard-layout/layout-base-character.ts",
+        "publishedSha256": "1bde1edeba1ccb33aa4f6d0578d739335720f6b617e2ef432e4fb8ba641559f9",
+        "workingSha256": "1bde1edeba1ccb33aa4f6d0578d739335720f6b617e2ef432e4fb8ba641559f9",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/activity/activity-clear-completed.test.ts",
+        "publishedSha256": "7408d7066e389df04eea26de22a474e2632b81ac85cba49b1ab09b1c9fcdd8b9",
+        "workingSha256": "7408d7066e389df04eea26de22a474e2632b81ac85cba49b1ab09b1c9fcdd8b9",
+        "sameAsWorking": true
+      }
+    ],
+    "classification": "fixable-issue",
+    "correctnessFindings": [
+      "Five listener cleanup changes are straightforward dev HMR retirement. Activity eviction cleanup initially drops its pagehide handler while an Undo transaction still needs it; reload before60s fallback can replay cleared persisted rows."
+    ],
+    "userVisibleBehavior": {
+      "before": "Dev HMR can retain old global listeners; pending activity evictions still flush on pagehide.",
+      "after": "Published head removes old listeners but loses pending activity flush. Local correction defers that single handler retirement until pending Undo/timeout/pagehide transactions settle; stale post-HMR callbacks can reattach it.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Actual exported HMR disposer followed by real happy-dom pagehide: without disposer1/1 pass, published disposer1/1 expected failure. Permanent correction covers pagehide/Undo/fallback/stale handler.",
+    "dependencyAndMergeRisks": "Dev-only functional regression in initial head; no production cache cap or history reduction. Actual Vite hot reload was not launched.",
+    "nextAction": "Publish bounded pending-eviction lifetime correction, preserving Undo. Production HMR guards remain inert.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ],
+    "latestPublishedReview": {
+      "pr": 20908,
+      "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+      "passedTests": 20,
+      "failedTests": 0,
+      "loadedRepositorySources": 885,
+      "verifiedAssets": 25,
+      "allSourceHashesVerified": true,
+      "classification": "low-observed-risk",
+      "correctionFilesMatchReadyManifest": true,
+      "validation": "notes/pr-risk-review/renderer/published-validation.json",
+      "remainingGate": "Refreshed GitHub CI and current-main integration; native cross-platform execution remains unproved."
+    }
+  }
+}

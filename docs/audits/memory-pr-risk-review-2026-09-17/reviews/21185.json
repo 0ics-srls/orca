@@ -1,0 +1,377 @@
+{
+  "schemaVersion": 1,
+  "number": 21185,
+  "url": "https://github.com/stablyai/orca/pull/21185",
+  "title": "fix(plugins): retire log owners after successful uninstall",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "Successful uninstall clears that installation’s 200-row log history. Same-key reinstall starts fresh; installed, disabled/crashed, and failed-removal history keeps its policy.",
+    "currentHead": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "pending",
+      "label": "Pending (7 checks)",
+      "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "snapshotHead": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "rollupState": "PENDING",
+      "failed": [],
+      "pending": [
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072313"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072344"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072384"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072325"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072315"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072394"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "url": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bqy6t00090agm0x2nscfe"
+        }
+      ],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105148705126"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066200/job/105148702916"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105148705230"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149071659"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149071675"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072383"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073576"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073052"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073341"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072985"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073529"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073735"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073079"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149071815"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149071766"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073103"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149073411"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072539"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072313"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072344"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072384"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072345"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072325"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072315"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072342"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205066825/job/105149072394"
+        },
+        {
+          "name": "pullfrog",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://pullfrog.com/repo/stablyai/orca/workflow-run/cmu5bqy6t00090agm0x2nscfe"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "number": 21185,
+      "oldHead": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+      "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "paths": [
+        "src/main/plugins/__mocks__/plugin-uninstall-log-fixture.ts",
+        "src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts",
+        "src/main/plugins/plugin-uninstall-log-retention.test.ts",
+        "src/main/plugins/plugin-uninstall-lifecycle.test.ts",
+        "src/main/plugins/plugin-uninstall-ordering.test.ts",
+        "docs/audits/plugin-uninstall-log-retirement/README.md",
+        "docs/audits/plugin-uninstall-log-retirement/scenario.test.mjs",
+        "docs/audits/plugin-uninstall-log-retirement/source-versions.json",
+        "docs/audits/plugin-uninstall-log-retirement/before-node-results.json",
+        "docs/audits/plugin-uninstall-log-retirement/fixed-node-results.json",
+        "docs/audits/plugin-uninstall-log-retirement/before-electron-results.json",
+        "docs/audits/plugin-uninstall-log-retirement/fixed-electron-results.json",
+        "docs/audits/plugin-uninstall-log-retirement/loader-results.json",
+        "docs/audits/plugin-uninstall-log-retirement/validation.json"
+      ],
+      "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643",
+      "sourceArtifact": "corrections-published.json"
+    },
+    "publishedUpdateEvidence": "evidence/corrections-published.json",
+    "currentMainMergeCheck": {
+      "number": 21185,
+      "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+      "tree": "ccaa3682c2cde6642166d967ebe5e2751e818211",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    },
+    "correction": "Renamed actual test-only support to plugin-uninstall-log-test-fixture.ts, satisfying the existing child-process boundary exemption without widening its allowlist; refreshed source/evidence fences."
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21185.json",
+    "sha256": "a716c1f3244df6ccc1195efffb75d30b5fbd7f327e985214dfeccd46c0fa4d49",
+    "reviewedHead": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21185,
+    "url": "https://github.com/stablyai/orca/pull/21185",
+    "title": "fix(plugins): retire log owners after successful uninstall",
+    "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/ipc/plugins.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "0547926a103489f367b0472d6d2eb7a81c151ccdd5c56c516ce29ee5a1de12f5"
+      },
+      {
+        "path": "src/main/plugins/plugin-event-delivery.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "fcf33cd2415fd9f37d81248090529f1999eea6ada70769000a169057eb456cef"
+      },
+      {
+        "path": "src/main/plugins/plugin-install.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "f3432a1ee1de14050a22f2c1aea7ec5328fa9e94eff91741f79adbd9c247f1f6"
+      },
+      {
+        "path": "src/main/plugins/plugin-installation-state.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "4289aabf3565fd0344840aef7cabf28261e6a6022e66efbd0e4aca1de99d8f65"
+      },
+      {
+        "path": "src/main/plugins/plugin-log-buffer.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "15c2a6b3f1dac8e4337b7e73fbfce749e4d1e74ce2d9bdcf08f91d1afcc71b71"
+      },
+      {
+        "path": "src/main/plugins/plugin-panel-controller.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "80e7b228a49404d07b7428d21762fce614c7e1294b0b39d6455138511ee90f01"
+      },
+      {
+        "path": "src/main/plugins/plugin-service.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "59fc1e8c5ea6b26cbecdaad2b42e00ae9fa2e895f3568f45f489e9fa226cccdb"
+      },
+      {
+        "path": "src/main/plugins/plugin-worker-controller.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "d4b539cbbc4358b6ce59b1045fb6790ee34415b8c5817f8a5d38691177dfda03"
+      },
+      {
+        "path": "src/main/plugins/plugin-worker-manager.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "78360d3032a26c80f4cd21dcc80d267f5ed36b0855e110cb5c056fb420509357"
+      },
+      {
+        "path": "src/renderer/src/components/settings/use-plugin-logs.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "d1267ab2f4774813a9e1026ff66ff694b9591d1493acfafa26b0ade88a1b042a"
+      },
+      {
+        "path": "src/main/plugins/plugin-worker-startup.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "4b1e3ffb800e387a7a6f677ceef27a4d72f1b0aca467b54994f0b4518137fa2e"
+      },
+      {
+        "path": "src/main/plugins/plugin-host-process.ts",
+        "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+        "sha256": "825b938a5fe510944c26e9b503afeb3a0da13b570558a111adc2f9edc21cce6b"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Removal joins the existing refresh chain, resolves the current discovered object inside the queue, blocks new starts during shutdown, clears history only after deletion succeeds and rejects bundled deletion again inside the filesystem mutation queue. Producer tokens are captured before asynchronous work and do not retain old rings."
+      },
+      {
+        "severity": "merge-blocking-ci",
+        "assessment": "Published fixture filename introduces a direct child_process importer according to the existing ratchet. Prepared correction renames only test support and refreshes evidence; no production source or allowlist changes.",
+        "correctionPaths": "notes/pr-risk-review/queues/plugin-correction.paths.json"
+      }
+    ],
+    "userVisibleBeforeAfter": "Successful uninstall now deletes the removed installation's 200-row history and prevents late callbacks from contaminating a same-key reinstall. Installed, disabled/crashed and failed-removal history keeps its previous 200-row policy.",
+    "capacityAndDataLoss": "Reinstalling the same key no longer shows pre-uninstall history. The settings UI already removes a deleted plugin row, but this is an explicit history policy change. Sequential file deletion remains non-atomic as before. No zero-tradeoff claim is warranted.",
+    "platformEvidence": {
+      "assessment": "Real temporary-file install/remove and controlled SDK/fork channels run on macOS. Two supervision cases additionally fork real Node workers. Native Windows/Linux filesystem locking/removal and worker teardown remain unexecuted here.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. Real temporary-file install/remove and controlled SDK/fork channels run on macOS. Two supervision cases additionally fork real Node workers. Native Windows/Linux filesystem locking/removal and worker teardown remain unexecuted here.",
+    "regressionCoverage": {
+      "description": "Seventeen uninstall controls cover failed partial delete/retry, refresh ordering, bundled successor, callback lateness, same-key reinstall and service disposal; full published-head selection passes 40 cases across seven suites.",
+      "focusedPassingCases": 40,
+      "log": "notes/pr-risk-review/queues/21185.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21185.graph.json",
+      "limitations": "Reinstalling the same key no longer shows pre-uninstall history. The settings UI already removes a deleted plugin row, but this is an explicit history policy change. Sequential file deletion remains non-atomic as before. No zero-tradeoff claim is warranted."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "intentional-tradeoff",
+    "nextAction": "Publish the prepared fixture filename/CI correction; explicitly review the same-key reinstall history reset. If preserving prior history is mandatory, retain this PR for a separate durable-history design rather than hiding the tradeoff."
+  }
+}

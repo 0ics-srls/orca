@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "number": 21006,
+  "url": "https://github.com/stablyai/orca/pull/21006",
+  "title": "fix(sessions): cancel transcript acquisition during host teardown",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "Host teardown aborts pending transcript acquisition, preventing stale watcher admission or later TUI launch. An in-flight user action may receive a stopped error.",
+    "currentHead": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "snapshotHead": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051579"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051501"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104730176504"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104727928984"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839244/job/104727927387"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839253/job/104727927027"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104727929253"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051579"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051501"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052611"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052744"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053051"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052453"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053548"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053440"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051453"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053308"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051633"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728051482"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053538"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053145"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728053550"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052476"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052603"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052461"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052647"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052502"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052487"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052590"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104728052588"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075839706/job/104730176504"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35075843883"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21006,
+      "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+      "tree": "955560f3e19f6067c243e2d5cc616ca322b0be06",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/terminal/21006.json",
+    "sha256": "351ba67173b2608b73758a9ceac019a1f6557e0842d962213a841a450d5c4dc8",
+    "reviewedHead": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21006,
+    "url": "https://github.com/stablyai/orca/pull/21006",
+    "title": "fix(sessions): cancel transcript acquisition during host teardown",
+    "reviewedHead": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
+    "recordedGithubBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "diffBase": "15cac68802361f3b9075630335d3e6d379c2a909",
+    "diffBoundaryExplanation": "Exact full PR content is reviewed from the shared named-main ancestor, or exact parent topic head for a stack. This is not HEAD^ and is not a claim of clean merge into current main.",
+    "productDiffFile": "notes/pr-risk-review/terminal/21006.diff",
+    "allChangedPaths": [
+      "docs/audits/tui-transcript-acquisition/README.md",
+      "docs/audits/tui-transcript-acquisition/fix.patch",
+      "docs/audits/tui-transcript-acquisition/reproduce.mjs",
+      "docs/audits/tui-transcript-acquisition/results.json",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-types.ts",
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts",
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-ownership.test.ts",
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown-test-fixture.ts",
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown.test.ts"
+    ],
+    "productSourcesInspected": [
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-types.ts",
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts"
+    ],
+    "callersAndContractsInspected": [
+      "src/main/native-chat/agent-session-wire/structured-agent-session-host-handoff.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-host-teardown.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts",
+      "docs/reference/ssh-execution-boundary.md",
+      "docs/reference/remote-wire-compatibility.md",
+      "docs/reference/agent-status-store.md"
+    ],
+    "worktreeProductMatchesPublishedAtReadOnlyStart": {
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-forward.ts": true,
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-restart.ts": true,
+      "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-types.ts": true,
+      "src/main/native-chat/agent-session-wire/structured-tui-transcript-catchup.ts": true
+    },
+    "correctnessFindings": [],
+    "userVisibleBeforeAfter": "Stopping a catch-up owner or tearing down its host aborts pending transcript lookup/subscription readiness and prevents a later TUI launch or restart activation from proceeding with the cancelled acquisition.",
+    "retentionPolicy": "Active catch-up history behavior and all retention limits are unchanged. Cancelled/superseded acquisition loses permission to retain a watcher or resume ownership.",
+    "crossPlatform": {
+      "observed": "macOS background Node unit suite:23 files/238 tests passed before edits, recorded in focused-tests.log. No visible app or native window launched.",
+      "reasoning": "AbortController and existing transcript watch signal support; no OS-specific branch introduced. macOS controlled async/file watcher tests pass; Linux/Windows watcher scheduling remains unexecuted here.",
+      "linux": "No native Linux execution by this reviewer. Root separately checks exact-head Linux CI; do not equate passing tests on a mocked host with every Linux kernel/provider path.",
+      "windows": "No native Windows execution by this reviewer. Packaging/typecheck can establish a narrower property than runtime correctness."
+    },
+    "sshAndFolderCompatibility": "Inspected execution-host ownership and existing routes. No local substitution for a missing SSH provider is introduced. Workspace identity is passed through existing folder-aware owners/planners where relevant; no new git-worktree-only requirement appears in the diff.",
+    "wireCompatibility": "No stream opcode, RPC shape, capability requirement, or payload truncation is introduced. Existing lifecycle content can change only for the retired/stale owner described above.",
+    "regressionControls": [
+      "stop during transcript discovery",
+      "stop while first snapshot pending",
+      "stopAll prevents new acquisition",
+      "host teardown cancellation",
+      "no late launch after stopped prepare",
+      "cancelled recovery does not retry stale activation"
+    ],
+    "localTestEvidence": {
+      "log": "notes/pr-risk-review/terminal/focused-tests.log",
+      "files": 23,
+      "tests": 238,
+      "scope": "Combined worktree with published product hash comparison above; overlapping modules are not claimed to equal each isolated PR head. These results supplement exact-diff review, not substitute for it."
+    },
+    "missingEvidenceAndLimits": [
+      "Abort gates asynchronous authority; an already issued filesystem operation can still settle and is ignored afterwards.",
+      "A stop can report the explicit stopped error to a user action in flight during teardown; this replaces a stale successful acquisition."
+    ],
+    "dependencyAndMergeRisks": {
+      "requires": [],
+      "findings": [],
+      "ci": "Root owns current exact-head CI classification; no blanket merge-ready claim is made here.",
+      "currentMain": "Not evaluated by this subgroup; root fetched named current main separately."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Use root current-main and exact-head CI gates; no additional product correction identified in this scoped review.",
+    "confidence": "No universal zero-regression claim. Conclusions are scoped to inspected owners, callers, and listed controls.",
+    "reviewedAt": "2026-09-17T09:17:17.306339+00:00"
+  }
+}

@@ -1,0 +1,39 @@
+{
+  "pr": 21175,
+  "publishedHead": "4ad5d393f77d44dfb0ef2845bc287a947375fc38",
+  "proposedBasePr": 21113,
+  "proposedBaseHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+  "automaticMergeTree": "1c6d5f1f5040f83c55f166caa56016fcf2f5d4c7",
+  "candidateTree": "7f91f884780b41faaa9400e04102dc4d7d7ff57c",
+  "mergeConflicts": [],
+  "changesBeyondAutomaticMerge": ["src/main/ipc/runtime-environment-session-retirement.test.ts"],
+  "resolution": "Only21175 permanent test registration becomes the existing validated primary two-argument call. The runtime stub is never accessed by these session-write cases; production code needs no additional edit.",
+  "projection": "notes/pr-risk-review/integration/21175/src/main/ipc/runtime-environment-session-retirement.test.ts",
+  "sha256": "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5",
+  "blob": "cc3d6650561af430610a831b170fbd90cbbf8c08",
+  "primaryFixtureByteIdentical": true,
+  "validation": {
+    "exactTreeTestsPassed": 95,
+    "exactTreeSuitesPassed": 10,
+    "additionalSuiteCollectionFailures": 1,
+    "processExitCode": 1,
+    "log": "notes/pr-risk-review/integration/21175/exact-tree-tests.log",
+    "collectionFailure": {
+      "path": "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+      "line": 146,
+      "reason": "Strict exact-head source resolver rejects existing unresolved mock ../../shared/runtime-environment-store, which resolves to nonexistent src/main/shared/runtime-environment-store. Normal Vitest can register this unused virtual mock.",
+      "presentBeforeBothPRsAt": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "productAssertionFailure": false
+    },
+    "evaluatedRepositorySourceCount": 4113,
+    "allSourceHashesIndependentlyRechecked": true,
+    "sourceGraph": "notes/pr-risk-review/integration/21175/evaluated-graph.json",
+    "ordinaryLint": "passed",
+    "antiSlopLint": "passed",
+    "typecheck": "Full candidate-tree typecheck not run; exact fixture is byte-identical to previously typechecked primary two-argument version.",
+    "platform": "macOS Node fixtures only; no native Windows/Linux app execution"
+  },
+  "publication": "Candidate resolves known signature trap with no product change. Root may advance21175 using this merge tree with both published heads as parents and set PR base to21113; retain exact-head CI and collection-harness caveat.",
+  "primarySourcesEdited": false,
+  "gitRefsUpdated": false
+}

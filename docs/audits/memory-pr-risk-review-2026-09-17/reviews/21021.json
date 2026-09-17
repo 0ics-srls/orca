@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "number": 21021,
+  "url": "https://github.com/stablyai/orca/pull/21021",
+  "title": "fix(claude): enforce history window quota while reading",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "The existing 16 MiB history-source bound applies during reads. A growing oversized file yields the existing inconsistent/unverifiable result.",
+    "currentHead": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "snapshotHead": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233198"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233231"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104758172123"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756107987"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084525887/job/104756106937"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084525946/job/104756106572"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756108132"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233198"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233231"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234418"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235231"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235113"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235156"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234940"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235438"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235143"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235268"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233365"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756233717"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234787"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756235220"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234461"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234385"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234329"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234410"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234368"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234334"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234294"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234328"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104756234317"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084526187/job/104758172123"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35084528526"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21021,
+      "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+      "tree": "ac31669370ff3405f69fb3789982a23a3d75d7a0",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/21021.json",
+    "sha256": "9dbbc77cdc73c063db4e47fdcb26affc4392e6e02db48aac8ba7cb0443b444a6",
+    "reviewedHead": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21021,
+    "url": "https://github.com/stablyai/orca/pull/21021",
+    "title": "fix(claude): enforce history window quota while reading",
+    "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "recordedBaseOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/claude/claude-structured-history-window.ts",
+        "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
+        "sha256": "77098508b3f5ab5cf4a53163a14da2fa74b1de38859c4717496f7a97e2cd50ea",
+        "inspection": "Product diff read at the named head"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "The history-window builder keeps its existing 16 MiB source allowance but reads through the bounded file reader rather than stat followed by an unbounded readFile."
+      },
+      {
+        "severity": "informational",
+        "assessment": "UTF-8 conversion follows the successful bounded read. Read failure still returns the existing INCONSISTENT result, so unverifiable history is not misrepresented as a valid empty window."
+      }
+    ],
+    "userVisibleBeforeAfter": "Normal history windows are unchanged. A file growing past the existing 16 MiB allowance during the read now yields the existing inconsistent/unverifiable result.",
+    "capacityAndDataLoss": "Existing source-size contract enforced at read time; no new quota, stored-history deletion, or command cancellation.",
+    "platformEvidence": {
+      "assessment": "The change uses the shared portable Node bounded-file reader. Fresh macOS tests cover the read-time bound; native Windows/Linux file races are not independently executed.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "The existing history source stays on its execution host; no remote liveness inference or local-only Git assumption is added. Folder workspaces remain supported by the same file path API.",
+    "regressionCoverage": {
+      "description": "The fresh batch includes claude-history-window-source-budget, with source review checking error translation and conversion order.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": ["src/main/claude/claude-history-window-source-budget.test.ts"],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "An inconsistent result still requires the existing caller recovery behavior; the change does not promise a valid history window from a source beyond the existing allowance."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "reviewedMergeBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review after current CI/integration."
+  }
+}

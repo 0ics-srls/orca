@@ -1,0 +1,323 @@
+{
+  "schemaVersion": 1,
+  "number": 20963,
+  "url": "https://github.com/stablyai/orca/pull/20963",
+  "title": "Bound AI Vault transcript record assembly before allocation",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "A newly rejected local JSONL record above 10 MiB omits its whole session from that scan. The cursor stays before the record; later appends do not recover it.",
+    "currentHead": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "snapshotHead": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675320106"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061321/job/104675319885"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059060998/job/104675318878"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675319953"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675418367"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675418431"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419325"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419511"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419236"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419065"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419593"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419405"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675420191"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419589"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675418459"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675418600"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419744"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419404"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419986"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419278"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419322"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419203"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419180"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419196"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419348"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419289"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104675419264"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059061280/job/104676815950"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35059063369"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20963,
+      "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+      "tree": "8efe233c8e40ad17a0de1888c55ecf6849c75e73",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20963.json",
+    "sha256": "4be5d31853ee6dc9bf2521977c032742971f0b95c59758ad613bf9cad9dfa936",
+    "reviewedHead": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20963,
+    "url": "https://github.com/stablyai/orca/pull/20963",
+    "title": "Bound AI Vault transcript record assembly before allocation",
+    "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+    "base": "96d77b37c5371f15f8dc9263f70c6d4e47be221f",
+    "recordedBaseOid": "b0d46e2d3d7940548346bc6bf8af6c4e6d3266d2",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/ai-vault/remote-session-content-lines.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "3e6da0e99a2abe4ec31a33d5bb4846799dd2b2e86e8a4b35239ea835c3b6db78",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/ai-vault/session-scanner-jsonl-reader.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "5b50abf41607cf71203d6e3e7dadcd012c95beae6dc38196d6447a180019304f",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/ai-vault/session-transcript-record-budget.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "dc6632ad6cab7e98ccda78a4e82ea5ab9dee905777b2da33f0d3ab51855d5813",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/ai-vault/session-transcript-reader.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "928ba21c8933f1d80c49c9e5fc24c3c2ef5de19803e3e04f31066210e2dc10f8",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "src/main/ai-vault/session-scanner-parse-cache.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "488c10c9d4f97dcb959140357d9c5c80be82a7f5d6b1e329f759c43d1aed81b3",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "src/main/ai-vault/session-scanner.ts",
+        "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
+        "sha256": "f5ea702e3208a2d828fc65eda76042e902edc44f78cbf400d7546dea624e5b6c",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The 10 MiB per-record allowance was already enforced for remote streamed transcripts. This PR newly applies it to local JSONL scanning, including byte-oriented consumers, before concatenation or parsing."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The resumable reader clones its cached fold, reports an incomplete read with session=null and the original start offset on failure, and rethrows. The parse cache is updated only after success, so a failed record does not advance the cached cursor."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The scanner catches the error and returns session=null plus a scan issue. Thus the affected session disappears from that scan, rather than merely dropping the oversized record or returning the previously cached session."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Appending more data does not remove the offending record: subsequent reads encounter it again from the prior cursor. Recovery requires removing, shrinking, or rewriting that record, or changing the acceptance policy."
+      }
+    ],
+    "userVisibleBeforeAfter": "A local AI Vault transcript containing a record over 10 MiB could previously be scanned. It now yields a scan issue and no session in that scan. Legitimate large image/tool payload records can trigger this behavior, and appending later normal records does not heal it.",
+    "capacityAndDataLoss": "New local 10 MiB JSONL record cap; exactly the allowance is accepted and greater records reject. The original file is not deleted, but its scanned session becomes unavailable. Remote enforcement remains unchanged.",
+    "platformEvidence": {
+      "assessment": "The byte limit and exception path use Node buffers and JavaScript on all desktop platforms. Fresh parser tests ran on macOS. Local file scanning on Linux/Windows and actual large multimodal sessions were not exercised here.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Remote streams retain their previous 10 MiB rule; local files now converge on that rule. This does not make a previously valid local record backward-compatible. No process liveness or Git-worktree assumption is added.",
+    "regressionCoverage": {
+      "description": "Fresh tests include session-scanner-jsonl-reader and session-scanner-record-budget. Exact-head caller review follows resumable reader failure, parse-cache commit, and scanner issue construction.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": [
+          "src/main/ai-vault/session-scanner-jsonl-reader.test.ts",
+          "src/main/ai-vault/session-scanner-record-budget.test.ts"
+        ],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "Reader controls alone do not prove good UI recovery. No automatic skip, durable large-record spool, prior-session fallback, or user repair flow is added. The cap is not justified as invisible merely because remote reading already had it."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "b0d46e2d3d7940548346bc6bf8af6c4e6d3266d2",
+      "reviewedMergeBase": "96d77b37c5371f15f8dc9263f70c6d4e47be221f",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "intentional-tradeoff",
+    "nextAction": "Hold for a product decision on large local records. If the requirement is no new acceptance limit, redesign the scan path to avoid retaining large payloads while preserving valid records; do not describe this cap as a pure leak fix."
+  }
+}

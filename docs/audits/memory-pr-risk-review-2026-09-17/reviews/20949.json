@@ -1,0 +1,298 @@
+{
+  "schemaVersion": 1,
+  "number": 20949,
+  "url": "https://github.com/stablyai/orca/pull/20949",
+  "title": "fix(browser): bound CDP output for stalled clients",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "A CDP client exceeding 64 MiB or 4096 queued frames is disconnected. Pending automation commands/events may be lost; reconnect does not imply replay.",
+    "currentHead": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "snapshotHead": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662531217"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777645/job/104662530373"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777593/job/104662530089"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662531326"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662631091"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662631176"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632348"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632200"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632098"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632236"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632462"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632328"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632208"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632390"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662631299"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662631219"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632522"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632615"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632320"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632048"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632032"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632030"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632038"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632044"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632076"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632197"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104662632086"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054777783/job/104664097068"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35054780704"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20949,
+      "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+      "tree": "2b62073c18e09910072c8cc4ea4ad60dab5de748",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20949.json",
+    "sha256": "176a2ce3f1f1510f7e0dfb259666bf506cbe96656ec5e0b1731d029d9c4c2a68",
+    "reviewedHead": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20949,
+    "url": "https://github.com/stablyai/orca/pull/20949",
+    "title": "fix(browser): bound CDP output for stalled clients",
+    "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+    "base": "e6a41081a3cc723ade11e719286ca6bd67c68884",
+    "recordedBaseOid": "e6a41081a3cc723ade11e719286ca6bd67c68884",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/browser/cdp-client-response-writer.ts",
+        "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+        "sha256": "fa1b93148bc0388ef7396bc540ff816c4a0a0bed13f3ebab28b9b5fe3a21629e",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/browser/cdp-debugger-channel.ts",
+        "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+        "sha256": "5689bfe1aa00539e01797d8a05ec7789ec3243932583487f31bc2f248a92acb7",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/ws-outbound-backpressure-queue.ts",
+        "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
+        "sha256": "73bf7ff3c10c42ada557045ac4be57f7676b87678984985f2dfe1b99a6e23e17",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "CDP responses and debugger notifications share the existing outbound queue, retaining message ordering and response/session associations. WeakMap ownership and close cleanup prevent an old connection from keeping a queue alive."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The reused defaults are 8 MiB soft native buffering, 64 MiB hard queued bytes, 4096 queued frames, 25 ms polling, and 128 frames per drain turn. On overflow, this caller terminates the CDP client."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "maxFrameBytes=Infinity preserves direct delivery of an individual large screenshot/PDF response on a draining connection. JSON serialization and a single direct-send frame can still allocate beyond the queue budget."
+      }
+    ],
+    "userVisibleBeforeAfter": "Ordinary CDP automation sees the same messages. A client that cannot read fast enough now disconnects once queued bytes or frame count overflow; outstanding commands and notifications may be lost and require caller recovery.",
+    "capacityAndDataLoss": "This introduces a finite CDP backlog with connection termination on overflow. Reconnection is not a guarantee of command/event replay, and no automatic replay protocol is added.",
+    "platformEvidence": {
+      "assessment": "Queue and WebSocket logic is JavaScript without a changed native process or path contract. Fresh writer tests ran on macOS. This does not establish real browser automation behavior under native Windows/Linux network stalls.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Local and forwarded CDP sockets retain their existing routing. Slow SSH forwarding can trigger the same overload disconnect. No workspace type or process liveness inference is introduced.",
+    "regressionCoverage": {
+      "description": "The fresh batch includes cdp-client-response-writer.test.ts. Source review also follows debugger notifications into the writer and the shared queue default limits and overflow callback.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": ["src/main/browser/cdp-client-response-writer.test.ts"],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "No end-to-end automation recovery test establishes that a real CDP consumer reconnects and reconstructs state after overflow. Transient serialization allocations remain outside the retained queue budget."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "e6a41081a3cc723ade11e719286ca6bd67c68884",
+      "reviewedMergeBase": "e6a41081a3cc723ade11e719286ca6bd67c68884",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "intentional-tradeoff",
+    "nextAction": "Hold for acceptance and documentation of the overload disconnect policy; do not classify it as zero user-visible tradeoff."
+  }
+}

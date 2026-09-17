@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "number": 20978,
+  "url": "https://github.com/stablyai/orca/pull/20978",
+  "title": "Release provider children after structured session holds disappear",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "A provider child acquired after its last holder disappears enters the existing 15-second release clock. Active turns/new holders still preserve it; journals remain.",
+    "currentHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "snapshotHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830087"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830254"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104716902040"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104712609216"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120399/job/104712607364"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104712609020"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830087"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830254"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831386"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831596"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831904"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831152"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831207"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713832005"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830089"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831235"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830056"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713830167"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831645"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831735"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713832016"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831051"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831091"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831042"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831031"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831171"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831277"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831185"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104713831155"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120679/job/104716902040"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35071120368"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20978,
+      "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+      "tree": "16868e77581f9e5b8873010ea8a37c8e1af7c8f9",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/terminal/20978.json",
+    "sha256": "1f145d62a21f9a91b3c3d4c3cea84762b47aa6ed8edb5637de251dc1670c711f",
+    "reviewedHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20978,
+    "url": "https://github.com/stablyai/orca/pull/20978",
+    "title": "Release provider children after structured session holds disappear",
+    "reviewedHead": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
+    "recordedGithubBase": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+    "baseRefName": "main",
+    "diffBase": "16ac9018dbbd21e6cf5aad2129be36b26f24a7b8",
+    "diffBoundaryExplanation": "Exact full PR content is reviewed from the shared named-main ancestor, or exact parent topic head for a stack. This is not HEAD^ and is not a claim of clean merge into current main.",
+    "productDiffFile": "notes/pr-risk-review/terminal/20978.diff",
+    "allChangedPaths": [
+      "docs/audits/structured-hold-retention/README.md",
+      "docs/audits/structured-hold-retention/reproduce.mjs",
+      "docs/audits/structured-hold-retention/results.json",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-hold-resume-race.test.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+      "src/main/runtime/rpc/methods/structured-agent-session-hold.test.ts",
+      "src/main/runtime/rpc/methods/structured-agent-session-hold.ts",
+      "tests/e2e/cross-version-wire/cross-version-agent-session-wire.unit.test.ts"
+    ],
+    "productSourcesInspected": [
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts",
+      "src/main/runtime/rpc/methods/structured-agent-session-hold.ts"
+    ],
+    "callersAndContractsInspected": [
+      "src/main/native-chat/agent-session-wire/structured-agent-session-release-clock.ts",
+      "src/main/native-chat/agent-session-wire/structured-agent-session-host.ts",
+      "docs/reference/ssh-execution-boundary.md",
+      "docs/reference/remote-wire-compatibility.md",
+      "docs/reference/agent-status-store.md"
+    ],
+    "worktreeProductMatchesPublishedAtReadOnlyStart": {
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts": true,
+      "src/main/native-chat/agent-session-wire/structured-agent-session-holds.ts": true,
+      "src/main/runtime/rpc/methods/structured-agent-session-hold.ts": true
+    },
+    "correctnessFindings": [],
+    "userVisibleBeforeAfter": "A provider child acquired after its last holder disconnects now enters the existing release clock. Failed older acquisitions cannot remove a replacement hold or RPC cleanup registration.",
+    "retentionPolicy": "Production release grace remains 15 seconds; active turns continue to postpone eviction; a new holder cancels release. Journal and session record remain on disk. No history count or byte limit changes.",
+    "crossPlatform": {
+      "observed": "macOS background Node unit suite:23 files/238 tests passed before edits, recorded in focused-tests.log. No visible app or native window launched.",
+      "reasoning": "Map/Symbol/timer and existing host adapter calls; no new OS process invocation. macOS focused tests use a fake provider adapter, so native provider termination on Linux/Windows is inferred from the unchanged adapter boundary.",
+      "linux": "No native Linux execution by this reviewer. Root separately checks exact-head Linux CI; do not equate passing tests on a mocked host with every Linux kernel/provider path.",
+      "windows": "No native Windows execution by this reviewer. Packaging/typecheck can establish a narrower property than runtime correctness."
+    },
+    "sshAndFolderCompatibility": "Inspected execution-host ownership and existing routes. No local substitution for a missing SSH provider is introduced. Workspace identity is passed through existing folder-aware owners/planners where relevant; no new git-worktree-only requirement appears in the diff.",
+    "wireCompatibility": "No stream opcode, RPC shape, capability requirement, or payload truncation is introduced. Existing lifecycle content can change only for the retired/stale owner described above.",
+    "regressionControls": [
+      "successful delayed resume after disconnect",
+      "failed resume after child acquisition",
+      "same holder key reacquired before old failure",
+      "RPC connection cleanup ownership",
+      "active-turn grace and re-hold preservation"
+    ],
+    "localTestEvidence": {
+      "log": "notes/pr-risk-review/terminal/focused-tests.log",
+      "files": 23,
+      "tests": 238,
+      "scope": "Combined worktree with published product hash comparison above; overlapping modules are not claimed to equal each isolated PR head. These results supplement exact-diff review, not substitute for it."
+    },
+    "missingEvidenceAndLimits": [
+      "Release-clock eviction can still fail through the existing onError path; this PR does not add a new retry policy.",
+      "No test on a live Windows provider child was run in this review."
+    ],
+    "dependencyAndMergeRisks": {
+      "requires": [],
+      "findings": [],
+      "ci": "Root owns current exact-head CI classification; no blanket merge-ready claim is made here.",
+      "currentMain": "Not evaluated by this subgroup; root fetched named current main separately."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Use root current-main and exact-head CI gates; no additional product correction identified in this scoped review.",
+    "confidence": "No universal zero-regression claim. Conclusions are scoped to inspected owners, callers, and listed controls.",
+    "reviewedAt": "2026-09-17T09:17:17.305426+00:00"
+  }
+}

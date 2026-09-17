@@ -1,0 +1,18 @@
+[
+  {
+    "number": 20903,
+    "state": "closed",
+    "head": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
+    "title": "Withdrawn: terminal editor timers already have an owning cleanup",
+    "url": "https://github.com/stablyai/orca/pull/20903",
+    "updatedAt": "2026-09-17T09:22:34Z"
+  },
+  {
+    "number": 20904,
+    "state": "closed",
+    "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+    "title": "Withdrawn: canceling deferred diff disposal retains Monaco models",
+    "url": "https://github.com/stablyai/orca/pull/20904",
+    "updatedAt": "2026-09-17T09:22:35Z"
+  }
+]

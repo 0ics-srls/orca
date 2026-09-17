@@ -1,0 +1,26 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+ ❯ notes/pr-risk-review/renderer/20908.control.test.tsx (1 test | 1 failed) 4ms
+   × flushes pending disk eviction when pagehide follows an HMR disposal 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  notes/pr-risk-review/renderer/20908.control.test.tsx > flushes pending disk eviction when pagehide follows an HMR disposal
+AssertionError: expected "vi.fn()" to be called 1 times, but got 0 times
+ ❯ notes/pr-risk-review/renderer/20908.control.test.tsx:134:18
+    132|     if (process.env.REVIEW_VARIANT === 'head') disposePendingClearComp…
+    133|     window.dispatchEvent(new Event('pagehide'))
+    134|     expect(drop).toHaveBeenCalledTimes(1)
+       |                  ^
+    135|   } finally {
+    136|     flushPendingClearCompletedEvictions()
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed (1)
+   Start at  02:16:16
+   Duration  1.83s (transform 1.16s, setup 26ms, import 1.64s, tests 4ms, environment 94ms)
+

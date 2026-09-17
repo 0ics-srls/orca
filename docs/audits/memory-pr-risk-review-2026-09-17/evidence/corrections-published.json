@@ -1,0 +1,61 @@
+[
+  {
+    "number": 20906,
+    "oldHead": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
+    "head": "ea8f01637cf5ae292225158e3e8f2741bc5a58a8",
+    "paths": [
+      "src/renderer/src/components/settings/EphemeralVmsPane.tsx",
+      "src/renderer/src/components/settings/EphemeralVmsPane.test.tsx"
+    ],
+    "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643"
+  },
+  {
+    "number": 20908,
+    "oldHead": "04a81de660dba6595c047b152f4da97a660f031c",
+    "head": "0848c34790482d9cebdfc66b83caa15d79113d3c",
+    "paths": [
+      "src/renderer/src/components/activity/activity-clear-completed.ts",
+      "src/renderer/src/components/activity/activity-clear-completed-hmr.test.ts"
+    ],
+    "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643"
+  },
+  {
+    "number": 21010,
+    "oldHead": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
+    "head": "2c57430b40dbc6d196fc4435b6a48649e711790c",
+    "paths": [
+      "src/main/browser/browser-manager-state.ts",
+      "src/main/browser/browser-manager-guest-navigation-policy.ts",
+      "src/main/browser/browser-manager-registration.ts",
+      "src/main/browser/browser-manager-download-lifecycle.ts",
+      "src/main/browser/browser-manager-destroyed-guest-test-fixture.ts",
+      "src/main/browser/browser-manager-destroyed-guest-downloads.test.ts",
+      "docs/audits/browser-destroyed-guest-retention/README.md",
+      "docs/audits/browser-destroyed-guest-retention/reproduce.mjs",
+      "docs/audits/browser-destroyed-guest-retention/results.json"
+    ],
+    "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643"
+  },
+  {
+    "number": 21185,
+    "oldHead": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+    "head": "7ac04b01a2c97451fd5e2df3af79745bac36a1cc",
+    "paths": [
+      "src/main/plugins/__mocks__/plugin-uninstall-log-fixture.ts",
+      "src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts",
+      "src/main/plugins/plugin-uninstall-log-retention.test.ts",
+      "src/main/plugins/plugin-uninstall-lifecycle.test.ts",
+      "src/main/plugins/plugin-uninstall-ordering.test.ts",
+      "docs/audits/plugin-uninstall-log-retirement/README.md",
+      "docs/audits/plugin-uninstall-log-retirement/scenario.test.mjs",
+      "docs/audits/plugin-uninstall-log-retirement/source-versions.json",
+      "docs/audits/plugin-uninstall-log-retirement/before-node-results.json",
+      "docs/audits/plugin-uninstall-log-retirement/fixed-node-results.json",
+      "docs/audits/plugin-uninstall-log-retirement/before-electron-results.json",
+      "docs/audits/plugin-uninstall-log-retirement/fixed-electron-results.json",
+      "docs/audits/plugin-uninstall-log-retirement/loader-results.json",
+      "docs/audits/plugin-uninstall-log-retirement/validation.json"
+    ],
+    "primaryCommit": "14fbfbd42dd7cf898a997322817f4d328f6bc643"
+  }
+]

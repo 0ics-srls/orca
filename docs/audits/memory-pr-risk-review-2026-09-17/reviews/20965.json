@@ -1,0 +1,336 @@
+{
+  "schemaVersion": 1,
+  "number": 20965,
+  "url": "https://github.com/stablyai/orca/pull/20965",
+  "title": "Bound invisible WebGL glyph cache entries",
+  "finalDisposition": {
+    "category": "extra-review",
+    "recommendation": "Focused performance/API review",
+    "userVisibleBeforeAfter": "A 4096-entry bound affects only derived empty-glyph results. Terminal data stays; high-cardinality empty glyphs can require extra rasterization.",
+    "currentHead": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "snapshotHead": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679503174"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464224/job/104679502171"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464132/job/104679501784"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679503065"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598798"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598868"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598762"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598784"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598857"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598848"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598846"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598910"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599035"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598961"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599004"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679598946"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599117"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599096"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679600098"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679887266"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679885765"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679886782"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679886712"
+        },
+        {
+          "name": "real IME / Linux X11 terminal IME",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599077"
+        },
+        {
+          "name": "real IME / Linux Wayland Hangul terminating digit",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679599107"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679600052"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911560"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911535"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911541"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911486"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911527"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911538"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911529"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104679911518"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060464372/job/104681398976"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35060466859"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20965,
+      "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+      "tree": "de81f503711d7096bd3af39c77a145b0895bc3b1",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20965.json",
+    "sha256": "a46c5f120c921faac2908e0b3306fc8628f1aa902ee27746158b1b33f3fe3cfd",
+    "reviewedHead": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20965,
+    "url": "https://github.com/stablyai/orca/pull/20965",
+    "title": "Bound invisible WebGL glyph cache entries",
+    "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+    "base": "feb04ec254585ba69587699d41f80a72dda2cb27",
+    "recordedBaseOid": "feb04ec254585ba69587699d41f80a72dda2cb27",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "config/patches/@xterm__addon-webgl@0.20.0-beta.299.patch",
+        "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+        "sha256": "023a26cbe215df764d841484cb7b0c81d97d9405587eec4b9446d9d06d4e762c",
+        "inspection": "Generated integration diff; semantics reviewed in source patch, not a claim of line-by-line review of minified bundles"
+      },
+      {
+        "path": "config/patches/xterm-src/@xterm__addon-webgl@0.20.0-beta.299.src.patch",
+        "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+        "sha256": "efd57c589762d3d8435723ff27955031fb58df9b3625e3389e4cb4ddbbc95c9d",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "pnpm-lock.yaml",
+        "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
+        "sha256": "9fb0aa726d3b760b79ac49c78ba3a10ec69c8acd1a6168066514a4583c20cc32",
+        "inspection": "Dependency or workflow integration diff inspected"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Empty glyph results are moved to dedicated numeric and combined-key caches with a shared 4096-entry count. A new empty result at capacity clears both empty caches before insertion; ordinary visible glyph atlas storage is unchanged."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Lookup still returns the existing NULL_RASTERIZED_GLYPH sentinel. Texture/page reset clears the empty caches too, including the early no-pages path."
+      },
+      {
+        "severity": "informational",
+        "assessment": "The source patch, emitted browser bundles, and pnpm patch hash carry the same change. Evicted entries are derived rasterization results and can be recomputed from the retained terminal cells."
+      }
+    ],
+    "userVisibleBeforeAfter": "Terminal text, colors, scrollback, and visible glyphs remain unchanged. Repeatedly cycling more than 4096 distinct empty glyph keys can cause extra empty-glyph rasterization work.",
+    "capacityAndDataLoss": "The 4096 bound applies to derived empty-glyph cache entries only. It does not drop terminal data or restrict accepted colors or characters.",
+    "platformEvidence": {
+      "assessment": "The patch targets shared xterm WebGL JavaScript. The historical browser reproduction uses headless Chromium/SwiftShader and two terminals sharing an atlas, not native GPU drivers on all three operating systems.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Rendering remote output uses the same atlas; no wire format, execution host, or folder-workspace behavior changes.",
+    "regressionCoverage": {
+      "description": "The historical artifact exercises 100000 color/space and joined-space keys, checks the 4096 cache bound, stable page counts, live A/B pixel hashes, and hot-key reuse. Source patch and emitted integration were reviewed; no fresh graphical run was launched.",
+      "rootFocusedBatch": {
+        "applies": false,
+        "boundary": "No fresh test execution assigned to this PR in the capacity batch. Historical artifacts and published controls are described separately."
+      },
+      "limitations": "Native GPU correctness and performance remain unexecuted in this review. Cache churn adds recomputation even when output parity holds."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "feb04ec254585ba69587699d41f80a72dda2cb27",
+      "reviewedMergeBase": "feb04ec254585ba69587699d41f80a72dda2cb27",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk product review with the cache-miss cost explicit; keep emitted/source patch synchronization and representative renderer CI green."
+  }
+}

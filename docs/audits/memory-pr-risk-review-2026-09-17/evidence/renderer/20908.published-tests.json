@@ -1,0 +1,249 @@
+{
+  "numTotalTestSuites": 4,
+  "numPassedTestSuites": 4,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 20,
+  "numPassedTests": 20,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789637403259,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves the pending pagehide flush through HMR and removes the listener when drained",
+          "status": "passed",
+          "title": "preserves the pending pagehide flush through HMR and removes the listener when drained",
+          "duration": 4.000666000007186,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "preserves Undo after HMR without dropping the restored persisted row",
+          "status": "passed",
+          "title": "preserves Undo after HMR without dropping the restored persisted row",
+          "duration": 0.6375840000109747,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": [],
+          "fullName": "releases the retired listener when its fallback settles and supports a late stale handler",
+          "status": "passed",
+          "title": "releases the retired listener when its fallback settles and supports a late stale handler",
+          "duration": 0.4989579999964917,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637492012,
+      "endTime": 1789637492017.499,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/renderer/src/components/activity/activity-clear-completed-hmr.test.ts"
+    },
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["isClearableActivityThread"],
+          "fullName": "isClearableActivityThread clears only completed and interrupted threads",
+          "status": "passed",
+          "title": "clears only completed and interrupted threads",
+          "duration": 1.2060419999907026,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity plans cutoffs and retained removals for completed threads only",
+          "status": "passed",
+          "title": "plans cutoffs and retained removals for completed threads only",
+          "duration": 0.7548749999987194,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity stamps cutoffs, dismisses retained snapshots, and defers the disk drop to toast close",
+          "status": "passed",
+          "title": "stamps cutoffs, dismisses retained snapshots, and defers the disk drop to toast close",
+          "duration": 1.6574580000014976,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity clears one thread immediately without bulk-clear feedback",
+          "status": "passed",
+          "title": "clears one thread immediately without bulk-clear feedback",
+          "duration": 0.2994999999937136,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity does not clear one active thread",
+          "status": "passed",
+          "title": "does not clear one active thread",
+          "duration": 0.12562500000058208,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity undo restores prior cutoffs and re-retains snapshots, and skips the disk drop",
+          "status": "passed",
+          "title": "undo restores prior cutoffs and re-retains snapshots, and skips the disk drop",
+          "duration": 0.3396659999998519,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity undo restores a completed live row and removes the suppressor created by clear",
+          "status": "passed",
+          "title": "undo restores a completed live row and removes the suppressor created by clear",
+          "duration": 0.1915830000070855,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity undo removes the suppressor even after an identity-only live entry replacement",
+          "status": "passed",
+          "title": "undo removes the suppressor even after an identity-only live entry replacement",
+          "duration": 0.13441700000839774,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity undo keeps the suppressor when the live row has moved to a new turn",
+          "status": "passed",
+          "title": "undo keeps the suppressor when the live row has moved to a new turn",
+          "duration": 0.12329199998930562,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity does not restore a cleared snapshot over a newer retained run",
+          "status": "passed",
+          "title": "does not restore a cleared snapshot over a newer retained run",
+          "duration": 0.16049999999813735,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity stamps a real cutoff for a thread with no usable timestamp",
+          "status": "passed",
+          "title": "stamps a real cutoff for a thread with no usable timestamp",
+          "duration": 0.1083749999961583,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity evicts after the fallback window when no toast close callback ever fires",
+          "status": "passed",
+          "title": "evicts after the fallback window when no toast close callback ever fires",
+          "duration": 1.3879589999996824,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity undo cancels the fallback eviction timer",
+          "status": "passed",
+          "title": "undo cancels the fallback eviction timer",
+          "duration": 0.31983400000899564,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity falls back to per-identity drops when the batch API is absent",
+          "status": "passed",
+          "title": "falls back to per-identity drops when the batch API is absent",
+          "duration": 0.11095799999020528,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity does nothing when no thread is clearable",
+          "status": "passed",
+          "title": "does nothing when no thread is clearable",
+          "duration": 0.08079199999338016,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity pagehide flush evicts a clear whose undo toast is still open",
+          "status": "passed",
+          "title": "pagehide flush evicts a clear whose undo toast is still open",
+          "duration": 0.12274999999499414,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["clearCompletedActivity"],
+          "fullName": "clearCompletedActivity pagehide flush skips a clear that was undone",
+          "status": "passed",
+          "title": "pagehide flush skips a clear that was undone",
+          "duration": 0.09954199999629054,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789637578305,
+      "endTime": 1789637578312.3198,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/src/renderer/src/components/activity/activity-clear-completed.test.ts"
+    }
+  ]
+}

@@ -1,0 +1,364 @@
+{
+  "schemaVersion": 1,
+  "number": 20955,
+  "url": "https://github.com/stablyai/orca/pull/20955",
+  "title": "Fix terminal hyperlink metadata retention during redraws",
+  "finalDisposition": {
+    "category": "extra-review",
+    "recommendation": "Focused performance/API review",
+    "userVisibleBeforeAfter": "Stale OSC 8 link entries retire after checking live cells, open attributes, and saved cursors. Live links/history remain; periodic full-buffer scanning adds work.",
+    "currentHead": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "failing",
+      "label": "Raw FAILURE: static analysis, typecheck (+1)",
+      "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "snapshotHead": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "rollupState": "FAILURE",
+      "failed": [
+        {
+          "name": "static analysis",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578593"
+        },
+        {
+          "name": "typecheck",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578631"
+        },
+        {
+          "name": "verify",
+          "result": "FAILURE",
+          "url": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104715357440"
+        }
+      ],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "native-smoke (ubuntu-22.04)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310670/job/104710039421"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310833/job/104710039810"
+        },
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710040703"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310690/job/104710039567"
+        },
+        {
+          "name": "native-smoke (windows-latest)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310670/job/104710039456"
+        },
+        {
+          "name": "mac-native-owner-smoke",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310670/job/104710039434"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710040965"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578593"
+        },
+        {
+          "name": "linux",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310670/job/104710040514"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578631"
+        },
+        {
+          "name": "windows",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310670/job/104710040229"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710580471"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579455"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579843"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579622"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579512"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579762"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710580074"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579705"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578796"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710578752"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579873"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710580259"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710580039"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579680"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579698"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579701"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579639"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579728"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579624"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579657"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104710579734"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "FAILURE",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310880/job/104715357440"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35070310970"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20955,
+      "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+      "tree": "eb473d45f162bf3e470999fc2d272955b58b0130",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20955.json",
+    "sha256": "abd57325ac4a6e01ccef854b1fba2f0d26ff859bdcd297d5576b900a02408483",
+    "reviewedHead": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20955,
+    "url": "https://github.com/stablyai/orca/pull/20955",
+    "title": "Fix terminal hyperlink metadata retention during redraws",
+    "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+    "base": "357c9780f8bffa10a21d004449d8d6d9846a9310",
+    "recordedBaseOid": "357c9780f8bffa10a21d004449d8d6d9846a9310",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "mobile/scripts/build-terminal-webview-engine.mjs",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "f54d301c4f96a1d0af2266030a5e6deebc565493ad1ec0414028a9a365ec42c0",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "mobile/src/terminal/terminal-webview-html/terminal-init-and-write.ts",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "28407ba605482c26d249f2cc5948a137028958cb03f04f4e5d38ad4356f165e7",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/daemon/headless-emulator.ts",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "ace96102285c3967cd9544e7696fe73e1ac6df576b476939aa9819f5c298bab6",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/components/dashboard-popout/AgentTerminalPreview.tsx",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "fc1371cf230904ad6be998c5fd568fe65b105380c369c19060a660c59387e12e",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/lib/pane-manager/pane-dom-creation.ts",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "314ccf16020fab7423441f99d435f36ace4905814c49a9ab3aabd75f7d9bd947",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/terminal-osc-link-retirement.ts",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "40afa50eb7f531a2ff8df54b2fb0d86761597b635a1d6009e22503efdbd0113d",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/shared/terminal-osc-link-retirement.test.ts",
+        "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
+        "sha256": "cdc1fccee301227d93e0e507073f56b2202e2c9864b1cdc3f9627fa5006d51b3",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "The sweep identifies live OSC 8 link IDs in normal and alternate buffer cells, the active input attribute, and both saved-cursor attributes before disposing any stale link markers."
+      },
+      {
+        "severity": "informational",
+        "assessment": "The collector runs after writes in headless terminals and through the write-parsed addon in renderer and mobile terminals. Registry growth of 1024 entries triggers a sweep; this is a sweep interval, not a limit on live links."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Guards around the private xterm registry and input handler return without collection if their shape is unavailable. Disposing markers uses xterm ownership to remove both registry indexes; the marker array is copied before mutation."
+      }
+    ],
+    "userVisibleBeforeAfter": "Live hyperlinks, saved cursor state, and existing scrollback remain available. URLs belonging only to overwritten or discarded cells can be retired. Large buffers incur a cell scan after enough registry growth.",
+    "capacityAndDataLoss": "No new scrollback or hyperlink count limit. The sweep keeps live IDs even above 1024 entries; the additional cost is periodic scanning of both buffers.",
+    "platformEvidence": {
+      "assessment": "The liveness calculation is shared TypeScript, and integrations cover desktop renderer, headless daemon, popout, and mobile terminal construction. Private xterm shape is package-version sensitive. Historical browser/headless controls do not prove native GPU or all-OS rendering.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Remote terminal output is parsed by the existing local renderer or execution-host headless instance. The sweep changes neither the remote wire format nor host liveness. Folder and Git workspaces share the same terminal path.",
+    "regressionCoverage": {
+      "description": "Published terminal-osc-link-retirement controls and the audit reproduction exercise stale versus live cells, alternate buffer, open attributes, and saved cursor state. The integration sources were reviewed at the published head; no fresh UI or native GPU run was performed.",
+      "rootFocusedBatch": {
+        "applies": false,
+        "boundary": "No fresh test execution assigned to this PR in the capacity batch. Historical artifacts and published controls are described separately."
+      },
+      "limitations": "Private xterm internals remain a maintenance dependency. Guard failure preserves behavior but loses reclamation. Periodic full-buffer scan cost should be considered for very large scrollback."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "357c9780f8bffa10a21d004449d8d6d9846a9310",
+      "reviewedMergeBase": "357c9780f8bffa10a21d004449d8d6d9846a9310",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review with the private xterm dependency and periodic sweep cost recorded; retain live-link and saved-cursor controls on future xterm updates."
+  }
+}

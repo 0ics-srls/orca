@@ -1,0 +1,29 @@
+[
+  {
+    "number": 20981,
+    "oldHead": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
+    "mergedParent": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+    "tree": "c167384cba8c13aec60d22d5608d4b0e7d77c8c4",
+    "candidate": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+    "patchHash": "3a6c0d12de82b2cb60b3bb93dd7f03cf25672986bce77aa3aefac986e4135163",
+    "conflictsResolved": ["mobile/pnpm-lock.yaml"]
+  },
+  {
+    "number": 20992,
+    "oldHead": "ccac7bb908ef74856a9f51973faffc9204f085ff",
+    "mergedParent": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+    "tree": "7af25d82c52c465d1ac1dc211b6afc656a8ad13e",
+    "candidate": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+    "patchHash": "abb15d5f03c5ecdc59f2e1a137c85c7302ebd6288de6d1342d612ee140f527a6",
+    "conflictsResolved": []
+  },
+  {
+    "number": 21112,
+    "oldHead": "f893dc4a7598e77944b53f644a874d838a080ce6",
+    "mergedParent": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+    "tree": "dad4302b90449412a9ed2b0cf1e089af2c62bf19",
+    "candidate": "061913804c35af189d00f8a9574dcb226b971ba6",
+    "patchHash": "3763a491aeafb7b0f81094295ce51b6b695bdfd6ede503119d73342c68e68f88",
+    "conflictsResolved": []
+  }
+]

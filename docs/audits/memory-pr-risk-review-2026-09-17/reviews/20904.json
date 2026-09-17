@@ -1,0 +1,308 @@
+{
+  "schemaVersion": 1,
+  "number": 20904,
+  "url": "https://github.com/stablyai/orca/pull/20904",
+  "title": "Withdrawn: canceling deferred diff disposal retains Monaco models",
+  "finalDisposition": {
+    "category": "withdrawn",
+    "recommendation": "Withdrawn; do not merge",
+    "userVisibleBeforeAfter": "Withdrawn: canceling deferred disposal prevented both kept Monaco diff models from being released on permanent unmount; the base disposed them.",
+    "currentHead": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+    "currentState": "CLOSED",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "snapshotHead": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654079099"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962034/job/104654078750"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654078871"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171666"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171594"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171644"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172629"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172504"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172628"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172237"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172521"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171554"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171580"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171682"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171695"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171746"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171763"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172659"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654680672"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654679661"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654679633"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654681069"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172839"
+        },
+        {
+          "name": "real WSL terminal / wsl-terminal",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654171959"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172147"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172202"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172214"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172167"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172140"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172218"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172157"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104654172236"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051962098/job/104656392700"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35051958580"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "withdrawal": {
+      "number": 20904,
+      "state": "closed",
+      "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+      "title": "Withdrawn: canceling deferred diff disposal retains Monaco models",
+      "url": "https://github.com/stablyai/orca/pull/20904",
+      "updatedAt": "2026-09-17T09:22:35Z"
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20904.json",
+    "sha256": "802f155df95c9b20f0a3a07dd690908096f5bf04d3d655c62086750744d710aa",
+    "reviewedHead": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20904,
+    "url": "https://github.com/stablyai/orca/pull/20904",
+    "title": "fix(renderer): cancel deferred diff model disposal",
+    "exactHead": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
+    "reviewBase": "07c7606feebc850d8b82c8c85a6a7fda71f29f14",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/components/editor/use-diff-section-model-lifecycle.ts",
+        "publishedSha256": "d9bba04689d606f3c55b400b1bccbe550687ce5798bacb2111c138e24461d993",
+        "workingSha256": "af8be19d90a0d670ec9145b3ca8aec0077f2f613edb929cb4af84fd5f5a55aa2",
+        "sameAsWorking": false
+      },
+      {
+        "path": "src/renderer/src/components/editor/DiffSectionBody.tsx",
+        "publishedSha256": "769903133ec1cd1da17e09f1f055d29a4b9fec57f5806e09af1f7fa794f10051",
+        "workingSha256": "769903133ec1cd1da17e09f1f055d29a4b9fec57f5806e09af1f7fa794f10051",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/DiffSectionItem.tsx",
+        "publishedSha256": "26c2a8de7a05c0e09ff6354b16f8044738600790233b5841e97af820e9c64e0c",
+        "workingSha256": "26c2a8de7a05c0e09ff6354b16f8044738600790233b5841e97af820e9c64e0c",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/editor/diff-monaco-model-disposal.ts",
+        "publishedSha256": "62f639d07c2053d966c1677f5f6f88acaf75e62cbd5d46c63996e52f48f572b3",
+        "workingSha256": "885dc5f5ff4a531e70063a7613570d26fbe902458569ae2e927997a19b84d01f",
+        "sameAsWorking": false
+      }
+    ],
+    "classification": "fixable-issue",
+    "correctnessFindings": [
+      "Confirmed regression: React ref(null) schedules necessary model disposal, then the new passive unmount cleanup cancels it. DiffSectionBody deliberately keeps original and modified Monaco models. Base disposes both; published head disposes neither."
+    ],
+    "userVisibleBehavior": {
+      "before": "A zero-delay callback retires unattached kept diff section models after widget teardown.",
+      "after": "Permanent section unmount cancels retirement, retaining both registered models and contents indefinitely.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Exact published hook/base transformed through Vite with actual React unmount: base1/1 pass; head1/1 expected failure. notes20904.base-control.log and20904.head-control.log. Monaco port is a controlled model stub; actual retained-model flags verified statically.",
+    "dependencyAndMergeRisks": "High correctness risk until withdrawal; harms all platforms and both local/remote diff surfaces.",
+    "nextAction": "Withdraw and restore base behavior. Do not invent unrelated coalescing behavior to salvage a mistaken timer-leak claim.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

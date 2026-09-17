@@ -1,0 +1,315 @@
+{
+  "schemaVersion": 1,
+  "number": 20924,
+  "url": "https://github.com/stablyai/orca/pull/20924",
+  "title": "fix(renderer): release parked terminal scroll intents",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Explicitly closed parked leaves release scroll-intent entries. Surviving parked leaves retain pinned viewport state for remount.",
+    "currentHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "snapshotHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628287799"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509557/job/104628287209"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628287955"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384277"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384364"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385347"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385699"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385681"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385295"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385668"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385218"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385532"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385596"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384304"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384303"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384518"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628384521"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385559"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628572744"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628571661"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628572894"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628573237"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385257"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385437"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385001"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385024"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385062"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385055"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385014"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385023"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385181"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104628385101"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043509795/job/104629927465"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35043510388"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20924,
+      "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+      "tree": "1a27331eb63a112bf69aeb6209df86c435d6417d",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/20924.json",
+    "sha256": "a302127a7a48ae5c177c11652eaa0623cf37bc4c8d2d46ac6bd5412e382e2ac3",
+    "reviewedHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 20924,
+    "url": "https://github.com/stablyai/orca/pull/20924",
+    "title": "fix(renderer): release parked terminal scroll intents",
+    "exactHead": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
+    "reviewBase": "7ec2986fd11e2de3964546657c0069a00f0676d6",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/renderer/src/components/terminal-pane/terminal-parked-watcher-reconciliation.test.ts",
+        "publishedSha256": "12cae43826f99ec96c62ac6863f20411a834d58d2c586aecbf8fe3a9e83ec7ce",
+        "workingSha256": "12cae43826f99ec96c62ac6863f20411a834d58d2c586aecbf8fe3a9e83ec7ce",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/terminal-pane/terminal-parked-watcher-registry.ts",
+        "publishedSha256": "657f5f7ac013334d80798783148978bc5717310876243f334f90ed4776ecc751",
+        "workingSha256": "f598d30b8ccc26c020168e8d5ee17b2377b384d0aaca0f6f5e999eec8c206031",
+        "sameAsWorking": false
+      },
+      {
+        "path": "src/renderer/src/lib/pane-manager/terminal-scroll-intent-key-store.ts",
+        "publishedSha256": "aa7418fe43c9636c934087615b58378acc129c486c052075a9f52be340bd5354",
+        "workingSha256": "aa7418fe43c9636c934087615b58378acc129c486c052075a9f52be340bd5354",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/components/use-terminal-watcher-effects.ts",
+        "publishedSha256": "f07fd6378c3e101fae500bcdb7276be56ad35681c0604cc50f52ce45c99caa2b",
+        "workingSha256": "f07fd6378c3e101fae500bcdb7276be56ad35681c0604cc50f52ce45c99caa2b",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/renderer/src/store/terminals/terminal-tab-close.ts",
+        "publishedSha256": "b299252be75b2612fefd753807703863cd3e3984b9a72976b3d861557ce8f9c3",
+        "workingSha256": "00b764f8385ad58e38407cd9e3f70bb5d588d59f8ecec5ea194560861cdccadd",
+        "sameAsWorking": false
+      }
+    ],
+    "classification": "low-observed-risk",
+    "correctnessFindings": [
+      "Releases scroll-intent and binding keys only at explicit parked-tab retirement or removal from live workspace surfaces. Plain park/unmount/watcher disposal paths remain unchanged; floating workspace is added to liveness set."
+    ],
+    "userVisibleBehavior": {
+      "before": "Explicitly closed parked leaves leave strong keyed scroll intent entries behind.",
+      "after": "Closed/removed leaves release their intent; surviving parked leaves retain pinned viewport state for remount. Recently closed tabs recreate leaves rather than promise old PTY viewport restoration.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Explicit closed tab/workspace ownership only; existing workspaceSurfaceIds includes folder surfaces and synthetic floating workspace through terminalWatcherLiveWorkspaceIds. No remote process-death inference or PTY kill change.",
+    "testsAndEvidence": "Parked reconciliation/registry suites passed in89-test batch. Published direct release and current helper extraction were compared; behavior equivalent.",
+    "dependencyAndMergeRisks": "No terminal scrollback cap, live pin loss, or execution-host process-death inference. Liveness still depends on existing caller's workspaceSurfaceIds.",
+    "nextAction": "Suitable for low-risk review; include SSH/folder/floating workspace retirement controls when integrating.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}

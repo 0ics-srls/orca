@@ -1,0 +1,286 @@
+{
+  "schemaVersion": 1,
+  "number": 21024,
+  "url": "https://github.com/stablyai/orca/pull/21024",
+  "title": "fix(claude): stream transcript ancestry proofs",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Branch proof streams one opened-file prefix instead of retaining a whole file. No new record cap; concurrent incomplete evidence can require retry.",
+    "currentHead": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "snapshotHead": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048613884"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173041886/job/105048613341"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048613621"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711240"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711323"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712147"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712260"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712249"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712253"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712694"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712272"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712343"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712486"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711293"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711263"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712445"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712413"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712528"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712086"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712115"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711977"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712232"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712012"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048711985"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712042"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105048712033"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173042006/job/105050157596"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35173041800"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21024,
+      "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "tree": "9e3fefd180284679079e164eb04585804fa947e2",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/21024.json",
+    "sha256": "0c3e1dec51ad34672b33045802cfdbdb7ff25ab0684e90aba3f15fa181952bbb",
+    "reviewedHead": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21024,
+    "url": "https://github.com/stablyai/orca/pull/21024",
+    "title": "fix(claude): stream transcript ancestry proofs",
+    "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "recordedBaseOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/claude/claude-transcript-branch-proof.ts",
+        "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+        "sha256": "8688711f711adf434c596dda729018e43cfa46ba746590187388e9f5e864648f",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/native-chat/transcript-stream-lines.ts",
+        "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+        "sha256": "f228f252f9dc3e9520c4195486df524ee0bcb258cd1c0c31046042df83675644",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "Branch proof now folds complete streamed JSONL records into the existing incremental graph rather than splitting an entire readFile result. The file is opened once, sized with fstat, read through that initial prefix, and closed in finally."
+      },
+      {
+        "severity": "informational",
+        "assessment": "splitTranscriptStreamLines defaults maxRecordBytes to Infinity at this exact head. This change therefore introduces no hidden record or whole-file quota; graph metadata and an individual oversized record can still be large."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Malformed unterminated tails remain retryable incomplete evidence. A missing expected prompt/marker after concurrent growth becomes a tail-incomplete result rather than chasing an indefinitely appending file. The 10000-ancestor safety bound is unchanged."
+      }
+    ],
+    "userVisibleBeforeAfter": "Stable transcripts yield the same branch proof with less whole-file retention. Concurrent appends are evaluated against one opened-file prefix; incomplete evidence follows the existing retryable path.",
+    "capacityAndDataLoss": "No new file or record limit. Streaming reduces transient whole-file ownership; graph metadata remains proportional to relevant nodes, and the line framer can retain a very large single record.",
+    "platformEvidence": {
+      "assessment": "Node descriptor ownership and bounded prefix reads are portable APIs. Fresh macOS tests include append/truncate/descriptor lifecycle controls; native Windows sharing and Linux filesystem races were not separately executed.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "Proof stays with the existing file on the execution host. No SSH disconnection is treated as process exit. Paths and folder workspaces do not require Git-worktree identity.",
+    "regressionCoverage": {
+      "description": "The fresh batch includes claude-transcript-branch-streaming. Exact-head review checked the stream helper default and descriptor close behavior; historical artifacts cover allocation, duration, growth, parity, and descriptor reuse.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": ["src/main/claude/claude-transcript-branch-streaming.test.ts"],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "The memory improvement is not a constant-space proof. Growing files intentionally use a stable prefix and may require retry; no native all-platform race claim is made."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "reviewedMergeBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review after current CI/integration; retain the prefix/retry behavior and descriptor ownership controls."
+  }
+}

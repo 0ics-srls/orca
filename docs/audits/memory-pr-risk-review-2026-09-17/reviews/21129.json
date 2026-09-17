@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "number": 21129,
+  "url": "https://github.com/stablyai/orca/pull/21129",
+  "title": "fix: bound audio queued behind local speech recognition",
+  "finalDisposition": {
+    "category": "explicit-decision",
+    "recommendation": "Hold for behavior/cost decision",
+    "userVisibleBeforeAfter": "An 8 MiB/1024-frame audio backlog stops dictation with an error. New capture and accepted-but-undelivered transcript can be lost; already inserted text remains.",
+    "currentHead": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "snapshotHead": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047059311"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531193/job/105047057570"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531314/job/105047057830"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047059485"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152435"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152447"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153349"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153195"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153107"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153297"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153161"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153238"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153526"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153314"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152490"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152493"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153057"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153326"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153186"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152948"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152953"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152968"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152971"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153010"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047152956"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153077"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105047153004"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172531538/job/105048508365"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35172534060"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21129,
+      "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "tree": "6db46ce98af7b9a7c384c997bf1ef2529c36f846",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/21129.json",
+    "sha256": "6e4953073b881c1faf7c5051fe66b23131af890fbaf27e9f65d1a53ff295f247",
+    "reviewedHead": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21129,
+    "url": "https://github.com/stablyai/orca/pull/21129",
+    "title": "fix: bound audio queued behind local speech recognition",
+    "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "recordedBaseOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/speech/stt-audio-pending-budget.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "8cb41ca2e35c6af7af75fb8e6df9b7970a30d6fae1fabfef66ac783d68c00346",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-audio-pending-test-fixture.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "16a755c7aed4a70ed1346020ca6dd46af2467d8ed27f383f65a53a9b26408dda",
+        "inspection": "Test-support lifecycle inspected; not product runtime"
+      },
+      {
+        "path": "src/main/speech/stt-audio-test-worker.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "855f01fd28c05824320a98da551de2d0d34b7a0f6195f7d26cea2f0ffc39aa86",
+        "inspection": "Test-support lifecycle inspected; not product runtime"
+      },
+      {
+        "path": "src/main/speech/stt-service.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "5dbc8d39f35e444b31cc6f75c0d3d86b3c3917eeb9cc67e325d0b3315a32dd00",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-session-start.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "302b871f65383345d22eaef950cdc9abba9dc1fb2c0a9241c111532d1fbb7520",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-session-state.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "49f274da94f0c72be67d8d4dd626b7b995d194654402ffd9ab4a09cd1b7175d5",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-session-stop.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "54eb81b15d98ca36b691c4c19d2e58f70682ad7622f0928cc9e7e9dbc81220ba",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-worker-startup.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "ca6bf612b71da11ea93e914bd44d844e49b7d627f0a72813f2bfb88ae4223628",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/speech/stt-worker.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "fa016241c3fb70b100b0d5644069e88123bb45846ed5ee2046dc20b1389db07d",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/renderer/src/hooks/use-audio-capture.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "3e9055b4c7abc0fa69381a14ece4a2de7251013208ebd70322f5326b361c1ab1",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "src/renderer/src/components/dictation/DictationController.tsx",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "6eb2f85c1be9d1371dd054c344b75f0745246f508127488d7db504e8ed4157b4",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      },
+      {
+        "path": "src/main/runtime/runtime-mobile-dictation-controller.ts",
+        "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+        "sha256": "b22a9223974b2b1a3220095acda140a0ff274aeef4bb9bf3b30da8238c640c69",
+        "inspection": "Exact-head caller, shared dependency, or regression control read"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "A service-wide pending allowance charges backing ArrayBuffer bytes and frame count across the current and predecessor workers: 8 MiB or 1024 frames. Empty input does not transfer. Cumulative consumed-byte/frame acknowledgments avoid retaining a callback per feed."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Acknowledgments are validated as safe monotonic values within the owned worker posted range. Failed post before transfer rolls back; uncertain transfer and unresolved termination retain debt. Exit or successful termination releases ownership, including after lifecycle code removed listeners."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Desktop microphone capture uses 4096 mono Float32 samples per frame, or 16384 bytes. The 8 MiB limit therefore allows 512 fully unconsumed desktop frames: about 43.7 seconds at 48 kHz, 47.6 seconds at 44.1 kHz, or 131.1 seconds at 16 kHz. The 1024-frame cap becomes decisive for smaller frames."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "Overflow initiates stop before emitting the error, preventing reentrant feed acceptance. Desktop onError immediately clears activeSessionId, stops capture, and discards buffered capture audio; later final events from already-admitted worker audio fail the active-session check. Already inserted text remains."
+      },
+      {
+        "severity": "policy-or-performance-tradeoff",
+        "assessment": "The mobile/remote controller records the error, refuses later feed, and rejects finish rather than returning a successful transcript. Worker stop is FIFO after admitted audio, but the existing 60-second stop deadline can terminate a stuck worker; even a worker that drains is not an end-to-end preservation guarantee after the desktop error."
+      }
+    ],
+    "userVisibleBeforeAfter": "A local recognizer that falls sufficiently behind now stops dictation and reports that it cannot keep up. Newly captured audio is discarded and accepted-but-not-yet-delivered transcript can be lost after the frontend clears the active session. Previously inserted text stays in place.",
+    "capacityAndDataLoss": "New 8 MiB/1024-frame in-flight audio allowance. It accounts for full backing allocations, including subarray backing storage. It does not bound native recognizer/model memory, renderer IPC queues, or all process RSS. Cloud dictation is unchanged.",
+    "platformEvidence": {
+      "assessment": "The worker accounting uses common Node worker_threads APIs. Historical stalled-worker controls use real Node/Electron workers with controlled recognizers; no native speech model or real microphone overload was run on macOS, Linux, and Windows. Actual desktop capture cadence is established from the exact-head 4096-sample caller, not inferred from a synthetic test feed.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "The execution host retains worker ownership and the mobile/remote dictation controller receives the existing error channel. Added consumption fields are internal worker messages, not a new remote stream opcode. Folder workspaces require no Git-specific behavior.",
+    "regressionCoverage": {
+      "description": "Fresh batch includes stt-audio-pending-budget and stt-worker-audio-ack. Published evidence adds real stalled-worker before/fixed controls and the broader speech suite. Exact-head caller review follows desktop capture, active-session clearing/final filtering, mobile feed/finish, and stop deadlines.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": [
+          "src/main/speech/stt-audio-pending-budget.test.ts",
+          "src/main/speech/stt-worker-audio-ack.test.ts"
+        ],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "No user-flow test proves transcript recovery after overload, and current code does not preserve all admitted transcript on that path. A native call that will not terminate can retain predecessor debt; restarting does not manufacture a fresh budget. Native speech latency and all-platform execution remain gaps."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "77cd61df396f25ec91ee2d5ddcbd1f55aa94f818",
+      "reviewedMergeBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "intentional-tradeoff",
+    "nextAction": "Hold for explicit acceptance of stop-and-error with possible pending transcript loss. If complete admitted audio must survive, redesign the overload/stop frontend contract and validate real capture cadence before merge."
+  }
+}

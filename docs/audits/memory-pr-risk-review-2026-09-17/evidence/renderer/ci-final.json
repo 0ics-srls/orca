@@ -1,0 +1,207 @@
+{
+  "recordedAt": "2026-09-17T09:39:58.776726+00:00",
+  "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+  "currentMain": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+  "scope": "Read-only final CI triage for PRs 20992 and 21112; no source edits, reruns, or CI writes.",
+  "pullRequests": [
+    {
+      "number": 20992,
+      "head": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "base": "47bb299d4d5e0a3d5e1e53a88fe5c5a68012519e",
+      "snapshotRollup": "FAILURE",
+      "snapshotMergeable": "MERGEABLE",
+      "snapshotMergeState": "CLEAN",
+      "classification": "cancelled-duplicate-run-with-successful-same-head-checks",
+      "failedVerify": {
+        "run": 35204671336,
+        "job": 105147441925,
+        "url": "https://github.com/stablyai/orca/actions/runs/35204671336/job/105147441925",
+        "workflowConclusion": "cancelled",
+        "cause": "The verify gate exits 1 immediately when CODE_PATHS is not success; CODE_PATHS=cancelled in this canceled workflow. Other prerequisite jobs were also canceled. This is not a failing product assertion, compiler error, or test failure.",
+        "log": "notes/pr-risk-review/renderer/20992.final-verify.log"
+      },
+      "successfulSameHeadChecks": {
+        "run": 35204671692,
+        "workflowConclusion": "success",
+        "updatedAt": "2026-09-17T09:32:20Z",
+        "url": "https://github.com/stablyai/orca/actions/runs/35204671692",
+        "verify": {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671692/job/105150406161"
+        }
+      },
+      "allSameHeadWorkflows": [
+        {
+          "id": 35204671692,
+          "name": "PR Checks",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:31Z",
+          "updatedAt": "2026-09-17T09:32:20Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671692"
+        },
+        {
+          "id": 35204671133,
+          "name": "PR test LoC",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:32Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671133"
+        },
+        {
+          "id": 35204671132,
+          "name": "Computer-use e2e",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:32Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671132"
+        },
+        {
+          "id": 35204671336,
+          "name": "PR Checks",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:38Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671336"
+        },
+        {
+          "id": 35204671480,
+          "name": "PR test LoC",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:40Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671480"
+        },
+        {
+          "id": 35204671103,
+          "name": "Mobile Checks",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:32Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671103"
+        },
+        {
+          "id": 35204671425,
+          "name": "Computer-use e2e",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:28:55Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671425"
+        },
+        {
+          "id": 35204671464,
+          "name": "Mobile Checks",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:30:40Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671464"
+        }
+      ],
+      "evidenceCompleteness": {
+        "exactHeadWorkflowRunCount": 8,
+        "allRunListPagesPresent": true,
+        "snapshotContextsComplete": true,
+        "onlyFailureContextIsCanceledRunVerify": true
+      },
+      "interpretation": "The raw commit rollup retains a failed verify context from an earlier canceled duplicate run. A completed successful PR Checks run on the identical commit supersedes that run for code-validation evidence. The raw rollup is still FAILURE at this snapshot.",
+      "uncertainty": "Cancellation cause (for example workflow concurrency) was not independently established; do not infer a product defect from canceled jobs or claim GitHub rollup is green.",
+      "nextAction": "Record the successful same-head run and the canceled-run rollup artifact in the final handoff. No product fix or CI rerun is supported by these failed verify logs."
+    },
+    {
+      "number": 21112,
+      "head": "061913804c35af189d00f8a9574dcb226b971ba6",
+      "base": "565cbd6c6d1991410268d9d036dcd6876490bca0",
+      "snapshotRollup": "FAILURE",
+      "snapshotMergeable": "MERGEABLE",
+      "snapshotMergeState": "CLEAN",
+      "classification": "cancelled-duplicate-run-with-successful-same-head-checks",
+      "failedVerify": {
+        "run": 35204671137,
+        "job": 105147443966,
+        "url": "https://github.com/stablyai/orca/actions/runs/35204671137/job/105147443966",
+        "workflowConclusion": "cancelled",
+        "cause": "The verify gate exits 1 immediately when CODE_PATHS is not success; CODE_PATHS=cancelled in this canceled workflow. Other prerequisite jobs were also canceled. This is not a failing product assertion, compiler error, or test failure.",
+        "log": "notes/pr-risk-review/renderer/21112.final-verify.log"
+      },
+      "successfulSameHeadChecks": {
+        "run": 35204671199,
+        "workflowConclusion": "success",
+        "updatedAt": "2026-09-17T09:32:16Z",
+        "url": "https://github.com/stablyai/orca/actions/runs/35204671199",
+        "verify": {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35204671199/job/105149935807"
+        }
+      },
+      "allSameHeadWorkflows": [
+        {
+          "id": 35204671067,
+          "name": "PR test LoC",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:32Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671067"
+        },
+        {
+          "id": 35204670950,
+          "name": "Mobile Checks",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:32Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204670950"
+        },
+        {
+          "id": 35204671137,
+          "name": "PR Checks",
+          "conclusion": "cancelled",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:39Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671137"
+        },
+        {
+          "id": 35204671114,
+          "name": "PR test LoC",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:21:39Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671114"
+        },
+        {
+          "id": 35204671177,
+          "name": "Mobile Checks",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:30:35Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671177"
+        },
+        {
+          "id": 35204671199,
+          "name": "PR Checks",
+          "conclusion": "success",
+          "createdAt": "2026-09-17T09:21:30Z",
+          "updatedAt": "2026-09-17T09:32:16Z",
+          "url": "https://github.com/stablyai/orca/actions/runs/35204671199"
+        }
+      ],
+      "evidenceCompleteness": {
+        "exactHeadWorkflowRunCount": 6,
+        "allRunListPagesPresent": true,
+        "snapshotContextsComplete": true,
+        "onlyFailureContextIsCanceledRunVerify": true
+      },
+      "interpretation": "The raw commit rollup retains a failed verify context from an earlier canceled duplicate run. A completed successful PR Checks run on the identical commit supersedes that run for code-validation evidence. The raw rollup is still FAILURE at this snapshot.",
+      "uncertainty": "Cancellation cause (for example workflow concurrency) was not independently established; do not infer a product defect from canceled jobs or claim GitHub rollup is green.",
+      "nextAction": "Record the successful same-head run and the canceled-run rollup artifact in the final handoff. No product fix or CI rerun is supported by these failed verify logs."
+    }
+  ],
+  "evidenceHashes": {
+    "notes/pr-risk-review/final-snapshot.json": "8d6f4064eb942bf1d2c5f9e3a577e88a6339a91190354164ce5d9098ddcc5a0e",
+    "notes/pr-risk-review/renderer/20992.final-runs.json": "fc7bf86d781e333f99fcf9c5ea7d0872a3248fc8f70ec75f4a09f5026688daad",
+    "notes/pr-risk-review/renderer/20992.final-verify.log": "4d28b37de53b7b93e53ccf40967fb9782c3548af4ee6fe42fe12bb7cfd9f7ba7",
+    "notes/pr-risk-review/renderer/21112.final-runs.json": "974c120b3156a7cc1d3dea0b512353b02c58a3f4e026f2db21f129e5566d0795",
+    "notes/pr-risk-review/renderer/21112.final-verify.log": "772334297461840977eb2c52bae52961926f1cfb7256af7dd26dbe92382dfa5c"
+  }
+}

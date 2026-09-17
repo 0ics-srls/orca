@@ -1,0 +1,25 @@
+
+ RUN  v4.1.11 /Users/m4air/orca/workspaces/orca/np-oom-scan
+
+ ❯ src/main/ipc/register-core-handlers/register-core-handlers.test.ts (0 test)
+
+⎯⎯⎯⎯⎯⎯ Failed Suites 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/main/ipc/register-core-handlers/register-core-handlers.test.ts [ src/main/ipc/register-core-handlers/register-core-handlers.test.ts ]
+Error: Missing published dependency: 7f91f884780b41faaa9400e04102dc4d7d7ff57c:src/main/shared/runtime-environment-store
+ ❯ src/main/ipc/register-core-handlers/register-core-handlers.test.ts:397:1
+    395| }))
+    396|
+    397| import { registerCoreHandlers } from './register-core-handlers'
+       | ^
+    398|
+    399| describe('registerCoreHandlers', () => {
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 10 passed (11)
+      Tests  95 passed (95)
+   Start at  02:25:43
+   Duration  382.24s (transform 372.45s, setup 235ms, import 377.43s, tests 1.70s, environment 1ms)
+

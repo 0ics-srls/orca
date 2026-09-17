@@ -1,0 +1,22 @@
+{
+  "snapshot": "notes/pr-risk-review/final-snapshot.json",
+  "observedAt": "2026-09-17T09:35:11.421829+00:00",
+  "finalSnapshot": true,
+  "reports": 59,
+  "categories": {
+    "withdrawn": 2,
+    "low-observed-risk": 47,
+    "explicit-decision": 7,
+    "extra-review": 3
+  },
+  "openCi": {
+    "green": 28,
+    "pending": 6,
+    "failing": 23
+  },
+  "lowRiskRawGreenShortlist": [
+    20905, 20924, 20946, 20960, 20976, 20980, 21024, 21113, 21128, 21131, 21135, 21136, 21138,
+    21139, 21140, 21142, 21144, 21150, 21162, 21164, 21167
+  ],
+  "manifestEntries": 64
+}

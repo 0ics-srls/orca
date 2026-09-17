@@ -1,0 +1,363 @@
+{
+  "schemaVersion": 1,
+  "number": 21113,
+  "url": "https://github.com/stablyai/orca/pull/21113",
+  "title": "fix: persist closing never-started local terminal tabs",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Explicit close durably removes a never-started local terminal tab so stale saves cannot revive it. Any binding/history/pin/owner excludes this narrow path.",
+    "currentHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "snapshotHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052483360"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174298810/job/105052481921"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052483402"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566202"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566237"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567314"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567131"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567193"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567458"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567148"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567486"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567454"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567089"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566434"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566314"
+        },
+        {
+          "name": "e2e / build e2e app",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566546"
+        },
+        {
+          "name": "e2e / prepare Electron native cache",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052566570"
+        },
+        {
+          "name": "e2e / ssh browser network route",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567277"
+        },
+        {
+          "name": "e2e / e2e ${{ matrix.shard_name }}",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052754595"
+        },
+        {
+          "name": "e2e / changed e2e specs",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052753900"
+        },
+        {
+          "name": "e2e / ssh docker watcher isolation",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052753974"
+        },
+        {
+          "name": "e2e / localhost SSH terminal and hooks",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052754942"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567009"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567252"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567332"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567416"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567403"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567335"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567471"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567401"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567434"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105052567373"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174299400/job/105053947743"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174297776"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21113,
+      "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "tree": "90bc6b20b4681b932d713676fe47671661ecb81c",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/terminal/21113.json",
+    "sha256": "39ee50b377db9be1f4c50fc8aa0aebb21854a7aa957a77ef2d2b0d0b4e03f4e5",
+    "reviewedHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21113,
+    "url": "https://github.com/stablyai/orca/pull/21113",
+    "title": "fix: persist closing never-started local terminal tabs",
+    "reviewedHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+    "recordedGithubBase": "2e3a24c30f4c57d040d66e3dad75315fcc379eb0",
+    "baseRefName": "main",
+    "diffBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "diffBoundaryExplanation": "Exact full PR content is reviewed from the shared named-main ancestor, or exact parent topic head for a stack. This is not HEAD^ and is not a claim of clean merge into current main.",
+    "productDiffFile": "notes/pr-risk-review/terminal/21113.diff",
+    "allChangedPaths": [
+      "docs/audits/local-empty-tab-retirement/README.md",
+      "docs/audits/local-empty-tab-retirement/fix.patch",
+      "docs/audits/local-empty-tab-retirement/fixture.test.ts",
+      "docs/audits/local-empty-tab-retirement/renderer-store-fixture.ts",
+      "docs/audits/local-empty-tab-retirement/reproduce.mjs",
+      "docs/audits/local-empty-tab-retirement/results.json",
+      "src/main/ipc/pty/pane/empty-terminal-tab-retirement-owner.ts",
+      "src/main/ipc/register-core-handlers/register-core-handlers.test.ts",
+      "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+      "src/main/ipc/session-empty-terminal-tab-retirement-fixture.ts",
+      "src/main/ipc/session-empty-terminal-tab-retirement.test.ts",
+      "src/main/ipc/session-empty-terminal-tab-retirement.ts",
+      "src/main/ipc/session-empty-terminal-tab-runtime-owner.test.ts",
+      "src/main/ipc/session.ts",
+      "src/main/runtime/empty-terminal-tab-retirement-owner.ts",
+      "src/main/runtime/orca-runtime.ts",
+      "src/preload/api/session-bridge.ts",
+      "src/preload/api/workspace-session-api.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close-empty.test.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close-empty.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close.ts",
+      "src/shared/empty-terminal-tab-retirement.ts"
+    ],
+    "productSourcesInspected": [
+      "src/main/ipc/pty/pane/empty-terminal-tab-retirement-owner.ts",
+      "src/main/ipc/register-core-handlers/register-core-handlers.ts",
+      "src/main/ipc/session-empty-terminal-tab-retirement.ts",
+      "src/main/ipc/session.ts",
+      "src/main/runtime/empty-terminal-tab-retirement-owner.ts",
+      "src/main/runtime/orca-runtime.ts",
+      "src/preload/api/session-bridge.ts",
+      "src/preload/api/workspace-session-api.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close-empty.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close.ts",
+      "src/shared/empty-terminal-tab-retirement.ts"
+    ],
+    "callersAndContractsInspected": [
+      "src/main/ipc/session-empty-terminal-tab-retirement.ts",
+      "src/main/runtime/empty-terminal-tab-retirement-owner.ts",
+      "src/renderer/src/store/terminals/terminal-tab-close.ts",
+      "src/main/ipc/pty/pane/spawn-reservation.ts",
+      "docs/reference/ssh-execution-boundary.md",
+      "docs/reference/remote-wire-compatibility.md",
+      "docs/reference/agent-status-store.md"
+    ],
+    "worktreeProductMatchesPublishedAtReadOnlyStart": {
+      "src/main/ipc/pty/pane/empty-terminal-tab-retirement-owner.ts": true,
+      "src/main/ipc/register-core-handlers/register-core-handlers.ts": true,
+      "src/main/ipc/session-empty-terminal-tab-retirement.ts": true,
+      "src/main/ipc/session.ts": false,
+      "src/main/runtime/empty-terminal-tab-retirement-owner.ts": true,
+      "src/main/runtime/orca-runtime.ts": true,
+      "src/preload/api/session-bridge.ts": true,
+      "src/preload/api/workspace-session-api.ts": true,
+      "src/renderer/src/store/terminals/terminal-tab-close-empty.ts": true,
+      "src/renderer/src/store/terminals/terminal-tab-close.ts": true,
+      "src/shared/empty-terminal-tab-retirement.ts": true
+    },
+    "correctnessFindings": [],
+    "userVisibleBeforeAfter": "A never-started, generation-zero local terminal tab explicitly closed by the user now has its host-owned membership retired durably, so a stale session save cannot revive it.",
+    "retentionPolicy": "No history is discarded: admission rejects any PTY binding, layout/buffer/scrollback reference, sleeping agent, structured owner, pin, pending spawn/adoption or runtime owner. SSH/paired tabs retain their existing close path.",
+    "crossPlatform": {
+      "observed": "macOS background Node unit suite:23 files/238 tests passed before edits, recorded in focused-tests.log. No visible app or native window launched.",
+      "reasoning": "Uses existing Store flush and IPC only; local/SSH ownership resolution is explicit. macOS real Store fixtures pass; native Windows filesystem unavailable cases not run.",
+      "linux": "No native Linux execution by this reviewer. Root separately checks exact-head Linux CI; do not equate passing tests on a mocked host with every Linux kernel/provider path.",
+      "windows": "No native Windows execution by this reviewer. Packaging/typecheck can establish a narrower property than runtime correctness."
+    },
+    "sshAndFolderCompatibility": "Inspected execution-host ownership and existing routes. No local substitution for a missing SSH provider is introduced. Workspace identity is passed through existing folder-aware owners/planners where relevant; no new git-worktree-only requirement appears in the diff.",
+    "wireCompatibility": "No stream opcode, RPC shape, capability requirement, or payload truncation is introduced. Existing lifecycle content can change only for the retired/stale owner described above.",
+    "regressionControls": [
+      "local git and folder durable retirement",
+      "stale renderer saves",
+      "SSH/runtime refusal",
+      "pin/createdAt/generation changes",
+      "pending spawn/runtime-create/adoption owners",
+      "hidden history and structured ownership",
+      "windowless renderer guard"
+    ],
+    "localTestEvidence": {
+      "log": "notes/pr-risk-review/terminal/focused-tests.log",
+      "files": 23,
+      "tests": 238,
+      "scope": "Combined worktree with published product hash comparison above; overlapping modules are not claimed to equal each isolated PR head. These results supplement exact-diff review, not substitute for it."
+    },
+    "missingEvidenceAndLimits": [
+      "A failed flush reports/logs failure; this is not an atomic rollback transaction.",
+      "Request is deliberately a no-op outside local never-started tabs; it does not fix every empty-looking remote tab."
+    ],
+    "dependencyAndMergeRisks": {
+      "requires": [],
+      "findings": [
+        "Combining with21175 requires its published one-argument registerSessionHandlers fixture to pass a runtime.21113 changes this signature to two required arguments; primary worktree fixture already has that adaptation."
+      ],
+      "ci": "Root owns current exact-head CI classification; no blanket merge-ready claim is made here.",
+      "currentMain": "Not evaluated by this subgroup; root fetched named current main separately."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Coordinate21113/21175 test-signature integration before treating the combined merge as low risk.",
+    "confidence": "No universal zero-regression claim. Conclusions are scoped to inspected owners, callers, and listed controls.",
+    "reviewedAt": "2026-09-17T09:17:17.306559+00:00"
+  }
+}

@@ -1,0 +1,23 @@
+[
+  "src/main/ai-vault/session-scanner-jsonl-reader.test.ts",
+  "src/main/ai-vault/session-scanner-record-budget.test.ts",
+  "src/main/browser/cdp-client-response-writer.test.ts",
+  "src/main/claude/claude-background-task-retention.test.ts",
+  "src/main/claude/claude-history-window-source-budget.test.ts",
+  "src/main/claude/claude-transcript-branch-streaming.test.ts",
+  "src/main/crash-reporting/crashpad-capture-read-limit.test.ts",
+  "src/main/daemon/terminal-mouse-tail-retention.test.ts",
+  "src/main/native-chat/agent-session-journal/journal-legacy-import-source-bound.test.ts",
+  "src/main/native-chat/transcript-stream-lines.test.ts",
+  "src/main/plugins/plugin-worker-output-retention.test.ts",
+  "src/main/ports/advertised-url-retention.test.ts",
+  "src/main/runtime/recent-pty-output-retention.test.ts",
+  "src/main/speech/stt-audio-pending-budget.test.ts",
+  "src/main/speech/stt-worker-audio-ack.test.ts",
+  "src/main/stats/collector-async-save.test.ts",
+  "src/renderer/src/components/terminal-pane/terminal-capped-buffer-retention.test.ts",
+  "src/shared/check-job-log-retention.test.ts",
+  "src/shared/command-code-output-retention.test.ts",
+  "src/shared/terminal-kitty-keyboard-tail-retention.test.ts",
+  "src/shared/terminal-osc133-carry-retention.test.ts"
+]

@@ -1,0 +1,295 @@
+{
+  "schemaVersion": 1,
+  "number": 20976,
+  "url": "https://github.com/stablyai/orca/pull/20976",
+  "title": "Enforce the legacy transcript import budget while reading",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "The existing 16 MiB legacy-import limit is enforced during reading. A file growing past it fails import without a partial successful commit.",
+    "currentHead": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "snapshotHead": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104690957341"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256285/job/104690957221"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256406/job/104690956570"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104690957591"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691061281"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691061572"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062657"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062658"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062654"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062529"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062534"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062753"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691061468"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691063047"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691061577"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691061626"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691063072"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691063251"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062775"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062527"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062497"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062544"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062471"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062651"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062498"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062512"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104691062599"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064256447/job/104692737288"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35064259102"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 20976,
+      "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+      "tree": "48dc88424ded76ebc43da7592e7ffaee6dfd627f",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/capacity/20976.json",
+    "sha256": "ee60b4308c3bb5bdac3959e3fdc878951d9fe496970f6b240bb74bac3a1dcb75",
+    "reviewedHead": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 20976,
+    "url": "https://github.com/stablyai/orca/pull/20976",
+    "title": "Enforce the legacy transcript import budget while reading",
+    "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+    "base": "f78483ec29891ab11f49bb25e6cd628837b1242e",
+    "recordedBaseOid": "f78483ec29891ab11f49bb25e6cd628837b1242e",
+    "baseRefName": "main",
+    "reviewBoundary": "Original published merge-base-to-head product diff plus named exact-head callers. Source hashes below bind the reviewed bytes. Existing audit artifacts are historical supporting evidence, not newly executed native cross-platform tests. Later integration heads, if any, are tracked separately.",
+    "inspectedSources": [
+      {
+        "path": "src/main/native-chat/agent-session-journal/journal-legacy-import.ts",
+        "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+        "sha256": "88c007b4fb83eba6ec5fdf21c50b4c4aff35199cc4eed92abe3a1c29addfc5f3",
+        "inspection": "Product diff read at the named head"
+      },
+      {
+        "path": "src/main/native-chat/transcript-stream-lines.ts",
+        "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
+        "sha256": "5f3a0a1e5b3d003076452fa22234af00502808ed6463672c0e58aa49ae5b6aa1",
+        "inspection": "Product diff read at the named head"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "The legacy importer already rejected sources over 16 MiB at stat time. It now counts raw streamed bytes during the read, closing the race where a file grows after that stat."
+      },
+      {
+        "severity": "informational",
+        "assessment": "Removing the stream UTF-8 encoding lets the budget count actual source bytes; the existing StringDecoder preserves split multi-byte sequences. Other decodeTranscriptStream callers retain the default Infinity allowance."
+      },
+      {
+        "severity": "informational",
+        "assessment": "A limit failure is caught by the existing import failure path instead of committing a partial successful import. The existing 64-subagent allowance is unchanged."
+      }
+    ],
+    "userVisibleBeforeAfter": "Normal allowed-size imports produce the same messages. A source that grows beyond the existing 16 MiB allowance while being read now fails import rather than consuming the enlarged file.",
+    "capacityAndDataLoss": "Enforcement of the existing whole-source import limit; no new record limit or lower source quota. Source data remains on disk.",
+    "platformEvidence": {
+      "assessment": "Raw Node stream byte accounting and StringDecoder are portable APIs. Fresh tests ran on macOS; filesystem growth semantics on native Linux and Windows were not separately executed.",
+      "executedHost": "Fresh shared batch: macOS darwin arm64; Node 26.6.0. PRs outside that batch have no new execution in this follow-up.",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "The existing execution-host import path owns its source file. No remote shell, process status, or Git-worktree assumption is introduced.",
+    "regressionCoverage": {
+      "description": "The fresh batch includes journal-legacy-import-source-bound and transcript-stream-lines, covering read-time growth and framing/UTF-8 behavior. Static review confirms the budget is passed only by the already capped importer.",
+      "rootFocusedBatch": {
+        "applies": true,
+        "totalSuites": 21,
+        "totalPassingCases": 133,
+        "relevantPaths": [
+          "src/main/native-chat/agent-session-journal/journal-legacy-import-source-bound.test.ts",
+          "src/main/native-chat/transcript-stream-lines.test.ts"
+        ],
+        "log": "notes/pr-risk-review/capacity/focused-tests.log",
+        "boundary": "Root ran the current worktree after checking affected product bytes against nine published heads. Installed dependencies and transitive imports are current; this is not an exact historical full-source-graph execution. The 133 count is shared by the batch, not repeated per PR."
+      },
+      "limitations": "This does not bound all decoded message objects under every caller: decodeTranscriptStream defaults to Infinity elsewhere. Native filesystem race execution is limited to the macOS host."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "recordedBaseOid": "f78483ec29891ab11f49bb25e6cd628837b1242e",
+      "reviewedMergeBase": "f78483ec29891ab11f49bb25e6cd628837b1242e",
+      "currentMainAtReview": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "productAssessment": "No additional production correctness defect established by this review; user-visible policy and performance consequences are explicitly separated from implementation correctness.",
+      "ci": "Root owns the final fresh CI snapshot. Focused green tests and old CI do not replace required checks on the published current head.",
+      "merge": "Review is tied to the named original head and merge-base product diff; GitHub UNKNOWN is not interpreted as a merge result."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Eligible for low-risk review after current CI/integration; describe it as enforcing the existing import contract during reads."
+  }
+}

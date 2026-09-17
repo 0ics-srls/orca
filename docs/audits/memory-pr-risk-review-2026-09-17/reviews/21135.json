@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "number": 21135,
+  "url": "https://github.com/stablyai/orca/pull/21135",
+  "title": "fix: release aborted auth filesystem waiters",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk",
+    "userVisibleBeforeAfter": "Abandoned auth polls release callbacks/errors while siblings keep sharing the native read. Existing result-versus-abort ordering remains.",
+    "currentHead": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "green",
+      "label": "Green at snapshot",
+      "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "snapshotHead": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "rollupState": "SUCCESS",
+      "failed": [],
+      "pending": [],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052545368"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174318980/job/105052543813"
+        },
+        {
+          "name": "track-community-pr",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174318334/job/105052543061"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052545161"
+        },
+        {
+          "name": "static analysis",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052631380"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052631401"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632431"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632616"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632167"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632487"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632371"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632437"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632273"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632142"
+        },
+        {
+          "name": "package",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052631519"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052631534"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632483"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632737"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632380"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632176"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632140"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632164"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632151"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632178"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632154"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632144"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105052632168"
+        },
+        {
+          "name": "verify",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174319413/job/105053981968"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35174316863"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "CLEAN",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "currentMainMergeCheck": {
+      "number": 21135,
+      "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "tree": "790e4f44a4b4c8ddd79c6b97a75c04bdb09ea6d7",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/queues/21135.json",
+    "sha256": "9640f376ef205df26eacb4a6ec7ccf530a8e39774a2f5ca473aebc095177a222",
+    "reviewedHead": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "number": 21135,
+    "url": "https://github.com/stablyai/orca/pull/21135",
+    "title": "fix: release aborted auth filesystem waiters",
+    "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+    "base": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "baseRefName": "main",
+    "reviewBoundary": "Full merge-base-to-published-head product diff and named caller sources. Repository modules in the focused Vite run are loaded from this exact Git head; node_modules and runner are installed current dependencies. Supplemental internally esbuild-bundled children use current-worktree source, explicitly noted.",
+    "inspectedSources": [
+      {
+        "path": "src/main/rate-limits/auth-filesystem-operation.ts",
+        "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "sha256": "bfac9dc25c3f3c36ab590bc6e01be39ec19dea5a872f5c409ed149e65258f9e2"
+      },
+      {
+        "path": "src/shared/promise-settlement-waiters.ts",
+        "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "sha256": "92618db591cf1fc1ad52f257cc9f3314310bf902fbd24e5d18abcf93afb8e722"
+      },
+      {
+        "path": "src/main/rate-limits/codex-backend-auth.ts",
+        "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "sha256": "1a6b4015abe81744686cc0fe3d84dcc1d833cda2d465845a5b07a6797c0daac5"
+      },
+      {
+        "path": "src/main/rate-limits/codex-auth-presence.ts",
+        "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "sha256": "9d177b10510de0bf1956ed23f57ca67ba9cc2a791c084ebfec9a610ab56dd9f4"
+      },
+      {
+        "path": "src/main/rate-limits/kimi-fetcher.ts",
+        "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+        "sha256": "b96a373e6a22155c8aee2e31d7cec5729620bbe7406fb258f340df9653576099"
+      }
+    ],
+    "correctnessFindings": [
+      {
+        "severity": "informational",
+        "assessment": "One settlement observer fans out to removable waiters; the wrapper retains the prior per-poll symbol count and cancels not-yet-started work only after the last waiter leaves. Already-started filesystem operations stay shared."
+      }
+    ],
+    "userVisibleBeforeAfter": "An abandoned auth poll releases its callback/error references while siblings still share the same native read. Existing raw-result versus abort timing is preserved through deferred abandonment.",
+    "capacityAndDataLoss": "Shared PromiseSettlementWaiters is also used outside auth; default abort scheduling stays unchanged. New abortInMicrotask is opt-in only. No new polling/result cap.",
+    "platformEvidence": {
+      "assessment": "The two-operation WSL limit, normalized distro lanes and filesystem launch are unchanged. Tests execute JS cancellation ports on macOS, not physical Windows UNC hangs.",
+      "executedHost": "macOS darwin arm64; Node 26.6.0",
+      "linuxNativeExecuted": false,
+      "windowsNativeExecuted": false,
+      "zeroRiskClaim": false
+    },
+    "sshAndFolderCases": "No git-worktree-only assumption is added; no execution is moved across hosts. The two-operation WSL limit, normalized distro lanes and filesystem launch are unchanged. Tests execute JS cancellation ports on macOS, not physical Windows UNC hangs.",
+    "regressionCoverage": {
+      "description": "Eight raw-result/abort order cases, arbitrary false/zero/string/object reasons, late/rejected results, live siblings, and helper waiter cleanup.",
+      "focusedPassingCases": 21,
+      "log": "notes/pr-risk-review/queues/21135.test.log",
+      "sourceGraph": "notes/pr-risk-review/queues/21135.graph.json",
+      "limitations": "Shared PromiseSettlementWaiters is also used outside auth; default abort scheduling stays unchanged. New abortInMicrotask is opt-in only. No new polling/result cap."
+    },
+    "dependencyAndMergeRisk": {
+      "base": "main",
+      "productAssessment": "No new production correctness defect found in this review; original behavior and noted lifetime policy checked.",
+      "ci": "Root review owns fresh CI. Focused green tests do not override inherited or introduced CI failures.",
+      "merge": "Revalidate against current base and with overlapping PRs; this report is tied to the named head."
+    },
+    "classification": "low-observed-risk",
+    "nextAction": "Refresh the PR against the intended merge base as needed, verify required CI, then review as a low observed risk change. No product correction requested by this pass."
+  }
+}

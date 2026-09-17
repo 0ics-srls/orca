@@ -1,0 +1,321 @@
+{
+  "schemaVersion": 1,
+  "number": 21160,
+  "url": "https://github.com/stablyai/orca/pull/21160",
+  "title": "fix: fence viewport state after browser guest retirement",
+  "finalDisposition": {
+    "category": "low-observed-risk",
+    "recommendation": "Low observed risk; await green CI",
+    "userVisibleBeforeAfter": "Retired browser guests cannot commit late viewport/UA state to a successor. Integration preserves current main process-wide UA identity.",
+    "currentHead": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+    "currentState": "OPEN",
+    "currentBaseRefName": "main",
+    "ci": {
+      "status": "pending",
+      "label": "Pending (10 checks)",
+      "head": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "snapshotHead": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "rollupState": "PENDING",
+      "failed": [],
+      "pending": [
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150580"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150603"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151716"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151656"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151772"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151791"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151648"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151657"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151754"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "QUEUED",
+          "url": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151738"
+        }
+      ],
+      "contexts": [
+        {
+          "name": "detect code-relevant changes",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105148712999"
+        },
+        {
+          "name": "test vs non-test LoC",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205068992/job/105148711994"
+        },
+        {
+          "name": "root directory guard",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105148713184"
+        },
+        {
+          "name": "static analysis",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150580"
+        },
+        {
+          "name": "typecheck",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150631"
+        },
+        {
+          "name": "Git compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152544"
+        },
+        {
+          "name": "Codex index-heal contract",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152211"
+        },
+        {
+          "name": "xterm patch sync",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152497"
+        },
+        {
+          "name": "shell contracts",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152311"
+        },
+        {
+          "name": "prepare test native cache node 24",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152911"
+        },
+        {
+          "name": "orcad browser provider",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152348"
+        },
+        {
+          "name": "cross-version wire compatibility",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152368"
+        },
+        {
+          "name": "managed hooks on Node 18",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152662"
+        },
+        {
+          "name": "package",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150603"
+        },
+        {
+          "name": "package (windows)",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149150628"
+        },
+        {
+          "name": "e2e",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152162"
+        },
+        {
+          "name": "real IME",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152936"
+        },
+        {
+          "name": "real WSL terminal",
+          "status": "COMPLETED",
+          "conclusion": "SKIPPED",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149152795"
+        },
+        {
+          "name": "test / tests node 24 1/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151716"
+        },
+        {
+          "name": "test / tests node 24 2/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151656"
+        },
+        {
+          "name": "test / tests node 24 3/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151772"
+        },
+        {
+          "name": "test / tests node 24 4/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151791"
+        },
+        {
+          "name": "test / tests node 24 5/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151648"
+        },
+        {
+          "name": "test / tests node 24 6/8",
+          "status": "IN_PROGRESS",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151657"
+        },
+        {
+          "name": "test / tests node 24 7/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151754"
+        },
+        {
+          "name": "test / tests node 24 8/8",
+          "status": "QUEUED",
+          "conclusion": null,
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069279/job/105149151738"
+        },
+        {
+          "name": "pullfrog",
+          "status": "COMPLETED",
+          "conclusion": "SUCCESS",
+          "detailsUrl": "https://github.com/stablyai/orca/actions/runs/35205069845"
+        }
+      ],
+      "contextsTruncated": false
+    },
+    "githubMergeable": "MERGEABLE",
+    "githubMergeStateStatus": "UNSTABLE",
+    "snapshotObservedAt": "2026-09-17T09:35:11.421829+00:00",
+    "snapshotIsFinal": true,
+    "parentPullRequests": [],
+    "readiness": "No automatic merge recommendation. Required CI, current base integration, dependencies, and any behavior decision remain separate gates. UNKNOWN merge state is not evidence of a conflict or a clean merge.",
+    "publishedUpdate": {
+      "number": 21160,
+      "head": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "tree": "bb25a4cc12efeb6f0578037e3a272362d5623447",
+      "oldHead": "d83da0060426ef3ceeb1052a4feb4bb9119901f1",
+      "mergedParent": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "sourceArtifact": "integration/21160/published.json"
+    },
+    "publishedUpdateEvidence": "evidence/integration/21160/published.json",
+    "currentMainMergeCheck": {
+      "number": 21160,
+      "head": "c0476ed0ff7fe4259beadb8a032fa34f7e274466",
+      "tree": "bb25a4cc12efeb6f0578037e3a272362d5623447",
+      "exitCode": 0,
+      "conflicts": [],
+      "main": "96eb97aad641f3d8324bd5488d51c06a3eba59ad",
+      "scope": "Each open PR individually against named current main; includes its stack ancestors. Clean does not prove combined merge order, typecheck or runtime behavior."
+    }
+  },
+  "originalReviewProvenance": {
+    "source": "notes/pr-risk-review/renderer/21160.json",
+    "sha256": "4f206d04a692fdd061fa7056e2ddba52d3e1aea58ff31133b2ec6517a91745ab",
+    "reviewedHead": "d83da0060426ef3ceeb1052a4feb4bb9119901f1",
+    "boundary": "Original review is preserved verbatim as structured data below. Its classifications and pending actions describe that earlier head; finalDisposition records published corrections, withdrawals, integration, and current CI separately. Notes-only artifact paths are historical references unless present in the durable evidence manifest."
+  },
+  "originalReview": {
+    "schemaVersion": 1,
+    "pr": 21160,
+    "url": "https://github.com/stablyai/orca/pull/21160",
+    "title": "fix: fence viewport state after browser guest retirement",
+    "exactHead": "d83da0060426ef3ceeb1052a4feb4bb9119901f1",
+    "reviewBase": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "reviewBoundary": "Actual published product diff against named merge base; affected callers inspected with per-path SHA256. Existing combined-tree tests are explicitly distinguished from exact-source controls. GitHub CI and current-main integration handled by root; this report does not equate UNKNOWN mergeability or green unit tests with zero risk.",
+    "inspectedPaths": [
+      {
+        "path": "src/main/browser/browser-manager-viewport-ownership.test.ts",
+        "publishedSha256": "ec17f2acd6b766166d13cafc2ecd33f1d4f0de7a4b4e8896d0746b2d528341da",
+        "workingSha256": "ec17f2acd6b766166d13cafc2ecd33f1d4f0de7a4b4e8896d0746b2d528341da",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-viewport.ts",
+        "publishedSha256": "a839fd89cc5e687782323036ca3a8dd9de79bd838e77dd863a5e1ae101424b4c",
+        "workingSha256": "a839fd89cc5e687782323036ca3a8dd9de79bd838e77dd863a5e1ae101424b4c",
+        "sameAsWorking": true
+      },
+      {
+        "path": "src/main/browser/browser-manager-registration.ts",
+        "publishedSha256": "12c149b1fb87b67b4192b6c2f23bd7f45b7df2d0c60368182f33b5a47b56f96f",
+        "workingSha256": "55d66285b1d3ad29a7be596b1ca3536f333f2e3b2580e4d2a41090928ca8edd1",
+        "sameAsWorking": false
+      }
+    ],
+    "classification": "low-observed-risk",
+    "correctnessFindings": [
+      "New exact guest-ID checks prevent late viewport apply/clear commands from inserting, deleting or restoring per-page UA state for a retired/replaced owner."
+    ],
+    "userVisibleBehavior": {
+      "before": "A pending CDP completion can resurrect old UA entries or delete successor state.",
+      "after": "Captured old guest commands cannot commit bookkeeping to a replacement page; current apply/clear and rollback remain serialized.",
+      "retentionLimits": "No new numeric live-history/cache reduction in this PR. Any closed-owner state or retry semantics change is explicitly described above."
+    },
+    "platforms": {
+      "macOS": "Review and reported tests ran on macOS with DOM/Electron ports mocked where needed; no app windows opened.",
+      "Linux": "Platform-neutral TypeScript/React/Electron APIs, with unchanged runtime-specific branches. This is static inference plus available CI context; no native Linux app execution in this review.",
+      "Windows": "No new slash construction, shell/process launch, or hard-coded modifier keys in the change. This is static inference plus available CI context; no native Windows app execution in this review."
+    },
+    "sshAndFolders": "Cleanup is scoped to renderer/page/resource identity and does not add Git-worktree assumptions or alter SSH wire contracts. Remote execution lifetime is not inferred from local disconnect.",
+    "testsAndEvidence": "Viewport ownership suite passed in89-test batch and55-test corrected-browser batch. All CDP sessions are controlled mocks.",
+    "dependencyAndMergeRisks": "Published logic looks narrow but current-main merge risk is unresolved. Do not reintroduce removed native-UA gate while resolving.",
+    "nextAction": "HOLD integration: current main96eb97a changed process-wide UA identity and conflicts with old per-page native-UA gate. Root preparing resolution that preserves current main semantics and reruns ownership tests.",
+    "limitations": [
+      "Zero regressions across all possible inputs/platforms is not proved.",
+      "Native Electron UI/CDP/OS-event behavior was not exercised in this bounded review unless explicitly stated.",
+      "No PR was merged by this reviewer; local corrections require root publication and refreshed CI."
+    ]
+  }
+}
