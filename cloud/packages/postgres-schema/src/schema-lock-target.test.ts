@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  requireSchemaLockTarget,
   schemaLockTarget,
   sqlWithoutLeadingComments,
   takesRelationLock
@@ -120,5 +121,46 @@ describe('schemaLockTarget', () => {
 
   it('gives CREATE TABLE IF NOT EXISTS no target', () => {
     expect(schemaLockTarget(COMMENTED_TABLE)).toBeUndefined()
+  })
+})
+
+// Each of these reads as an index or column statement and each fails to yield a target. Letting any
+// of them through would send an unchecked lock-taking statement on every boot.
+const MALFORMED = [
+  ['an index with no ON clause', 'CREATE INDEX IF NOT EXISTS i'],
+  ['an auto-named index', 'CREATE INDEX ON t(c)'],
+  ['an auto-named unique concurrent index', 'CREATE UNIQUE INDEX CONCURRENTLY ON t(c)'],
+  ['an index whose name ran into a comment', '-- note\nCREATE INDEX IF NOT EXISTS\nON t(c)'],
+  ['an ALTER TABLE with no table', 'ALTER TABLE ADD COLUMN c TEXT'],
+  ['an ADD COLUMN with no column', 'ALTER TABLE t ADD COLUMN'],
+  ['an ADD COLUMN IF NOT EXISTS with no column', 'ALTER TABLE t ADD COLUMN IF NOT EXISTS']
+] as const
+
+describe('requireSchemaLockTarget', () => {
+  it.each(MALFORMED)('throws with the statement text on %s', (_label, statement) => {
+    expect(() => requireSchemaLockTarget(statement)).toThrow(/unparsed_schema_lock_target/)
+  })
+
+  it('names the offending statement in the error', () => {
+    expect(() => requireSchemaLockTarget('CREATE INDEX ON t(c)')).toThrow(
+      'unparsed_schema_lock_target: CREATE INDEX ON t(c)'
+    )
+  })
+
+  it('returns the target for a statement that parses', () => {
+    expect(requireSchemaLockTarget(COMMENTED_INDEX)).toEqual({
+      kind: 'index',
+      table: 'relay_connection_bases',
+      name: 'relay_connection_bases_active_deadline'
+    })
+  })
+
+  it.each([
+    ['CREATE TABLE IF NOT EXISTS t (id TEXT)'],
+    ['ALTER TABLE t ADD CONSTRAINT c CHECK (x > 0)'],
+    ['ALTER TABLE t DROP CONSTRAINT IF EXISTS c'],
+    ['ALTER TABLE t ALTER COLUMN c SET DEFAULT 0']
+  ])('leaves %s alone, because no target is expected of it', (statement) => {
+    expect(requireSchemaLockTarget(statement)).toBeUndefined()
   })
 })

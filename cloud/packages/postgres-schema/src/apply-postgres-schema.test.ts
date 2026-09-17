@@ -15,6 +15,21 @@ CREATE TABLE IF NOT EXISTS relay_cells (
   cell_id TEXT PRIMARY KEY
 )`
 
+// Answers absent first and present afterwards, the state a concurrent create leaves behind.
+function catalogAnswersInSequence(answers: SchemaCatalogRow[][]): {
+  catalogQuery: (sql: string, params: unknown[]) => Promise<SchemaCatalogRow[]>
+  asked: unknown[][]
+} {
+  const asked: unknown[][] = []
+  return {
+    asked,
+    catalogQuery: async (sql, params) => {
+      asked.push([sql, ...params])
+      return answers[asked.length - 1] ?? []
+    }
+  }
+}
+
 function catalogAnswers(rows: SchemaCatalogRow[]): {
   catalogQuery: (sql: string, params: unknown[]) => Promise<SchemaCatalogRow[]>
   asked: unknown[][]
@@ -220,5 +235,74 @@ describe('applyPostgresSchema catalog pre-check', () => {
     const summary = await applyPostgresSchema([COMMENTED_TABLE, COMMENTED_INDEX], query)
     expect(query).toHaveBeenCalledTimes(2)
     expect(summary).toEqual({ ran: 2, skipped: 0 })
+  })
+})
+
+describe('applyPostgresSchema concurrent creates', () => {
+  it('re-asks the catalog on a collision instead of retrying the CREATE INDEX', async () => {
+    // Another director created the index between the pre-check and this statement. Retrying would
+    // take SHARE on the table again for an object that is already there.
+    vi.spyOn(console, 'log').mockImplementation(() => undefined)
+    const query = vi.fn(async (_statement: string) => {
+      throw postgresError('42P07')
+    })
+    const { catalogQuery, asked } = catalogAnswersInSequence([[], [{ indisvalid: true }]])
+    const summary = await applyPostgresSchema([COMMENTED_INDEX], query, {
+      catalogQuery,
+      wait: async () => undefined
+    })
+    expect(query).toHaveBeenCalledTimes(1)
+    expect(asked).toHaveLength(2)
+    expect(summary).toEqual({ ran: 0, skipped: 1 })
+  })
+
+  it('still retries when the catalog says the object is not there after all', async () => {
+    let calls = 0
+    const query = vi.fn(async (_statement: string) => {
+      calls += 1
+      if (calls === 1) throw postgresError('23505', 'pg_class_relname_nsp_index')
+      return undefined
+    })
+    const { catalogQuery } = catalogAnswersInSequence([[], []])
+    const summary = await applyPostgresSchema([COMMENTED_INDEX], query, {
+      catalogQuery,
+      wait: async () => undefined
+    })
+    expect(query).toHaveBeenCalledTimes(2)
+    expect(summary).toEqual({ ran: 1, skipped: 0 })
+  })
+
+  it('retries a CREATE TABLE collision without a catalog re-ask, having no target to ask about', async () => {
+    let calls = 0
+    const query = vi.fn(async (_statement: string) => {
+      calls += 1
+      if (calls === 1) throw postgresError('42710')
+      return undefined
+    })
+    const { catalogQuery, asked } = catalogAnswersInSequence([[], []])
+    await applyPostgresSchema([COMMENTED_TABLE], query, {
+      catalogQuery,
+      wait: async () => undefined
+    })
+    expect(asked).toEqual([])
+    expect(query).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('applyPostgresSchema unparseable statements', () => {
+  it('fails the boot rather than sending an index whose target cannot be read', async () => {
+    const query = vi.fn(async (_statement: string) => undefined)
+    await expect(applyPostgresSchema(['CREATE INDEX ON t(c)'], query)).rejects.toThrow(
+      /unparsed_schema_lock_target/
+    )
+    expect(query).not.toHaveBeenCalled()
+  })
+
+  it('fails even with no catalog query, because the statement would take the lock either way', async () => {
+    const query = vi.fn(async (_statement: string) => undefined)
+    await expect(
+      applyPostgresSchema(['ALTER TABLE t ADD COLUMN IF NOT EXISTS'], query)
+    ).rejects.toThrow(/unparsed_schema_lock_target/)
+    expect(query).not.toHaveBeenCalled()
   })
 })

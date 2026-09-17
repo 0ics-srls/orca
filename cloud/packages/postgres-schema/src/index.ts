@@ -10,6 +10,7 @@ export {
   type SchemaCatalogRow
 } from './catalog-object-precheck.js'
 export {
+  requireSchemaLockTarget,
   schemaLockTarget,
   sqlWithoutLeadingComments,
   takesRelationLock,

@@ -1,6 +1,11 @@
 import pg from 'pg'
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { applyPostgresSchema, schemaLockTarget, takesRelationLock } from '@orca-cloud/postgres-schema'
+import {
+  applyPostgresSchema,
+  catalogObjectPresence,
+  schemaLockTarget,
+  takesRelationLock
+} from '@orca-cloud/postgres-schema'
 import {
   openRelayDatabase,
   POSTGRES_LOCK_TIMEOUT_MS,
@@ -115,6 +120,29 @@ describePostgres('relay boot-time schema against PostgreSQL', () => {
     sent = []
     await applyRecording()
     expect(preCheckable()).toEqual([])
+    await pool.end()
+  })
+
+  it('does not let a same-named index on a sibling table answer for this one', async () => {
+    // Index names are unique per schema, not per table, so a name freed on one table and taken on
+    // another is reachable. Without tying the index to the table, the pre-check reads that sibling
+    // as this table's index and skips the real CREATE INDEX for good.
+    await applyRecording()
+    const ask = async (table: string): Promise<boolean> =>
+      (
+        await catalogObjectPresence(
+          async (sql, params) => (await pool.query(sql, params)).rows,
+          { kind: 'index', table, name: 'relay_audit_events_at' }
+        )
+      ).present
+
+    expect(await ask('relay_audit_events')).toBe(true)
+    await pool.query(`DROP INDEX ${schema}.relay_audit_events_at`)
+    await pool.query(`CREATE TABLE ${schema}.precheck_sibling (at BIGINT)`)
+    await pool.query(`CREATE INDEX relay_audit_events_at ON ${schema}.precheck_sibling(at)`)
+
+    expect(await ask('relay_audit_events')).toBe(false)
+    expect(await ask('precheck_sibling')).toBe(true)
     await pool.end()
   })
 

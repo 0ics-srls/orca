@@ -8,7 +8,13 @@ export type SchemaLockTarget = {
   name: string
 }
 
-const IDENTIFIER = '"(?:[^"]|"")*"|[A-Za-z_][A-Za-z0-9_$]*'
+// Keywords that sit in an identifier position when the optional clause before them is absent.
+// Without this, `CREATE UNIQUE INDEX CONCURRENTLY ON t(c)` reads CONCURRENTLY as the index name and
+// `ADD COLUMN IF NOT EXISTS` with no column reads IF as the column: a silently wrong target, which
+// is worse than no target. Excluding them makes both throw instead. A column genuinely named `if`
+// has to be quoted to be derivable, which is the safe direction to fail in.
+const NOT_KEYWORD = '(?!(?:CONCURRENTLY|IF|NOT|EXISTS|ON|ONLY)\\b)'
+const IDENTIFIER = `"(?:[^"]|"")*"|${NOT_KEYWORD}[A-Za-z_][A-Za-z0-9_$]*`
 const QUALIFIED = `((?:${IDENTIFIER})(?:\\.(?:${IDENTIFIER}))?)`
 
 const LEADING_COMMENT = /^(?:\s|--[^\n]*(?:\n|$)|\/\*[\s\S]*?\*\/)+/
@@ -46,6 +52,14 @@ function bareIdentifier(written: string): string {
   return last.startsWith('"') ? last.slice(1, -1).replace(/""/g, '"') : last
 }
 
+// Shapes whose lock target the pre-check must be able to derive. Deliberately looser than the
+// regexes that parse them, so a statement that reads as one of these but does not parse is caught
+// rather than falling through to the lock path.
+const MUST_PARSE = [
+  /^CREATE\s+(?:UNIQUE\s+)?INDEX\b/i,
+  /^ALTER\s+TABLE\b[\s\S]*\bADD\s+COLUMN\b/i
+]
+
 // Derived from the statement itself so a renamed index cannot drift away from its pre-check.
 export function schemaLockTarget(statement: string): SchemaLockTarget | undefined {
   const sql = sqlWithoutLeadingComments(statement)
@@ -56,6 +70,20 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
   const column = ADD_COLUMN.exec(sql)
   if (column?.[1] && column[2]) {
     return { kind: 'column', table: column[1], name: bareIdentifier(column[2]) }
+  }
+  return undefined
+}
+
+// An index or column statement whose target cannot be read is the dangerous case: it would be sent
+// unchecked and take the lock the pre-check exists to avoid, silently and on every boot. An
+// auto-named `CREATE INDEX ON t(c)` lands here too, because nothing in the text says what the
+// catalog will call it. Fail the boot with the statement instead.
+export function requireSchemaLockTarget(statement: string): SchemaLockTarget | undefined {
+  const target = schemaLockTarget(statement)
+  if (target) return target
+  const sql = sqlWithoutLeadingComments(statement)
+  if (MUST_PARSE.some((shape) => shape.test(sql))) {
+    throw new Error(`unparsed_schema_lock_target: ${sql}`)
   }
   return undefined
 }

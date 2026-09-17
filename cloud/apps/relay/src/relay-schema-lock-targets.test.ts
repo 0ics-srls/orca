@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  requireSchemaLockTarget,
   schemaLockTarget,
   sqlWithoutLeadingComments,
   takesRelationLock,
@@ -133,12 +134,25 @@ describe('relay boot-time lock targets', () => {
   it('derives a target for every CREATE INDEX and every ALTER TABLE ADD COLUMN', () => {
     // A census over the real schema, not two hand-picked cases: a statement that lands here
     // without a target is sent on every boot and takes the lock the pre-check exists to avoid.
+    // requireSchemaLockTarget is what boot calls, so this fails the same way boot would.
+    for (const statement of relayPostgresSchemaStatements()) {
+      expect(() => requireSchemaLockTarget(statement)).not.toThrow()
+    }
     const unparsed = relayPostgresSchemaStatements().filter(
       (statement) =>
         INDEX_OR_ADD_COLUMN.test(sqlWithoutLeadingComments(statement)) &&
         schemaLockTarget(statement) === undefined
     )
     expect(unparsed).toEqual([])
+  })
+
+  it('reads every derived name as a bare identifier, never a keyword or a qualified name', () => {
+    for (const statement of relayPostgresSchemaStatements()) {
+      const target = schemaLockTarget(statement)
+      if (!target) continue
+      expect(target.name).toMatch(/^[a-z_][a-z0-9_]*$/)
+      expect(target.table).toMatch(/^[a-z_][a-z0-9_]*$/)
+    }
   })
 
   it('pre-checks every lock-taking statement except the two pinned constraint swaps', () => {

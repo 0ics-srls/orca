@@ -8,12 +8,15 @@ export type SchemaCatalogQuery = (
   params: unknown[]
 ) => Promise<SchemaCatalogRow[]>
 
-// The index name is resolved inside the table's own namespace, so a same-named index on an
-// unrelated table in another schema cannot answer for this one. `to_regclass` returns NULL rather
-// than erroring when the table does not exist yet, which is the whole of a cold start.
+// The index name is resolved inside the table's own namespace, and `i.indrelid = t.oid` ties it to
+// this table: index names are unique per schema, not per table, so without that condition a
+// same-named index on a sibling table answers yes and the real index is skipped forever.
+// `to_regclass` returns NULL rather than erroring when the table does not exist yet, which is the
+// whole of a cold start.
 const INDEX_PRESENT = `SELECT i.indisvalid FROM pg_catalog.pg_class t
 JOIN pg_catalog.pg_class c ON c.relnamespace = t.relnamespace AND c.relname = $2
-JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid WHERE t.oid = to_regclass($1)`
+JOIN pg_catalog.pg_index i ON i.indexrelid = c.oid AND i.indrelid = t.oid
+WHERE t.oid = to_regclass($1)`
 
 const COLUMN_PRESENT = `SELECT 1 FROM pg_catalog.pg_attribute
 WHERE attrelid = to_regclass($1) AND attname = $2 AND attnum > 0 AND NOT attisdropped`

@@ -1,5 +1,9 @@
 import { catalogObjectPresence, type SchemaCatalogQuery } from './catalog-object-precheck.js'
-import { schemaLockTarget, sqlWithoutLeadingComments } from './schema-lock-target.js'
+import {
+  requireSchemaLockTarget,
+  sqlWithoutLeadingComments,
+  type SchemaLockTarget
+} from './schema-lock-target.js'
 
 const RETRYABLE_SCHEMA_CODES = new Set(['57014'])
 const LOCK_NOT_AVAILABLE = '55P03'
@@ -74,14 +78,12 @@ function retryableSchemaError(error: unknown, sql: string): boolean {
 // Evaluated immediately before each statement, so a pre-check still sees the tables the statements
 // ahead of it created in this same boot.
 async function alreadyPresent(
-  statement: string,
+  target: SchemaLockTarget | undefined,
   options: SchemaStartupOptions,
   eventPrefix: string
 ): Promise<boolean> {
   const catalogQuery = options.catalogQuery
-  if (!catalogQuery) return false
-  const target = schemaLockTarget(statement)
-  if (!target) return false
+  if (!catalogQuery || !target) return false
   const presence = await catalogObjectPresence(catalogQuery, target)
   if (!presence.present) return false
   console.log(
@@ -109,7 +111,10 @@ export async function applyPostgresSchema(
   const summary: SchemaApplySummary = { ran: 0, skipped: 0 }
 
   for (const statement of statements) {
-    if (await alreadyPresent(statement, options, eventPrefix)) {
+    // Throws when an index or column statement's target cannot be read, rather than sending it
+    // unchecked into the lock queue.
+    const target = requireSchemaLockTarget(statement)
+    if (await alreadyPresent(target, options, eventPrefix)) {
       summary.skipped += 1
       continue
     }
@@ -139,6 +144,16 @@ export async function applyPostgresSchema(
             })
           )
           throw error
+        }
+        // The object was created between the pre-check and this statement. Re-asking the catalog
+        // is the cheap answer; retrying the CREATE INDEX would take SHARE on the table again for
+        // an object that is already there.
+        if (
+          concurrentCreateCollision((error as { code?: unknown; constraint?: unknown }) ?? {}, sql) &&
+          (await alreadyPresent(target, options, eventPrefix))
+        ) {
+          summary.skipped += 1
+          break
         }
         const remainingMs = deadlineAt - now()
         const retryable =
