@@ -101,6 +101,7 @@ describe('agent.launch operation id', () => {
     attempts: Attempt[]
     replay?: boolean
     supported?: boolean
+    worktreeCreateIdempotency?: false
     mintLaunchOperationId?: () => string
   }): Promise<WorktreeCreateResult> {
     let minted = 0
@@ -108,7 +109,7 @@ describe('agent.launch operation id', () => {
       client: args.client,
       baseName: 'otter',
       buildParams: (name) => ({ repo: 'id:r', name }),
-      worktreeCreateIdempotency: IDEMPOTENT_CREATE_SUPPORT,
+      worktreeCreateIdempotency: args.worktreeCreateIdempotency ?? IDEMPOTENT_CREATE_SUPPORT,
       mintMutationId: () => 'key-launch',
       agentLaunch: {
         agent: 'claude',
@@ -152,6 +153,29 @@ describe('agent.launch operation id', () => {
       name: 'otter'
     })
     expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1'])
+  })
+
+  it('uses launch replay support independently of worktree.create idempotency', async () => {
+    const attempts: Attempt[] = []
+    const client = scriptedLaunchClient(
+      [{ throws: new LogicalClientCutoverError() }, { launched: 'wt-replay' }],
+      attempts
+    )
+
+    await expect(
+      launchRetry({ client, attempts, worktreeCreateIdempotency: false })
+    ).resolves.toEqual({ worktreeId: 'wt-replay', name: 'otter' })
+    expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1'])
+  })
+
+  it('bounds named timeout retries without minting another operation', async () => {
+    const attempts: Attempt[] = []
+    const error = markRpcDeliveryUnknown(new Error('Request timed out'))
+    const client = scriptedLaunchClient([{ throws: error }], attempts)
+
+    await expect(launchRetry({ client, attempts })).rejects.toBe(error)
+    expect(attempts).toHaveLength(3)
+    expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1', 'op-1'])
   })
 
   // The invariant. `computeAgentLaunchFingerprint` folds `target` whole, so the candidate name is

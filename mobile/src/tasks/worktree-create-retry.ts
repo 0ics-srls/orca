@@ -209,6 +209,8 @@ async function sendWorktreeCreateResilient(
   params: WorkspaceCreateParams,
   worktreeCreateIdempotency: WorktreeCreateIdempotencySupport | false
 ): Promise<{ response: RpcResponse; replayed: boolean }> {
+  // Only the selected method's receipt can authorize replay after an ambiguous delivery.
+  const replaySupport = launchAgent ? launchOperationId : worktreeCreateIdempotency
   let migrationRetry = 0
   let ambiguousRetry = 0
   const firstSentAt = Date.now()
@@ -229,7 +231,7 @@ async function sendWorktreeCreateResilient(
       // A refusal on the replacement connection says nothing about what the first call created.
       return { response, replayed: migrationRetry > 0 || ambiguousRetry > 0 }
     } catch (error) {
-      if (!worktreeCreateIdempotency) {
+      if (!replaySupport) {
         throw error
       }
       if (isLogicalClientCutoverError(error)) {
@@ -244,29 +246,21 @@ async function sendWorktreeCreateResilient(
       if (!isRpcDeliveryUnknown(error) || ambiguousRetry >= WORKTREE_CREATE_AMBIGUOUS_MAX_RETRIES) {
         throw error
       }
-      // Why: every transport path that reports a *drop* leaves 'connected' before the
-      // rejection reaches us (rpc-client.ts:675/695/1213 set state first or reject via
-      // queueMicrotask; the relay's fail() publishes synchronously). So still being
-      // 'connected' here means the socket was healthy the whole time and only the
-      // response went missing — the request-timeout path, which surfaces after
-      // WORKTREE_CREATE_TIMEOUT_MS. That says nothing about when the host actually
-      // resolved, so the dedupe record may be long gone and a replay would build a
-      // second worktree instead of reconciling. Fail the create instead.
-      if (client.getState() === 'connected') {
+      // A legacy cache may expire before a request timeout; durable receipts refuse unsafe replay.
+      if (typeof replaySupport !== 'string' && client.getState() === 'connected') {
         throw error
       }
-      // Computed once: a later ambiguity reads a fresher lastInboundAt from the
-      // replacement session, which would push the deadline past the record it respects.
-      replayDeadlineAt ??= resolveReplayDeadline(client, firstSentAt, worktreeCreateIdempotency)
+      // Keep the legacy deadline fixed; the host itself refuses expired durable operation IDs.
+      replayDeadlineAt ??=
+        typeof replaySupport === 'string'
+          ? Infinity
+          : resolveReplayDeadline(client, firstSentAt, replaySupport)
       const remainingWindowMs = replayDeadlineAt - Date.now()
       if (remainingWindowMs <= 0) {
         throw error
       }
       ambiguousRetry += 1
-      // Why: unlike a cutover, no replacement session exists yet — resending now
-      // would just hit the dead one, so wait for the transport to come back and
-      // surface the original ambiguity if it does not. Clamped to the window so the
-      // wait itself cannot carry the replay past the host's record.
+      // Disconnected transports must reconnect before resend; bound the wait even for durable IDs.
       if (
         !(await waitForRpcClientReconnected(
           client,
