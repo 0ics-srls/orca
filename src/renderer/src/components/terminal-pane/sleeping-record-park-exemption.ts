@@ -5,7 +5,7 @@ import { createWorktreeRecordSelector } from '@/store/worktree-record-selector-c
 
 const EMPTY_TAB_IDS: ReadonlySet<string> = new Set()
 
-export type SleepingRecordParkExemptionState = {
+type SleepingRecordParkExemptionState = {
   sleepingAgentSessionsByPaneKey?: Record<string, SleepingAgentSessionRecord> | undefined
 }
 
@@ -28,7 +28,6 @@ export const selectSleepingRecordParkExemptTabIds = createWorktreeRecordSelector
 >({
   readSources: (state) => [state.sleepingAgentSessionsByPaneKey],
   empty: EMPTY_TAB_IDS,
-  isEmpty: (tabIds) => tabIds.size === 0,
   build: (state, worktreeId) => {
     const sleepingAgentSessionsByPaneKey = state.sleepingAgentSessionsByPaneKey
     if (!sleepingAgentSessionsByPaneKey) {
