@@ -53,6 +53,7 @@ export function applyOutcome(
       phase: 'settled',
       outcome,
       joinedChildrenKnowledge: 'unknown',
+      integrityBreached: false,
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: null,
@@ -171,7 +172,7 @@ function deriveDispatchOutcome(
   if (turn.joinedChildrenKnowledge !== 'complete') {
     return 'unresolved'
   }
-  if (state.integrityIssues.some((entry) => entry.turnId === dispatch.turnId)) {
+  if (turn.integrityBreached) {
     return 'unresolved'
   }
   const joined = state.work.filter(

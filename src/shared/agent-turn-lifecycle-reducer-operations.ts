@@ -62,6 +62,13 @@ export function findDispatch(
 }
 
 export function issue(state: AgentTurnLifecycleState, entry: AgentTurnIntegrityIssue): void {
+  // Latch the breach on the turn itself; the ring below can evict this entry.
+  if (entry.turnId !== undefined) {
+    const turn = findTurn(state, entry.turnId)
+    if (turn) {
+      turn.integrityBreached = true
+    }
+  }
   if (
     state.integrityIssues.some(
       (existing) =>
@@ -173,14 +180,15 @@ export function addDispatch(
 export function unresolvedTurn(
   state: AgentTurnLifecycleState,
   turnId: string,
-  at: number,
+  evidence: AgentTurnEvidence,
   options: { includeResidentBackground?: boolean } = {}
 ): void {
+  const at = evidence.observedAt
   const turn = findTurn(state, turnId)
   if (turn && (turn.phase === 'active' || turn.phase === 'recovering')) {
     turn.phase = 'unresolved'
     turn.settledAt = at
-    turn.lastEvidence = { ...turn.lastEvidence, observedAt: at }
+    turn.lastEvidence = evidence
   }
   for (const item of state.work) {
     if (
@@ -190,7 +198,7 @@ export function unresolvedTurn(
     ) {
       item.phase = 'unresolved'
       item.settledAt = at
-      item.lastEvidence = { ...item.lastEvidence, observedAt: at }
+      item.lastEvidence = evidence
     }
   }
   if (state.currentTurnId === turnId) {
@@ -221,6 +229,7 @@ export function turnFromInventory(
       phase: 'active',
       outcome: null,
       joinedChildrenKnowledge: 'unknown',
+      integrityBreached: false,
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: inventory.startedAt ?? event.evidence.observedAt,

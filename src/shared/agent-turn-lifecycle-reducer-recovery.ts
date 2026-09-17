@@ -42,6 +42,7 @@ export function recoveryStarted(
       phase: 'recovering',
       outcome: null,
       joinedChildrenKnowledge: 'unknown',
+      integrityBreached: false,
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: null,
@@ -73,7 +74,7 @@ export function recoveryExpired(
     return 'stale'
   }
   state.recoveries = state.recoveries.filter((entry) => entry.custodyId !== event.custodyId)
-  unresolvedTurn(state, event.turnId, event.evidence.observedAt)
+  unresolvedTurn(state, event.turnId, eventEvidence(event))
   return undefined
 }
 
@@ -99,4 +100,27 @@ export function recoveryAbandoned(
     state.currentTurnId = null
   }
   return undefined
+}
+
+/** The host re-derives this expiry itself, so it is not attributable to any provider. */
+const HOST_RECOVERY_EXPIRY_PRODUCER = 'host:turn-recovery-expiry'
+
+/**
+ * TTL re-derivation. A custody whose producer dies before sending its expiry event
+ * must still die here, or the turn stays `recovering` and every dispatch on it stays
+ * `unresolved` for the life of the process.
+ */
+export function expireRecoveries(state: AgentTurnLifecycleState, observedAt: number): void {
+  const lapsed = state.recoveries.filter((entry) => entry.deadlineAt <= observedAt)
+  if (lapsed.length === 0) {
+    return
+  }
+  state.recoveries = state.recoveries.filter((entry) => entry.deadlineAt > observedAt)
+  for (const recovery of lapsed) {
+    unresolvedTurn(state, recovery.turnId, {
+      eventId: `recovery-expiry:${recovery.custodyId}`,
+      producerId: HOST_RECOVERY_EXPIRY_PRODUCER,
+      observedAt
+    })
+  }
 }

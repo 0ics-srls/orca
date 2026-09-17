@@ -36,6 +36,9 @@ export type AgentTurnRecord = {
   outcome: AgentTurnOutcome | null
   /** Whether authoritative inventory closed the finite-child set for this turn. */
   joinedChildrenKnowledge: 'unknown' | 'complete'
+  /** Sticky: `integrityIssues` is a bounded diagnostic ring, so a settlement gate
+   *  that scanned it would re-open once the entry aged out. */
+  integrityBreached: boolean
   interrupt: AgentTurnInterruptState
   /** Writing Escape/Ctrl+C is delivery evidence, not an interrupt acknowledgement. */
   interruptInputWrittenAt: number | null

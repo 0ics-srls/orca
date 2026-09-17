@@ -48,6 +48,7 @@ function turnStarted(
       phase: 'active',
       outcome: null,
       joinedChildrenKnowledge: 'unknown',
+      integrityBreached: false,
       interrupt: 'none',
       interruptInputWrittenAt: null,
       startedAt: event.startedAt ?? event.evidence.observedAt,
@@ -63,7 +64,7 @@ function turnStarted(
     return 'capacity'
   }
   if (state.currentTurnId && state.currentTurnId !== event.turnId) {
-    unresolvedTurn(state, state.currentTurnId, event.evidence.observedAt)
+    unresolvedTurn(state, state.currentTurnId, eventEvidence(event))
   }
   state.currentTurnId = event.turnId
   return undefined
@@ -75,7 +76,7 @@ function inventory(
 ): Reason {
   const priorCurrent = state.currentTurnId
   if (priorCurrent && (!event.currentTurn || priorCurrent !== event.currentTurn.turnId)) {
-    unresolvedTurn(state, priorCurrent, event.evidence.observedAt)
+    unresolvedTurn(state, priorCurrent, eventEvidence(event))
   }
   if (event.currentTurn && !turnFromInventory(state, event.currentTurn, event)) {
     issue(state, {

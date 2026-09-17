@@ -2,7 +2,7 @@ import type {
   AgentTurnLifecycleEvent,
   AgentTurnLifecycleState
 } from './agent-turn-lifecycle-contract'
-import { unresolvedTurn } from './agent-turn-lifecycle-reducer-operations'
+import { eventEvidence, unresolvedTurn } from './agent-turn-lifecycle-reducer-operations'
 
 export function observeExecutionVerdict(
   state: AgentTurnLifecycleState,
@@ -17,7 +17,7 @@ export function observeExecutionVerdict(
         (item) => item.turnId === turn.turnId && item.phase === 'active'
       )
       if (turn.phase === 'active' || turn.phase === 'recovering' || hasActiveWork) {
-        unresolvedTurn(state, turn.turnId, event.evidence.observedAt, {
+        unresolvedTurn(state, turn.turnId, eventEvidence(event), {
           includeResidentBackground: true
         })
       }

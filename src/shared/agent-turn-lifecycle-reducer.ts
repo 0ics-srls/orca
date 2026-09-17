@@ -20,6 +20,7 @@ import {
   reconcileDispatches
 } from './agent-turn-lifecycle-reducer-transitions'
 import { reduceAgentTurnEvent } from './agent-turn-lifecycle-reducer-events'
+import { expireRecoveries } from './agent-turn-lifecycle-reducer-recovery'
 
 function ignored(
   state: AgentTurnLifecycleState,
@@ -47,6 +48,8 @@ export function reduceAgentTurnLifecycle(
   // turn a provider delivery race into an unbounded host workload.
   rememberEvent(next, event)
   const reason = reduceAgentTurnEvent(next, event)
+  // Expire first: a lapsed custody must release its turn before dispatches settle.
+  expireRecoveries(next, event.evidence.observedAt)
   reconcileDispatches(next, event.evidence.observedAt)
   return {
     state: next,

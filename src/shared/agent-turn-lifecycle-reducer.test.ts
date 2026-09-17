@@ -476,6 +476,65 @@ describe('canonical agent turn lifecycle reducer', () => {
     expect(readAgentTurnLifecycleSnapshot(inventory.state).currentTurn?.turnId).toBe('turn-1')
   })
 
+  it('expires a lapsed recovery custody without an explicit expiry event', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-ttl' })).state
+    current = apply(
+      current,
+      event({ kind: 'dispatch-received', dispatchId: 'dispatch-ttl', turnId: 'turn-ttl' })
+    ).state
+    current = apply(
+      current,
+      event({
+        kind: 'turn-recovery-started',
+        turnId: 'turn-ttl',
+        custodyId: 'custody-ttl',
+        deadlineAt: 25
+      })
+    ).state
+    expect(current.recoveries).toHaveLength(1)
+    expect(current.turns[0]).toMatchObject({ phase: 'recovering' })
+    // Any later evidence re-derives the lapsed deadline; the producer that opened
+    // the custody never sends its expiry event.
+    const unrelated = event({ kind: 'turn-started', turnId: 'turn-ttl-next' })
+    const swept = apply(current, {
+      ...unrelated,
+      evidence: { ...unrelated.evidence, observedAt: 30 }
+    })
+    expect(swept.state.recoveries).toHaveLength(0)
+    expect(swept.state.turns.find((turn) => turn.turnId === 'turn-ttl')).toMatchObject({
+      phase: 'unresolved'
+    })
+    expect(swept.state.dispatches[0]).toMatchObject({ outcome: 'unresolved' })
+  })
+
+  it('latches an integrity breach on the turn rather than the bounded issue ring', () => {
+    let current = state()
+    current = apply(current, event({ kind: 'turn-started', turnId: 'turn-breach' })).state
+    current = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-breach',
+        outcome: 'completed',
+        recordKind: 'event'
+      })
+    ).state
+    const conflicted = apply(
+      current,
+      event({
+        kind: 'turn-outcome-observed',
+        turnId: 'turn-breach',
+        outcome: 'failed',
+        recordKind: 'event'
+      })
+    )
+    expect(conflicted.state.turns[0]).toMatchObject({
+      turnId: 'turn-breach',
+      integrityBreached: true
+    })
+  })
+
   it('bounds recovery custody and supports expiry versus explicit abandon', () => {
     let current = state()
     current = apply(
