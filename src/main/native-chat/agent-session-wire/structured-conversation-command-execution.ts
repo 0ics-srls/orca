@@ -173,7 +173,7 @@ export class StructuredConversationCommandExecution {
           .close(replacementSessionId)
           .catch((error) => this.owner.report(entry, error))
       }
-      await this.markUnknown(entry, STALE_COMMAND_COMPLETION, true)
+      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
       return
     }
     await this.complete(entry, attachError ?? undefined, Boolean(attachError))
@@ -190,7 +190,7 @@ export class StructuredConversationCommandExecution {
     }
     await this.context().serialize(execution.turn.sessionId, async () => {
       if (!this.canSettle(entry, execution)) {
-        await this.markUnknownInLane(entry, STALE_COMMAND_COMPLETION, true)
+        await this.markUnknownInLane(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
         return
       }
       const value: AgentSessionConversationCommandRecord = {
