@@ -1,0 +1,25 @@
+{
+  "observations": [
+    {
+      "variant": "before",
+      "repositoryPaths": 249,
+      "crlfMatches": true,
+      "simulatedMainPublicationMatches": true,
+      "sourceHash": "fc7a9e1bc5cfa43c934c315941f3ad301dfdf39951c79b2829e450dad17f0ac5"
+    },
+    {
+      "variant": "fixed",
+      "repositoryPaths": 250,
+      "crlfMatches": true,
+      "simulatedMainPublicationMatches": true,
+      "sourceHash": "cf5c128ef92a91e82f193718cf613d2daffb5a9e1c62c47fd177f093381302eb"
+    }
+  ],
+  "currentDependencyContextPaths": [
+    "src/main/git/command-runner/git-subprocess-admission.ts",
+    "src/main/plugins/plugin-worker-output-buffer.ts",
+    "src/main/providers/working-directory-validation.ts",
+    "src/shared/promise-settlement-waiters.ts"
+  ],
+  "driftRejected": true
+}

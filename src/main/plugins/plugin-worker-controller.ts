@@ -32,7 +32,7 @@ export type PluginWorkerControllerOptions = {
     method: string,
     params: unknown
   ) => Promise<PluginPanelActionOutcome>
-  log: (pluginKey: string, level: 'info' | 'warn' | 'error', line: string) => void
+  log: (pluginKey: string) => (level: 'info' | 'warn' | 'error', line: string) => void
   onStateChanged: (pluginKey: string) => void
   onWorkerGone: (pluginKey: string) => void
 }
