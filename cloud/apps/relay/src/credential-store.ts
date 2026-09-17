@@ -12,6 +12,13 @@ const CREDENTIAL_GRACE_MS = 24 * 60 * 60 * 1000
 // tolerance at exactly inviteTtlMs; issuing under the ceiling keeps pairing
 // working for clients whose clocks trail the cell by up to this margin.
 const INVITE_ISSUE_SKEW_MARGIN_MS = 30 * 1000
+// Terminal invites are read by nothing: every reader re-checks expiry and state at read time, so
+// the row only serves the audit trail, which relay_audit_events already keeps. A week is long
+// enough to answer a support question about a pairing that failed.
+const TERMINAL_INVITE_RETENTION_MS = 7 * 24 * 60 * 60 * 1000
+// Bounded so one cycle cannot hold row locks or grow WAL without limit; the backlog drains over
+// however many cycles it takes.
+const TERMINAL_INVITE_REAP_BATCH = 5000
 
 export type RelayIdentity = { userId: string; relayHostId: string }
 export type CredentialReservation = RelayIdentity & {
@@ -643,6 +650,24 @@ export class RelayCredentialStore {
         [now - 24 * 60 * 60 * 1000]
       )
     })
+    await this.reapTerminalInvites(now)
+  }
+
+  // Outside the sweep transaction on purpose: the delete is idempotent and independent of the
+  // state transitions above, so batching it in would only hold their row locks for longer.
+  private async reapTerminalInvites(now: number): Promise<void> {
+    const cutoff = now - TERMINAL_INVITE_RETENTION_MS
+    // ctid/rowid, not the primary key: the physical address lets the delete re-find the batch the
+    // subquery already located instead of matching four text columns per row.
+    const address = this.database.dialect === 'sqlite' ? 'rowid' : 'ctid'
+    await this.database.query(
+      `DELETE FROM relay_invites WHERE ${address} IN (
+         SELECT ${address} FROM relay_invites
+         WHERE state IN (?, ?, ?) AND updated_at <= ?
+         LIMIT ${TERMINAL_INVITE_REAP_BATCH}
+       )`,
+      ['expired', 'consumed', 'invalidated', cutoff]
+    )
   }
 
   private async installStatusWith(
