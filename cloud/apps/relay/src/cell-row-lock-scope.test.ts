@@ -341,6 +341,24 @@ describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
     ).resolves.toBeUndefined()
   })
 
+  // Why: an insert shape the parser cannot read used to match no branch at all --
+  // not the insert path, not the write path, not the read path -- so it produced
+  // no report and no stand-down. A statement that falls through every branch is
+  // the one failure a guard sold on its silence must never have.
+  it('reports an insert shape it cannot read instead of skipping it', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(INVENTORY_LOCK)
+        // Matches nothing, so the statement itself succeeds and the guard is
+        // judged on the shape rather than on a constraint failure.
+        await transaction.query(
+          `INSERT INTO relay_cells SELECT * FROM relay_cells WHERE cell_id = ?`,
+          [`${PREFIX}-absent`]
+        )
+      })
+    ).rejects.toThrow('unparsed-write')
+  })
+
   it('still treats a plain insert as free, since nobody could hold that row', async () => {
     await expect(
       database.transaction(async (transaction) => {

@@ -92,6 +92,15 @@ export class CellRowLockScopeSamples {
 // rather than a regex. Case-sensitive, like the census that ratchets these sites.
 const CELL_TABLE = 'relay_cells'
 const CELL_INSERT = /^\s*INSERT\s+INTO\s+relay_cells\s*\(([^)]*)\)\s*VALUES\s*\(/i
+// Any insert into the table, matched separately so a shape the parser above does
+// not recognise -- INSERT ... SELECT, a multi-row VALUES -- is reported rather
+// than silently skipped. Silence is what this guard sells; a shape that falls
+// through every branch is the one failure it must never have.
+const CELL_INSERT_ANY = /^\s*INSERT\s+INTO\s+relay_cells\b/i
+// A second VALUES tuple. insertedCellIds reads only the first, so the rest would
+// be missing from `held` -- and a missing entry on the insert path is the one
+// direction that invents a report instead of losing one.
+const MULTI_ROW_VALUES = /\)\s*,\s*\(/
 const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
 // The statement's own relation, not any mention of the table: relay_assignments,
 // relay_cell_runtime and relay_migrations all carry a cell_id that would
@@ -165,7 +174,21 @@ export class CellRowLockScope {
     if (CELL_INSERT.test(sql)) {
       // See the CELL_UPSERT note above: a colliding upsert is a waiting
       // acquisition this does not police, and closing that needs the conversion.
-      for (const cellId of insertedCellIds(sql, params)) this.held.add(cellId)
+      const inserted = insertedCellIds(sql, params)
+      // A recognised shape that yielded no cell_id, or a second VALUES tuple this
+      // parser does not read, would otherwise leave rows out of `held` -- which
+      // turns into a FALSE out-of-order report on the next write naming them.
+      if (inserted.length === 0 || MULTI_ROW_VALUES.test(sql)) {
+        this.noteStandDown(fingerprint(sql))
+        return
+      }
+      for (const cellId of inserted) this.held.add(cellId)
+      return
+    }
+    if (CELL_INSERT_ANY.test(sql)) {
+      // Reached only by an insert shape the parser above does not read.
+      this.note()
+      this.acquire(undefined, fingerprint(sql), 'wait')
       return
     }
     if (CELL_ROW_WRITE.test(sql)) {
