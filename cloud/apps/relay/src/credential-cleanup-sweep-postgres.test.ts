@@ -120,6 +120,64 @@ describePostgres('credential cleanup against PostgreSQL', () => {
     expect(expiry).toContain('relay_invites_sweep_expiry')
   })
 
+  it('plans the live-basis sweep on the partial index, not the table-wide composite', async () => {
+    // The shape that made this the most expensive statement in the sweep: 20,000 settled bases to
+    // 50 live ones, so the composite (active, deadline) index spans 400x the rows the sweep wants.
+    await database.query(
+      `INSERT INTO relay_connection_bases
+       (basis_conn_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        credential_kind, deadline, active, created_at)
+       SELECT 'settled-' || n, ?, ?, 'device-1', 1, 'invite', ?, 0, ?
+       FROM generate_series(1, 20000) AS n`,
+      [identity.userId, identity.relayHostId, NOW - 2 * DAY_MS, NOW - 2 * DAY_MS]
+    )
+    await database.query(
+      `INSERT INTO relay_connection_bases
+       (basis_conn_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        credential_kind, deadline, active, created_at)
+       SELECT 'live-' || n, ?, ?, 'device-1', 1, 'invite', ?, 1, ?
+       FROM generate_series(1, 50) AS n`,
+      [identity.userId, identity.relayHostId, NOW + 30_000, NOW]
+    )
+    await database.query(`ANALYZE relay_connection_bases`)
+
+    const sweep = await plan(
+      `UPDATE relay_connection_bases SET active = 0 WHERE active = 1 AND deadline <= ?`,
+      [NOW]
+    )
+
+    expect(sweep).toContain('relay_connection_bases_live_deadline')
+    expect(sweep).not.toContain('Seq Scan on relay_connection_bases')
+    expect(sweep).not.toContain('relay_connection_bases_active_deadline')
+  })
+
+  it('plans the drained basis reaper off the composite index, not the heap', async () => {
+    // Why the composite index stays for now: it is the only one covering active = 0, and the case
+    // that needs it is the steady state, where every row is inside retention and the reaper must
+    // learn there is nothing to do. While the backlog drains the planner rightly prefers a bounded
+    // sequential scan, because it finds its 5,000 rows and stops; measured at 200k rows, the
+    // drained batch costs 5 buffers with this index and 1,274 without it.
+    await database.query(
+      `INSERT INTO relay_connection_bases
+       (basis_conn_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        credential_kind, deadline, active, created_at)
+       SELECT 'settled-' || n, ?, ?, 'device-1', 1, 'invite', ?, 0, ?
+       FROM generate_series(1, 20000) AS n`,
+      [identity.userId, identity.relayHostId, NOW - 60_000, NOW - 60_000]
+    )
+    await database.query(`ANALYZE relay_connection_bases`)
+
+    const reaper = await plan(
+      `DELETE FROM relay_connection_bases WHERE ctid IN (
+         SELECT ctid FROM relay_connection_bases WHERE active = ? AND deadline <= ? LIMIT 5000
+       )`,
+      [0, NOW - DAY_MS]
+    )
+
+    expect(reaper).toContain('relay_connection_bases_active_deadline')
+    expect(reaper).not.toContain('Seq Scan on relay_connection_bases')
+  })
+
   it('plans the pending-authorization and rate-window sweeps as index scans', async () => {
     await database.query(
       `INSERT INTO relay_direct_authorizations
@@ -150,6 +208,56 @@ describePostgres('credential cleanup against PostgreSQL', () => {
     expect(pending).not.toContain('Seq Scan on relay_direct_authorizations')
     expect(windows).toContain('relay_rate_windows_started')
     expect(windows).not.toContain('Seq Scan on relay_rate_windows')
+  })
+
+  it('reaps settled bases and consumed authorizations through ctid', async () => {
+    await database.query(
+      `INSERT INTO relay_connection_bases
+       (basis_conn_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        credential_kind, deadline, active, created_at)
+       SELECT 'settled-' || n, ?, ?, 'device-1', 1, 'invite', ?, 0, ?
+       FROM generate_series(1, 5002) AS n`,
+      [identity.userId, identity.relayHostId, NOW - 2 * DAY_MS, NOW - 2 * DAY_MS]
+    )
+    await database.query(
+      `INSERT INTO relay_connection_bases
+       (basis_conn_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        credential_kind, deadline, active, created_at)
+       VALUES ('live', ?, ?, 'device-1', 1, 'invite', ?, 1, ?)`,
+      [identity.userId, identity.relayHostId, NOW + 30_000, NOW]
+    )
+    await database.query(
+      `INSERT INTO relay_direct_authorizations
+       (direct_auth_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        deadline, consumed_at)
+       SELECT 'consumed-' || n, ?, ?, 'device-1', 1, ?, ?
+       FROM generate_series(1, 5002) AS n`,
+      [identity.userId, identity.relayHostId, NOW - 2 * DAY_MS, NOW - 2 * DAY_MS]
+    )
+    await database.query(
+      `INSERT INTO relay_direct_authorizations
+       (direct_auth_id, user_id, relay_host_id, relay_device_id, owning_control_generation,
+        deadline, consumed_at)
+       VALUES ('pending', ?, ?, 'device-1', 1, ?, NULL)`,
+      [identity.userId, identity.relayHostId, NOW + 30_000]
+    )
+
+    await store.cleanup()
+    expect(
+      await database.query(`SELECT count(*) AS total FROM relay_connection_bases`)
+    ).toEqual([{ total: '3' }])
+    expect(
+      await database.query(`SELECT count(*) AS total FROM relay_direct_authorizations`)
+    ).toEqual([{ total: '3' }])
+
+    await store.cleanup()
+    // Only the rows a reader could still accept are left.
+    expect(
+      await database.query(`SELECT basis_conn_id FROM relay_connection_bases`)
+    ).toEqual([{ basis_conn_id: 'live' }])
+    expect(
+      await database.query(`SELECT direct_auth_id FROM relay_direct_authorizations`)
+    ).toEqual([{ direct_auth_id: 'pending' }])
   })
 
   it('reaps terminal invites past retention through ctid, one bounded batch per cycle', async () => {

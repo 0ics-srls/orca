@@ -175,6 +175,13 @@ CREATE TABLE IF NOT EXISTS relay_connection_bases (
 CREATE INDEX IF NOT EXISTS relay_connection_bases_active_deadline
   ON relay_connection_bases(active, deadline);
 
+-- schema-deferrable: created out of band, so a boot that cannot take the lock must retry
+-- Why: the index above spans every row, and inactive bases outnumber live ones by ~6.6M to a few
+-- hundred, so the sweep still walked ~283 MB of index to find them. This one holds only the rows
+-- the sweep can act on. Keeping both: the composite is also what makes the reaper an index range.
+CREATE INDEX IF NOT EXISTS relay_connection_bases_live_deadline
+  ON relay_connection_bases(deadline) WHERE active = 1;
+
 CREATE TABLE IF NOT EXISTS relay_direct_authorizations (
   direct_auth_id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL,
