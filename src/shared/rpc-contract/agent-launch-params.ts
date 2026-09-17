@@ -12,6 +12,7 @@
  */
 
 import { z } from 'zod'
+import { parseAgentSessionOperationTimestamp } from '../agent-session-host-authority'
 import { isTuiAgent } from '../tui-agent-config'
 import type { TuiAgent } from '../tui-agent'
 import { WorktreeCreate } from './worktree-create-params'
@@ -26,10 +27,6 @@ const LaunchAgent = z
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the superRefine above rejects anything isTuiAgent refuses, so the transform only ever runs on a TuiAgent.
   .transform((value): TuiAgent => value as TuiAgent)
 
-/** The shipped durable-operation id shape: millisecond timestamp, then 128 bits of hex entropy.
- *  Same format the structured session ledger already keys on, so one id vocabulary covers both. */
-const LAUNCH_OPERATION_ID_PATTERN = /^\d{13}-[0-9a-f]{32}$/
-
 export const AgentLaunch = z.object({
   agent: LaunchAgent,
   /**
@@ -42,7 +39,10 @@ export const AgentLaunch = z.object({
    */
   operationId: z
     .string()
-    .regex(LAUNCH_OPERATION_ID_PATTERN, 'Malformed launch operation id')
+    .refine(
+      (value) => parseAgentSessionOperationTimestamp(value) !== null,
+      'Malformed launch operation id'
+    )
     .optional(),
   target: z.discriminatedUnion('kind', [
     z.object({

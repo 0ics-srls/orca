@@ -15,10 +15,7 @@
  * and the fence for that same reason.
  */
 
-import {
-  computeAgentLaunchFingerprint,
-  deriveAgentLaunchChildOperationId
-} from '../../../../shared/agent-launch-operation'
+import { deriveAgentLaunchChildOperationId } from '../../../../shared/agent-launch-operation'
 import { isAgentLaunchResult, type AgentLaunchResult } from '../../../../shared/agent-launch-intent'
 import type {
   AgentSessionOperationOutcome,
@@ -30,26 +27,18 @@ import type { AgentSessionRecordStore } from '../../agent-session-record-store'
 import type { RpcContext } from '../core'
 import type { AgentLaunchParams } from './agent-launch-schemas'
 
-/**
- * Who the ledger partitions this operation under.
- *
- * Matches `terminal.create`'s derivation. Stated honestly: only the paired device id is an identity
- * a caller keeps across reconnects. `clientId` is the documented fallback, and on the websocket
- * dispatch path it is the bearer token itself — which rotates, so a caller that re-authenticates
- * lands in a fresh partition where its earlier ids are unreachable rather than replayable. That is
- * the safe direction (an unreachable row never replays as done), but it is a real limit, not the
- * absence of one. `local` covers the in-process caller, which is the same build as the host.
- *
- * It does NOT give one client a single namespace across surfaces: the structured attach this launch
- * performs partitions under `structuredCallerFor` (`clientId` or `trusted-local:<kind>`), so the
- * two coincide only for a bearer-identity caller with no paired device. The child id below is what
- * makes that coincidence safe; when they diverge the attach's row simply lands elsewhere, is never
- * read back — the launch's own row answers every replay — and ages out on its own schedule.
- */
+/** Remote replay needs the paired-device subject because its bearer credential can rotate. */
 export function agentLaunchOperationCallerKey(
-  context: Pick<RpcContext, 'pairedDeviceId' | 'clientId'>
+  context: Pick<RpcContext, 'pairedDeviceId' | 'clientKind'>
 ): string {
-  return context.pairedDeviceId ?? context.clientId ?? 'local'
+  if (context.clientKind === undefined) {
+    return 'trusted-local:runtime'
+  }
+  const pairedDeviceId = context.pairedDeviceId?.trim()
+  if (!pairedDeviceId) {
+    throw new Error('agent_session_identity_required')
+  }
+  return pairedDeviceId
 }
 
 /**
@@ -82,6 +71,7 @@ export type AgentLaunchAdmission =
       fail: (code: string) => Promise<void>
       /** Distinct from the launch id: the inner attach reserves in this same ledger. */
       attachOperationId: string
+      callerKey: string
     }
   /** Already run under this id; hand back what it produced rather than producing it again. */
   | { decision: 'replay'; result: AgentLaunchResult }
@@ -136,6 +126,7 @@ function answerFromRecordedRow(
 export async function admitAgentLaunchOperation(
   context: RpcContext,
   params: AgentLaunchParams & { operationId: string },
+  fingerprint: string,
   now: number = Date.now()
 ): Promise<AgentLaunchAdmission> {
   const operationId = params.operationId
@@ -148,9 +139,7 @@ export async function admitAgentLaunchOperation(
   const admitted = await store.admitOperation({
     callerKey,
     operationId,
-    // Host-computed over the caller's stated intent; a digest the caller supplied is a digest a
-    // buggy caller can make agree with anything.
-    fingerprint: computeAgentLaunchFingerprint(params),
+    fingerprint,
     now
   })
   if (admitted.decision === 'refused') {
@@ -164,13 +153,8 @@ export async function admitAgentLaunchOperation(
   }
   const claim = await store.claimOperation({ callerKey, operationId })
   if (claim.claim === 'lost') {
-    // Never `pending` — a pending row is exactly what a claim takes — so this always has an answer.
-    //
-    // KNOWN LIMIT, deliberate here: `unknown` does not distinguish a sibling executing in this very
-    // process from one a restart abandoned, so a duplicate that arrives while the real launch is
-    // still running is refused as uncertain rather than made to wait for it. Telling those apart
-    // needs the claim to record which execution generation took it, and re-deriving against the
-    // live one is recovery — the thing this PR draws its line at.
+    // The handler joins same-process retries before admission. Reaching a claimed row here means
+    // this runtime did not start it, so treating it as restart uncertainty is the safe answer.
     return (
       answerFromRecordedRow(operationId, claim.row.outcome) ??
       refusal(operationId, 'agent_session_operation_unknown', 'is claimed but unsettled')
@@ -188,6 +172,7 @@ export async function admitAgentLaunchOperation(
   return {
     decision: 'execute',
     attachOperationId,
+    callerKey,
     settle: (result) =>
       store.recordOperationOutcome({
         callerKey,

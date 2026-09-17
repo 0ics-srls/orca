@@ -18,6 +18,7 @@ import {
   type AgentLaunchFingerprintInput
 } from '../../../../shared/agent-launch-operation'
 import {
+  agentSessionOperationKey,
   claimAgentSessionOperation,
   isAgentSessionOperationRow,
   settleAgentSessionOperation,
@@ -28,6 +29,8 @@ import { agentSessionStorePath } from '../../agent-session-record-store-file'
 import { setStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
 import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
 import type { RpcContext } from '../core'
+import type { OrcaRuntimeService } from '../../orca-runtime'
+import { RpcDispatcher } from '../dispatcher'
 import {
   methodNamed,
   rpcContext,
@@ -42,17 +45,24 @@ type StructuredCreateReply =
 /** Records the operation id the launch handed its inner attach, so the child-id rule is observable
  *  rather than inferred. */
 const attachOperationIds: string[] = []
+const attachCallerKeys: string[] = []
 
 const createStructuredSession = vi.fn(
-  async (args: { envelope: { clientOperationId: string } }): Promise<StructuredCreateReply> => {
+  async (args: {
+    caller: { callerKey: string }
+    envelope: { clientOperationId: string }
+  }): Promise<StructuredCreateReply> => {
     attachOperationIds.push(args.envelope.clientOperationId)
+    attachCallerKeys.push(args.caller.callerKey)
     return { ok: true, value: { sessionId: 'sess-1' } }
   }
 )
 
 vi.mock('./structured-agent-session-create', () => ({
-  createStructuredAgentSessionForWorktree: (args: { envelope: { clientOperationId: string } }) =>
-    createStructuredSession(args)
+  createStructuredAgentSessionForWorktree: (args: {
+    caller: { callerKey: string }
+    envelope: { clientOperationId: string }
+  }) => createStructuredSession(args)
 }))
 
 const { AGENT_LAUNCH_METHODS } = await import('./agent-launch')
@@ -64,16 +74,15 @@ const AGENT_LAUNCH = methodNamed(AGENT_LAUNCH_METHODS, 'agent.launch')
 const NOW = Date.now()
 const OPERATION_ID = `${NOW}-000000000000000000000000000000aa`
 
-/** Paired identity and bearer identity derive the launch's caller key differently, and only the
- *  bearer-identity shape can collide with what the inner attach reserves under. */
 const PAIRED_CLIENT: Partial<RpcContext> = {
   clientKind: 'mobile',
   pairedDeviceId: 'device-1',
+  clientId: 'credential-a',
   clientCapabilities: [AGENT_LAUNCH_RUNTIME_CAPABILITY]
 }
-const BEARER_CLIENT: Partial<RpcContext> = {
-  clientKind: 'runtime',
-  clientId: 'client-9',
+const ROTATED_CREDENTIAL_CLIENT: Partial<RpcContext> = {
+  ...PAIRED_CLIENT,
+  clientId: 'credential-b',
   clientCapabilities: [AGENT_LAUNCH_RUNTIME_CAPABILITY]
 }
 
@@ -108,6 +117,7 @@ function rowFor(operationId: string): AgentSessionOperationRow | undefined {
 
 beforeEach(async () => {
   attachOperationIds.length = 0
+  attachCallerKeys.length = 0
   createStructuredSession.mockClear()
   directory = await mkdtemp(join(tmpdir(), 'orca-agent-launch-replay-'))
   store = await AgentSessionRecordStore.open({ directory, hostId: 'local' })
@@ -123,47 +133,34 @@ afterEach(async () => {
 })
 
 describe('exactly one execution per launch operation', () => {
-  it('runs one of two callers that both observe a pending row', async () => {
+  it('joins an identical live retry through settlement and conflicts on changed intent', async () => {
     const runtime = runtimeStub()
+    let markStarted: (() => void) | undefined
+    const started = new Promise<void>((resolve) => {
+      markStarted = resolve
+    })
+    let releaseEffect: (() => void) | undefined
+    const effectGate = new Promise<void>((resolve) => {
+      releaseEffect = resolve
+    })
+    runtime.createManagedWorktree.mockImplementationOnce(async () => {
+      markStarted?.()
+      await effectGate
+      return { worktree: { id: 'wt-new' }, startupTerminal: undefined }
+    })
     const params = createLaunch({ operationId: OPERATION_ID })
-    const [first, second] = await Promise.allSettled([
-      launch(params, runtime),
-      launch(params, runtime)
-    ])
+    const first = launch(params, runtime)
+    await started
+    const joined = launch(params, runtime)
+    await expect(
+      launch(createLaunch({ operationId: OPERATION_ID, agent: 'codex' }), runtime)
+    ).rejects.toThrow('agent_session_operation_conflict')
+    releaseEffect?.()
+    const [firstResult, joinedResult] = await Promise.all([first, joined])
 
     expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
     expect(createStructuredSession).toHaveBeenCalledTimes(1)
-    const settled = [first, second].filter((result) => result.status === 'fulfilled')
-    expect(settled).toHaveLength(1)
-  })
-
-  it('ABLATION: a claim that reads and then writes in separate steps launches twice', async () => {
-    // The composition this replaced, substituted back into the handler's own store: observe the
-    // admitted row, then settle it `unknown`. Two transactions, so both callers drain their read
-    // before either write lands, and `settleAgentSessionOperation` replaces the outcome blind —
-    // neither write can tell the other it was second.
-    vi.spyOn(store, 'claimOperation').mockImplementation(async ({ callerKey, operationId }) => {
-      const before = rowFor(operationId)
-      if (!before) {
-        return { claim: 'absent' }
-      }
-      if (before.outcome.status !== 'pending') {
-        return { claim: 'lost', row: before }
-      }
-      await store.recordOperationOutcome({
-        callerKey,
-        operationId,
-        outcome: { status: 'unknown' }
-      })
-      return { claim: 'won', row: { ...before, outcome: { status: 'unknown' } } }
-    })
-
-    const runtime = runtimeStub()
-    const params = createLaunch({ operationId: OPERATION_ID })
-    await Promise.allSettled([launch(params, runtime), launch(params, runtime)])
-
-    // One tap, two workspaces. This is the number the first test in this block holds at 1.
-    expect(runtime.createManagedWorktree).toHaveBeenCalledTimes(2)
+    expect(joinedResult).toEqual(firstResult)
   })
 
   it('the atomic claim admits exactly one winner where the blind settle admitted two', async () => {
@@ -180,6 +177,35 @@ describe('exactly one execution per launch operation', () => {
     ])
     expect(claims.filter((claim) => claim.claim === 'won')).toHaveLength(1)
     expect(claims.filter((claim) => claim.claim === 'lost')).toHaveLength(1)
+  })
+})
+
+describe('stable replay identity', () => {
+  it('replays across a bearer-credential change under the paired device subject', async () => {
+    const params = createLaunch({ operationId: OPERATION_ID })
+    const firstRuntime = runtimeStub()
+    const first = await launch(params, firstRuntime, PAIRED_CLIENT)
+    const replayRuntime = runtimeStub()
+
+    await expect(launch(params, replayRuntime, ROTATED_CREDENTIAL_CLIENT)).resolves.toEqual(first)
+    expect(firstRuntime.createManagedWorktree).toHaveBeenCalledTimes(1)
+    expect(replayRuntime.createManagedWorktree).not.toHaveBeenCalled()
+    expect(attachCallerKeys).toEqual(['device-1'])
+  })
+
+  it('refuses remote replay safety without a stable paired-device subject', async () => {
+    const runtime = runtimeStub()
+
+    await expect(
+      launch(createLaunch({ operationId: OPERATION_ID }), runtime, {
+        clientKind: 'runtime',
+        clientId: 'rotating-credential',
+        clientCapabilities: [AGENT_LAUNCH_RUNTIME_CAPABILITY]
+      })
+    ).rejects.toThrow('agent_session_identity_required')
+    expect(runtime.ensureStructuredAgentSessionHost).not.toHaveBeenCalled()
+    expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
+    expect(store.listOperationRows()).toHaveLength(0)
   })
 })
 
@@ -275,6 +301,42 @@ describe('an uncertain launch stays uncertain', () => {
     expect(rowFor(OPERATION_ID)?.outcome.status).toBe('unknown')
   })
 
+  it('preserves the unknown refusal code through RPC dispatch', async () => {
+    const params = createLaunch({ operationId: OPERATION_ID })
+    await store.admitOperation({
+      callerKey: 'trusted-local:runtime',
+      operationId: OPERATION_ID,
+      fingerprint: computeAgentLaunchFingerprint(params),
+      now: NOW
+    })
+    await store.claimOperation({
+      callerKey: 'trusted-local:runtime',
+      operationId: OPERATION_ID
+    })
+    const runtime = { ...runtimeStub(), getRuntimeId: () => 'runtime-1' }
+    const dispatcher = new RpcDispatcher({
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the fixture implements every runtime method reached by agent.launch and dispatcher metadata.
+      runtime: runtime as unknown as OrcaRuntimeService,
+      methods: AGENT_LAUNCH_METHODS
+    })
+
+    const response = await dispatcher.dispatch({
+      id: 'request-1',
+      authToken: 'token',
+      method: 'agent.launch',
+      params
+    })
+
+    expect(response).toMatchObject({
+      ok: false,
+      error: {
+        code: 'agent_session_operation_unknown',
+        message: 'agent_session_operation_unknown'
+      }
+    })
+    expect(runtime.createManagedWorktree).not.toHaveBeenCalled()
+  })
+
   it('records a failure that happened before anything could be created', async () => {
     const runtime = runtimeStub()
     runtime.showManagedTerminalWorkspace.mockRejectedValueOnce(new Error('worktree_not_found'))
@@ -303,7 +365,7 @@ describe('settlement is monotone', () => {
       expiresAt: NOW + 1,
       outcome: { status: 'succeeded', sessionId: 'sess-1' }
     }
-    const rows = new Map([[`device-1 ${OPERATION_ID}`, succeeded]])
+    const rows = new Map([[agentSessionOperationKey('device-1', OPERATION_ID), succeeded]])
 
     const settled = settleAgentSessionOperation(rows, {
       callerKey: 'device-1',
@@ -324,7 +386,7 @@ describe('settlement is monotone', () => {
       expiresAt: NOW + 1,
       outcome: { status: 'pending' }
     }
-    const rows = new Map([[`device-1 ${OPERATION_ID}`, pending]])
+    const rows = new Map([[agentSessionOperationKey('device-1', OPERATION_ID), pending]])
 
     const claimed = claimAgentSessionOperation(rows, {
       callerKey: 'device-1',
@@ -486,16 +548,12 @@ describe('a client that names no operation keeps today behaviour', () => {
 describe('the inner attach reserves under its own id', () => {
   it('does not conflict with its own launch when both share a caller key', async () => {
     const runtime = runtimeStub()
-    // An existing workspace: a create-worktree launch additionally demands a paired device
-    // identity, and the bearer-identity shape under test here has none.
     const params = createLaunch({
       operationId: OPERATION_ID,
       target: { kind: 'existing', worktree: 'id:wt-7' }
     })
 
-    // The bearer-identity shape is the one where the launch's caller key and the attach's caller
-    // key derive to the same string, so a forwarded id would meet the launch's own row.
-    const result = await launch(params, runtime, BEARER_CLIENT)
+    const result = await launch(params, runtime, PAIRED_CLIENT)
 
     expect(result.outcome).toEqual({
       kind: 'structured',
@@ -505,6 +563,7 @@ describe('the inner attach reserves under its own id', () => {
     expect(attachOperationIds).toHaveLength(1)
     expect(attachOperationIds[0]).not.toBe(OPERATION_ID)
     expect(attachOperationIds[0]).toBe(deriveAgentLaunchChildOperationId(OPERATION_ID))
+    expect(attachCallerKeys).toEqual(['device-1'])
   })
 
   it('what forwarding the launch id unchanged would do: the attach refuses a conflict', async () => {

@@ -20,15 +20,17 @@
  */
 
 import { AGENT_LAUNCH_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
+import { computeAgentLaunchFingerprint } from '../../../../shared/agent-launch-operation'
 import type {
   AgentLaunchIntent,
   AgentLaunchResult,
   AgentLaunchTarget
 } from '../../../../shared/agent-launch-intent'
+import { agentSessionOperationKey } from '../../../../shared/agent-session-operation-ledger'
 import { executeAgentLaunch } from '../../../agent-launch/agent-launch-executor'
 import type { OrcaRuntimeService } from '../../orca-runtime'
 import { defineMethod, type RpcContext } from '../core'
-import { admitAgentLaunchOperation } from './agent-launch-replay'
+import { admitAgentLaunchOperation, agentLaunchOperationCallerKey } from './agent-launch-replay'
 import { AgentLaunch, type AgentLaunchParams } from './agent-launch-schemas'
 import { agentLaunchSurfaceFactory } from './agent-launch-surfaces'
 import { agentLaunchWorkspaceFactory } from './agent-launch-worktree-creation'
@@ -114,12 +116,13 @@ async function resolveUnlaunchedIntent(
 function runAgentLaunch(
   intent: AgentLaunchIntent,
   context: RpcContext,
-  attachOperationId?: string
+  attachOperationId?: string,
+  operationCallerKey?: string
 ): Promise<AgentLaunchResult> {
   return executeAgentLaunch({
     runtime: context.runtime,
     intent,
-    surfaces: agentLaunchSurfaceFactory(context, attachOperationId),
+    surfaces: agentLaunchSurfaceFactory(context, attachOperationId, operationCallerKey),
     workspaces: agentLaunchWorkspaceFactory(context, intent.agent)
   })
 }
@@ -174,6 +177,83 @@ function agentLaunchFailureCode(error: unknown): string {
   return code.length > 0 ? code.slice(0, LAUNCH_FAILURE_CODE_MAX_LENGTH) : 'agent_launch_failed'
 }
 
+type ActiveAgentLaunch = {
+  fingerprint: string
+  promise: Promise<AgentLaunchResult>
+}
+
+const activeAgentLaunchesByRuntime = new WeakMap<
+  OrcaRuntimeService,
+  Map<string, ActiveAgentLaunch>
+>()
+
+function activeAgentLaunchesFor(runtime: OrcaRuntimeService): Map<string, ActiveAgentLaunch> {
+  const existing = activeAgentLaunchesByRuntime.get(runtime)
+  if (existing) {
+    return existing
+  }
+  const active = new Map<string, ActiveAgentLaunch>()
+  activeAgentLaunchesByRuntime.set(runtime, active)
+  return active
+}
+
+async function executeReplaySafeAgentLaunch(
+  params: AgentLaunchParams & { operationId: string },
+  context: RpcContext,
+  fingerprint: string
+): Promise<AgentLaunchResult> {
+  const admission = await admitAgentLaunchOperation(context, params, fingerprint)
+  if (admission.decision === 'refuse') {
+    throw new Error(admission.refusal.code)
+  }
+  if (admission.decision === 'replay') {
+    return admission.result
+  }
+  let intent: AgentLaunchIntent
+  try {
+    intent = await resolveUnlaunchedIntent(params, context.runtime)
+  } catch (error) {
+    await settleQuietly(admission.fail(agentLaunchFailureCode(error)))
+    throw error
+  }
+  // Any later failure may follow a created surface, so the claimed row must stay `unknown`.
+  const result = await runAgentLaunch(
+    intent,
+    context,
+    admission.attachOperationId,
+    admission.callerKey
+  )
+  // Settlement is bookkeeping; failure leaves the truthful `unknown` refusal for later retries.
+  await settleQuietly(admission.settle(result))
+  return result
+}
+
+function runReplaySafeAgentLaunch(
+  params: AgentLaunchParams & { operationId: string },
+  context: RpcContext
+): Promise<AgentLaunchResult> {
+  const callerKey = agentLaunchOperationCallerKey(context)
+  const key = agentSessionOperationKey(callerKey, params.operationId)
+  const fingerprint = computeAgentLaunchFingerprint(params)
+  const activeAgentLaunches = activeAgentLaunchesFor(context.runtime)
+  const active = activeAgentLaunches.get(key)
+  if (active) {
+    if (active.fingerprint !== fingerprint) {
+      return Promise.reject(new Error('agent_session_operation_conflict'))
+    }
+    return active.promise
+  }
+
+  let promise: Promise<AgentLaunchResult>
+  promise = executeReplaySafeAgentLaunch(params, context, fingerprint).finally(() => {
+    if (activeAgentLaunches.get(key)?.promise === promise) {
+      activeAgentLaunches.delete(key)
+    }
+  })
+  activeAgentLaunches.set(key, { fingerprint, promise })
+  return promise
+}
+
 export const AGENT_LAUNCH_METHODS = [
   defineMethod({
     name: 'agent.launch',
@@ -185,34 +265,13 @@ export const AGENT_LAUNCH_METHODS = [
       if (!params.operationId) {
         return runLegacyAgentLaunch(params, context)
       }
-      const admission = await admitAgentLaunchOperation(context, {
-        ...params,
-        operationId: params.operationId
-      })
-      if (admission.decision === 'refuse') {
-        throw new Error(admission.refusal.code)
-      }
-      if (admission.decision === 'replay') {
-        return admission.result
-      }
-      let intent: AgentLaunchIntent
-      try {
-        intent = await resolveUnlaunchedIntent(params, context.runtime)
-      } catch (error) {
-        // Nothing was created yet, so the retry deserves the same answer rather than another
-        // attempt at a selector that did not resolve.
-        await settleQuietly(admission.fail(agentLaunchFailureCode(error)))
-        throw error
-      }
-      // Past here a throw no longer proves the launch did nothing: the structured create's commit
-      // half says so in as many words. The row therefore stays at the `unknown` its claim wrote,
-      // and a later replay of this id refuses instead of building a second surface.
-      const result = await runAgentLaunch(intent, context, admission.attachOperationId)
-      // The launch is done; settling is bookkeeping, and bookkeeping must never take the answer
-      // away from the caller that earned it. A settle that fails leaves the row `unknown`, so a
-      // retry refuses rather than launching again — uncertain, which is the truth.
-      await settleQuietly(admission.settle(result))
-      return result
+      return runReplaySafeAgentLaunch(
+        {
+          ...params,
+          operationId: params.operationId
+        },
+        context
+      )
     }
   })
 ]

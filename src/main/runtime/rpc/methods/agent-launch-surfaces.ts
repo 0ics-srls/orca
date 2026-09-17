@@ -22,18 +22,11 @@ import type { RpcContext } from '../core'
 import { structuredCallerFor } from './structured-agent-session-gate'
 import { createStructuredAgentSessionForWorktree } from './structured-agent-session-create'
 
-/**
- * `attachOperationId` is the launch's derived child id, present only when the caller named the
- * launch. It cannot be the launch's own id: the ledger keys a row on `(callerKey, operationId)`
- * with no method in it, and for a bearer-identity caller `structuredCallerFor` below derives the
- * same key the launch partitioned under — so the attach would meet the launch's own row, disagree
- * with its fingerprint, and refuse a conflict before creating anything. Absent, the attach mints
- * its own — which is what every launch did before, and is still correct for a launch nobody can
- * replay.
- */
+/** Replay-safe launches keep the nested attach in the same stable caller namespace as the launch. */
 export function agentLaunchSurfaceFactory(
   context: RpcContext,
-  attachOperationId?: string
+  attachOperationId?: string,
+  operationCallerKey?: string
 ): AgentLaunchSurfaceFactory {
   return {
     createStructuredSession: async ({ worktreeId, agent, options }) => {
@@ -45,7 +38,9 @@ export function agentLaunchSurfaceFactory(
           await context.runtime.ensureStructuredAgentSessionHost()
           return requireInstalledHost()
         },
-        caller: structuredCallerFor(context),
+        caller: operationCallerKey
+          ? { callerKey: operationCallerKey }
+          : structuredCallerFor(context),
         envelope: {
           sessionId,
           clientOperationId:
