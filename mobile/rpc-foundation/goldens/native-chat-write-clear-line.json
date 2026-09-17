@@ -3,9 +3,9 @@
   "family": "nativeChat.terminal-write",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
-  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "baseline": "6142657d7ad4af81cb4449176048edadef10db45",
+  "lockfileSha256": "4568633356187895ccda8e2ff83245c37d5621832c69e268733733b6947971e3",
+  "recorderSha256": "1d8cf6624653d15b5b32bd2871d4d93739d4092a06f10dab24a795702422bb31",
   "adapterSha256": "b98a3ca3818678b88cf629bc4635300a103637126a136f025a1600dc16f08008",
   "scenarioSha256": "b8265928eefc167de59c64dc62ebe40635007a5f73c87ec8b6eb5e0f6dc0ce00",
   "platform": "darwin",
@@ -13,12 +13,14 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "242d9ae1137d": {
+    "098c51e345e3": {
       "name": "terminal.send#1",
+      "ordinal": 2,
       "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"terminal.send\",\"params\":{\"terminal\":\"terminal-1\",\"text\":\"\\u0015\",\"enter\":false,\"client\":{\"id\":\"device-token-1\",\"type\":\"mobile\"}}}"
     },
-    "52ae659a3d36": {
+    "7e7356ce5972": {
       "name": "terminal.send#1",
+      "ordinal": 1,
       "args": [
         {
           "name": "method",
@@ -75,8 +77,8 @@
       {
         "id": "cleared",
         "observation": {
-          "sender": ["52ae659a3d36"],
-          "payloads": ["242d9ae1137d"],
+          "sender": ["7e7356ce5972"],
+          "payloads": ["098c51e345e3"],
           "settlements": {
             "clear": "84e5ca07cb7a"
           },

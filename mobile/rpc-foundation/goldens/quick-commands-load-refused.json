@@ -3,9 +3,9 @@
   "family": "settings.quick-commands",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
-  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "baseline": "6142657d7ad4af81cb4449176048edadef10db45",
+  "lockfileSha256": "4568633356187895ccda8e2ff83245c37d5621832c69e268733733b6947971e3",
+  "recorderSha256": "1d8cf6624653d15b5b32bd2871d4d93739d4092a06f10dab24a795702422bb31",
   "adapterSha256": "42334358b5e5966001639653b553f15033f6e201d785107871fe056536f0a5e2",
   "scenarioSha256": "42573387533f75122f626ce6ec81c1e61fe54cde5df416154bb7cba132f53309",
   "platform": "darwin",
@@ -13,6 +13,11 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
+    "3a752c2955e2": {
+      "name": "settings.getTerminalQuickCommands#1",
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.getTerminalQuickCommands\"}"
+    },
     "990fb5428d1f": {
       "commands": [],
       "error": "Unknown method",
@@ -20,8 +25,17 @@
       "persisted": [],
       "ready": false
     },
-    "ae75d9a09c8f": {
+    "eb79a9b3682a": {
+      "status": "fulfilled",
+      "startedAt": 0,
+      "settledAt": 0,
+      "value": {
+        "$rpc": "undefined"
+      }
+    },
+    "f7798a9d2071": {
       "name": "settings.getTerminalQuickCommands#1",
+      "ordinal": 1,
       "args": [
         {
           "name": "method",
@@ -53,18 +67,6 @@
           "ok": false
         }
       }
-    },
-    "e1663c7c38e3": {
-      "name": "settings.getTerminalQuickCommands#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"settings.getTerminalQuickCommands\"}"
-    },
-    "eb79a9b3682a": {
-      "status": "fulfilled",
-      "startedAt": 0,
-      "settledAt": 0,
-      "value": {
-        "$rpc": "undefined"
-      }
     }
   },
   "recording": {
@@ -73,8 +75,8 @@
       {
         "id": "errored",
         "observation": {
-          "sender": ["ae75d9a09c8f"],
-          "payloads": ["e1663c7c38e3"],
+          "sender": ["f7798a9d2071"],
+          "payloads": ["3a752c2955e2"],
           "settlements": {
             "mount": "eb79a9b3682a"
           },

@@ -3,9 +3,9 @@
   "family": "speech.setup-sheet",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
-  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "baseline": "6142657d7ad4af81cb4449176048edadef10db45",
+  "lockfileSha256": "4568633356187895ccda8e2ff83245c37d5621832c69e268733733b6947971e3",
+  "recorderSha256": "1d8cf6624653d15b5b32bd2871d4d93739d4092a06f10dab24a795702422bb31",
   "adapterSha256": "3ddb44511547ae2fc97340e5a49393233f6716f9704b7b994f43bc030788b25b",
   "scenarioSha256": "748e1bc0575fca6baab51b19cbbea5ac6185fca2a15dc4d8577212134355cd7e",
   "platform": "darwin",
@@ -13,12 +13,14 @@
   "projectionVersion": 2,
   "goldenFormatVersion": 5,
   "values": {
-    "0ea7d26d0706": {
-      "name": "speech.dictation.setup#1",
-      "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"speech.dictation.setup\",\"params\":{\"enabled\":true,\"modelId\":\"whisper-small\"}}"
+    "0e61f11d0307": {
+      "name": "speech.models.delete#1",
+      "ordinal": 6,
+      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.delete\",\"params\":{\"modelId\":\"whisper-small\"}}"
     },
-    "374a424a4fcb": {
+    "38ccf3e1658f": {
       "name": "speech.dictation.setup#1",
+      "ordinal": 7,
       "args": [
         {
           "name": "method",
@@ -59,8 +61,19 @@
         }
       }
     },
-    "4670310cd94e": {
+    "4f793e38be31": {
       "name": "speech.models.list#1",
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.list\",\"params\":null}"
+    },
+    "694b34cbeee9": {
+      "name": "speech.models.download#1",
+      "ordinal": 4,
+      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.download\",\"params\":{\"modelId\":\"whisper-small\"}}"
+    },
+    "6c40f11805ec": {
+      "name": "speech.models.list#1",
+      "ordinal": 1,
       "args": [
         {
           "name": "method",
@@ -146,8 +159,43 @@
         "selectedModelId": "whisper-small"
       }
     },
-    "c41375ac7391": {
+    "adbb96fcc08c": {
+      "name": "speech.models.download#1",
+      "ordinal": 3,
+      "args": [
+        {
+          "name": "method",
+          "value": "speech.models.download"
+        },
+        {
+          "name": "params",
+          "value": {
+            "modelId": "whisper-small"
+          }
+        },
+        {
+          "name": "options",
+          "value": {
+            "$rpc": "absent"
+          }
+        }
+      ],
+      "settlement": {
+        "status": "fulfilled",
+        "startedAt": 0,
+        "settledAt": 0,
+        "value": {
+          "id": "frame-2",
+          "ok": true,
+          "result": {
+            "started": true
+          }
+        }
+      }
+    },
+    "d8c329a93e43": {
       "name": "speech.models.delete#1",
+      "ordinal": 5,
       "args": [
         {
           "name": "method",
@@ -181,39 +229,6 @@
         }
       }
     },
-    "d0708dcdf365": {
-      "name": "speech.models.download#1",
-      "args": [
-        {
-          "name": "method",
-          "value": "speech.models.download"
-        },
-        {
-          "name": "params",
-          "value": {
-            "modelId": "whisper-small"
-          }
-        },
-        {
-          "name": "options",
-          "value": {
-            "$rpc": "absent"
-          }
-        }
-      ],
-      "settlement": {
-        "status": "fulfilled",
-        "startedAt": 0,
-        "settledAt": 0,
-        "value": {
-          "id": "frame-2",
-          "ok": true,
-          "result": {
-            "started": true
-          }
-        }
-      }
-    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -222,17 +237,10 @@
         "$rpc": "undefined"
       }
     },
-    "f14b5bb0c614": {
-      "name": "speech.models.delete#1",
-      "json": "{\"id\":\"frame-3\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.delete\",\"params\":{\"modelId\":\"whisper-small\"}}"
-    },
-    "f7594a980fe2": {
-      "name": "speech.models.download#1",
-      "json": "{\"id\":\"frame-2\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.download\",\"params\":{\"modelId\":\"whisper-small\"}}"
-    },
-    "f7f1557b866b": {
-      "name": "speech.models.list#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"speech.models.list\",\"params\":null}"
+    "fba26d61d9d2": {
+      "name": "speech.dictation.setup#1",
+      "ordinal": 8,
+      "json": "{\"id\":\"frame-4\",\"deviceToken\":\"recording-device\",\"method\":\"speech.dictation.setup\",\"params\":{\"enabled\":true,\"modelId\":\"whisper-small\"}}"
     },
     "fc5fb77f49bb": {
       "status": "fulfilled",
@@ -251,8 +259,8 @@
       {
         "id": "settled",
         "observation": {
-          "sender": ["4670310cd94e", "d0708dcdf365", "c41375ac7391", "374a424a4fcb"],
-          "payloads": ["f7f1557b866b", "f7594a980fe2", "f14b5bb0c614", "0ea7d26d0706"],
+          "sender": ["6c40f11805ec", "adbb96fcc08c", "d8c329a93e43", "38ccf3e1658f"],
+          "payloads": ["4f793e38be31", "694b34cbeee9", "0e61f11d0307", "fba26d61d9d2"],
           "settlements": {
             "list": "a2879fd6371d",
             "download": "eb79a9b3682a",

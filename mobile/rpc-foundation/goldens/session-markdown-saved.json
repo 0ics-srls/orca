@@ -3,9 +3,9 @@
   "family": "session.markdown-save",
   "namedDeltas": [],
   "runnerVersion": 1,
-  "baseline": "e7206f62a827f4fe0a2badf3eecd2167b8ac4285",
-  "lockfileSha256": "788c1234b38a61fc882fca292341fce6690deee9cc6695673b0575cf2c4cf571",
-  "recorderSha256": "64a741e034b13bca69c466f93f713aa5c0cf3fbb2bbb02f357003506b17fe353",
+  "baseline": "6142657d7ad4af81cb4449176048edadef10db45",
+  "lockfileSha256": "4568633356187895ccda8e2ff83245c37d5621832c69e268733733b6947971e3",
+  "recorderSha256": "1d8cf6624653d15b5b32bd2871d4d93739d4092a06f10dab24a795702422bb31",
   "adapterSha256": "42334358b5e5966001639653b553f15033f6e201d785107871fe056536f0a5e2",
   "scenarioSha256": "a2b5b73b2455f9efc48361e4b96ab1d3ecc3d136459403c9c3678104604cd774",
   "platform": "darwin",
@@ -25,15 +25,21 @@
         }
       }
     },
-    "976e04874a1e": {
+    "48e7060a8031": {
+      "name": "markdown.saveTab#1",
+      "ordinal": 2,
+      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"markdown.saveTab\",\"params\":{\"worktree\":\"id:workspace-1\",\"tabId\":\"tab-md\",\"baseVersion\":\"v1\",\"content\":\"# b\"}}"
+    },
+    "807e68f28cfd": {
       "name": "toast",
+      "ordinal": 3,
       "value": {
         "message": "Saved"
-      },
-      "sent": 1
+      }
     },
-    "a06e17cbe383": {
+    "b60a4c682490": {
       "name": "markdown.saveTab#1",
+      "ordinal": 1,
       "args": [
         {
           "name": "method",
@@ -70,10 +76,6 @@
         }
       }
     },
-    "be35c536a20e": {
-      "name": "markdown.saveTab#1",
-      "json": "{\"id\":\"frame-1\",\"deviceToken\":\"recording-device\",\"method\":\"markdown.saveTab\",\"params\":{\"worktree\":\"id:workspace-1\",\"tabId\":\"tab-md\",\"baseVersion\":\"v1\",\"content\":\"# b\"}}"
-    },
     "eb79a9b3682a": {
       "status": "fulfilled",
       "startedAt": 0,
@@ -89,13 +91,13 @@
       {
         "id": "saved",
         "observation": {
-          "sender": ["a06e17cbe383"],
-          "payloads": ["be35c536a20e"],
+          "sender": ["b60a4c682490"],
+          "payloads": ["48e7060a8031"],
           "settlements": {
             "save": "eb79a9b3682a"
           },
           "state": "36de5fd645a3",
-          "effects": ["976e04874a1e"]
+          "effects": ["807e68f28cfd"]
         }
       }
     ]
