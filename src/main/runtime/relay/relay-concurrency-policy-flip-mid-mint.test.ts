@@ -10,6 +10,7 @@ import type { OrcaRuntimeRpcServer } from '../runtime-rpc'
 const fakes = vi.hoisted(() => ({
   readRelayAuthContext: vi.fn(),
   connect: vi.fn(),
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an empty literal cannot infer the element type, and vi.hoisted runs before the class that fills it exists.
   brokers: [] as { closeNow: ReturnType<typeof vi.fn> }[]
 }))
 
@@ -55,6 +56,7 @@ type FakeBroker = {
 }
 
 function newBroker(): FakeBroker {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the module mock replaces the class wholesale; only the fake's members are ever called.
   const broker = new (RelaySessionBroker as unknown as new () => FakeBroker)()
   fakes.brokers.push(broker)
   return broker
@@ -66,6 +68,7 @@ function service(mode: { current: MobilePairingConnectionMode }): DesktopRelaySe
     accessToken: 'access-1',
     relayEntitled: true
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the service reads only these four getters off the rpc server; the rest is never reached.
   const runtimeRpc = {
     getE2EEKeypair: () => ({
       publicKey: new Uint8Array(32).fill(7),
@@ -81,6 +84,7 @@ function service(mode: { current: MobilePairingConnectionMode }): DesktopRelaySe
     })
   } as unknown as OrcaRuntimeRpcServer
   return new DesktopRelayService({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RelaySessionBroker.connect reads only these two endpoints off authConfig.
     authConfig: {
       relayDirectorUrl: 'https://relay.example.test',
       relayTokenEndpoint: 'https://login.example.test/relay-token'
@@ -105,7 +109,7 @@ afterEach(() => {
 
 describe('DesktopRelayService LAN flip landing mid-mint', () => {
   it('names the flip when it lands while the mint is parked on an in-flight open', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const open = deferred<FakeBroker>()
     fakes.connect.mockImplementation(() => open.promise)
     const relayService = service(mode)
@@ -130,7 +134,7 @@ describe('DesktopRelayService LAN flip landing mid-mint', () => {
   })
 
   it('names the flip when it lands after the broker is live, mid create_pairing_relay', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const broker = newBroker()
     const mintCall = deferred<never>()
     const relayService = service(mode)
@@ -148,6 +152,7 @@ describe('DesktopRelayService LAN flip landing mid-mint', () => {
       expect(broker.createPairingRelay).toHaveBeenCalled()
 
       // The control the flip closed under it fails the call that was in flight.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: resolves a deferred whose value the caller discards; the type is the broker's, not this suite's.
       mintCall.resolve(undefined as never)
       await vi.advanceTimersByTimeAsync(0)
       await rejection
@@ -159,7 +164,7 @@ describe('DesktopRelayService LAN flip landing mid-mint', () => {
   it('leaves the real failure alone when the flip is reverted before the mint fails', async () => {
     // The rewrite reads the live policy at the moment of failure, so a flip that
     // is undone in the same window must not claim a failure it did not cause.
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const broker = newBroker()
     broker.createPairingRelay = vi.fn(async () => {
       mode.current = 'local-only'

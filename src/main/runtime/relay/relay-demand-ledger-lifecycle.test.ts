@@ -17,7 +17,7 @@ function fixture(now = 1_000) {
   const userDataPath = mkdtempSync(join(tmpdir(), 'orca-relay-demand-lifecycle-'))
   const deviceRegistry = new DeviceRegistry(userDataPath)
   const revokeOutbox = new RelayRevokeOutbox(userDataPath)
-  const host = { mode: 'automatic' as MobilePairingConnectionMode }
+  const host: { mode: MobilePairingConnectionMode } = { mode: 'automatic' }
   const ledger = new RelayDemandLedger({
     deviceRegistry,
     revokeOutbox,
