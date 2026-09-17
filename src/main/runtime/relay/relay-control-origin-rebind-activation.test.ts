@@ -4,6 +4,7 @@ import type { RelayConnectionOpenMessage, RelayHostHelloAckMessage } from './rel
 import type { RelayAssignment } from './relay-http-client'
 
 const fakes = vi.hoisted(() => ({
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an empty literal cannot infer the element type, and vi.hoisted runs before the mock class that fills it exists.
   controls: [] as { closeNow: ReturnType<typeof vi.fn> }[],
   setGeneration: vi.fn(),
   controlConnect: vi.fn()
@@ -63,6 +64,7 @@ function createOrigin(): RelayControlOrigin {
     identity: { userId: 'user-1', profileId: 'profile-1', organizationId: 'org-1' },
     keypair: { ...keypair, publicKeyB64: Buffer.from(keypair.publicKey).toString('base64') },
     appVersion: '1.0.0',
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: attachTransport is the only member RelayControlOrigin calls, and nothing in this suite opens a mobile socket.
     mobileSocketWiring: { attachTransport: vi.fn(() => () => {}) } as never,
     onConnectionOwned: vi.fn(),
     onConnectionReleased: vi.fn(),
