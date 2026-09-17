@@ -2,33 +2,33 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { AgentSessionRecordStore } from '../../src/main/runtime/agent-session-record-store'
-import { OrcaRuntimeRpcServer } from '../../src/main/runtime/runtime-rpc'
-import { DeviceRegistry } from '../../src/main/runtime/device-registry'
-import type { AuthenticatedMobileSocket } from '../../src/main/runtime/rpc/mobile-socket-wiring'
-import { RpcDispatcher } from '../../src/main/runtime/rpc/dispatcher'
-import { AgentLaunch } from '../../src/main/runtime/rpc/methods/agent-launch-schemas'
-import { runtimeStub } from '../../src/main/runtime/rpc/methods/agent-launch.test-fixture'
-import { setStructuredAgentSessionHost } from '../../src/main/native-chat/agent-session-wire/structured-agent-session-registry'
-import type { StructuredAgentSessionHost } from '../../src/main/native-chat/agent-session-wire/structured-agent-session-host'
-import type { OrcaRuntimeService } from '../../src/main/runtime/orca-runtime'
-import { markRpcDeliveryUnknown } from '../../mobile/src/transport/rpc-delivery-ambiguity'
-import { createStableLogicalRpcClient } from '../../mobile/src/transport/stable-logical-rpc-client'
-import type { RpcClient } from '../../mobile/src/transport/rpc-client'
-import type { RpcResponse } from '../../mobile/src/transport/types'
-import { WorktreeCreateCollisionError } from '../../src/shared/new-workspace/worktree-create-collision'
-import { createWorktreeWithNameRetry } from '../../mobile/src/tasks/worktree-create-retry'
-import { readNewWorktreeRuntimeCapabilities } from '../../mobile/src/tasks/worktree-create-capability'
+import { AgentSessionRecordStore } from '../../../src/main/runtime/agent-session-record-store'
+import { OrcaRuntimeRpcServer } from '../../../src/main/runtime/runtime-rpc'
+import { DeviceRegistry } from '../../../src/main/runtime/device-registry'
+import type { AuthenticatedMobileSocket } from '../../../src/main/runtime/rpc/mobile-socket-wiring'
+import { RpcDispatcher } from '../../../src/main/runtime/rpc/dispatcher'
+import { AgentLaunch } from '../../../src/main/runtime/rpc/methods/agent-launch-schemas'
+import { runtimeStub } from '../../../src/main/runtime/rpc/methods/agent-launch.test-fixture'
+import { setStructuredAgentSessionHost } from '../../../src/main/native-chat/agent-session-wire/structured-agent-session-registry'
+import type { StructuredAgentSessionHost } from '../../../src/main/native-chat/agent-session-wire/structured-agent-session-host'
+import type { OrcaRuntimeService } from '../../../src/main/runtime/orca-runtime'
+import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
+import { createStableLogicalRpcClient } from '../transport/stable-logical-rpc-client'
+import type { RpcClient } from '../transport/rpc-client'
+import type { RpcResponse } from '../transport/types'
+import { WorktreeCreateCollisionError } from '../../../src/shared/new-workspace/worktree-create-collision'
+import { createWorktreeWithNameRetry } from './worktree-create-retry'
+import { readNewWorktreeRuntimeCapabilities } from './worktree-create-capability'
 import {
   AGENT_LAUNCH_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY
-} from '../../src/shared/protocol-version'
+} from '../../../src/shared/protocol-version'
 
 const createStructuredSession = vi.fn()
-vi.mock('../../src/main/runtime/rpc/methods/structured-agent-session-create', () => ({
+vi.mock('../../../src/main/runtime/rpc/methods/structured-agent-session-create', () => ({
   createStructuredAgentSessionForWorktree: (...args: unknown[]) => createStructuredSession(...args)
 }))
-const { AGENT_LAUNCH_METHODS } = await import('../../src/main/runtime/rpc/methods/agent-launch')
+const { AGENT_LAUNCH_METHODS } = await import('../../../src/main/runtime/rpc/methods/agent-launch')
 
 let directory: string
 let store: AgentSessionRecordStore
