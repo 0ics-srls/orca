@@ -8,6 +8,7 @@ import type { AgentSessionJournal } from '../agent-session-journal/journal-store
 import type { JournalLifecycleMutationInput } from '../agent-session-journal/journal-row-builders'
 import { estimateStructuredAgentSessionItemBytes } from './structured-agent-session-event-sink-estimate'
 import { StructuredAgentSessionSinkQueue } from './structured-agent-session-event-sink-queue'
+import { createStructuredAgentSessionResolvedAppend } from './structured-agent-session-resolved-append'
 
 export type StructuredAgentSessionSinkAdmission =
   | { accepted: true }
@@ -23,18 +24,15 @@ export type StructuredAgentSessionSinkState = {
 export type StructuredAgentSessionSinkBarrier = { ok: true } | { ok: false; error: unknown }
 
 export type StructuredAgentSessionAppendOptions = {
+  ownerEndedClientMessageIds?: readonly string[]
+  onCommitted?: () => void
+  onAbandoned?: () => void
   /** Pending checkpoints with this key replace one another before they run. */
   coalescingKey?: string
   /** Marks a critical lifecycle operation for lifecycle barriers and diagnostics. */
   lifecycle?: boolean
   /** Host clock to stamp on the row instead of its append time. */
   observedAt?: number
-  /** Exact sends whose provider ownership ends with this terminal lifecycle row. */
-  ownerEndedClientMessageIds?: readonly string[]
-  /** Runs only after the queued lifecycle append is durable. */
-  onCommitted?: () => void
-  /** Releases in-memory bookkeeping if the queued lifecycle append is discarded. */
-  onAbandoned?: () => void
 }
 
 export type StructuredAgentSessionLifecycleJournal = Pick<
@@ -42,12 +40,14 @@ export type StructuredAgentSessionLifecycleJournal = Pick<
   'epoch' | 'visitItems'
 >
 
-export type StructuredAgentSessionLifecycleIdentityResolver = (
+export type StructuredAgentSessionIdentityResolver = (
   journal: StructuredAgentSessionLifecycleJournal
 ) => AgentJournalItemIdentity | null
 
+/** Compatibility alias for lifecycle callers that already use this resolver. */
+export type StructuredAgentSessionLifecycleIdentityResolver = StructuredAgentSessionIdentityResolver
+
 export type StructuredAgentSessionEventSink = {
-  /** This sink invokes lifecycle callbacks at durable completion or abandonment. */
   durableLifecycleCallbacks?: true
   appendItem(
     identity: AgentJournalItemIdentity,
@@ -69,11 +69,25 @@ export type StructuredAgentSessionEventSink = {
     body: AgentJournalItemBody,
     options?: StructuredAgentSessionAppendOptions
   ): StructuredAgentSessionSinkAdmission
+  /** Queues an ordinary append whose identity is resolved after journal bind. */
+  tryAppendResolvedItem?(
+    identitySizeBound: AgentJournalItemIdentity,
+    body: AgentJournalItemBody,
+    resolveIdentity: StructuredAgentSessionIdentityResolver,
+    options?: StructuredAgentSessionAppendOptions
+  ): StructuredAgentSessionSinkAdmission
+  /** Queues one resolved append and its publication as a single admitted operation. */
+  tryAppendResolvedItemAndPublish?(
+    identitySizeBound: AgentJournalItemIdentity,
+    body: AgentJournalItemBody,
+    resolveIdentity: StructuredAgentSessionIdentityResolver,
+    options?: StructuredAgentSessionAppendOptions
+  ): StructuredAgentSessionSinkAdmission
   /** Queues one journal-derived lifecycle append; a null resolution is a no-op. */
   tryAppendLifecycleTransition?(
     identitySizeBound: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
-    resolveIdentity: StructuredAgentSessionLifecycleIdentityResolver
+    resolveIdentity: StructuredAgentSessionIdentityResolver
   ): StructuredAgentSessionSinkAdmission
   /** Current durable epoch, when this deferred sink is bound to its journal. */
   journalEpoch?(): string | null
@@ -150,46 +164,26 @@ export function createDeferredStructuredAgentSessionEventSink(
     ...(deps.readingControl ? { readingControl: deps.readingControl } : {}),
     ...(deps.onBackpressureChange ? { onBackpressureChange: deps.onBackpressureChange } : {})
   })
+  const resolvedAppend = createStructuredAgentSessionResolvedAppend(queue)
 
   const appendLifecycleBatch = (
     settlementId: string,
     mutations: readonly JournalLifecycleMutationInput[],
     options: StructuredAgentSessionAppendOptions = {}
-  ): StructuredAgentSessionSinkAdmission => {
-    const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds?.slice()
-    return queue.submit(
+  ): StructuredAgentSessionSinkAdmission =>
+    queue.submit(
       {
-        bytes:
-          Buffer.byteLength(
-            JSON.stringify({
-              settlementId,
-              mutations,
-              ownerEndedClientMessageIds
-            }),
-            'utf8'
-          ) + 512,
+        bytes: Buffer.byteLength(JSON.stringify({ settlementId, mutations }), 'utf8') + 512,
         coalescingKey: `lifecycle:${settlementId}`,
         run: (bound) =>
-          bound.journal
-            .appendLifecycleBatch({
-              settlementId,
-              mutations,
-              fence: bound.fence,
-              ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
-            })
-            .then(options.onCommitted, (error: unknown) => {
-              options.onAbandoned?.()
-              throw error
-            }),
-        ...(options.onAbandoned ? { onDiscarded: options.onAbandoned } : {})
+          bound.journal.appendLifecycleBatch({
+            settlementId,
+            mutations,
+            fence: bound.fence
+          })
       },
-      {
-        ...options,
-        lifecycle: true,
-        ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
-      }
+      { ...options, lifecycle: true }
     )
-  }
 
   const publish = (
     options: StructuredAgentSessionAppendOptions = {}
@@ -206,49 +200,33 @@ export function createDeferredStructuredAgentSessionEventSink(
   return {
     sink: {
       appendItem: (identity, body, options = {}) => {
-        const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
-          ? [...options.ownerEndedClientMessageIds]
-          : undefined
         queue.submit(
           {
-            bytes:
-              estimateStructuredAgentSessionItemBytes(identity, body) +
-              (ownerEndedClientMessageIds
-                ? Buffer.byteLength(JSON.stringify(ownerEndedClientMessageIds), 'utf8')
-                : 0),
+            bytes: estimateStructuredAgentSessionItemBytes(identity, body),
             coalescingKey: options.coalescingKey,
             run: (bound) =>
               bound.journal.appendItem(identity, body, {
                 fence: bound.fence,
-                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt }),
-                ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
+                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt })
               })
           },
-          { ...options, ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {}) }
+          options
         )
       },
-      tryAppendItem: (identity, body, options = {}) => {
-        const ownerEndedClientMessageIds = options.ownerEndedClientMessageIds
-          ? [...options.ownerEndedClientMessageIds]
-          : undefined
-        return queue.submit(
+      tryAppendItem: (identity, body, options = {}) =>
+        queue.submit(
           {
-            bytes:
-              estimateStructuredAgentSessionItemBytes(identity, body) +
-              (ownerEndedClientMessageIds
-                ? Buffer.byteLength(JSON.stringify(ownerEndedClientMessageIds), 'utf8')
-                : 0),
+            bytes: estimateStructuredAgentSessionItemBytes(identity, body),
             coalescingKey: options.coalescingKey,
             run: (bound) =>
               bound.journal.appendItem(identity, body, {
                 fence: bound.fence,
-                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt }),
-                ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {})
+                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt })
               })
           },
-          { ...options, ...(ownerEndedClientMessageIds ? { ownerEndedClientMessageIds } : {}) }
-        )
-      },
+          options
+        ),
+      ...resolvedAppend,
       tryAppendLifecycleTransition: (identitySizeBound, body, resolveIdentity) => {
         const bytes = estimateStructuredAgentSessionItemBytes(identitySizeBound, body)
         return queue.submit(
@@ -282,7 +260,6 @@ export function createDeferredStructuredAgentSessionEventSink(
         }
         return admission
       },
-      durableLifecycleCallbacks: true,
       tryAppendLifecycleBatch: appendLifecycleBatch,
       bindReadingControl: (control) => {
         return queue.bindReadingControl(control)

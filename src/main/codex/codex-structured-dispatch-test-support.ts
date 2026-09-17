@@ -10,6 +10,7 @@ import type {
 } from './codex-app-server-connection'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { CodexStructuredSessionAdapter } from './codex-structured-session-adapter'
+import type { CodexStructuredSessionAdapterDeps } from './codex-structured-session-state'
 import type { CodexStructuredSessionEvent } from './codex-structured-session-state'
 import { readCodexTurnId } from './codex-structured-thread-facts'
 import type {
@@ -91,6 +92,7 @@ export async function acquiredCodexAdapter(input: {
   settleLateDispatch?: (
     settlement: LateSettlement
   ) => Promise<StructuredAgentSessionLateSettlementResult>
+  captureTurnProcesses?: CodexStructuredSessionAdapterDeps['captureTurnProcesses']
 }): Promise<CodexStructuredSessionAdapter> {
   const events = input.events
   const terminalTurnIds = new Set<string>()
@@ -104,7 +106,7 @@ export async function acquiredCodexAdapter(input: {
     }),
     openConnection: input.codex.openConnection,
     readProcessStartTime: async () => 1_700_000_000_000,
-    captureTurnProcesses: async () => null,
+    captureTurnProcesses: input.captureTurnProcesses ?? (async () => null),
     now: () => 1_700_000_000_500,
     onDispatchSettledLate: async (settlement) => {
       if (input.settleLateDispatch) {
