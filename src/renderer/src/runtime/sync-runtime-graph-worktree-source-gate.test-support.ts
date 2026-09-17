@@ -7,8 +7,10 @@ import {
   graphState,
   resetRuntimeGraphSliceScanCaches
 } from './sync-runtime-graph/graph-state'
-import { buildMobileSessionAgentStatusByWorktree } from './sync-runtime-graph/mobile-session-inputs'
-import { getOpenFileIndexes } from './sync-runtime-graph/mobile-session-inputs'
+import {
+  buildMobileSessionAgentStatusByWorktree,
+  getOpenFileIndexes
+} from './sync-runtime-graph/mobile-session-inputs'
 import { resetMobileSessionWorktreeIdCacheForTests } from './sync-runtime-graph/mobile-session-worktree-sources'
 import { createTabKeyedRecordPartitioner } from './sync-runtime-graph/tab-keyed-record-partition'
 import {
