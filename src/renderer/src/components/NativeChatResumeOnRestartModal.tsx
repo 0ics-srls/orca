@@ -67,21 +67,23 @@ function ContinuationExplainer(): React.JSX.Element {
         </Button>
       </PopoverTrigger>
       <PopoverContent align="end" className="w-96">
-        <p className="text-xs font-semibold">
-          {translate(
-            'auto.components.NativeChatResumeOnRestartModal.whatIsSentTitle',
-            'What Orca sends'
-          )}
-        </p>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {translate(
-            'auto.components.NativeChatResumeOnRestartModal.whatIsSentBody',
-            'Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.'
-          )}
-        </p>
-        <blockquote className="mt-2 rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
-          {AGENT_SESSION_RESTART_CONTINUATION_MESSAGE}
-        </blockquote>
+        <div className="space-y-2 p-3">
+          <p className="text-xs font-semibold">
+            {translate(
+              'auto.components.NativeChatResumeOnRestartModal.whatIsSentTitle',
+              'What Orca sends'
+            )}
+          </p>
+          <p className="text-xs text-muted-foreground">
+            {translate(
+              'auto.components.NativeChatResumeOnRestartModal.whatIsSentBody',
+              'Continuing sends one short message to each agent, telling it that Orca restarted and asking it to check its last action before carrying on. Your own prompt is never re-sent.'
+            )}
+          </p>
+          <blockquote className="rounded-md border bg-muted/40 p-2 text-xs text-muted-foreground">
+            {AGENT_SESSION_RESTART_CONTINUATION_MESSAGE}
+          </blockquote>
+        </div>
       </PopoverContent>
     </Popover>
   )
