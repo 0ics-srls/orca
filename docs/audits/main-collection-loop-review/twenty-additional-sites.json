@@ -1,0 +1,325 @@
+{
+  "reviewPath": "docs/audits/main-collection-loop-review/twenty-additional-sites.md",
+  "capturedAt": "2026-09-17T02:27:44.924545+00:00",
+  "scope": "20 additional manually reviewed loop sites in 14 production files; source evidence only",
+  "sites": [
+    {
+      "path": "src/main/browser/browser-host-command-result-settler.ts",
+      "line": 105,
+      "sourceLine": "while (!this.closed && this.inFlight < this.maxConcurrent && this.pending.length > 0) {",
+      "sha256": "166e3b3b7c44985c1de16d80cc185f6dd87ee63765e1e196ab114b37d60103d8",
+      "evidence": "Each iteration shifts one pending record before incrementing inFlight; submission is deferred to a microtask, so synchronous drain cannot replenish itself. Constructor validates limits, defaulting to 16 in flight and 256 unsettled. PairedRuntimeBrowserHostLease.handlePageCommand admits first and only enqueues the nonduplicate admission once; its error paths release the admission. Result submission uses the lease request timeout (15 seconds by default). close drops pending records and admission keys; each running submission releases in finally.",
+      "verdict": "Finite, count-bounded queue under its actual caller. The class alone does not validate repeated enqueue calls; bytes of each result remain protocol-dependent."
+    },
+    {
+      "path": "src/main/plugins/plugin-panel-sessions.ts",
+      "line": 38,
+      "sourceLine": "while (this.sessions.size >= MAX_PANEL_SESSIONS) {",
+      "sha256": "ef7e6e0fb0c0b740b5cccf15a13abe06f78424d6d7f109624c28499678d8db81",
+      "evidence": "The oldest actual token and its reverse binding key are removed each iteration, leaving at most 1,024 sessions after insertion. Same owner+binding reuses a token. Renderer owner retirement and RPC owner abort revoke both maps; plugin refresh and service disposal clear them. Binding stores a serialized manifest and duplicates it inside the JSON reverse key. Manifest file reader stops beyond 1 MiB, but an entry cap is not a small aggregate-byte bound and serialized representation can differ from file bytes.",
+      "verdict": "Finite, bounded entry count with owner cleanup. Large approved manifests can amplify retained bytes across many distinct bindings; no measured leak or incident attribution."
+    },
+    {
+      "path": "src/main/worktree-create-preparation-pool.ts",
+      "line": 113,
+      "sourceLine": "while (preparations.size >= WORKTREE_CREATE_PREPARATION_LIMIT) {",
+      "sha256": "3b7c887672925dcccbe325ca4fc48e139a596bf36cb86e8229c5fb3ae8b54bf2",
+      "evidence": "Every successful iteration selects an existing victim from a snapshot of at most three preparations, deletes its key, clears its timer, aborts it, then schedules discard. Missing victim returns. Entries expire after five minutes; claiming removes the entry and timer. Public prepare/rearm callers check the same key immediately before start. Native/WSL Git checkout and removal request deadlines; folder and SSH repositories are excluded by the preparation entry point. Discard waits for ready and is separately held in inFlightDiscards until settlement; native mkdir itself has no cancellation/deadline. Failed discard targets are retried on the next same-host preparation, at most three attempts.",
+      "verdict": "Finite pool eviction, at most three current entries. The pool cap does not bound unsettled detached discards or dormant failed targets across hosts; no stalled-native producer proof in this batch."
+    },
+    {
+      "path": "src/main/providers/ssh-pty-source-delivery-state.ts",
+      "line": 60,
+      "sourceLine": "while (previous?.lease.phase === 'retired') {",
+      "sha256": "00266097262e3e1ce5655a4be64d2e1a1598c1a511554b0d05f376d70191c831",
+      "evidence": "Each step follows previous to an older state. Production installProvisional only links a newly frozen state to the prior map value; admit clones current while preserving its previous pointer, so no backward link mutation or cycle is introduced. commit removes the previous chain from the current map entry. retire skips already-retired predecessors and restores the first active one or deletes the map entry. External activation lease closures can still own older states until their callers release those leases.",
+      "verdict": "Finite acyclic predecessor walk under actual constructors. Chain length depends on overlapping activations, not an unconditional count cap."
+    },
+    {
+      "path": "src/main/providers/ssh-pty-source-delivery-ledger.ts",
+      "line": 176,
+      "sourceLine": "while (lease.pendingData.length > 0) {",
+      "sha256": "361adeac2f4d626660393e6a9b4bcee84b92a2238cc278e21215b9f8298c6d62",
+      "evidence": "transferToRecovery switches phase to recovery before shifting each pending record to the sink; admit during that phase sends directly to recoverySink rather than appending the drained array. Sink failure retires the lease, clears pending data and drops its recovery sink. Returned recovery lease commit/retire are idempotent. SSH notification subscription owns the ledger; provider disposal removes that subscription and drops its reference. Normal source delivery negotiates a 256-Ki source-unit window; the ledger has no independent byte/frame cap.",
+      "verdict": "Finite drain for admitted queued data. Source credit is an upstream bound, not a claim that arbitrary injected frames or pending recovery owners are bounded here."
+    },
+    {
+      "path": "src/main/providers/ssh-pty-source-delivery-ledger.ts",
+      "line": 211,
+      "sourceLine": "while (lease.pendingData.length > 0) {",
+      "sha256": "361adeac2f4d626660393e6a9b4bcee84b92a2238cc278e21215b9f8298c6d62",
+      "evidence": "commit shifts each pending frame before publishing it, then marks committed and removes predecessor links, or deletes an exited activation. A stale lease clears its pending data without publishing. Real publisher synchronously fans out to registered data listeners; network notifications arrive through the multiplexer. Fresh spawn, normal attach and reattach-for-spawn commit or roll back their activation leases; reconnect transfers the lease to recovery ownership. Provider disposal drops the subscription. A throwing/reentrant arbitrary publisher is not a proven bounded input contract of this class.",
+      "verdict": "Progress on every ordinary iteration; no growing production synchronous source demonstrated. Queued byte size and exceptional publisher cleanup require caller/credit semantics."
+    },
+    {
+      "path": "src/main/ai-vault/session-transcript-channel.ts",
+      "line": 55,
+      "sourceLine": "while (index < this.readers.length) {",
+      "sha256": "70a963fa6e1d827174bfe39642eb79f645ad1ad620e8df1b65e2b0b2fd491259",
+      "evidence": "A successful message increments index; a throwing reader is spliced out without increment, strictly reducing remaining work. beginRead takes a snapshot of registered consumers and replaces old reader references. Both resumable and whole-file readers finishRead on success and catch, clearing readers before invoking finish callbacks. The actual search consumer catches write.add failures, discards its write, and finishes with discard in finally; indexer.close unregisters the consumer. Channel does not keep a message queue.",
+      "verdict": "Finite consumer fan-out and read-scoped ownership. Generic throwing consumers deliberately receive no finish; real search consumer handles its own resource failure."
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-items.ts",
+      "line": 197,
+      "sourceLine": "while (this.identities.size > MAX_CODEX_IDENTITY_ENTRIES) {",
+      "sha256": "7a9dc981cdcb1931d620feaa5523b486600c50c241f223ffdc71aa9edeb4a5bb",
+      "evidence": "identityFor inserts one key then deletes actual oldest string keys until at most 512 identities. All keys originate from codexStructuredItemKey; no delete/reinsert of the iterated oldest occurs. Existing identities are returned directly. dispose clears the map; session close and acquisition failure dispose the translator. Identity payload bytes are provider-derived, so count alone is not a total heap-byte cap.",
+      "verdict": "Finite bounded identity count; no growing Map iteration."
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-items.ts",
+      "line": 203,
+      "sourceLine": "while (this.details.size > MAX_CODEX_DETAIL_ENTRIES) {",
+      "sha256": "7a9dc981cdcb1931d620feaa5523b486600c50c241f223ffdc71aa9edeb4a5bb",
+      "evidence": "Deletes actual oldest detail keys until at most 512 during new-identity allocation. handle then may insert one command detail truncated to 64 KiB UTF-8. Because trimming precedes that insertion and existing identity lookup returns early, 512 is not asserted as an exact post-handle limit; recently pruned details for still-cached identities can be reintroduced. Identity/detail keys use the same bounded key function, limiting the union via the bounded identity and detail windows. dispose clears details. Buffer.from(command) materializes the full command before truncation.",
+      "verdict": "Finite deletion loop. Count windows constrain retention, while the full-command transient allocation is input-sized; nominal 512 detail limit is not enforced after every update."
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-items.ts",
+      "line": 213,
+      "sourceLine": "while (this.activeItems.size - this.streams.persistentCount > MAX_CODEX_ACTIVE_ITEMS) {",
+      "sha256": "7a9dc981cdcb1931d620feaa5523b486600c50c241f223ffdc71aa9edeb4a5bb",
+      "evidence": "Selects an existing nonpersistent active item, publishes terminal settlement, forgets its stream, suppresses its turn and deletes its key. No eligible item breaks; refused settlement returns immediately. Default nonpersistent target is 256; persistent commands are excluded from this count but pass CodexItemStreamRetention metadata admission (default 256*64 KiB), which includes key, serialized state and overhead. Notification retry serializes a blocked event before later events, bounds its own queue at 256 events/8 MiB, and fails the connection on overflow. Completed item/turn and session disposal release active entries.",
+      "verdict": "Finite progress or explicit backpressure, with separate persistent-item byte admission. Active nonpersistent item retains the provider item itself, not just the bounded stream copy; payload-sized retention remains."
+    },
+    {
+      "path": "src/main/codex/codex-prompt-registry.ts",
+      "line": 112,
+      "sourceLine": "while (",
+      "sha256": "254c530216f47abfc3572bb1689161ad3c10775af2cdceda7e94f443e52c0691",
+      "evidence": "Rejects a prompt whose accounted fields alone exceed 4 MiB. While union(byAddress,boundPrompts) plus incoming bytes exceeds that budget, removes one oldest byAddress prompt or breaks. A removed prompt can remain bound, leaving accounted bytes unchanged, but byAddress size still decreases so the loop terminates. If bound prompts consume the budget it refuses the new prompt. Each check snapshots the bounded maps. Question IDs/options have separate count/byte bounds. Accounting omits requestId, encoded binding keys and claims; later answers mutate prompt bytes after registration.",
+      "verdict": "Finite byte-admission loop, not a complete heap-byte guarantee. Orphaned claims after eviction are a separate ownership candidate."
+    },
+    {
+      "path": "src/main/codex/codex-prompt-registry.ts",
+      "line": 259,
+      "sourceLine": "while (this.byAddress.size > MAX_CODEX_PROMPT_REGISTRY_ENTRIES) {",
+      "sha256": "254c530216f47abfc3572bb1689161ad3c10775af2cdceda7e94f443e52c0691",
+      "evidence": "Each iteration deletes the actual oldest byAddress prompt until at most 128, without touching boundPrompts or claims. Bound prompts deliberately stay resolvable through journal IDs. Answer completion calls forget, partial answers releaseClaim, failures releaseClaim, normal turn completion clearTurn, and session termination clear. A confirmed prompt cancellation intentionally keeps its claim until completion; eviction can remove the maps clearTurn scans while leaving that claim reachable.",
+      "verdict": "Finite bounded byAddress map. Candidate: claimed prompt evicted before delayed turn completion may remain only in claims until session clear; not yet reproduced in this batch."
+    },
+    {
+      "path": "src/main/codex/codex-prompt-registry.ts",
+      "line": 266,
+      "sourceLine": "while (this.journalItemIds.size > MAX_CODEX_PROMPT_JOURNAL_BINDINGS) {",
+      "sha256": "254c530216f47abfc3572bb1689161ad3c10775af2cdceda7e94f443e52c0691",
+      "evidence": "Deletes oldest journalItemIds key and corresponding boundPrompts entry until at most 256 bindings. Keys produced by journal item identity are nonempty. claim/claimBound place prompt->claim in a distinct Map; trim does not release those claims. clearTurn discovers prompts only through byAddress and boundPrompts, so it cannot find a prompt evicted from both even if claims still owns it. clear drops all four maps.",
+      "verdict": "Finite paired-map eviction. Shared orphaned-claim candidate with preceding site; avoid arbitrary caps that would weaken in-flight claim authority."
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-prompts.ts",
+      "line": 152,
+      "sourceLine": "while (this.pending.size > MAX_CODEX_PENDING_PROMPTS) {",
+      "sha256": "806f61f913c28593b02b6ea6dcb68559b126bf939b91b1e5cf4f43fedabf45a2",
+      "evidence": "Finds the oldest pending prompt, appends a cancelled lifecycle body and publishes before deleting. Missing key breaks; append/publish rejection returns rather than looping. Default pending target128; one incoming question is inserted then trim runs before the next. Production notification retry holds the blocked head and bounds subsequent events, so refusal is not an unrestricted stream of new pending insertions. Resolve/cancel, turn settlement and translator dispose delete entries. Sink owns the admitted lifecycle payload beyond this map.",
+      "verdict": "Finite settlement-preserving trim with explicit backpressure; no silent evidence drop or synchronous growth found."
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-generic-frames.ts",
+      "line": 202,
+      "sourceLine": "while (",
+      "sha256": "5fe2414993c44075d9c979d76091c89611360cb166f650e4483d1e6bad3b30d2",
+      "evidence": "Each iteration chooses an existing bucket other than current/overflow and removes it from all bookkeeping maps and byte accounting. Unpublished suppression moves into a single overflow summary via recordBucket; already-present overflow does not allocate another key. No eligible victim breaks. Keys are at most512 UTF-8 bytes or reduced to an ASCII prefix/hash; limits are64 turn buckets,128 combined row/suppression entries and32 KiB accounted key bytes. One suppression-flush timer is coalesced; dispose cancels it and clears all maps.",
+      "verdict": "Finite eviction with coalesced overflow state. Error rows intentionally reach the journal independently of the eight informational rows/turn policy."
+    },
+    {
+      "path": "src/main/observability/bundle.ts",
+      "line": 55,
+      "sourceLine": "while (end > 0) {",
+      "sha256": "79c9baea1eed62b6497c907f317db37c79b4392f7a519aa47081e7e4b9dd2619",
+      "evidence": "Reverse-line generator moves end to the preceding newline or breaks at start-of-file; it yields one slice at a time without split-to-array. collectBundle scans fixed rotated families from its production caller (ten trace files plus daemon family), skips files statting above50 MiB, and accumulates at most4 MiB output. Whole readFileSync, JSON.parse, recursive redaction and stringify occur before record output checks; stat/read is not an atomic byte limit. Local file sink normally rotates at10 MiB. The generator state is local to this synchronous collection.",
+      "verdict": "Finite input scan and bounded returned payload. Peak parsing memory is larger than4 MiB and can depend on whole-file/record input; no persistent iterator leak."
+    },
+    {
+      "path": "src/main/observability/redactor.ts",
+      "line": 125,
+      "sourceLine": "while (index < length) {",
+      "sha256": "59190309dbef22508e3f2ef27b0190093d5aaab8cce146d6d49a89eb9d0a2b73",
+      "evidence": "ASCII whitespace increments index one code unit; non-ASCII hands off to sticky whitespace regex, returning when lastIndex is unchanged and otherwise advancing to its end. Nonwhitespace returns immediately. No collection is built by this loop and input is immutable. Caller environment-line scanner advances its own line cursor afterward.",
+      "verdict": "Finite whitespace scan with explicit zero-length-match escape."
+    },
+    {
+      "path": "src/main/observability/redactor.ts",
+      "line": 149,
+      "sourceLine": "while (start < input.length) {",
+      "sha256": "59190309dbef22508e3f2ef27b0190093d5aaab8cce146d6d49a89eb9d0a2b73",
+      "evidence": "Each successful environment match consumes a required key/value and advances start to matched end+1. On no match, terminator caches search each of four terminator kinds from content; start advances to terminator+1 or breaks. parts receives two strings per successful replacement, is local, then joins once. All-secret short lines can expand via the fixed replacement marker, so output is input-proportional rather than input-byte-preserving. Other redactor regexes and recursive object walking were not established linear by this loop review.",
+      "verdict": "Finite parser with input-sized transient parts/output; no persistent accumulator."
+    },
+    {
+      "path": "src/main/browser/browser-certificate-request-guard.ts",
+      "line": 204,
+      "sourceLine": "while (this.grantsByGuestId.size > MAX_CERTIFICATE_GRANTS) {",
+      "sha256": "6f36c603f2315396ab716070577838ae3cecc1a0e9ed594bb261ee6e94b849d0",
+      "evidence": "Deletes actual oldest guest grant via revokeGuest, removing its parallel session mapping, until at most32. Guest retirement/navigation revokes grants; partition cleanup removes session request listener and accepted identity map. acceptedIdentityBySession is separate, deliberately retains each accepted endpoint/leaf/error for that session even after guest revocation: Chromium caches certificate decisions, so deleting this history would weaken endpoint/leaf checks. Session partition lifecycle, not guest count, owns those pins.",
+      "verdict": "Finite bounded live-grant map. Accepted endpoint history is intentionally session-sized and not covered by32; no arbitrary eviction is safe."
+    },
+    {
+      "path": "src/main/claude-accounts/keychain.ts",
+      "line": 137,
+      "sourceLine": "while (true) {",
+      "sha256": "c3824424fe7fcf8ab06b88e4711e59b36e20adb8d70d96024cb8d15c6b07d86e",
+      "evidence": "Missing ENOENT path moves existingPath to dirname and unshifts one basename; parent===current breaks at root. Found realpath produces at most one additional canonical alias and breaks. Non-ENOENT, a broken symlink, or any original .. segment breaks without guessing. The resulting aliases are local and feed a deduplicated service list; macOS keychain commands separately have a three-second deadline. This synchronous path-resolution scan does not retain per-call maps.",
+      "verdict": "Finite path-depth traversal; at most two returned aliases and input-depth scratch strings."
+    }
+  ],
+  "dependencies": [
+    {
+      "path": "src/main/browser/paired-runtime-browser-host-lease.ts",
+      "sha256": "617970c740a23ab352135135f9a64b94155d0a3a7cdc5381302c48ea9ef10a29"
+    },
+    {
+      "path": "src/main/browser/browser-host-command-result-submission.ts",
+      "sha256": "4687448b882b64b6c4d1d3fe3ca03b74392e2b36ac739bc3268619dc8180dfd4"
+    },
+    {
+      "path": "src/main/plugins/plugin-panel-controller.ts",
+      "sha256": "193fac71a44f031fda7766365566a23a1f7f8618a0576d751a30ee937600cfd7"
+    },
+    {
+      "path": "src/main/plugins/plugin-manifest-file.ts",
+      "sha256": "8035fadec680f601d26abcb1ba81d3199860342e9feaa9eba35b6716426ff640"
+    },
+    {
+      "path": "src/main/plugins/plugin-service.ts",
+      "sha256": "057bcb8af5067112f8aec498ad7824b005dfe9ed7880b3e0745ed54fcfb75420"
+    },
+    {
+      "path": "src/main/ipc/plugins.ts",
+      "sha256": "6084c3da4543f7fcd5da4e1919b9608bcceff8e7a71650f5bdd42ff5917cebe1"
+    },
+    {
+      "path": "src/main/runtime/rpc/methods/plugins.ts",
+      "sha256": "4097f68c3e9c6e4b7eed73dd433b6cfda5a97c833a4cb51a3d1996fe542934e5"
+    },
+    {
+      "path": "src/main/worktree-create-preparation.ts",
+      "sha256": "3a6453bd02ca41ff3bfcafc7784ab561337f018f4df6979ea1f314a463f6258a"
+    },
+    {
+      "path": "src/main/worktree-preparation-discard-retry.ts",
+      "sha256": "435ef232a3fabe40dfc854e8bb4c3535d020ec95d340248ea3cd4eb71dc13144"
+    },
+    {
+      "path": "src/main/worktree-create-preparation-stale-cleanup.ts",
+      "sha256": "5084112baed051e1db8e6537de1f6a47450a8e9ae52c81589aa27472a3f7a2fc"
+    },
+    {
+      "path": "src/main/git/worktree-create-preparation.ts",
+      "sha256": "39c1c811626a5034dbb0f319529e97f0122cc5e8bce8879fc30a81a43319f916"
+    },
+    {
+      "path": "src/main/providers/ssh-pty-notification-routing.ts",
+      "sha256": "0d4f926dee5bc72d57c4bbf25f4b7a5f1ca70f7ebd3faddb2fc09e93d6d671d1"
+    },
+    {
+      "path": "src/main/providers/ssh-pty-provider-output-state.ts",
+      "sha256": "23290e3617f3ade46d6f3e3c16b1bf6bc451f19d4f99da24bc325680a282639d"
+    },
+    {
+      "path": "src/main/providers/ssh-pty-provider.ts",
+      "sha256": "7bf1a9e41b606dcfd73bd2a4aa9d9aa185b12f18f9beb027b640fe10cf360123"
+    },
+    {
+      "path": "src/main/providers/ssh-pty-session-reattach.ts",
+      "sha256": "5169ffb491ed15a4f6957988f061585c647918dde1b03971c2a8fb417ca1e216"
+    },
+    {
+      "path": "src/shared/pty-source-credit-contract.ts",
+      "sha256": "1a09776cd995c6c86ad0d9e1f141862e6890c9953d692accd33ea154dba9d0d4"
+    },
+    {
+      "path": "src/main/ai-vault/session-transcript-consumers.ts",
+      "sha256": "79c89f8a963be344b68201caa117f1d7ac1ebf1a0deef95b46576b4c064aa478"
+    },
+    {
+      "path": "src/main/ai-vault/session-transcript-reader.ts",
+      "sha256": "928ba21c8933f1d80c49c9e5fc24c3c2ef5de19803e3e04f31066210e2dc10f8"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-index-consumer.ts",
+      "sha256": "2e96a59a132d20c5ede2bb9d9844e038c23e95f4f79df8d439ffd2a9bda3fed0"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-indexer.ts",
+      "sha256": "ad01c5b44b0dff8c53eefd63d26f77d9bbea69935383c195020cdd9e0748c814"
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-limits.ts",
+      "sha256": "2fd2d5015b73fb948df6abdb6469039b1ee3a680db5119b1a44ebf82bc152492"
+    },
+    {
+      "path": "src/main/codex/codex-structured-item-streams.ts",
+      "sha256": "b70c3306e8bec3587342afc3bc156f40903513fa7ff3865b217ba4cc912cd89f"
+    },
+    {
+      "path": "src/main/codex/codex-structured-item-stream-bounds.ts",
+      "sha256": "88e9efa8a9c163905f1a5eb5eaf316fba2f194d76c5a94ed7f55636cc0d74ae0"
+    },
+    {
+      "path": "src/main/codex/codex-item-stream-retention.ts",
+      "sha256": "66d1f1d51ed6711e20f81698b14be2d003e899dbc587ac1306b6a656cf951b96"
+    },
+    {
+      "path": "src/main/codex/codex-prompt-registry-bounds.ts",
+      "sha256": "f6bfd21bcc2ccf7005a93a4764d17235887f11380b0b29301410b0f291a5c618"
+    },
+    {
+      "path": "src/main/codex/codex-structured-prompt-ownership.ts",
+      "sha256": "8d86f3784b79a1470e4002527bdfa505efe2762cba865de7716442f7d9730013"
+    },
+    {
+      "path": "src/main/codex/codex-structured-prompt-replies.ts",
+      "sha256": "7b927e9910031ee80ab885ce1d713133d3ee614c5b6d460a5c91ff3768d9cb2e"
+    },
+    {
+      "path": "src/main/codex/codex-structured-turn-cancellation.ts",
+      "sha256": "518b8e5a2f6dc4f8e46e01366c0a61830d6c805b68101484726bd62bbfc831a8"
+    },
+    {
+      "path": "src/main/codex/codex-structured-notification-retry.ts",
+      "sha256": "d6c1e65fc214dc2e054d29d1c2e829a21f2f21a252e6d2ae3c456f75b0239805"
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-translation.ts",
+      "sha256": "56e17b9649471e804d29d1d54a3e14b4298ca8af2e25c4759dc37fce000b06a1"
+    },
+    {
+      "path": "src/main/codex/codex-structured-journal-translation-turn-boundaries.ts",
+      "sha256": "bb482b2c49fa3754b76e1e749185bb2804409e017f909c0453022ead07f99a03"
+    },
+    {
+      "path": "src/main/codex/codex-structured-session-close.ts",
+      "sha256": "f85aa2cdcfd2ddf34ae0be8397a3896128f04a989eaff750f8e72eee3398b361"
+    },
+    {
+      "path": "src/main/observability/index.ts",
+      "sha256": "a64b90f32f2f7ffbad5ab89d6ae09045865641f8641b07b7019a1ea76d0a92d9"
+    },
+    {
+      "path": "src/main/observability/local-file-sink.ts",
+      "sha256": "6b6d768d9a06a72205df1d6f9a7254d3d35807a47715cc37b0c0117a10cf69f6"
+    },
+    {
+      "path": "src/main/observability/diagnostic-bundle-limits.ts",
+      "sha256": "39103f7b34ada61de5ee87cf920134f8579706d5b785baff820244a8f83a1166"
+    },
+    {
+      "path": "src/main/browser/browser-certificate-challenge.ts",
+      "sha256": "5283efe43e991ae85e04b393f4e2d2b111946e5e022cbb2ea93dfd0455abaf73"
+    },
+    {
+      "path": "src/main/browser/browser-certificate-trust-controller.ts",
+      "sha256": "0f0c7236303e74fd7f491912fb3d2283a8fbb0631ac41a546cf2c4f61104a689"
+    },
+    {
+      "path": "src/main/browser/browser-manager-state.ts",
+      "sha256": "ea6e847afe227b9acbf432d68a6f21f0d15247748fc8b4f769ab73498d6a13c5"
+    },
+    {
+      "path": "src/main/browser/browser-session-partition-policies.ts",
+      "sha256": "0b97dc7248cd5df6d3e6296a738ac582fa81df053bb6b5b2859c35386aa26d0f"
+    }
+  ]
+}

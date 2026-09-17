@@ -1,0 +1,119 @@
+===================================================================
+--- a/mobile/src/session/use-mobile-session-close-actions.ts
++++ b/mobile/src/session/use-mobile-session-close-actions.ts
+@@ -1,5 +0,0 @@
+-import {
+-  sessionTabClose,
+-  sessionTerminalClose,
+-  sessionTerminalRename
+-} from './mobile-session-write-operations'
+@@ -47,4 +42,5 @@
+-      const response = sessionTerminalRename.interpret(
+-        await sessionTerminalRename.request(client, { terminal: target.handle, title })
+-      )
+-      if (response.accepted) {
++      const response = await client.sendRequest('terminal.rename', {
++        terminal: target.handle,
++        title
++      })
++      if (response.ok) {
+@@ -73,4 +69,4 @@
+-      const response = sessionTerminalClose.interpret(
+-        await sessionTerminalClose.request(client, { terminal: target.handle })
+-      )
+-      if (response.accepted) {
++      const response = await client.sendRequest('terminal.close', {
++        terminal: target.handle
++      })
++      if (response.ok) {
+@@ -104,10 +100,8 @@
+-      const response = sessionTabClose.interpret(
+-        await sessionTabClose.request(client, {
+-          worktree: `id:${worktreeId}`,
+-          tabId: tab.id,
+-          // Why: a tapped tab close is explicit user intent; older hosts strip
+-          // the unknown field and keep their legacy behavior.
+-          reason: 'user'
+-        })
+-      )
+-      if (response.accepted) {
++      const response = await client.sendRequest('session.tabs.close', {
++        worktree: `id:${worktreeId}`,
++        tabId: tab.id,
++        // Why: a tapped tab close is explicit user intent; older hosts strip
++        // the unknown field and keep their legacy behavior.
++        reason: 'user'
++      })
++      if (response.ok) {
+===================================================================
+--- a/src/main/ipc/pty/runtime/spawn-preflight.ts
++++ b/src/main/ipc/pty/runtime/spawn-preflight.ts
+@@ -75,5 +74,0 @@
+-  // `args.shellOverride` is the per-request pick (`terminal create --shell`), read here the way
+-  // the renderer twin (ipc/spawn-preflight.ts) reads a tab's override. Without it a runtime create
+-  // could only ever get the host default shell, so a caller asking for cmd/PowerShell got the
+-  // default shell with the request typed into it. Still Windows-only: the override names a
+-  // Windows shell, and spawn-options applies it under the same platform gate.
+@@ -83,1 +78,1 @@
+-          requestedShellOverride: args.shellOverride,
++          requestedShellOverride: undefined,
+===================================================================
+--- a/src/main/ipc/pty/runtime/spawn-state.ts
++++ b/src/main/ipc/pty/runtime/spawn-state.ts
+@@ -105,1 +104,0 @@
+-  shellOverride?: string
+===================================================================
+--- a/src/main/runtime/orca-runtime-close-mobile-session-tab.ts
++++ b/src/main/runtime/orca-runtime-close-mobile-session-tab.ts
+@@ -22,0 +23,1 @@
++import { captureAcknowledgedTerminalTabRetirement } from './workspace-session-terminal-tab-retirement-identity'
+@@ -180,2 +181,12 @@
+-        // Why: whole-tab close is a lifecycle transaction. The renderer reply
+-        // arrives only after canonical retirement and a forced session flush.
++        // The renderer flush can rebase its omission; the host commits the acknowledged identity.
++        const acknowledgeRetirement = captureAcknowledgedTerminalTabRetirement(
++          worktreeId,
++          tab.parentTabId,
++          () => ({
++            hostId: this.getWorkspaceSessionHostIdForWorktree(worktreeId),
++            session: this.getWorkspaceSessionForWorktree(worktreeId),
++            snapshot: this.mobileSessionTabsByWorktree.get(worktreeId),
++            incarnationOf: (ptyId) => this.ptysById.get(ptyId)?.incarnationId
++          })
++        )
++        // Wait for the renderer's pin guard, retirement and forced session flush.
+@@ -202,0 +214,5 @@
++        const retirement = acknowledgeRetirement()
++        if (!retirement.matches) {
++          this.republishMobileSessionTabsSnapshot(worktreeId)
++          return refusedMobileSessionTabClose('stale-terminal', { snapshotRepublished: true })
++        }
+@@ -222,0 +239,4 @@
++        } else if (retirement.hasPersistedTab) {
++          this.commitHeadlessTerminalTabRetirement(worktreeId, tab.parentTabId, {
++            force: options.force
++          })
+===================================================================
+--- a/src/main/runtime/orca-runtime-create-terminal.ts
++++ b/src/main/runtime/orca-runtime-create-terminal.ts
+@@ -149,1 +148,0 @@
+-            ...(launchOpts.shellOverride ? { shellOverride: launchOpts.shellOverride } : {}),
+===================================================================
+--- a/src/main/runtime/runtime-pty-controller-contract.ts
++++ b/src/main/runtime/runtime-pty-controller-contract.ts
+@@ -61,2 +60,0 @@
+-    /** Windows shell to spawn AS this PTY, instead of the host default. */
+-    shellOverride?: string
+===================================================================
+--- a/src/main/runtime/runtime-terminal-contracts.ts
++++ b/src/main/runtime/runtime-terminal-contracts.ts
+@@ -25,9 +24,0 @@
+-  /**
+-   * Windows shell to spawn AS the PTY process, instead of the host default shell.
+-   *
+-   * Distinct from `command`, which is typed into whatever shell the host spawns: a caller asking
+-   * for cmd or PowerShell through `command` gets it as a CHILD of the default shell, so the
+-   * terminal's own process is still the default shell and leaving that child lands back on a
+-   * prompt the caller never asked for.
+-   */
+-  shellOverride?: string

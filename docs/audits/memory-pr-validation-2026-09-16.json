@@ -1,234 +1,367 @@
 {
   "observedAt": "2026-09-16T10:30:00.481357+00:00",
-  "scope": "Published memory-audit PRs; statuses are a timestamped observation, not a claim that all CI is green.",
+  "scope": "Published memory-audit PRs; each pullRequests row has its latest observation time. Other sections are historical observations, not a claim that all CI is green.",
+  "codexClaimBrowserPerformanceCi": {
+    "pullRequest": 21138,
+    "head": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+    "jobUrl": "https://github.com/stablyai/orca/actions/runs/35175767178/job/105057094035",
+    "failure": "Untouched browser-history-match.performance.test.ts cold corpus p95 was 2.584757 ms against a 2 ms threshold; 10157 other tests in that shard passed.",
+    "testBlobOnMainAndTopic": "7a99c2ad49df25f4ebd4cca6fa2c1812f345b959",
+    "interpretation": "No browser source or timing threshold changes in this PR. This log establishes a missed performance threshold, not why it occurred. One failed-job rerun requested."
+  },
+  "runtimeRpcColdCacheCi": {
+    "pullRequest": 21131,
+    "head": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+    "run": 35173437413,
+    "jobUrl": "https://github.com/stablyai/orca/actions/runs/35173437413/job/105050004011",
+    "failure": "The untouched resolve-7za-path.test.mjs cold-cache test received resolver exit status 1 instead of 0. Its captured stderr was not included in the assertion, so the underlying cause is unproven.",
+    "scopeCheck": "The 16-file patch changes only the runtime RPC queue, its new tests and audit artifacts; no resolver, dependency or signing files changed.",
+    "otherChecks": "Static analysis, typecheck, package and Windows package passed. Verify failed because the test job failed.",
+    "followup": "The failed-job rerun passed on the same head. No product change was made; the original resolver failure cause remains unproven."
+  },
   "pullRequests": [
     {
       "number": 20903,
       "base": "main",
       "head": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20904,
       "base": "main",
       "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20905,
       "base": "main",
       "head": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20906,
       "base": "main",
       "head": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20908,
       "base": "main",
       "head": "04a81de660dba6595c047b152f4da97a660f031c",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20909,
       "base": "main",
       "head": "c2e588e985b139995538e3e57cd48915357e9eea",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20910,
       "base": "main",
       "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20924,
       "base": "main",
       "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20941,
       "base": "main",
       "head": "b34a5d921a66f9a26388fe32273732d48303dcf7",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20946,
       "base": "main",
       "head": "47a50b69344148ad965a4334ce4f10124bbeeda6",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20947,
       "base": "main",
       "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20949,
       "base": "main",
       "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20955,
       "base": "main",
       "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20960,
       "base": "main",
       "head": "8d599520e44654a5c28e9930e3070c00d6499931",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20963,
       "base": "main",
       "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20965,
       "base": "main",
       "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20976,
       "base": "main",
       "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20978,
       "base": "main",
       "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20980,
       "base": "main",
       "head": "87b2d00025337e5d7e5fac0a72245a89702853ec",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20981,
       "base": "main",
       "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20986,
       "base": "main",
       "head": "03270639f008359752ba0b4c5a45339ac39eeeb7",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20992,
       "base": "np-oom-scan-contrast-cache",
       "head": "ccac7bb908ef74856a9f51973faffc9204f085ff",
-      "state": "SUCCESS"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 20996,
       "base": "main",
       "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21000,
       "base": "main",
       "head": "827dabf9582a92820d340c58452b66468f5e2199",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21001,
       "base": "main",
       "head": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21002,
       "base": "main",
       "head": "bbab979c73c81c90a6096626195ae244a1dedd9c",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21005,
       "base": "np-oom-scan-pending-split-close",
       "head": "9effc47aacec86d2be4a44c94249073ac5adda09",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21006,
       "base": "main",
       "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21009,
       "base": "main",
       "head": "8da602c7e3a74655f98039705bbfede174078e79",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21010,
       "base": "main",
       "head": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21011,
       "base": "np-oom-scan-daemon-late-exit",
       "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21012,
       "base": "main",
       "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21014,
       "base": "main",
       "head": "099f3396524554fc6725a7f0b727434dc7369527",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21018,
       "base": "main",
       "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21019,
       "base": "np-oom-scan-daemon-late-exit",
       "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21020,
       "base": "main",
       "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21021,
       "base": "main",
       "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     },
     {
       "number": 21022,
       "base": "main",
       "head": "97338c35d95151b744cc653f328a1180f17dd182",
-      "state": "FAILURE"
+      "state": "FAILURE",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21024,
+      "base": "main",
+      "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21112,
+      "base": "np-oom-scan-terminal-cell-retention",
+      "head": "f893dc4a7598e77944b53f644a874d838a080ce6",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21113,
+      "base": "main",
+      "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21128,
+      "base": "main",
+      "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21129,
+      "base": "main",
+      "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21131,
+      "base": "main",
+      "head": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21135,
+      "base": "main",
+      "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21136,
+      "base": "main",
+      "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21138,
+      "base": "main",
+      "head": "86bb5899725ccceedac0537e2d68f61d5149bbed",
+      "state": "PENDING",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21139,
+      "base": "main",
+      "head": "66d12af6a54cc928f269dae02c399db7d8431f03",
+      "state": "PENDING",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
+    },
+    {
+      "number": 21140,
+      "base": "main",
+      "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
+      "state": "PENDING",
+      "observedAt": "2026-09-17T03:06:47.720115+00:00"
     }
   ],
   "correctedPatchFailures": [
@@ -3000,5 +3133,64 @@
       },
       "interpretation": "Each file has the same blob on main and this topic; this is not proof of why the tests failed."
     }
+  },
+  "streamingProofFollowup": {
+    "pullRequest": 21024,
+    "primaryCommit": "def23816ccaa7322e13b755ddfd800b8bacd97ba",
+    "headCommit": "5ecd46d02b8896e7c79886ae76a4111b9b59c160",
+    "localValidation": "98 affected tests; 204 comparative regression executions; root before/after and post-commit proof; full desktop typecheck; lint/format/changed-code gate pass",
+    "ci": "In progress at observation; not a green-CI claim. Main base291b carries the earlier unused NativeChatMessage import failure recorded below."
+  },
+  "introducedCiCorrections": {
+    "claudeDescriptorTest": {
+      "pullRequest": 21024,
+      "failedHead": "41f3bc2f4ac5e6522bcd5d1befd6af417cc14681",
+      "jobUrl": "https://github.com/stablyai/orca/actions/runs/35161574613/job/105013408092",
+      "cause": "The test checked fstatSync on a descriptor number that another concurrent test could reuse.",
+      "correction": "Inspect the original FileHandle objects: opens equal closes, fd becomes -1 and handle.stat rejects EBADF.",
+      "publishedHead": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
+      "validation": "23 transcript tests; 48 combined transcript/search/reflow tests; changed-code quality passed."
+    },
+    "reflowExpectations": {
+      "pullRequest": 21112,
+      "failedHead": "f85b8738383d6b4507f747127e5a989e94cbfc2e",
+      "jobUrls": [
+        "https://github.com/stablyai/orca/actions/runs/35161693369/job/105013670245",
+        "https://github.com/stablyai/orca/actions/runs/35161693430/job/105013919441"
+      ],
+      "cause": "A search test expected the removed negative buffer property; the mobile payload expectation still described the earlier engine.",
+      "correction": "Assert no negative properties and exact retained tail order; verify each branch's regenerated mobile payload using its pinned esbuild.",
+      "publishedHead": "f893dc4a7598e77944b53f644a874d838a080ce6",
+      "primaryPayload": {
+        "length": 732650,
+        "sha256": "a10f26ac720c96c14472574b955b30e816667b0a15dfe4e0b0ce11641691506b"
+      },
+      "publishedPayload": {
+        "length": 731264,
+        "sha256": "952197df7918e6a545da4e8e4a5daa498ad352ba0507911761ddbad7b3691c2d"
+      },
+      "validation": "48 combined desktop tests; 14 primary and 14 exact-publication mobile tests; changed-code quality passed."
+    },
+    "emptyTabWindowlessStore": {
+      "pullRequest": 21113,
+      "failedHead": "e26e2ffc64264c30434b9d0a16d06062de9f4b98",
+      "jobUrls": [
+        "https://github.com/stablyai/orca/actions/runs/35172271108/job/105046367342",
+        "https://github.com/stablyai/orca/actions/runs/35172271108/job/105046367239"
+      ],
+      "cause": "The new optional retirement helper read window in store-only tests with no renderer window.",
+      "correction": "Skip the optional bridge request when no window exists; preserve the existing synchronous store close.",
+      "publishedHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
+      "validation": "42 tests across four affected suites; independent five-test review; before/after restart proof remains two expected baseline failures and ten fixed passes; Web typecheck, lint and changed-code quality passed."
+    }
+  },
+  "reflowAndEmptyTabFollowup": {
+    "observedAt": "2026-09-16T23:20:09.328240+00:00",
+    "pullRequests": [21112, 21113],
+    "localChecks": {
+      "xterm": "92 root and24 mobile tests; canonical regeneration; focusedlint; independent review; postcommit9 memory/28 parity/8 lifecycle proof exit0",
+      "emptyTab": "29 focused/43 existing tests;47 mainbase overlay; desktop typechecks; independent review; postcommit before2fail8controls,after10pass"
+    },
+    "limits": "Both current PRchecks pending. Prior CI failures remain recorded below; no claim allCIgreen. Xterm stacks on20992; publication preserves unrelatedWebGLlockhash and records projected-lock qualification."
   }
 }

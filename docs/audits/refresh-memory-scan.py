@@ -20,6 +20,7 @@ SIGNALS = [
     "setInterval", "clearInterval", "requestAnimationFrame", "cancelAnimationFrame",
     "subscribe(", "unsubscribe", "DisposableStore", "MutableDisposable",
     "onWillDispose", "onDidDispose", "new Map", "new Set", "Buffer.concat",
+    "Promise.race", "Promise.withResolvers",
 ]
 
 

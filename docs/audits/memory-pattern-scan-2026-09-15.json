@@ -29,13 +29,13 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25579,
-  "matchingFiles": 7798,
+  "sourceFilesSearched": 25659,
+  "matchingFiles": 7877,
   "counts": {
-    "addEventListener": 1555,
-    "removeEventListener": 1204,
-    "setTimeout": 3942,
-    "clearTimeout": 1851,
+    "addEventListener": 1554,
+    "removeEventListener": 1203,
+    "setTimeout": 3956,
+    "clearTimeout": 1855,
     "setInterval": 383,
     "clearInterval": 218,
     "requestAnimationFrame": 586,
@@ -46,9 +46,11 @@
     "MutableDisposable": 1,
     "onWillDispose": 1,
     "onDidDispose": 17,
-    "new Map": 7581,
-    "new Set": 7271,
-    "Buffer.concat": 275
+    "new Map": 7598,
+    "new Set": 7274,
+    "Buffer.concat": 277,
+    "Promise.race": 215,
+    "Promise.withResolvers": 147
   },
   "files": {
     ".github/actions/cloud-sql-rollout-lease/renew.mjs": {
@@ -236,9 +238,11 @@
       "clearInterval": 1
     },
     "cloud/apps/relay/src/control-rebind-inventory-lock-postgres.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 2
     },
     "cloud/apps/relay/src/control-renewal-postgres.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "cloud/apps/relay/src/database-statement-timeout-postgres.test.ts": {
@@ -277,6 +281,7 @@
       "new Set": 1
     },
     "cloud/apps/relay/src/postgres-transaction-recovery.test.ts": {
+      "Promise.race": 3,
       "clearTimeout": 1,
       "setTimeout": 5
     },
@@ -481,6 +486,9 @@
     "cloud/dev/scripts/relay-load-reader-evidence.test.mjs": {
       "new Map": 1
     },
+    "cloud/dev/scripts/relay-load-rebind-boundary.mjs": {
+      "Promise.race": 1
+    },
     "cloud/dev/scripts/relay-load-region-behavior.mjs": {
       "setTimeout": 1
     },
@@ -589,6 +597,7 @@
       "new Map": 2
     },
     "config/scripts/archive-hook-removal-repro.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "setTimeout": 2
     },
@@ -700,6 +709,7 @@
       "new Set": 1
     },
     "config/scripts/claude-account-windows-spawn-repro.mjs": {
+      "Promise.race": 1,
       "setInterval": 2,
       "setTimeout": 3
     },
@@ -725,6 +735,7 @@
       "setTimeout": 2
     },
     "config/scripts/codex-validation-process-shutdown.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "new Map": 1,
       "setTimeout": 3
@@ -854,12 +865,15 @@
       "setTimeout": 1
     },
     "config/scripts/linux-wayland-renderer-diagnostics.mjs": {
+      "Promise.race": 2,
       "setTimeout": 2
     },
     "config/scripts/linux-wayland-terminal-exercise.mjs": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "config/scripts/linux-wayland-validation-watchdog.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -902,6 +916,7 @@
       "new Set": 1
     },
     "config/scripts/macos-computer-helper-owner-loss-benchmark.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 3,
       "setTimeout": 3
     },
@@ -1048,6 +1063,7 @@
       "new Map": 1
     },
     "config/scripts/run-codex-real-account-validation.mjs": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "new Set": 1,
       "removeEventListener": 1,
@@ -1074,6 +1090,7 @@
       "setTimeout": 1
     },
     "config/scripts/runtime-file-watcher-fault-harness.mjs": {
+      "Promise.race": 3,
       "clearTimeout": 2,
       "setTimeout": 1,
       "subscribe(": 1,
@@ -1085,6 +1102,7 @@
       "subscribe(": 2
     },
     "config/scripts/runtime-serve-terminal-smoke.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "setTimeout": 3
     },
@@ -1120,6 +1138,7 @@
       "new Map": 2
     },
     "config/scripts/smoke-packaged-hang-watchdog-worker.mjs": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "config/scripts/space-sharing-copy.mjs": {
@@ -1170,6 +1189,7 @@
       "new Set": 5
     },
     "config/scripts/verify-linux-wayland-gpu-sandbox.mjs": {
+      "Promise.race": 2,
       "setTimeout": 1
     },
     "config/scripts/verify-localization-catalog.mjs": {
@@ -1208,11 +1228,13 @@
       "new Set": 1
     },
     "config/scripts/windows-apphang-repro/electron-dev-session.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setInterval": 1,
       "setTimeout": 2
     },
     "config/scripts/windows-apphang-repro/repro-timing.mjs": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "config/scripts/windows-apphang-repro/terminal-activation-scenario.mjs": {
@@ -1223,6 +1245,7 @@
       "new Set": 3
     },
     "config/scripts/windows-daemon-workspace-close-repro.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 8,
       "new Map": 1,
       "setTimeout": 6
@@ -1265,6 +1288,26 @@
     "docs/audits/agent-start-count-semantics/reproduce.cjs": {
       "new Set": 1
     },
+    "docs/audits/auth-filesystem-wait-retention/reproduce.cjs": {
+      "clearTimeout": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/auth-filesystem-wait-retention/sources.cjs": {
+      "new Map": 2
+    },
+    "docs/audits/claude-branch-proof-streaming/parity-cases.cjs": {
+      "Buffer.concat": 2
+    },
+    "docs/audits/codex-prompt-claim-retention/reproduce.cjs": {
+      "clearTimeout": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/codex-prompt-claim-retention/scenario.cjs": {
+      "new Map": 1
+    },
+    "docs/audits/codex-prompt-claim-retention/sources.cjs": {
+      "new Map": 2
+    },
     "docs/audits/daemon-shutdown-identity/close-retry.test.ts": {
       "new Map": 2
     },
@@ -1277,15 +1320,43 @@
     "docs/audits/daemon-stream-retention/reproduce.mjs": {
       "setTimeout": 1
     },
+    "docs/audits/gitlab-known-host-retirement/reproduce.cjs": {
+      "Promise.withResolvers": 4,
+      "setTimeout": 1
+    },
+    "docs/audits/headless-pending-tab-resurrection/fixture.test.mjs": {
+      "Promise.withResolvers": 2,
+      "new Map": 1,
+      "new Set": 1
+    },
+    "docs/audits/headless-pending-tab-resurrection/reproduce.mjs": {
+      "new Map": 1
+    },
     "docs/audits/legacy-import-source-budget/reproduce.mjs": {
+      "new Map": 1
+    },
+    "docs/audits/local-empty-tab-retirement/fixture.test.ts": {
+      "new Map": 1
+    },
+    "docs/audits/local-unbound-close-authority/receipt-candidate.ts": {
       "new Map": 1
     },
     "docs/audits/macos-allocation-tags/probe.cjs": {
       "clearTimeout": 1,
       "setTimeout": 2
     },
+    "docs/audits/native-pty-spawn-env-retention/reproduce.cjs": {
+      "clearTimeout": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/native-pty-spawn-env-retention/sources.cjs": {
+      "new Map": 2
+    },
     "docs/audits/nested-repo-processed-queue/reproduce.cjs": {
       "new Set": 1
+    },
+    "docs/audits/pending-split-close/daemon-proof.test.ts": {
+      "Promise.withResolvers": 2
     },
     "docs/audits/posix-command-row-framing/reproduce.cjs": {
       "setTimeout": 1
@@ -1297,6 +1368,8 @@
       "Buffer.concat": 1,
       "DisposableStore": 1,
       "MutableDisposable": 1,
+      "Promise.race": 1,
+      "Promise.withResolvers": 1,
       "addEventListener": 1,
       "cancelAnimationFrame": 1,
       "clearInterval": 1,
@@ -1315,7 +1388,29 @@
     "docs/audits/relay-replay-overflow/replay-fixture.test.ts": {
       "Buffer.concat": 1
     },
+    "docs/audits/runtime-rpc-consumed-queue/extended-controls.cjs": {
+      "Promise.withResolvers": 2,
+      "new Set": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/runtime-rpc-consumed-queue/reproduce.cjs": {
+      "Promise.withResolvers": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/runtime-rpc-consumed-queue/resolver-controls.cjs": {
+      "setTimeout": 1
+    },
+    "docs/audits/speech-worker-audio-budget/run-case.cjs": {
+      "setTimeout": 1
+    },
+    "docs/audits/speech-worker-audio-budget/sources.cjs": {
+      "new Map": 1
+    },
+    "docs/audits/speech-worker-audio-queue/reproduce.cjs": {
+      "setTimeout": 1
+    },
     "docs/audits/structured-hold-retention/reproduce.mjs": {
+      "Promise.withResolvers": 1,
       "setTimeout": 1
     },
     "docs/audits/structured-tui-catchup-queue/reproduce.mjs": {
@@ -1327,6 +1422,17 @@
     "docs/audits/terminal-cell-retention/throughput.cjs": {
       "new Map": 1
     },
+    "docs/audits/terminal-completed-spawn-inputs/admission-control.cjs": {
+      "new Map": 1,
+      "setTimeout": 1
+    },
+    "docs/audits/terminal-completed-spawn-inputs/reproduce.cjs": {
+      "Promise.withResolvers": 2,
+      "setTimeout": 1
+    },
+    "docs/audits/terminal-completed-spawn-inputs/spawn-source.cjs": {
+      "new Map": 2
+    },
     "docs/audits/terminal-contrast-cache-retention/reproduce-dom.mjs": {
       "new Map": 1,
       "requestAnimationFrame": 1
@@ -1336,6 +1442,9 @@
     },
     "docs/audits/webgl-empty-glyph-retention/reproduce.mjs": {
       "requestAnimationFrame": 1
+    },
+    "docs/audits/xterm-reflow-retention/child.cjs": {
+      "setTimeout": 2
     },
     "docs/site/src/components/AutoplayClip.tsx": {
       "addEventListener": 1,
@@ -1799,6 +1908,7 @@
       "setTimeout": 1
     },
     "mobile/src/notifications/push-registration.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "new Set": 2,
@@ -2905,6 +3015,7 @@
       "setTimeout": 2
     },
     "mobile/src/transport/mobile-relay-browser-cancel-budget.test.ts": {
+      "Promise.withResolvers": 2,
       "new Map": 1,
       "subscribe(": 1,
       "unsubscribe": 2
@@ -2979,10 +3090,12 @@
       "unsubscribe": 2
     },
     "mobile/src/transport/mobile-relay-rpc-stream-cancellation.test.ts": {
+      "Promise.withResolvers": 2,
       "subscribe(": 12,
       "unsubscribe": 19
     },
     "mobile/src/transport/mobile-relay-rpc-streams.test.ts": {
+      "Promise.withResolvers": 2,
       "subscribe(": 6
     },
     "mobile/src/transport/mobile-relay-rpc-streams.ts": {
@@ -3108,10 +3221,12 @@
       "unsubscribe": 4
     },
     "mobile/src/transport/rpc-client.test.ts": {
+      "Promise.race": 1,
       "subscribe(": 13,
       "unsubscribe": 14
     },
     "mobile/src/transport/rpc-operation-barrier.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "mobile/src/transport/rpc-operation-cast-fence.test.ts": {
@@ -3119,6 +3234,7 @@
       "new Set": 5
     },
     "mobile/src/transport/rpc-operation.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "mobile/src/transport/rpc-session-liveness-integration.test.ts": {
@@ -3281,6 +3397,7 @@
       "new Set": 1
     },
     "src/cli/handlers/interactive-login-interruption.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -3447,6 +3564,7 @@
       "setTimeout": 2
     },
     "src/main/agent-auth-restart-preservation.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -3721,11 +3839,15 @@
     "src/main/ai-vault-search/session-search-retrieval.ts": {
       "new Set": 1
     },
+    "src/main/ai-vault-search/session-search-root-refresh.test.ts": {
+      "Promise.withResolvers": 1
+    },
     "src/main/ai-vault-search/session-search-scan-roots.ts": {
       "new Map": 1,
       "new Set": 1
     },
     "src/main/ai-vault-search/session-search-service-registry.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -3907,6 +4029,7 @@
       "new Set": 2
     },
     "src/main/ai-vault/session-scanner-service-cancellation.test.ts": {
+      "Promise.withResolvers": 3,
       "new Set": 2
     },
     "src/main/ai-vault/session-scanner-service-client-state.ts": {
@@ -3935,8 +4058,12 @@
       "setTimeout": 1
     },
     "src/main/ai-vault/session-scanner-service-root-request.ts": {
+      "Promise.withResolvers": 1,
       "addEventListener": 1,
       "removeEventListener": 1
+    },
+    "src/main/ai-vault/session-scanner-service-root-response.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/main/ai-vault/session-scanner-subagent-transcripts.ts": {
       "new Map": 1
@@ -3973,6 +4100,9 @@
     },
     "src/main/ai-vault/session-transcript-message-content.ts": {
       "new Set": 1
+    },
+    "src/main/ai-vault/ssh-session-list.test.ts": {
+      "Promise.race": 1
     },
     "src/main/ai-vault/ssh-session-list.ts": {
       "addEventListener": 1,
@@ -4076,6 +4206,7 @@
       "setTimeout": 2
     },
     "src/main/browser/agent-browser-bridge-core-commands.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "setTimeout": 2
     },
@@ -4153,6 +4284,7 @@
       "new Set": 1
     },
     "src/main/browser/browser-client-host-command-join.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4193,6 +4325,9 @@
     },
     "src/main/browser/browser-client-page-reconciliation-adapters.test.ts": {
       "new Set": 2
+    },
+    "src/main/browser/browser-client-page-renderer-bridge.test.ts": {
+      "Promise.race": 1
     },
     "src/main/browser/browser-client-page-renderer-bridge.ts": {
       "addEventListener": 1,
@@ -4349,6 +4484,7 @@
       "new Set": 2
     },
     "src/main/browser/browser-manager-types.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4425,6 +4561,7 @@
       "new Set": 3
     },
     "src/main/browser/browser-route-h3-egress-electron-main.ts": {
+      "Promise.race": 3,
       "clearTimeout": 1,
       "setTimeout": 4
     },
@@ -4517,6 +4654,7 @@
       "setTimeout": 3
     },
     "src/main/browser/browser-screencast-debugger-command.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4590,6 +4728,7 @@
       "new Map": 1
     },
     "src/main/browser/cdp-debugger-lifecycle.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4601,6 +4740,7 @@
       "setTimeout": 6
     },
     "src/main/browser/cdp-page-navigation-commands.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4613,6 +4753,7 @@
       "setTimeout": 3
     },
     "src/main/browser/cdp-screenshot.ts": {
+      "Promise.race": 1,
       "clearTimeout": 5,
       "setTimeout": 5
     },
@@ -4686,6 +4827,9 @@
       "new Map": 1,
       "setTimeout": 1
     },
+    "src/main/browser/offscreen-browser-backend-lifecycle.test.ts": {
+      "Promise.race": 1
+    },
     "src/main/browser/offscreen-browser-backend.ts": {
       "clearTimeout": 1,
       "new Map": 1,
@@ -4732,10 +4876,12 @@
       "new Map": 2
     },
     "src/main/browser/remote-browser-socks-buffering.test.ts": {
-      "Buffer.concat": 2
+      "Buffer.concat": 2,
+      "Promise.withResolvers": 1
     },
     "src/main/browser/remote-browser-socks-server.test.ts": {
       "Buffer.concat": 2,
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/browser/remote-browser-socks-server.ts": {
@@ -4842,10 +4988,12 @@
       "new Set": 1
     },
     "src/main/claude/claude-agent-sdk-control-requests.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
     "src/main/claude/claude-agent-sdk-exit-proof.test.ts": {
+      "Promise.withResolvers": 3,
       "setInterval": 2,
       "setTimeout": 1
     },
@@ -4853,6 +5001,7 @@
       "new Set": 1
     },
     "src/main/claude/claude-agent-sdk-user-message-queue.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/claude/claude-background-task-tracker.ts": {
@@ -4875,6 +5024,9 @@
     "src/main/claude/claude-slash-command-catalog.ts": {
       "new Map": 2,
       "new Set": 8
+    },
+    "src/main/claude/claude-stream-json-connection-close.test.ts": {
+      "Promise.withResolvers": 3
     },
     "src/main/claude/claude-stream-json-connection.test.ts": {
       "new Map": 1,
@@ -4958,6 +5110,7 @@
       "new Set": 1
     },
     "src/main/claude/claude-structured-prompt-ownership.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -4966,6 +5119,9 @@
     },
     "src/main/claude/claude-structured-real-cli.test.ts": {
       "setTimeout": 2
+    },
+    "src/main/claude/claude-structured-session-adapter.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/main/claude/claude-structured-session-adapter.ts": {
       "new Map": 2,
@@ -4983,6 +5139,9 @@
     "src/main/claude/claude-structured-session-publication.ts": {
       "new Map": 1,
       "new Set": 2
+    },
+    "src/main/claude/claude-structured-session-recovery.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/main/claude/claude-structured-session-state.ts": {
       "new Map": 1
@@ -5007,10 +5166,12 @@
       "new Set": 2
     },
     "src/main/claude/claude-tui-resume-proof.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
     "src/main/claude/claude-tui-resume-real-binary.integration.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 4
     },
     "src/main/claude/claude-turn-resumption.test.ts": {
@@ -5034,6 +5195,9 @@
     },
     "src/main/cli/keyed-promise-queue.test.ts": {
       "new Map": 2
+    },
+    "src/main/cli/linux-bare-orca-dispatcher.test.ts": {
+      "Promise.withResolvers": 2
     },
     "src/main/cli/packaged-cli-assets.test.ts": {
       "clearTimeout": 1,
@@ -5093,6 +5257,7 @@
       "new Set": 2
     },
     "src/main/codex-accounts/service-quota-refresh-decoupling.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -5156,6 +5321,9 @@
       "setInterval": 1,
       "setTimeout": 2
     },
+    "src/main/codex/codex-app-server-process-teardown.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/main/codex/codex-app-server-process-teardown.ts": {
       "new Set": 1,
       "setTimeout": 1
@@ -5166,11 +5334,13 @@
       "setTimeout": 1
     },
     "src/main/codex/codex-app-server-session.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 1
     },
     "src/main/codex/codex-app-server-teardown.integration.test.ts": {
+      "Promise.withResolvers": 2,
       "setInterval": 2,
       "setTimeout": 2
     },
@@ -5262,6 +5432,7 @@
       "new Set": 1
     },
     "src/main/codex/codex-process-exit-deadline.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -5342,6 +5513,9 @@
     "src/main/codex/codex-state-db-backfill-recovery.ts": {
       "new Map": 2,
       "setTimeout": 1
+    },
+    "src/main/codex/codex-structured-acquisition-exit-proof.test.ts": {
+      "Promise.withResolvers": 4
     },
     "src/main/codex/codex-structured-app-server-args.ts": {
       "new Set": 3
@@ -5433,6 +5607,9 @@
     "src/main/codex/codex-structured-session-adapter-lifecycle.test.ts": {
       "new Map": 1
     },
+    "src/main/codex/codex-structured-session-adapter.test.ts": {
+      "Promise.withResolvers": 1
+    },
     "src/main/codex/codex-structured-session-adapter.ts": {
       "new Map": 1
     },
@@ -5450,6 +5627,9 @@
     },
     "src/main/codex/codex-structured-session-options.ts": {
       "new Map": 1
+    },
+    "src/main/codex/codex-structured-session-shutdown.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/main/codex/codex-structured-session-state.ts": {
       "new Map": 1
@@ -5491,6 +5671,7 @@
       "new Set": 1
     },
     "src/main/codex/codex-tui-resume-real-binary.integration.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "setTimeout": 3
     },
@@ -5588,6 +5769,7 @@
       "new Map": 1
     },
     "src/main/computer/desktop-script-request-queue.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -5622,6 +5804,9 @@
       "removeEventListener": 2,
       "setTimeout": 1
     },
+    "src/main/computer/macos-native-provider-transport.ts": {
+      "Promise.race": 1
+    },
     "src/main/computer/sidecar-client.ts": {
       "clearTimeout": 5,
       "new Map": 1,
@@ -5645,7 +5830,12 @@
       "new Set": 2,
       "setTimeout": 2
     },
+    "src/main/crash-reporting/gpu-crash-diagnostics.test.ts": {
+      "Promise.withResolvers": 1
+    },
     "src/main/crash-reporting/gpu-crash-diagnostics.ts": {
+      "Promise.race": 1,
+      "Promise.withResolvers": 2,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -5690,6 +5880,7 @@
       "setTimeout": 4
     },
     "src/main/daemon/client.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 4
     },
     "src/main/daemon/cold-restore-payload-cache.ts": {
@@ -5761,6 +5952,7 @@
       "setTimeout": 1
     },
     "src/main/daemon/daemon-entry.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/daemon/daemon-health.test.ts": {
@@ -5793,6 +5985,7 @@
       "new Set": 2
     },
     "src/main/daemon/daemon-launch-paths.ts": {
+      "Promise.withResolvers": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -5825,6 +6018,7 @@
       "setTimeout": 1
     },
     "src/main/daemon/daemon-pty-adapter-concurrent-recovery.test.ts": {
+      "Promise.withResolvers": 2,
       "new Set": 4
     },
     "src/main/daemon/daemon-pty-adapter-daemon-recovery.test.ts": {
@@ -5907,6 +6101,8 @@
       "new Set": 2
     },
     "src/main/daemon/daemon-pty-spawn-preparations.ts": {
+      "Promise.race": 1,
+      "Promise.withResolvers": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "new Set": 1,
@@ -5917,11 +6113,13 @@
       "setTimeout": 3
     },
     "src/main/daemon/daemon-reattach-checkpoint-isolation.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 3
     },
     "src/main/daemon/daemon-request-deadline.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -5964,6 +6162,7 @@
       "setTimeout": 1
     },
     "src/main/daemon/daemon-shutdown-final-checkpoint-caller-deadline.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 3
     },
@@ -6165,6 +6364,7 @@
       "new Set": 1
     },
     "src/main/daemon/terminal-history-permission-repair.ts": {
+      "Promise.withResolvers": 1,
       "new Set": 1,
       "setTimeout": 1
     },
@@ -6193,8 +6393,14 @@
     "src/main/daemon/terminal-host-cwd-readability.test.ts": {
       "setTimeout": 1
     },
+    "src/main/daemon/terminal-host-session-create.ts": {
+      "Promise.race": 1
+    },
     "src/main/daemon/terminal-host-session-reaping-leak.test.ts": {
       "setTimeout": 1
+    },
+    "src/main/daemon/terminal-host-spawn-input-retention.test.ts": {
+      "Promise.withResolvers": 2
     },
     "src/main/daemon/terminal-host-teardown-recreate.test.ts": {
       "setTimeout": 2
@@ -6206,6 +6412,7 @@
       "setTimeout": 2
     },
     "src/main/daemon/terminal-host.ts": {
+      "Promise.race": 1,
       "new Map": 3
     },
     "src/main/daemon/terminal-session-teardown.test.ts": {
@@ -6457,6 +6664,7 @@
       "removeEventListener": 3
     },
     "src/main/git/git-username.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -6566,6 +6774,7 @@
       "new Set": 2
     },
     "src/main/git/worktree-listing.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -6754,6 +6963,10 @@
     "src/main/gitlab/gitlab-known-host-probe.ts": {
       "new Map": 3,
       "new Set": 3
+    },
+    "src/main/gitlab/gitlab-known-host-retirement.test.ts": {
+      "Promise.withResolvers": 1,
+      "new Map": 1
     },
     "src/main/gitlab/gitlab-project-ref-resolution.ts": {
       "new Map": 1
@@ -6967,6 +7180,7 @@
       "new Map": 1
     },
     "src/main/ipc/feedback.test.ts": {
+      "Promise.race": 2,
       "addEventListener": 4,
       "new Map": 1
     },
@@ -7114,6 +7328,7 @@
       "unsubscribe": 1
     },
     "src/main/ipc/filesystem-watcher-local-unsubscribe.test.ts": {
+      "Promise.race": 3,
       "addEventListener": 2,
       "new Map": 1,
       "setTimeout": 3,
@@ -7345,12 +7560,16 @@
       "subscribe(": 2,
       "unsubscribe": 24
     },
+    "src/main/ipc/parcel-watcher-event-cancellation.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/main/ipc/parcel-watcher-host-subscriptions.ts": {
       "clearTimeout": 1,
       "setTimeout": 1,
       "unsubscribe": 3
     },
     "src/main/ipc/parcel-watcher-in-process-fallback.ts": {
+      "Promise.race": 2,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -7398,10 +7617,12 @@
       "subscribe(": 1
     },
     "src/main/ipc/parcel-watcher-shallow-subscription.test.ts": {
+      "Promise.withResolvers": 2,
       "new Map": 1,
       "unsubscribe": 5
     },
     "src/main/ipc/parcel-watcher-shallow-subscription.ts": {
+      "Promise.withResolvers": 1,
       "clearInterval": 1,
       "new Map": 3,
       "new Set": 1,
@@ -7438,6 +7659,7 @@
       "new Map": 2
     },
     "src/main/ipc/preflight-command-exec.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -7483,6 +7705,7 @@
       "setTimeout": 1
     },
     "src/main/ipc/pty-pane-reservation-settlement.test.ts": {
+      "Promise.race": 2,
       "clearTimeout": 2,
       "setTimeout": 4
     },
@@ -7573,6 +7796,7 @@
       "new Map": 1
     },
     "src/main/ipc/pty/ipc/write-input-chunk-yield.test.ts": {
+      "Promise.race": 2,
       "setTimeout": 3
     },
     "src/main/ipc/pty/ipc/write-input.ts": {
@@ -7609,6 +7833,9 @@
     },
     "src/main/ipc/pty/provider/shutdown-detect.ts": {
       "unsubscribe": 2
+    },
+    "src/main/ipc/pty/runtime/kill.ts": {
+      "Promise.race": 1
     },
     "src/main/ipc/pty/runtime/queried-host-kinds.test.ts": {
       "new Set": 2
@@ -7666,6 +7893,7 @@
       "new Map": 2
     },
     "src/main/ipc/renderer-shutdown-checkpoint.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -7720,6 +7948,9 @@
     "src/main/ipc/repos/repo-clone-lifecycle.ts": {
       "new Map": 2,
       "new Set": 1
+    },
+    "src/main/ipc/rg-availability.test.ts": {
+      "Promise.race": 1
     },
     "src/main/ipc/rg-availability.ts": {
       "clearTimeout": 1,
@@ -7806,6 +8037,7 @@
       "unsubscribe": 2
     },
     "src/main/ipc/runtime.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 2,
@@ -7821,6 +8053,7 @@
       "setTimeout": 2
     },
     "src/main/ipc/shallow-watch-delivery-probe.ts": {
+      "Promise.withResolvers": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -7865,6 +8098,7 @@
       "setTimeout": 1
     },
     "src/main/ipc/ssh-passphrase.ts": {
+      "Promise.withResolvers": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "new Map": 1,
@@ -7908,7 +8142,11 @@
     "src/main/ipc/ssh-pty-output-intake-validation.ts": {
       "setTimeout": 1
     },
+    "src/main/ipc/ssh-pty-output-model-migration.test.ts": {
+      "Promise.race": 3
+    },
     "src/main/ipc/ssh-pty-output-model-migration.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 2,
       "new Set": 1,
@@ -7974,6 +8212,7 @@
       "setTimeout": 1
     },
     "src/main/ipc/ssh-shutdown-drain.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -8014,6 +8253,7 @@
       "new Set": 1
     },
     "src/main/ipc/watcher-removal-drain.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2,
       "unsubscribe": 4
@@ -8039,6 +8279,7 @@
       "setTimeout": 1
     },
     "src/main/ipc/workspace-cleanup-scan-primitives.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -8119,6 +8360,7 @@
       "unsubscribe": 1
     },
     "src/main/ipc/worktree-base-directory-watch-targets.test.ts": {
+      "Promise.withResolvers": 2,
       "new Set": 2
     },
     "src/main/ipc/worktree-base-directory-watch-targets.ts": {
@@ -8180,6 +8422,7 @@
       "unsubscribe": 4
     },
     "src/main/ipc/worktree-git-common-watch.test.ts": {
+      "Promise.withResolvers": 1,
       "new Map": 1,
       "new Set": 2,
       "setTimeout": 6,
@@ -8256,7 +8499,11 @@
       "setTimeout": 1
     },
     "src/main/ipc/worktrees-local-base-ref-resolution.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
+    },
+    "src/main/ipc/worktrees-local-create-flow.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/main/ipc/worktrees-ssh-create-base-prefetch.test.ts": {
       "new Set": 1,
@@ -8279,6 +8526,7 @@
       "new Set": 1
     },
     "src/main/ipc/worktrees/listing/register-detected-worktree-handlers.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -8294,6 +8542,7 @@
       "new Set": 3
     },
     "src/main/ipc/worktrees/metadata/host-lineage-listing.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -8362,6 +8611,7 @@
       "setTimeout": 1
     },
     "src/main/lib/html-to-pdf.ts": {
+      "Promise.race": 1,
       "addEventListener": 2,
       "clearTimeout": 1,
       "setTimeout": 1
@@ -8414,6 +8664,7 @@
       "removeEventListener": 1
     },
     "src/main/local-worktree-removal-recovery-live.test.ts": {
+      "Promise.race": 2,
       "setTimeout": 1
     },
     "src/main/local-worktree-scan-generation.ts": {
@@ -8556,6 +8807,7 @@
       "new Set": 1
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-eviction-deadline.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -8579,16 +8831,23 @@
     "src/main/native-chat/agent-session-wire/structured-agent-session-handoff-state.ts": {
       "new Map": 2
     },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-hold-resume-race.test.ts": {
+      "Promise.withResolvers": 6
+    },
     "src/main/native-chat/agent-session-wire/structured-agent-session-holders.ts": {
       "new Map": 2
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-holds.test.ts": {
       "setTimeout": 3
     },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-host-handoff.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/main/native-chat/agent-session-wire/structured-agent-session-host-runtime-state.ts": {
       "new Map": 1
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-host.test.ts": {
+      "Promise.withResolvers": 1,
       "subscribe(": 6
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-host.ts": {
@@ -8637,6 +8896,9 @@
     "src/main/native-chat/agent-session-wire/structured-agent-session-restart-reconcile.test.ts": {
       "new Map": 3
     },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-restart-restore.test.ts": {
+      "Promise.withResolvers": 1
+    },
     "src/main/native-chat/agent-session-wire/structured-agent-session-reveal.test.ts": {
       "new Map": 1
     },
@@ -8676,11 +8938,15 @@
       "subscribe(": 2,
       "unsubscribe": 2
     },
+    "src/main/native-chat/agent-session-wire/structured-agent-session-task-queue.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/main/native-chat/agent-session-wire/structured-agent-session-task-queue.ts": {
       "new Map": 1,
       "new Set": 1
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-teardown-handoff-drain.test.ts": {
+      "Promise.withResolvers": 2,
       "setTimeout": 1
     },
     "src/main/native-chat/agent-session-wire/structured-agent-session-unexpected-exit.test.ts": {
@@ -8713,10 +8979,12 @@
       "unsubscribe": 2
     },
     "src/main/native-chat/agent-session-wire/structured-tui-transcript-ownership.test.ts": {
+      "Promise.withResolvers": 4,
       "new Set": 1,
       "unsubscribe": 1
     },
     "src/main/native-chat/agent-session-wire/structured-tui-transcript-teardown.test.ts": {
+      "Promise.withResolvers": 5,
       "new Set": 1,
       "unsubscribe": 1
     },
@@ -8940,6 +9208,7 @@
       "new Set": 2
     },
     "src/main/opencode/status-plugin-session-lineage-source.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -8972,6 +9241,7 @@
       "new Map": 1
     },
     "src/main/orca-profiles/profile-persistence-deadline.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -9025,6 +9295,7 @@
       "new Set": 2
     },
     "src/main/persistence-async-write-syscalls.test.ts": {
+      "Promise.race": 1,
       "clearInterval": 2,
       "setInterval": 2,
       "setTimeout": 2
@@ -9216,6 +9487,7 @@
       "new Set": 2
     },
     "src/main/pi/agent-status-extension-source.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -9700,6 +9972,7 @@
       "new Set": 1
     },
     "src/main/providers/windows-shell-preflight-runtime.windows.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -9742,10 +10015,12 @@
       "setTimeout": 2
     },
     "src/main/pty/omp-shell-wrapper.node-pty.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
     "src/main/pty/posix-pty-process-groups.integration.test.ts": {
+      "Promise.race": 1,
       "new Set": 1,
       "setTimeout": 2
     },
@@ -9773,14 +10048,15 @@
       "setTimeout": 1
     },
     "src/main/quit-teardown-deadline.ts": {
+      "Promise.race": 2,
       "clearTimeout": 2,
       "new Set": 1,
       "setTimeout": 4
     },
     "src/main/rate-limits/auth-filesystem-operation.ts": {
-      "addEventListener": 2,
+      "addEventListener": 1,
       "new Set": 2,
-      "removeEventListener": 2
+      "removeEventListener": 1
     },
     "src/main/rate-limits/claude-pty.ts": {
       "addEventListener": 1,
@@ -10001,6 +10277,7 @@
       "new Set": 1
     },
     "src/main/runtime/browser-host-client-page-creation.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -10028,6 +10305,7 @@
       "new Set": 1
     },
     "src/main/runtime/browser-host-page-reconciliation-actions.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "new Map": 2,
       "removeEventListener": 1
@@ -10037,6 +10315,7 @@
       "removeEventListener": 1
     },
     "src/main/runtime/browser-host-page-reconciliation-executor.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -10122,9 +10401,11 @@
       "setTimeout": 2
     },
     "src/main/runtime/folder-workspace-pty-identity.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/runtime/forced-sweep-settlement.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -10568,6 +10849,7 @@
       "new Set": 1
     },
     "src/main/runtime/orca-runtime-tests/mobile-creation-and-orchestration-part-03.spec.ts": {
+      "Promise.race": 1,
       "removeEventListener": 1,
       "setTimeout": 1
     },
@@ -10585,6 +10867,7 @@
       "unsubscribe": 4
     },
     "src/main/runtime/orca-runtime-tests/runtime-availability.spec.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -10644,6 +10927,7 @@
       "setTimeout": 1
     },
     "src/main/runtime/orchestration-codex-real-pty.integration.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/runtime/orchestration-mailbox-detached-routing.test.ts": {
@@ -11002,6 +11286,7 @@
       "new Map": 8
     },
     "src/main/runtime/rpc/methods/browser-client-host.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "new Map": 1,
       "new Set": 1,
@@ -11099,10 +11384,14 @@
       "new Set": 1
     },
     "src/main/runtime/rpc/methods/orchestration/messaging/ask.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/main/runtime/rpc/methods/orchestration/messaging/check-worker.ts": {
       "new Set": 1
+    },
+    "src/main/runtime/rpc/methods/orchestration/messaging/check.test.ts": {
+      "Promise.race": 1
     },
     "src/main/runtime/rpc/methods/orchestration/messaging/send-group.ts": {
       "new Map": 1,
@@ -11142,6 +11431,7 @@
       "setTimeout": 4
     },
     "src/main/runtime/rpc/methods/orchestration/worker/worker-start-structured-setup-gate.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -11197,6 +11487,7 @@
       "unsubscribe": 1
     },
     "src/main/runtime/rpc/methods/structured-agent-session-hold.test.ts": {
+      "Promise.withResolvers": 8,
       "setTimeout": 4,
       "unsubscribe": 2
     },
@@ -11243,6 +11534,7 @@
       "unsubscribe": 2
     },
     "src/main/runtime/rpc/methods/terminal/terminal-legacy-subscribe-snapshot.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -11405,6 +11697,7 @@
       "unsubscribe": 3
     },
     "src/main/runtime/rpc/terminal-subscribe-buffer.test.ts": {
+      "Promise.race": 2,
       "addEventListener": 1,
       "setTimeout": 2
     },
@@ -11440,6 +11733,7 @@
       "setInterval": 1
     },
     "src/main/runtime/rpc/ws-transport.test.ts": {
+      "Promise.race": 1,
       "clearInterval": 1,
       "setInterval": 2,
       "setTimeout": 6
@@ -11573,6 +11867,7 @@
       "new Set": 1
     },
     "src/main/runtime/runtime-linear-comment-lookup-commands.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -11668,6 +11963,9 @@
     "src/main/runtime/runtime-rpc-browser-host-admission.test.ts": {
       "addEventListener": 3,
       "new Map": 1
+    },
+    "src/main/runtime/runtime-rpc-long-poll-transport.test.ts": {
+      "Promise.race": 1
     },
     "src/main/runtime/runtime-rpc-startup-failure.ts": {
       "new Set": 1
@@ -11862,7 +12160,11 @@
     "src/main/runtime/structured-agent-session-close.test.ts": {
       "new Set": 2
     },
+    "src/main/runtime/structured-agent-session-integration-replay.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/main/runtime/structured-agent-session-integration.test.ts": {
+      "Promise.withResolvers": 2,
       "new Map": 1,
       "subscribe(": 4,
       "unsubscribe": 1
@@ -12161,6 +12463,7 @@
       "setTimeout": 1
     },
     "src/main/skills/skill-package-download.test.ts": {
+      "Promise.race": 1,
       "addEventListener": 3
     },
     "src/main/skills/skill-package-download.ts": {
@@ -12224,6 +12527,7 @@
       "new Set": 1
     },
     "src/main/skills/skill-scan-coalescer.test.ts": {
+      "Promise.race": 1,
       "addEventListener": 1
     },
     "src/main/skills/skill-scan-coalescer.ts": {
@@ -12331,6 +12635,9 @@
       "clearTimeout": 1,
       "setTimeout": 2
     },
+    "src/main/speech/model-manager.test.ts": {
+      "Promise.race": 1
+    },
     "src/main/speech/model-manager.ts": {
       "new Map": 2,
       "new Set": 1,
@@ -12349,7 +12656,14 @@
       "removeEventListener": 1,
       "setTimeout": 3
     },
+    "src/main/speech/stt-audio-pending-budget.test.ts": {
+      "Promise.withResolvers": 4
+    },
+    "src/main/speech/stt-audio-pending-budget.ts": {
+      "new Map": 1
+    },
     "src/main/speech/stt-service.test.ts": {
+      "Promise.race": 2,
       "new Map": 1,
       "new Set": 1
     },
@@ -12360,7 +12674,12 @@
       "clearTimeout": 1,
       "setTimeout": 1
     },
+    "src/main/speech/stt-worker-audio-ack.test.ts": {
+      "clearTimeout": 1,
+      "setTimeout": 1
+    },
     "src/main/speech/stt-worker-startup.ts": {
+      "Promise.withResolvers": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -12463,7 +12782,11 @@
       "new Set": 1
     },
     "src/main/ssh/ssh-connection-auth-fallback.test.ts": {
+      "Promise.withResolvers": 3,
       "addEventListener": 1
+    },
+    "src/main/ssh/ssh-connection-channel-open.test.ts": {
+      "Promise.race": 3
     },
     "src/main/ssh/ssh-connection-file-transfer.test.ts": {
       "addEventListener": 2
@@ -12484,6 +12807,7 @@
       "setTimeout": 2
     },
     "src/main/ssh/ssh-connection-sftp-wire.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "new Set": 1,
@@ -12515,6 +12839,9 @@
       "clearTimeout": 1,
       "setTimeout": 2,
       "unsubscribe": 5
+    },
+    "src/main/ssh/ssh-file-transfer-abort.test.ts": {
+      "Promise.race": 2
     },
     "src/main/ssh/ssh-file-transfer-abort.ts": {
       "addEventListener": 2,
@@ -12637,6 +12964,7 @@
     },
     "src/main/ssh/ssh-relay-deploy-helpers.test.ts": {
       "Buffer.concat": 2,
+      "Promise.race": 3,
       "removeEventListener": 2,
       "setTimeout": 1
     },
@@ -12648,14 +12976,17 @@
       "setTimeout": 3
     },
     "src/main/ssh/ssh-relay-deploy-staged-upload.test.ts": {
+      "Promise.race": 1,
       "addEventListener": 2,
       "setTimeout": 1
     },
     "src/main/ssh/ssh-relay-deploy.test.ts": {
+      "Promise.race": 3,
       "addEventListener": 3,
       "setTimeout": 4
     },
     "src/main/ssh/ssh-relay-deploy.ts": {
+      "Promise.race": 2,
       "addEventListener": 2,
       "clearTimeout": 3,
       "new Set": 3,
@@ -12683,6 +13014,7 @@
       "setTimeout": 1
     },
     "src/main/ssh/ssh-relay-install-lock.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 2,
@@ -12751,6 +13083,7 @@
       "new Map": 1
     },
     "src/main/ssh/ssh-relay-session.ts": {
+      "Promise.race": 1,
       "clearTimeout": 3,
       "new Map": 9,
       "new Set": 6,
@@ -12760,6 +13093,7 @@
       "setTimeout": 2
     },
     "src/main/ssh/ssh-relay-upload-cancel.docker.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "setTimeout": 4
     },
@@ -12813,6 +13147,7 @@
     },
     "src/main/ssh/ssh-system-fallback.test.ts": {
       "Buffer.concat": 1,
+      "Promise.race": 2,
       "setTimeout": 2
     },
     "src/main/ssh/ssh-system-transport.integration.test.ts": {
@@ -12841,6 +13176,7 @@
       "setTimeout": 8
     },
     "src/main/ssh/system-ssh-operation-lifecycle.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "removeEventListener": 1,
@@ -12897,6 +13233,7 @@
       "setTimeout": 1
     },
     "src/main/startup/first-window-startup-services.ts": {
+      "Promise.race": 3,
       "clearTimeout": 2,
       "setTimeout": 4
     },
@@ -12981,6 +13318,7 @@
       "setTimeout": 1
     },
     "src/main/startup/wsl-cli-reconciliation-startup-barrier.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -13060,6 +13398,7 @@
       "setTimeout": 2
     },
     "src/main/text-generation/commit-message-text-generation-cancellation.test.ts": {
+      "Promise.race": 1,
       "new Map": 4
     },
     "src/main/text-generation/commit-message-text-generation-generated-output.test.ts": {
@@ -13160,6 +13499,7 @@
       "clearTimeout": 1
     },
     "src/main/updater/updater-install-support.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -13244,6 +13584,7 @@
       "setTimeout": 2
     },
     "src/main/window/clipboard-remote-file-staging.ts": {
+      "Promise.race": 1,
       "new Set": 1,
       "setTimeout": 1
     },
@@ -13493,6 +13834,7 @@
       "setTimeout": 1
     },
     "src/main/wsl/wsl-guest-environment.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 4,
       "setTimeout": 2
@@ -13505,6 +13847,7 @@
       "new Set": 3
     },
     "src/main/zsh-startup-hook-pty-harness.ts": {
+      "Promise.race": 3,
       "clearTimeout": 1,
       "setTimeout": 3
     },
@@ -13592,6 +13935,9 @@
     },
     "src/relay/agent-exec-handler-test-harness.ts": {
       "new Map": 1
+    },
+    "src/relay/agent-exec-handler.test.ts": {
+      "Promise.race": 1
     },
     "src/relay/agent-exec-handler.ts": {
       "addEventListener": 1,
@@ -13706,6 +14052,7 @@
       "setTimeout": 1
     },
     "src/relay/fs-handler-list-files-ignored.test.ts": {
+      "Promise.race": 3,
       "setTimeout": 7
     },
     "src/relay/fs-handler-list-files-result-limit.test.ts": {
@@ -13926,6 +14273,7 @@
     },
     "src/relay/relay-handshake-roundtrip.test.ts": {
       "Buffer.concat": 2,
+      "Promise.race": 1,
       "setTimeout": 2
     },
     "src/relay/relay-orca-cli-channel.ts": {
@@ -13974,6 +14322,7 @@
       "setTimeout": 1
     },
     "src/relay/relay-watch-root-capacity-gate.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "new Set": 1,
       "unsubscribe": 1
@@ -14045,6 +14394,7 @@
       "setTimeout": 3
     },
     "src/relay/subprocess.test.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 11
     },
@@ -14901,6 +15251,7 @@
       "unsubscribe": 2
     },
     "src/renderer/src/components/browser-pane/host-guest/browser-automation-visibility.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 2,
       "new Set": 2,
@@ -14938,6 +15289,7 @@
       "new Map": 1
     },
     "src/renderer/src/components/browser-pane/host-guest/browser-page-guest-recovery.ts": {
+      "Promise.race": 2,
       "clearTimeout": 4,
       "setTimeout": 4
     },
@@ -15748,6 +16100,7 @@
       "new Set": 4
     },
     "src/renderer/src/components/editor/combined-diff/load-sections/combined-diff-section-load-timeout.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 1
     },
@@ -16952,6 +17305,7 @@
       "new Set": 2
     },
     "src/renderer/src/components/native-chat/structured-agent-session-read-transport.test.ts": {
+      "Promise.withResolvers": 2,
       "unsubscribe": 19
     },
     "src/renderer/src/components/native-chat/structured-agent-session-read-transport.ts": {
@@ -17374,6 +17728,7 @@
       "new Set": 1
     },
     "src/renderer/src/components/right-sidebar/ai-vault-first-prompt-card.tsx": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -18436,6 +18791,9 @@
       "new Map": 5,
       "new Set": 1
     },
+    "src/renderer/src/components/sidebar/WorktreeMetaDialog.test.tsx": {
+      "Promise.race": 1
+    },
     "src/renderer/src/components/sidebar/WorktreeParentPickerPopover.tsx": {
       "addEventListener": 2,
       "clearTimeout": 1,
@@ -18773,6 +19131,7 @@
       "setTimeout": 2
     },
     "src/renderer/src/components/sidebar/use-worktree-issue-link.ts": {
+      "Promise.race": 2,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -20234,10 +20593,14 @@
       "setTimeout": 4,
       "unsubscribe": 2
     },
+    "src/renderer/src/components/terminal-pane/pending-runtime-pane-close-test-fixture.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/renderer/src/components/terminal-pane/pending-runtime-pane-close.test.ts": {
       "new Map": 1
     },
     "src/renderer/src/components/terminal-pane/pending-split-close-test-fixture.ts": {
+      "Promise.withResolvers": 1,
       "new Map": 10
     },
     "src/renderer/src/components/terminal-pane/pending-split-close.test.ts": {
@@ -20530,6 +20893,7 @@
       "unsubscribe": 17
     },
     "src/renderer/src/components/terminal-pane/pty-input-write-queue.ts": {
+      "Promise.race": 1,
       "new Set": 1
     },
     "src/renderer/src/components/terminal-pane/pty-model-restore-channel.ts": {
@@ -20548,6 +20912,9 @@
       "new Map": 4,
       "new Set": 1,
       "setTimeout": 2
+    },
+    "src/renderer/src/components/terminal-pane/pty-preconnect-input-buffer.ts": {
+      "Promise.race": 1
     },
     "src/renderer/src/components/terminal-pane/pty-renderer-delivery-claims.ts": {
       "new Map": 3
@@ -20693,6 +21060,7 @@
       "setTimeout": 1
     },
     "src/renderer/src/components/terminal-pane/resolve-split-cwd.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/renderer/src/components/terminal-pane/session-restored-banner-pane-state.test.tsx": {
@@ -20713,6 +21081,7 @@
       "requestAnimationFrame": 1
     },
     "src/renderer/src/components/terminal-pane/ssh-reattach-model-restore.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -20828,6 +21197,7 @@
       "setTimeout": 1
     },
     "src/renderer/src/components/terminal-pane/terminal-fit-restore.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 1,
       "setTimeout": 2
@@ -21233,6 +21603,7 @@
       "setTimeout": 6
     },
     "src/renderer/src/components/terminal-pane/terminal-paste-operation-timeout.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -21613,6 +21984,7 @@
       "new Set": 1
     },
     "src/renderer/src/components/terminal/pty-running-work-probe.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -21633,6 +22005,7 @@
       "unsubscribe": 3
     },
     "src/renderer/src/components/terminal/terminal-provider-snapshot-capability.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "new Map": 4,
       "new Set": 3,
@@ -21920,6 +22293,7 @@
       "new Map": 2
     },
     "src/renderer/src/components/workspace-cleanup/workspace-cleanup-removal-settlement.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -22027,6 +22401,7 @@
       "subscribe(": 4
     },
     "src/renderer/src/hooks/direct-ssh-host-hydration.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 2,
       "new Set": 1,
@@ -22044,6 +22419,7 @@
       "setTimeout": 1
     },
     "src/renderer/src/hooks/direct-ssh-reconnect-preparation.ts": {
+      "Promise.race": 1,
       "new Map": 1
     },
     "src/renderer/src/hooks/direct-ssh-runtime-wake-isolation.test.tsx": {
@@ -22151,6 +22527,7 @@
       "removeEventListener": 1
     },
     "src/renderer/src/hooks/ipc-events/direct-ssh-state-ipc-bridge.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 3,
       "setTimeout": 2
@@ -22250,6 +22627,7 @@
       "setTimeout": 2
     },
     "src/renderer/src/hooks/remote-workspace-snapshot-apply.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Set": 3,
       "setTimeout": 3
@@ -22267,6 +22645,7 @@
       "new Set": 1
     },
     "src/renderer/src/hooks/remote-workspace-snapshot-placement.ts": {
+      "Promise.withResolvers": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "new Set": 1,
@@ -22559,6 +22938,7 @@
       "new Set": 2
     },
     "src/renderer/src/lib/activate-ai-vault-structured-session.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 2
@@ -23012,6 +23392,7 @@
       "setTimeout": 1
     },
     "src/renderer/src/lib/orca-yaml-trust-prompt-slot-eviction.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 1
     },
     "src/renderer/src/lib/orchestration-skill-coverage.ts": {
@@ -23380,6 +23761,9 @@
       "cancelAnimationFrame": 4,
       "requestAnimationFrame": 1
     },
+    "src/renderer/src/lib/pane-manager/terminal-structural-replay-coordinator.ts": {
+      "Promise.race": 2
+    },
     "src/renderer/src/lib/pane-manager/terminal-webgl-hidden-retention.test.ts": {
       "new Map": 1
     },
@@ -23578,6 +23962,7 @@
       "new Set": 2
     },
     "src/renderer/src/lib/structured-agent-session-launch-cancellation.test.ts": {
+      "Promise.withResolvers": 1,
       "new Set": 6,
       "setTimeout": 1
     },
@@ -23993,10 +24378,12 @@
       "addEventListener": 1
     },
     "src/renderer/src/runtime/github-check-details-timeout.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
     "src/renderer/src/runtime/gitlab-ipc-timeout.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -24220,6 +24607,9 @@
     },
     "src/renderer/src/runtime/runtime-rpc-client.ts": {
       "new Map": 1
+    },
+    "src/renderer/src/runtime/runtime-terminal-inspection.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/renderer/src/runtime/runtime-terminal-inspection.ts": {
       "new Map": 1
@@ -24609,6 +24999,7 @@
       "new Set": 1
     },
     "src/renderer/src/ssh/ssh-connect-ui-timeout.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -24616,6 +25007,7 @@
       "new Set": 1
     },
     "src/renderer/src/startup/ssh-startup-reconnect.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -25007,12 +25399,18 @@
     "src/renderer/src/store/slices/folder-workspace-update-coordinator.ts": {
       "new Map": 2
     },
+    "src/renderer/src/store/slices/github-issue-state-machine.test.ts": {
+      "Promise.withResolvers": 1
+    },
     "src/renderer/src/store/slices/github-pr-branch-linked-pr-divergence.test.ts": {
       "subscribe(": 1,
       "unsubscribe": 2
     },
     "src/renderer/src/store/slices/github-pr-checks-fetch.test.ts": {
       "setTimeout": 1
+    },
+    "src/renderer/src/store/slices/github-pr-comments.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/renderer/src/store/slices/github-pr-refresh-host-guard.test.ts": {
       "new Map": 1
@@ -25024,6 +25422,15 @@
       "subscribe(": 3,
       "unsubscribe": 6
     },
+    "src/renderer/src/store/slices/github-project-request-coordination.test.ts": {
+      "Promise.withResolvers": 2
+    },
+    "src/renderer/src/store/slices/github-project-view-tables.test.ts": {
+      "Promise.withResolvers": 1
+    },
+    "src/renderer/src/store/slices/github-provider-request-concurrency.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/renderer/src/store/slices/github-refresh-sweep.test.ts": {
       "new Map": 1,
       "setTimeout": 2,
@@ -25032,6 +25439,9 @@
     },
     "src/renderer/src/store/slices/github-repo-lookup-index.ts": {
       "new Map": 2
+    },
+    "src/renderer/src/store/slices/github-review-thread-actions.test.ts": {
+      "Promise.withResolvers": 2
     },
     "src/renderer/src/store/slices/github-slice-test-harness.ts": {
       "unsubscribe": 1
@@ -25106,15 +25516,28 @@
     "src/renderer/src/store/slices/repo-reorder-host-split.ts": {
       "new Map": 2
     },
+    "src/renderer/src/store/slices/repos-add-races.test.ts": {
+      "Promise.withResolvers": 2
+    },
+    "src/renderer/src/store/slices/repos-all-hosts-generation.test.ts": {
+      "Promise.withResolvers": 6
+    },
     "src/renderer/src/store/slices/repos-all-hosts.test.ts": {
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 1
     },
+    "src/renderer/src/store/slices/repos-host-identity-routing.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/renderer/src/store/slices/repos-manual-order-hydration.test.ts": {
       "new Map": 1
     },
+    "src/renderer/src/store/slices/repos-module-lifetime-coordinators.test.ts": {
+      "Promise.withResolvers": 2
+    },
     "src/renderer/src/store/slices/repos-project-group-create-race.test.ts": {
+      "Promise.withResolvers": 2,
       "subscribe(": 1,
       "unsubscribe": 2
     },
@@ -25130,6 +25553,9 @@
     },
     "src/renderer/src/store/slices/repos-ssh-host-reconciliation.test.ts": {
       "new Map": 4
+    },
+    "src/renderer/src/store/slices/repos-stale-fetch.test.ts": {
+      "Promise.withResolvers": 1
     },
     "src/renderer/src/store/slices/restored-editor-owner-reparent.test.ts": {
       "addEventListener": 1,
@@ -26151,6 +26577,7 @@
       "new Map": 1
     },
     "src/shared/ephemeral-vm-recipe-process.test.ts": {
+      "Promise.race": 1,
       "setTimeout": 2
     },
     "src/shared/ephemeral-vm-recipe-process.ts": {
@@ -26242,6 +26669,7 @@
       "new Map": 1
     },
     "src/shared/git-branch-line-total.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 2
@@ -26270,6 +26698,7 @@
       "new Set": 2
     },
     "src/shared/git-operation-lock.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "new Map": 1,
       "removeEventListener": 1
@@ -26614,6 +27043,7 @@
       "new Map": 2
     },
     "src/shared/process-table-snapshot-reader.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 1,
       "setTimeout": 2
@@ -26637,6 +27067,7 @@
       "new Set": 3
     },
     "src/shared/promise-settlement-waiters.ts": {
+      "Promise.race": 1,
       "addEventListener": 1,
       "clearTimeout": 1,
       "new Set": 1,
@@ -26860,6 +27291,7 @@
       "new Map": 2
     },
     "src/shared/ripgrep-process-availability.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "new Set": 1,
       "setTimeout": 4
@@ -26879,6 +27311,9 @@
       "new Set": 1,
       "removeEventListener": 1,
       "setTimeout": 3
+    },
+    "src/shared/runtime-rpc-call-queue-retention.test.ts": {
+      "new Set": 1
     },
     "src/shared/runtime-rpc-call-queue.ts": {
       "addEventListener": 1,
@@ -27459,6 +27894,7 @@
       "setTimeout": 1
     },
     "tests/e2e/helpers/electron-process-shutdown.ts": {
+      "Promise.race": 1,
       "clearTimeout": 2,
       "new Map": 1,
       "setTimeout": 3
@@ -27551,6 +27987,7 @@
       "new Map": 1
     },
     "tests/e2e/helpers/ssh-recovery-input-observation.ts": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "setTimeout": 2
     },
@@ -27646,6 +28083,7 @@
       "setTimeout": 1
     },
     "tests/e2e/orchestration-idle-mail-delivery.spec.ts": {
+      "Promise.race": 1,
       "new Set": 2,
       "setTimeout": 13
     },
@@ -27847,6 +28285,7 @@
       "setTimeout": 2
     },
     "tests/e2e/project-group-creation-visibility.spec.ts": {
+      "Promise.withResolvers": 1,
       "new Set": 1
     },
     "tests/e2e/project-group-manual-sort.spec.ts": {
@@ -28030,6 +28469,7 @@
       "setTimeout": 1
     },
     "tests/e2e/structured-agent-session-read-owner.unit.test.ts": {
+      "Promise.withResolvers": 1,
       "new Map": 1,
       "subscribe(": 1,
       "unsubscribe": 1
@@ -28338,6 +28778,7 @@
       "setTimeout": 1
     },
     "tests/tools/benchmarks/worktree-deletion-dev-bench.mjs": {
+      "Promise.race": 2,
       "setTimeout": 6
     },
     "tests/tools/daemon-relocation-spike/daemon-launch.mjs": {
@@ -28345,6 +28786,7 @@
       "setTimeout": 1
     },
     "tests/tools/daemon-relocation-spike/ndjson-client.mjs": {
+      "Promise.race": 1,
       "clearTimeout": 5,
       "new Map": 1,
       "setTimeout": 4
@@ -28416,6 +28858,7 @@
       "setTimeout": 7
     },
     "tests/tools/repro-watcher-crash-7547/child.cjs": {
+      "Promise.race": 1,
       "new Map": 1,
       "setTimeout": 1,
       "subscribe(": 6,
@@ -28447,6 +28890,7 @@
       "setTimeout": 1
     },
     "tests/tools/win-update-e2e/app-driver.mjs": {
+      "Promise.race": 2,
       "clearTimeout": 2,
       "new Set": 1,
       "setTimeout": 2
@@ -28475,6 +28919,7 @@
       "new Set": 2
     },
     "tests/tools/windows-pty-native-capability-smoke/packaged-node-pty-capability-probe.cjs": {
+      "Promise.race": 1,
       "clearTimeout": 1,
       "new Map": 4,
       "new Set": 4,

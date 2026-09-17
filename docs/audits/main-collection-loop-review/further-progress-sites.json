@@ -1,0 +1,77 @@
+{
+  "scope": "Twelve manually reviewed source files; see review for progress properties and explicit limits. Not an exhaustive termination proof.",
+  "files": [
+    {
+      "path": "src/shared/hermes-session-run-index.ts",
+      "sha256": "836aa4c04e777427cc83a1ee8afcfcfff6912f37b0fb0587befa54d69fb4dc90",
+      "loopLines": [36, 49, 75, 78],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/foreground-process-selection.ts",
+      "sha256": "18005d15f552cb8805148cebb330636f6cec0f8d98d2eca83444aef7794d3767",
+      "loopLines": [82, 100],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/codex-subagent-poll-scheduler.ts",
+      "sha256": "cb251d797dc6b3803a60058edbfa587a6765571c6dcc16c22cf33587f3713eb4",
+      "loopLines": [54, 99, 101],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/main/plugins/plugin-worker-slot-pool.ts",
+      "sha256": "e8cbcc0d409f5afb24b90341e6e0cb8628a98cf56b0568d155adf57f13c73f8b",
+      "loopLines": [70, 91],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/new-workspace/worktree-create-retry-policy.ts",
+      "sha256": "6b79398c41d2c11e525310cb00c6e40836151ac5bc4dd62d71c4d10004e8ac54",
+      "loopLines": [33],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/worktree-name-suggestion.ts",
+      "sha256": "1bcd715dce08850cf62975e2bba154ceb886fcf3ffa96c4a3bb4e113a4063399",
+      "loopLines": [51, 56],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/repo-ref-maintenance.ts",
+      "sha256": "447d00525190a2ebe739b304a02bbcb00d9428b51bb6f3313079b5dfd29ee1d0",
+      "loopLines": [128, 164, 188],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/main/git/repo-git-marker-scan.ts",
+      "sha256": "7f8328ea5307c0e609d7439cb442585b7a988d6cf327e76ac7644f0bed57a77e",
+      "loopLines": [43, 60, 174, 206],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/main/git/command-runner/git-admission-candidate-heap.ts",
+      "sha256": "6ff4eabf0691aa3d0d66e81c01c48b2bfb9e8e565202a08581a53591ea35b5f9",
+      "loopLines": [26, 39, 50, 67],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/relay-frame-buffer.ts",
+      "sha256": "f89fcd33489894c34f79ba8fd5e5634487555a7c34fc8e7c054229ae1c20e0be",
+      "loopLines": [41, 65, 95],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/relay-frame-decoder.ts",
+      "sha256": "88c0ecbc06b93efe6733094b8c9e4509ab1cbd139f8cb3257e9fb74a0ed39194",
+      "loopLines": [108],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    },
+    {
+      "path": "src/shared/node-source-copy-content-equality.ts",
+      "sha256": "5aff272c1ff625ad237ecbf830eb7ce8aed59ae3e439f4cd997e8591ffa02fb2",
+      "loopLines": [7, 36, 53],
+      "evidence": "docs/audits/main-collection-loop-review/further-progress-sites.md"
+    }
+  ]
+}

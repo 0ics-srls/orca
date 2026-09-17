@@ -1,0 +1,68 @@
+{
+  "comparison": "Actual renderer close and Store persistence. Intentionally unsafe candidate overlays; no product edits.",
+  "sourceHashes": {
+    "src/shared/closed-terminal-tab-tombstones.ts": "19b72f09734d8f1877a9d204f71dac5781697e2dd6ebebf5a7e08bdd32cb9e4b",
+    "src/shared/terminal-tab-types.ts": "425230667394a94199527fc729130563a9e296ff500be1ad9140da65c13e054a",
+    "src/shared/workspace-session-schema.ts": "2420de916968e0d08545bc7a326e8bd4a37b3048ec6d44b10dfef574dd066b77",
+    "src/shared/workspace-session-terminal-tab-close.ts": "94c8d4e77ec384fb3a5ba57bed64cd6ff117ca01cb5fc7ce4526592d4a31ec1e",
+    "src/main/runtime/workspace-session-terminal-membership-authority.ts": "265f047f9f0dedfcbff978446c4111860f2f50817a1b59f65633149659ffbd24",
+    "src/main/runtime/mobile-session-terminal-persistence-retirement.ts": "5e736a944a6d78a8e93ffeea18d58bf3d6035f71afcc4b96c1c02a411cf7f31f",
+    "src/main/persistence/loading-store/workspace-session-snapshot-publication.ts": "e476dfd4f4e6ab984cbeda73ac6953cc6a4972baf8fe451d8c10c93bd4667d3b",
+    "src/main/persistence/loading-store/terminal-session-cleanup.ts": "002af019b0a405152d406a99a00b2baf510a0165ba19ecea17bcd90f18f28650",
+    "src/renderer/src/store/terminals/terminal-tab-close.ts": "00b764f8385ad58e38407cd9e3f70bb5d588d59f8ecec5ea194560861cdccadd",
+    "docs/audits/local-unbound-close-authority/candidate.ts": "4af8fbbe81ae525873c73623a8b03a00e26399a73ce4e498f602786e8f5ac305",
+    "docs/audits/local-unbound-close-authority/receipt-candidate.ts": "3c12396a73f231e25f93245bb8c926841d1b2448f3f47813f759b85a8bf8f8f6",
+    "docs/audits/local-unbound-close-authority/candidate.config.mjs": "74e07337506b2daa9678fa682c36e1ea1a4ec5810507ef2fc2543873241ad780",
+    "docs/audits/local-unbound-close-authority/ownership.test.ts": "d30ea18ec603254a7f716d51dc617c29875102580a42e4a5a7541ab813748b90"
+  },
+  "phases": {
+    "baseline21": {
+      "total": 21,
+      "passed": 13,
+      "failed": 8,
+      "exitCode": 1,
+      "timedOut": false,
+      "failedCases": [
+        "retires exact empty repo tab through full",
+        "retires exact empty repo tab through patch",
+        "retires exact empty repo tab through marker-only",
+        "retires exact empty repo tab through unload",
+        "retires exact empty folder tab through full",
+        "retires exact empty folder tab through patch",
+        "retires exact empty folder tab through marker-only",
+        "retires exact empty folder tab through unload"
+      ]
+    },
+    "candidate21": {
+      "total": 21,
+      "passed": 20,
+      "failed": 1,
+      "exitCode": 1,
+      "timedOut": false,
+      "failedCases": [
+        "does not reinterpret a refused marker after cap eviction and SSH acknowledgement"
+      ]
+    },
+    "receipt27": {
+      "total": 27,
+      "passed": 27,
+      "failed": 0,
+      "exitCode": 0,
+      "timedOut": false,
+      "failedCases": []
+    },
+    "clock30": {
+      "total": 30,
+      "passed": 27,
+      "failed": 3,
+      "exitCode": 1,
+      "timedOut": false,
+      "failedCases": [
+        "fresh explicit close remains possible with same-millisecond clock or identity",
+        "fresh explicit close remains possible with backwards clock or identity",
+        "fresh explicit close remains possible with replacement clock or identity"
+      ]
+    }
+  },
+  "expectedFailuresReproduced": true
+}

@@ -36,3 +36,40 @@ The follow-up inspected renderer PTY admission/flush/accounting/reset code: ordi
 Other targeted reads found existing safeguards: browser tunnel frame decoding caps frame and retained bytes and advances its offset; receive queues consume entries while honoring credit; scrcpy frames cap at 16 MiB and copy retained packet data; MJPEG pending data copies a capped suffix; diagnostic uploads cap response bytes; native-chat edit LCS uses a 200,000-cell threshold before a linear fallback; terminal redraw rows grow only on consumed newlines and trim to the retained line limit. Native-image capture and tray paths were read without finding a persistent image collection in those files. A native capture that never settles is a separate lifetime question, not disproved by a JavaScript timeout.
 
 PTY grid validation checks finite positive sizes but does not impose a common upper bound at every local/main/daemon entry. Some RPC and history routes have separate limits. A large requested grid can cause a large finite allocation; no ordinary producer of incident-scale dimensions or low-risk universal sizing policy has been established here. This is not counted as a proven new leak.
+
+## Additional synchronous-loop review
+
+A broader mechanical candidate list contains 216 `while`/`do`/`for` sites with collection-growth calls. That list has not been completely manually reviewed. Targeted follow-up found these concrete progress properties:
+
+- Managed TOML scanning advances to a newline/end or a recognized positive-width region; its outer index increments after an unmatched marker.
+- Safari cookie offset arrays are bounded by readable file/page data; invalid binary offsets throw.
+- Browser partition-capacity eviction deletes an existing victim or throws when none can be evicted.
+- The provider-error traversal rejects previously visited objects. Very large spread arguments can still throw; the review does not claim a general input-size bound.
+- Git admission retries an aborted selected waiter through the actual controller's abort/dequeue path. Candidate lists are rebuilt per iteration, not appended across retries.
+- The host-balanced listing loop consumes one row per active bucket and removes exhausted buckets.
+- Cron ranges validate the domain and a positive integer step; production domains are finite calendar fields.
+- Codex session counting consumes a directory stack and ignores symlinks. Its 100-file stopping limit does not cap the number of directories without matching files. Date-gap enumeration advances a UTC day; the bounded expansion wrapper checks range size before enumeration.
+- Git octal path decoding advances the byte escape position; UI Automator XML parsing consumes input, returns, or throws on malformed delimiters. Deep recursive XML remains an input-depth risk rather than a demonstrated growing loop.
+- Offline speech chunking consumes at least one sample on every iteration. The separate delivery queue before that handler is now reproduced in the [speech worker diagnostic](../speech-worker-audio-queue/README.md).
+
+These are source-level checks of specific progress paths, not proof that all 216 candidates terminate or that native callees cannot stall.
+
+A further [25-site manual review](./additional-sites.md) records progress, ownership and caller limits for each site, with exact source hashes in [its manifest](./additional-sites.json). It found no growing synchronous iterator. Surrounding input-size and stale-generation candidates remain explicitly identified for follow-up.
+
+A [further twelve-file review](./further-progress-sites.md) checks ancestor/union-find progress, callback rescheduling, worker-slot disposal, naming retries, cache eviction, relay framing and bounded-buffer comparison. It records input-size and native-I/O limits alongside the observed progress properties; it does not clear every unreviewed candidate.
+
+Another [twenty-site review](./twenty-additional-sites.md) covers browser command settlement, plugin ownership, SSH delivery, transcript fan-out, Codex registries, observability and certificate decisions. It records [source and supporting hashes](./twenty-additional-sites.json), identifies a separate prompt-claim ownership candidate, and preserves the certificate-history security requirement. No growing synchronous production iterator was established in that selected batch.
+
+The prompt-claim follow-up now has an [actual cancellation/completion proof](../codex-prompt-claim-retention/README.md) and separate fix [#21138](https://github.com/stablyai/orca/pull/21138). It releases claims after accepted exact-turn completion; active claims remain owned. The earlier review manifest retains its source hashes from before that change.
+
+A [twelve-file progress and retention follow-up](./twelve-retention-sites.md) covers output framing, title/query parsing, bounded metadata and image probing. It records the Codex reader's intentional infinite record allowance and a separate kitty escape-tail backing-string candidate, without treating logical length caps as owned-memory bounds.
+
+## Further ownership checks
+
+- GitLab admission removes each selected entry before granting it; timeout removes its own queued entry and clears its timer. Reviewed issue, merge-state and authentication callers release their acquired slot in `finally`. This is a lifetime bound on queued waits, not an aggregate request-byte limit.
+- Workspace-space traversal advances each frame index and retires its entry array after dispatch. Local classification uses `lstat`; remote classification checks symlink identity before descending. Listing admission enforces 100,000 entries per directory and an estimated 64 MiB live-listing budget. Completed parent aggregates and active jobs are separate from that charge, so the budget is not a whole-process or arbitrary-depth bound.
+- Plugin language-catalog traversal removes a frame per iteration and rejects repeated/cyclic objects, depth over 16, or more than 20,000 entries. The JSON parse and `Object.keys` allocation occur before those traversal checks; this does not prove a pre-parse byte bound.
+- Grok session lookup shifts each admitted pending entry, caps its pending/cache maps at 64, runs at most four distinct roots, and removes in-flight/root ownership in `finally`. A stalled scanner retains its active slot; strict FIFO can delay unrelated roots but does not expand the queue past its cap.
+- WSL auth filesystem admission removes queued work before starting and removes aborted queued entries. Its three reviewed callers coalesce a raw operation by path until actual settlement. The follow-up [auth waiter proof](../auth-filesystem-wait-retention/README.md) reproduces retained expired Errors on Electron and verifies detachable waiters preserve ordering. [#21135](https://github.com/stablyai/orca/pull/21135) removes those reactions; no actual native filesystem stall or incident magnitude was established.
+
+The follow-up also traced several shared-promise callers. Worktree metadata resolution races a fresh filesystem traversal on each call, so a timeout does not itself demonstrate repeated reactions on one shared promise. WSL environment probes cap subprocess output at 64 KiB and execution at ten seconds; process-table evidence joins a capture with its own longer timeout. Those controls limit ordinary reaction lifetime while leaving operating-system stalls separate. The desktop script request queue retains expired closures behind its predecessor, but its actual host aborts and rejects the active request on a timer and limits startup retries. No indefinitely pending ordinary producer was established in that review. Daemon shared preparation and terminal creation waits remain additional candidates for cancellation-lifetime analysis.

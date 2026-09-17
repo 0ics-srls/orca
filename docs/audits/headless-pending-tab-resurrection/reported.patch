@@ -1,0 +1,683 @@
+===================================================================
+--- a/src/main/ipc/pty/pane/stable-owner.ts
++++ b/src/main/ipc/pty/pane/stable-owner.ts
+@@ -16,0 +17,1 @@
++import { spawnCommitBindingOrigin } from '../../../persistence/loading-store/pty-binding-span'
+@@ -203,1 +204,2 @@
+-      expectedBinding
++      expectedBinding,
++      origin: spawnCommitBindingOrigin(args.result)
+===================================================================
+--- a/src/main/ipc/pty/runtime/spawn-commit.ts
++++ b/src/main/ipc/pty/runtime/spawn-commit.ts
+@@ -36,0 +37,1 @@
++import { spawnCommitBindingOrigin } from '../../../persistence/loading-store/pty-binding-span'
+@@ -162,1 +163,2 @@
+-          : {})
++          : {}),
++        origin: spawnCommitBindingOrigin(ctx.result, ctx.hostSessionBinding.expectedSourceBinding)
+===================================================================
+--- /dev/null
++++ b/src/main/persistence/loading-store/pty-binding-fast-lane.ts
+@@ -0,0 +1,87 @@
++import { isTerminalLeafId } from '../../../shared/stable-pane-id'
++import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
++import { layoutContainsLeafId } from '../restoring-sessions/terminal-layout-normalization'
++import { tabRowPtyIdAfterLeafBinding } from './terminal-tab-pty-ownership'
++
++/**
++ * Why a reattach can be ineligible. `not_durable` alone means memory already matched but the
++ * binding was still waiting in the debounced save — the bucket that says whether skipping the
++ * flush on a durable match is enough, or the autosave itself has to move off the main thread.
++ */
++export type PtyBindingFastLaneMiss =
++  | 'split'
++  | 'legacy_leaf'
++  | 'tab_missing'
++  | 'tab_pty'
++  | 'layout_missing'
++  | 'leaf_absent'
++  | 'leaf_pty'
++  | 'incarnation'
++  | 'tombstone'
++  | 'not_durable'
++
++export type PtyBindingFastLaneRequest = {
++  tabId: string
++  leafId: string
++  ptyId: string
++  incarnationId?: string
++  expectedSourceBinding?: unknown
++}
++
++export type PtyBindingFastLaneVerdict = {
++  eligible: boolean
++  misses: PtyBindingFastLaneMiss[]
++}
++
++/**
++ * True only when `persistPtyBinding` would change nothing: the requested binding is already the
++ * in-memory session's binding and that session is already on disk. Every miss falls through to
++ * the write path, so the predicate must be at least as strict as the mutations it stands in for.
++ */
++export function evaluatePtyBindingFastLane(
++  args: PtyBindingFastLaneRequest,
++  session: WorkspaceSessionState,
++  bindingWorktreeId: string,
++  durable: boolean
++): PtyBindingFastLaneVerdict {
++  const misses: PtyBindingFastLaneMiss[] = []
++  const paneKey = `${args.tabId}:${args.leafId}`
++  if (args.expectedSourceBinding !== undefined) {
++    misses.push('split')
++  }
++  if (!isTerminalLeafId(args.leafId)) {
++    misses.push('legacy_leaf')
++  }
++  const tab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
++    (candidate) => candidate.id === args.tabId
++  )
++  const layout = session.terminalLayoutsByTabId?.[args.tabId]
++  if (!tab) {
++    misses.push('tab_missing')
++  } else if (
++    tab.ptyId !== tabRowPtyIdAfterLeafBinding(tab, layout?.ptyIdsByLeafId, args.leafId, args.ptyId)
++  ) {
++    misses.push('tab_pty')
++  }
++  if (!layout || !layout.root) {
++    misses.push('layout_missing')
++  } else {
++    if (!layoutContainsLeafId(layout.root, args.leafId)) {
++      misses.push('leaf_absent')
++    }
++    if (layout.ptyIdsByLeafId?.[args.leafId] !== args.ptyId) {
++      misses.push('leaf_pty')
++    }
++  }
++  // Strict: undefined on both sides matches, undefined on one side does not.
++  if (session.terminalPtyIncarnationsByPaneKey?.[paneKey] !== args.incarnationId) {
++    misses.push('incarnation')
++  }
++  if (session.terminalSurfaceTombstonesByPaneKey?.[paneKey]) {
++    misses.push('tombstone')
++  }
++  if (!durable) {
++    misses.push('not_durable')
++  }
++  return { eligible: misses.length === 0, misses }
++}
+===================================================================
+--- a/src/main/persistence/loading-store/pty-binding-persistence.ts
++++ b/src/main/persistence/loading-store/pty-binding-persistence.ts
+@@ -1,1 +1,1 @@
+-import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
++import { LOCAL_EXECUTION_HOST_ID, parseExecutionHostId } from '../../../shared/execution-host'
+@@ -2,0 +3,1 @@
++import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
+@@ -17,0 +19,4 @@
++import { evaluatePtyBindingFastLane } from './pty-binding-fast-lane'
++import { ptyBindingIsRefused } from './pty-binding-refusals'
++import { startPtyBindingSpan, type PtyBindingOrigin } from './pty-binding-span'
++import { tabRowPtyIdAfterLeafBinding } from './terminal-tab-pty-ownership'
+@@ -19,1 +24,10 @@
+-type PtyBindingPersistenceOperationsRuntime = Pick<StoreRuntimeState, 'flushOrThrow' | 'state'>
++type PtyBindingPersistenceOperationsRuntime = Pick<
++  StoreRuntimeState,
++  | 'flushOrThrow'
++  | 'lastDurableWriteGeneration'
++  | 'pendingWrite'
++  | 'quitFlushStarted'
++  | 'state'
++  | 'writeGeneration'
++  | 'writeTimer'
++>
+@@ -20,0 +35,24 @@
++type PersistPtyBindingArgs = {
++  worktreeId: string
++  tabId: string
++  leafId: string
++  ptyId: string
++  incarnationId?: string
++  startupCwd?: string
++  expectedBinding?: { ptyId: string; incarnationId?: string }
++  expectedSourceBinding?: PtyBindingSourceExpectation
++  /** Set by host-initiated creates, which have no renderer session writer behind them. */
++  hostAdmittedMembership?: boolean
++  /**
++   * Defaults true, which is what `pty:spawn` needs — it can beat the debounced layout writer
++   * and must be able to mint the surface it is binding. A reattach is the opposite: the pane
++   * either still exists or the user closed it, so creating one grafts back a tab they closed.
++   * Callers pass false only once absence is meaningful; see the relay's reattach bind.
++   */
++  mayCreate?: boolean
++  /** Reattach must not revive a surface a prior build durably recorded as retired. */
++  mayReviveRetiredSurface?: boolean
++  /** Span metadata only; see `PtyBindingOrigin`. The write path never reads it. */
++  origin?: PtyBindingOrigin
++}
++
+@@ -37,24 +75,2 @@
+-  persistPtyBinding(
+-    args: {
+-      worktreeId: string
+-      tabId: string
+-      leafId: string
+-      ptyId: string
+-      incarnationId?: string
+-      startupCwd?: string
+-      expectedBinding?: { ptyId: string; incarnationId?: string }
+-      expectedSourceBinding?: PtyBindingSourceExpectation
+-      /** Set by host-initiated creates, which have no renderer session writer behind them. */
+-      hostAdmittedMembership?: boolean
+-      /**
+-       * Defaults true, which is what `pty:spawn` needs — it can beat the debounced layout writer
+-       * and must be able to mint the surface it is binding. A reattach is the opposite: the pane
+-       * either still exists or the user closed it, so creating one grafts back a tab they closed.
+-       * Callers pass false only once absence is meaningful; see the relay's reattach bind.
+-       */
+-      mayCreate?: boolean
+-      /** Reattach must not revive a surface a prior build durably recorded as retired. */
+-      mayReviveRetiredSurface?: boolean
+-    },
+-    hostId?: string | null
+-  ): boolean {
++  persistPtyBinding(args: PersistPtyBindingArgs, hostId?: string | null): boolean {
++    const runtime = this[ptyBindingPersistenceOperationsContext].runtime
+@@ -66,4 +82,48 @@
+-    if (args.expectedSourceBinding) {
+-      const expected = args.expectedSourceBinding
+-      if (expected.tabId !== args.tabId) {
+-        return false
++    const span = startPtyBindingSpan({
++      hostKind: parseExecutionHostId(resolvedHostId)?.kind ?? 'local',
++      origin: args.origin ?? 'unknown',
++      savePending: runtime.writeTimer !== null || runtime.pendingWrite !== null,
++      generationGap: runtime.writeGeneration - runtime.lastDurableWriteGeneration
++    })
++    if (ptyBindingIsRefused(args, session, bindingWorktreeId, paneKey)) {
++      span.finish('refused')
++      return false
++    }
++    // A durable reattach needs neither a session clone nor whole-state serialization.
++    const verdict = evaluatePtyBindingFastLane(
++      args,
++      session,
++      bindingWorktreeId,
++      !runtime.quitFlushStarted && runtime.lastDurableWriteGeneration >= runtime.writeGeneration
++    )
++    span.setEligibility(verdict)
++    if (verdict.eligible) {
++      span.finish('fast_lane')
++      return true
++    }
++    try {
++      writePtyBinding(this, args, session, resolvedHostId, bindingWorktreeId, paneKey)
++    } catch (err) {
++      span.finish('threw', err)
++      throw err
++    }
++    span.finish('flushed')
++    return true
++  }
++}
++
++function writePtyBinding(
++  owner: PtyBindingPersistenceOperations,
++  args: PersistPtyBindingArgs,
++  session: WorkspaceSessionState,
++  resolvedHostId: ReturnType<typeof resolveHostId>,
++  bindingWorktreeId: string,
++  paneKey: string
++): void {
++  const runtime = owner[ptyBindingPersistenceOperationsContext].runtime
++  const sessionBeforeBinding = cloneWorkspaceSessionState(session)
++  try {
++    if (resolvedHostId !== LOCAL_EXECUTION_HOST_ID) {
++      runtime.state.workspaceSessionsByHostId = {
++        ...runtime.state.workspaceSessionsByHostId,
++        [resolvedHostId]: session
+@@ -71,14 +130,0 @@
+-      const sourceTab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
+-        (candidate) => candidate.id === expected.tabId && candidate.worktreeId === bindingWorktreeId
+-      )
+-      const sourceLayout = session.terminalLayoutsByTabId?.[expected.tabId]
+-      const sourcePaneKey = `${expected.tabId}:${expected.leafId}`
+-      if (
+-        !sourceTab ||
+-        sourceLayout?.ptyIdsByLeafId?.[expected.leafId] !== expected.ptyId ||
+-        !layoutContainsLeafId(sourceLayout.root, expected.leafId) ||
+-        (expected.incarnationId !== undefined &&
+-          session.terminalPtyIncarnationsByPaneKey?.[sourcePaneKey] !== expected.incarnationId)
+-      ) {
+-        return false
+-      }
+@@ -86,11 +132,9 @@
+-    if (args.expectedBinding) {
+-      const tab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
+-        (candidate) => candidate.id === args.tabId && candidate.worktreeId === bindingWorktreeId
+-      )
+-      const boundPtyId = session.terminalLayoutsByTabId?.[args.tabId]?.ptyIdsByLeafId?.[args.leafId]
+-      if (
+-        !tab ||
+-        boundPtyId !== args.expectedBinding.ptyId ||
+-        session.terminalPtyIncarnationsByPaneKey?.[paneKey] !== args.expectedBinding.incarnationId
+-      ) {
+-        return false
++    applyPtyBinding(args, session, bindingWorktreeId, paneKey)
++    runtime.flushOrThrow()
++  } catch (err) {
++    if (resolvedHostId === LOCAL_EXECUTION_HOST_ID) {
++      runtime.state.workspaceSession = sessionBeforeBinding
++    } else {
++      runtime.state.workspaceSessionsByHostId = {
++        ...runtime.state.workspaceSessionsByHostId,
++        [resolvedHostId]: sessionBeforeBinding
+@@ -99,3 +143,22 @@
+-    // Decided before any mutation so a refusal leaves nothing half-written. Mirrors the four
+-    // creating branches below — mint a tab, mint a root leaf, split the root and graft a leaf,
+-    // mint a layout — each of which sets `terminalMembershipChanged`.
++    throw err
++  }
++}
++
++function applyPtyBinding(
++  args: PersistPtyBindingArgs,
++  session: WorkspaceSessionState,
++  bindingWorktreeId: string,
++  paneKey: string
++): void {
++  const reconciledIncarnation =
++    args.expectedBinding !== undefined && args.incarnationId !== args.expectedBinding.incarnationId
++  let terminalMembershipChanged = false
++  let hostAdmittedTabCreated = false
++  const advanceTopologyFence = (): void => {
++    const repoId = getRepoIdFromWorktreeId(bindingWorktreeId)
++    const currentRevision = session.terminalTopologyRevisionByRepoId?.[repoId] ?? 0
++    // Why: a split, or a host-admitted tab the renderer has never seen, is itself
++    // the authority — with no fence the renderer's pre-create tab list replays
++    // over it and the tab is lost even on the repo's first such change.
++    const establishesMembershipAuthority =
++      args.expectedSourceBinding !== undefined || hostAdmittedTabCreated
+@@ -103,2 +166,2 @@
+-      args.mayReviveRetiredSurface === false &&
+-      session.terminalSurfaceTombstonesByPaneKey?.[paneKey]
++      !reconciledIncarnation &&
++      (!terminalMembershipChanged || (currentRevision <= 0 && !establishesMembershipAuthority))
+@@ -106,1 +169,1 @@
+-      return false
++      return
+@@ -108,14 +171,4 @@
+-    if (args.mayCreate === false) {
+-      const existingTab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
+-        (candidate) => candidate.id === args.tabId
+-      )
+-      const existingLayout = session.terminalLayoutsByTabId?.[args.tabId]
+-      const wouldCreateTopology =
+-        !existingTab ||
+-        (isTerminalLeafId(args.leafId) &&
+-          (!existingLayout ||
+-            !existingLayout.root ||
+-            !layoutContainsLeafId(existingLayout.root, args.leafId)))
+-      if (wouldCreateTopology) {
+-        return false
+-      }
++    // Why: host-admitted membership or incarnation changes must outrank a stale renderer replay.
++    session.terminalTopologyRevisionByRepoId = {
++      ...session.terminalTopologyRevisionByRepoId,
++      [repoId]: currentRevision + 1
+@@ -123,5 +176,5 @@
+-    if (resolvedHostId !== LOCAL_EXECUTION_HOST_ID) {
+-      this[ptyBindingPersistenceOperationsContext].runtime.state.workspaceSessionsByHostId = {
+-        ...this[ptyBindingPersistenceOperationsContext].runtime.state.workspaceSessionsByHostId,
+-        [resolvedHostId]: session
+-      }
++  }
++  if (args.incarnationId) {
++    session.terminalPtyIncarnationsByPaneKey = {
++      ...session.terminalPtyIncarnationsByPaneKey,
++      [paneKey]: args.incarnationId
+@@ -129,19 +182,3 @@
+-    const sessionBeforeBinding = cloneWorkspaceSessionState(session)
+-    const reconciledIncarnation =
+-      args.expectedBinding !== undefined &&
+-      args.incarnationId !== args.expectedBinding.incarnationId
+-    let terminalMembershipChanged = false
+-    let hostAdmittedTabCreated = false
+-    const advanceTopologyFence = (): void => {
+-      const repoId = getRepoIdFromWorktreeId(bindingWorktreeId)
+-      const currentRevision = session.terminalTopologyRevisionByRepoId?.[repoId] ?? 0
+-      // Why: a split, or a host-admitted tab the renderer has never seen, is itself
+-      // the authority — with no fence the renderer's pre-create tab list replays
+-      // over it and the tab is lost even on the repo's first such change.
+-      const establishesMembershipAuthority =
+-        args.expectedSourceBinding !== undefined || hostAdmittedTabCreated
+-      if (
+-        !reconciledIncarnation &&
+-        (!terminalMembershipChanged || (currentRevision <= 0 && !establishesMembershipAuthority))
+-      ) {
+-        return
++    if (session.terminalSurfaceTombstonesByPaneKey?.[paneKey]) {
++      session.terminalSurfaceTombstonesByPaneKey = {
++        ...session.terminalSurfaceTombstonesByPaneKey
+@@ -149,5 +186,1 @@
+-      // Why: host-admitted membership or incarnation changes must outrank a stale renderer replay.
+-      session.terminalTopologyRevisionByRepoId = {
+-        ...session.terminalTopologyRevisionByRepoId,
+-        [repoId]: currentRevision + 1
+-      }
++      delete session.terminalSurfaceTombstonesByPaneKey[paneKey]
+@@ -155,10 +188,25 @@
+-    const restoreSession = (): void => {
+-      if (resolvedHostId === LOCAL_EXECUTION_HOST_ID) {
+-        this[ptyBindingPersistenceOperationsContext].runtime.state.workspaceSession =
+-          sessionBeforeBinding
+-      } else {
+-        this[ptyBindingPersistenceOperationsContext].runtime.state.workspaceSessionsByHostId = {
+-          ...this[ptyBindingPersistenceOperationsContext].runtime.state.workspaceSessionsByHostId,
+-          [resolvedHostId]: sessionBeforeBinding
+-        }
+-      }
++  }
++  const tabs = session.tabsByWorktree?.[bindingWorktreeId]
++  const tab = tabs?.find((t) => t.id === args.tabId)
++  if (tab) {
++    tab.ptyId = tabRowPtyIdAfterLeafBinding(
++      tab,
++      session.terminalLayoutsByTabId?.[args.tabId]?.ptyIdsByLeafId,
++      args.leafId,
++      args.ptyId
++    )
++  } else {
++    terminalMembershipChanged = true
++    hostAdmittedTabCreated = args.hostAdmittedMembership === true
++    // Why: pty:spawn can beat the debounced writer; persist a minimal tab so hydration won't prune the binding as orphaned.
++    const nextTabs = [
++      ...(tabs ?? []),
++      createMinimalPersistedTerminalTab({
++        ...args,
++        worktreeId: bindingWorktreeId,
++        existingTabCount: tabs?.length ?? 0
++      })
++    ]
++    session.tabsByWorktree = {
++      ...session.tabsByWorktree,
++      [bindingWorktreeId]: nextTabs
+@@ -166,11 +214,5 @@
+-    if (args.incarnationId) {
+-      session.terminalPtyIncarnationsByPaneKey = {
+-        ...session.terminalPtyIncarnationsByPaneKey,
+-        [paneKey]: args.incarnationId
+-      }
+-      if (session.terminalSurfaceTombstonesByPaneKey?.[paneKey]) {
+-        session.terminalSurfaceTombstonesByPaneKey = {
+-          ...session.terminalSurfaceTombstonesByPaneKey
+-        }
+-        delete session.terminalSurfaceTombstonesByPaneKey[paneKey]
+-      }
++    session.activeWorktreeId ??= bindingWorktreeId
++    session.activeTabId ??= args.tabId
++    session.activeTabIdByWorktree = {
++      ...session.activeTabIdByWorktree,
++      [bindingWorktreeId]: session.activeTabIdByWorktree?.[bindingWorktreeId] ?? args.tabId
+@@ -178,5 +220,9 @@
+-    const tabs = session.tabsByWorktree?.[bindingWorktreeId]
+-    const tab = tabs?.find((t) => t.id === args.tabId)
+-    if (tab) {
+-      tab.ptyId = args.ptyId
+-    } else {
++  }
++  if (!isTerminalLeafId(args.leafId)) {
++    // Why: keep legacy renderer-local pane ids out of durable leaf-keyed layout state after the UUID migration.
++    advanceTopologyFence()
++    return
++  }
++  const layout = session.terminalLayoutsByTabId?.[args.tabId]
++  if (layout) {
++    if (!layout.root) {
+@@ -184,13 +230,12 @@
+-      hostAdmittedTabCreated = args.hostAdmittedMembership === true
+-      // Why: pty:spawn can beat the debounced writer; persist a minimal tab so hydration won't prune the binding as orphaned.
+-      const nextTabs = [
+-        ...(tabs ?? []),
+-        createMinimalPersistedTerminalTab({
+-          ...args,
+-          worktreeId: bindingWorktreeId,
+-          existingTabCount: tabs?.length ?? 0
+-        })
+-      ]
+-      session.tabsByWorktree = {
+-        ...session.tabsByWorktree,
+-        [bindingWorktreeId]: nextTabs
++      // Why: createTab can persist an empty layout before TerminalPane mounts; the sync binding still needs a durable root.
++      layout.root = { type: 'leaf', leafId: args.leafId }
++      layout.activeLeafId = args.leafId
++      layout.expandedLeafId = null
++    } else if (!layoutContainsLeafId(layout.root, args.leafId)) {
++      terminalMembershipChanged = true
++      // Why: splitPane spawns before its snapshot reaches main; add a minimal leaf so a crash can't strand the pane's binding.
++      layout.root = {
++        type: 'split',
++        direction: 'vertical',
++        first: cloneLayoutNode(layout.root),
++        second: { type: 'leaf', leafId: args.leafId }
+@@ -198,5 +243,3 @@
+-      session.activeWorktreeId ??= bindingWorktreeId
+-      session.activeTabId ??= args.tabId
+-      session.activeTabIdByWorktree = {
+-        ...session.activeTabIdByWorktree,
+-        [bindingWorktreeId]: session.activeTabIdByWorktree?.[bindingWorktreeId] ?? args.tabId
++      layout.activeLeafId = args.leafId
++      if (layout.expandedLeafId && !layoutContainsLeafId(layout.root, layout.expandedLeafId)) {
++        layout.expandedLeafId = null
+@@ -205,10 +248,3 @@
+-    if (!isTerminalLeafId(args.leafId)) {
+-      // Why: keep legacy renderer-local pane ids out of durable leaf-keyed layout state after the UUID migration.
+-      advanceTopologyFence()
+-      try {
+-        this[ptyBindingPersistenceOperationsContext].runtime.flushOrThrow()
+-      } catch (err) {
+-        restoreSession()
+-        throw err
+-      }
+-      return true
++    layout.ptyIdsByLeafId = {
++      ...layout.ptyIdsByLeafId,
++      [args.leafId]: args.ptyId
+@@ -216,21 +252,10 @@
+-    const layout = session.terminalLayoutsByTabId?.[args.tabId]
+-    if (layout) {
+-      if (!layout.root) {
+-        terminalMembershipChanged = true
+-        // Why: createTab can persist an empty layout before TerminalPane mounts; the sync binding still needs a durable root.
+-        layout.root = { type: 'leaf', leafId: args.leafId }
+-        layout.activeLeafId = args.leafId
+-        layout.expandedLeafId = null
+-      } else if (!layoutContainsLeafId(layout.root, args.leafId)) {
+-        terminalMembershipChanged = true
+-        // Why: splitPane spawns before its snapshot reaches main; add a minimal leaf so a crash can't strand the pane's binding.
+-        layout.root = {
+-          type: 'split',
+-          direction: 'vertical',
+-          first: cloneLayoutNode(layout.root),
+-          second: { type: 'leaf', leafId: args.leafId }
+-        }
+-        layout.activeLeafId = args.leafId
+-        if (layout.expandedLeafId && !layoutContainsLeafId(layout.root, layout.expandedLeafId)) {
+-          layout.expandedLeafId = null
+-        }
++  } else {
++    terminalMembershipChanged = true
++    // Why: first tab spawn — persist a minimal layout so a SIGKILL before the renderer snapshot can't lose ptyIdsByLeafId.
++    session.terminalLayoutsByTabId = {
++      ...session.terminalLayoutsByTabId,
++      [args.tabId]: {
++        root: { type: 'leaf', leafId: args.leafId },
++        activeLeafId: args.leafId,
++        expandedLeafId: null,
++        ptyIdsByLeafId: { [args.leafId]: args.ptyId }
+@@ -238,16 +262,0 @@
+-      layout.ptyIdsByLeafId = {
+-        ...layout.ptyIdsByLeafId,
+-        [args.leafId]: args.ptyId
+-      }
+-    } else {
+-      terminalMembershipChanged = true
+-      // Why: first tab spawn — persist a minimal layout so a SIGKILL before the renderer snapshot can't lose ptyIdsByLeafId.
+-      session.terminalLayoutsByTabId = {
+-        ...session.terminalLayoutsByTabId,
+-        [args.tabId]: {
+-          root: { type: 'leaf', leafId: args.leafId },
+-          activeLeafId: args.leafId,
+-          expandedLeafId: null,
+-          ptyIdsByLeafId: { [args.leafId]: args.ptyId }
+-        }
+-      }
+@@ -255,8 +263,0 @@
+-    advanceTopologyFence()
+-    try {
+-      this[ptyBindingPersistenceOperationsContext].runtime.flushOrThrow()
+-    } catch (err) {
+-      restoreSession()
+-      throw err
+-    }
+-    return true
+@@ -263,0 +265,1 @@
++  advanceTopologyFence()
+@@ -267,1 +269,1 @@
+-  target: object,
++  target: PtyBindingPersistenceOperations,
+===================================================================
+--- /dev/null
++++ b/src/main/persistence/loading-store/pty-binding-refusals.ts
+@@ -0,0 +1,83 @@
++import { isTerminalLeafId } from '../../../shared/stable-pane-id'
++import type { WorkspaceSessionState } from '../../../shared/workspace-session-state-types'
++import { layoutContainsLeafId } from '../restoring-sessions/terminal-layout-normalization'
++import type { PtyBindingSourceExpectation } from './store'
++
++export type PtyBindingRefusalRequest = {
++  tabId: string
++  leafId: string
++  expectedBinding?: { ptyId: string; incarnationId?: string }
++  expectedSourceBinding?: PtyBindingSourceExpectation
++  mayCreate?: boolean
++  mayReviveRetiredSurface?: boolean
++}
++
++/**
++ * The four fences a binding must clear before anything is mutated, so a refusal leaves nothing
++ * half-written. Order matters: every `false` here is returned before the write path or the
++ * fast lane can run, which is what the relay's lease expiry and the stable-owner throw rely on.
++ */
++export function ptyBindingIsRefused(
++  args: PtyBindingRefusalRequest,
++  session: WorkspaceSessionState,
++  bindingWorktreeId: string,
++  paneKey: string
++): boolean {
++  if (args.expectedSourceBinding) {
++    const expected = args.expectedSourceBinding
++    if (expected.tabId !== args.tabId) {
++      return true
++    }
++    const sourceTab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
++      (candidate) => candidate.id === expected.tabId && candidate.worktreeId === bindingWorktreeId
++    )
++    const sourceLayout = session.terminalLayoutsByTabId?.[expected.tabId]
++    const sourcePaneKey = `${expected.tabId}:${expected.leafId}`
++    if (
++      !sourceTab ||
++      sourceLayout?.ptyIdsByLeafId?.[expected.leafId] !== expected.ptyId ||
++      !layoutContainsLeafId(sourceLayout.root, expected.leafId) ||
++      (expected.incarnationId !== undefined &&
++        session.terminalPtyIncarnationsByPaneKey?.[sourcePaneKey] !== expected.incarnationId)
++    ) {
++      return true
++    }
++  }
++  if (args.expectedBinding) {
++    const tab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
++      (candidate) => candidate.id === args.tabId && candidate.worktreeId === bindingWorktreeId
++    )
++    const boundPtyId = session.terminalLayoutsByTabId?.[args.tabId]?.ptyIdsByLeafId?.[args.leafId]
++    if (
++      !tab ||
++      boundPtyId !== args.expectedBinding.ptyId ||
++      session.terminalPtyIncarnationsByPaneKey?.[paneKey] !== args.expectedBinding.incarnationId
++    ) {
++      return true
++    }
++  }
++  // Mirrors the four creating branches of the write path — mint a tab, mint a root leaf, split
++  // the root and graft a leaf, mint a layout — each of which sets `terminalMembershipChanged`.
++  if (
++    args.mayReviveRetiredSurface === false &&
++    session.terminalSurfaceTombstonesByPaneKey?.[paneKey]
++  ) {
++    return true
++  }
++  if (args.mayCreate === false) {
++    const existingTab = session.tabsByWorktree?.[bindingWorktreeId]?.find(
++      (candidate) => candidate.id === args.tabId
++    )
++    const existingLayout = session.terminalLayoutsByTabId?.[args.tabId]
++    const wouldCreateTopology =
++      !existingTab ||
++      (isTerminalLeafId(args.leafId) &&
++        (!existingLayout ||
++          !existingLayout.root ||
++          !layoutContainsLeafId(existingLayout.root, args.leafId)))
++    if (wouldCreateTopology) {
++      return true
++    }
++  }
++  return false
++}
+===================================================================
+--- a/src/main/runtime/orca-runtime-build-pty-terminal-summary.ts
++++ b/src/main/runtime/orca-runtime-build-pty-terminal-summary.ts
+@@ -176,1 +176,1 @@
+-    if (leaf.ptyId && incarnationId) {
++    if (leaf.ptyId) {
+===================================================================
+--- a/src/main/runtime/orca-runtime-close-mobile-session-tab.ts
++++ b/src/main/runtime/orca-runtime-close-mobile-session-tab.ts
+@@ -22,0 +23,1 @@
++import { captureAcknowledgedTerminalTabRetirement } from './workspace-session-terminal-tab-retirement-identity'
+@@ -180,2 +181,12 @@
+-        // Why: whole-tab close is a lifecycle transaction. The renderer reply
+-        // arrives only after canonical retirement and a forced session flush.
++        // The renderer flush can rebase its omission; the host commits the acknowledged identity.
++        const acknowledgeRetirement = captureAcknowledgedTerminalTabRetirement(
++          worktreeId,
++          tab.parentTabId,
++          () => ({
++            hostId: this.getWorkspaceSessionHostIdForWorktree(worktreeId),
++            session: this.getWorkspaceSessionForWorktree(worktreeId),
++            snapshot: this.mobileSessionTabsByWorktree.get(worktreeId),
++            incarnationOf: (ptyId) => this.ptysById.get(ptyId)?.incarnationId
++          })
++        )
++        // Wait for the renderer's pin guard, retirement and forced session flush.
+@@ -202,0 +214,5 @@
++        const retirement = acknowledgeRetirement()
++        if (!retirement.matches) {
++          this.republishMobileSessionTabsSnapshot(worktreeId)
++          return refusedMobileSessionTabClose('stale-terminal', { snapshotRepublished: true })
++        }
+@@ -222,0 +239,4 @@
++        } else if (retirement.hasPersistedTab) {
++          this.commitHeadlessTerminalTabRetirement(worktreeId, tab.parentTabId, {
++            force: options.force
++          })
+===================================================================
+--- a/src/main/runtime/runtime-terminal-contracts.ts
++++ b/src/main/runtime/runtime-terminal-contracts.ts
+@@ -98,0 +99,3 @@
++  /** The pane's terminal handle, when it is bound to one. Stamped on the stored row so a
++   *  reader can rejoin it to the terminal after the pane key moved. */
++  terminalHandle?: string
+@@ -104,1 +107,1 @@
+-  'payload' | 'updatedAt' | 'stateStartedAt' | 'worktreeId'
++  'payload' | 'updatedAt' | 'evidenceObservedAt' | 'stateStartedAt' | 'worktreeId'

@@ -1,0 +1,344 @@
+{
+  "comparison": "Actual runtime/controller/Store; historical overlays cover the 31 manifest paths with other dependencies current",
+  "runtime": "v26.6.0",
+  "commits": {
+    "reported": "8e76d049146d8d8fb853fecfaba902ff6cab9372",
+    "main": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "working": "b5fc27171c0273e0b9e2af873259e85724aea8c3"
+  },
+  "sourceHashes": {
+    "mobile/src/session/use-mobile-session-close-actions.ts": {
+      "working": "f59083c0774160fc5939f5601234bfa3c6423cbebe8ea7870aaa973fd9371015",
+      "reported": "f59083c0774160fc5939f5601234bfa3c6423cbebe8ea7870aaa973fd9371015",
+      "main": "97d04daadf31c9f88f50f4e27cb63e55c57ce3a41f1c1620faa2ff244ccd9462"
+    },
+    "src/main/runtime/rpc/methods/session-tab-close-methods.ts": {
+      "working": "e3a6749f8f2101de266d464ff4941e30cf41c4f197f62c6b1acfaa5236115258",
+      "reported": "e3a6749f8f2101de266d464ff4941e30cf41c4f197f62c6b1acfaa5236115258",
+      "main": "e3a6749f8f2101de266d464ff4941e30cf41c4f197f62c6b1acfaa5236115258"
+    },
+    "src/main/runtime/orca-runtime-close-mobile-session-tab.ts": {
+      "working": "b5f5ff9df47165c6c9b41b49ee78f4d84b4d6210e69c04d3ca63bc53e9d32ad5",
+      "reported": "fcf1a22bc7aa72af40593c00008a83695fc3ebd78b76a6707ecca300beaedece",
+      "main": "fcf1a22bc7aa72af40593c00008a83695fc3ebd78b76a6707ecca300beaedece"
+    },
+    "src/main/runtime/orca-runtime-close-headless-mobile-terminal-tab.ts": {
+      "working": "097a4f170bb090aa45f418bf41e9e69b43c626ae181910d655cc385048842fa0",
+      "reported": "097a4f170bb090aa45f418bf41e9e69b43c626ae181910d655cc385048842fa0",
+      "main": "097a4f170bb090aa45f418bf41e9e69b43c626ae181910d655cc385048842fa0"
+    },
+    "src/main/runtime/orca-runtime-hydrate-headless-mobile-session-tabs-from-workspace-session.ts": {
+      "working": "873a1c96b1fa16a4467a86f0c24cd1fa62428b8542f88401f0d9fd493ac41199",
+      "reported": "873a1c96b1fa16a4467a86f0c24cd1fa62428b8542f88401f0d9fd493ac41199",
+      "main": "873a1c96b1fa16a4467a86f0c24cd1fa62428b8542f88401f0d9fd493ac41199"
+    },
+    "src/main/runtime/mobile-session-terminal-projection.ts": {
+      "working": "cd362cf8528ddc7354d5af4ba3dedb6818ce26c395785eaa67ca242cd1e8bf88",
+      "reported": "cd362cf8528ddc7354d5af4ba3dedb6818ce26c395785eaa67ca242cd1e8bf88",
+      "main": "cd362cf8528ddc7354d5af4ba3dedb6818ce26c395785eaa67ca242cd1e8bf88"
+    },
+    "src/main/runtime/orca-runtime-build-headless-mobile-session-browser-tabs.ts": {
+      "working": "9e81df267d2f2dd1a854ed571531c9e81374f1b65000726cea4a5bd85284eaf2",
+      "reported": "9e81df267d2f2dd1a854ed571531c9e81374f1b65000726cea4a5bd85284eaf2",
+      "main": "9e81df267d2f2dd1a854ed571531c9e81374f1b65000726cea4a5bd85284eaf2"
+    },
+    "src/main/runtime/orca-runtime-activate-managed-worktree.ts": {
+      "working": "66b15e0b9bee1e2a4b8f52246eaaba83a5d7faec5adf27fd461a7602dea918d7",
+      "reported": "66b15e0b9bee1e2a4b8f52246eaaba83a5d7faec5adf27fd461a7602dea918d7",
+      "main": "66b15e0b9bee1e2a4b8f52246eaaba83a5d7faec5adf27fd461a7602dea918d7"
+    },
+    "src/main/runtime/orca-runtime-perform-mobile-session-pty-records-refresh.ts": {
+      "working": "c39abfef8cc8b0c631a31e70ade8dd7620dd612481a1de7d10a408c7c4203527",
+      "reported": "c39abfef8cc8b0c631a31e70ade8dd7620dd612481a1de7d10a408c7c4203527",
+      "main": "c39abfef8cc8b0c631a31e70ade8dd7620dd612481a1de7d10a408c7c4203527"
+    },
+    "src/main/runtime/orca-runtime-create-runtime-owned-mobile-session-terminal.ts": {
+      "working": "8f4e2df95535a8cc7f14d9ddcae2937712f6e2370a7082a68e8d1f25220958ee",
+      "reported": "8f4e2df95535a8cc7f14d9ddcae2937712f6e2370a7082a68e8d1f25220958ee",
+      "main": "8f4e2df95535a8cc7f14d9ddcae2937712f6e2370a7082a68e8d1f25220958ee"
+    },
+    "src/main/runtime/orca-runtime-create-terminal.ts": {
+      "working": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+      "reported": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+      "main": "1a76531f42e96cd702f90cd22b3430e6de93b3596d22c2f9850152563fd5f17b"
+    },
+    "src/main/ipc/pty/runtime/spawn-state.ts": {
+      "working": "5f6e74129365270658454a19d150ed9659dcef5437eafe852d97b05fb565ee7d",
+      "reported": "5f6e74129365270658454a19d150ed9659dcef5437eafe852d97b05fb565ee7d",
+      "main": "348edca999d9fafbf5938ec59ec6e559eb1323ed4d56bc8d86c1365d30633686"
+    },
+    "src/main/ipc/pty/runtime/spawn-commit.ts": {
+      "working": "2c7edbe93267ac645163c5204add02bcd4d5086b949dad4ccd94cd94ac856b68",
+      "reported": "0379c8422cd62371d6f0049b2dbff8af43b3cce5014b47dac0bafb06cec6c4c1",
+      "main": "2c7edbe93267ac645163c5204add02bcd4d5086b949dad4ccd94cd94ac856b68"
+    },
+    "src/shared/workspace-session-terminal-tab-close.ts": {
+      "working": "94c8d4e77ec384fb3a5ba57bed64cd6ff117ca01cb5fc7ce4526592d4a31ec1e",
+      "reported": "94c8d4e77ec384fb3a5ba57bed64cd6ff117ca01cb5fc7ce4526592d4a31ec1e",
+      "main": "94c8d4e77ec384fb3a5ba57bed64cd6ff117ca01cb5fc7ce4526592d4a31ec1e"
+    },
+    "src/main/runtime/workspace-session-terminal-membership-authority.ts": {
+      "working": "265f047f9f0dedfcbff978446c4111860f2f50817a1b59f65633149659ffbd24",
+      "reported": "265f047f9f0dedfcbff978446c4111860f2f50817a1b59f65633149659ffbd24",
+      "main": "265f047f9f0dedfcbff978446c4111860f2f50817a1b59f65633149659ffbd24"
+    },
+    "src/main/runtime/mobile-session-terminal-persistence-retirement.ts": {
+      "working": "5e736a944a6d78a8e93ffeea18d58bf3d6035f71afcc4b96c1c02a411cf7f31f",
+      "reported": "5e736a944a6d78a8e93ffeea18d58bf3d6035f71afcc4b96c1c02a411cf7f31f",
+      "main": "5e736a944a6d78a8e93ffeea18d58bf3d6035f71afcc4b96c1c02a411cf7f31f"
+    },
+    "src/main/runtime/orca-runtime-build-pty-terminal-summary.ts": {
+      "working": "28f841ec2da5d9a165a0b4e02fc9c4865789c25a18a72e40b476d6e2e1fa6d10",
+      "reported": "1924f2645a63bfadf91dde41ee6a12d441ff0d29fb14a0e30826356d12212bb4",
+      "main": "28f841ec2da5d9a165a0b4e02fc9c4865789c25a18a72e40b476d6e2e1fa6d10"
+    },
+    "src/main/runtime/runtime-terminal-orphan-adoption.ts": {
+      "working": "11921af202d21e3ac31d1d796ec42442ac0562010f152ae8e757dba28cff6113",
+      "reported": "11921af202d21e3ac31d1d796ec42442ac0562010f152ae8e757dba28cff6113",
+      "main": "11921af202d21e3ac31d1d796ec42442ac0562010f152ae8e757dba28cff6113"
+    },
+    "src/main/ipc/pty/runtime/spawn.ts": {
+      "working": "02975c1614302602e767fe1cbac9b71342dd23df7d1dcacbf49d7e870bbc5e34",
+      "reported": "02975c1614302602e767fe1cbac9b71342dd23df7d1dcacbf49d7e870bbc5e34",
+      "main": "02975c1614302602e767fe1cbac9b71342dd23df7d1dcacbf49d7e870bbc5e34"
+    },
+    "src/main/ipc/pty/runtime/spawn-early.ts": {
+      "working": "0050b1b4109185fcf5f6275eacd39c1f95e830f0a179f81f8987a6494bb46730",
+      "reported": "0050b1b4109185fcf5f6275eacd39c1f95e830f0a179f81f8987a6494bb46730",
+      "main": "0050b1b4109185fcf5f6275eacd39c1f95e830f0a179f81f8987a6494bb46730"
+    },
+    "src/main/ipc/pty/runtime/spawn-preflight.ts": {
+      "working": "b8a10878f8c22a828e058312a88de21850b5f94a1ddc7f2a5c76784725b7510b",
+      "reported": "b8a10878f8c22a828e058312a88de21850b5f94a1ddc7f2a5c76784725b7510b",
+      "main": "f41c6948bdb3e877eeae68b326a98b58b3ab3ad411bee3a76863a76b9d4ceeb1"
+    },
+    "src/main/ipc/pty/runtime/spawn-options.ts": {
+      "working": "db3e384b6b305d869f3c86b1e57229e0664950543affc67fb5b122a5f2ffcdd0",
+      "reported": "db3e384b6b305d869f3c86b1e57229e0664950543affc67fb5b122a5f2ffcdd0",
+      "main": "db3e384b6b305d869f3c86b1e57229e0664950543affc67fb5b122a5f2ffcdd0"
+    },
+    "src/main/ipc/pty/runtime/spawn-execute.ts": {
+      "working": "b35128bc7010f8b6e4788dc3b8ebbe0ad1222b7e71840ecb4e5c572ab273b76d",
+      "reported": "b35128bc7010f8b6e4788dc3b8ebbe0ad1222b7e71840ecb4e5c572ab273b76d",
+      "main": "b35128bc7010f8b6e4788dc3b8ebbe0ad1222b7e71840ecb4e5c572ab273b76d"
+    },
+    "src/main/ipc/pty/pane/adopt-stable.ts": {
+      "working": "02f2ce64d689cb5053bcd02e2f1cfcd61109f7e8d67792b295b8c0ecc1d67745",
+      "reported": "02f2ce64d689cb5053bcd02e2f1cfcd61109f7e8d67792b295b8c0ecc1d67745",
+      "main": "02f2ce64d689cb5053bcd02e2f1cfcd61109f7e8d67792b295b8c0ecc1d67745"
+    },
+    "src/main/ipc/pty/pane/stable-owner.ts": {
+      "working": "b4ff1f187c2af965ac12e4e27db9bce5cc241234cca2747baae237a1168f2459",
+      "reported": "c393f438eecda2e7d0c649e5abe4a7e399d06f1bb30ef768870b1a5b343add41",
+      "main": "b4ff1f187c2af965ac12e4e27db9bce5cc241234cca2747baae237a1168f2459"
+    },
+    "src/main/ipc/pty/pane/spawn-reservation.ts": {
+      "working": "2346fcc7fdac36585ec20687d0cc48bc11873b8eb9b61b2fea27be62294ae9f0",
+      "reported": "2346fcc7fdac36585ec20687d0cc48bc11873b8eb9b61b2fea27be62294ae9f0",
+      "main": "2346fcc7fdac36585ec20687d0cc48bc11873b8eb9b61b2fea27be62294ae9f0"
+    },
+    "src/main/persistence/loading-store/pty-binding-persistence.ts": {
+      "working": "173b12bd84906e0265e237137004eb1bb614ce9b101b67658ba66d4dca248eb7",
+      "reported": "2c39f086bb421beb0b1e6be3245581fb307192939f0cc382919d8ad825914df2",
+      "main": "173b12bd84906e0265e237137004eb1bb614ce9b101b67658ba66d4dca248eb7"
+    },
+    "src/main/persistence/loading-store/pty-binding-refusals.ts": {
+      "working": "a0cefd4bd05ed71a0719d69be55d8cdc4ecde895f2b2f596c637c58c39b88888",
+      "reported": null,
+      "main": "a0cefd4bd05ed71a0719d69be55d8cdc4ecde895f2b2f596c637c58c39b88888"
+    },
+    "src/main/persistence/loading-store/pty-binding-fast-lane.ts": {
+      "working": "0ad1e8dfac339073ee7114e15337c1eb6831865aec4f5dffc77894bd1a89ebe4",
+      "reported": null,
+      "main": "0ad1e8dfac339073ee7114e15337c1eb6831865aec4f5dffc77894bd1a89ebe4"
+    },
+    "src/main/runtime/runtime-terminal-contracts.ts": {
+      "working": "c9aa3f45e86e174694ddba24018a718b04821791cb66d39eacb5bb9557785df6",
+      "reported": "79ca0d387a85dd870d0802459656b08b1a84001fdac172af28bb4385d3fc2da6",
+      "main": "13d36dc4689e76d2594224a39aed608568bce64ccdb33024a291a0887e0fe790"
+    },
+    "src/main/runtime/runtime-pty-controller-contract.ts": {
+      "working": "8ca746f9838269103651ba338c156c9588cc4e53cff7a26aecbf7c80238b6cf4",
+      "reported": "8ca746f9838269103651ba338c156c9588cc4e53cff7a26aecbf7c80238b6cf4",
+      "main": "c619cb165cb8e4d3b53629af5308c70cdee8258558be98a29b1a333434085ab2"
+    }
+  },
+  "artifactHashes": {
+    "fixture.test.mjs": "a3b03e58ef4ef695c05b948cb407e6753ae078cee3e1b8e120182a900668ca6b",
+    "reproduce.mjs": "5061ef1f2b53c53cf73d899c954599358751a1cb4e9143aa020bb81bd6289514",
+    "source-manifest.json": "6997f70929cdf364b60e879a65984f5a88c6c7b31b90138f770488c06174cacf",
+    "reported.patch": "625a8c55751d081749699cdfc23311ff38cd2942d8468fc6c1267a931aea6479",
+    "main.patch": "c07af08cc876d238d29c6ac537a3b5fc1801b2bc0c2be4687a8363d35c444ad9"
+  },
+  "phases": {
+    "working": {
+      "exitCode": 0,
+      "timedOut": false,
+      "passed": 12,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "mobile headless close durably retires even when kill returns false and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "mobile headless close durably retires even when kill returns true and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "rejects stale persisted-tab replay after successful headless close",
+          "status": "passed"
+        },
+        {
+          "name": "propagates disk failure before kill and leaves original disk row for restart",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='failure'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='failure'",
+          "status": "passed"
+        }
+      ]
+    },
+    "main": {
+      "exitCode": 0,
+      "timedOut": false,
+      "passed": 12,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "mobile headless close durably retires even when kill returns false and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "mobile headless close durably retires even when kill returns true and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "rejects stale persisted-tab replay after successful headless close",
+          "status": "passed"
+        },
+        {
+          "name": "propagates disk failure before kill and leaves original disk row for restart",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='failure'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='failure'",
+          "status": "passed"
+        }
+      ]
+    },
+    "reported": {
+      "exitCode": 0,
+      "timedOut": false,
+      "passed": 12,
+      "failed": 0,
+      "cases": [
+        {
+          "name": "mobile headless close durably retires even when kill returns false and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "mobile headless close durably retires even when kill returns true and live inventory remains",
+          "status": "passed"
+        },
+        {
+          "name": "rejects stale persisted-tab replay after successful headless close",
+          "status": "passed"
+        },
+        {
+          "name": "propagates disk failure before kill and leaves original disk row for restart",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=false and action='failure'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='close'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='keep'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='replacement'",
+          "status": "passed"
+        },
+        {
+          "name": "pending activation with bound=true and action='failure'",
+          "status": "passed"
+        }
+      ]
+    }
+  },
+  "passed": true
+}

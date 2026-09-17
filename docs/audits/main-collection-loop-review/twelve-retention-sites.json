@@ -1,0 +1,66 @@
+{
+  "reviewPath": "docs/audits/main-collection-loop-review/twelve-retention-sites.md",
+  "scope": "Twelve targeted source reads of progress and ownership; not twelve unique new defects or proof all loops were reviewed",
+  "sites": [
+    {
+      "path": "src/shared/agent-hook-status-cache.ts",
+      "evidence": "Eviction deletes an actual non-current pane through clearPaneCacheState or breaks. Positive safe-integer maxPanes defaults to 500. The cleanup removes pane-scoped status and companion caches. This is a count bound, not a byte bound on arbitrary admitted payloads.",
+      "sha256": "6ee16d0ea1fda5cbb2e63e30fde98a3b62d23e036b9529775326ee131d71c4c5"
+    },
+    {
+      "path": "src/shared/remote-runtime-shared-control-retired-request-ids.ts",
+      "evidence": "Each count-prune deletes the oldest actual key; expiry traversal only deletes. The production connection uses defaults of 2,048 IDs and 60 seconds. Non-finite custom constructor values are not validated, but no production custom values were found. String bytes remain separate from count.",
+      "sha256": "9ee42f6e27855cf4561426930359e78b2ee9828d7ae6f44aa56d63239512bc4b"
+    },
+    {
+      "path": "src/main/plugins/plugin-worker-output-buffer.ts",
+      "evidence": "Each loop consumes through a newline or returns. The stream retains at most 8,192 code units of unfinished text, discards an overflowing line until newline, and clears on end. Listener lifetime belongs to child stdout/stderr. Slices/concatenations require a separate backing-storage check; logical length is not proof of owned bytes.",
+      "sha256": "969daeddb4f4fde9d53e80b008438aa2942526af940ae9eb4f08cd9440a0f914"
+    },
+    {
+      "path": "src/shared/raster-image-base64-preview.ts",
+      "evidence": "Probe grows geometrically from 64 bytes by 16x, capped at 8 MiB. Exhausted input returns; over-limit dimensions trigger one final maximum probe whose exhausted branch returns. Decode scans finite input and allocates at most the probe size. The caller's encoded content already exists; this is not a whole-image memory bound.",
+      "sha256": "89baf40f4637615456888e0f35115517a8445a3b1cb640b7bc495dd9a98fcedb"
+    },
+    {
+      "path": "src/main/pty/legacy-terminal-shim-dir.ts",
+      "evidence": "Literal PATH removal advances searchStart after a non-boundary match, or shortens result by removing the matched nonempty entry/boundary. Production entries come from nonempty explicit shim directories and their path spellings. Case folding and repeated concatenation are input-sized transient work.",
+      "sha256": "bf6663aa3478d4c0ea55bd09d0d72ba1dbe726f8eb83debafb14a7a981650832"
+    },
+    {
+      "path": "src/shared/terminal-title-wrapper-segments.ts",
+      "evidence": "Separator search advances by the positive-width separator each time. Returned suffix count grows with title length; includes checks can make repeated-wrapper input expensive and suffixes can share backing storage. These are local results used by title identity/status checks; no persistent growing collection in this function.",
+      "sha256": "f2eb6fc485e519263f3e9394a9f3dc7004aa70373e3e36d42eba3ec509e2cb78"
+    },
+    {
+      "path": "src/shared/terminal-query-reply.ts",
+      "evidence": "Both extraction loops accept only a nonempty anchored reply match, advance to its end, or return null. Returned reply strings and arrays scale with input and can share backing storage. This review does not impose a byte limit on callers or change protocol recognition.",
+      "sha256": "f3dee7d1b8d0dc0d88e15fa12867842a9b1c237144f2e79ccc3c23789dd9c6d7"
+    },
+    {
+      "path": "src/shared/runtime-rpc-error-code.ts",
+      "evidence": "Cause-chain traversal records each object in a visited Set and stops on a repeated identity, primitive, or matching token. Work scales with a finite chain; arbitrary user-defined property getters are outside the plain transported error-object case.",
+      "sha256": "1fa7751ab065c0396491d92af2a0e2ef8308810934b3349645051053be05a3ea"
+    },
+    {
+      "path": "src/shared/retired-pty-incarnations.ts",
+      "evidence": "Expiry traversal only deletes, and count-prune deletes oldest entries until at most 1,000. Some callers prune before adding one new entry, so 1,000 is not asserted as a universal post-insertion maximum. Evidence strings are caller-sized; expiry admission is reviewed separately from process authority.",
+      "sha256": "8321bc080d3398b4ee6326568e474c1b2d86aa050cf02f73093c4b97558a47de"
+    },
+    {
+      "path": "src/shared/search-subprocess-lines.ts",
+      "evidence": "Each delimiter loop advances to newline+1 or returns. Buffer growth checks the configured line budget first, copies residual bytes and drops its buffer after emitting a line. Default line cap is 64 MiB; complete string fast-path is conservatively bounded by 3 * UTF-16 units. Input conversion and callback retention remain separate.",
+      "sha256": "b860de84a4081fb86515bb31910f0f1d4b0a6606370490c4f60aa9d2e9d5eee3"
+    },
+    {
+      "path": "src/shared/main-process-ndjson-framer.ts",
+      "evidence": "Prefix binary search narrows its integer interval; main parser advances before callbacks or returns while retaining suffix/paused input. Default limits are 16 MiB per line and 64 MiB paused complete queue. The production Codex reader explicitly passes Infinity to preserve provider payload fidelity, so those defaults do not bound that caller; stdout.pause/resume supplies transport backpressure. No safe truncation policy is inferred.",
+      "sha256": "cac5d9cdba42fc9f8340b2b815e6b36ff20e104d734a7ac4b8bca7136e6fa490"
+    },
+    {
+      "path": "src/shared/terminal-kitty-keyboard-mode-tracker.ts",
+      "evidence": "The global regexp cannot match empty input; pop stops once its stack of at most 16 frames empties. An incomplete escape suffix is logically capped at 4,096 units but returned with slice from the full input. A separate actual-source Node/Electron backing-string investigation is pending; bounded suffix length alone is not leak-free evidence.",
+      "sha256": "2ee0bad47d4575046f71c16e0334a8ae8be531f0cfc67133abc287f8ae5aa403"
+    }
+  ]
+}

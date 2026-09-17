@@ -1,0 +1,207 @@
+{
+  "reviewPath": "docs/audits/main-collection-loop-review/additional-sites.md",
+  "capturedAt": "2026-09-17T01:55:40.565Z",
+  "scope": "25 manually reviewed loop sites; source evidence only",
+  "sites": [
+    {
+      "path": "src/main/text-generation/pull-request-context.ts",
+      "line": 61,
+      "sourceLine": "while (index >= 0) {",
+      "sha256": "09bf2d615aa6753ba153a95dfb44db08eb99422352d3eeeb7a95b19399f868e2",
+      "evidence": "Reverse generator decrements `index` for ordinary characters and moves before a CR/LF delimiter otherwise. The error summarizer stops at the first nonempty yielded line. No accumulating collection in the loop; git context calls request a 10 MiB subprocess max buffer.",
+      "verdict": "Finite input scan."
+    },
+    {
+      "path": "src/main/gitlab/mr-file-diffs.ts",
+      "line": 29,
+      "sourceLine": "while (cursor < diff.length) {",
+      "sha256": "14018405ad871159ea7191fa87bf8415c62e05ce1ce6f5d1043362cb9e847ace",
+      "evidence": "`countDiffLines` advances to newline + 1 or breaks. Holds counters, not a line array. `fetchMRFiles` maps one API page of at most 100 requested files, retaining each requested diff in its returned result.",
+      "verdict": "Finite scan; input diff bytes still determine output size."
+    },
+    {
+      "path": "src/main/crash-reporting/process-gone-dedupe.ts",
+      "line": 69,
+      "sourceLine": "while (this.recentKeys.size > this.maxKeys) {",
+      "sha256": "175cbfbf2fbefdd2eea1bea4370750e44c7c8367ddc09bdfad0604d6f80889a3",
+      "evidence": "Prune deletes the first actual Map key each iteration or breaks on empty. Default process singleton has a 128-key cap plus a two-second expiry checked on claims. `release` deletes only its own claim identity.",
+      "verdict": "Bounded state; no growing iteration."
+    },
+    {
+      "path": "src/main/crash-reporting/gpu-crash-fallback-decision.ts",
+      "line": 63,
+      "sourceLine": "while (stale < this.recentCrashes.length && this.recentCrashes[stale] < cutoff) {",
+      "sha256": "9cfc1af6bba55d35739b519c666b2039e7e5796f304e373b279d2fe3629acf98",
+      "evidence": "`stale` increases to array length; one splice removes that prefix. Real singleton uses 30 seconds/threshold 3; engagement suppresses later pushes. `gpu-lifecycle.ts` can disengage after withholding fallback, so threshold 3 is not an unconditional array-size cap. Monotonic normalization and rolling expiry remain; entries are numbers.",
+      "verdict": "Finite scan. No input-independent count bound claimed across arbitrary disengage sequences."
+    },
+    {
+      "path": "src/main/gitlab/gitlab-known-host-probe.ts",
+      "line": 84,
+      "sourceLine": "while (unauthenticatedHostExpiries.size > UNAUTHENTICATED_HOSTS_MAX_ENTRIES) {",
+      "sha256": "4f9651c5a383438aa968aec082c200a3371e2f4317372125aa11aa6938793c25",
+      "evidence": "Unauthenticated-host prune deletes one oldest key or returns, giving 128 entries. Adjacent successful known-host map is different: execution keys contain SSH generations and old successful entries are never removed on reconnect. Production reset exists in `preflight/agent-detection.ts:359`, only for forced preflight. `ssh-git-dispatch.ts` increments generations on register/unregister and does not invalidate this map.",
+      "verdict": "Selected loop bounded. Obsolete successful-generation retention remains a concrete follow-up candidate, not a measured leak here."
+    },
+    {
+      "path": "src/main/gitlab/gitlab-auth-and-rate-limit.ts",
+      "line": 139,
+      "sourceLine": "while (gitLabRateLimitCache.size > GITLAB_RATE_LIMIT_CACHE_MAX_ENTRIES) {",
+      "sha256": "6ae3d155b46b879abff7b3637005e44f7e59bc66591af30edb16832a8025ecbf",
+      "evidence": "TTL pass only deletes existing entries; count pass deletes oldest or breaks. Remember prunes before and after insert, leaving at most 64 snapshots of small scalar fields. `getRateLimit` always releases GitLab admission in finally.",
+      "verdict": "Bounded cache."
+    },
+    {
+      "path": "src/main/crash-reporting/minidump-crash-signature.ts",
+      "line": 145,
+      "sourceLine": "while (end < limit && isPrintableLogByte(dump[end])) {",
+      "sha256": "91a87850fd5b303cc1607825886f8ee43c68b15e5367d19632726fa93aa48c8d",
+      "evidence": "`end` increases until printable bytes stop or at most 4,000 bytes past candidate start. Outer marker search advances and examines at most 256 markers per four severities. Only successful decoded strings escape; no Buffer view escapes into signature. The separately audited crashpad file reader owns dump acquisition.",
+      "verdict": "Finite bounded candidate scan; whole dump search cost remains input-sized."
+    },
+    {
+      "path": "src/main/crash-reporting/minidump-crashpad-annotations.ts",
+      "line": 129,
+      "sourceLine": "while (value.endsWith('\\0')) {",
+      "sha256": "2fe7fac1deb374dd4d80f07940be0781e74dc00386ae580a7670739a85db5e1b",
+      "evidence": "Each trailing-NUL removal strictly shortens the string. `MinidumpView.byteArray` caps annotation value bytes at 8,192; annotation count <= 512, module list <= 1,024, keys pass a fixed allowlist. Slices may retain a small bounded original string, not the dump Buffer.",
+      "verdict": "Bounded parsing; no persistent parser collection."
+    },
+    {
+      "path": "src/main/crash-reporting/crash-breadcrumb-store.ts",
+      "line": 77,
+      "sourceLine": "while (retainedBreadcrumbs.size > MAX_RETAINED_BREADCRUMBS) {",
+      "sha256": "8848be8a897e0d1a214dbbaf87a0377d493ee83358763c0fc286e693889b2cb9",
+      "evidence": "Retained breadcrumb insertion removes oldest entries until <= 8. Record sanitization occurs before storing. Recent ring separately holds <= 30 entries.",
+      "verdict": "Bounded retained lane."
+    },
+    {
+      "path": "src/main/crash-reporting/crash-breadcrumb-store.ts",
+      "line": 227,
+      "sourceLine": "while (coalescedBreadcrumbs.size > MAX_COALESCE_KEYS) {",
+      "sha256": "8848be8a897e0d1a214dbbaf87a0377d493ee83358763c0fc286e693889b2cb9",
+      "evidence": "Overflow preserves the oldest coalesced entry's pending evidence then deletes that actual key, ending at 128. Preservation calls ordinary record insertion, which does not grow the coalesce Map. Pending payload replaces prior payload.",
+      "verdict": "Bounded key count; pending unsanitized payload size is caller-dependent."
+    },
+    {
+      "path": "src/main/crash-reporting/crash-breadcrumb-store.ts",
+      "line": 282,
+      "sourceLine": "while (window.length > budget) {",
+      "sha256": "8848be8a897e0d1a214dbbaf87a0377d493ee83358763c0fc286e693889b2cb9",
+      "evidence": "`visibleReportWindow` copies a <= 30-entry visible ring and splices one existing element each iteration. Its sole callers compute budget as 30 minus retained-visible count <= 8, so budget >= 22; the negative-budget infinite-empty-loop case is unreachable from these callers.",
+      "verdict": "Bounded loop under actual caller invariant."
+    },
+    {
+      "path": "src/main/rate-limits/opencode-go-page-scraper.ts",
+      "line": 23,
+      "sourceLine": "while ((keyMatch = keyRegex.exec(text)) !== null) {",
+      "sha256": "f0657cfc3954a2e023f223029b679d0d74a2cd15581b19827f758548e1cf1c67",
+      "evidence": "Global regex always consumes at least a key and colon; repeated calls advance `lastIndex`. Inner brace and numeric scans increment indexes. Public parser refuses strings over 10,000,000 characters. Repeated malformed key/brace candidates can rescan large suffixes, so this is not a linear-time claim. `opencode-go-usage-fetcher.ts` materializes `Response.text()` before this check.",
+      "verdict": "Finite parsing with potential superlinear work; pre-parse body acquisition is not capped by parser check."
+    },
+    {
+      "path": "src/main/integration-credential-file.ts",
+      "line": 56,
+      "sourceLine": "while (written < data.length) {",
+      "sha256": "16901ff22eab5371b3dd20ba78b47bd630d4204698c867c6a5793625e99bc19f",
+      "evidence": "Successful write must return positive bytes, otherwise throws; `written` strictly increases toward existing Buffer length. Success fsyncs/closes/renames; catch closes any owned descriptor, tries to unlink temporary file, and rethrows. No per-write collection.",
+      "verdict": "Finite progress and owned descriptor cleanup."
+    },
+    {
+      "path": "src/main/crash-reporting/self-initiated-tree-kill-log.ts",
+      "line": 129,
+      "sourceLine": "while (selfInitiatedKills.length > MAX_TRACKED_SELF_KILLS) {",
+      "sha256": "eb28b4a513a3cbc30586df30569adf29d828f059522ebe6c751d55b233c13987",
+      "evidence": "Overflow helper splices exactly one element at an index >= 0 and below the nonempty array's length. Post-insert ring <= 32; read/filter/detail formatting operate on that bound. Site/scope values originate at instrumented process-kill callers.",
+      "verdict": "Bounded ring."
+    },
+    {
+      "path": "src/main/gitlab/gitlab-project-ref-resolution.ts",
+      "line": 61,
+      "sourceLine": "while (projectRefCache.size > PROJECT_REF_CACHE_MAX_ENTRIES) {",
+      "sha256": "45bca2aefe907271610b0522e9519f2d80783fd25803c71ad42f38cfb5e6cddf",
+      "evidence": "Positive/negative insertion deletes oldest keys until <= 512; runtime generation and known-host list are part of key. Coalesced producer checks `ownsKey` before publication. Negative expiry checked on lookup; positive stale generations still cannot exceed entry cap.",
+      "verdict": "Bounded count; key/value string bytes input-dependent."
+    },
+    {
+      "path": "src/shared/secure-path-hardening-cache.ts",
+      "line": 53,
+      "sourceLine": "while (",
+      "sha256": "69bd48880928fd18cf80a1372a7d3e1cca7a3adaf3569576c025cb7c58552444",
+      "evidence": "Rejects individually oversized keys before eviction; each loop deletes oldest and subtracts its byte accounting, or returns if empty. Actual production consumers use finite shared defaults: 1,024 entries, 64 KiB/key, 512 KiB aggregate key bytes. Values are booleans or fixed scalar stat/retry records.",
+      "verdict": "Bounded production cache; arbitrary invalid constructor bounds not assumed safe."
+    },
+    {
+      "path": "src/shared/terminal-retirement-proof-ledger.ts",
+      "line": 39,
+      "sourceLine": "while (next.size > MAX_RETIRED_TERMINAL_SURFACE_PROOFS) {",
+      "sha256": "d0cba83a8dd4ce290b3ad821e9b5c5f43da52ab60268675124023418ec2fddcf",
+      "evidence": "Local Map built from existing/input proofs; overflow deletes oldest string key until <= 64. Runtime stores the returned bounded array; web reader uses same append routine and drops proofs for republished live surfaces. No mutation of input collection while iterating it.",
+      "verdict": "Bounded retained result; temporary Map/input sizes depend on supplied arrays."
+    },
+    {
+      "path": "src/main/git/remote-name-listing.ts",
+      "line": 56,
+      "sourceLine": "while (remoteNameListingCache.size > REMOTE_NAME_LISTING_CACHE_MAX_ENTRIES) {",
+      "sha256": "86180170dcf53d51c9d16cae1a0550835ebd006641423f7b0d93fba309e4221b",
+      "evidence": "TTL deletion followed by oldest-key deletion; called before lookup and after successful owned probe insertion. At most 512 repo/runtime entries, with 30-second/5-minute TTL. Coalesced probes remove only their own slot in finally; subprocess requests have a timeout. Remote-name arrays remain sized by repository input.",
+      "verdict": "Bounded cache entries, no growing loop."
+    },
+    {
+      "path": "src/shared/quick-open-listing-limits.ts",
+      "line": 102,
+      "sourceLine": "while (cursor < chunk.length) {",
+      "sha256": "b27c21a88683bca11833b773f5203587d03e986a51a6532179e64f1a3752dda6",
+      "evidence": "Every delimiter moves `cursor` +1; absent delimiter returns. Partial field copied into `GrowingByteBuffer`, rejected/cleared over 64 KiB, so tiny suffix cannot pin a large incoming buffer. `take`/`clear` replace backing storage. `filesystem-search-file-paths.ts` clears on abort/deadline and removes child/signal listeners on finish. That caller ignores `path-too-large`, a correctness follow-up rather than an unbounded accumulator.",
+      "verdict": "Bounded partial-field retention."
+    },
+    {
+      "path": "src/shared/quick-open-expansion-paths.ts",
+      "line": 16,
+      "sourceLine": "while (slashIndex !== -1) {",
+      "sha256": "23f37369d85d11df8ae5ab189ea80d7c986dc122772a0f7b7324fb635d32289a",
+      "evidence": "Slash search starts strictly after previous slash or breaks when ancestor found. Temporary sorted list and output Map are local to call; output has no more entries than input. `quick-open-readdir-walk.ts` consumes collapsed paths for the next scan frontier.",
+      "verdict": "Finite input-sized transform."
+    },
+    {
+      "path": "src/main/git/local-repo-ref-maintenance.ts",
+      "line": 43,
+      "sourceLine": "while (repoBusyProbes.size > REPO_BUSY_PROBE_MAX) {",
+      "sha256": "6e724e8a916748b259a17ab8155a75279a16b08636d2b8458bd47683b2a6330d",
+      "evidence": "Each overflow deletes oldest Map key; at most 64 closures. `disposeLocalRepoRefMaintenance` disposes maintenance timers, clears all probes, drops singleton, and awaits an active packed-refs lock rewrite rather than killing it. Runtime producer replaces a repo key's callback.",
+      "verdict": "Bounded callback registry with app-lifetime cleanup."
+    },
+    {
+      "path": "src/main/rate-limits/codex-rpc-rate-limit-probe.ts",
+      "line": 206,
+      "sourceLine": "while ((newlineIdx = buffer.indexOf('\\n')) !== -1) {",
+      "sha256": "c538a33de029dbbaeb471559ea88d82eaccd60b25915ea79acc8aee31fc912cd",
+      "evidence": "Each iteration removes through newline before parse/continue. Settling removes stdout/stderr/error/close/abort listeners and timer. Stdin error observer intentionally lasts until child close. Production initial/RPC deadlines are 30/10 seconds or WSL 40/25; termination adds bounded waits. Unterminated `buffer` has no byte cap; repeated matching initialization replies can rearm the deadline. No ordinary large/repeated-init Codex producer was established in this review.",
+      "verdict": "Finite loop; unbounded incomplete-frame bytes remain a conditional input risk."
+    },
+    {
+      "path": "src/shared/git-status-porcelain-parser.ts",
+      "line": 56,
+      "sourceLine": "while (true) {",
+      "sha256": "a333a1a62a6c4390d2c973252795383f04f6f39187fd89045676359241f8b49f",
+      "evidence": "Each parsed line advances `start`, or no newline breaks. Main and relay use `resolveGitStatusLimit` then stop child when callback reports excess. Changed/unmerged entries count; ignored paths do not, and partial line has no byte cap. `--ignored=matching` is only enabled on explicit includeIgnored paths. Ignored output is semantically requested, so adding an arbitrary cap would alter behavior.",
+      "verdict": "Finite scan; requested ignored-path collection and partial line remain input-sized."
+    },
+    {
+      "path": "src/shared/agent-hook-spool.ts",
+      "line": 72,
+      "sourceLine": "for (;;) {",
+      "sha256": "51764e1f2570241eebf7bda9381ee67f55669794ac0d4d1e5d51dbaa2cade4de",
+      "evidence": "Each newline advances `start`/`consumed`; no newline ends parsing. Drain handles at most 1,024 nonempty files sequentially and closes `r+` descriptor in finally. POSIX writer checks preexisting file size < 5 MiB before append, but reader `readFileSync`, concurrent append, final record, and unread-tail allocation do not enforce that as a hard byte cap. Directory names are enumerated before candidate slicing.",
+      "verdict": "Finite parsing; whole-file/tail memory bound not proven by writer precheck."
+    },
+    {
+      "path": "src/shared/resolved-worktree-lineage.ts",
+      "line": 59,
+      "sourceLine": "while (currentId && lineageByChildId.has(currentId) && !processed.has(currentId)) {",
+      "sha256": "a13b6960c12319dce0cc1c6181879193941c2d1f4cda6dc23145c24d754af335",
+      "evidence": "Each path records current ID; encountering same ID breaks, then path nodes enter global processed set. Every lookup moves to parent. Caller prefilters valid same-boundary/incarnation edges; Maps/Sets are local and returned projections are tied to supplied worktree collection.",
+      "verdict": "Finite cycle-aware traversal, O(input nodes) auxiliary retention."
+    }
+  ]
+}

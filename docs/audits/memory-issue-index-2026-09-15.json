@@ -39,7 +39,7 @@
       "limit": 100
     }
   ],
-  "note": "All six title searches returned fewer than 100 results. Body searches added reports recorded in the issue-correlation ledger; this index distinguishes keyword matches from memory-retention evidence.",
+  "note": "Original58 title matches plus3 later matches;60 currently open. All six latest searches fit one100-result page with hasNextPage=false. Duplicate editor reports21121/21122 remain individually accounted. Body-search reports are also recorded in the correlation ledger; keyword matches alone do not establish memory retention.",
   "issues": [
     {
       "number": 7175,
@@ -51,7 +51,7 @@
     },
     {
       "number": 7410,
-      "title": "on submidule-heavy repos, worktree create hangs ~30s \u2192 runtime_unavailable and orphans a git worktree on submodule-heavy repos under load (macOS 1.4.121)",
+      "title": "on submidule-heavy repos, worktree create hangs ~30s → runtime_unavailable and orphans a git worktree on submodule-heavy repos under load (macOS 1.4.121)",
       "url": "https://github.com/stablyai/orca/issues/7410",
       "scope": "adjacent-or-unrelated",
       "triage": "Git worktree directory orphan; disk/transaction cleanup, not reported RAM retention.",
@@ -59,7 +59,7 @@
     },
     {
       "number": 8362,
-      "title": "node-pty in the remote relay leaks PTY master fds (no FD_CLOEXEC after forkpty) \u2014 later children can inherit earlier terminals' masters",
+      "title": "node-pty in the remote relay leaks PTY master fds (no FD_CLOEXEC after forkpty) — later children can inherit earlier terminals' masters",
       "url": "https://github.com/stablyai/orca/issues/8362",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -75,7 +75,7 @@
     },
     {
       "number": 8928,
-      "title": "[Feature] Add Nushell as a first-class supported shell \u2014 500MB+ RAM and ~1s cold-start savings for the headline 5-worktree use case",
+      "title": "[Feature] Add Nushell as a first-class supported shell — 500MB+ RAM and ~1s cold-start savings for the headline 5-worktree use case",
       "url": "https://github.com/stablyai/orca/issues/8928",
       "scope": "adjacent-or-unrelated",
       "triage": "Feature request comparing normal shell working sets; no leak claim.",
@@ -83,7 +83,7 @@
     },
     {
       "number": 9138,
-      "title": "[Bug]: App updates leave previous daemon generations running forever \u2014 invisible agent sessions accumulate and exhaust memory",
+      "title": "[Bug]: App updates leave previous daemon generations running forever — invisible agent sessions accumulate and exhaust memory",
       "url": "https://github.com/stablyai/orca/issues/9138",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -131,7 +131,7 @@
     },
     {
       "number": 10358,
-      "title": "[Bug]: Windows remote env \u2014 \"Timed out waiting for terminal handle after creation\" on Ctrl+T; ConPTY console host leaks and only a full restart recovers",
+      "title": "[Bug]: Windows remote env — \"Timed out waiting for terminal handle after creation\" on Ctrl+T; ConPTY console host leaks and only a full restart recovers",
       "url": "https://github.com/stablyai/orca/issues/10358",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -139,7 +139,7 @@
     },
     {
       "number": 10493,
-      "title": "[Bug]: macOS \u2014 unbounded agent process growth panics the kernel (watchdogd timeout); RunAtLoad+KeepAlive turns it into a reboot loop",
+      "title": "[Bug]: macOS — unbounded agent process growth panics the kernel (watchdogd timeout); RunAtLoad+KeepAlive turns it into a reboot loop",
       "url": "https://github.com/stablyai/orca/issues/10493",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -155,7 +155,7 @@
     },
     {
       "number": 11218,
-      "title": "[Bug]: Sudden CPU/memory runaway with two worktrees in one workspace \u2014 Resource Manager reports 135 GB (211% of system RAM) on a 64 GB Mac, machine froze and required force power-off",
+      "title": "[Bug]: Sudden CPU/memory runaway with two worktrees in one workspace — Resource Manager reports 135 GB (211% of system RAM) on a 64 GB Mac, machine froze and required force power-off",
       "url": "https://github.com/stablyai/orca/issues/11218",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -163,7 +163,7 @@
     },
     {
       "number": 11342,
-      "title": "[Bug]: Terminal pty leaks \u2014 stale daemons survive upgrade, ptys survive tab close, `orphaned` flag unreliable",
+      "title": "[Bug]: Terminal pty leaks — stale daemons survive upgrade, ptys survive tab close, `orphaned` flag unreliable",
       "url": "https://github.com/stablyai/orca/issues/11342",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -187,7 +187,7 @@
     },
     {
       "number": 11904,
-      "title": "Tab close during a broken pane binding orphans the daemon session \u2014 kill intent is fire-and-forget",
+      "title": "Tab close during a broken pane binding orphans the daemon session — kill intent is fire-and-forget",
       "url": "https://github.com/stablyai/orca/issues/11904",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -203,7 +203,7 @@
     },
     {
       "number": 11993,
-      "title": "Orphaned adopted Run cannot be taken over \u2014 run-use and --takeover-legacy both refuse, tasks stuck in dispatched forever",
+      "title": "Orphaned adopted Run cannot be taken over — run-use and --takeover-legacy both refuse, tasks stuck in dispatched forever",
       "url": "https://github.com/stablyai/orca/issues/11993",
       "scope": "adjacent-or-unrelated",
       "triage": "Orchestration takeover/state policy; no memory-growth evidence.",
@@ -211,7 +211,7 @@
     },
     {
       "number": 12243,
-      "title": "Orphaned daemon processes accumulate silently across app restarts/crashes \u2014 no cross-launch reaping",
+      "title": "Orphaned daemon processes accumulate silently across app restarts/crashes — no cross-launch reaping",
       "url": "https://github.com/stablyai/orca/issues/12243",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -259,7 +259,7 @@
     },
     {
       "number": 13011,
-      "title": "[Bug]: `orca worktree create` can't create a branch containing `/` \u2014 sanitized worktree name leaks into the branch name",
+      "title": "[Bug]: `orca worktree create` can't create a branch containing `/` — sanitized worktree name leaks into the branch name",
       "url": "https://github.com/stablyai/orca/issues/13011",
       "scope": "adjacent-or-unrelated",
       "triage": "Branch-name sanitization defect; 'leak' describes wrong text.",
@@ -291,7 +291,7 @@
     },
     {
       "number": 14549,
-      "title": "Renderer killed with SIGKILL (exit 9) \u2014 5 occurrences in 2 days, low memory footprint",
+      "title": "Renderer killed with SIGKILL (exit 9) — 5 occurrences in 2 days, low memory footprint",
       "url": "https://github.com/stablyai/orca/issues/14549",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -331,7 +331,7 @@
     },
     {
       "number": 15909,
-      "title": "[Bug]: Live PTY orphaned with no tab row in a non-empty tabsByWorktree \u2014 blank pane, permanent terminal_pane_owner_changed",
+      "title": "[Bug]: Live PTY orphaned with no tab row in a non-empty tabsByWorktree — blank pane, permanent terminal_pane_owner_changed",
       "url": "https://github.com/stablyai/orca/issues/15909",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -371,7 +371,7 @@
     },
     {
       "number": 16905,
-      "title": "[Bug]: orca-terminal-daemon still spawns powershell.exe every ~2s on v1.4.190 (partial fix from #15209 / #15749) \u2014 memory collector + identity probes not migrated to native process-tree reader",
+      "title": "[Bug]: orca-terminal-daemon still spawns powershell.exe every ~2s on v1.4.190 (partial fix from #15209 / #15749) — memory collector + identity probes not migrated to native process-tree reader",
       "url": "https://github.com/stablyai/orca/issues/16905",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -395,7 +395,7 @@
     },
     {
       "number": 17298,
-      "title": "session-kill-failed drops the underlying error, and non-immediate kill never verifies death \u2014 leaked PTYs are indistinguishable from benign ones in daemon.log",
+      "title": "session-kill-failed drops the underlying error, and non-immediate kill never verifies death — leaked PTYs are indistinguishable from benign ones in daemon.log",
       "url": "https://github.com/stablyai/orca/issues/17298",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -411,7 +411,7 @@
     },
     {
       "number": 18789,
-      "title": "[Bug]: worker-terminal reap leak on the headless serve \u2014 unbounded process/memory growth (OOM) or cgroup PID exhaustion (EAGAIN) crashes the serve and co-tenant agents",
+      "title": "[Bug]: worker-terminal reap leak on the headless serve — unbounded process/memory growth (OOM) or cgroup PID exhaustion (EAGAIN) crashes the serve and co-tenant agents",
       "url": "https://github.com/stablyai/orca/issues/18789",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -419,7 +419,7 @@
     },
     {
       "number": 18803,
-      "title": "[Bug]: federation worker reap leaks the live PTY on a stale durable handle \u2014 the federation twin of #18737",
+      "title": "[Bug]: federation worker reap leaks the live PTY on a stale durable handle — the federation twin of #18737",
       "url": "https://github.com/stablyai/orca/issues/18803",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -475,7 +475,7 @@
     },
     {
       "number": 19831,
-      "title": "[Bug]: Unbounded memory growth on Linux \u2014 app OOM-killed after ~44h (16.2G RAM + 15.2G swap peak), second instance killed within 3 minutes",
+      "title": "[Bug]: Unbounded memory growth on Linux — app OOM-killed after ~44h (16.2G RAM + 15.2G swap peak), second instance killed within 3 minutes",
       "url": "https://github.com/stablyai/orca/issues/19831",
       "scope": "memory-or-process-resource",
       "triage": "See memory-leak-scan-2026-09-15.md issue correlation.",
@@ -504,17 +504,42 @@
       "scope": "adjacent-or-unrelated",
       "triage": "Input text crosses workspace state; not resource leakage.",
       "openTitleMatchAtRecheck": true
+    },
+    {
+      "number": 21066,
+      "title": "[Bug]: serve/headless: closed workspace tabs resurrect on workspace re-entry — orphan PTYs re-adopted, persisted tabs rehydrated without tombstone check",
+      "url": "https://github.com/stablyai/orca/issues/21066",
+      "scope": "memory-or-process-resource",
+      "triage": "Headless/mobile tab resurrection; actual host close, persistence and adoption authority under code review.",
+      "openTitleMatchAtRecheck": true
+    },
+    {
+      "number": 21121,
+      "title": "[Bug]: Editor tabs for deleted/duplicated files resurrect across restarts (duplicate OpenFile records + UI-focus owner leak)",
+      "url": "https://github.com/stablyai/orca/issues/21121",
+      "scope": "memory-or-process-resource",
+      "triage": "Duplicate reports21121/21122. Four baseline store/serializer controls reproduce retention/resurrection behaviors; existing openPRs21124/21125. See editor-duplicate-issue-review.",
+      "openTitleMatchAtRecheck": true
+    },
+    {
+      "number": 21122,
+      "title": "[Bug]: Editor tabs for deleted/duplicated files resurrect across restarts (duplicate OpenFile records + UI-focus owner leak)",
+      "url": "https://github.com/stablyai/orca/issues/21122",
+      "scope": "memory-or-process-resource",
+      "triage": "Duplicate reports21121/21122. Four baseline store/serializer controls reproduce retention/resurrection behaviors; existing openPRs21124/21125. See editor-duplicate-issue-review.",
+      "openTitleMatchAtRecheck": true
     }
   ],
-  "recheckedAtUtc": "2026-09-16T07:20:41.163620+00:00",
-  "recheckTitleMatches": 57,
+  "recheckedAtUtc": "2026-09-17T02:29:40.666932+00:00",
+  "recheckTitleMatches": 60,
   "recheckHasNextPage": false,
   "recheckQueryCounts": {
     "memory": 12,
     "oom": 5,
-    "leak": 26,
-    "orphan": 19,
+    "leak": 28,
+    "orphan": 20,
     "RAM": 6,
     "growth": 3
-  }
+  },
+  "recheckNewMatches": [21066, 21121, 21122]
 }

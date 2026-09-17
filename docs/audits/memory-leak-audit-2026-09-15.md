@@ -1,6 +1,6 @@
 # Memory leak audit (2026-09-15)
 
-The audit produced **38 separate PRs**: 34 target `main`; four are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
+The audit produced **49 separate PRs**: 44 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
 reproduced mechanisms are terminal hyperlink metadata retention, stalled daemon
 output, stalled CDP delivery, oversized strings retained by small text tails,
 unbounded transcript record assembly, invisible WebGL glyph caches, and contrast-color caches. They establish real defects in code paths that
@@ -37,9 +37,9 @@ explicit.
 | A delayed process list overwrites a newer PTY owner                | Stale positive and absent rows now fail the existing provider-generation check before changing handles or liveness. Twelve failing cases plus six controls become 18 passing tests. [#21014](https://github.com/stablyai/orca/pull/21014), [reproduction](./stale-pty-inventory/README.md).                                                                                                                                                             |
 | Backward terminal-tail scan fails to advance at the first row      | Five isolated inputs time out before and terminate after a cursor-bound fix. Normal producers filter blanks; a complete application trigger remains unproven. This allocation-free loop does not explain the OOM incidents. [#21018](https://github.com/stablyai/orca/pull/21018), [reproduction](./terminal-wait-leading-blank/README.md).                                                                                                             |
 | Aggregate stop verification overwrites an already observed exit    | Two actual daemon endpoints reproduce physical EXIT followed by unrelated inventory failure. Same-incarnation exit authority now prevents a redundant kill and second renderer exit. [#21019](https://github.com/stablyai/orca/pull/21019), [reproduction](./terminal-close-observed-exit/README.md).                                                                                                                                                   |
-| Acknowledged terminal close leaves its persisted tab | A renderer acknowledgment can precede graph removal while Store rebasing preserves the omitted row. Exact identity checks now permit the existing host retirement transaction; 28 failing cases plus three controls become 31 passes. [#21020](https://github.com/stablyai/orca/pull/21020), [reproduction](./acknowledged-tab-retirement/README.md). |
-| Claude history quota during concurrent source growth | A 305-byte checked file grows to 17 MiB before read. The existing 16 MiB quota now stops at one overflow-probe byte and preserves the inconsistent-history result. [#21021](https://github.com/stablyai/orca/pull/21021), [reproduction](./claude-history-window-budget/README.md). This reader is absent from v1.4.198. |
-| Completed nested-repository scan records | At a controlled scan pause, 94 completed directory records and their ignore-rule arrays remain reachable before; none after consumed slots are released. Same 193-directory traversal; temporary retention, no measured byte magnitude. [#21022](https://github.com/stablyai/orca/pull/21022), [reproduction](./nested-repo-processed-queue/README.md). |
+| Acknowledged terminal close leaves its persisted tab               | A renderer acknowledgment can precede graph removal while Store rebasing preserves the omitted row. Exact identity checks now permit the existing host retirement transaction; 28 failing cases plus three controls become 31 passes. [#21020](https://github.com/stablyai/orca/pull/21020), [reproduction](./acknowledged-tab-retirement/README.md).                                                                                                   |
+| Claude history quota during concurrent source growth               | A 305-byte checked file grows to 17 MiB before read. The existing 16 MiB quota now stops at one overflow-probe byte and preserves the inconsistent-history result. [#21021](https://github.com/stablyai/orca/pull/21021), [reproduction](./claude-history-window-budget/README.md). This reader is absent from v1.4.198.                                                                                                                                |
+| Completed nested-repository scan records                           | At a controlled scan pause, 94 completed directory records and their ignore-rule arrays remain reachable before; none after consumed slots are released. Same 193-directory traversal; temporary retention, no measured byte magnitude. [#21022](https://github.com/stablyai/orca/pull/21022), [reproduction](./nested-repo-processed-queue/README.md).                                                                                                 |
 | Stats persistence stalls                                           | The live event array exceeded its serialize-time cap. It now retains the newest 10,000 events on append. [#20941](https://github.com/stablyai/orca/pull/20941).                                                                                                                                                                                                                                                                                         |
 | Process-table ancestry cycle                                       | A two-row cycle exhausts an isolated 32 MiB heap in about 0.15 seconds. Existing [#20715](https://github.com/stablyai/orca/pull/20715) covers the shared walker; [#20946](https://github.com/stablyai/orca/pull/20946) fixes the independent relay walker.                                                                                                                                                                                              |
 | Smaller lifecycle leaks                                            | Eight PRs cover editor/diff/auth/prompt timers, renderer HMR listeners, main IPC relay/preload cleanup, watchdog listeners, and parked scroll-intent records. These are not gigabyte explanations. [Full PR list](./memory-leak-scan-2026-09-15.md#pull-requests).                                                                                                                                                                                      |
@@ -60,9 +60,19 @@ found a race that could kill live work; it is excluded from the fix count. The l
 The [issue ledger](./memory-leak-scan-2026-09-15.md#github-memory-issue-correlation)
 accounts for the memory/process-resource title matches and additional reports
 from body searches. The [search index](./memory-issue-index-2026-09-15.json)
-preserves 58 original title matches with explicit unrelated exclusions; a
-batched recheck found 57 still open, no new matches, and #9141 closed. All six
-searches returned a complete first page below the 100-result cap.
+preserves 58 original title matches plus three later reports, with explicit
+unrelated exclusions. The latest batched recheck found 60 open matches and #9141
+still absent. All six searches returned a complete first page below the 100-result
+cap. The new editor reports #21121/#21122 have identical bodies; four baseline
+store controls and existing PRs #21124/#21125 are recorded in the
+[editor review](./editor-duplicate-issue-review/README.md). For headless/mobile
+[#21066](https://github.com/stablyai/orca/issues/21066), an initially unbound tab's
+late first spawn can recreate membership after durable close. Existing bound
+reattach is protected; ordinary close/re-entry does not reproduce resurrection.
+The [36-case actual-caller diagnostic](./headless-pending-tab-resurrection/README.md)
+covers current/main/reported-release source selections with other dependencies
+current. The report does not establish the required pending-activation trigger;
+safe cleanup must also protect a newer live owner.
 
 The ledger separates reproduced retaining paths, ownership/cleanup gaps,
 intentional resource policies, historical fixes, and incidents without enough
@@ -113,21 +123,21 @@ because the retaining path crosses that boundary.
 
 | Category       | Inventoried files |
 | -------------- | ----------------: |
-| Source         |            25,579 |
-| Config         |               825 |
-| Documentation  |               281 |
-| Asset/other    |               214 |
-| **Total rows** |        **26,899** |
+| Source         |            25,659 |
+| Config         |               893 |
+| Documentation  |               300 |
+| Asset/other    |               226 |
+| **Total rows** |        **27,078** |
 
 The [file inventory](./memory-leak-file-inventory-2026-09-15.tsv) records size and
 SHA-256 for every tracked path except the inventory itself. That self-exclusion
-avoids a circular hash; symlinks are hashed as link text. Thus 26,899 rows plus
-the inventory account for 26,900 tracked paths. Hashes describe the final
+avoids a circular hash; symlinks are hashed as link text. Thus 27,078 rows plus
+the inventory account for 27,079 tracked paths. Hashes describe the final
 worktree contents, including staged evidence files, rather than only HEAD.
 
 The [mechanical search results](./memory-pattern-scan-2026-09-15.json) record
-25,579 source files searched and per-file hits for listener, timer,
-subscription, disposal, Map/Set, and buffer-concatenation signals. Zero-hit source
+25,659 source files searched, including 7,877 matching files, and per-file hits for
+listener, timer, subscription, disposal, Map/Set, buffer-concatenation and shared-promise signals. Zero-hit source
 files remain represented in the inventory. These searches include comments and
 tests; unequal add/remove counts do not establish a leak. Candidate review traced
 owners, cleanup, caps, and production callers, with tests or isolated experiments
@@ -161,4 +171,32 @@ available, and no application windows were opened.
 
 ### Remote CI follow-up
 
-Local verification is separate from GitHub CI. The [CI ledger](./memory-pr-validation-2026-09-16.json) records reviewed failures, corrected test/proof issues, branch-specific mobile payload hashes, and current head statuses. Several merge-tree runs fail on an unused type import introduced by main #20898; the audit patches do not touch that file. Two runs also failed in untouched watcher/React teardown fixtures. No all-green CI claim is made.
+Local verification is separate from GitHub CI. The [CI ledger](./memory-pr-validation-2026-09-16.json) records reviewed failures, corrected test/proof issues, branch-specific mobile payload hashes, and timestamped head statuses. Earlier merge-tree runs failed on an unused type import introduced by main #20898; two other failures involved untouched watcher/React teardown fixtures. Later CI found introduced gaps: a transcript-close test confused a reused descriptor number with its original handle, xterm tests expected obsolete negative properties and a prior mobile payload hash, and the new empty-tab bridge assumed a renderer window in store-only tests. These have targeted corrections and passing local regressions. No all-green CI claim is made.
+
+### Transcript and worker delivery follow-up
+
+[#21024](https://github.com/stablyai/orca/pull/21024) streams the full Claude ancestry proof from a finite file prefix, reducing sampled live heap for a 32 MiB transcript from 34.6 MB to 1.2 MB. Complete graph checks, growth classification and file closure remain covered by real-file and actual-verifier controls on Node and Electron. This reduces transient allocation; the largest record and identity graph remain input-sized.
+
+The [speech-worker proof](./speech-worker-audio-queue/README.md) confirms 16 MiB can queue in real worker message delivery behind an injected native-decoder stall in the baseline. [#21129](https://github.com/stablyai/orca/pull/21129) adds an aggregate 8 MiB/1,024-frame budget across current and predecessor workers, with credit released after consumption or actual termination. Overload explicitly stops dictation; existing error handling may discard pending transcript. No natural stall or affected-host dictation was established, and ordinary capture rates do not explain the rapid reported #19768 allocation estimate.
+
+## Reflow and direct empty-tab follow-up
+
+[#21112](https://github.com/stablyai/orca/pull/21112) stops xterm from writing before the retained circular-buffer rows during narrowing. The 1,000-row proof changes 999 retained negative properties to zero and corrects the retained terminal text. Retention is bounded per buffer; temporary reflow amplification remains. The proof covers desktop/headless CJS/ESM, mobile’s generated engine, parity, cursor/markers and lifetime. This stacks on #20992.
+
+[#21113](https://github.com/stablyai/orca/pull/21113) persists an explicit close of a local, never-bound tab after host membership authority is active. The actual renderer/preload/IPC/Store/runtime/disk proof changes two restart failures to ten passing controls. Current runtime, pending creation and newer ownership remain protected. This explains a concrete #17344 resurrection path, not gigabyte memory growth.
+
+## Bounded reads and consumed RPC entries
+
+[#21128](https://github.com/stablyai/orca/pull/21128) enforces the existing 64 MiB crash-dump quota during reading. A real file growing to 65 MiB reaches the parser before; the fix skips it and processes the next valid dump. The eight acquisition controls cover exact quota, same-open growth, descriptor release and reservation reuse. This bounds a crash-time read, not aggregate process RSS.
+
+[#21131](https://github.com/stablyai/orca/pull/21131) releases consumed RPC lane entries immediately. Eight completed calls retaining 1 MiB inputs change from eight reachable payloads to zero on both tested runtimes, while an unrelated call keeps the selector active. Active ownership, cancellation, lane order and admission remain covered by 14 tests and portable controls. Electron also retains response payloads through saved native resolve functions; Node 26 does not. Existing compaction bounds the record count. These remote/paired callers do not explain local-only #19831 by reachability.
+
+[#21135](https://github.com/stablyai/orca/pull/21135) detaches aborted auth-poll waits from their shared filesystem operation. Electron retains 128 expired Error objects before and one after; the remaining reason belongs to the existing cancellation controller. Twenty-four raw-result/abort orderings match, with 50 auth/registry tests and 39 existing consumer tests passing. Native filesystem stalling is injected, ordinary Error bytes are unmeasured, and no incident allocation rate is attributed to it. [Proof and limits](./auth-filesystem-wait-retention/README.md).
+
+[#21136](https://github.com/stablyai/orca/pull/21136) retires successful GitLab cache entries from obsolete SSH generations and rejects stale asynchronous publication after reconnect, reset or probe replacement. The proof changes 128 retained result arrays to one current array on Node and Electron, with 32 tests and host-isolation controls. This is small metadata; distinct connection identities can still retain an entry each. The SSH-generation trigger cannot explain the all-local #19831 session. [Artifacts](./gitlab-known-host-retirement/README.md).
+
+[#21138](https://github.com/stablyai/orca/pull/21138) includes claimed Codex prompts in exact turn-completion cleanup after lookup eviction or replacement. Actual cancellation and delayed completion retain 32 small prompts before and zero after in Node and Electron, preserving active replacement claims and refused lifecycle events. The 71-test run, full desktop typecheck, independent review and post-commit proof pass. The injected ordering establishes a lifetime defect without measuring incident-scale growth. [Artifacts](./codex-prompt-claim-retention/README.md).
+
+[#21139](https://github.com/stablyai/orca/pull/21139) releases completed terminal spawn inputs captured by session-exit and foreground-confirmation callbacks. Three live sessions retain three sets of original options/environment/history before and zero after; the seeded terminal content remains readable. Actual admission narrows signal cleanup to stream detach. The 67-test run, desktop typechecks, independent admission review and post-commit proof pass. This path can run locally, but restore traffic and incident-scale retained bytes remain unproven. Native merged-environment capture is separate. [Artifacts](./terminal-completed-spawn-inputs/README.md).
+
+[#21140](https://github.com/stablyai/orca/pull/21140) removes that separate native-wrapper capture by copying its immutable exit-status boolean before registering the callback. Actual wrapper proofs release the merged environment and arguments while the native event owner stays live; PATH, exit interpretation, foreground lookup and disposal remain covered. The 114-test run, Node typecheck, independent review and post-commit proof pass. Environment strings may have other owners, so object collection does not imply equal RSS reduction. [Artifacts](./native-pty-spawn-env-retention/README.md).

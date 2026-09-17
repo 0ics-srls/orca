@@ -1,0 +1,33 @@
+{
+  "issues": [21121, 21122],
+  "scope": "Seeded duplicate records and actual store/serializer calls; four observed baseline behaviors, not a full incident recreation or fixed-source validation.",
+  "passed": 4,
+  "failed": 0,
+  "cases": [
+    "serializes two indistinguishable clean editor rows without their live IDs",
+    "leaves a same-document sibling record and tab after closing one identity",
+    "accepts active-file identity even when no OpenFile backs it",
+    "stamps an explicitly local file tab from active workspace focus"
+  ],
+  "sourceHashes": {
+    "src/renderer/src/lib/workspace-session.ts": "a61b3b23173331d289e51710ea857e8a0cb2e42321d2af09728e7d8294b4b7e5",
+    "src/renderer/src/lib/unified-tab-host-ownership.ts": "bf66771c981ab76df80020ad913a1c94d1b32c265052b3abbe48f2d240f0aef6",
+    "src/renderer/src/store/slices/editor/actions/open-file-apply.ts": "970286c06a3e3c47db407a234c542cea61ef468db659381ba28254859caad0ad",
+    "src/renderer/src/store/slices/editor/actions/close-file-action.ts": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+    "src/renderer/src/store/slices/editor/actions/open-file-mutations.ts": "d531f26f1997b9a5b0965fa5be805bcb79712594092d4d97fc2f5e55bb2b2a3e",
+    "src/renderer/src/store/slices/editor/actions/hydrate-editor-session.ts": "27eed43b546ba809ed773c631112373a013e43e7b527462c4d52efdbc8fa1149",
+    "src/renderer/src/store/slices/tabs/tabs-create-actions.ts": "0fc89505cc586caeb78d3763d63657bf7a7a7b0810e6e9f59bb8e7fc85f924ac",
+    "src/renderer/src/store/slices/tabs/tabs-reconciliation.ts": "7f35be86b8c810a4fae8beac9f46e9262a569a85d9c079d6680598c0e3e53b70",
+    "src/renderer/src/store/slices/tabs/tabs-surface.ts": "027ba558306a2c8d3e643a536e97b2861826fed2f898a7c40c07a97246bc40eb"
+  },
+  "existingPullRequests": {
+    "21124": {
+      "head": "0c8e3c34d33689773918177058eec7c2b0a4608c",
+      "validation": "Author reported; not independently rerun by this audit"
+    },
+    "21125": {
+      "head": "4d1b135cc5c374d47abfc13e288d2881db0606f5",
+      "validation": "Author reported; not independently rerun by this audit"
+    }
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "version": "1.12.37",
+  "scope": "Official tag source referenced by scripts/node-addon-api/src symlinks; not a binary-level model-allocation measurement",
+  "sources": {
+    "non-streaming-asr.cc": {
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.12.37/harmony-os/SherpaOnnxHar/sherpa_onnx/src/main/cpp/non-streaming-asr.cc",
+      "sha256": "b8bc268c7e2473095e5ee38f1d393408f3f2652ce140e5555de3a6db036c2954",
+      "bytes": 30724
+    },
+    "streaming-asr.cc": {
+      "url": "https://raw.githubusercontent.com/k2-fsa/sherpa-onnx/v1.12.37/harmony-os/SherpaOnnxHar/sherpa_onnx/src/main/cpp/streaming-asr.cc",
+      "sha256": "a5130d234f55e5e7bfb50158abcc9c2b6773949f0f089c7f49ea24b146b7b342",
+      "bytes": 22123
+    }
+  },
+  "observation": "Online/offline recognizer and stream wrappers register Napi::External finalizers that invoke matching SherpaOnnxDestroy functions. No external-memory accounting call appears in these two ASR wrapper files. That bounded search neither measures GC timing nor proves a missing finalizer/native leak."
+}
