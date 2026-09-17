@@ -24,15 +24,17 @@ function serviceWithTeardown(options: {
   release?: () => void
   refreshDemand?: () => void
 }): (operation: () => Promise<unknown>) => Promise<unknown> {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: builds the instance without running the constructor, which would open a real broker.
   const service = Object.create(DesktopRelayService.prototype) as DesktopRelayService
   Object.assign(service, {
-    hostMobilePairingConnectionMode: () => 'automatic' as MobilePairingConnectionMode,
+    hostMobilePairingConnectionMode: (): MobilePairingConnectionMode => 'automatic',
     runtimeRpc: {
       getDeviceRegistry: () => ({ getMobilePairingConnectionMode: () => 'automatic' })
     },
     demandLedger: { acquireTransient: () => options.release ?? ((): void => {}) },
     refreshDemand: options.refreshDemand ?? ((): void => {})
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: withTransientDemand is private; the fixture calls it directly with only the fields it touches.
   const host = service as unknown as TransientDemandHost
   return (operation) => host.withTransientDemand.call(service, 'pairing', 'device-1', operation)
 }
@@ -86,7 +88,8 @@ describe('DesktopRelayService transient-demand teardown', () => {
   })
 
   it('carries the original failure as the cause of a mid-operation policy flip', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: builds the instance without running the constructor, which would open a real broker.
     const service = Object.create(DesktopRelayService.prototype) as DesktopRelayService
     Object.assign(service, {
       hostMobilePairingConnectionMode: () => mode.current,
@@ -96,6 +99,7 @@ describe('DesktopRelayService transient-demand teardown', () => {
       demandLedger: { acquireTransient: () => (): void => {} },
       refreshDemand: () => {}
     })
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: withTransientDemand is private; the fixture calls it directly with only the fields it touches.
     const host = service as unknown as TransientDemandHost
 
     const rejection = await host.withTransientDemand
@@ -105,7 +109,9 @@ describe('DesktopRelayService transient-demand teardown', () => {
       })
       .catch((error: unknown) => error)
 
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the rejection is this suite's own thrown Error; only message and cause are read.
     expect((rejection as Error).message).toBe('relay_disabled_for_device')
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the rejection is this suite's own thrown Error; only message and cause are read.
     expect(((rejection as Error).cause as Error | undefined)?.message).toBe(
       'relay_token_exchange_failed_503'
     )
