@@ -162,9 +162,8 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
   protected async startWebSocketTransport(options: {
     host: string
     port: number
-    preferPinnedPort: boolean
+    preferPinnedPort?: boolean
     fallbackPort?: number
-    // Why: a rebind must keep the port it is replacing; only the first bind of a session may relocate (STA-7721).
     allowOsAssignedPortFallback?: boolean
   }): Promise<{ transport: WebSocketTransport; endpoint: string }> {
     const deviceRegistry = this.deviceRegistry
@@ -178,9 +177,7 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
       staticRoot: this.webClientRoot,
       ...(options.fallbackPort !== undefined ? { fallbackPort: options.fallbackPort } : {}),
       ...(options.preferPinnedPort ? { preferPinnedPort: true } : {}),
-      ...(options.allowOsAssignedPortFallback === false
-        ? { allowOsAssignedPortFallback: false }
-        : {})
+      allowOsAssignedPortFallback: options.allowOsAssignedPortFallback !== false
     })
     const mobileSocketWiring = this.ensureMobileSocketWiring(deviceRegistry, e2eeKeypair)
     this.detachWebSocketWiring = mobileSocketWiring.attachTransport(wsTransport)
@@ -199,6 +196,17 @@ export class RuntimeRpcLifecycle extends RuntimeRpcWebSocketDispatch {
       transport: wsTransport,
       endpoint: formatWsEndpoint(options.host, wsTransport.resolvedPort)
     }
+  }
+
+  // Why: STA-7721 — a rebind replaces a listener whose port is already in metadata and in every offer minted
+  // so far, so it must come back on THAT port or fail. Only the first bind of a session may take an
+  // OS-assigned port, when nothing has been published yet. Both pairing rebinds route through here so the
+  // rule is stated once rather than restated (and forgotten) per call site.
+  protected async rebindWebSocketTransport(
+    host: string,
+    port: number
+  ): Promise<{ transport: WebSocketTransport; endpoint: string }> {
+    return this.startWebSocketTransport({ host, port, allowOsAssignedPortFallback: false })
   }
 
   // Why: one MobileSocketWiring per server session. Direct WS and cloud relay both attach to it, and
