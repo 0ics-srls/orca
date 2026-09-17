@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeHostStatusSnapshot } from '../../../../shared/runtime-host-status'
 import { TERMINAL_PAIRED_PARKING_RUNTIME_CAPABILITY } from '../../../../shared/protocol-version'
+import { runtimeHostConnectionStateForEntry } from '@/runtime/runtime-host-connection-state'
 import {
   resetPairedRuntimeParkingEnvironmentIdsCacheForTest,
   selectPairedRuntimeParkingEnvironmentIds
@@ -50,6 +51,20 @@ describe('paired parking capability through an unverifiable probe', () => {
         new Map([[ENVIRONMENT_ID, { status: null, snapshot: verifiedSnapshot() }]])
       )
     ).toEqual(new Set([ENVIRONMENT_ID]))
+  })
+
+  // The other half of the gate: it must fire on the host's own terminal verdict and on nothing
+  // else. Firing on a flap strands every hidden tab mounted, which is the churn this PR removes.
+  it.each([
+    ['checking', { verification: 'checking' } as const, 'checking'],
+    ['reconnecting', { transport: 'disconnected' } as const, 'reconnecting'],
+    ['runtime-unavailable', { transport: 'ready' } as const, 'runtime-unavailable']
+  ])('keeps a %s host capable', (_label, patch, expectedState) => {
+    const entry = { status: null, snapshot: verifiedSnapshot(patch) }
+    expect(runtimeHostConnectionStateForEntry(entry)).toBe(expectedState)
+    expect(selectPairedRuntimeParkingEnvironmentIds(new Map([[ENVIRONMENT_ID, entry]]))).toEqual(
+      new Set([ENVIRONMENT_ID])
+    )
   })
 
   it('does not invent a capability the host never advertised', () => {
