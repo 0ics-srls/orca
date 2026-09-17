@@ -47,6 +47,7 @@ type LiveSession = { journal: AgentSessionJournal; hasProviderChild: boolean; fe
 
 /** The host capabilities this needs, named so the collaborator cannot quietly grow more. */
 export type StructuredAgentSessionRestartResumeSurfaces = {
+  publish: (sessionId: string, journal: AgentSessionJournal) => void
   revealSession: (sessionId: string) => Promise<{ readable: boolean }>
   /** The resume-capable hold; see the runner for why a hold and not a send. */
   hold: (sessionId: string, holderId: string) => Promise<void>
@@ -113,8 +114,8 @@ export function createStructuredAgentSessionRestartResume(
     claiming ??= (async () => {
       try {
         claimed = (await deps.recoveryCapsule?.take(surfaces.now())) ?? []
-      } catch (error) {
-        console.warn('[structured-agent-session] taking recovery capsule failed', error)
+      } catch {
+        console.warn('[structured-agent-session] taking recovery capsule failed')
         claimed = []
       }
     })()
@@ -274,6 +275,7 @@ export function createStructuredAgentSessionRestartResume(
                 { kind: 'status', text },
                 { fence: session.fence }
               )
+              surfaces.publish(sessionId, session.journal)
             }
           },
           marker.sessionId,

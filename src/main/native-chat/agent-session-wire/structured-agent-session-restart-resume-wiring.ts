@@ -44,7 +44,7 @@ export function structuredAgentSessionRestartResumeSurfaces(
   /** The host's error sink. Absent on a host built without one, which only means a failed note goes
    *  unreported — never that the continuation fails. */
   reportError?: (input: { sessionId: string; error: Error }) => void
-): StructuredAgentSessionRestartResumeSurfaces {
+): Omit<StructuredAgentSessionRestartResumeSurfaces, 'publish'> {
   return {
     revealSession: host.revealSession,
     hold: host.hold,

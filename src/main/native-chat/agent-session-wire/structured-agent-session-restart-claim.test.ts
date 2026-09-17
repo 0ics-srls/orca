@@ -95,6 +95,7 @@ function surface(input: {
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the live-session map is read for journal, hasProviderChild and fence only.
       sessions as never,
       {
+        publish: () => {},
         revealSession: async () => ({ readable: true }),
         release: () => {},
         hold: async (sessionId: string) => {
@@ -152,6 +153,27 @@ function surface(input: {
 }
 
 describe('claiming the recovery capsule', () => {
+  it('reports a failed take without logging private capsule or filesystem details', async () => {
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    try {
+      const { restartResume, recoveryCapsule, held, sent } = surface({})
+      recoveryCapsule.take.mockRejectedValueOnce(new Error('private capsule payload and path'))
+      expect(await restartResume.list()).toEqual([])
+      expect(await restartResume.continueAfterRestart([SESSION], 'modal')).toEqual({
+        resumed: [],
+        continued: []
+      })
+      expect(held).toEqual([])
+      expect(sent).toEqual([])
+      expect(warning).toHaveBeenCalledWith(
+        '[structured-agent-session] taking recovery capsule failed'
+      )
+      expect(warning.mock.calls.flat().map(String).join(' ')).not.toContain('private capsule')
+    } finally {
+      warning.mockRestore()
+    }
+  })
+
   it('shares one take across concurrent initial readers', async () => {
     const { restartResume, recoveryCapsule } = surface({})
     const results = await Promise.all([restartResume.list(), restartResume.list()])

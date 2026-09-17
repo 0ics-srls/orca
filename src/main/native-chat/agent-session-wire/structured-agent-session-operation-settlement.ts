@@ -51,6 +51,10 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
     )
     return outcome
   } catch (error) {
+    // The pre-run uncertainty is already durable; refusing before dispatch adds no new uncertainty.
+    if (input.plan.markUnknownBeforeRun && error instanceof AgentSessionPreDispatchError) {
+      throw error
+    }
     try {
       await settle({ status: 'unknown' })
     } catch {

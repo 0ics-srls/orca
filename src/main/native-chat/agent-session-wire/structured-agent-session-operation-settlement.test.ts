@@ -47,6 +47,50 @@ afterEach(() => {
   vi.restoreAllMocks()
 })
 
+it('returns a pre-dispatch refusal without waiting on redundant uncertainty persistence', async () => {
+  const ctx = await context()
+  const { store } = hostTestState()
+  const stalled = Promise.withResolvers<void>()
+  const refusing = Promise.withResolvers<void>()
+  const writes = vi
+    .spyOn(store, 'recordOperationOutcome')
+    .mockResolvedValueOnce()
+    .mockImplementation(() => stalled.promise)
+  const refusal = new AgentSessionPreDispatchError('agent_session_restart_work_superseded')
+  let returned = false
+  vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+  const result = runSettledAgentSessionMutation({
+    store,
+    operationCallerKey: 'test',
+    envelope: envelope('agentSession.send', {}),
+    context: ctx,
+    plan: {
+      method: 'agentSession.send',
+      fields: {},
+      markUnknownBeforeRun: true,
+      run: async () => {
+        refusing.resolve()
+        throw refusal
+      },
+      replay: () => null
+    }
+  }).catch((error: unknown) => {
+    returned = true
+    return error
+  })
+  try {
+    await refusing.promise
+    await vi.advanceTimersByTimeAsync(AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS)
+    expect(returned).toBe(true)
+    expect(writes).toHaveBeenCalledOnce()
+    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
+    expect(vi.getTimerCount()).toBe(0)
+  } finally {
+    stalled.resolve()
+    expect(await result).toBe(refusal)
+  }
+})
+
 it.each([1, 2])(
   'preserves a proven refusal through %s failed bookkeeping writes',
   async (failures) => {

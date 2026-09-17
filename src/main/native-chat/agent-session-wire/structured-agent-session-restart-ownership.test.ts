@@ -11,6 +11,7 @@ import { StructuredAgentSessionHost } from './structured-agent-session-host'
 import { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { pendingApproval } from './structured-agent-session-restart-resume-test-harness'
 import { restartContinuationEnvelope } from './structured-agent-session-restart-continuation'
+import { AGENT_SESSION_RESTART_CONTINUATION_NOTE } from '../../../shared/agent-session-restart-continuation'
 import { STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER } from './structured-agent-session-restart-resume-wiring'
 import {
   adapter,
@@ -91,6 +92,21 @@ async function interruptedRestart(
 }
 
 afterEach(() => vi.useRealTimers())
+
+it('publishes continuation attribution to the subscribed chat without another provider event', async () => {
+  const { host } = await interruptedRestart()
+  await host.restartResume.list()
+  const emit = vi.fn()
+  const unsubscribe = host.subscribe({ id: 'pane', sessionId: SESSION, emit })
+  try {
+    expect(
+      (await host.restartResume.continueAfterRestart([SESSION], 'modal')).continued
+    ).toMatchObject([{ outcome: 'continued' }])
+    expect(JSON.stringify(emit.mock.calls)).toContain(AGENT_SESSION_RESTART_CONTINUATION_NOTE)
+  } finally {
+    unsubscribe()
+  }
+})
 
 it.each(['turn', 'submission'] as const)(
   'does not continue a marked %s after the user submits new work without a provider echo',
@@ -287,9 +303,8 @@ it.each([
     })
     expect(dispatch).not.toHaveBeenCalled()
     if (settlementFails) {
-      expect(warning).toHaveBeenCalledWith(
-        '[structured-agent-session] operation uncertainty persistence failed'
-      )
+      expect(store.recordOperationOutcome).toHaveBeenCalledOnce()
+      expect(warning).not.toHaveBeenCalled()
     }
     warning.mockRestore()
   }
