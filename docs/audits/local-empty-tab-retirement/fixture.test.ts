@@ -11,12 +11,15 @@ import {
   reservePaneSpawn
 } from '../../../src/main/ipc/pty/pane/spawn-reservation'
 
-const wire = vi.hoisted(() => ({
-  handlers: new Map<string, (event: object, args: unknown) => unknown>(),
-  requests: [] as Promise<unknown>[],
-  gate: Promise.resolve(),
-  unavailable: false
-}))
+const wire = vi.hoisted(() => {
+  const requests: Promise<unknown>[] = []
+  return {
+    handlers: new Map<string, (event: object, args: unknown) => unknown>(),
+    requests,
+    gate: Promise.resolve(),
+    unavailable: false
+  }
+})
 vi.mock('electron', () => ({
   ipcMain: {
     handle: (name: string, handler: (event: object, args: unknown) => unknown) =>
