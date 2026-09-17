@@ -339,7 +339,6 @@ function existingWorktreeId(target: AgentLaunchTarget): string {
 }
 
 /**
-<<<<<<< HEAD
  * Read from the id rather than carried alongside it, so the kind cannot disagree with the workspace
  * it describes. `worktree` here is never a caller's selector — the method resolved it to an id
  * before building the intent — and a create always produces a git worktree.
@@ -348,11 +347,7 @@ function launchWorkspaceKind(target: AgentLaunchTarget): WorkspaceLaunchKind {
   return target.kind === 'existing' ? workspaceKindForWorktreeId(target.worktree) : 'git-worktree'
 }
 
-/** Prompt delivery is the caller's, not the executor's: a PTY paste is observed by whoever owns
- *  the pane, and a structured first turn is sent through the session. The executor reports the
- *  requested delivery back as not delivered so a caller cannot mistake silence for delivery. */
-function promptReceipt(intent: AgentLaunchIntent): Pick<AgentLaunchResult, 'prompt'> {
-
+/**
  * The one place a disposal is constructed, so the three arms cannot drift apart.
  *
  * `journaled` is reachable only from a committed message id, and that id exists only because the
@@ -365,7 +360,6 @@ function promptReceipt(
   intent: AgentLaunchIntent,
   messageId: string | null
 ): Pick<AgentLaunchResult, 'prompt'> {
-
   if (!intent.prompt) {
     return {}
   }

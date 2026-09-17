@@ -28,10 +28,9 @@ import type { StructuredAgentSessionCaller } from '../../../native-chat/agent-se
 /**
  * The committed transcript row's id, or `null` when nothing was committed.
  *
- * `ok` is the host's own proof of the commit: `performSend` refuses when the append fails and
- * never refuses after it, so a truthy result cannot name a row that does not exist. Every other
- * answer — a refusal, a missing host, a throw — is `null`, and the launch reports the text as still
- * the caller's. A resend costs a duplicate message; over-claiming loses the text with no trace.
+ * `ok` is the host's own proof of the commit. A send can still throw after appending (for example
+ * when operation settlement fails), so throws are reconciled against the host's journal before we
+ * under-claim. A resend after that boundary would duplicate the model turn.
  *
  * Deliberately does NOT wait for the dispatch to settle. The row is committed either way, and
  * whether the provider took the turn is the submission's own state to carry.
@@ -46,8 +45,9 @@ export async function commitStructuredAgentSessionLaunchPrompt(args: {
   if (!args.host || args.text.trim().length === 0) {
     return null
   }
+  const clientMessageId = createStructuredAgentSessionOperationId(randomUUID)
   const entry = createStructuredAgentSessionOutboxEntry({
-    clientMessageId: createStructuredAgentSessionOperationId(randomUUID),
+    clientMessageId,
     sessionId: args.sessionId,
     text: args.text,
     attachments: [],
@@ -60,7 +60,18 @@ export async function commitStructuredAgentSessionLaunchPrompt(args: {
     )
     return result.ok ? result.value.clientMessageId : null
   } catch (error) {
-    // A launch whose agent is already running must not fail over its prompt; the caller can resend.
+    // Settlement can fail after the journal append. Re-read the authoritative row before asking
+    // the caller to resend, otherwise a retry creates a duplicate turn.
+    try {
+      const committed = args.host
+        .journalSnapshot(args.sessionId)
+        .submissions.find((submission) => submission.clientMessageId === clientMessageId)
+      if (committed) {
+        return clientMessageId
+      }
+    } catch {
+      // The host may have gone away before the snapshot; the caller retains the text in that case.
+    }
     console.warn('[agent-launch] the session was created, its launch prompt was not sent', error)
     return null
   }

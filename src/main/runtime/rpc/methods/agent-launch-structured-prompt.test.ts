@@ -14,9 +14,12 @@ import type { StructuredAgentSessionHost } from '../../../native-chat/agent-sess
 
 const CALLER = { callerKey: 'trusted-local:runtime' }
 
-function hostWith(send: ReturnType<typeof vi.fn>): StructuredAgentSessionHost {
+function hostWith(
+  send: ReturnType<typeof vi.fn>,
+  journalSnapshot: ReturnType<typeof vi.fn> = vi.fn(() => ({ submissions: [] }))
+): StructuredAgentSessionHost {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the stub implements the only method this module reaches; any other would throw rather than read a wrong value.
-  return { send } as unknown as StructuredAgentSessionHost
+  return { send, journalSnapshot } as unknown as StructuredAgentSessionHost
 }
 
 function commit(host: StructuredAgentSessionHost | null, text = 'do the thing') {
@@ -61,7 +64,22 @@ describe('committing a launch prompt', () => {
     await expect(commit(hostWith(send))).resolves.toBeNull()
   })
 
-  it('claims nothing, and does not fail the launch, when the send throws', async () => {
+  it('recovers a committed row when settlement throws after append', async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    let clientMessageId = ''
+    const send = vi.fn(
+      async (_caller: unknown, params: { envelope: { clientOperationId: string } }) => {
+        clientMessageId = params.envelope.clientOperationId
+        throw new Error('host gone')
+      }
+    )
+    const journalSnapshot = vi.fn((_sessionId) => ({
+      submissions: [{ clientMessageId }]
+    }))
+    await expect(commit(hostWith(send, journalSnapshot))).resolves.toEqual(clientMessageId)
+  })
+
+  it('claims nothing, and does not fail the launch, when no row was committed', async () => {
     vi.spyOn(console, 'warn').mockImplementation(() => {})
     const send = vi.fn(async () => {
       throw new Error('host gone')
