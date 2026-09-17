@@ -36,7 +36,7 @@ import {
 import { ORCA_HERMES_STARTUP_QUERY_ENV } from '../../../shared/hermes-startup-query'
 import {
   ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV,
-  scrubCodexDefaultHomeMarkerForWindowsShell
+  scrubCodexDefaultHomeMarkerForLaunch
 } from '../../pty/codex-default-home-shell-startup'
 import { WINDOWS_GIT_BASH_SHELL } from '../../../shared/windows-terminal-shell'
 import { getShellLaunchConfig, resolvePtyShellPath } from '../shell-ready'
@@ -72,8 +72,6 @@ export function createPtyShellLaunchPlan(
   let validationCwd = spawnCwd
 
   if (process.platform === 'win32') {
-    // Why: execution-host reconciliation may preserve a daemon-only custom home
-    // by dropping the reset, but that must not also disable shell integration.
     const useGitBashShellReadyWrapper =
       opts.env?.[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV] !== undefined
     const normalizedShellFamily = pathWin32.basename(shellPath).toLowerCase()
@@ -117,8 +115,11 @@ export function createPtyShellLaunchPlan(
       wslContext: resolvedWslContext,
       startupCommand: opts.command
     })
+    let supportsCodexDefaultHomeAfterProfile = false
     const primaryAttempt = windowsFallbackAttempts[0]
     if (primaryAttempt) {
+      supportsCodexDefaultHomeAfterProfile =
+        primaryAttempt.supportsCodexDefaultHomeAfterProfile === true
       shellPath = primaryAttempt.shellPath
       shellArgs = primaryAttempt.shellArgs
       spawnCwd = primaryAttempt.effectiveCwd
@@ -134,6 +135,7 @@ export function createPtyShellLaunchPlan(
         env.ORCA_CODEX_LAUNCH_PREFLIGHT,
         useGitBashShellReadyWrapper
       )
+      supportsCodexDefaultHomeAfterProfile = resolved.supportsCodexDefaultHomeAfterProfile === true
       shellArgs = resolved.shellArgs
       spawnCwd = resolved.effectiveCwd
       validationCwd = resolved.validationCwd
@@ -163,6 +165,8 @@ export function createPtyShellLaunchPlan(
               env.ORCA_CODEX_LAUNCH_PREFLIGHT,
               useGitBashShellReadyWrapper
             )
+            supportsCodexDefaultHomeAfterProfile =
+              resolved.supportsCodexDefaultHomeAfterProfile === true
             shellArgs = resolved.shellArgs
             spawnCwd = resolved.effectiveCwd
             validationCwd = resolved.validationCwd
@@ -189,7 +193,7 @@ export function createPtyShellLaunchPlan(
     if (pathWin32.basename(shellPath).toLowerCase() === 'wsl.exe') {
       addOrcaWslInteropEnv(env)
     }
-    scrubCodexDefaultHomeMarkerForWindowsShell(env, shellPath)
+    scrubCodexDefaultHomeMarkerForLaunch(env, supportsCodexDefaultHomeAfterProfile)
   } else {
     rescrubDaemonPtyEnvironment(env, opts)
     const preferredShellPath = shellPath

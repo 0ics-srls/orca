@@ -6,7 +6,7 @@ import { parseWslPath } from '../wsl'
 import { isWindowsGitBashShellPath } from '../git-bash'
 import {
   ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV,
-  scrubCodexDefaultHomeMarkerForWindowsShell
+  scrubCodexDefaultHomeMarkerForLaunch
 } from '../pty/codex-default-home-shell-startup'
 import type { LocalPtyLaunchPlan } from './local-pty-launch-plan'
 import {
@@ -41,6 +41,7 @@ export function finalizeWindowsLocalPtySpawnEnvironment(args: {
               distro: codexHomeWslInfo.distro
             }
           )
+          plan.supportsCodexDefaultHomeAfterProfile = resolved.supportsCodexDefaultHomeAfterProfile
           plan.shellArgs = resolved.shellArgs
           plan.effectiveCwd = resolved.effectiveCwd
           plan.validationCwd = resolved.validationCwd
@@ -72,7 +73,6 @@ export function finalizeWindowsLocalPtySpawnEnvironment(args: {
   const shellBasename = pathWin32.basename(plan.shellPath).toLowerCase()
   const codexLaunchPreflightCommand = env.ORCA_CODEX_LAUNCH_PREFLIGHT
   const useGitBashShellReadyWrapper = env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV] !== undefined
-  scrubCodexDefaultHomeMarkerForWindowsShell(env, plan.shellPath)
   if (
     (codexLaunchPreflightCommand || useGitBashShellReadyWrapper) &&
     ((shellBasename === 'cmd.exe' && Boolean(codexLaunchPreflightCommand)) ||
@@ -91,9 +91,11 @@ export function finalizeWindowsLocalPtySpawnEnvironment(args: {
       codexLaunchPreflightCommand,
       useGitBashShellReadyWrapper
     )
+    plan.supportsCodexDefaultHomeAfterProfile = resolved.supportsCodexDefaultHomeAfterProfile
     plan.shellArgs = resolved.shellArgs
     plan.effectiveCwd = resolved.effectiveCwd
     plan.validationCwd = resolved.validationCwd
     plan.startupCommandDeliveredInShellArgs = resolved.startupCommandDeliveredInShellArgs === true
   }
+  scrubCodexDefaultHomeMarkerForLaunch(env, plan.supportsCodexDefaultHomeAfterProfile)
 }

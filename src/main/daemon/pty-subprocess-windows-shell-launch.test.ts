@@ -1,4 +1,6 @@
 // Native Windows shell launch: PowerShell implementations, cmd.exe and Git Bash.
+import { writeFileSync, mkdirSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import type * as LocalPtyUtils from '../providers/local-pty-utils'
 
@@ -346,6 +348,34 @@ describe('createPtySubprocess', () => {
         })
       })
     )
+  })
+
+  it('abandons the default-home marker when Git Bash wrapper materialization fails', async () => {
+    const proc = mockPtyProcess()
+    spawnMock.mockReturnValue(proc)
+    const platform = Object.getOwnPropertyDescriptor(process, 'platform')!
+    const userDataPath = process.env.ORCA_USER_DATA_PATH!
+    // A file occupying the wrapper directory deterministically prevents materialization.
+    mkdirSync(userDataPath, { recursive: true })
+    writeFileSync(join(userDataPath, 'shell-wrappers'), 'occupied')
+    Object.defineProperty(process, 'platform', { value: 'win32' })
+    try {
+      await createPtySubprocess({
+        sessionId: 'test',
+        cols: 80,
+        rows: 24,
+        cwd: 'C:\\Users\\jin\\repo',
+        shellOverride: 'C:\\PortableGit\\bin\\bash.exe',
+        env: { [ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]: '1' }
+      })
+    } finally {
+      Object.defineProperty(process, 'platform', platform)
+    }
+    expect(spawnMock).toHaveBeenCalledTimes(1)
+    const [shell, args, options] = spawnMock.mock.calls[0]
+    expect(shell).toBe('C:\\PortableGit\\bin\\bash.exe')
+    expect(args).toEqual(['-c', 'chcp.com 65001 >/dev/null 2>&1; exec "$BASH" --login -i'])
+    expect(options.env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]).toBeUndefined()
   })
 
   it('keeps the Git Bash wrapper without a managed Codex preflight', async () => {

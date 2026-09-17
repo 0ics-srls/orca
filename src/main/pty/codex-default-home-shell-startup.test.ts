@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV,
   reconcileDaemonCodexDefaultHomeMarker,
-  scrubCodexDefaultHomeMarkerForWindowsShell
+  scrubCodexDefaultHomeMarkerForLaunch
 } from './codex-default-home-shell-startup'
 
 describe('reconcileDaemonCodexDefaultHomeMarker', () => {
@@ -63,29 +63,15 @@ describe('reconcileDaemonCodexDefaultHomeMarker', () => {
   })
 })
 
-describe('scrubCodexDefaultHomeMarkerForWindowsShell', () => {
-  it.each([
-    'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-    'C:\\Program Files\\PowerShell\\7\\pwsh.exe',
-    'C:\\Program Files\\Git\\bin\\bash.exe'
-  ])('keeps the one-shot marker for a consuming shell: %s', (shellPath) => {
-    const env = { [ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]: '1' }
-
-    scrubCodexDefaultHomeMarkerForWindowsShell(env, shellPath)
-
-    expect(env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]).toBe('1')
-  })
-
-  it.each(['cmd.exe', 'wsl.exe', 'C:\\msys64\\usr\\bin\\bash.exe'])(
-    'removes the marker before an unwrapped shell: %s',
-    (shellPath) => {
-      const env: Record<string, string> = {
-        [ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]: '1'
-      }
-
-      scrubCodexDefaultHomeMarkerForWindowsShell(env, shellPath)
-
-      expect(env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]).toBeUndefined()
+describe('scrubCodexDefaultHomeMarkerForLaunch', () => {
+  it.each([true, false, undefined])(
+    'retains the marker only with a consumer: %s',
+    (supportsConsumer) => {
+      const env = { [ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]: '1' }
+      scrubCodexDefaultHomeMarkerForLaunch(env, supportsConsumer)
+      expect(env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]).toBe(
+        supportsConsumer ? '1' : undefined
+      )
     }
   )
 })

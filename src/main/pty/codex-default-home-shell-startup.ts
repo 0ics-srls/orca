@@ -1,6 +1,3 @@
-import { win32 as pathWin32 } from 'node:path'
-import { isWindowsGitBashShellPath } from '../git-bash'
-
 export const ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV = 'ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE'
 export const ORCA_CODEX_DEFAULT_HOME_UNSET_AFTER_PROFILE = '1'
 
@@ -24,16 +21,11 @@ export function reconcileDaemonCodexDefaultHomeMarker(
 }
 
 /** Drops the one-shot marker from shells whose startup path cannot consume it. */
-export function scrubCodexDefaultHomeMarkerForWindowsShell(
+export function scrubCodexDefaultHomeMarkerForLaunch(
   env: Record<string, string>,
-  shellPath: string
+  supportsCodexDefaultHomeAfterProfile: boolean | undefined
 ): void {
-  const shellName = pathWin32.basename(shellPath).toLowerCase()
-  if (
-    shellName !== 'powershell.exe' &&
-    shellName !== 'pwsh.exe' &&
-    !isWindowsGitBashShellPath(shellPath)
-  ) {
+  if (!supportsCodexDefaultHomeAfterProfile) {
     delete env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]
   }
 }

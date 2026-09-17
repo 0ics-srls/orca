@@ -632,6 +632,40 @@ describe('LocalPtyProvider', () => {
       )
     })
 
+    it('abandons the default-home marker when Git Bash wrapper writing fails', async () => {
+      spawnMock.mockClear()
+      Object.defineProperty(process, 'platform', { configurable: true, value: 'win32' })
+      statSyncMock.mockImplementation((path: string) => {
+        if (String(path).includes('shell-wrappers')) {
+          throw new Error('ENOENT')
+        }
+        return { isDirectory: () => true, mode: 0o755, size: 1 }
+      })
+      writeFileSyncMock.mockImplementation(() => {
+        throw new Error('ENOSPC')
+      })
+      provider.configure({
+        buildSpawnEnv: (_id, env) => ({
+          ...env,
+          [ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]: '1'
+        })
+      })
+
+      await provider.spawn({
+        cols: 80,
+        rows: 24,
+        cwd: 'C:\\Users\\jin\\repo',
+        shellOverride: 'C:\\PortableGit\\bin\\bash.exe'
+      })
+
+      expect(writeFileSyncMock).toHaveBeenCalledTimes(1)
+      expect(spawnMock).toHaveBeenCalledTimes(1)
+      const [shell, args, options] = spawnMock.mock.calls[0]
+      expect(shell).toBe('C:\\PortableGit\\bin\\bash.exe')
+      expect(args).toEqual(['-c', 'chcp.com 65001 >/dev/null 2>&1; exec "$BASH" --login -i'])
+      expect(options.env[ORCA_CODEX_DEFAULT_HOME_AFTER_PROFILE_ENV]).toBeUndefined()
+    })
+
     it('keeps the Git Bash wrapper without a managed Codex preflight', async () => {
       const platform = Object.getOwnPropertyDescriptor(process, 'platform')
       const originalProgramFiles = process.env.ProgramFiles
