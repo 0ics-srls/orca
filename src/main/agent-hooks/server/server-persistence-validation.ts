@@ -98,21 +98,15 @@ export function sanitizeHydratedEntry(
   const runId = isAgentStatusRunId(record.runId) ? record.runId : undefined
   const executionId = isAgentStatusExecutionId(record.executionId) ? record.executionId : undefined
   const providerAlias = parseAgentStatusProviderAlias(record.providerAlias) ?? undefined
-  if (
-    (record.runId !== undefined && runId === undefined) ||
-    (record.executionId !== undefined && executionId === undefined)
-  ) {
-    return null
-  }
   const providerSessionOnly = record.providerSessionOnly === true
   const retainedForLiveness = record.retainedForLiveness === true
+  // These are optional additive facets, so an unreadable one drops itself below rather than the
+  // row: a build that persists a shape this parser predates would otherwise erase a live agent's
+  // whole status row on downgrade, which is the disappearance this membership work exists to fix.
   const launchMembership =
     record.launchMembership === undefined
       ? undefined
       : parseAgentStatusLaunchMembership(record.launchMembership)
-  if (record.launchMembership !== undefined && !launchMembership) {
-    return null
-  }
   const validRetainedIdentity = Boolean(
     retainedForLiveness && providerSession && payload.agentType && payload.agentType !== 'unknown'
   )
