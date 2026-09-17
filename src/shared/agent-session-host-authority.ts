@@ -11,7 +11,7 @@ import type { TuiAgent } from './tui-agent'
 import {
   parseAgentStatusExecutionBinding,
   type AgentStatusExecutionBinding
-} from './agent-status-run'
+} from './agent-status-execution-binding'
 
 export { AGENT_SESSION_HOST_AUTHORITY_RUNTIME_CAPABILITY as AGENT_SESSION_HOST_AUTHORITY_CAPABILITY } from './protocol-version'
 

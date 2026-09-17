@@ -1,57 +1,38 @@
 import { isAgentHookSource, type AgentHookSource } from './agent-hook-relay'
 import type { AgentProviderSessionKey } from './agent-session-resume'
+import {
+  hasExactKeys,
+  isAgentStatusRunId,
+  isBoundedIdentity,
+  isRecord,
+  parseAgentStatusExecutionAttachment,
+  type AgentStatusExecutionAttachment,
+  type AgentStatusRunId,
+  type AgentStatusRunRole
+} from './agent-status-execution-binding'
+
+// Execution identity lives in `agent-status-execution-binding.ts` so the ownership layer can reach it
+// without this module's hook-wire dependency. Re-exported here for existing run-record consumers.
+export {
+  agentStatusExecutionBindingEnv,
+  isAgentStatusExecutionId,
+  isAgentStatusRunId,
+  ORCA_AGENT_STATUS_EXECUTION_ID_ENV,
+  ORCA_AGENT_STATUS_RUN_ID_ENV,
+  parseAgentStatusExecutionBinding,
+  parseAgentStatusReportedExecutionBinding,
+  type AgentStatusExecutionAttachment,
+  type AgentStatusExecutionBinding,
+  type AgentStatusExecutionId,
+  type AgentStatusReportedExecutionBinding,
+  type AgentStatusRunId,
+  type AgentStatusRunRole
+} from './agent-status-execution-binding'
 
 export const AGENT_STATUS_PROVIDER_SESSION_CHAIN_MAX = 256
 
-const MAX_RUN_ID_LENGTH = 128
-const MAX_EXECUTION_ID_LENGTH = 128
 const MAX_PANE_KEY_LENGTH = 512
 const MAX_PROVIDER_ID_LENGTH = 512
-
-export type AgentStatusRunId = string
-export type AgentStatusExecutionId = string
-
-/** Public handle for one host-observed process incarnation; process evidence stays host-private. */
-export type AgentStatusExecutionAttachment = {
-  executionId: AgentStatusExecutionId
-}
-
-/** Identity minted atomically with one committed execution owner. */
-export type AgentStatusExecutionBinding = {
-  runId: AgentStatusRunId
-  attachment: AgentStatusExecutionAttachment
-  role: Exclude<AgentStatusRunRole, 'unresolved'>
-  continuityOf?: AgentStatusRunId
-}
-
-/** Minimal execution claim carried by an emitter; the host resolves the canonical binding. */
-export type AgentStatusReportedExecutionBinding = {
-  runId: AgentStatusRunId
-  executionId: AgentStatusExecutionId
-}
-
-export const ORCA_AGENT_STATUS_RUN_ID_ENV = 'ORCA_AGENT_STATUS_RUN_ID' as const
-export const ORCA_AGENT_STATUS_EXECUTION_ID_ENV = 'ORCA_AGENT_STATUS_EXECUTION_ID' as const
-
-export function parseAgentStatusReportedExecutionBinding(
-  value: unknown
-): AgentStatusReportedExecutionBinding | null {
-  if (!isRecord(value)) {
-    return null
-  }
-  return isAgentStatusRunId(value.runId) && isAgentStatusExecutionId(value.executionId)
-    ? { runId: value.runId, executionId: value.executionId }
-    : null
-}
-
-export function agentStatusExecutionBindingEnv(
-  binding: AgentStatusExecutionBinding
-): Record<typeof ORCA_AGENT_STATUS_RUN_ID_ENV | typeof ORCA_AGENT_STATUS_EXECUTION_ID_ENV, string> {
-  return {
-    [ORCA_AGENT_STATUS_RUN_ID_ENV]: binding.runId,
-    [ORCA_AGENT_STATUS_EXECUTION_ID_ENV]: binding.attachment.executionId
-  }
-}
 
 export type AgentStatusProviderAlias = {
   provider: AgentHookSource
@@ -69,11 +50,10 @@ export type AgentStatusRunAttribution =
   | 'execution-attachment'
   | 'provider-alias'
   | 'unresolved'
+  /** Second-class subject for an agent Orca did not launch, or one behind a multiplexer. */
+  | 'pane'
   /** @deprecated Legacy persisted records; never use for newly emitted rows. */
   | 'token'
-  /** @deprecated Legacy pane-key fallback; never use for newly emitted rows. */
-  | 'pane'
-export type AgentStatusRunRole = 'root' | 'child' | 'unresolved'
 export type AgentStatusRunVerdict = 'live' | 'unverifiable' | 'exited'
 
 /** Identity and lifecycle fields carried by a canonical `pty-run` status row. */
@@ -86,89 +66,6 @@ export type AgentStatusPtyRunRecord = {
   continuityOf?: AgentStatusRunId
   role: AgentStatusRunRole
   verdict: AgentStatusRunVerdict
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
-
-function hasExactKeys(
-  record: Record<string, unknown>,
-  required: readonly string[],
-  optional: readonly string[] = []
-): boolean {
-  const keys = Object.keys(record)
-  return (
-    required.every((key) => Object.hasOwn(record, key)) &&
-    keys.every((key) => required.includes(key) || optional.includes(key))
-  )
-}
-
-function isBoundedIdentity(value: unknown, maxLength: number): value is string {
-  if (
-    typeof value !== 'string' ||
-    value.length === 0 ||
-    value.length > maxLength ||
-    value !== value.trim()
-  ) {
-    return false
-  }
-  for (let index = 0; index < value.length; index += 1) {
-    const code = value.charCodeAt(index)
-    if (code <= 0x1f || code === 0x7f) {
-      return false
-    }
-  }
-  return true
-}
-
-export function isAgentStatusRunId(value: unknown): value is AgentStatusRunId {
-  return isBoundedIdentity(value, MAX_RUN_ID_LENGTH)
-}
-
-export function isAgentStatusExecutionId(value: unknown): value is AgentStatusExecutionId {
-  return isBoundedIdentity(value, MAX_EXECUTION_ID_LENGTH)
-}
-
-function parseExecutionAttachment(value: unknown): AgentStatusExecutionAttachment | null {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ['executionId']) ||
-    !isAgentStatusExecutionId(value.executionId)
-  ) {
-    return null
-  }
-  return { executionId: value.executionId }
-}
-
-export function parseAgentStatusExecutionBinding(
-  value: unknown
-): AgentStatusExecutionBinding | null {
-  if (
-    !isRecord(value) ||
-    !hasExactKeys(value, ['runId', 'attachment', 'role'], ['continuityOf']) ||
-    !isAgentStatusRunId(value.runId) ||
-    (value.role !== 'root' && value.role !== 'child')
-  ) {
-    return null
-  }
-  const attachment = parseExecutionAttachment(value.attachment)
-  const hasContinuity = Object.hasOwn(value, 'continuityOf')
-  if (
-    !attachment ||
-    (hasContinuity &&
-      (!isAgentStatusRunId(value.continuityOf) || value.continuityOf === value.runId))
-  ) {
-    return null
-  }
-  return {
-    runId: value.runId,
-    attachment,
-    role: value.role,
-    ...(hasContinuity && isAgentStatusRunId(value.continuityOf)
-      ? { continuityOf: value.continuityOf }
-      : {})
-  }
 }
 
 export function parseAgentStatusProviderAlias(value: unknown): AgentStatusProviderAlias | null {
@@ -248,7 +145,7 @@ export function parseAgentStatusPtyRunRecord(value: unknown): AgentStatusPtyRunR
   ) {
     return null
   }
-  const attachment = parseExecutionAttachment(value.attachment)
+  const attachment = parseAgentStatusExecutionAttachment(value.attachment)
   const providerSessions = parseProviderSessions(value.providerSessions)
   const hasContinuity = Object.hasOwn(value, 'continuityOf')
   if (

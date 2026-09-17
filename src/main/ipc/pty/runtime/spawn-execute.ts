@@ -17,7 +17,7 @@ import {
   isSshPtyIdentityMismatchError
 } from '../../../providers/ssh-pty-errors'
 import type { RuntimePtySpawnState } from './spawn-state'
-import { agentStatusExecutionBindingEnv } from '../../../../shared/agent-status-run'
+import { agentStatusExecutionBindingEnv } from '../../../../shared/agent-status-execution-binding'
 
 export async function executeRuntimePtySpawn(ctx: RuntimePtySpawnState): Promise<void> {
   const args = ctx.args

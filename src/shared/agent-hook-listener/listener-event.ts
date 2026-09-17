@@ -1,12 +1,12 @@
 import type { ParsedAgentStatusPayload } from '../agent-status-types'
 import type { AgentHookSource } from '../agent-hook-relay'
 import type { AgentProviderSessionMetadata } from '../agent-session-resume'
+import type { AgentStatusProviderAlias } from '../agent-status-run'
 import type {
   AgentStatusExecutionId,
-  AgentStatusProviderAlias,
   AgentStatusReportedExecutionBinding,
   AgentStatusRunId
-} from '../agent-status-run'
+} from '../agent-status-execution-binding'
 
 export type AgentHookEventPayload = {
   paneKey: string

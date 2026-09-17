@@ -2,7 +2,7 @@ import type { AgentHookSource } from '../../shared/agent-hook-relay'
 import type {
   AgentStatusExecutionBinding,
   AgentStatusReportedExecutionBinding
-} from '../../shared/agent-status-run'
+} from '../../shared/agent-status-execution-binding'
 import type { ClaimedAgentPtyOwnerRegistry } from '../../shared/claimed-agent-pty-owner'
 import { makePaneKey } from '../../shared/stable-pane-id'
 import { worktreeIdsEqual } from '../../shared/worktree/id'

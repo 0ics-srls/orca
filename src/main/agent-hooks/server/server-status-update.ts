@@ -24,7 +24,7 @@ import {
 import { isStaleGrokTurnEnd } from './server-grok-status-rules'
 import { isToolProgressWorkingAfterInterrupt } from './server-status-identity'
 import { AgentHookServerStatusApplication } from './server-status-application'
-import { resolveAgentStatusBinding } from './server-status-binding'
+import { resolveReportedExecutionBinding } from './server-status-binding'
 import { preserveCodexRootContext } from './server-status-context'
 export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusApplication {
   protected applyNormalizedStatus(
@@ -34,7 +34,7 @@ export abstract class AgentHookServerStatusUpdate extends AgentHookServerStatusA
     observedAt?: number,
     mutationBefore?: EnrichedAgentHookEventPayload
   ): EnrichedAgentHookEventPayload | undefined {
-    const binding = resolveAgentStatusBinding({
+    const binding = resolveReportedExecutionBinding({
       payload,
       previousCandidate: this.state.lastStatusByPaneKey.get(payload.paneKey),
       resolver: this.executionBindingResolver

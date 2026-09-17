@@ -6,7 +6,7 @@ import { parsePaneKey } from '../stable-pane-id'
 import { MAX_PANE_KEY_LEN, warnOnHookEnvOrVersionMismatch } from './listener-limits'
 import type { HookListenerState } from './listener-state'
 import { parseAgentHookJson } from './request-body'
-import { parseAgentStatusReportedExecutionBinding } from '../agent-status-run'
+import { parseAgentStatusReportedExecutionBinding } from '../agent-status-execution-binding'
 
 function readHookHeader(headers: IncomingHttpHeaders, name: string): string | undefined {
   const value = headers[name]

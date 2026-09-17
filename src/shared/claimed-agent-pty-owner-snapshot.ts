@@ -4,7 +4,7 @@ import {
   type AgentSessionOwnerBinding,
   type AgentSessionSurfaceBinding
 } from './agent-session-host-authority'
-import type { AgentStatusExecutionBinding } from './agent-status-run'
+import type { AgentStatusExecutionBinding } from './agent-status-execution-binding'
 
 export type LiveAgentSessionOwner = AgentSessionOwnerBinding & { phase: 'live' }
 

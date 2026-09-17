@@ -14,7 +14,7 @@ function isEnrichedStatus(
   )
 }
 
-export type AgentStatusBindingResolution = {
+export type ReportedExecutionBindingResolution = {
   payload: AgentHookEventPayload
   previous?: EnrichedAgentHookEventPayload
   suppress: boolean
@@ -22,11 +22,11 @@ export type AgentStatusBindingResolution = {
 }
 
 /** Resolve an emitter claim against the committed owner before status projection. */
-export function resolveAgentStatusBinding(args: {
+export function resolveReportedExecutionBinding(args: {
   payload: AgentHookEventPayload
   previousCandidate: AgentHookEventPayload | undefined
   resolver: AgentStatusExecutionBindingResolver | null
-}): AgentStatusBindingResolution {
+}): ReportedExecutionBindingResolution {
   const previous = isEnrichedStatus(args.previousCandidate) ? args.previousCandidate : undefined
   const reported = args.payload.reportedExecutionBinding
   let payload = args.payload

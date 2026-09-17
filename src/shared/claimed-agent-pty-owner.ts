@@ -22,7 +22,7 @@ import {
   scopedAgentSessionClaimsEqual,
   type LiveAgentSessionOwner
 } from './claimed-agent-pty-owner-snapshot'
-import type { AgentStatusExecutionBinding } from './agent-status-run'
+import type { AgentStatusExecutionBinding } from './agent-status-execution-binding'
 
 export { agentSessionOwnerBindingsEqual } from './claimed-agent-pty-owner-snapshot'
 

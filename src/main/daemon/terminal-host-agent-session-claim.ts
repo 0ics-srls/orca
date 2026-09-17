@@ -1,7 +1,7 @@
 import type { ClaimedAgentPtyOwnerRegistry } from '../../shared/claimed-agent-pty-owner'
 import type { AgentSessionOwnerBinding } from '../../shared/agent-session-host-authority'
 import type { CreateOrAttachOptions, CreateOrAttachResult } from './terminal-host-create-contract'
-import { agentStatusExecutionBindingEnv } from '../../shared/agent-status-run'
+import { agentStatusExecutionBindingEnv } from '../../shared/agent-status-execution-binding'
 
 export type InternalCreateOrAttachOptions = CreateOrAttachOptions & {
   agentSessionGeneration?: string
