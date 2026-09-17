@@ -5,6 +5,7 @@ import type { RelayHostHelloAckMessage } from './relay-control-protocol'
 import type * as RelayHttpClientModule from './relay-http-client'
 
 const fakes = vi.hoisted(() => ({
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an empty literal cannot infer the element type, and vi.hoisted runs before the class that fills it exists.
   controls: [] as {
     options: {
       onDrain(message: { type: 'drain'; graceMs: number; recovery: 'resolve-director' }): void
@@ -57,6 +58,7 @@ function brokerOptions(
 ): Parameters<typeof RelaySessionBroker.connect>[0] {
   const keypair = nacl.box.keyPair()
   return {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RelaySessionBroker.connect reads only these two endpoints off authConfig; the rest of the profile config is never reached.
     authConfig: {
       relayTokenEndpoint: 'https://auth.example.test/v1/relay-token',
       relayDirectorUrl: 'https://relay.example.test'
@@ -65,6 +67,7 @@ function brokerOptions(
     identity: { userId: 'user-1', profileId: 'profile-1', organizationId: 'org-1' },
     keypair: { ...keypair, publicKeyB64: Buffer.from(keypair.publicKey).toString('base64') },
     appVersion: '1.0.0',
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: attachTransport is the only member the broker calls, and nothing in this suite opens a mobile socket.
     mobileSocketWiring: { attachTransport: vi.fn(() => () => {}) } as never,
     isCurrent: () => true,
     refreshAccessToken: async () => null,
