@@ -38,10 +38,12 @@ function binding(relayDeviceId: string): RelayDeviceBinding {
 /** A broker whose revoke is rejected permanently, the way a deleted device or a revoked
  *  credential is rejected: the server is reachable and says no, every time. */
 function permanentlyFailingBroker(revokeDevice: ReturnType<typeof vi.fn>) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: flushRevokeOutbox reads exactly these three members off the broker; nothing in this suite opens a control session.
   return { ownerIdentityKey, hostId: relayHostId, revokeDevice } as never
 }
 
 function serviceOver(revokeOutbox: RelayRevokeOutbox, ledger: RelayDemandLedger) {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the Object.assign below supplies every field the flush path touches, and building a real service would need a live runtime RPC.
   const service = Object.create(DesktopRelayService.prototype) as DesktopRelayService
   Object.assign(service, {
     revokeOutbox,
@@ -51,6 +53,7 @@ function serviceOver(revokeOutbox: RelayRevokeOutbox, ledger: RelayDemandLedger)
     livenessTimer: null,
     demandExpiryTimer: null
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: narrows the fixture to the one private method under test rather than widening it.
   return service as unknown as { flushRevokeOutbox: (broker: unknown) => Promise<void> }
 }
 
