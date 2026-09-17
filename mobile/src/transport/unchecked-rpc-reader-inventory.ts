@@ -16,7 +16,8 @@
  * A merge is the one case where a line goes up without a migration undoing itself: main can land an
  * operation the branch never saw. Raise the line then, and name the PR that brought it, so the next
  * reader can tell an import from a regression. #20954 brought three
- * (`notification-stream-closed`, `native-chat-session-page`, `terminal-buffer-cleared`).
+ * (`notification-stream-closed`, `native-chat-session-page`, `terminal-buffer-cleared`) and step 6's
+ * second migration brought two (`created-terminal-tab`, `terminal-display-mode-set`).
  *
  * Two holes this list does not close, both deliberate:
  *   - A hand-written reader that returns `{ compatible: true, ... }` without going through those
@@ -72,7 +73,7 @@ export const UNCHECKED_RPC_READERS: readonly UncheckedRpcReaderEntry[] = [
   { file: 'src/session/mobile-review-terminal-operations.ts', readers: 3 },
   { file: 'src/session/mobile-session-launch-operations.ts', readers: 7 },
   { file: 'src/session/mobile-session-read-operations.ts', readers: 11 },
-  { file: 'src/session/mobile-session-write-operations.ts', readers: 8 },
+  { file: 'src/session/mobile-session-write-operations.ts', readers: 10 },
   // tasks
   { file: 'src/tasks/mobile-task-item-comment-operations.ts', readers: 7 },
   { file: 'src/tasks/mobile-task-item-detail-operations.ts', readers: 8 },
@@ -81,7 +82,9 @@ export const UNCHECKED_RPC_READERS: readonly UncheckedRpcReaderEntry[] = [
   { file: 'src/tasks/mobile-task-project-board-operations.ts', readers: 17 },
   { file: 'src/tasks/mobile-task-runtime-operations.ts', readers: 7 },
   { file: 'src/tasks/mobile-task-source-search-operations.ts', readers: 7 },
-  { file: 'src/tasks/mobile-workspace-create-operations.ts', readers: 4 },
+  // #19850 brought the fifth (`agent-launch-receipt`): mobile's create routes through agent.launch
+  // when the host advertises it, and that reply is re-typed exactly as the four beside it are.
+  { file: 'src/tasks/mobile-workspace-create-operations.ts', readers: 5 },
   { file: 'src/tasks/mobile-workspace-source-operations.ts', readers: 7 },
   // terminal
   { file: 'src/terminal/mobile-terminal-operations.ts', readers: 4 },
