@@ -1,10 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import type { SshMultiplexerRequestOptions } from '../ssh/ssh-channel-multiplexer'
 import { SshFilesystemProvider } from './ssh-filesystem-provider'
 import { SSH_FILE_STREAM_INACTIVITY_TIMEOUT_MS } from '../ssh/ssh-file-stream-inactivity-deadline'
 import { publishSystemResume, publishSystemSuspend } from '../system-power-lifecycle'
 
 type MockMultiplexer = {
   request: ReturnType<typeof vi.fn>
+  _response: ReturnType<typeof vi.fn>
   notify: ReturnType<typeof vi.fn>
   onNotification: ReturnType<typeof vi.fn>
   onNotificationByMethod: ReturnType<typeof vi.fn>
@@ -16,10 +18,22 @@ type MockMultiplexer = {
 }
 
 function createMockMux(): MockMultiplexer {
+  const response = vi.fn().mockResolvedValue(undefined)
   const methodHandlers = new Map<string, Set<(params: Record<string, unknown>) => void>>()
   const disposeHandlers = new Set<(reason: 'shutdown' | 'connection_lost') => void>()
   return {
-    request: vi.fn().mockResolvedValue(undefined),
+    _response: response,
+    request: vi.fn(
+      async (
+        method: string,
+        params?: Record<string, unknown>,
+        options?: SshMultiplexerRequestOptions
+      ) => {
+        const result: unknown = await response(method, params)
+        options?.beforeResolve?.(result)
+        return result
+      }
+    ),
     notify: vi.fn(),
     onNotification: vi.fn(),
     onNotificationByMethod: vi.fn(
@@ -72,12 +86,11 @@ describe('SshFilesystemProvider readFile streaming', () => {
   it('streams via fs.readFileStream and reassembles utf-8 text', async () => {
     const text = 'hello world'
     const totalSize = Buffer.byteLength(text, 'utf-8')
-    mux.request.mockImplementation(async (method: string) => {
+    mux._response.mockImplementation(async (method: string) => {
       if (method !== 'fs.readFileStream') {
         throw new Error(`unexpected method ${method}`)
       }
-      // Why: setImmediate fires after the metadata-resolution .then has set
-      // streamIdRef, ensuring subscribed handlers see a matching streamId.
+      // The relay schedules chunks after publishing metadata.
       setImmediate(() => {
         mux._emitMethod('fs.streamChunk', {
           streamId: 1,
@@ -96,16 +109,19 @@ describe('SshFilesystemProvider readFile streaming', () => {
     })
 
     const result = await provider.readFile('/home/user/file.txt')
-    expect(mux.request).toHaveBeenCalledWith('fs.readFileStream', {
-      filePath: '/home/user/file.txt',
-      flowControl: 'ack'
-    })
+    expect(mux.request.mock.calls[0]?.slice(0, 2)).toEqual([
+      'fs.readFileStream',
+      {
+        filePath: '/home/user/file.txt',
+        flowControl: 'ack'
+      }
+    ])
     expect(result).toEqual({ content: text, isBinary: false })
   })
 
   it('falls back to legacy fs.readFile on -32601 method-not-found', async () => {
     const legacyResult = { content: 'legacy', isBinary: false }
-    mux.request.mockImplementation(async (method: string) => {
+    mux._response.mockImplementation(async (method: string) => {
       if (method === 'fs.readFileStream') {
         const err = new Error('Method not found') as Error & { code: number }
         err.code = -32601
@@ -124,7 +140,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('rejects when chunk arrives out of order', async () => {
     const totalSize = 256 * 1024 * 2
-    mux.request.mockImplementation(async () => {
+    mux._response.mockImplementation(async () => {
       setImmediate(() => {
         mux._emitMethod('fs.streamChunk', {
           streamId: 1,
@@ -144,7 +160,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
   })
 
   it('rejects when totalSize exceeds client cap without allocating', async () => {
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 1,
       totalSize: 51 * 1024 * 1024,
       isBinary: true,
@@ -156,7 +172,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
   })
 
   it('applies a caller binary cap before allocating the stream buffer', async () => {
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 2,
       totalSize: 2,
       isBinary: true,
@@ -172,7 +188,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('rejects on fs.streamError notification', async () => {
     const totalSize = 1024
-    mux.request.mockImplementation(async () => {
+    mux._response.mockImplementation(async () => {
       setImmediate(() => {
         mux._emitMethod('fs.streamError', {
           streamId: 7,
@@ -193,7 +209,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('cancels and cleans up a stream that stalls after metadata', async () => {
     vi.useFakeTimers()
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 9,
       totalSize: 1,
       isBinary: false,
@@ -213,7 +229,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
   it('keeps a long stream alive while chunks continue arriving', async () => {
     vi.useFakeTimers()
     const chunkSize = 256 * 1024
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 10,
       totalSize: chunkSize + 1,
       isBinary: true,
@@ -246,7 +262,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('grants an active stream a fresh inactivity window after system resume', async () => {
     vi.useFakeTimers()
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 11,
       totalSize: 1,
       isBinary: false,
@@ -276,7 +292,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('keeps metadata received during suspend paused until resume', async () => {
     vi.useFakeTimers()
-    mux.request.mockResolvedValue({
+    mux._response.mockResolvedValue({
       streamId: 12,
       totalSize: 1,
       isBinary: false,
@@ -310,7 +326,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('rejects on chunk count mismatch at streamEnd', async () => {
     const totalSize = 256 * 1024 * 3
-    mux.request.mockImplementation(async () => {
+    mux._response.mockImplementation(async () => {
       setImmediate(() => {
         mux._emitMethod('fs.streamChunk', {
           streamId: 1,
@@ -335,7 +351,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
     // count matches (2), so the old code resolved with a zero-filled tail. The
     // exact-length check must reject this.
     const totalSize = 256 * 1024 * 2
-    mux.request.mockImplementation(async () => {
+    mux._response.mockImplementation(async () => {
       setImmediate(() => {
         mux._emitMethod('fs.streamChunk', {
           streamId: 1,
@@ -362,7 +378,7 @@ describe('SshFilesystemProvider readFile streaming', () => {
 
   it('rejects a short non-final chunk before later chunks arrive', async () => {
     const totalSize = 256 * 1024 * 2
-    mux.request.mockImplementation(async () => {
+    mux._response.mockImplementation(async () => {
       setImmediate(() => {
         mux._emitMethod('fs.streamChunk', {
           streamId: 1,
