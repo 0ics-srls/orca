@@ -294,8 +294,11 @@ describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
       await transaction.query(RESERVE, [1, 0, CELL_A])
     })
 
+    // checked is 1, not 0: standing down is now scoped to the statement it could
+    // not read, so the write after it was still judged. That is the point --
+    // muting a whole transaction over one unreadable projection was the hazard.
     expect(consumeRelayCellRowLockScope(database)).toMatchObject({
-      cellRowLockScopesChecked: 0,
+      cellRowLockScopesChecked: 1,
       cellRowLockScopesStoodDown: 1
     })
   })
@@ -413,10 +416,11 @@ describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
     )
   })
 
-  // Why: after standing down the scope has an incomplete picture, so judging
-  // anything further would be guessing. Without this the suppression can be
-  // deleted and no test notices, because the stand-down cases hold nothing yet.
-  it('judges nothing further once it has stood down', async () => {
+  // Why: a statement the scope cannot read must not mute the ones after it. The
+  // read below contributes nothing to `held`, and a missing `held` entry can only
+  // ever remove a report -- so continuing to police is strictly safer than
+  // latching off, and the descending write after it is still caught.
+  it('keeps policing after a statement it could not read', async () => {
     await expect(
       database.transaction(async (transaction) => {
         await transaction.queryLocked(LOCK_ONE, [CELL_C])
@@ -426,13 +430,14 @@ describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
         )
         await transaction.query(RESERVE, [1, 0, CELL_A])
       })
-    ).resolves.toBeUndefined()
+    ).rejects.toThrow('out-of-order')
   })
 
   // Why: production is the configuration that actually ships. "Tests throw,
   // production warns" was half-tested -- nothing exercised the warn, nor the
   // once-per-signature dedupe that bounds it.
   it('warns instead of throwing when it is not running under test', async () => {
+    consumeRelayCellRowLockScope(database)
     const previous = process.env.NODE_ENV
     process.env.NODE_ENV = 'production'
     const events: string[] = []

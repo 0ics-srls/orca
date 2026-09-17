@@ -24,16 +24,24 @@ type CellRowLockViolation = {
 export type CellRowLockScopeOutcome = {
   checked: boolean
   stoodDown: boolean
-  violations: number
+  violated: boolean
 }
 
 export function emptyCellRowLockScopeOutcome(): CellRowLockScopeOutcome {
-  return { checked: false, stoodDown: false, violations: 0 }
+  return { checked: false, stoodDown: false, violated: false }
 }
 
-// Why max and not sum: a retry replays the same statements, so a transaction that
-// violated, was retried and violated again is one logical violation seen twice.
-// Summing would make the count rise with contention rather than with breakage.
+// Merged across a transaction's attempts, so the counters describe transactions
+// rather than attempts: a retry replays the same statements, and counting each
+// one made a single logical transaction report up to three times -- inflation
+// worst under exactly the contention these numbers exist to measure.
+//
+// `violated` is any-of, not a sum and not a max. Summing rises with contention
+// rather than with breakage; a max cannot inflate but can still ZERO OUT an
+// observed violation, because an attempt that violates and then hits a retryable
+// 55P03 can be followed by a clean attempt that takes a different branch. The
+// gate here is zero-versus-nonzero, so what has to survive is "this transaction
+// violated at least once". Magnitude lives in the distinct-signature log.
 export function mergeCellRowLockScopeOutcomes(
   left: CellRowLockScopeOutcome,
   right: CellRowLockScopeOutcome
@@ -41,14 +49,15 @@ export function mergeCellRowLockScopeOutcomes(
   return {
     checked: left.checked || right.checked,
     stoodDown: left.stoodDown || right.stoodDown,
-    violations: Math.max(left.violations, right.violations)
+    violated: left.violated || right.violated
   }
 }
 
 // Why: `violations === 0` is only evidence if something was examined. Checked
-// counts transactions where at least one relay_cells write was evaluated, which
-// is the population a per-cell conversion moves; stoodDown counts the ones this
-// guard refused to reason about, and must read as a bug, not as a clean run.
+// counts transactions where at least one cell row lock was evaluated, which is
+// the population a per-cell conversion moves; stoodDown counts the ones holding a
+// statement this guard could not read, and must be a bug report, not a clean run.
+// Violations counts violating TRANSACTIONS, not violating statements.
 export type CellRowLockScopeCounts = {
   cellRowLockScopesChecked: number
   cellRowLockScopesStoodDown: number
@@ -69,7 +78,7 @@ export class CellRowLockScopeSamples {
   record(outcome: CellRowLockScopeOutcome): void {
     if (outcome.checked) this.counts.cellRowLockScopesChecked += 1
     if (outcome.stoodDown) this.counts.cellRowLockScopesStoodDown += 1
-    this.counts.cellRowLockScopeViolations += outcome.violations
+    if (outcome.violated) this.counts.cellRowLockScopeViolations += 1
   }
 
   consumeCounts(): CellRowLockScopeCounts {
@@ -84,13 +93,19 @@ export class CellRowLockScopeSamples {
 const CELL_TABLE = 'relay_cells'
 const CELL_INSERT = /^\s*INSERT\s+INTO\s+relay_cells\s*\(([^)]*)\)\s*VALUES\s*\(/i
 const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
-// The statement's own relation, not any mention of the table. A locked read of
-// another table that names relay_cells in a JOIN or an EXISTS locks no cell row,
-// and every one of those tables carries a cell_id column that would otherwise be
-// taken for a held row.
+// The statement's own relation, not any mention of the table: relay_assignments,
+// relay_cell_runtime and relay_migrations all carry a cell_id that would
+// otherwise be recorded as a held cell row. The narrow reading is deliberate and
+// it under-reports in two known ways, both of which only ever cost a report and
+// never invent one: a locked read of another table that JOINs relay_cells does
+// lock cell rows, because Postgres FOR UPDATE without OF locks every table in the
+// FROM list; and a WITH ... SELECT does not match the SELECT anchor at all.
+// Neither shape exists in relay today.
 const CELL_TABLE_READ = /^\s*SELECT\b[\s\S]*?\bFROM\s+([A-Za-z_]\w*)/i
 const CELL_ID_EQUALS = /\bcell_id\s*=\s*\?/gi
-const ORDERED_LOCK = /\bORDER\s+BY\s+cell_id\s+ASC\b/i
+// Alias-tolerant: `ORDER BY cell.cell_id ASC` orders identically, and rejecting
+// it would throw in tests on a statement that is correct.
+const ORDERED_LOCK = /\bORDER\s+BY\s+(?:\w+\.)?cell_id\s+ASC\b/i
 // An upsert is not the free set-extension a plain insert is: when the row it
 // names already exists it takes that row's lock and BLOCKS, so it is a waiting
 // acquisition and belongs under the order check. Proven against PostgreSQL 16 --
@@ -102,12 +117,15 @@ const CELL_UPSERT = /\bON\s+CONFLICT\b[\s\S]*\bDO\s+UPDATE\b/i
 
 export class CellRowLockScope {
   private readonly held = new Set<string>()
-  // A locked read whose rows do not name their cell. Nothing produces one today;
-  // policing would then mean guessing, so the scope stands down instead -- but
-  // never silently, or its silence would read the same as a clean transaction.
-  private opaque = false
+  // A statement the scope could not read -- a locked read whose rows do not name
+  // their cell, or one that threw while being parsed. Scoped to the statement,
+  // not the transaction: skipping it and carrying on is strictly safer than
+  // muting everything after it, because the only effect of a missing `held` entry
+  // is to REMOVE reports, never to invent one. A transaction-wide latch turned a
+  // single unreadable projection into a silent transaction.
+  private stoodDown = false
   private checked = false
-  private violations = 0
+  private violated = false
   // Set by a lock that took the whole inventory in order. While it holds, every
   // row that existed is held, so an upsert naming an unheld row is creating one.
   private coveredInventory = false
@@ -121,8 +139,7 @@ export class CellRowLockScope {
       this.inspect(sql, params, lock, rows)
     } catch (error) {
       if (error instanceof CellRowLockScopeViolationError) throw error
-      this.opaque = true
-      reportStandDown(`unreadable:${fingerprint(sql)}`)
+      this.noteStandDown(`unreadable:${fingerprint(sql)}`)
     }
   }
 
@@ -167,7 +184,7 @@ export class CellRowLockScope {
   // never reached or quietly stood down, and the deploy plan is to trust its
   // silence. These give the silence a denominator.
   outcome(): CellRowLockScopeOutcome {
-    return { checked: this.checked, stoodDown: this.opaque, violations: this.violations }
+    return { checked: this.checked, stoodDown: this.stoodDown, violated: this.violated }
   }
 
   // Why reads count too: `checked` is the denominator for "the guard saw the
@@ -176,11 +193,17 @@ export class CellRowLockScope {
   // them when measured across this suite -- including the fleet-wide
   // `SELECT ... FOR UPDATE` the conversion exists to replace, which scored zero.
   private note(): void {
-    if (!this.opaque) this.checked = true
+    this.checked = true
+  }
+
+  // Statement-scoped, and always visible: silence that reads the same as a clean
+  // transaction is the failure this guard exists to avoid.
+  private noteStandDown(statement: string): void {
+    this.stoodDown = true
+    reportStandDown(statement)
   }
 
   private acquireRead(sql: string, lock: CellRowLockKind, rows: SqlRow[]): void {
-    if (this.opaque) return
     const statement = fingerprint(sql)
     // Shape, not row count: a lock that names no single cell may return one row
     // in a fixture and many in production, so judging it by what came back makes
@@ -193,8 +216,9 @@ export class CellRowLockScope {
     for (const row of rows) {
       const cellId = row.cell_id
       if (typeof cellId !== 'string') {
-        this.opaque = true
-        reportStandDown(statement)
+        // Skip this read only. Its rows never enter `held`, which can only cost
+        // a later report, never manufacture one.
+        this.noteStandDown(statement)
         return
       }
       cellIds.push(cellId)
@@ -210,7 +234,7 @@ export class CellRowLockScope {
   // Counted before it is thrown: in production report() only warns, so the count
   // is what carries the magnitude the once-per-signature log deliberately drops.
   private report(violation: CellRowLockViolation): void {
-    this.violations += 1
+    this.violated = true
     report(violation)
   }
 
@@ -219,7 +243,6 @@ export class CellRowLockScope {
     statement: string,
     lock: CellRowLockKind
   ): void {
-    if (this.opaque) return
     if (cellIds === undefined) {
       this.report({ reason: 'unparsed-write', cellIds: [], held: [...this.held], statement })
       return
