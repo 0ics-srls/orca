@@ -27,14 +27,17 @@ class CountingMap<K, V> extends Map<K, V> {
       [Symbol.iterator]() {
         return this
       }
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal above implements next() and [Symbol.iterator](), which is the whole protocol a for..of over this wrapper reaches; no other IterableIterator member is ever called.
     } as IterableIterator<T>
   }
 
   override [Symbol.iterator](): MapIterator<[K, V]> {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: countingIterator wraps the real Map iterator and forwards every next() to it, so the result is that iterator with a counter attached.
     return this.countingIterator(super[Symbol.iterator]()) as MapIterator<[K, V]>
   }
 
   override values(): MapIterator<V> {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the same wrapper as [Symbol.iterator] above, over super.values().
     return this.countingIterator(super.values()) as MapIterator<V>
   }
 
@@ -77,6 +80,7 @@ function dispatcherWithClients(clientCount: number): {
   clients: CountingMap<number, unknown>
   ledger: CountingMap<string, number>
 } {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: ProbedDispatcher names the protected members this census reads. RelayDispatcher really has them; the compiler just will not hand them out.
   const d = new RelayDispatcher(() => {}) as unknown as ProbedDispatcher
   for (let i = 1; i < clientCount; i++) {
     d.attachClient(() => {})
@@ -111,6 +115,7 @@ describe('relay hot-path operation counts', () => {
         aborts.create(c, r)
       }
     }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: byClient is the private index this test exists to measure; the shape mirrors its declaration in client-request-aborts.ts.
     const byClient = (aborts as unknown as { byClient: Map<number, Map<number, AbortController>> })
       .byClient
 
@@ -132,6 +137,7 @@ describe('relay hot-path operation counts', () => {
       targetBucket.set(k, v)
     }
     index.set(1, targetBucket)
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: swaps the counting stand-in into the same private index read above.
     ;(aborts as unknown as { byClient: Map<number, unknown> }).byClient = index
     index.visits = 0
     targetBucket.visits = 0

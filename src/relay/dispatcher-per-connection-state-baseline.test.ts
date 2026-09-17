@@ -56,6 +56,7 @@ function census(d: Probed): Record<string, number | string> {
 }
 
 function newDispatcher(): Probed {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Probed names the protected containers this census counts. RelayDispatcher really has them; the compiler just will not hand them out.
   return new RelayDispatcher(() => {}) as unknown as Probed
 }
 
