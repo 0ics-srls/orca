@@ -21,6 +21,7 @@ type Store = ReturnType<typeof createSliceStore>
 
 function createSliceStore() {
   return create<RuntimeStatusSlice>()((...a) => ({
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the slice creator is declared against the whole AppState; this store holds only its own slice, which is all the code under test reads.
     ...createRuntimeStatusSlice(...(a as unknown as Parameters<typeof createRuntimeStatusSlice>))
   }))
 }
@@ -35,7 +36,7 @@ function makeStatus(runtimeId: string): RuntimeStatus {
     liveLeafCount: 0,
     runtimeProtocolVersion: 3,
     minCompatibleRuntimeClientVersion: 3
-  } as RuntimeStatus
+  }
 }
 
 function makeSnapshot(
@@ -55,6 +56,7 @@ function makeSnapshot(
 
 /** The mirror-subscription effect dependency, rebuilt from the slice's current state. */
 function mirrorKey(store: Store): string {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the builder takes the whole app state; only the fields below reach the mirror-target scan.
   return buildRuntimeSessionMirrorEnvironmentKey({
     activeRuntimeEnvironmentId: ENVIRONMENT_ID,
     repos: [],

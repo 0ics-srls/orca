@@ -21,7 +21,7 @@ function makeStatus(runtimeId: string): RuntimeStatus {
     liveLeafCount: 0,
     runtimeProtocolVersion: 3,
     minCompatibleRuntimeClientVersion: 3
-  } as RuntimeStatus
+  }
 }
 
 function makeSnapshot(
@@ -115,7 +115,15 @@ describe('mirror targets and host connection state agree on one host', () => {
   })
 
   it('drops the mirror target when the control channel closed', () => {
-    const closed = { state: 'closed' } as NonNullable<RuntimeStatus['remoteControl']>
+    const closed: NonNullable<RuntimeStatus['remoteControl']> = {
+      state: 'closed',
+      pendingRequestCount: 0,
+      subscriptionCount: 0,
+      reconnectAttempt: 0,
+      lastConnectedAt: null,
+      lastClose: null,
+      lastError: null
+    }
     const entry = {
       ...entryForSnapshot(makeSnapshot({ verification: 'verified' })),
       remoteControl: closed
