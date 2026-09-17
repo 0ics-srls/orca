@@ -25,7 +25,11 @@ type RestartResumeHostBindings = {
   release: (sessionId: string, holderId: string) => void
   send: (
     caller: { callerKey: string },
-    params: { envelope: AgentSessionMutationEnvelope; body: AgentJournalMessageItem }
+    params: {
+      envelope: AgentSessionMutationEnvelope
+      body: AgentJournalMessageItem
+      beforeRun?: () => void
+    }
   ) => Promise<AgentSessionMutationResult<AgentSessionSendResult>>
   /** The host's existing settlement waiter; a send returns while its dispatch is still pending. */
   waitForSendSettlement: (

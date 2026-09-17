@@ -62,6 +62,7 @@ export type StructuredAgentSessionRestartResumeSurfaces = {
   send: (input: {
     envelope: AgentSessionMutationEnvelope
     body: AgentJournalMessageItem
+    beforeRun?: () => void
   }) => Promise<AgentSessionMutationResult<AgentSessionSendResult>>
   /** The host's existing settlement waiter. A send resolves while its dispatch is still pending, so
    *  this is what turns that starting state into a verdict. */
@@ -245,7 +246,16 @@ export function createStructuredAgentSessionRestartResume(
         await continueStructuredAgentSessionAfterRestart(
           {
             currentFence: (sessionId) => sessions.get(sessionId)?.fence ?? null,
-            send: surfaces.send,
+            send: (input) =>
+              surfaces.send({
+                ...input,
+                // Acquisition reconciles history; validate again inside the serialized send.
+                beforeRun: () => {
+                  if (derive([marker], 'may-be-held').length !== 1) {
+                    throw new Error('agent_session_restart_work_superseded')
+                  }
+                }
+              }),
             awaitSettlement: async (sessionId, clientMessageId) =>
               (await surfaces.awaitSendSettlement(sessionId, clientMessageId))?.value.submission,
             onNoteFailed: surfaces.onNoteFailed,

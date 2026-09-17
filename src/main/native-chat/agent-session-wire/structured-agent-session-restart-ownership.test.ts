@@ -7,28 +7,37 @@ import { STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER } from './structur
 import {
   adapter,
   attach,
+  CALLER,
+  envelope,
   hostTestState,
   replaceHostTestState
 } from './structured-agent-session-host-test-harness'
 import {
   HOST_TEST_NOW as NOW,
   HOST_TEST_SESSION as SESSION,
-  HOST_TEST_THREAD as THREAD
+  HOST_TEST_THREAD as THREAD,
+  hostTestMessage
 } from './structured-agent-session-host-test-data'
 
 const GRACE = 15_000
 
-async function interruptedRestart() {
+async function interruptedRestart(work: 'turn' | 'submission' = 'turn') {
   const previous = hostTestState()
   await attach()
   const events = previous.acquire.mock.calls[0]?.[0].events
   if (!events) {
     throw new Error('missing provider event sink')
   }
-  events.appendItem(
-    { provider: 'codex', threadId: THREAD, turnId: 'interrupted-turn', ordinal: 1 },
-    { kind: 'turn', turnId: 'interrupted-turn', state: 'running' }
-  )
+  if (work === 'submission') {
+    previous.dispatch.mockResolvedValueOnce({ state: 'admitted' })
+    const body = hostTestMessage('Perform the original task')
+    await previous.host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
+  } else {
+    events.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'interrupted-turn', ordinal: 1 },
+      { kind: 'turn', turnId: 'interrupted-turn', state: 'running' }
+    )
+  }
   await previous.host.flushStreamedEvents(SESSION)
   await previous.host.flushAllStreamedEvents()
   const store = await AgentSessionRecordStore.open({
@@ -38,7 +47,19 @@ async function interruptedRestart() {
   const closeSession = vi.fn(async () => true)
   const host = new StructuredAgentSessionHost({
     store,
-    adapter: { ...adapter(), closeSession },
+    adapter: {
+      ...adapter(),
+      closeSession,
+      ...(work === 'submission'
+        ? {
+            providerHistoryWindow: async () => ({
+              items: [],
+              boundaryConsistent: true,
+              turnInFlight: false
+            })
+          }
+        : {})
+    },
     journalRoot: previous.root,
     claimKeyId: 'key-1',
     mintSpawnToken: () => 'spawn-next',
@@ -50,10 +71,58 @@ async function interruptedRestart() {
   replaceHostTestState({ store, host })
   previous.acquire.mockClear()
   previous.releaseAcquisition.mockClear()
+  previous.dispatch.mockClear()
   return { ...hostTestState(), host, store, closeSession }
 }
 
 afterEach(() => vi.useRealTimers())
+
+it('does not continue work that acquisition proves was never delivered', async () => {
+  const { host, acquire, dispatch } = await interruptedRestart('submission')
+  expect(await host.restartResume.list()).toHaveLength(1)
+  const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+  expect(host.journalSnapshot(SESSION).submissions[0]).toMatchObject({
+    dispatchState: 'rejected',
+    reason: 'not_delivered'
+  })
+  expect(acquire).toHaveBeenCalledTimes(1)
+  expect(dispatch).not.toHaveBeenCalled()
+  expect(result.resumed).toMatchObject([{ outcome: 'refused' }])
+  expect(host.isHeld(SESSION)).toBe(false)
+})
+
+it('checks interrupted work at send admission after a newer turn supersedes it', async () => {
+  const { host, store, acquire, dispatch } = await interruptedRestart()
+  expect(await host.restartResume.list()).toHaveLength(1)
+  await host.hold(SESSION, 'pane')
+  const events = acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing resumed provider event sink')
+  }
+  const admitting = Promise.withResolvers<void>()
+  const proceed = Promise.withResolvers<void>()
+  const admit = store.admitMutationOperation
+  vi.spyOn(store, 'admitMutationOperation').mockImplementationOnce(async (input) => {
+    admitting.resolve()
+    await proceed.promise
+    return admit(input)
+  })
+  const continuing = host.restartResume.continueAfterRestart([SESSION], 'modal')
+  await admitting.promise
+  events.appendItem(
+    { provider: 'codex', threadId: THREAD, turnId: 'newer-turn', ordinal: 1 },
+    { kind: 'turn', turnId: 'newer-turn', state: 'completed' }
+  )
+  await host.flushStreamedEvents(SESSION)
+  proceed.resolve()
+  expect((await continuing).resumed).toMatchObject([
+    { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
+  ])
+  expect(dispatch).not.toHaveBeenCalled()
+  expect(host.journalSnapshot(SESSION).submissions).toHaveLength(0)
+  host.release(SESSION, 'pane')
+  expect(host.isHeld(SESSION)).toBe(false)
+})
 
 it('replays the same logical continuation through the durable send ledger', async () => {
   const { host, store, dispatch } = await interruptedRestart()
