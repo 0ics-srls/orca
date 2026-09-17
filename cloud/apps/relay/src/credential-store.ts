@@ -673,6 +673,8 @@ export class RelayCredentialStore {
       0,
       now - INACTIVE_AUTHORIZATION_RETENTION_MS
     ])
+    // consumed_at, not deadline: consumption is what settles this row, and it can happen well
+    // before the deadline, so measuring from it retains the row for the full window either way.
     await this.reapBatch(
       'relay_direct_authorizations',
       'consumed_at IS NOT NULL AND consumed_at <= ?',
