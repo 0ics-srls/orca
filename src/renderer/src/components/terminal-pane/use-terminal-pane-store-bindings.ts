@@ -24,6 +24,7 @@ export function useTerminalPaneStoreBindings(controller: TerminalPaneChatControl
     refreshWorkspaceSpace,
     setRuntimePaneTitle,
     setTabLayout,
+    setTabParkedScrollback,
     updateSettings,
     updateTabPtyId,
     updateTabTitle
@@ -50,6 +51,7 @@ export function useTerminalPaneStoreBindings(controller: TerminalPaneChatControl
 
   return {
     setTabLayout,
+    setTabParkedScrollback,
     expectedLayoutLeafIdsAttr,
     initialLayoutRef,
     updateTabTitle,

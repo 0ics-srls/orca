@@ -15,7 +15,10 @@ import {
   clearPaneTitleOverlayRects
 } from './pane-title-overlay-rects'
 import type { PaneTitleOverlayRect } from './TerminalPaneHeaderOverlay'
-import { shutdownBufferCaptures } from './shutdown-buffer-captures'
+import {
+  shutdownBufferCaptures,
+  type ShutdownBufferCaptureOptions
+} from './shutdown-buffer-captures'
 import { captureTerminalShutdownLayout } from './terminal-shutdown-layout-capture'
 import { shouldPreserveTerminalScrollbackBuffers } from '../../../../shared/workspace-session-terminal-buffers'
 import type { TerminalPaneCloseController } from './use-terminal-pane-close-actions'
@@ -44,6 +47,7 @@ export function useTerminalPaneTitleEffects(controller: TerminalPaneCloseControl
     setPaneTitleOverlayRects,
     setSessionRestoredBannerPaneIds,
     setTabLayout,
+    setTabParkedScrollback,
     shouldMeasureHiddenStartup,
     tabId,
     worktreeId
@@ -187,7 +191,7 @@ export function useTerminalPaneTitleEffects(controller: TerminalPaneCloseControl
   }, [paneCount])
 
   useEffect(() => {
-    const captureBuffers = (options?: { includeLocalBuffers?: boolean }): void => {
+    const captureBuffers = (options?: ShutdownBufferCaptureOptions): void => {
       const manager = managerRef.current
       const container = containerRef.current
       if (!manager || !container) {
@@ -213,7 +217,18 @@ export function useTerminalPaneTitleEffects(controller: TerminalPaneCloseControl
         captureBuffers: shouldCaptureScrollbackBuffers,
         clearedScrollbackLeafIds: clearedScrollbackLeafIdsRef.current
       })
-      setTabLayout(tabId, layout)
+      if (options?.localOnly && layout.buffersByLeafId) {
+        // Why split: the ordinary cold park fires on every workspace hide, and buffersByLeafId
+        // rides the remote projection. Keep the structure (root, ptyIds, titles) in the shared
+        // layout and put the bytes in the client-local field, which the export never enumerates.
+        const { buffersByLeafId, ...structureOnly } = layout
+        setTabLayout(tabId, structureOnly)
+        setTabParkedScrollback(tabId, buffersByLeafId)
+      } else {
+        setTabLayout(tabId, layout)
+        // A shared capture supersedes whatever the last park left behind, so the local copy goes.
+        setTabParkedScrollback(tabId, null)
+      }
       for (const pane of panes) {
         clearedScrollbackLeafIdsRef.current.delete(pane.leafId)
       }
@@ -225,7 +240,7 @@ export function useTerminalPaneTitleEffects(controller: TerminalPaneCloseControl
       }
     }
     // oxlint-disable-next-line react-hooks/exhaustive-deps -- Preserve the pre-split dependency contract.
-  }, [tabId, worktreeId, setTabLayout])
+  }, [tabId, worktreeId, setTabLayout, setTabParkedScrollback])
 
   useEffect(() => {
     if (renamingPaneId === null) {
