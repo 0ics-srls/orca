@@ -79,11 +79,13 @@ export function parseHandshakeMessage(payload: Buffer): HandshakeMessage {
   if (typeof parsed !== 'object' || parsed === null) {
     throw new Error('Handshake payload is not an object')
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the typeof/null guard directly above is exactly what makes this an index-able object; every read below still proves its own field.
   const msg = parsed as Record<string, unknown>
   const t = msg.type
   const required =
     typeof t === 'string' && Object.hasOwn(HANDSHAKE_STRING_FIELDS, t)
-      ? HANDSHAKE_STRING_FIELDS[t as HandshakeMessage['type']]
+      ? // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: reached only when Object.hasOwn proved t is a key of this record, on the same line.
+        HANDSHAKE_STRING_FIELDS[t as HandshakeMessage['type']]
       : null
   if (required === null) {
     // Why typeof and not String(t): a peer-supplied `{ "type": { "toString": 1 } }` makes String()
@@ -96,11 +98,13 @@ export function parseHandshakeMessage(payload: Buffer): HandshakeMessage {
       throw new Error(`Handshake field ${field} is not a string`)
     }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the required === null bail above already refused every t that is not one of the four keys.
   for (const field of HANDSHAKE_OPTIONAL_STRING_FIELDS[t as HandshakeMessage['type']]) {
     if (msg[field] !== undefined && typeof msg[field] !== 'string') {
       throw new Error(`Handshake field ${field} is not a string`)
     }
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: this is the one place the shape is proved: the type is one of the four literals and every field the union declares has been checked to be a string.
   return msg as unknown as HandshakeMessage
 }
 
