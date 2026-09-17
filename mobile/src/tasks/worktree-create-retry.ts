@@ -13,7 +13,6 @@ import {
 } from '../../../src/shared/new-workspace/worktree-create-retry-policy'
 import {
   agentLaunchCreateParams,
-  classifyAgentLaunchOperationRefusal,
   isAgentLaunchUnsupportedRefusal,
   readAgentLaunchCreateOutcome,
   type WorktreeCreateAgentLaunch
@@ -107,45 +106,29 @@ export async function createWorktreeWithNameRetry(
     // fingerprint and refuse `agent_session_operation_conflict` — failing the create outright on
     // the second candidate. One operation per candidate, reused verbatim by every retry within it,
     // is the same partition `clientMutationId` above is minted on.
-    let launchOperationId = launch?.replay ? mintLaunchOperationId() : null
-    let response = await sendWorktreeCreateResilient(
+    const launchOperationId = launch?.replay ? mintLaunchOperationId() : null
+    const sent = await sendWorktreeCreateResilient(
       client,
       launch?.agent ?? null,
       launchOperationId,
       params,
       worktreeCreateIdempotency
     )
-    if (!response.ok && launch && isAgentLaunchUnsupportedRefusal(response.error)) {
+    let response = sent.response
+    if (
+      !response.ok &&
+      !sent.replayed &&
+      launch &&
+      isAgentLaunchUnsupportedRefusal(response.error)
+    ) {
       // The probe said the host knows `agent.launch` but it refused the call — most likely this
       // client's capability list had not landed yet. Downgrade for good rather than fail a create.
       launch = null
-      launchOperationId = null
-      response = await sendWorktreeCreateResilient(
-        client,
-        null,
-        null,
-        params,
-        worktreeCreateIdempotency
-      )
+      response = (
+        await sendWorktreeCreateResilient(client, null, null, params, worktreeCreateIdempotency)
+      ).response
     }
-    if (
-      !response.ok &&
-      launch &&
-      launchOperationId &&
-      classifyAgentLaunchOperationRefusal(response.error) === 'unadmitted'
-    ) {
-      // The ledger declined to record the id, which it does before running anything. Re-send the
-      // same candidate unnamed so bookkeeping cannot gate the create; this attempt forfeits replay
-      // safety, which is what an unsupporting host gives anyway.
-      launchOperationId = null
-      response = await sendWorktreeCreateResilient(
-        client,
-        launch.agent,
-        null,
-        params,
-        worktreeCreateIdempotency
-      )
-    }
+    // Ledger refusals can follow workspace creation or an expired receipt; never retry unnamed.
     // Why the raw refusal: the retry decision below is `isRetryableWorktreeCreateConflict` over the
     // host's message, and no acceptance policy carries a refusal message through without throwing.
     if (response.ok) {
@@ -225,7 +208,7 @@ async function sendWorktreeCreateResilient(
   launchOperationId: string | null,
   params: WorkspaceCreateParams,
   worktreeCreateIdempotency: WorktreeCreateIdempotencySupport | false
-): Promise<RpcResponse> {
+): Promise<{ response: RpcResponse; replayed: boolean }> {
   let migrationRetry = 0
   let ambiguousRetry = 0
   const firstSentAt = Date.now()
@@ -234,7 +217,7 @@ async function sendWorktreeCreateResilient(
     try {
       // `request` is the transport promise itself, so a delivery-unknown rejection reaches the
       // catch below as the object the transport marked — the WeakSet cannot see through a wrapper.
-      return await (launchAgent
+      const response = await (launchAgent
         ? agentLaunchRun.request(
             client,
             agentLaunchCreateParams(launchAgent, params, launchOperationId),
@@ -243,6 +226,8 @@ async function sendWorktreeCreateResilient(
         : worktreeCreateRun.request(client, params, {
             timeoutMs: WORKTREE_CREATE_TIMEOUT_MS
           }))
+      // A refusal on the replacement connection says nothing about what the first call created.
+      return { response, replayed: migrationRetry > 0 || ambiguousRetry > 0 }
     } catch (error) {
       if (!worktreeCreateIdempotency) {
         throw error

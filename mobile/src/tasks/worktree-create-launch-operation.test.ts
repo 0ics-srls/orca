@@ -201,26 +201,20 @@ describe('agent.launch operation id', () => {
     expect(attempts[0]!.params.operationId).toBeUndefined()
   })
 
-  // Admission runs ahead of every effect, so a ledger that refused to record the id launched
-  // nothing. Bookkeeping must not be able to fail a create the host would otherwise perform.
+  // These codes also describe a refused nested attach or an expired receipt after creation.
   it.each([
     'agent_session_operation_capacity',
     'agent_session_operation_invalid',
     'agent_session_operation_expired'
-  ])('re-sends the same candidate unnamed when admission refuses with %s', async (code) => {
+  ])('preserves the operation identity when the host refuses with %s', async (code) => {
     const attempts: Attempt[] = []
     const client = scriptedLaunchClient([{ errorCode: code }, { launched: 'wt-unnamed' }], attempts)
-    await expect(launchRetry({ client, attempts })).resolves.toEqual({
-      worktreeId: 'wt-unnamed',
-      name: 'otter'
-    })
-    expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'agent.launch'])
-    expect(launchOperationIds(attempts)).toEqual(['op-1', undefined])
-    // Same candidate, same create payload — only the name of the operation is dropped.
-    expect(launchCandidateNames(attempts)).toEqual(['otter', 'otter'])
+    await expect(launchRetry({ client, attempts })).resolves.toEqual({ error: code })
+    expect(attempts).toHaveLength(1)
+    expect(launchOperationIds(attempts)).toEqual(['op-1'])
   })
 
-  // The one refusal that is NOT safe to re-send unnamed: the launch may already have run.
+  // An unsettled claim is evidence that the launch may already have run.
   it('surfaces an unknown operation without re-sending and without re-minting', async () => {
     const attempts: Attempt[] = []
     const client = scriptedLaunchClient(
@@ -265,6 +259,24 @@ describe('agent.launch operation id', () => {
     })
     expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'worktree.create'])
     expect(launchOperationIds(attempts)).toEqual(['op-1', undefined])
+  })
+
+  it('does not downgrade a launch when a replacement connection refuses the method', async () => {
+    const attempts: Attempt[] = []
+    const client = scriptedLaunchClient(
+      [
+        { throws: new LogicalClientCutoverError() },
+        { errorCode: 'agent_launch_unsupported' },
+        { created: 'wt-duplicate' }
+      ],
+      attempts
+    )
+
+    await expect(launchRetry({ client, attempts })).resolves.toEqual({
+      error: 'agent_launch_unsupported'
+    })
+    expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'agent.launch'])
+    expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1'])
   })
 
   it('mints a real durable id in production', async () => {

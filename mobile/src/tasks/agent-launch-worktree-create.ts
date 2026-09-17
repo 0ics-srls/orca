@@ -23,9 +23,7 @@ import type { WorkspaceCreateParams } from './workspace-create-params'
 /** What this host's `agent.launch` can do, in the `| false` shape `worktree.create`'s own
  *  idempotency probe already uses: `false` is an older host with no `agent.launch` at all. */
 export type AgentLaunchSupport = {
-  /** The host admits a launch through the durable operation ledger, so a caller that names its
-   *  launch with `operationId` gets exactly one execution and the recorded answer on every replay.
-   *  An older host strips the field as an unknown key and launches again, with no error. */
+  /** The host deduplicates operationId durably and refuses unknown or expired outcomes. */
   replay: boolean
 }
 
@@ -98,45 +96,4 @@ export function isAgentLaunchUnsupportedRefusal(error: {
     return true
   }
   return (error.message ?? '').includes('agent_launch_unsupported')
-}
-
-/**
- * The ledger declined to record the operation id. Admission runs ahead of resolving the caller's
- * target and ahead of every effect, so a refusal here proves nothing was launched — a full or
- * unreadable ledger must not be able to fail a create the host would otherwise have performed.
- */
-const UNADMITTED_LAUNCH_OPERATION_CODES = new Set([
-  'agent_session_operation_invalid',
-  'agent_session_operation_expired',
-  'agent_session_operation_capacity'
-])
-
-/**
- * What the host said about the operation *id*, as distinct from what it said about the launch.
- *
- * Classified on the code with a message fallback because the launch handler raises its refusals as
- * the thrown code — `mapRuntimeError` then answers with that same string in both fields — and a
- * relay in between may only preserve one of them. `agent_session_operation_conflict` is deliberately
- * absent: it means a row under this id disagrees about what the launch does, which can only be a
- * client that reused one id across two payloads, and papering over it would hide that bug forever.
- */
-export function classifyAgentLaunchOperationRefusal(error: {
-  code?: string
-  message?: string
-}): 'unadmitted' | 'unknown' | null {
-  const message = error.message ?? ''
-  if (
-    error.code === 'agent_session_operation_unknown' ||
-    message.includes('agent_session_operation_unknown')
-  ) {
-    // The effect may have happened. The same id may be re-sent; a fresh one is a second operation.
-    return 'unknown'
-  }
-  if (
-    (error.code && UNADMITTED_LAUNCH_OPERATION_CODES.has(error.code)) ||
-    [...UNADMITTED_LAUNCH_OPERATION_CODES].some((code) => message.includes(code))
-  ) {
-    return 'unadmitted'
-  }
-  return null
 }
