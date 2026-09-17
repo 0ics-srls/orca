@@ -20,6 +20,7 @@
 // match), never an over-offer.
 
 import { readFile, rm } from 'node:fs/promises'
+import { z } from 'zod'
 import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { durableWriteTempPath, renameDurable, writeTempFileDurable } from '../durable-file-write'
@@ -38,14 +39,14 @@ export function agentSessionLaunchFilePath(stateDirectory: string): string {
   return join(stateDirectory, AGENT_SESSION_LAUNCH_FILE_NAME)
 }
 
+/** The stamp file's shape. Parsed rather than read field-by-field: the file is JSON this process
+ *  may not have written, and an unreadable one must fail closed rather than half-read. */
+const launchStampSchema = z.object({ current: z.string().min(1) })
+
 function readLaunchId(raw: string): string | null {
   try {
-    const parsed: unknown = JSON.parse(raw)
-    if (typeof parsed !== 'object' || parsed === null) {
-      return null
-    }
-    const current = Reflect.get(parsed, 'current')
-    return typeof current === 'string' && current.length > 0 ? current : null
+    const parsed = launchStampSchema.safeParse(JSON.parse(raw))
+    return parsed.success ? parsed.data.current : null
   } catch {
     return null
   }

@@ -130,6 +130,17 @@ export function claudeRecord(
   } as unknown as AgentSessionRecord
 }
 
+/** The fake journal's own shape, so callers can wire `appendItem` without reaching into `unknown`.
+ *  The code under test sees the real `AgentSessionJournal` type; tests see this. */
+export type HarnessJournal = {
+  isReadOnly: boolean
+  snapshot: () => { items: AgentJournalRenderItem[]; submissions: AgentJournalSubmission[] }
+  submissions: () => AgentJournalSubmission[]
+  appendItem: (envelope: unknown, body: { kind: string; text: string }) => Promise<void>
+}
+
+export type HarnessSession = { journal: HarnessJournal; hasProviderChild: boolean; fence?: number }
+
 export function journal(
   items: AgentJournalRenderItem[],
   isReadOnly = false,

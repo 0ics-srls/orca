@@ -27,6 +27,24 @@ export type StructuredAgentSessionResumeOutcome = {
 }
 
 /**
+ * The refusal a second caller gets, carrying WHO holds the session.
+ *
+ * A named error with a typed field rather than a bag assigned onto `new Error`: the catch site then
+ * recognises it by identity and reads `owner` as a string, instead of poking at an unknown value.
+ */
+export class StructuredAgentSessionResumeInProgressError extends Error {
+  constructor(readonly owner: string) {
+    super(STRUCTURED_AGENT_SESSION_RESUME_IN_PROGRESS)
+    this.name = 'StructuredAgentSessionResumeInProgressError'
+  }
+}
+
+/** The live holder named by a refusal, or null for any other failure. */
+function resumeAdmissionOwner(error: unknown): string | null {
+  return error instanceof StructuredAgentSessionResumeInProgressError ? error.owner : null
+}
+
+/**
  * One resume per session at a time, whoever is asking.
  *
  * Two surfaces can reach for the same chat at once — the banner's "Resume all" and a user clicking
@@ -43,7 +61,7 @@ export class StructuredAgentSessionResumeAdmission {
   async run<T>(sessionId: string, owner: string, task: () => Promise<T>): Promise<T> {
     const live = this.owners.get(sessionId)
     if (live !== undefined) {
-      throw Object.assign(new Error(STRUCTURED_AGENT_SESSION_RESUME_IN_PROGRESS), { owner: live })
+      throw new StructuredAgentSessionResumeInProgressError(live)
     }
     this.owners.set(sessionId, owner)
     try {
@@ -96,13 +114,12 @@ async function resumeOne(
     })
   } catch (error) {
     const reason = error instanceof Error ? error.message : String(error)
-    const owner =
-      typeof error === 'object' && error !== null ? Reflect.get(error, 'owner') : undefined
+    const owner = resumeAdmissionOwner(error)
     return {
       sessionId,
       outcome: 'refused',
       reason,
-      ...(typeof owner === 'string' ? { owner } : {})
+      ...(owner === null ? {} : { owner })
     }
   }
 }

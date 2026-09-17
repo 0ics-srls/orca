@@ -8,6 +8,8 @@
 // Markers are transient obligations, so each one carries the two ways it can die: it is consumed on
 // the resume that uses it, and it expires on its own if no launch ever does.
 
+import { z } from 'zod'
+
 /** Why the app went away. Recorded because an update install is a restart the user did not choose,
  *  and the surface that offers the resume says so. */
 export const AGENT_SESSION_RESUME_TRIGGERS = ['quit', 'update'] as const
@@ -61,34 +63,42 @@ export type AgentSessionResumeMarker = {
 
 const MAX_FIELD_LENGTH = 512
 
-function isMarkerField(value: unknown): value is string {
-  return typeof value === 'string' && value.length > 0 && value.length <= MAX_FIELD_LENGTH
-}
+/** Bounded because a marker is read back from a file this process did not necessarily write. */
+const markerField = z.string().min(1).max(MAX_FIELD_LENGTH)
 
-function isAgentSessionResumeWork(value: unknown): value is AgentSessionResumeWork {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-  const kind = Reflect.get(value, 'kind')
-  return (kind === 'turn' || kind === 'submission') && isMarkerField(Reflect.get(value, 'id'))
+const agentSessionResumeWorkSchema = z.object({
+  kind: z.enum(['turn', 'submission']),
+  id: markerField
+})
+
+/**
+ * The single parse boundary for a marker.
+ *
+ * Markers re-enter from the store as JSON this process may not have written — an older build, a
+ * hand-edited profile, a partially recovered file. Everything downstream dereferences the shape
+ * without guards and decides whether to hand an agent a provider child, so the untyped value is
+ * turned into a typed one exactly once, here, and never read field-by-field off `unknown`.
+ *
+ * Unknown keys pass: a marker written by a slightly newer build must not read as malformed.
+ */
+const agentSessionResumeMarkerSchema = z.object({
+  sessionId: markerField,
+  work: agentSessionResumeWorkSchema,
+  recordedAt: z.number().int().nonnegative(),
+  trigger: z.enum(AGENT_SESSION_RESUME_TRIGGERS),
+  providerHandleRoot: markerField,
+  launchId: markerField
+})
+
+/** The marker this value describes, or null when it is not one. Null is always a drop, never a
+ *  throw: a malformed advisory marker must never make a user's sessions unreadable. */
+export function parseAgentSessionResumeMarker(value: unknown): AgentSessionResumeMarker | null {
+  const parsed = agentSessionResumeMarkerSchema.safeParse(value)
+  return parsed.success ? parsed.data : null
 }
 
 export function isAgentSessionResumeMarker(value: unknown): value is AgentSessionResumeMarker {
-  if (typeof value !== 'object' || value === null) {
-    return false
-  }
-  const recordedAt = Reflect.get(value, 'recordedAt')
-  const trigger = Reflect.get(value, 'trigger')
-  return (
-    isMarkerField(Reflect.get(value, 'sessionId')) &&
-    isAgentSessionResumeWork(Reflect.get(value, 'work')) &&
-    isMarkerField(Reflect.get(value, 'providerHandleRoot')) &&
-    isMarkerField(Reflect.get(value, 'launchId')) &&
-    typeof recordedAt === 'number' &&
-    Number.isSafeInteger(recordedAt) &&
-    recordedAt >= 0 &&
-    (trigger === 'quit' || trigger === 'update')
-  )
+  return parseAgentSessionResumeMarker(value) !== null
 }
 
 export function isExpiredAgentSessionResumeMarker(

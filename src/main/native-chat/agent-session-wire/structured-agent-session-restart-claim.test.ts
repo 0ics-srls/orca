@@ -24,12 +24,13 @@ import {
   record,
   SESSION,
   submission,
-  turnItem
+  turnItem,
+  type HarnessSession
 } from './structured-agent-session-restart-resume-test-harness'
 
 function surface(input: {
   markers?: AgentSessionResumeMarker[]
-  sessions?: Map<string, { journal: unknown; hasProviderChild: boolean }>
+  sessions?: Map<string, HarnessSession>
   record?: AgentSessionRecord
   holdFails?: boolean
   /** The launch generation the host reads. Absent means adjacent to the marker fixtures. */
@@ -84,14 +85,11 @@ function surface(input: {
     ])
   // The note is written onto the session's own journal; intercept it there to assert attribution.
   for (const [sessionId, session] of sessions) {
-    const target = Reflect.get(session, 'journal')
-    if (target !== null && typeof target === 'object') {
-      Reflect.set(target, 'appendItem', async (_envelope: unknown, body: unknown) => {
-        if (input.noteFails) {
-          throw new Error('journal refused the note')
-        }
-        noted.push({ sessionId, text: String(Reflect.get(body ?? {}, 'text')) })
-      })
+    session.journal.appendItem = async (_envelope, body) => {
+      if (input.noteFails) {
+        throw new Error('journal refused the note')
+      }
+      noted.push({ sessionId, text: body.text })
     }
   }
   const noteFailures: { sessionId: string; error: unknown }[] = []
