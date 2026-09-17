@@ -100,9 +100,10 @@ describe('relay observability', () => {
     observability.recordReadiness({
       ready: true,
       degraded: true,
+      degradedDependencies: ['jwks'],
       failure: 'jwks_timed_out',
       jwksLatencyMs: 2_001,
-      sqlLatencyMs: 0,
+      sqlLatencyMs: 4,
       totalLatencyMs: 2_002
     })
 
@@ -112,6 +113,7 @@ describe('relay observability', () => {
         event: 'orca_relay_readiness_check',
         ready: true,
         degraded: true,
+        degradedDependencies: ['jwks'],
         failure: 'jwks_timed_out'
       })
     ])
@@ -125,15 +127,17 @@ describe('relay observability', () => {
     )
 
     observability.recordReadinessGrace({
+      dependency: 'sql',
       grace: 'entered',
       failure: 'sql_failed',
       lastSuccessAgeMs: 12_000,
-      graceMs: 900_000
+      graceMs: 180_000
     })
     observability.recordReadinessGrace({
+      dependency: 'sql',
       grace: 'recovered',
       lastSuccessAgeMs: 0,
-      graceMs: 900_000
+      graceMs: 180_000
     })
 
     expect(entries).toEqual([
@@ -145,10 +149,11 @@ describe('relay observability', () => {
         role: 'cell',
         cellId: 'production-gce-c28',
         region: 'asia-east2',
+        dependency: 'sql',
         grace: 'entered',
         failure: 'sql_failed',
         lastSuccessAgeMs: 12_000,
-        graceMs: 900_000
+        graceMs: 180_000
       },
       {
         severity: 'INFO',
@@ -158,9 +163,10 @@ describe('relay observability', () => {
         role: 'cell',
         cellId: 'production-gce-c28',
         region: 'asia-east2',
+        dependency: 'sql',
         grace: 'recovered',
         lastSuccessAgeMs: 0,
-        graceMs: 900_000
+        graceMs: 180_000
       }
     ])
   })
