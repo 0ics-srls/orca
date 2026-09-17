@@ -389,7 +389,7 @@ describe('one pane title update: fanout at live-capture scale', () => {
 
     // …but every one of those executions is now an identity check. These three
     // counters sit on the state maps themselves, so they catch a walk by ANY of
-    // the 5,500 subscribers, not only the four instrumented modules.
+    // the 5,500 subscribers, not only the three instrumented modules.
     expect(reads.sleepingRecords).toBe(0)
     expect(reads.agentStatusRows).toBe(0)
     // One bucket lookup per workspace consumer is a keyed read; a full-inventory
