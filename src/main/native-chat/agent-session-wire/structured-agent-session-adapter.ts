@@ -235,7 +235,7 @@ export type StructuredAgentSessionAdapter = {
     kind: 'approval' | 'question'
     optionId: string
     fence: number
-    commit: () => Promise<void>
+    commit: (settlement?: { options: Readonly<Record<string, string>> }) => Promise<void>
     /** Fenced host persistence for provider-owned changes during prompt settlement. */
     settleOptions?: (options: Readonly<Record<string, string>>) => Promise<void>
   }): Promise<void>

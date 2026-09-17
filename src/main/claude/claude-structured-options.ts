@@ -234,14 +234,11 @@ export async function restoreClaudeStructuredSessionOptions(
   session: ClaudeSession,
   timeoutMs: number | undefined
 ): Promise<void> {
-  const restoresPermissionMode = session.options.has('permissionMode')
   // Any write that was already in flight belongs to the previous acquisition
   // state and must not repopulate this map after restore starts.
   session.optionMutationSequence += 1
   session.permissionModeMutationSequence += 1
-  if (!restoresPermissionMode) {
-    session.reportedPermissionModeMutation = session.permissionModeMutationSequence
-  }
+  session.reportedPermissionModeMutation = session.permissionModeMutationSequence
   // The fence bump is not a write, so the report the session already holds is still
   // current as of this instant; leaving the stamp behind would make every restored
   // session read as unconfirmed until its next turn.

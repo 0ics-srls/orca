@@ -174,5 +174,6 @@ it('persists resumed provider options atomically with owner proof', async () => 
 
   const reopened = await AgentSessionRecordStore.open({ directory, hostId: 'local' })
   expect(reopened.getRecord(SESSION)?.options).toEqual({ model: 'gpt-tui', effort: 'low' })
+  expect(reopened.getRecord(SESSION)?.optionsRevision).toBe(1)
   expect(reopened.getRecord(SESSION)?.permissionModeRestoreValue).toBe('acceptEdits')
 })

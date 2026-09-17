@@ -8,6 +8,12 @@ import {
   tick,
   USER_MESSAGE
 } from './claude-structured-session-test-support'
+import {
+  applyStructuredAgentSessionOptions,
+  createStructuredAgentSessionOptionState,
+  structuredAgentSessionOptionSnapshot
+} from '../../shared/structured-agent-session-options'
+import { CLAUDE_SESSION_OPTION_CATALOG } from '../../shared/agent-session-option-catalog-claude-codex'
 
 describe('ClaudeStructuredSessionAdapter prompts', () => {
   it('restores and durably settles the prior permission mode after ExitPlanMode approval', async () => {
@@ -53,19 +59,21 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
       await durableSettlement.promise
     })
 
+    const commit = vi.fn(async () => {})
     const answering = adapter.answerPrompt({
       sessionId: 'session-1',
       itemId: 'journal-allow',
       kind: 'approval',
       optionId: 'allow',
       fence: 7,
-      commit: async () => {},
+      commit,
       settleOptions
     })
 
     await expect(answered.promise).resolves.toMatchObject({
       behavior: 'allow'
     })
+    expect(commit).toHaveBeenCalledWith({ options: { permissionMode: 'acceptEdits' } })
     expect(answerSettled).toBe(true)
     expect(writtenModes).toEqual(['plan', 'acceptEdits'])
     await vi.waitFor(() =>
@@ -256,9 +264,17 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
     expect(settleOptions).toHaveBeenCalledWith({ permissionMode: 'acceptEdits' })
     const options = await adapter.readOptions({ sessionId: 'session-1', fence: 7 })
     expect(options).toMatchObject({
-      current: { permissionMode: 'acceptEdits' }
+      current: { permissionMode: 'plan', confirmed: expect.arrayContaining(['permissionMode']) }
     })
-    expect(options.current.confirmed).not.toContain('permissionMode')
+    const projected = applyStructuredAgentSessionOptions(
+      createStructuredAgentSessionOptionState('claude'),
+      CLAUDE_SESSION_OPTION_CATALOG,
+      options
+    )
+    expect(
+      structuredAgentSessionOptionSnapshot(projected).find(({ id }) => id === 'permissionMode')
+    ).toMatchObject({ valueSource: 'reported', kind: { currentValue: 'plan' } })
+    expect(permissionMode).toBe('plan')
     warning.mockRestore()
   })
 

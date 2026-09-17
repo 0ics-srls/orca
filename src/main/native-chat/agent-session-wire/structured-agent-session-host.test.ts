@@ -374,7 +374,7 @@ describe('respondToPrompt', () => {
       emit: (event) => events.push(event)
     })
     answerPrompt.mockImplementationOnce(async ({ commit, settleOptions }) => {
-      await commit()
+      await commit({ options: { permissionMode: 'acceptEdits' } })
       await settleOptions?.({})
     })
     const fields = { itemId: prompt.itemId, expectedRevision: prompt.revision, optionId: 'allow' }
@@ -385,6 +385,16 @@ describe('respondToPrompt', () => {
       ...fields
     })
     expect(store.getRecord(SESSION)?.options).toEqual({})
+    expect(
+      host.journalSnapshot(SESSION).items.find((item) => item.itemId === prompt.itemId)?.body
+    ).toMatchObject({
+      resolution: {
+        sessionOptions: {
+          expectedRevision: 1,
+          values: { permissionMode: 'acceptEdits' }
+        }
+      }
+    })
     expect(events).toContainEqual(expect.objectContaining({ type: 'batch', optionsChanged: true }))
 
     const released = await store.evictProvenDeadOwner({
@@ -398,6 +408,42 @@ describe('respondToPrompt', () => {
     ).resolves.toMatchObject({ ok: true })
     expect(acquire.mock.calls[1]?.[0].options).toEqual({})
     unsubscribe()
+  })
+
+  it('recovers a committed prompt option effect before replacement acquisition', async () => {
+    const record = await attach()
+    setOption.mockResolvedValueOnce({ permissionMode: 'plan' })
+    const optionFields = { key: 'permissionMode', value: 'plan' }
+    await host.setOption(CALLER, {
+      envelope: envelope('agentSession.setOption', optionFields),
+      ...optionFields
+    })
+    const prompt = await seedApproval()
+    answerPrompt.mockImplementationOnce(async ({ commit }) => {
+      await commit({ options: { permissionMode: 'acceptEdits' } })
+    })
+    const fields = { itemId: prompt.itemId, expectedRevision: prompt.revision, optionId: 'allow' }
+
+    await host.respondToPrompt(CALLER, {
+      envelope: envelope('agentSession.respondTo:approval', fields),
+      kind: 'approval',
+      ...fields
+    })
+    expect(store.getRecord(SESSION)).toMatchObject({
+      options: { permissionMode: 'plan' },
+      optionsRevision: 1
+    })
+
+    const released = await store.evictProvenDeadOwner({
+      sessionId: SESSION,
+      expectedFence: record?.lease.runtimeFence ?? 1,
+      probe: { outcome: 'pid-absent' },
+      now: NOW
+    })
+    await expect(
+      host.attach(CALLER, ensureParams(released.lease.runtimeFence))
+    ).resolves.toMatchObject({ ok: true })
+    expect(acquire.mock.calls[1]?.[0].options).toEqual({ permissionMode: 'acceptEdits' })
   })
 
   it('does not let a later Plan write overtake approved prompt settlement', async () => {

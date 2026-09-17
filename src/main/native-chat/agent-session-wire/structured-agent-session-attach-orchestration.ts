@@ -16,6 +16,7 @@ import type {
 } from '../../../shared/agent-session-wire'
 import type { AgentSessionAttachParams } from './structured-agent-session-attach'
 import { performAttach } from './structured-agent-session-attach-flow'
+import { recoverResolvedPromptSessionOptions } from './structured-agent-session-prompt-option-recovery'
 import {
   pinnedAgentSessionLaunchArgs,
   pinnedAgentSessionLaunchEnv
@@ -94,6 +95,11 @@ export function attachStructuredAgentSession(
           }
           eventSink.unbind()
         },
+        optionsForAcquisition: (record, readDurableItems) =>
+          recoverResolvedPromptSessionOptions(
+            record,
+            context.sessions.get(sessionId)?.journal.snapshot().items ?? readDurableItems()
+          ),
         authority: {
           spawnToken: () => context.deps.mintSpawnToken?.() ?? randomUUID(),
           claimKeyId: context.deps.claimKeyId,

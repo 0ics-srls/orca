@@ -170,7 +170,7 @@ export type ClaudeSession = {
   optionMutationSequence: number
   /** Permission-mode writes have independent ownership from model and effort mutations. */
   permissionModeMutationSequence: number
-  /** Permission-mode mutation current when the provider last reported the desired mode. */
+  /** Permission-mode mutation current when the provider last reported its mode. */
   reportedPermissionModeMutation: number
   /** Shared durable-close write; a failed write clears this for a retry. */
   closePersistence?: Promise<void>

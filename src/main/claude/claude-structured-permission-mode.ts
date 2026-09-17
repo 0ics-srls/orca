@@ -60,6 +60,9 @@ export async function setClaudeStructuredPermissionMode(
 ): Promise<Readonly<Record<string, string>>> {
   const mutationSequence = ++session.permissionModeMutationSequence
   const previousPermissionMode = session.options.get('permissionMode')
+  const priorPlanWasReported =
+    session.reportedPermissionModeMutation === mutationSequence - 1 &&
+    session.reportedOptions.permissionMode === 'plan'
   session.options.set('permissionMode', permissionMode)
   session.confirmedOptions.delete('permissionMode')
   try {
@@ -70,6 +73,9 @@ export async function setClaudeStructuredPermissionMode(
     }
     if (failureDisposition === 'rollback') {
       restorePermissionModeIntent(session, previousPermissionMode, mutationSequence)
+    } else if (priorPlanWasReported) {
+      // Keep the last provider observation visible until the restore reports its replacement.
+      session.reportedPermissionModeMutation = mutationSequence
     }
     if (error instanceof ClaudeControlRequestError) {
       throw new AgentSessionOptionRejectedError(error)
@@ -85,12 +91,14 @@ export async function setClaudeStructuredPermissionMode(
   }
   if (settingsPermissionMode) {
     session.reportedOptions.permissionMode = settingsPermissionMode
+    session.reportedPermissionModeMutation = mutationSequence
     if (settingsPermissionMode === permissionMode) {
-      session.reportedPermissionModeMutation = mutationSequence
       session.confirmedOptions.add('permissionMode')
     } else {
       session.confirmedOptions.delete('permissionMode')
     }
+  } else if (priorPlanWasReported) {
+    session.reportedPermissionModeMutation = mutationSequence
   }
   if (permissionMode === 'plan' || !session.confirmedOptions.has('permissionMode')) {
     return Object.fromEntries(session.options)
@@ -101,28 +109,24 @@ export async function setClaudeStructuredPermissionMode(
 
 export async function restoreClaudePermissionModeAfterApprovedPrompt(
   session: ClaudeSession,
+  intent: ClaudePermissionModeRestoreIntent,
   settleOptions?: (options: Readonly<Record<string, string>>) => Promise<void>,
   timeoutMs?: number
 ): Promise<void> {
-  const restoreValue = session.basePermissionMode
-  if (session.options.get('permissionMode') !== 'plan' || !restoreValue) {
-    return
-  }
   const providerSettlement = setClaudeStructuredPermissionMode(
     session,
-    restoreValue,
+    intent.value,
     timeoutMs,
     'keep-requested'
   ).then(
     (options) => ({ options }),
     (error: unknown) => ({ options: Object.fromEntries(session.options), error })
   )
-  const requestedOptions: Readonly<Record<string, string>> = Object.fromEntries(session.options)
-  // Let the caller settle the provider prompt after control starts and before durable bookkeeping.
+  // The committed prompt owns crash recovery, so provider approval need not wait on record I/O.
   await new Promise<void>((resolve) => setImmediate(resolve))
   let failure: unknown
   try {
-    await settleOptions?.(requestedOptions)
+    await settleOptions?.(intent.options)
   } catch (error) {
     failure = error
   }
@@ -130,17 +134,38 @@ export async function restoreClaudePermissionModeAfterApprovedPrompt(
   if ('error' in settled) {
     failure ??= settled.error
   }
-  if (settled.options.permissionMode !== restoreValue) {
+  if (settled.options.permissionMode !== intent.value) {
     try {
       await settleOptions?.(settled.options)
     } catch (error) {
       failure ??= error
     }
   }
+  // The durable settlement can publish before the provider attempt finishes. Publish once more
+  // so a failed or disagreeing restore cannot leave subscribers showing the requested mode.
+  session.events?.optionsChanged?.()
   if (failure !== undefined) {
     console.warn('[claude] failed to settle permission mode after ExitPlanMode approval', {
       providerSessionId: session.providerSessionId,
       error: failure
     })
+  }
+}
+
+export type ClaudePermissionModeRestoreIntent = {
+  value: StructuredAgentSessionPermissionMode
+  options: Readonly<Record<string, string>>
+}
+
+export function claudePermissionModeRestoreIntent(
+  session: ClaudeSession
+): ClaudePermissionModeRestoreIntent | null {
+  const value = session.basePermissionMode
+  if (session.options.get('permissionMode') !== 'plan' || !value) {
+    return null
+  }
+  return {
+    value,
+    options: { ...Object.fromEntries(session.options), permissionMode: value }
   }
 }

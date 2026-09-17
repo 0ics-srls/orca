@@ -15,6 +15,7 @@ import type { StructuredAgentSessionHostSession } from './structured-agent-sessi
 import { StructuredAgentSessionHandoffCoordinator } from './structured-agent-session-handoff'
 import { recoverDeadTuiHandoffStatus } from './structured-agent-session-dead-tui-recovery'
 import { readNativeSessionOptionRestoration } from './structured-agent-session-option-restoration'
+import { recoverResolvedPromptSessionOptions } from './structured-agent-session-prompt-option-recovery'
 import type { AgentSessionSubscribers } from './structured-agent-session-subscribers'
 import { StructuredTuiTranscriptCatchup } from './structured-tui-transcript-catchup'
 import { adapterSupportsCreateIfDeclared } from './structured-agent-session-provider-support'
@@ -243,11 +244,15 @@ export async function acquireNativeHandoffOwner(
   if (!adapterSupportsCreateIfDeclared(deps.adapter, record.location, record.provider)) {
     throw new Error('structured_agent_session_unsupported')
   }
+  const acquisitionOptions = recoverResolvedPromptSessionOptions(
+    record,
+    session.journal.snapshot().items
+  )
   const acquired = await deps.adapter.acquire({
     identity: journalIdentityFor(record, session.params),
     fence: input.fence,
     spawnToken: input.spawnToken,
-    ...(record.options ? { options: record.options } : {}),
+    ...(acquisitionOptions ? { options: acquisitionOptions } : {}),
     ...(record.permissionModeRestoreValue
       ? { permissionModeRestoreValue: record.permissionModeRestoreValue }
       : {}),
@@ -259,7 +264,7 @@ export async function acquireNativeHandoffOwner(
       adapter: deps.adapter,
       sessionId: input.sessionId,
       fence: input.fence,
-      ...(record.options ? { priorOptions: record.options } : {})
+      ...(acquisitionOptions ? { priorOptions: acquisitionOptions } : {})
     })
     await deps.store.commitProcessIdentity({
       sessionId: input.sessionId,

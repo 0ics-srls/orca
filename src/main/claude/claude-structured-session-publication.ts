@@ -25,6 +25,8 @@ export function createClaudeSessionPublication(input: {
   observedAt: number
   options?: ReadonlyMap<string, string>
   permissionModeRestoreValue?: ClaudeSession['basePermissionMode']
+  launchPermissionMode?: ClaudeSession['basePermissionMode']
+  settingsPermissionMode?: ClaudeSession['basePermissionMode']
   capabilities: readonly string[]
   /** Read from `get_settings`; `system/init` never reports an effort. */
   effort: string | null
@@ -39,15 +41,18 @@ export function createClaudeSessionPublication(input: {
   const persistedPermissionMode = readStructuredAgentSessionPermissionMode(
     input.options?.get('permissionMode')
   )
-  const reportedPermissionMode = input.init.permissionMode ?? undefined
-  // The durable baseline wins; current provider state seeds only a session with no prior owner.
+  const reportedPermissionMode =
+    input.settingsPermissionMode ?? input.init.permissionMode ?? undefined
+  // The durable baseline wins; otherwise capture the provider's state or its accepted launch mode.
   const basePermissionMode =
     input.permissionModeRestoreValue ??
     (persistedPermissionMode && persistedPermissionMode !== 'plan'
       ? persistedPermissionMode
       : reportedPermissionMode && reportedPermissionMode !== 'plan'
         ? reportedPermissionMode
-        : undefined)
+        : input.launchPermissionMode && input.launchPermissionMode !== 'plan'
+          ? input.launchPermissionMode
+          : undefined)
   return {
     acquisition: {
       process: input.process,

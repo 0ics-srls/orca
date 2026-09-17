@@ -10,5 +10,10 @@ export function replaceAgentSessionRecordOptions(
   if (record.lease.runtimeFence !== replacement.fence || record.lease.claimStatus !== 'live') {
     throw new Error('agent_session_ownership_unknown')
   }
-  return { ...record, options: { ...replacement.options }, updatedAt: replacement.now }
+  return {
+    ...record,
+    options: { ...replacement.options },
+    optionsRevision: (record.optionsRevision ?? 0) + 1,
+    updatedAt: replacement.now
+  }
 }

@@ -27,7 +27,8 @@ import { ClaudePromptRegistry } from './claude-structured-prompt-replies'
 import { createClaudeSessionJournalTranslator } from './claude-structured-journal-translation'
 import {
   observeClaudeFastModeFacts,
-  readClaudeSettingsEffort
+  readClaudeSettingsEffort,
+  readClaudeSettingsPermissionMode
 } from './claude-structured-session-options'
 import {
   claudeStructuredSessionPublicationOptions,
@@ -251,6 +252,7 @@ export async function acquireClaudeSession({
         leafUuid: observedLeafUuid,
         fence: input.fence,
         effort: readClaudeSettingsEffort(settings),
+        settingsPermissionMode: readClaudeSettingsPermissionMode(settings) ?? undefined,
         ...claudeStructuredSessionPublicationOptions(acquisitionOptions),
         resumed: launch.resumed,
         prompts,
@@ -259,6 +261,7 @@ export async function acquireClaudeSession({
         process,
         acquisitionGeneration: mintClaudeAcquisitionGeneration(deps),
         options: acquisitionOptions.options,
+        launchPermissionMode: launch.launchPermissionMode,
         ...(input.permissionModeRestoreValue
           ? { permissionModeRestoreValue: input.permissionModeRestoreValue }
           : {}),

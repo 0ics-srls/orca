@@ -200,16 +200,24 @@ export async function answerClaudeStructuredPrompt(
     throw new AgentSessionPromptUnavailableError(request.itemId)
   }
   try {
-    await request.commit()
-    if (
-      sessions.get(request.sessionId) !== session ||
-      session.fence !== request.fence ||
-      session.acquisitionGeneration !== acquisitionGeneration ||
-      !session.prompts.ownsClaim(claim)
-    ) {
-      throw new AgentSessionPromptUnavailableError(request.itemId)
-    }
-    await answerClaudePrompt(session, claim, request.optionId, request.settleOptions, timeoutMs)
+    await answerClaudePrompt(
+      session,
+      claim,
+      request.optionId,
+      async (settlement) => {
+        await request.commit(settlement)
+        if (
+          sessions.get(request.sessionId) !== session ||
+          session.fence !== request.fence ||
+          session.acquisitionGeneration !== acquisitionGeneration ||
+          !session.prompts.ownsClaim(claim)
+        ) {
+          throw new AgentSessionPromptUnavailableError(request.itemId)
+        }
+      },
+      request.settleOptions,
+      timeoutMs
+    )
   } catch (error) {
     session.prompts.releaseClaim(claim)
     throw error

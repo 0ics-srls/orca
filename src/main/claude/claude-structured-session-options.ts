@@ -18,6 +18,7 @@ import {
   readStructuredAgentSessionPermissionMode,
   type StructuredAgentSessionPermissionMode
 } from '../../shared/structured-agent-session-permission-mode'
+import { claudePublishedPermissionMode } from './claude-structured-permission-mode-projection'
 
 /**
  * The session's current effort, which only `get_settings` reports: the
@@ -69,9 +70,9 @@ export function observeClaudeUserPermissionMode(session: ClaudeSession, value: u
   const previousPermissionMode = session.reportedOptions.permissionMode
   const wasConfirmed = session.confirmedOptions.has('permissionMode')
   session.reportedOptions.permissionMode = permissionMode
+  session.reportedPermissionModeMutation = session.permissionModeMutationSequence
   const desiredPermissionMode = session.options.get('permissionMode') ?? session.basePermissionMode
   if (desiredPermissionMode === permissionMode) {
-    session.reportedPermissionModeMutation = session.permissionModeMutationSequence
     session.confirmedOptions.add('permissionMode')
   } else {
     session.confirmedOptions.delete('permissionMode')
@@ -285,10 +286,10 @@ export async function readClaudeStructuredSessionOptions(
     const permissionMode = readClaudeSettingsPermissionMode(settings)
     if (permissionMode) {
       session.reportedOptions.permissionMode = permissionMode
+      session.reportedPermissionModeMutation = readPermissionModeMutation
       const desiredPermissionMode =
         session.options.get('permissionMode') ?? session.basePermissionMode
       if (desiredPermissionMode === permissionMode) {
-        session.reportedPermissionModeMutation = readPermissionModeMutation
         session.confirmedOptions.add('permissionMode')
       } else {
         session.confirmedOptions.delete('permissionMode')
@@ -324,10 +325,8 @@ export async function readClaudeStructuredSessionOptions(
     session.reportedOptions.fastMode ??
     (session.fastModeState === undefined ? undefined : session.fastModeState !== 'off')
   const support = claudeFastModeSupport(discovered, session.fastModeDisabledReason)
-  const permissionMode =
-    readStructuredAgentSessionPermissionMode(session.options.get('permissionMode')) ??
-    session.basePermissionMode ??
-    session.reportedOptions.permissionMode
+  const { value: permissionMode, reported: permissionModeReported } =
+    claudePublishedPermissionMode(session)
   const confirmed = [
     ...(current.confirmed ? ['model'] : []),
     ...(effort && session.confirmedOptions.has('effort') ? ['effort'] : []),
@@ -335,7 +334,9 @@ export async function readClaudeStructuredSessionOptions(
     (session.confirmedOptions.has('fastMode') || !session.options.has('fastMode'))
       ? ['fastMode']
       : []),
-    ...(permissionMode && session.confirmedOptions.has('permissionMode') ? ['permissionMode'] : [])
+    ...(permissionMode && (session.confirmedOptions.has('permissionMode') || permissionModeReported)
+      ? ['permissionMode']
+      : [])
   ]
   return {
     models: models.map((entry) => ({

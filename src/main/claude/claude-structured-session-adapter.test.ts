@@ -9,6 +9,12 @@ import {
 import type { ClaudeStreamJsonConnection } from './claude-stream-json-connection'
 import { ClaudeControlRequestError } from './claude-stream-json-connection'
 import { CLAUDE_SPAWN_TOKEN_ENV } from './claude-structured-owner-identity'
+import { CLAUDE_SESSION_OPTION_CATALOG } from '../../shared/agent-session-option-catalog-claude-codex'
+import {
+  applyStructuredAgentSessionOptions,
+  createStructuredAgentSessionOptionState,
+  structuredAgentSessionOptionSnapshot
+} from '../../shared/structured-agent-session-options'
 import {
   CLAUDE_STRUCTURED_INIT_TIMEOUT_MS,
   type ClaudeStructuredSessionAdapter,
@@ -67,6 +73,96 @@ describe('ClaudeStructuredSessionAdapter.acquire', () => {
       observedAt: 1_700_000_000_500
     })
     expect(events[0]).toMatchObject({ type: 'message', message: { subtype: 'init' } })
+  })
+
+  it('offers Plan from the launch baseline when system/init omits permission mode', async () => {
+    const claude = fakeClaude({ initPermissionMode: null })
+    const adapter = adapterFor(claude, {
+      launchPermissionMode: 'bypassPermissions'
+    })
+
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-9'
+    })
+
+    const options = await adapter.readOptions({ sessionId: 'session-1', fence: 7 })
+    expect(options).toMatchObject({
+      permissionModeRestoreValue: 'bypassPermissions',
+      current: { permissionMode: 'bypassPermissions' }
+    })
+    const projected = applyStructuredAgentSessionOptions(
+      createStructuredAgentSessionOptionState('claude'),
+      CLAUDE_SESSION_OPTION_CATALOG,
+      options
+    )
+    expect(
+      structuredAgentSessionOptionSnapshot(projected).find(({ id }) => id === 'permissionMode')
+    ).toMatchObject({ kind: { currentValue: 'bypassPermissions' } })
+  })
+
+  it('uses provider settings ahead of the launch fallback when system/init omits permission mode', async () => {
+    const claude = fakeClaude({
+      initPermissionMode: null,
+      settings: { applied: { permissionMode: 'acceptEdits' } }
+    })
+    const adapter = adapterFor(claude, { launchPermissionMode: 'bypassPermissions' })
+
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-9'
+    })
+
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'acceptEdits',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
+  })
+
+  it('uses provider settings ahead of a conflicting system/init permission mode', async () => {
+    const claude = fakeClaude({
+      initPermissionMode: 'bypassPermissions',
+      settings: { applied: { permissionMode: 'acceptEdits' } }
+    })
+    const adapter = adapterFor(claude, { launchPermissionMode: 'default' })
+
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-9'
+    })
+
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'acceptEdits',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
+  })
+
+  it('uses system/init ahead of the launch fallback when settings omit permission mode', async () => {
+    const claude = fakeClaude({ initPermissionMode: 'acceptEdits' })
+    const adapter = adapterFor(claude, { launchPermissionMode: 'bypassPermissions' })
+
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-9'
+    })
+
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'acceptEdits',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
   })
 
   it('restores persisted model and effort before publishing a reacquired session', async () => {
@@ -260,6 +356,37 @@ describe('ClaudeStructuredSessionAdapter.acquire', () => {
       permissionModeRestoreValue: 'acceptEdits',
       current: {
         permissionMode: 'acceptEdits',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
+  })
+
+  it('publishes provider-current Plan when a recovered approved exit retry is rejected', async () => {
+    const claude = fakeClaude({
+      initPermissionMode: 'plan',
+      routes: {
+        get_settings: () => ({ applied: { permissionMode: 'plan' } }),
+        set_permission_mode: () => {
+          throw new ClaudeControlRequestError('set_permission_mode', 'temporarily unavailable')
+        }
+      }
+    })
+    const adapter = adapterFor(claude, { resumed: true })
+
+    await expect(
+      adapter.acquire({
+        identity: identityFor(),
+        fence: 7,
+        spawnToken: 'spawn-9',
+        options: { permissionMode: 'acceptEdits' }
+      })
+    ).resolves.toBeDefined()
+
+    expect(adapter.readOptionRestoreFailures('session-1')).toEqual([])
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'plan',
         confirmed: expect.arrayContaining(['permissionMode'])
       }
     })

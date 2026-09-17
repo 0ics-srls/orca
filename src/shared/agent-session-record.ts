@@ -24,10 +24,12 @@ import {
 } from './structured-agent-session-permission-mode'
 import { isAgentSessionLaunchArgs, type AgentSessionLaunchArgs } from './agent-session-launch-args'
 import { isAgentSessionId } from './agent-session-id'
+import { isAgentSessionOptions } from './agent-session-options-record'
 
 export { isAgentSessionLaunchArgs } from './agent-session-launch-args'
 export type { AgentSessionLaunchArgs } from './agent-session-launch-args'
 export { isAgentSessionId } from './agent-session-id'
+export { isAgentSessionOptions } from './agent-session-options-record'
 
 export const AGENT_SESSION_RECORD_SCHEMA_VERSION = 2 as const
 
@@ -138,6 +140,8 @@ export type AgentSessionRecord = {
   accountHome: AgentSessionAccountHome
   /** Provider options acknowledged for the next turn, restored across owner replacement. */
   options?: Record<string, string>
+  /** Monotonic generation for durable option replacement. */
+  optionsRevision?: number
   /** Non-Plan permission mode captured before this session first entered Plan. */
   permissionModeRestoreValue?: StructuredAgentSessionPermissionMode
   rewind?: AgentSessionRewindRecord
@@ -229,20 +233,6 @@ function isAgentSessionAccountHome(value: unknown): value is AgentSessionAccount
   return (
     (home.variable === 'CLAUDE_CONFIG_DIR' || home.variable === 'CODEX_HOME') &&
     isBoundedString(home.path, MAX_PATH_LENGTH)
-  )
-}
-
-export function isAgentSessionOptions(value: unknown): value is Record<string, string> {
-  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
-    return false
-  }
-  const entries = Object.entries(value)
-  return (
-    entries.length <= 32 &&
-    entries.every(
-      ([key, option]) =>
-        isBoundedString(key, MAX_ID_LENGTH) && isBoundedString(option, MAX_ID_LENGTH)
-    )
   )
 }
 
@@ -346,6 +336,8 @@ export function isAgentSessionRecord(value: unknown): value is AgentSessionRecor
     isAgentSessionProviderHandleChain(record.providerHandleChain) &&
     isAgentSessionAccountHome(record.accountHome) &&
     (record.options === undefined || isAgentSessionOptions(record.options)) &&
+    (record.optionsRevision === undefined ||
+      (Number.isSafeInteger(record.optionsRevision) && record.optionsRevision >= 0)) &&
     (record.permissionModeRestoreValue === undefined ||
       isStructuredAgentSessionPermissionModeRestoreValue(record.permissionModeRestoreValue)) &&
     (record.rewind === undefined || isAgentSessionRewindRecord(record.rewind)) &&
