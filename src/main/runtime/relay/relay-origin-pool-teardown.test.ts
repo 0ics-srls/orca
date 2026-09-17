@@ -58,10 +58,10 @@ function brokerOptions(
 ): Parameters<typeof RelaySessionBroker.connect>[0] {
   const keypair = nacl.box.keyPair()
   return {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RelaySessionBroker.connect reads only these two endpoints off authConfig; the rest of the profile config is never reached.
     authConfig: {
       relayTokenEndpoint: 'https://auth.example.test/v1/relay-token',
       relayDirectorUrl: 'https://relay.example.test'
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: RelaySessionBroker.connect reads only these two endpoints off authConfig; the rest of the profile config is never reached.
     } as OrcaCloudAuthConfig,
     accessToken: 'access-token',
     identity: { userId: 'user-1', profileId: 'profile-1', organizationId: 'org-1' },
