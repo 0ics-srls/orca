@@ -221,8 +221,8 @@ export const OPERATION_MUTATIONS = {
   // there. Invisible to any scenario whose session already has an active tab.
   'create-after-tab-id-null': {
     file: 'use-mobile-session-terminal-create-actions.ts',
-    before: '        afterTabId: activeSessionTabId ?? undefined,',
-    after: '        afterTabId: activeSessionTabId,'
+    before: '      const afterTabId = activeSessionTabId ?? undefined',
+    after: '      const afterTabId = activeSessionTabId'
   },
   // Swaps the two quick-command members, so a saved shell command arrives as an agent prompt and an
   // agent prompt arrives as a startup command. Invisible to any scenario that fills neither.
@@ -254,6 +254,28 @@ export const OPERATION_MUTATIONS = {
     file: 'use-mobile-session-startup.ts',
     before: '      await ensureSessionTabs().catch(() => null)',
     after: '      await ensureSessionTabs()'
+  },
+  // Accepts a `null` Linear status as the status itself, which is the container requirement the
+  // whole domain rests on: main read `status.connected` off that null and threw the property-read
+  // TypeError the Tasks screen showed as its load error. Only the `result-null` partition of the
+  // matrix can see it, so `family-mutants.test.ts` drives that variant rather than the pilot.
+  'linear-status-nullable': {
+    file: 'task-list-reply-schema.ts',
+    before: `  activeWorkspaceId: salvagedOptional('activeWorkspaceId', z.string().nullable())
+})`,
+    after: `  activeWorkspaceId: salvagedOptional('activeWorkspaceId', z.string().nullable())
+}).nullable()`
+  },
+  // Collapses the assignable-user row's explicit `avatarUrl: null` into absence, so a host that
+  // reported "this user has no avatar" becomes indistinguishable from one that does not report
+  // avatars at all, and the picker draws its initials placeholder for both. The null-collapse class
+  // the session domain shipped twice before a review caught it; this anchor keeps it caught.
+  'assignable-user-avatar-null-collapse': {
+    file: 'task-provider-entity-reply-schema.ts',
+    before: `  name: prNullableText('name'),
+  avatarUrl: prNullableText('avatarUrl')`,
+    after: `  name: prNullableText('name'),
+  avatarUrl: prText('avatarUrl')`
   },
   // Publishes the settings envelope as the refreshed task runtime settings.
   'task-workspace-envelope': {
