@@ -3,21 +3,15 @@
 
 import { isSettledBackgroundTaskState } from '../../shared/native-chat-background-task-row'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
-import {
-  classifyClaudeBackgroundTaskKind,
-  record,
-  taskAliasId
-} from './claude-background-task-frames'
+import { record, taskAliasId } from './claude-background-task-frames'
 import {
   claudeBackgroundTaskPatchChange,
   claudeBackgroundTaskToolUseId,
   canonicalClaudeBackgroundTaskId,
   finalizeClaudeBackgroundTaskRow,
-  isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
   newClaudeBackgroundTaskRowFromNotification,
   reviseClaudeBackgroundTaskRow,
-  shouldRestartClaudeBackgroundTaskRow,
   type ClaudeBackgroundTaskChange,
   type ClaudeBackgroundTaskRow
 } from './claude-background-task-row-lifecycle'
@@ -26,10 +20,10 @@ import {
   ensureClaudeBackgroundTaskRowSlot,
   type ClaudeBackgroundTaskLedgerSizes
 } from './claude-background-task-memory'
-import { writeClaudeBackgroundTaskRow } from './claude-background-task-row-journal'
+import { ClaudeBackgroundTaskRowWriter } from './claude-background-task-row-writer'
+import { observeClaudeBackgroundTaskStart } from './claude-background-task-start'
 import { observeClaudeBackgroundTaskRoster } from './claude-background-task-roster'
 import { ClaudeSubagentIds } from './claude-subagent-id-aliases'
-import { isClaudeSubagentTask } from './claude-subagent-task-frames'
 import { ClaudeOverflowTerminalRows } from './claude-overflow-terminal-rows'
 
 const MAX_TASK_ROWS = 64
@@ -52,11 +46,13 @@ export type ClaudeBackgroundTaskRowsDeps = {
    *  output, so writing one must reopen a turn the provider resumed itself —
    *  otherwise the session renders the row while reporting idle. */
   openOutputTurn?: (frame: Record<string, unknown>, observedAt: number) => void
+  onPersistenceFailure?: (error: Error) => void
   now?: () => number
 }
 
 export class ClaudeBackgroundTaskRows {
   private readonly rows = new Map<string, ClaudeBackgroundTaskRow>()
+  private readonly writer: ClaudeBackgroundTaskRowWriter
   private readonly overflowTerminalRows: ClaudeOverflowTerminalRows
   private readonly ledgers = new ClaudeBackgroundTaskLedgers()
   private readonly ids = new ClaudeSubagentIds()
@@ -64,6 +60,7 @@ export class ClaudeBackgroundTaskRows {
 
   constructor(private readonly deps: ClaudeBackgroundTaskRowsDeps) {
     this.now = deps.now ?? (() => Date.now())
+    this.writer = new ClaudeBackgroundTaskRowWriter(deps.sink, deps.onPersistenceFailure)
     this.overflowTerminalRows = new ClaudeOverflowTerminalRows(
       this.ledgers,
       this.now,
@@ -120,7 +117,15 @@ export class ClaudeBackgroundTaskRows {
       return false
     }
     if (message.subtype === 'task_started') {
-      return this.observeStart(id, message)
+      return observeClaudeBackgroundTaskStart({
+        id,
+        message,
+        rows: this.rows,
+        ledgers: this.ledgers,
+        isForwardedParentTool: this.deps.isForwardedParentTool,
+        openRow: (taskId, frame) => this.openRow(taskId, frame),
+        maxRows: MAX_TASK_ROWS
+      })
     }
     if (this.ledgers.foreign.has(id)) {
       return true
@@ -134,111 +139,23 @@ export class ClaudeBackgroundTaskRows {
   settleSession(): void {
     for (const [id, row] of this.rows) {
       if (!isSettledBackgroundTaskState(row.block.state)) {
-        this.revise(id, { state: 'unverifiable' })
+        this.revise(id, { state: 'unverifiable' }, true)
       }
     }
+    this.writer.settlePendingWrites()
   }
 
   dispose(): void {
     this.settleSession()
     this.rows.clear()
+    this.writer.dispose()
     this.overflowTerminalRows.clear()
     this.ledgers.clear()
     this.ids.clear()
   }
 
-  private observeStart(id: string, message: Record<string, unknown>): boolean {
-    if (this.ledgers.fallbackTaskIds.has(id)) {
-      if (this.ledgers.terminalTaskIds.has(id)) {
-        const previousToolUseId = this.ledgers.terminalToolUseIds.get(id)
-        const currentToolUseId = claudeBackgroundTaskToolUseId(message)
-        if (
-          previousToolUseId !== undefined &&
-          currentToolUseId !== undefined &&
-          previousToolUseId !== currentToolUseId
-        ) {
-          this.ledgers.fallbackTaskIds.delete(id)
-        } else {
-          return false
-        }
-      } else {
-        return false
-      }
-    }
-    if (message.ambient === true || message.skip_transcript === true) {
-      this.ledgers.rememberForeign(id, 'ambient')
-      return true
-    }
-    if (isClaudeSubagentTask(message)) {
-      this.ledgers.rememberForeign(id, 'roster')
-      return true
-    }
-    const kind = classifyClaudeBackgroundTaskKind(message.task_type)
-    if (!isClaudeBackgroundTranscriptTask(message, kind)) {
-      this.ledgers.rememberForeign(id, 'foreground')
-      return true
-    }
-    const existing = this.rows.get(id)
-    if (existing) {
-      this.ledgers.foreign.delete(id)
-      // A task that already exists and has not finished is not re-opened: a
-      // duplicate announcement is a redelivery, not a second run, and treating
-      // it as one would restate a row the user is already reading.
-      if (!isSettledBackgroundTaskState(existing.block.state)) {
-        return true
-      }
-      if (shouldRestartClaudeBackgroundTaskRow(existing, message)) {
-        this.openRow(id, message)
-      }
-      return true
-    }
-    let restartedTerminal = false
-    if (this.ledgers.terminalTaskIds.has(id)) {
-      const previousToolUseId = this.ledgers.terminalToolUseIds.get(id)
-      const currentToolUseId = claudeBackgroundTaskToolUseId(message)
-      // A terminal edge that had no usable tool id cannot prove a later start
-      // is a new run, so keep the conservative orphan guard. When both runs
-      // name their parent, a different alias is the provider's restart signal.
-      if (
-        previousToolUseId === undefined ||
-        currentToolUseId === undefined ||
-        previousToolUseId === currentToolUseId
-      ) {
-        return true
-      }
-      restartedTerminal = true
-    }
-    this.ledgers.foreign.delete(id)
-    if (!this.admitsFirstRun(message)) {
-      // The refusal is recorded, not forgotten: the task belongs to the
-      // sidechain that spawned it, so its later frames find an owner here
-      // instead of looking like a task nothing ever decided about.
-      this.ledgers.rememberForeign(id, 'sidechain')
-      return true
-    }
-    if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
-      this.ledgers.rememberFallback(id)
-      return false
-    }
-    if (restartedTerminal) {
-      this.ledgers.terminalTaskIds.delete(id)
-      this.ledgers.terminalToolUseIds.delete(id)
-    }
-    this.openRow(id, message)
-    return true
-  }
-
-  /** The gate a task passes ONCE, when its first row is minted. Later frames
-   *  for an admitted task are never re-gated: the decision belongs to the
-   *  announcement, and re-asking it on a patch that carries no `tool_use_id`
-   *  would drop the outcome of a task already on screen. */
-  private admitsFirstRun(message: Record<string, unknown>): boolean {
-    const toolUseId = claudeBackgroundTaskToolUseId(message)
-    // Conditional on the field being PRESENT. An announcement that names a tool
-    // this session never forwarded is a nested child and is refused; one that
-    // names no tool at all is admitted, because there is nothing to contradict
-    // — absence of the field is not evidence of an unforwarded parent.
-    return toolUseId === undefined || this.deps.isForwardedParentTool(toolUseId)
+  retryPendingWrites() {
+    return this.writer.retryPendingWrites()
   }
 
   private openRow(id: string, message: Record<string, unknown>): void {
@@ -323,30 +240,40 @@ export class ClaudeBackgroundTaskRows {
     return true
   }
 
-  private revise(id: string, change: ClaudeBackgroundTaskChange): void {
+  private revise(id: string, change: ClaudeBackgroundTaskChange, lifecycle = false): void {
     const row = this.rows.get(id)
     if (!row) {
       return
     }
     const wasLive = !isSettledBackgroundTaskState(row.block.state)
     reviseClaudeBackgroundTaskRow(row, change, this.now())
-    this.write(id, wasLive)
+    this.write(id, wasLive, lifecycle)
   }
 
-  private write(id: string, openOutputTurn = true): void {
+  private write(id: string, openOutputTurn = true, lifecycle = false): void {
     const row = this.rows.get(id)
     if (!row) {
       return
     }
-    this.writeRow(id, row, openOutputTurn)
+    this.writeRow(id, row, openOutputTurn, lifecycle)
   }
 
-  private writeRow(id: string, row: ClaudeBackgroundTaskRow, openOutputTurn = true): void {
+  private writeRow(
+    id: string,
+    row: ClaudeBackgroundTaskRow,
+    openOutputTurn = true,
+    lifecycle = false
+  ): void {
     const journaling = this.journaling
-    writeClaudeBackgroundTaskRow(this.deps.sink, id, row, () => {
-      if (journaling && openOutputTurn) {
-        this.deps.openOutputTurn?.(journaling.frame, journaling.observedAt)
-      }
-    })
+    this.writer.write(
+      id,
+      row,
+      () => {
+        if (journaling && openOutputTurn) {
+          this.deps.openOutputTurn?.(journaling.frame, journaling.observedAt)
+        }
+      },
+      lifecycle
+    )
   }
 }

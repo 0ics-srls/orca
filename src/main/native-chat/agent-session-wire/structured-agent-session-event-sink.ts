@@ -8,6 +8,7 @@ import type { AgentSessionJournal } from '../agent-session-journal/journal-store
 import type { JournalLifecycleMutationInput } from '../agent-session-journal/journal-row-builders'
 import { estimateStructuredAgentSessionItemBytes } from './structured-agent-session-event-sink-estimate'
 import { StructuredAgentSessionSinkQueue } from './structured-agent-session-event-sink-queue'
+import { createStructuredAgentSessionResolvedAppend } from './structured-agent-session-resolved-append'
 
 export type StructuredAgentSessionSinkAdmission =
   | { accepted: true }
@@ -66,6 +67,13 @@ export type StructuredAgentSessionEventSink = {
   ): StructuredAgentSessionSinkAdmission
   /** Queues an ordinary append whose identity is resolved after journal bind. */
   tryAppendResolvedItem?(
+    identitySizeBound: AgentJournalItemIdentity,
+    body: AgentJournalItemBody,
+    resolveIdentity: StructuredAgentSessionIdentityResolver,
+    options?: StructuredAgentSessionAppendOptions
+  ): StructuredAgentSessionSinkAdmission
+  /** Queues one resolved append and its publication as a single admitted operation. */
+  tryAppendResolvedItemAndPublish?(
     identitySizeBound: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
     resolveIdentity: StructuredAgentSessionIdentityResolver,
@@ -152,6 +160,7 @@ export function createDeferredStructuredAgentSessionEventSink(
     ...(deps.readingControl ? { readingControl: deps.readingControl } : {}),
     ...(deps.onBackpressureChange ? { onBackpressureChange: deps.onBackpressureChange } : {})
   })
+  const resolvedAppend = createStructuredAgentSessionResolvedAppend(queue)
 
   const appendLifecycleBatch = (
     settlementId: string,
@@ -213,28 +222,7 @@ export function createDeferredStructuredAgentSessionEventSink(
           },
           options
         ),
-      tryAppendResolvedItem: (identitySizeBound, body, resolveIdentity, options = {}) => {
-        const bytes = estimateStructuredAgentSessionItemBytes(identitySizeBound, body)
-        return queue.submit(
-          {
-            bytes,
-            run: async (bound) => {
-              const identity = resolveIdentity(bound.journal)
-              if (identity === null) {
-                return
-              }
-              if (estimateStructuredAgentSessionItemBytes(identity, body) > bytes) {
-                throw new Error('structured agent-session item identity exceeded its reserved size')
-              }
-              await bound.journal.appendItem(identity, body, {
-                fence: bound.fence,
-                ...(options.observedAt === undefined ? {} : { observedAt: options.observedAt })
-              })
-            }
-          },
-          options
-        )
-      },
+      ...resolvedAppend,
       tryAppendLifecycleTransition: (identitySizeBound, body, resolveIdentity) => {
         const bytes = estimateStructuredAgentSessionItemBytes(identitySizeBound, body)
         return queue.submit(

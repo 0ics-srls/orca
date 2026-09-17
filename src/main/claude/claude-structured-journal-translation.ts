@@ -1,5 +1,8 @@
 import type { AgentSessionDeltaCoalescerDeps } from '../native-chat/agent-session-wire/agent-session-delta-coalescer'
-import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import type {
+  StructuredAgentSessionEventSink,
+  StructuredAgentSessionSinkAdmission
+} from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { ClaudeStructuredSessionEvent } from './claude-structured-session-state'
 import {
   claudeStreamingMessageBody,
@@ -35,6 +38,7 @@ export type ClaudeJournalTranslatorDeps = {
   coalesceMs?: number
   schedule?: AgentSessionDeltaCoalescerDeps['schedule']
   fallbackIdPrefix?: string
+  onBackgroundTaskJournalFailure?: (error: Error) => void
 }
 
 export type ClaudeJournalTranslator = {
@@ -44,6 +48,7 @@ export type ClaudeJournalTranslator = {
    *  a client's Stop names. Sole owner: no reader keeps a copy to disagree with. */
   readonly currentTurnId: string | null
   flush: () => void
+  retryPendingTaskRows?: () => StructuredAgentSessionSinkAdmission
   /** Streamed blocks still awaiting a final frame. A settled turn leaves none. */
   readonly pendingStreamedBlocks: number
   dispose: () => void
@@ -52,12 +57,14 @@ export type ClaudeJournalTranslator = {
 export function createClaudeSessionJournalTranslator(
   sink: StructuredAgentSessionEventSink | undefined,
   prompts: ClaudePromptRegistry,
-  fallbackIdPrefix: string
+  fallbackIdPrefix: string,
+  onBackgroundTaskJournalFailure?: (error: Error) => void
 ): ClaudeJournalTranslator | null {
   return sink
     ? createClaudeJournalTranslator({
         sink,
         fallbackIdPrefix,
+        ...(onBackgroundTaskJournalFailure ? { onBackgroundTaskJournalFailure } : {}),
         bindPromptItemId: (itemId, promptKey, questionId) =>
           prompts.bindJournalItemId(itemId, promptKey, questionId)
       })
@@ -89,7 +96,10 @@ export function createClaudeJournalTranslator(
     // A typed task row is provider output: journaling one must open a resumed
     // turn, or the session shows the row while reading idle.
     openOutputTurn: (frame, observedAt) =>
-      turn.ensureOpen(frame, claudeStreamTurnSource(frame), observedAt)
+      turn.ensureOpen(frame, claudeStreamTurnSource(frame), observedAt),
+    ...(deps.onBackgroundTaskJournalFailure
+      ? { onPersistenceFailure: deps.onBackgroundTaskJournalFailure }
+      : {})
   })
   const streamedText = createClaudeStreamedTextCheckpoints({
     ...(deps.coalesceMs === undefined ? {} : { coalesceMs: deps.coalesceMs }),
@@ -224,6 +234,7 @@ export function createClaudeJournalTranslator(
       return turn.id
     },
     flush: streamedText.flush,
+    retryPendingTaskRows: () => backgroundTasks.retryPendingWrites(),
     get pendingStreamedBlocks() {
       return streamedText.pending
     },
