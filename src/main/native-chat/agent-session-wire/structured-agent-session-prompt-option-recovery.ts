@@ -24,3 +24,15 @@ export function recoverResolvedPromptSessionOptions(
   }
   return recovered
 }
+
+export async function materializeResolvedPromptSessionOptions(input: {
+  record: Pick<AgentSessionRecord, 'options' | 'optionsRevision'>
+  items: readonly AgentJournalRenderItem[] | undefined
+  persist: (options: Readonly<Record<string, string>>) => Promise<void>
+}): Promise<Readonly<Record<string, string>> | undefined> {
+  const recovered = recoverResolvedPromptSessionOptions(input.record, input.items)
+  if (recovered !== undefined && !isDeepStrictEqual(recovered, input.record.options)) {
+    await input.persist(recovered)
+  }
+  return recovered
+}

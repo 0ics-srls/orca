@@ -56,7 +56,8 @@ export type CatalogModel = {
 export type AgentSessionOptionCatalog = {
   models: CatalogModel[]
   modelApply: CatalogOptionApply
-  /** Provider-owned controls that exist only on a live structured session. */
+  /** Provider-owned controls surfaced by live structured sessions. Launch mappings restore them
+   *  when that structured session resumes in a TUI. */
   structuredSessionOptions?: CatalogOption[]
   /** Opts this agent into structured per-worker launch overrides. */
   supportsWorkerLaunchPreferences?: true

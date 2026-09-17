@@ -144,10 +144,11 @@ export class AgentSessionRecordStore {
   setConversationCommand(
     sessionId: string,
     fence: number,
-    command: NonNullable<AgentSessionRecord['conversationCommand']>
+    command: NonNullable<AgentSessionRecord['conversationCommand']>,
+    optionSettlement?: { values: Readonly<Record<string, string>>; now: number }
   ): Promise<void> {
     return this.transact(() =>
-      commitConversationCommandRecord(this.state, sessionId, fence, command)
+      commitConversationCommandRecord(this.state, sessionId, fence, command, optionSettlement)
     )
   }
 

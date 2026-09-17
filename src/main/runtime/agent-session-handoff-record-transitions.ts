@@ -13,6 +13,7 @@ import {
   AGENT_SESSION_LEASE_TTL_MS,
   type AgentSessionRecordStore
 } from './agent-session-record-store'
+import { withAgentSessionRecordOptions } from './agent-session-record-options'
 
 export function setStoredAgentSessionHandoffStage(
   store: AgentSessionRecordStore,
@@ -82,15 +83,17 @@ export function reserveStoredAgentSessionHandoffOwner(
     claimKeyId: string
     now: number
     leaseTtlMs?: number
+    options?: Readonly<Record<string, string>>
   }
 ) {
-  return store.transitionHandoff(args.sessionId, (record) =>
-    reserveAgentSessionHandoffOwner({
+  return store.transitionHandoff(args.sessionId, (record) => {
+    const reserved = reserveAgentSessionHandoffOwner({
       ...args,
       record,
       leaseTtlMs: args.leaseTtlMs ?? AGENT_SESSION_LEASE_TTL_MS
     })
-  )
+    return args.options ? withAgentSessionRecordOptions(reserved, args.options, args.now) : reserved
+  })
 }
 
 export function abandonStoredAgentSessionHandoffAttempt(

@@ -103,7 +103,32 @@ const CLAUDE_PERMISSION_MODE: CatalogOption = {
     ],
     defaultValue: 'default'
   },
-  apply: {}
+  apply: {
+    launchArgs: (value) =>
+      value === 'default'
+        ? []
+        : value === 'bypassPermissions'
+          ? ['--dangerously-skip-permissions']
+          : ['--permission-mode', String(value)],
+    agentArgsOverride: (tokens) =>
+      hasFlag(tokens, ['--permission-mode', '--dangerously-skip-permissions']),
+    removeAgentArgs: (tokens) =>
+      removeClaudeBypassFlag(removeAgentArgOption(tokens, ['--permission-mode']))
+  }
+}
+
+function removeClaudeBypassFlag(tokens: readonly string[]): string[] {
+  const terminator = tokens.indexOf('--')
+  const optionTokens = terminator === -1 ? tokens : tokens.slice(0, terminator)
+  const trailing = terminator === -1 ? [] : tokens.slice(terminator)
+  return [
+    ...optionTokens.filter(
+      (token) =>
+        token !== '--dangerously-skip-permissions' &&
+        !token.startsWith('--dangerously-skip-permissions=')
+    ),
+    ...trailing
+  ]
 }
 
 export function createClaudeCatalogOptions(args: {
