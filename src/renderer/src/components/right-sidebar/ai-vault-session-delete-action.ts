@@ -58,7 +58,7 @@ export function useAiVaultSessionDeleteAction({
           toast.error(
             translate(
               'auto.components.right.sidebar.AiVaultPanel.sessionDeleteOwned',
-              'This conversation is open in a chat, so its history was kept'
+              'This conversation belongs to a chat, so its history was kept'
             ),
             {
               action: {
@@ -79,7 +79,7 @@ export function useAiVaultSessionDeleteAction({
           toast.error(
             translate(
               'auto.components.right.sidebar.AiVaultPanel.sessionDeleteOwnershipUnknown',
-              "Couldn't check whether a chat is still using this history, so nothing was deleted"
+              "Couldn't check whether this history belongs to a chat, so nothing was deleted"
             )
           )
           return

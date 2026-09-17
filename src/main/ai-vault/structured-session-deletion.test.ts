@@ -221,6 +221,46 @@ describe('deleteUnownedClaudeAiVaultSession', () => {
     expect(remove).not.toHaveBeenCalled()
   })
 
+  it('refuses when local alias inspection fails', async () => {
+    getHostMock.mockReturnValue(hostWith([]))
+    lstatMock.mockRejectedValue(Object.assign(new Error('denied'), { code: 'EACCES' }))
+    const remove = vi.fn()
+
+    const result = await deleteUnownedClaudeAiVaultSession(validation('unowned-id'), admits, remove)
+
+    expect(result).toMatchObject({ reason: 'structured-session-ownership-unknown' })
+    expect(remove).not.toHaveBeenCalled()
+  })
+
+  it('keeps an already-missing transcript idempotent', async () => {
+    getHostMock.mockReturnValue(hostWith([]))
+    lstatMock.mockRejectedValue(Object.assign(new Error('gone'), { code: 'ENOENT' }))
+    const remove = vi.fn().mockResolvedValue({ outcome: 'deleted' })
+
+    const result = await deleteUnownedClaudeAiVaultSession(validation('unowned-id'), admits, remove)
+
+    expect(result).toEqual({ outcome: 'deleted' })
+    expect(remove).toHaveBeenCalledOnce()
+  })
+
+  it('does not rely on unreliable host stat for a Windows WSL transcript', async () => {
+    const platform = vi.spyOn(process, 'platform', 'get').mockReturnValue('win32')
+    getHostMock.mockReturnValue(hostWith([]))
+    lstatMock.mockRejectedValue(Object.assign(new Error('9P unavailable'), { code: 'EIO' }))
+    const remove = vi.fn().mockResolvedValue({ outcome: 'deleted' })
+    const target = validation('unowned-id')
+    target.resolvedPath = String.raw`\\wsl.localhost\Ubuntu\home\me\.claude\projects\-proj\unowned-id.jsonl`
+
+    try {
+      await expect(deleteUnownedClaudeAiVaultSession(target, admits, remove)).resolves.toEqual({
+        outcome: 'deleted'
+      })
+      expect(remove).toHaveBeenCalledOnce()
+    } finally {
+      platform.mockRestore()
+    }
+  })
+
   it('ignores a codex record that happens to carry the same id', async () => {
     getHostMock.mockReturnValue(
       hostWith([{ ...claudeRecord('codex-session'), provider: 'codex' as const }])

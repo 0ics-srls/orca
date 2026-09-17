@@ -11,6 +11,12 @@ import {
 } from './agent-session-record-store-file'
 import { withAgentSessionStoreTransactionLock } from './agent-session-store-transaction-lock'
 
+type DeepReadonly<T> = T extends readonly (infer Item)[]
+  ? readonly DeepReadonly<Item>[]
+  : T extends object
+    ? { readonly [Key in keyof T]: DeepReadonly<T[Key]> }
+    : T
+
 function markLoadedLeasesUnreconciled(state: AgentSessionStoreState): void {
   for (const [sessionId, record] of state.records) {
     state.records.set(sessionId, {
@@ -55,7 +61,7 @@ function agentSessionStoreStateChanged(
 
 /** What an exclusive inspection can see, and whether that is provably everything. */
 export type AgentSessionStoreExclusiveInspection = {
-  records: readonly AgentSessionRecord[]
+  records: readonly DeepReadonly<AgentSessionRecord>[]
   // False when this catalogue is not provably whole: a quarantined record could
   // name the very session a caller is asking about, so absence is not an answer.
   complete: boolean

@@ -1,11 +1,12 @@
 import { lstat } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
-import type { AgentSessionRecord } from '../../shared/agent-session-record'
 import type {
   AiVaultDeleteSessionResult,
   AiVaultSessionDeleteAllowedResult
 } from '../../shared/ai-vault-session-deletion'
+import { parseWslUncPath } from '../../shared/wsl-paths'
 import { claudeSessionIdForOrcaSession } from '../claude/claude-session-identity'
+import { isENOENT } from '../ipc/filesystem-path-containment'
 import { getStructuredAgentSessionHost } from '../native-chat/agent-session-wire/structured-agent-session-registry'
 import type { AgentSessionStoreExclusiveInspection } from '../runtime/agent-session-store-transaction-queue'
 
@@ -87,15 +88,21 @@ export async function deleteUnownedClaudeAiVaultSession(
  * only id that reaches it, so a clean ownership answer for this path is not an
  * answer for the file. Refuse instead of enumerating aliases.
  *
- * A stat that cannot be taken is not evidence of aliases — WSL's 9P stat is
- * unreliable by design — so it proceeds; the ownership decision above is derived
- * from records, not from this call.
+ * A missing path has no inode left to alias. Windows WSL paths also proceed
+ * because their 9P stat is unreliable and deletion is validated inside the
+ * distro. Every other inspection failure leaves ownership unknown.
  */
 async function hasUnmappableAliases(resolvedPath: string): Promise<boolean> {
   try {
     return (await lstat(resolvedPath)).nlink > 1
-  } catch {
-    return false
+  } catch (error) {
+    if (
+      isENOENT(error) ||
+      (process.platform === 'win32' && parseWslUncPath(resolvedPath) !== null)
+    ) {
+      return false
+    }
+    return true
   }
 }
 
@@ -131,7 +138,9 @@ function findClaudeTranscriptOwner(
   return inspection.complete ? null : 'unknown'
 }
 
-function claudeRecordIdentities(record: AgentSessionRecord): string[] {
+function claudeRecordIdentities(
+  record: AgentSessionStoreExclusiveInspection['records'][number]
+): string[] {
   const chain = record.providerHandleChain.flatMap((link) =>
     link.handle.provider === 'claude' ? [link.handle.sessionId] : []
   )

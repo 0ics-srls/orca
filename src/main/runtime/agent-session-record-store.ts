@@ -138,8 +138,8 @@ export class AgentSessionRecordStore {
    * Decide and act on session ownership without a reservation slipping in between.
    * `act` runs holding the same lock reservation takes, so it is the seam for an
    * irreversible effect whose safety depends on what the catalogue said a moment
-   * ago — deleting provider history the writer may still be using. Nothing
-   * mutable escapes: the callback receives records by value and cannot write.
+   * ago — deleting provider history the writer may still be using. The callback
+   * sees a read-only record list; the transaction queue remains the only writer.
    */
   withExclusiveHistoryInspection = <T>(
     act: (inspection: AgentSessionStoreExclusiveInspection) => Promise<T>
