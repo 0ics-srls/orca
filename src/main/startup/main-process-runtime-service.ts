@@ -7,12 +7,15 @@ import { app } from 'electron'
 import { OrcaRuntimeService } from '../runtime/orca-runtime'
 import { getLocalPtyProvider, getSshPtyProvider, clearProviderPtyState } from '../ipc/pty'
 import { agentHookServer } from '../agent-hooks/server'
+import { agentSessionOwners } from '../ipc/pty/pane/agent-session-owners'
+import { createAgentStatusExecutionBindingResolver } from '../agent-hooks/agent-status-execution-binding-resolver'
 import { browserManager } from '../browser/browser-manager'
 import { loadAgentSessionClaimSigner } from '../runtime/agent-session-claim-identity'
 import {
-  publishCommittedAgentSessionMembership,
-  reconcileAgentSessionMembership
+  createAgentSessionMembershipReconciler,
+  publishCommittedAgentSessionMembership
 } from '../runtime/runtime-agent-session-membership'
+import { admitLocalVerifiedAgentDiscoveries } from '../runtime/runtime-agent-discovery-admission'
 import { getProfileUserDataPath } from '../orca-profiles/profile-storage-paths'
 import { prepareCodexAiVaultSessionResume } from '../codex/codex-ai-vault-session-resume'
 import { resolveHostCodexSessionSourceHome } from '../codex/codex-session-source-home'
@@ -75,6 +78,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
   // Why here and not in the window listener: `subscribeEnrichedStatus` also fires under headless
   // `orca serve`, which never opens one, and the fleet path runs there too.
   const observedPaneIdentities = new AgentStatusObservedPaneIdentities()
+  agentHookServer.setExecutionBindingResolver(
+    createAgentStatusExecutionBindingResolver(agentSessionOwners)
+  )
   const runtime = new OrcaRuntimeService(store, stats, {
     agentSessionClaimSigner: loadAgentSessionClaimSigner(
       getProfileUserDataPath(),
@@ -87,7 +93,9 @@ export function initializeMainProcessRuntime(): OrcaRuntimeService {
     onPtyStopped: clearProviderPtyState,
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
     onAgentSessionCommitted: publishCommittedAgentSessionMembership,
-    onAgentSessionInventoryReconciled: reconcileAgentSessionMembership,
+    onAgentSessionInventoryReconciled: createAgentSessionMembershipReconciler(
+      admitLocalVerifiedAgentDiscoveries
+    ),
     // Why: serve can be promoted in place, so wire the listener from startup; runtime enables desktop-only scanners only for a ready renderer.
     onTerminalSideEffects: (batch: TerminalSideEffectBatch) => {
       if (state.mainWindow && !state.mainWindow.isDestroyed()) {

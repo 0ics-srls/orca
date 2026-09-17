@@ -6,8 +6,6 @@ import type { AgentHookEventPayload } from '../../shared/agent-hook-listener/lis
 import type { AgentHookSource } from '../../shared/agent-hook-relay'
 import { AgentHookServerLifecycle } from './server/server-lifecycle'
 import { isValidPaneKey } from './server/server-status-identity'
-import { agentSessionOwners } from '../ipc/pty/pane/agent-session-owners'
-import { createAgentStatusExecutionBindingResolver } from './agent-status-execution-binding-resolver'
 
 export type {
   AgentHookAuthorityAttestation,
@@ -31,10 +29,10 @@ export { isValidPaneKey }
 /** Public composition seam for the loopback hook listener and relay status adapter. */
 export class AgentHookServer extends AgentHookServerLifecycle {}
 
+// The execution-binding resolver is injected by whichever composition root owns a PTY owner
+// registry. Reaching for the main-process one here would pull node-pty into the daemon bundle,
+// which loads this adapter but never populates that registry.
 export const agentHookServer = new AgentHookServer()
-agentHookServer.setExecutionBindingResolver(
-  createAgentStatusExecutionBindingResolver(agentSessionOwners)
-)
 
 // Why: exported for test coverage of the per-agent field extractors.
 export const _internals = {

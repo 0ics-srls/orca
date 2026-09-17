@@ -27,8 +27,8 @@ import { acquireOrcadInstanceLock, OrcadInstanceLockError } from './orcad-instan
 import { startOrcadWithLifecycle } from './orcad-lifecycle'
 import { parseArgs } from './orcad-command-arguments'
 import {
-  publishCommittedAgentSessionMembership,
-  reconcileAgentSessionMembership
+  createAgentSessionMembershipReconciler,
+  publishCommittedAgentSessionMembership
 } from '../runtime/runtime-agent-session-membership'
 import {
   changedAiVaultSearchSettings,
@@ -238,7 +238,7 @@ async function startOrcadRuntime(
     // projection read from — unwired, orcad lists no PTY agents at all.
     onTerminalAgentStatus: (event) => agentHookServer.ingestTerminalStatus(event),
     onAgentSessionCommitted: publishCommittedAgentSessionMembership,
-    onAgentSessionInventoryReconciled: reconcileAgentSessionMembership,
+    onAgentSessionInventoryReconciled: createAgentSessionMembershipReconciler(),
     // Why here too and not only on the desktop: orcad serves `worktree.ps` and `agentSession.*`,
     // so without these a headless host publishes its structured chats nowhere and lists no agents.
     getAgentStatusSnapshot: () =>

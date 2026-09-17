@@ -49,7 +49,12 @@ function buildAncestry(
     seen.add(cursor.pid)
     reversed.push({ pid: cursor.pid, startTime: cursor.startTime })
     if (cursor.pid === rootProcessId) {
-      const chain = reversed.toReversed()
+      // Indexed rather than `toReversed()`: this module reaches the Node 18 relay bundle,
+      // where the ES2023 array-copy methods do not exist.
+      const chain: { pid: number; startTime: string }[] = []
+      for (let index = reversed.length - 1; index >= 0; index -= 1) {
+        chain.push(reversed[index])
+      }
       const parent = chain.at(-1)
       return parent
         ? {
