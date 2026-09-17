@@ -24,6 +24,7 @@ import type {
 import {
   captureMountedTerminalSurfaces,
   narrowedEntriesEqual,
+  narrowMapByKeys,
   narrowRecordByKeys
 } from './mobile-session-capture'
 import {
@@ -206,24 +207,6 @@ export function buildMobileSessionWorktreeInputs(
     terminalTheme: publication.terminalTheme,
     mountedSurfaceCaptureByTabId
   }
-}
-
-function narrowMapByKeys<T>(
-  source: ReadonlyMap<string, T>,
-  keys: readonly string[]
-): ReadonlyMap<string, T> {
-  if (source.size === 0 || keys.length === 0) {
-    return EMPTY_NARROWED_BY_KEY
-  }
-  let narrowed: Map<string, T> | null = null
-  for (const key of keys) {
-    if (!source.has(key)) {
-      continue
-    }
-    narrowed ??= new Map<string, T>()
-    narrowed.set(key, source.get(key) as T)
-  }
-  return narrowed ?? EMPTY_NARROWED_BY_KEY
 }
 
 export function buildMobileLaunchDraftsByPaneKey(args: {
