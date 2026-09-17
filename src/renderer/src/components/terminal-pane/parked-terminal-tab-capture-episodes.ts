@@ -22,8 +22,9 @@ export function captureNewlyParkedTerminalTabs(
     return
   }
   // Why the fallback: capture is best-effort evidence and must never throw out of the park pass.
-  // An unhydrated catalog also fails open in shouldPreserveTerminalScrollbackBuffers — the safe
-  // direction, since a worktree wrongly judged local would park with no copy at all.
+  // An unhydrated catalog fails open toward "remote" in shouldPreserveTerminalScrollbackBuffers —
+  // capturing needlessly costs a serialize, while skipping it parks with no copy at all. See the
+  // note there on why the opposite default is correct in worktree-runtime-owner.ts.
   const repos = useAppStore.getState().repos ?? []
   for (const tabId of parkedTabIds) {
     if (capturedTabIds.has(tabId)) {
