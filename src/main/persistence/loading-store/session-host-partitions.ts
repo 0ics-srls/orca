@@ -4,6 +4,7 @@ import { sanitizeWorkspaceSessionTerminalRetirements } from '../../runtime/mobil
 import {
   LOCAL_EXECUTION_HOST_ID,
   normalizeExecutionHostId,
+  parseExecutionHostId,
   type ExecutionHostId
 } from '../../../shared/execution-host'
 import { getDefaultWorkspaceSession } from '../../../shared/constants'
@@ -78,6 +79,23 @@ export class SessionHostPartitionOperations {
       }
     }
     return [...hostIds]
+  }
+
+  removeRuntimeWorkspaceSessionPartition(hostId: ExecutionHostId): boolean {
+    if (
+      parseExecutionHostId(hostId)?.kind !== 'runtime' ||
+      !hasPersistedWorkspaceSession(this, hostId)
+    ) {
+      return false
+    }
+    const partitions = {
+      ...this[sessionHostPartitionOperationsContext].runtime.state.workspaceSessionsByHostId
+    }
+    delete partitions[hostId]
+    this[sessionHostPartitionOperationsContext].runtime.state.workspaceSessionsByHostId = partitions
+    invalidateLocalWorktreeMetadataPruneInputs()
+    scheduleSave(this[sessionHostPartitionOperationsContext].scheduling)
+    return true
   }
 
   readTerminalScrollbackSnapshot(ref: string): string | null {

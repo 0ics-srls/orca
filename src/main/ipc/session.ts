@@ -1,3 +1,4 @@
+import { canCreateRendererSessionPartition } from './renderer-workspace-session-admission'
 import { ipcMain } from 'electron'
 import type { Store } from '../persistence'
 import type {
@@ -21,11 +22,15 @@ export function registerSessionHandlers(store: Store): void {
   })
 
   ipcMain.handle('session:set', (_event, args: WorkspaceSessionState, hostId?: string | null) => {
-    store.setWorkspaceSession(args, hostId)
+    if (canCreateRendererSessionPartition(store, hostId)) {
+      store.setWorkspaceSession(args, hostId)
+    }
   })
 
   ipcMain.handle('session:patch', (_event, args: WorkspaceSessionPatch, hostId?: string | null) => {
-    store.patchWorkspaceSession(args, hostId)
+    if (canCreateRendererSessionPartition(store, hostId)) {
+      store.patchWorkspaceSession(args, hostId)
+    }
   })
 
   ipcMain.handle('session:flush', () => {
@@ -39,9 +44,19 @@ export function registerSessionHandlers(store: Store): void {
   // data (including terminal scrollback buffers) is persisted to disk
   // before the window closes — regardless of before-quit ordering.
   ipcMain.on('session:set-sync', (event, args: WorkspaceSessionState, hostId?: string | null) => {
-    store.setWorkspaceSession(args, hostId)
+    let admitted = false
+    let admissionOk = true
+    try {
+      admitted = canCreateRendererSessionPartition(store, hostId)
+    } catch (error) {
+      console.error('[session] Failed to establish runtime session partition authority:', error)
+      admissionOk = false
+    }
+    if (admitted) {
+      store.setWorkspaceSession(args, hostId)
+    }
     store.flush()
-    event.returnValue = true
+    event.returnValue = admissionOk
   })
 
   ipcMain.on(
