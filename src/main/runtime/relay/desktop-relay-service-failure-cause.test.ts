@@ -13,8 +13,10 @@ function serviceWithOfflineReason(offlineReason: RelayOfflineReason | null): {
     getLiveBroker: () => null,
     waitForLiveBrokerResult: async () => ({ broker: null, offlineReason })
   }
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: builds the instance without running the constructor, which would open a real broker.
   const service = Object.create(DesktopRelayService.prototype) as DesktopRelayService
   Object.assign(service, { coordinator })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: requireActiveBroker is private; this suite exercises it directly and the coordinator stub is all it reads.
   return service as unknown as { requireActiveBroker: () => Promise<unknown> }
 }
 
