@@ -16,6 +16,7 @@ class CountingMap<K, V> extends Map<K, V> {
     const bump = (): void => {
       this.visits++
     }
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal returned here implements next() and [Symbol.iterator](), which is the whole protocol a for..of over this wrapper reaches; no other IterableIterator member is ever called.
     return {
       next(): IteratorResult<T> {
         const r = inner.next()
@@ -27,7 +28,6 @@ class CountingMap<K, V> extends Map<K, V> {
       [Symbol.iterator]() {
         return this
       }
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the literal above implements next() and [Symbol.iterator](), which is the whole protocol a for..of over this wrapper reaches; no other IterableIterator member is ever called.
     } as IterableIterator<T>
   }
 
