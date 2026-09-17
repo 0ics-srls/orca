@@ -127,7 +127,7 @@ export async function sweepSupersededRelayEndpoints(
     // sweep exists to make that population visible, and on Windows it made it invisible.
     console.warn(
       `[ssh-relay] Superseded relay sweep did not run (Windows named-pipe endpoints are not enumerated); ` +
-        `orphans from earlier builds are neither listed nor reclaimed: current=${options.currentRelayDir}`
+        `any orphan from an earlier build would be neither listed nor reclaimed: current=${options.currentRelayDir}`
     )
     return []
   }
