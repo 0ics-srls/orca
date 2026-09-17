@@ -202,7 +202,7 @@ export class CodexJournalTurnBoundaries {
       this.deps.items.ordinals.forgetTurn(event.threadId, turnId)
       this.deps.activeTurns.forget(event.threadId, turnId)
       this.deps.resetActivity(event.threadId)
-    } else if (isPrimaryTurn && admission.reason !== 'backpressure') {
+    } else if (isPrimaryTurn) {
       this.deps.dispatchEchoes?.abandonTerminal(turnId)
     }
     return admission

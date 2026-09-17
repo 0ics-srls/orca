@@ -270,6 +270,8 @@ export function createCodexJournalTranslator(
               requestOrigin
             })
             if (!attribution.accepted) {
+              // Origin revision backpressure must not gate exact delivery proof.
+              deps.onUserMessageEcho?.(clientMessageId, providerIdentity)
               return attribution
             }
           }

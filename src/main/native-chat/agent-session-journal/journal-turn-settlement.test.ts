@@ -465,6 +465,8 @@ describe('turn settlement dispatch resolution', () => {
 
     const restarted = await open()
     expect(restarted.activeTurnId()).toBeNull()
+    expect(restarted.hasTerminalTurn('turn-crash-window', 1)).toBe(true)
+    expect(restarted.hasTerminalTurn('turn-crash-window', 2)).toBe(false)
     expect(restarted.submissions()[0]).toMatchObject({
       dispatchState: 'unknown',
       reason: 'turn_settled_before_acknowledgement',

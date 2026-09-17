@@ -60,16 +60,69 @@ describe('codex dispatch echoes', () => {
     expect(echoes.settle('client-2')).toBe(true)
   })
 
-  it('does not bind a steer response after its turn terminal notification', () => {
-    const echoes = createCodexDispatchEchoes()
+  it('late-settles an exact steer response after its terminal notification', async () => {
+    const ownerEndedLate: [string, string][] = []
+    const echoes = createCodexDispatchEchoes((clientMessageId, turnId) => {
+      ownerEndedLate.push([clientMessageId, turnId])
+      return Promise.resolve('settled')
+    })
     echoes.arm('client-1')
 
     expect(echoes.terminalOwnerIds('turn-1')).toEqual([])
     echoes.commitTerminal('turn-1')
 
-    expect(echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')).toBe(false)
-    expect(echoes.size).toBe(1)
+    expect(echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')).toBe(true)
+    expect(ownerEndedLate).toEqual([['client-1', 'turn-1']])
+    await Promise.resolve()
+    expect(echoes.size).toBe(0)
     expect(echoes.settle('client-1')).toBe(true)
+  })
+
+  it('late-settles a fresh start response after its terminal notification', async () => {
+    const ownerEndedLate: [string, string][] = []
+    const echoes = createCodexDispatchEchoes((clientMessageId, turnId) => {
+      ownerEndedLate.push([clientMessageId, turnId])
+      return Promise.resolve('settled')
+    })
+    echoes.arm('client-1')
+
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual([])
+    echoes.commitTerminal('turn-1')
+    echoes.recordStartResponse('client-1', 'turn-1')
+
+    expect(ownerEndedLate).toEqual([['client-1', 'turn-1']])
+    await Promise.resolve()
+    expect(echoes.size).toBe(0)
+  })
+
+  it('retains exact ownership when a late settlement is not durable', async () => {
+    const echoes = createCodexDispatchEchoes(() => Promise.resolve('evidence-not-durable'))
+    echoes.arm('client-1')
+    echoes.terminalOwnerIds('turn-1')
+    echoes.commitTerminal('turn-1')
+
+    expect(echoes.bindSteerResponse('client-1', 'turn-1', 'turn-1')).toBe(true)
+    await Promise.resolve()
+
+    expect(echoes.size).toBe(1)
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['client-1'])
+  })
+
+  it('re-derives exact owners after a terminal append is rejected', async () => {
+    const echoes = createCodexDispatchEchoes(() => Promise.resolve('evidence-not-durable'))
+    echoes.arm('known-before-terminal')
+    echoes.bindSteerResponse('known-before-terminal', 'turn-1', 'turn-1')
+    echoes.arm('response-still-pending')
+
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual(['known-before-terminal'])
+    echoes.abandonTerminal('turn-1')
+    expect(echoes.bindSteerResponse('response-still-pending', 'turn-1', 'turn-1')).toBe(true)
+    await Promise.resolve()
+
+    expect(echoes.terminalOwnerIds('turn-1')).toEqual([
+      'known-before-terminal',
+      'response-still-pending'
+    ])
   })
 
   it('binds a fresh start only after response and started evidence in either order', () => {
@@ -95,8 +148,6 @@ describe('codex dispatch echoes', () => {
 
     expect(echoes.terminalOwnerIds('active-turn')).toEqual([])
     echoes.commitTerminal('active-turn')
-    expect(echoes.terminalOwnerIds('phantom-turn')).toEqual([])
-    echoes.commitTerminal('phantom-turn')
     expect(echoes.size).toBe(1)
     expect(echoes.settle('client-1')).toBe(true)
   })
@@ -136,10 +187,11 @@ describe('codex dispatch echoes', () => {
 
   it('settles a send exactly once', () => {
     const echoes = createCodexDispatchEchoes()
-    echoes.arm('client-1')
+    echoes.arm('client-1', 100)
 
     expect(echoes.settle('client-1')).toBe(true)
     expect(echoes.settle('client-1')).toBe(false)
+    expect(echoes.requestOrigin('client-1')).toEqual({ requestedAt: 100, sequence: 0 })
   })
 
   it('drops a send whose write never reached the provider', () => {
@@ -161,7 +213,7 @@ describe('codex dispatch echoes', () => {
     expect(echoes.settle('client-1')).toBe(false)
   })
 
-  it('refuses new correlations at capacity without dropping an older send', () => {
+  it('leaves overflow untracked without dropping an older send', () => {
     const echoes = createCodexDispatchEchoes()
     for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
       expect(echoes.arm(`client-${index}`)).toBe(true)

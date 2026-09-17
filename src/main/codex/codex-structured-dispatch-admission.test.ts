@@ -1,8 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AgentJournalItemBody } from '../../shared/agent-session-journal-types'
 import { agentJournalSubmissionKey } from '../../shared/agent-session-journal-item-key'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import { MAX_CODEX_PENDING_DISPATCH_ECHOES } from './codex-structured-dispatch-echo'
+import type { CodexStructuredSessionEvent } from './codex-structured-session-state'
 import {
   acquiredCodexAdapter,
   echoUserMessage,
@@ -72,7 +73,7 @@ describe('codex dispatch admission', () => {
     expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
   })
 
-  it('does not late-settle when the terminal event precedes the steer response', async () => {
+  it('late-settles when an interrupted terminal event precedes the steer response', async () => {
     let completeTurn: (() => void) | undefined
     const codex = fakeCodexAppServer({
       'turn/steer': () => {
@@ -93,14 +94,56 @@ describe('codex dispatch admission', () => {
     completeTurn = () =>
       connection.handlers.onNotification?.('turn/completed', {
         threadId: CODEX_TEST_THREAD_ID,
-        turn: { id: 'turn-1', status: 'completed' }
+        turn: { id: 'turn-1', status: 'interrupted' }
       })
 
     await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
     expect(ownerEnded).toEqual([[]])
 
-    echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
-    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
+    expect(settlements).toEqual([
+      {
+        sessionId: 'session-1',
+        clientMessageId: 'client-1',
+        state: 'unknown',
+        reason: 'turn_settled_before_acknowledgement',
+        recovered: true,
+        turnId: 'turn-1'
+      }
+    ])
+  })
+
+  it('late-settles when a fresh-start terminal event precedes its response', async () => {
+    let connection: ReturnType<typeof fakeCodexAppServer>['connections'][number] | undefined
+    const codex = fakeCodexAppServer({
+      'turn/start': () => {
+        connection?.handlers.onNotification?.('turn/completed', {
+          threadId: CODEX_TEST_THREAD_ID,
+          turn: { id: 'turn-new', status: 'completed' }
+        })
+        return { turn: { id: 'turn-new' } }
+      }
+    })
+    const settlements: LateSettlement[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, sink })
+    connection = codex.connections[0]!
+
+    await expect(send(adapter, 'client-1')).resolves.toEqual({ state: 'admitted' })
+
+    expect(ownerEnded).toEqual([[]])
+    expect(settlements).toEqual([
+      expect.objectContaining({
+        clientMessageId: 'client-1',
+        state: 'unknown',
+        recovered: true,
+        turnId: 'turn-new'
+      })
+    ])
   })
 
   it.each(['response-first', 'started-first'] as const)(
@@ -291,6 +334,7 @@ describe('codex dispatch admission', () => {
     const connection = codex.connections[0]!
     startTurn(connection, 'turn-1')
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
+    settlements.length = 0
 
     const outcome = await send(adapter, 'client-2')
 
@@ -356,7 +400,7 @@ describe('codex dispatch admission', () => {
     ])
   })
 
-  it('settles nothing for a user message this session never sent', async () => {
+  it('forwards every correlated live echo for durable host validation', async () => {
     const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
@@ -364,15 +408,165 @@ describe('codex dispatch admission', () => {
     startTurn(connection, 'turn-1')
     await send(adapter, 'client-1')
 
-    // A message another client sent on the same thread, and one Codex did not
-    // correlate at all.
+    // The adapter cannot prove ownership after bounded tracking overflows. The
+    // host checks this exact id against its durable same-fence submission.
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-x', clientId: 'someone-else' })
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-y' })
 
-    expect(settlements).toEqual([])
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'someone-else' })])
   })
 
-  it('rejects only when Codex answered and declined, and arms nothing for it', async () => {
+  it('forces provider recovery when durable echo settlement fails', async () => {
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
+    const events: CodexStructuredSessionEvent[] = []
+    const adapter = await acquiredCodexAdapter({
+      codex,
+      settlements: [],
+      events,
+      settleLateDispatch: async (settlement) => {
+        if ('providerIdentity' in settlement) {
+          throw new Error('journal settlement failed')
+        }
+        return 'evidence-not-durable'
+      }
+    })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+    await send(adapter, 'client-1')
+
+    echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
+
+    await vi.waitFor(() => expect(connection.closed).toBe(true))
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'ended',
+        cause: 'unexpected-exit',
+        reason: 'journal settlement failed'
+      })
+    )
+  })
+
+  it('retries durable echo settlement when provider exit cannot be proven', async () => {
+    const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
+    let echoAttempts = 0
+    const adapter = await acquiredCodexAdapter({
+      codex,
+      settlements: [],
+      settleLateDispatch: async (settlement) => {
+        if ('turnId' in settlement) {
+          return 'evidence-not-durable'
+        }
+        echoAttempts += 1
+        if (echoAttempts === 1) {
+          throw new Error('journal settlement failed')
+        }
+        return 'settled'
+      }
+    })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+    await send(adapter, 'client-1')
+    const close = vi.fn(async () => false)
+    const originalClose = connection.close
+    connection.close = close
+    try {
+      echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
+      await new Promise((resolve) => setTimeout(resolve, 40))
+      startTurn(connection, 'turn-2')
+
+      await vi.waitFor(() => expect(echoAttempts).toBe(2))
+      expect(close).toHaveBeenCalledOnce()
+    } finally {
+      connection.close = originalClose
+      await adapter.closeSession('session-1')
+    }
+  })
+
+  it('forces provider recovery when terminal-before-response settlement fails', async () => {
+    let completeTurn: (() => void) | undefined
+    const codex = fakeCodexAppServer({
+      'turn/steer': () => {
+        completeTurn?.()
+        return { turnId: 'turn-1' }
+      }
+    })
+    const events: CodexStructuredSessionEvent[] = []
+    const adapter = await acquiredCodexAdapter({
+      codex,
+      settlements: [],
+      events,
+      settleLateDispatch: async (settlement) => {
+        if ('turnId' in settlement) {
+          throw new Error('terminal settlement failed')
+        }
+        return 'evidence-not-durable'
+      }
+    })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+    completeTurn = () =>
+      connection.handlers.onNotification?.('turn/completed', {
+        threadId: CODEX_TEST_THREAD_ID,
+        turn: { id: 'turn-1', status: 'interrupted' }
+      })
+
+    await send(adapter, 'client-1')
+
+    await vi.waitFor(() => expect(connection.closed).toBe(true))
+    expect(events).toContainEqual(
+      expect.objectContaining({
+        type: 'ended',
+        cause: 'unexpected-exit',
+        reason: 'terminal settlement failed'
+      })
+    )
+  })
+
+  it('retries terminal-before-response settlement when provider exit cannot be proven', async () => {
+    let completeTurn: (() => void) | undefined
+    const codex = fakeCodexAppServer({
+      'turn/steer': () => {
+        completeTurn?.()
+        return { turnId: 'turn-1' }
+      }
+    })
+    let terminalAttempts = 0
+    const adapter = await acquiredCodexAdapter({
+      codex,
+      settlements: [],
+      settleLateDispatch: async (settlement) => {
+        if (!('turnId' in settlement)) {
+          return 'evidence-not-durable'
+        }
+        terminalAttempts += 1
+        if (terminalAttempts === 1) {
+          throw new Error('terminal settlement failed')
+        }
+        return 'settled'
+      }
+    })
+    const connection = codex.connections[0]!
+    startTurn(connection, 'turn-1')
+    completeTurn = () =>
+      connection.handlers.onNotification?.('turn/completed', {
+        threadId: CODEX_TEST_THREAD_ID,
+        turn: { id: 'turn-1', status: 'interrupted' }
+      })
+    const close = vi.fn(async () => false)
+    const originalClose = connection.close
+    connection.close = close
+    try {
+      await send(adapter, 'client-1')
+
+      await vi.waitFor(() => expect(terminalAttempts).toBe(2))
+      expect(close).toHaveBeenCalledOnce()
+    } finally {
+      connection.close = originalClose
+      await adapter.closeSession('session-1')
+    }
+  })
+
+  it('rejects only when Codex answered and declined', async () => {
     const { CodexAppServerRequestError } = await import('./codex-app-server-connection')
     const refuse = (method: string): never => {
       throw new CodexAppServerRequestError(method, -32602, 'thread not found')
@@ -391,9 +585,10 @@ describe('codex dispatch admission', () => {
       reason: 'thread not found'
     })
 
-    // A refused write is disarmed, so a later echo of that id settles nothing.
+    // A contradictory live echo is forwarded; the durable rejected row makes
+    // the host ignore it.
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
-    expect(settlements).toEqual([])
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
   })
 
   it('retains correlation when a request fails after its write may have landed', async () => {
@@ -584,23 +779,55 @@ describe('codex dispatch admission', () => {
     expect(settlements.map(({ clientMessageId }) => clientMessageId)).toEqual(['client-late-echo'])
   })
 
-  it('refuses overflow without discarding an older accepted send', async () => {
+  it('admits overflow without discarding older correlations and leaves echo/exit recovery', async () => {
     const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
-    const adapter = await acquiredCodexAdapter({ codex, settlements })
+    const events: CodexStructuredSessionEvent[] = []
+    const ownerEnded: string[][] = []
+    const sink = recordingSink()
+    sink.appendLifecycleBatch = (_settlementId, _mutations, options) => {
+      ownerEnded.push([...(options?.ownerEndedClientMessageIds ?? [])])
+      return { accepted: true }
+    }
+    const adapter = await acquiredCodexAdapter({ codex, settlements, events, sink })
     const connection = codex.connections[0]!
     startTurn(connection, 'turn-1')
 
     for (let index = 0; index < MAX_CODEX_PENDING_DISPATCH_ECHOES; index += 1) {
       expect(await send(adapter, `client-${index}`)).toEqual({ state: 'admitted' })
     }
-    expect(await send(adapter, 'client-overflow')).toEqual({
-      state: 'rejected',
-      reason: 'codex structured dispatch queue is full'
+    await expect(send(adapter, 'client-overflow-echo')).resolves.toEqual({ state: 'admitted' })
+    await expect(send(adapter, 'client-overflow-exit')).resolves.toEqual({ state: 'admitted' })
+    expect(connection.calls.filter(({ method }) => method === 'turn/steer')).toHaveLength(
+      MAX_CODEX_PENDING_DISPATCH_ECHOES + 2
+    )
+
+    connection.handlers.onNotification?.('turn/completed', {
+      threadId: CODEX_TEST_THREAD_ID,
+      turn: { id: 'turn-1', status: 'completed' }
     })
+    expect(ownerEnded).toHaveLength(1)
+    expect(ownerEnded[0]).toHaveLength(MAX_CODEX_PENDING_DISPATCH_ECHOES)
+    expect(ownerEnded[0]).toContain('client-0')
+    expect(ownerEnded[0]).not.toContain('client-overflow-echo')
 
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u0', clientId: 'client-0' })
-    expect(settlements.map(({ clientMessageId }) => clientMessageId)).toEqual(['client-0'])
+    echoUserMessage(connection, {
+      turnId: 'turn-1',
+      itemId: 'item-overflow',
+      clientId: 'client-overflow-echo'
+    })
+    expect(settlements.map(({ clientMessageId }) => clientMessageId)).toEqual([
+      'client-0',
+      'client-overflow-echo'
+    ])
+
+    connection.handlers.onExit?.(new Error('codex app-server exited'))
+    await vi.waitFor(() =>
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'ended', sessionId: 'session-1' })
+      )
+    )
   })
 
   it('leaves no waiter behind when the session closes', async () => {
@@ -617,7 +844,7 @@ describe('codex dispatch admission', () => {
     expect(settlements).toEqual([])
   })
 
-  it('leaves no waiter behind when the child exits', async () => {
+  it('forwards a post-exit echo for durable host validation', async () => {
     const codex = fakeCodexAppServer({ 'turn/steer': () => ({ turnId: 'turn-1' }) })
     const settlements: LateSettlement[] = []
     const adapter = await acquiredCodexAdapter({ codex, settlements })
@@ -628,6 +855,6 @@ describe('codex dispatch admission', () => {
     connection.handlers.onExit?.(new Error('codex app-server exited'))
 
     echoUserMessage(connection, { turnId: 'turn-1', itemId: 'item-u1', clientId: 'client-1' })
-    expect(settlements).toEqual([])
+    expect(settlements).toEqual([expect.objectContaining({ clientMessageId: 'client-1' })])
   })
 })

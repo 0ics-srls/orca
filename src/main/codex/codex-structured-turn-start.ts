@@ -7,7 +7,6 @@ import {
 } from './codex-app-server-connection'
 import { isCodexAppServerUnsupportedError } from './codex-app-server-session'
 import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
-import { DISPATCH_REJECTED_CODEX_QUEUE_FULL } from '../../shared/structured-agent-session-dispatch-rejection'
 import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
 import { readCodexTurnId } from './codex-structured-thread-facts'
 
@@ -23,6 +22,14 @@ const CODEX_TURN_OPTION_KEYS = new Set([
   'personality',
   'serviceTier',
   'fastMode'
+])
+
+const CODEX_ACTIVE_TURN_SETTING_KEYS = new Set([
+  'model',
+  'effort',
+  'summary',
+  'approvalsReviewer',
+  'serviceTier'
 ])
 
 export function isCodexTurnOptionKey(key: string): boolean {
@@ -93,23 +100,41 @@ function steerProvesNoEnqueue(error: unknown): boolean {
   return isCodexAppServerRequestError(error) && error.method === 'turn/steer'
 }
 
+function activeTurnSettings(host: CodexTurnHost): Record<string, string> | null {
+  const options = codexTurnOptions(host)
+  return Object.keys(options).every((key) => CODEX_ACTIVE_TURN_SETTING_KEYS.has(key))
+    ? options
+    : null
+}
+
+function readSettingsUpdateStatus(result: unknown): 'applied' | 'targetUnavailable' | null {
+  if (typeof result !== 'object' || result === null || !('status' in result)) {
+    return null
+  }
+  return result.status === 'applied' || result.status === 'targetUnavailable' ? result.status : null
+}
+
 async function applyActiveTurnSettings(
   host: CodexTurnHost,
+  turnId: string,
   timeoutMs: number | undefined
 ): Promise<boolean> {
-  const options = codexTurnOptions(host)
-  if (Object.keys(options).length === 0) {
+  const settings = activeTurnSettings(host)
+  if (settings === null) {
+    return false
+  }
+  if (Object.keys(settings).length === 0) {
     return true
   }
   try {
-    await host.connection.request(
-      'thread/settings/update',
-      { threadId: host.threadId, ...options },
+    const result = await host.connection.request(
+      'turn/settings/update',
+      { threadId: host.threadId, turnId, ...settings },
       { timeoutMs }
     )
-    return true
+    return readSettingsUpdateStatus(result) === 'applied'
   } catch {
-    // No user input is carried by this request, so a full-options start is safe.
+    // The settings request carries no user input, so a full-options start is safe.
     return false
   }
 }
@@ -173,14 +198,12 @@ export async function startCodexTurn(
     requestedAt?: number
     timeoutMs?: number
   }
-): Promise<'admitted' | 'queue-full'> {
+): Promise<'admitted'> {
   // Armed before the write: the echo can land while the response is in flight.
-  if (!host.dispatchEchoes.arm(input.clientMessageId, input.requestedAt)) {
-    return 'queue-full'
-  }
+  host.dispatchEchoes.arm(input.clientMessageId, input.requestedAt)
   const expectedOwnerTurnId = currentActiveTurnId(host)
   if (expectedOwnerTurnId) {
-    if (await applyActiveTurnSettings(host, input.timeoutMs)) {
+    if (await applyActiveTurnSettings(host, expectedOwnerTurnId, input.timeoutMs)) {
       try {
         await steerActiveCodexTurn(host, expectedOwnerTurnId, input)
         return 'admitted'
@@ -209,10 +232,7 @@ export async function dispatchCodexTurn(
   timeoutMs: number | undefined
 ): Promise<AgentSessionDispatchOutcome> {
   try {
-    const admission = await startCodexTurn(session, { ...input, timeoutMs })
-    if (admission === 'queue-full') {
-      return { state: 'rejected', reason: DISPATCH_REJECTED_CODEX_QUEUE_FULL }
-    }
+    await startCodexTurn(session, { ...input, timeoutMs })
   } catch (error) {
     if (isCodexAppServerRequestError(error) || isCodexAppServerUnsupportedError(error)) {
       // Codex answered and declined, so no echo for this write can arrive.

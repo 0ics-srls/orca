@@ -1,4 +1,5 @@
 import type { AgentJournalItemIdentity } from '../../shared/agent-session-journal-types'
+import type { StructuredAgentSessionLateSettlementResult } from '../native-chat/agent-session-wire/structured-agent-session-late-settlement'
 
 /** Maximum sends awaiting an echo or exact owner-turn settlement. */
 export const MAX_CODEX_PENDING_DISPATCH_ECHOES = 256
@@ -14,6 +15,7 @@ type PendingDispatch = {
   /** A `turn/start` response is ownership evidence only after this turn starts. */
   startCandidateTurnId: string | null
   ownerTurnId: string | null
+  echoSettled: boolean
 }
 
 /**
@@ -21,11 +23,11 @@ type PendingDispatch = {
  * client message id Codex echoes on the user message.
  *
  * A successful `turn/steer` binds ownership atomically through expectedTurnId.
- * A fresh `turn/start` needs both its response id and matching started event;
- * either alone can describe a submission that never became the live turn.
+ * A fresh `turn/start` needs its response id plus a matching started or terminal
+ * event; either response or started evidence alone can describe a phantom turn.
  */
 export type CodexDispatchEchoes = {
-  /** Arms settlement for a send about to be written; false preserves older waits at capacity. */
+  /** Tracks a send when capacity permits; false leaves it to echo/exit recovery. */
   arm: (clientMessageId: string, requestedAt?: number) => boolean
   /** Records one successful steer response, binding only the expected active turn. */
   bindSteerResponse: (
@@ -67,11 +69,15 @@ function rememberBounded(values: Set<string>, value: string): void {
   }
 }
 
-export function createCodexDispatchEchoes(): CodexDispatchEchoes {
+export function createCodexDispatchEchoes(
+  onOwnerEndedLate?: (
+    clientMessageId: string,
+    turnId: string
+  ) => void | Promise<StructuredAgentSessionLateSettlementResult>
+): CodexDispatchEchoes {
   const armed = new Map<string, PendingDispatch>()
   const retired = new Map<string, PendingDispatch>()
   const startedTurns = new Set<string>()
-  const terminalTurns = new Set<string>()
   const terminalSnapshots = new Map<string, string[]>()
   let nextSequence = 0
   const rememberTerminalSnapshot = (turnId: string, snapshot: string[]): void => {
@@ -96,7 +102,6 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
   const pruneObservedTurns = (): void => {
     if (!hasUnbound()) {
       startedTurns.clear()
-      terminalTurns.clear()
     }
   }
   const rememberRetired = (clientMessageId: string, pending: PendingDispatch): void => {
@@ -110,10 +115,31 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
       retired.delete(oldest)
     }
   }
-  const bindStartedCandidates = (turnId: string): void => {
-    if (terminalTurns.has(turnId)) {
+  const settleOwnerEndedLate = (
+    clientMessageId: string,
+    turnId: string,
+    pending: PendingDispatch
+  ): void => {
+    const settlement = onOwnerEndedLate?.(clientMessageId, turnId)
+    if (!settlement) {
       return
     }
+    void settlement.then(
+      (outcome) => {
+        if (
+          outcome !== 'evidence-not-durable' &&
+          armed.get(clientMessageId) === pending &&
+          (pending.ownerTurnId === turnId || pending.startCandidateTurnId === turnId)
+        ) {
+          armed.delete(clientMessageId)
+          rememberRetired(clientMessageId, pending)
+          pruneObservedTurns()
+        }
+      },
+      () => undefined
+    )
+  }
+  const bindStartedCandidates = (turnId: string): void => {
     for (const pending of armed.values()) {
       if (pending.startCandidateTurnId === turnId) {
         pending.ownerTurnId = turnId
@@ -138,17 +164,23 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
         requestedAt: requestedAt ?? null,
         sequence: nextSequence++,
         startCandidateTurnId: null,
-        ownerTurnId: null
+        ownerTurnId: null,
+        echoSettled: false
       })
       return true
     },
     bindSteerResponse(clientMessageId, expectedTurnId, responseTurnId) {
       const pending = armed.get(clientMessageId)
-      if (!pending || responseTurnId !== expectedTurnId || terminalTurns.has(expectedTurnId)) {
+      if (!pending || responseTurnId !== expectedTurnId) {
         return false
+      }
+      if (pending.ownerTurnId === expectedTurnId && pending.startCandidateTurnId === null) {
+        return true
       }
       pending.ownerTurnId = expectedTurnId
       pending.startCandidateTurnId = null
+      // The host derives whether this response raced a durable terminal row.
+      settleOwnerEndedLate(clientMessageId, expectedTurnId, pending)
       pruneObservedTurns()
       return true
     },
@@ -157,24 +189,31 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
       if (!pending) {
         return
       }
-      pending.startCandidateTurnId = responseTurnId
-      if (startedTurns.has(responseTurnId) && !terminalTurns.has(responseTurnId)) {
-        pending.ownerTurnId = responseTurnId
+      if (pending.startCandidateTurnId === responseTurnId) {
+        return
       }
+      pending.startCandidateTurnId = responseTurnId
+      pending.ownerTurnId = startedTurns.has(responseTurnId) ? responseTurnId : null
+      // Terminal-before-response is proven by the durable host index, not a
+      // bounded in-memory observation that can forget an older turn.
+      settleOwnerEndedLate(clientMessageId, responseTurnId, pending)
       pruneObservedTurns()
     },
     observeTurnStarted(turnId) {
-      if (terminalTurns.has(turnId)) {
-        return
-      }
       rememberBounded(startedTurns, turnId)
       bindStartedCandidates(turnId)
       pruneObservedTurns()
     },
     settle(clientMessageId) {
-      const settled = armed.delete(clientMessageId) || retired.delete(clientMessageId)
+      const pending = armed.get(clientMessageId) ?? retired.get(clientMessageId)
+      if (!pending || pending.echoSettled) {
+        return false
+      }
+      armed.delete(clientMessageId)
+      pending.echoSettled = true
+      rememberRetired(clientMessageId, pending)
       pruneObservedTurns()
-      return settled
+      return true
     },
     terminalOwnerIds(turnId) {
       const priorSnapshot = terminalSnapshots.get(turnId)
@@ -182,9 +221,10 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
         return [...priorSnapshot]
       }
       const snapshot = [...armed].flatMap(([clientMessageId, pending]) =>
-        pending.ownerTurnId === turnId ? [clientMessageId] : []
+        pending.ownerTurnId === turnId || pending.startCandidateTurnId === turnId
+          ? [clientMessageId]
+          : []
       )
-      rememberBounded(terminalTurns, turnId)
       startedTurns.delete(turnId)
       if (snapshot.length > 0) {
         rememberTerminalSnapshot(turnId, snapshot)
@@ -194,7 +234,7 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
     commitTerminal(turnId) {
       for (const clientMessageId of terminalSnapshots.get(turnId) ?? []) {
         const pending = armed.get(clientMessageId)
-        if (pending?.ownerTurnId === turnId) {
+        if (pending?.ownerTurnId === turnId || pending?.startCandidateTurnId === turnId) {
           armed.delete(clientMessageId)
           rememberRetired(clientMessageId, pending)
         }
@@ -222,7 +262,6 @@ export function createCodexDispatchEchoes(): CodexDispatchEchoes {
       armed.clear()
       retired.clear()
       startedTurns.clear()
-      terminalTurns.clear()
       terminalSnapshots.clear()
       nextSequence = 0
     },

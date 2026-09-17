@@ -187,6 +187,23 @@ export class AgentSessionJournal {
   pendingSubmissions = (): AgentJournalSubmission[] =>
     this.submissions().filter((entry) => entry.dispatchState === 'pending')
 
+  canResolveDispatch = (clientMessageId: string, fence: number): boolean => {
+    const submission = this.state.submissions.get(clientMessageId)
+    return (
+      submission?.fence === fence &&
+      (submission.dispatchState === 'pending' || submission.dispatchState === 'unknown')
+    )
+  }
+
+  hasTerminalTurn = (turnId: string, fence: number): boolean => {
+    for (const terminalFence of this.state.terminalTurnFences.get(turnId)?.values() ?? []) {
+      if (terminalFence === fence) {
+        return true
+      }
+    }
+    return false
+  }
+
   /** The durable answer to "did my send land?" — a reconnecting client asking
    *  again gets this instead of re-sending. */
   receiptFor = (clientMessageId: string): AgentJournalAcceptanceReceipt | null =>
