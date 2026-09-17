@@ -122,8 +122,10 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
           }
           this.recordCurrentAuthorityObservation(event)
           const enriched = this.applyNormalizedStatus(event, normalized.onAccepted)
-          this.scheduleAssistantMessageRetry(source, aliasedBody, enriched)
-          this.scheduleCodexSubagentPoll(source, aliasedBody, enriched)
+          if (enriched) {
+            this.scheduleAssistantMessageRetry(source, aliasedBody, enriched)
+            this.scheduleCodexSubagentPoll(source, aliasedBody, enriched)
+          }
         }
         // Why: a delivery receipt is diagnostics, so it runs after status is applied and
         // never from an expression that can throw — the endpoint path is null until the
@@ -238,6 +240,7 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
     this.ownerStateInitialized = false
     // Why: don't unlink the endpoint file — a stale file matches fail-open and avoids a TOCTOU race with a concurrent Orca.
     clearAllListenerCaches(this.state)
+    this.resetCanonicalStatus()
     this.notifyStatusChangeListeners()
     this.paneStatusClearListeners.clear()
     this.statusDropListeners.clear()

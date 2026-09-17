@@ -189,6 +189,94 @@ export const OPERATION_MUTATIONS = {
     before: 'return repos.find((repo) => repo.id === repoId)?.connectionId?.trim() || null',
     after: 'return repos[0]?.connectionId?.trim() || null'
   },
+  // Routes a refused checks reply back through the sidebar's failure classifier, so a checks leg
+  // the reader could not read takes the whole sidebar to `error` and the PR the user opened it for
+  // disappears behind a retry.
+  'pr-sidebar-checks-failure-state': {
+    file: 'mobile-pr-sidebar-state.ts',
+    before: `      return {
+        kind: 'ready',
+        data: { pr, details: null, checks: [], checksError: checksOutcome.error }
+      }`,
+    after: '      return failureState(checksOutcome.error)'
+  },
+  // Sends the presence-lock `client` member whether or not this phone holds a device token, so a
+  // tokenless phone claims the floor under an empty id instead of asking for the mode alone.
+  'display-mode-unconditional-client': {
+    file: 'use-mobile-session-terminal-stream-display.ts',
+    before: `          ...(deviceTokenRef.current
+            ? { client: { id: deviceTokenRef.current, type: 'mobile' as const } }
+            : {}),`,
+    after: `          client: { id: deviceTokenRef.current, type: 'mobile' as const },`
+  },
+  // Forwards the viewport cell on every `auto` toggle, including before any surface has measured
+  // one, so the host is told to drive at a null size rather than at the dims it already stored.
+  'display-mode-unmeasured-viewport': {
+    file: 'use-mobile-session-terminal-stream-display.ts',
+    before: `          ...(viewportRef.current && next === 'auto' ? { viewport: viewportRef.current } : {})`,
+    after: `          ...(next === 'auto' ? { viewport: viewportRef.current } : {})`
+  },
+  // Puts the active tab on the wire as `null` rather than omitting the member, so a create on a
+  // fresh session or after the last tab closed asks the host to insert after a tab that is not
+  // there. Invisible to any scenario whose session already has an active tab.
+  'create-after-tab-id-null': {
+    file: 'use-mobile-session-terminal-create-actions.ts',
+    before: '      const afterTabId = activeSessionTabId ?? undefined',
+    after: '      const afterTabId = activeSessionTabId'
+  },
+  // Swaps the two quick-command members, so a saved shell command arrives as an agent prompt and an
+  // agent prompt arrives as a startup command. Invisible to any scenario that fills neither.
+  'create-quick-command-keys': {
+    file: 'use-mobile-session-terminal-create-actions.ts',
+    before: `        ...(options?.startupCommand ? { command: options.startupCommand } : {}),
+        ...(options?.startupCommandDelivery
+          ? { startupCommandDelivery: options.startupCommandDelivery }
+          : {}),
+        ...(options?.agentPrompt ? { agentPrompt: options.agentPrompt } : {}),`,
+    after: `        ...(options?.startupCommand ? { agentPrompt: options.startupCommand } : {}),
+        ...(options?.startupCommandDelivery
+          ? { startupCommandDelivery: options.startupCommandDelivery }
+          : {}),
+        ...(options?.agentPrompt ? { command: options.agentPrompt } : {}),`
+  },
+  // Drops the in-flight guard, so a second tap while the host is still answering opens a second
+  // terminal the user never asked for. Invisible to any scenario that taps once.
+  'create-second-tap-in-flight': {
+    file: 'use-mobile-session-terminal-create-actions.ts',
+    before: '    if (!client || creatingTerminalRef.current) {',
+    after: '    if (!client) {'
+  },
+  // Lets a refused tab load reject the startup sequence, so neither the terminal load behind it nor
+  // the two refresh timers it arms ever run and the route sits on "Loading terminals" with no
+  // second chance. The activation timer is not among them: it needs `created === '1'`, which the
+  // closing scenario leaves unset, so what kills this mutant is the missing fetches alone.
+  'startup-tab-load-rejects-sequence': {
+    file: 'use-mobile-session-startup.ts',
+    before: '      await ensureSessionTabs().catch(() => null)',
+    after: '      await ensureSessionTabs()'
+  },
+  // Accepts a `null` Linear status as the status itself, which is the container requirement the
+  // whole domain rests on: main read `status.connected` off that null and threw the property-read
+  // TypeError the Tasks screen showed as its load error. Only the `result-null` partition of the
+  // matrix can see it, so `family-mutants.test.ts` drives that variant rather than the pilot.
+  'linear-status-nullable': {
+    file: 'task-list-reply-schema.ts',
+    before: `  activeWorkspaceId: salvagedOptional('activeWorkspaceId', z.string().nullable())
+})`,
+    after: `  activeWorkspaceId: salvagedOptional('activeWorkspaceId', z.string().nullable())
+}).nullable()`
+  },
+  // Collapses the assignable-user row's explicit `avatarUrl: null` into absence, so a host that
+  // reported "this user has no avatar" becomes indistinguishable from one that does not report
+  // avatars at all, and the picker draws its initials placeholder for both. The null-collapse class
+  // the session domain shipped twice before a review caught it; this anchor keeps it caught.
+  'assignable-user-avatar-null-collapse': {
+    file: 'task-provider-entity-reply-schema.ts',
+    before: `  name: prNullableText('name'),
+  avatarUrl: prNullableText('avatarUrl')`,
+    after: `  name: prNullableText('name'),
+  avatarUrl: prText('avatarUrl')`
+  },
   // Publishes the settings envelope as the refreshed task runtime settings.
   'task-workspace-envelope': {
     file: 'use-mobile-tasks-workspace-create-actions.tsx',
