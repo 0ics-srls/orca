@@ -35,6 +35,10 @@ function shouldPreserveTerminalScrollbackBuffersForRepoMap(
     // Why: when the repo catalog is not hydrated, treating the worktree as
     // remote avoids losing the only scrollback source a relay/runtime terminal
     // may have.
+    // Why this direction is local to this decision: worktree-runtime-owner.ts resolves the same
+    // unhydrated catalog to 'local'. Safe there (nothing is destroyed), data loss here. "Fail
+    // open" names a direction per decision, never a house style — do not pattern-match it across
+    // the two.
     return true
   }
   return false
