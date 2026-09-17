@@ -1,0 +1,93 @@
+{
+  "scope": "Scoped GUI unpair persistence retirement; no process memory or incident attribution",
+  "permanentTests": {
+    "passed": 79,
+    "failed": 0,
+    "suites": 9,
+    "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config config/vitest.config.ts src/main/ipc/runtime-environment-session-retirement.test.ts src/main/runtime/runtime-workspace-session-namespace-custody.test.ts src/main/ipc/runtime-environment-removal-storage.test.ts src/main/ipc/runtime-environments-pairing.test.ts src/main/ipc/runtime-environments-capability-cache.test.ts src/main/ipc/runtime-environments-subscription-teardown.test.ts src/main/ipc/renderer-shutdown-checkpoint.test.ts src/main/persistence/loading-store/store-runtime-authored-session-writes.test.ts src/main/persistence/loading-store/workspace-session-partitions.test.ts"
+  },
+  "baselinePermanentControl": {
+    "passed": 5,
+    "expectedFailures": 11,
+    "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec vitest run --config docs/audits/paired-host-session-partition-retirement/before.config.mjs",
+    "failingCases": [
+      "renderer session partition admission rejects late session:set after actual GUI unpair",
+      "renderer session partition admission rejects late session:patch after actual GUI unpair",
+      "renderer session partition admission rejects late session:set-sync after actual GUI unpair",
+      "renderer session partition admission rejects late app:stage-before-unload-sync after actual GUI unpair",
+      "renderer session partition admission consults disk for the first valid runtime partition and not its next 64 scalar patches",
+      "renderer session partition admission keeps a newly paired same-name ID and rejects the old ID even when used as another pair name",
+      "renderer session partition admission persists unrelated shutdown sessions and UI while reporting an unreadable new-host authority",
+      "bounded paired mirror retirement keeps 32 pair/unpair cycles absent in memory, disk, and reload",
+      "removal failure ordering replies to the legacy sync channel and flushes unrelated state when admission fails",
+      "removal failure ordering keeps pairing and transport intact if custody cannot be established",
+      "removal failure ordering starts transport and browser retirement even if exact Store partition deletion fails"
+    ],
+    "interpretation": "Expected failures cover added admission/removal/failure-order contracts, including two controls requiring the new Store deletion API. The portable 13-case fixture separately demonstrates actual baseline retention and the isolated rollback-guard omission."
+  },
+  "portableProof": {
+    "node": {
+      "report": "node-results.json",
+      "cases": 78,
+      "passed": true
+    },
+    "electron": {
+      "report": "electron-results.json",
+      "cases": 78,
+      "passed": true
+    },
+    "command": "ORCA_BACKGROUND_LAUNCH=1 node docs/audits/paired-host-session-partition-retirement/reproduce.mjs [optional-output-path]",
+    "sourceGraphs": "Complete evaluated src module graphs, exact before/fixed identities on current audit and publication main291b; installed working node_modules dependencies"
+  },
+  "typecheck": {
+    "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm tc:node",
+    "exitCode": 0
+  },
+  "quality": {
+    "changedGate": {
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm run check:code-quality:changed HEAD",
+      "exitCode": 0,
+      "newFindings": 0
+    },
+    "ordinaryLintAllOwnedCode": {
+      "exitCode": 0,
+      "includesIgnoredArtifacts": true
+    },
+    "newCodeAndAllArtifactFullFileScans": {
+      "scans": [
+        "ordinary",
+        "casting",
+        "type-aware-quality",
+        "React Doctor",
+        "design-system",
+        "ordinary-type-aware"
+      ],
+      "exitCodes": [0, 0, 0, 0, 0, 0],
+      "paths": [
+        "src/main/ipc/renderer-workspace-session-admission.ts",
+        "src/main/runtime/runtime-workspace-session-namespace-custody.ts",
+        "src/main/ipc/runtime-environment-session-retirement.test.ts",
+        "src/main/runtime/runtime-workspace-session-namespace-custody.test.ts",
+        "docs/audits/paired-host-session-partition-retirement/before.config.mjs",
+        "docs/audits/paired-host-session-partition-retirement/phase.config.mjs",
+        "docs/audits/paired-host-session-partition-retirement/reproduce.mjs",
+        "docs/audits/paired-host-session-partition-retirement/scenario.test.mjs",
+        "docs/audits/paired-host-session-partition-retirement/sources.cjs"
+      ]
+    },
+    "existingFullFileLimits": "Additional full-file casting/type-aware scans expose pre-existing assertions in old suites and an unchanged disconnect-handler floating promise; changed-lines gate passes, no suppressions or unrelated edits added."
+  },
+  "whitespace": {
+    "productDiff": true,
+    "allArtifactFilesAsAdditions": true,
+    "zeroContextPatches": true
+  },
+  "limitations": [
+    "GUI response does not join scheduled profile deletion or make catalog/profile writes atomic",
+    "CLI catalog removal and ephemeral cleanup are outside this GUI boundary",
+    "Folder host-stamp controls explicitly declare in-memory main custody; persisted folder normalization strips those stamps",
+    "Rollback check is partition presence, not a same-ID incarnation fence",
+    "Renderer retained objects and existing unknown historical partitions are not swept",
+    "No RSS, byte reduction, or exclusive incident attribution claimed"
+  ]
+}
