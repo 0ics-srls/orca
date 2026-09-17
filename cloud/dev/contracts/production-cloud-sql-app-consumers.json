@@ -1,15 +1,15 @@
 {
-  "comment": "Production Cloud SQL consumers owned by the private orca-cloud application tree (auth and API services). The relay ships without them, so the values the connection budget needs are published here; the private repository binds every field back to its source in its own CI.",
-  "authInstances": 2,
+  "comment": "Production Cloud SQL consumers owned by the private orca-cloud application tree (auth and API services). The relay ships without them, so the values the connection budget needs are published here; the private repository binds every field back to its source in its own CI. The mobile push gateway is deliberately absent: it runs on its own orca-cloud-push-db instance and consumes none of this ceiling.",
+  "authInstances": 20,
   "authPoolMax": 10,
   "apiInstances": 10,
   "apiPoolMax": 5,
-  "maxConnections": 400,
+  "maxConnections": 500,
   "sources": {
-    "authInstances": "private apps tfvars: auth service max instances",
-    "authPoolMax": "private auth service: pg.Pool max",
-    "apiInstances": "private apps tfvars: API service max instances",
+    "authInstances": "private apps tfvars: auth_max_instances, raised 2 -> 20 by hand on 2026-09-04 after a cap of 2 starved desktop token refresh",
+    "authPoolMax": "private auth service: pg.Pool max on the request pool",
+    "apiInstances": "private apps tfvars: max_instances for the artifact API service",
     "apiPoolMax": "private API service: pg.Pool max",
-    "maxConnections": "Cloud SQL tier default; no max_connections flag is set"
+    "maxConnections": "measured SHOW max_connections = 500 on the live instance 2026-09-16; no max_connections flag is set, so this is the db-custom-4-15360 tier default and the previous 400 was an incorrect assumption about it"
   }
 }
