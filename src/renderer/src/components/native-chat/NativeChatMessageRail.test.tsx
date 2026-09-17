@@ -163,6 +163,35 @@ describe('message rail interaction', () => {
       expect(scrollIntoView).toHaveBeenCalledWith({ block: 'nearest' })
     })
 
+    it('rechecks the current row when messages are inserted before it', async () => {
+      const { rerender } = render(
+        <NativeChatMessageRail
+          rail={{ items, ticks: items, activeId: items[2].id, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+      fireEvent.pointerEnter(screen.getByRole('button', { name: 'Your messages' }), {
+        pointerType: 'mouse'
+      })
+      await screen.findByRole('dialog')
+      scrolled.length = 0
+
+      const shiftedItems = [
+        { id: 'older-prompt', text: 'Older prompt', slotIndex: 0, hasImages: false },
+        ...items.map((item) => ({ ...item, slotIndex: item.slotIndex + 1 }))
+      ]
+      rerender(
+        <NativeChatMessageRail
+          rail={{ items: shiftedItems, ticks: shiftedItems, activeId: items[2].id, visible: true }}
+          scrollRef={{ current: document.createElement('div') }}
+          onSelect={vi.fn()}
+        />
+      )
+
+      expect(scrolled).toEqual([screen.getByRole('button', { name: 'Prompt 2' })])
+    })
+
     it('leaves the panel alone when no message is lit', async () => {
       render(
         <NativeChatMessageRail

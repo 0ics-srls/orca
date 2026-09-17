@@ -37,6 +37,9 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
   const contentRef = useRef<HTMLDivElement>(null)
   const currentItemRef = useRef<HTMLButtonElement>(null)
   const restoreFocus = useRef(false)
+  const open = mode !== null
+  const activeId = rail.activeId
+  const itemCount = rail.items.length
   const cancelClose = (): void => {
     if (closeTimer.current !== null) {
       clearTimeout(closeTimer.current)
@@ -57,17 +60,19 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
     },
     []
   )
-  // The panel answers "where am I", so it has to open on the current message
-  // rather than at the top of the thread. The content unmounts on close, so this
-  // ref attaches at the open edge — and again if the reader scrolls the
-  // transcript underneath an open panel, which re-lights a different row.
-  const revealCurrentItem = useCallback((element: HTMLButtonElement | null) => {
-    currentItemRef.current = element
-    element?.scrollIntoView({ block: 'nearest' })
-  }, [])
   const resolveInteractiveItem = useCallback(
     () => currentItemRef.current ?? contentRef.current?.querySelector<HTMLButtonElement>('button'),
     []
+  )
+  // Exit animation can preserve the portal across a close/reopen, and loading
+  // earlier messages can move the same keyed row without reattaching its ref.
+  const revealCurrentItem = useCallback(
+    (list: HTMLUListElement | null) => {
+      if (list && open && activeId !== null && itemCount > 0) {
+        currentItemRef.current?.scrollIntoView({ block: 'nearest' })
+      }
+    },
+    [activeId, itemCount, open]
   )
 
   if (!rail.visible) {
@@ -76,7 +81,7 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
 
   return (
     <Popover
-      open={mode !== null}
+      open={open}
       onOpenChange={(open) => {
         cancelClose()
         if (open) {
@@ -167,12 +172,15 @@ export const NativeChatMessageRail = memo(function NativeChatMessageRail({
           }
         }}
       >
-        <ul className="scrollbar-sleek max-h-64 overflow-y-auto overflow-x-hidden">
+        <ul
+          ref={revealCurrentItem}
+          className="scrollbar-sleek max-h-64 overflow-y-auto overflow-x-hidden"
+        >
           {rail.items.map((item) => (
             <li key={item.id}>
               <button
                 type="button"
-                ref={item.id === rail.activeId ? revealCurrentItem : undefined}
+                ref={item.id === rail.activeId ? currentItemRef : undefined}
                 onClick={() => {
                   onSelect(item)
                   setMode(null)
