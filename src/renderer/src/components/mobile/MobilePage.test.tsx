@@ -596,13 +596,10 @@ describe('MobilePage pairing connection mode', () => {
     await waitFor(() =>
       expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
     )
-    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
-    await new Promise((resolve) => setTimeout(resolve, 20))
-
     // One Continue is one offer. Minting against the stale address and then
     // rotating to the settled one runs two overlapping mints through main, whose
     // rotate deletes the pending credential the first mint already returned.
-    expect(getPairingQR).toHaveBeenCalledTimes(1)
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
     expect(getPairingQR).toHaveBeenCalledWith({
       address: '10.0.0.9',
       connectionMode: 'automatic'
@@ -624,13 +621,209 @@ describe('MobilePage pairing connection mode', () => {
     // lookup, so the auto-mint always runs before any address is known.
     await user.click(screen.getByRole('button', { name: 'Pair another device' }))
 
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.5')
+    )
     await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
-    await new Promise((resolve) => setTimeout(resolve, 20))
-    expect(getPairingQR).toHaveBeenCalledTimes(1)
     expect(getPairingQR).toHaveBeenCalledWith({
       address: '10.0.0.5',
       connectionMode: 'automatic'
     })
+
+    // Returning to the paired list and pairing again is a fresh visit: it must
+    // wait for its own lookup, not inherit the previous visit's answer.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('paired'))
+    getPairingQR.mockClear()
+    let resolveSecondLookup: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecondLookup = resolve
+        })
+    )
+    await user.click(screen.getByRole('button', { name: 'Pair another device' }))
+    expect(getPairingQR).not.toHaveBeenCalled()
+
+    resolveSecondLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
+    )
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    expect(getPairingQR).toHaveBeenCalledWith({
+      address: '10.0.0.9',
+      connectionMode: 'automatic'
+    })
+  })
+
+  it('waits for the newest lookup when the flow is re-entered mid-refresh', async () => {
+    const user = userEvent.setup()
+    let resolveFirstLookup: ((value: Record<string, unknown>) => void) | undefined
+    let resolveSecondLookup: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveFirstLookup = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveSecondLookup = resolve
+          })
+      )
+    render(<MobilePage />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+
+    // Enter, leave, and re-enter while the first lookup is still unanswered, so
+    // two lookups overlap and the older one is the first to settle.
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(listNetworkInterfaces).toHaveBeenCalledTimes(2))
+
+    // The superseded lookup answers first. It must neither move the picker nor
+    // release the mint — this visit's lookup has not answered yet.
+    resolveFirstLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }] })
+    await waitFor(() => expect(screen.getByTestId('pair-loading')).toHaveTextContent('true'))
+    expect(getPairingQR).not.toHaveBeenCalled()
+    expect(screen.getByTestId('selected-address')).toHaveTextContent('none')
+
+    resolveSecondLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
+    )
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    expect(getPairingQR).toHaveBeenCalledWith({
+      address: '10.0.0.9',
+      connectionMode: 'automatic'
+    })
+  })
+
+  it('does not re-block Step 2 when an abandoned visit’s lookup settles last', async () => {
+    const user = userEvent.setup()
+    let resolveAbandonedLookup: ((value: Record<string, unknown>) => void) | undefined
+    let resolveCurrentLookup: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveAbandonedLookup = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveCurrentLookup = resolve
+          })
+      )
+    render(<MobilePage />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() => expect(listNetworkInterfaces).toHaveBeenCalledTimes(2))
+
+    resolveCurrentLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByTestId('pair-loading')).toHaveTextContent('false'))
+
+    // The abandoned visit answers last. Recording it as the settled visit would
+    // walk the marker backwards and leave Step 2 waiting on a lookup that is
+    // never coming, with its Generate action disabled.
+    resolveAbandonedLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('refreshing-addresses')).toHaveTextContent('false')
+    )
+    expect(screen.getByTestId('pair-loading')).toHaveTextContent('false')
+    expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
+    expect(getPairingQR).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores an interface lookup that settles after a newer one', async () => {
+    listNetworkInterfaces.mockResolvedValue({
+      interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }]
+    })
+    const user = userEvent.setup()
+    await openPairingStep()
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+
+    // Two manual refreshes overlap; the older one answers last with a stale list.
+    let resolveStaleRefresh: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveStaleRefresh = resolve
+        })
+    )
+    await user.click(screen.getByRole('button', { name: 'Refresh addresses' }))
+    listNetworkInterfaces.mockResolvedValueOnce({
+      interfaces: [{ name: 'Wi-Fi', address: '10.0.0.7' }]
+    })
+    await user.click(screen.getByRole('button', { name: 'Refresh addresses' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.7')
+    )
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(2))
+    expect(getPairingQR).toHaveBeenLastCalledWith({
+      address: '10.0.0.7',
+      connectionMode: 'automatic',
+      rotate: true
+    })
+
+    resolveStaleRefresh?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.1' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('refreshing-addresses')).toHaveTextContent('false')
+    )
+
+    // The stale list must not reselect an address and rotate the live offer away.
+    expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.7')
+    expect(getPairingQR).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not report the pairing step as busy during a manual address refresh', async () => {
+    listNetworkInterfaces.mockResolvedValue({
+      interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }]
+    })
+    // Leave Step 2 with no QR on screen: that is the state where a refresh could
+    // be mistaken for a mint in progress.
+    getPairingQR.mockResolvedValueOnce({
+      available: false,
+      reason: 'websocket_unavailable',
+      guidance: 'WebSocket transport is not running'
+    })
+    const user = userEvent.setup()
+    await openPairingStep()
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    await waitFor(() => expect(screen.getByTestId('pair-loading')).toHaveTextContent('false'))
+    expect(screen.getByTestId('pairing-qr')).toHaveTextContent('none')
+    expect(screen.getByTestId('relay-failure')).toHaveTextContent('none')
+
+    let resolveRefresh: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRefresh = resolve
+        })
+    )
+    await user.click(screen.getByRole('button', { name: 'Refresh addresses' }))
+    await waitFor(() =>
+      expect(screen.getByTestId('refreshing-addresses')).toHaveTextContent('true')
+    )
+
+    // Nothing is minting, so Step 2 must not claim it is — that would disable the
+    // Generate action while the user is only re-reading the interface list.
+    expect(screen.getByTestId('pair-loading')).toHaveTextContent('false')
+    resolveRefresh?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('refreshing-addresses')).toHaveTextContent('false')
+    )
   })
 
   it('keeps custom intent when the saved address is also discovered', async () => {
