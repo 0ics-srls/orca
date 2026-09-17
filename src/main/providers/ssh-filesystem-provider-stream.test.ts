@@ -83,6 +83,13 @@ describe('SshFilesystemProvider readFile streaming', () => {
     vi.useRealTimers()
   })
 
+  it('returns empty metadata and releases its stream listeners', async () => {
+    mux._response.mockResolvedValue({ totalSize: 0, isBinary: false, empty: true })
+    const result = await provider.readFile('/home/user/empty.txt')
+    expect(result).toEqual({ content: '', isBinary: false })
+    expect(mux._listenerCount()).toBe(0)
+  })
+
   it('streams via fs.readFileStream and reassembles utf-8 text', async () => {
     const text = 'hello world'
     const totalSize = Buffer.byteLength(text, 'utf-8')
