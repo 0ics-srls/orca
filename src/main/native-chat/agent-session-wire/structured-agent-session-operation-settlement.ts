@@ -42,7 +42,15 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
     )
     return outcome
   } catch (error) {
-    await settle({ status: 'unknown' })
+    try {
+      await settle({ status: 'unknown' })
+    } catch (settlementError) {
+      // Bookkeeping must not replace the operation's proof of whether dispatch began.
+      console.warn(
+        '[structured-agent-session] operation uncertainty persistence failed',
+        settlementError
+      )
+    }
     throw error
   }
 }

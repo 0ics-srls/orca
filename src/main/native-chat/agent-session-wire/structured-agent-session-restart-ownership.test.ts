@@ -216,9 +216,14 @@ it('refuses a completed turn even when its original delivery acknowledgement is 
   expect(host.isHeld(SESSION)).toBe(false)
 })
 
-it.each(['completion', 'message'] as const)(
-  'includes a provider %s queued at send admission in the restart decision',
-  async (newer) => {
+it.each([
+  { newer: 'completion', settlementFails: false },
+  { newer: 'message', settlementFails: false },
+  { newer: 'completion', settlementFails: true },
+  { newer: 'message', settlementFails: true }
+])(
+  'refuses queued $newer before dispatch even if later settlement fails: $settlementFails',
+  async ({ newer, settlementFails }) => {
     const { host, store, acquire, dispatch } = await interruptedRestart('submission', false)
     expect(await host.restartResume.list()).toHaveLength(1)
     await host.hold(SESSION, 'pane')
@@ -226,9 +231,18 @@ it.each(['completion', 'message'] as const)(
     if (!events) {
       throw new Error('missing resumed provider event sink')
     }
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const settle = store.recordOperationOutcome.bind(store)
-    vi.spyOn(store, 'recordOperationOutcome').mockImplementationOnce(async (input) => {
+    let admitted = false
+    vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
+      if (admitted) {
+        if (settlementFails) {
+          throw new Error('operation outcome could not be persisted')
+        }
+        return settle(input)
+      }
       await settle(input)
+      admitted = true
       events.appendItem(
         { provider: 'codex', threadId: THREAD, turnId: 'original-turn', ordinal: 2 },
         { kind: 'status', text: 'Provider finished its last action' }
@@ -251,6 +265,18 @@ it.each(['completion', 'message'] as const)(
     expect(host.journalSnapshot(SESSION).submissions).toHaveLength(1)
     host.release(SESSION, 'pane')
     expect(host.isHeld(SESSION)).toBe(false)
+    expect(await host.restartResume.continueAfterRestart([SESSION], 'retry')).toEqual({
+      resumed: [],
+      continued: []
+    })
+    expect(dispatch).not.toHaveBeenCalled()
+    if (settlementFails) {
+      expect(warning).toHaveBeenCalledWith(
+        '[structured-agent-session] operation uncertainty persistence failed',
+        expect.any(Error)
+      )
+    }
+    warning.mockRestore()
   }
 )
 
@@ -273,28 +299,35 @@ it('replays the same logical continuation through the durable send ledger', asyn
   expect(dispatch).toHaveBeenCalledTimes(1)
 })
 
-it('keeps delivery unconfirmed when operation settlement fails after dispatch', async () => {
-  const { host, store, dispatch } = await interruptedRestart()
-  expect(await host.restartResume.list()).toHaveLength(1)
-  await host.hold(SESSION, 'pane')
-  const settle = store.recordOperationOutcome.bind(store)
-  vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
-    if (input.outcome.status === 'succeeded') {
-      throw new Error('operation outcome could not be persisted')
-    }
-    return settle(input)
-  })
+it.each([false, true])(
+  'keeps dispatched delivery unconfirmed when settlement fails (uncertainty write fails: %s)',
+  async (uncertaintyFails) => {
+    const { host, store, dispatch } = await interruptedRestart()
+    expect(await host.restartResume.list()).toHaveLength(1)
+    await host.hold(SESSION, 'pane')
+    const settle = store.recordOperationOutcome.bind(store)
+    let dispatched = false
+    vi.spyOn(store, 'recordOperationOutcome').mockImplementation(async (input) => {
+      if (input.outcome.status === 'succeeded') {
+        dispatched = true
+      }
+      if (dispatched && (input.outcome.status === 'succeeded' || uncertaintyFails)) {
+        throw new Error('operation outcome could not be persisted')
+      }
+      return settle(input)
+    })
 
-  const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+    const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
 
-  expect(dispatch).toHaveBeenCalledTimes(1)
-  expect(host.journalSnapshot(SESSION).submissions[0]?.dispatchState).toBe('accepted')
-  expect(result.continued).toMatchObject([{ sessionId: SESSION, outcome: 'unknown' }])
-  host.release(SESSION, 'pane')
-  expect(host.isHeld(SESSION)).toBe(false)
-  await host.restartResume.continueAfterRestart([SESSION], 'retry')
-  expect(dispatch).toHaveBeenCalledTimes(1)
-})
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(host.journalSnapshot(SESSION).submissions[0]?.dispatchState).toBe('accepted')
+    expect(result.continued).toMatchObject([{ sessionId: SESSION, outcome: 'unknown' }])
+    host.release(SESSION, 'pane')
+    expect(host.isHeld(SESSION)).toBe(false)
+    await host.restartResume.continueAfterRestart([SESSION], 'retry')
+    expect(dispatch).toHaveBeenCalledTimes(1)
+  }
+)
 
 it('releases a failed acquisition without retrying the spent offer', async () => {
   const { host, acquire, dispatch, closeSession } = await interruptedRestart()

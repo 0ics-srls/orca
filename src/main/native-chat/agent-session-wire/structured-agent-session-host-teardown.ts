@@ -67,11 +67,13 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
     {
       name: 'record-resume-markers',
       run: () =>
-        withPhaseTimeout(collaborators.recordResumeMarkers, RESUME_MARKER_RECORD_TIMEOUT_MS).catch(
-          (error: unknown) => {
-            console.warn('[structured-agent-session] recording recovery capsule failed', error)
-          }
-        )
+        withPhaseTimeout(async () => {
+          // Capture accepted prompts before eviction cancels their waiting-on-user evidence.
+          await collaborators.runtimeState.flushAllEventSinks()
+          await collaborators.recordResumeMarkers()
+        }, RESUME_MARKER_RECORD_TIMEOUT_MS).catch((error: unknown) => {
+          console.warn('[structured-agent-session] recording recovery capsule failed', error)
+        })
     },
     { name: 'dispose-holds', run: () => collaborators.holds.dispose() },
     { name: 'stop-lease-renewal', run: () => collaborators.runtimeState.stopLeaseRenewal() },
