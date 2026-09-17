@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
     runtimePaneTitlesByTabId: {} as Record<string, Record<number, string>>,
     settings: {} as Record<string, unknown>,
     terminalLayoutsByTabId: {} as Record<string, { ptyIdsByLeafId?: Record<string, string> }>,
+    repos: [] as { id: string; connectionId: string | null; executionHostId: string | null }[],
     sleepingAgentSessionsByPaneKey: {} as Record<
       string,
       { paneKey: string; tabId?: string; worktreeId: string }
@@ -25,7 +26,10 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock('../../store', () => ({
-  useAppStore: (selector: (state: unknown) => unknown) => selector(mocks.storeState)
+  useAppStore: Object.assign(
+    (selector: (state: unknown) => unknown) => selector(mocks.storeState),
+    { getState: () => mocks.storeState }
+  )
 }))
 
 vi.mock('./terminal-hidden-view-parking', async (importOriginal) => {
