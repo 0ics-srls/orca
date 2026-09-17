@@ -66,15 +66,13 @@ const TRANSCRIPTS: readonly TranscriptCase[] = [
     name: 'antigravity-ready-api-key-gemini-model',
     capture: 'B',
     what: 'ready screen, API-key identity — the account row reads "Gemini API key", not an email',
-    expectReady: true,
-    knownDefect: 'refused: the model row never starts a line, the logo shares it'
+    expectReady: true
   },
   {
     name: 'antigravity-ready-account-info-hidden',
     capture: 'B',
     what: 'ready screen with AGY_CLI_HIDE_ACCOUNT_INFO=1 — no account row at all',
-    expectReady: true,
-    knownDefect: 'refused: same line-start defect, and no account row exists to require'
+    expectReady: true
   },
   {
     name: 'antigravity-dialog-trust-workspace',
@@ -114,8 +112,7 @@ const TRANSCRIPTS: readonly TranscriptCase[] = [
     name: 'antigravity-dialog-dismissed',
     capture: 'D',
     what: 'the screen immediately after the model picker is dismissed',
-    expectReady: true,
-    knownDefect: 'refused: the banner is not reprinted and no model row starts a line'
+    expectReady: true
   },
   // Not captured: this machine's agy has no OAuth session and offers only Gemini models, and
   // reaching the rest would mean signing the operator out or deleting their config. See

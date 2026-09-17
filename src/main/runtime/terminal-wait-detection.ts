@@ -133,10 +133,9 @@ function findAntigravityReadyPromptIndex(normalized: string): number | null {
     return null
   }
   let lineStart = headerIndex
-  let modelIndex: number | null = null
   let promptIndex: number | null = null
 
-  // Why: ready previews can include echoed paste after the header; scan line bounds directly instead of splitting the whole tail.
+  // Why: logo glyphs can prefix any model, while the standalone composer caret is the stable ready marker across model choices.
   for (let cursor = headerIndex; cursor <= normalized.length; cursor += 1) {
     if (cursor < normalized.length && normalized.charCodeAt(cursor) !== 10) {
       continue
@@ -150,21 +149,14 @@ function findAntigravityReadyPromptIndex(normalized: string): number | null {
       trimmedEnd -= 1
     }
     if (lineStart > headerIndex && trimmedStart < trimmedEnd) {
-      if (modelIndex === null && normalized.startsWith('gemini', trimmedStart)) {
-        modelIndex = trimmedStart
-      }
-      if (
-        promptIndex === null &&
-        trimmedEnd - trimmedStart === 1 &&
-        normalized.charCodeAt(trimmedStart) === 62
-      ) {
+      if (trimmedEnd - trimmedStart === 1 && normalized.charCodeAt(trimmedStart) === 62) {
         promptIndex = trimmedStart
       }
     }
     lineStart = cursor + 1
   }
 
-  return modelIndex !== null && promptIndex !== null ? Math.max(modelIndex, promptIndex) : null
+  return promptIndex
 }
 
 export const TERMINAL_WAIT_BLOCKED_SENTINEL_RE =
