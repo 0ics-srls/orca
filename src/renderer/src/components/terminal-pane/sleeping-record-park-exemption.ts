@@ -6,7 +6,7 @@ import { createWorktreeRecordSelector } from '@/store/worktree-record-selector-c
 const EMPTY_TAB_IDS: ReadonlySet<string> = new Set()
 
 type SleepingRecordParkExemptionState = {
-  sleepingAgentSessionsByPaneKey?: Record<string, SleepingAgentSessionRecord> | undefined
+  sleepingAgentSessionsByPaneKey?: Record<string, SleepingAgentSessionRecord>
 }
 
 /** Tab ids whose panes own a sleeping record a mount can actually consume.
@@ -14,13 +14,11 @@ type SleepingRecordParkExemptionState = {
  *  these — but only these: passive-completed records never resume,
  *  and exempting them would pin a hidden pane mounted indefinitely.
  *
- *  Why memoized on the record-map identity (STA-7552): zustand re-runs every
+ *  Why memoized on the record map's identity (STA-7552): zustand re-runs every
  *  mounted subscriber's selector on every store write, so an unrelated pane
- *  title update used to walk the whole sleeping-record inventory once per
- *  retained worktree. The map only changes when a record is parked or
- *  consumed, so gating on its identity keeps a keystroke independent of how
- *  many sleeping agents the profile has accumulated. Callers still compare with
- *  `useShallow`; the carried generation makes that an identity hit.
+ *  title update used to walk the whole inventory once per retained worktree.
+ *  The map changes only when a record is parked or consumed, so that identity
+ *  is the exact gate.
  *  Iterates in place — `Object.values` would allocate every record per rebuild. */
 export const selectSleepingRecordParkExemptTabIds = createWorktreeRecordSelector<
   SleepingRecordParkExemptionState,
@@ -28,8 +26,7 @@ export const selectSleepingRecordParkExemptTabIds = createWorktreeRecordSelector
 >({
   readSources: (state) => [state.sleepingAgentSessionsByPaneKey],
   empty: EMPTY_TAB_IDS,
-  build: (state, worktreeId) => {
-    const sleepingAgentSessionsByPaneKey = state.sleepingAgentSessionsByPaneKey
+  build: ({ sleepingAgentSessionsByPaneKey }, worktreeId) => {
     if (!sleepingAgentSessionsByPaneKey) {
       return EMPTY_TAB_IDS
     }
