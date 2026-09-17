@@ -44,11 +44,10 @@ export function useMobileStructuredAgentOptions(args: {
   sessionId: string | null
   enabled: boolean
   fence: number | null
-  turnId: string | null
   optionsRevision: number
   mutate: StructuredAgentSessionMutate
 }): StructuredOptionsController {
-  const { agent, client, enabled, fence, mutate, optionsRevision, sessionId, turnId } = args
+  const { agent, client, enabled, fence, mutate, optionsRevision, sessionId } = args
   const [optionState, setOptionState] = useState(() =>
     createStructuredAgentSessionOptionState(agent ?? 'codex')
   )
@@ -113,7 +112,7 @@ export function useMobileStructuredAgentOptions(args: {
     return () => {
       stale = true
     }
-  }, [client, enabled, optionCatalog, optionsRevision, sessionId, fence, turnId, updateOptionState])
+  }, [client, enabled, optionCatalog, optionsRevision, sessionId, fence, updateOptionState])
 
   const optionSnapshot = useMemo(
     () => structuredAgentSessionOptionSnapshot(optionState),

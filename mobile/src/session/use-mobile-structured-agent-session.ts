@@ -146,14 +146,12 @@ export function useMobileStructuredAgentSession(args: {
     [client, enabled, onSendError, sessionId, sessionKey]
   )
 
-  const turnId = activeStructuredAgentSessionTurnId(state.items)
   const options = useMobileStructuredAgentOptions({
     agent,
     client,
     sessionId,
     enabled,
     fence: state.fence,
-    turnId,
     optionsRevision: state.optionsRevision,
     mutate
   })
@@ -266,6 +264,7 @@ export function useMobileStructuredAgentSession(args: {
     () => projectStructuredAgentSessionMessages(state.items, [], state.submissions),
     [state.items, state.submissions]
   )
+  const turnId = activeStructuredAgentSessionTurnId(state.items)
   const turnTiming = useMobileStructuredAgentTurnTiming(state, turnId)
   const activityText =
     selectStructuredAgentTurnActivity(state.items, turnId, state.activity)?.text ?? null
