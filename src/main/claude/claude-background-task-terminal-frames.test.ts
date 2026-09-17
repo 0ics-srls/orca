@@ -17,9 +17,12 @@ describe('claude background task terminal frames', () => {
     // frame reached a user session whose task was never admitted, and both the
     // typed path and the generic fallback stayed silent, so the failure was
     // dropped on the floor.
-    const { rows, items, latest, latestTwin } = harness()
+    const { rows, items, latest, latestTwin, turnOpens } = harness()
     expect(rows.observe(ORPHAN_FAILED_NOTIFICATION)).toBe(true)
     expect(items).toHaveLength(1)
+    // The row is provider output like any other, so writing it reopens the turn
+    // the provider resumed itself rather than printing beside an idle session.
+    expect(turnOpens).toHaveLength(1)
     expect(latest()).toMatchObject({
       type: 'background-task',
       taskId: 'bjzenpq13',
