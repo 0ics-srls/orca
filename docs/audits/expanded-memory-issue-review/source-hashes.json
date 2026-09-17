@@ -1,0 +1,167 @@
+{
+  "reviewedHead": "ad2ae0213f437f7cb14250405c8222bb70bafc7d",
+  "scope": "Targeted source ownership/path/handshake reads; not every line or complete historical binary. No affected-host access.",
+  "sources": [
+    {
+      "path": "src/main/ssh/ssh-relay-versioned-install.ts",
+      "sha256": "b0899d2b2332c64fd471ab9e1ae754b34426945509e294410295c99eed3d8f6e"
+    },
+    {
+      "path": "src/main/ssh/ssh-relay-deploy.ts",
+      "sha256": "47b891482a039bb9e2118ef4ed2d842c19923a9909b72760fb0fea75c17d96eb"
+    },
+    {
+      "path": "src/relay/relay-handshake.ts",
+      "sha256": "9d5c8fd6ec28c44d748d19e9606fd29796e2d38f4d70d0daa71206b4525cb4d7"
+    },
+    {
+      "path": "src/main/ssh/remote-install-gc.ts",
+      "sha256": "c081c8fc6fab1ad47f7cfa423cb70e9c14886d01d9264a5c0fc40c83f57aad13"
+    },
+    {
+      "path": "src/main/ssh/ssh-relay-superseded-endpoints.ts",
+      "sha256": "895df6d04389e89d49d8fb8b2fd05fdb05ebee81e29d3051d18e4546a0a19eef"
+    },
+    {
+      "path": "src/main/ssh/ssh-relay-cross-version-isolation.test.ts",
+      "sha256": "f9354f3511f9dbca27f0c27601fa1259e4004a5e12c2d6c354dfa1058db7d624"
+    },
+    {
+      "path": "src/relay/relay-handshake-roundtrip.test.ts",
+      "sha256": "09d62cf35663d6527ea95374dd1e32efd79237d8fc2d75b373939d9c360dfbe6"
+    },
+    {
+      "path": "docs/reference/ssh-execution-boundary.md",
+      "sha256": "eb661689226400969cfa8e2418de3acc171cbb5f66ce7fbabf92aec8539938b2"
+    }
+  ],
+  "query": {
+    "observedAt": "2026-09-17T03:42:35.152687+00:00",
+    "counts": {
+      "memory": 12,
+      "oom": 5,
+      "leak": 28,
+      "orphan": 20,
+      "RAM": 6,
+      "growth": 3,
+      "heap": 1,
+      "RSS": 0,
+      "swap": 6
+    },
+    "uniqueOpenMatches": 66,
+    "allHasNextPageFalse": true
+  },
+  "newIssues": [
+    {
+      "number": 1355,
+      "url": "https://github.com/stablyai/orca/issues/1355",
+      "bodySha256": "9942664244295e23620fa46914b2e8f2de649eacda543a632c3b70b7d1565731",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/1355#issuecomment-4364783060",
+          "bodySha256": "8cac8a518cfee99e1e3484b9fd1224242b344aa674e9a6d0fd0693b2ece8f708"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/1355#issuecomment-4365059932",
+          "bodySha256": "55b8b8f2b3974475be330ca3623f98609cd3ddfd8ec37ea91616cd180d4e72b7"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/1355#issuecomment-4580788768",
+          "bodySha256": "6051fcc9dddcf1c7f7fae45cceaa9235147fe4490ed249fd6272ca22a35f152f"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/1355#issuecomment-4735499581",
+          "bodySha256": "7f2da268ab1f36109815ba0b165378ef45df441dbc15feacf1bf539d40d1ef9e"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/1355#issuecomment-5068228930",
+          "bodySha256": "65647564d43102f1c447afd4e53d13453ae3f2b6793629efb64f87554f55d122"
+        }
+      ]
+    },
+    {
+      "number": 10382,
+      "url": "https://github.com/stablyai/orca/issues/10382",
+      "bodySha256": "5c0d0100de8036adc488a53c6bf6a6da75e9fb041c7c5f42a909208f54a94e12",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/10382#issuecomment-5082624441",
+          "bodySha256": "9f8b54a8f289cc267244ff597a33c5e32cb3d3a194e7ddbc4999ea46626a72e0"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/10382#issuecomment-5087398732",
+          "bodySha256": "8971965e038464fbbea95653770113b5b7a11b826092dead756f6688459c342b"
+        }
+      ]
+    },
+    {
+      "number": 11824,
+      "url": "https://github.com/stablyai/orca/issues/11824",
+      "bodySha256": "87572a21d661b8b923c3c1c1f3bd2ab531804e187552e3ce8864c884e1dd4f93",
+      "comments": []
+    },
+    {
+      "number": 13171,
+      "url": "https://github.com/stablyai/orca/issues/13171",
+      "bodySha256": "59f140342ca4179ca8b07bb5861d6a30b8e737ba6335d753884cc59d629a145c",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/13171#issuecomment-5228572051",
+          "bodySha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ]
+    },
+    {
+      "number": 13852,
+      "url": "https://github.com/stablyai/orca/issues/13852",
+      "bodySha256": "d571c08122e33ae4832a27cca90f7de74ae9e90f59c2bedad635175bd266cabb",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5305218946",
+          "bodySha256": "2b5549abdcdf81dd635ed70405794b738584e4bd1d04bb6b21d7e9ad428b69e7"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5490069178",
+          "bodySha256": "eacd67610c242db9922135c1d531be3ef1c83772909b2bab104a2c18f0bfba76"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5493610344",
+          "bodySha256": "4cc4031d153b72a13c47fab7bba34e6cddad0fd05e14b22375ad13da1eab7369"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5496034290",
+          "bodySha256": "ff0b9e3b77f618ff54a51cc5a2188c6500fde2273ee34caad197d1fe6f634d83"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5496204134",
+          "bodySha256": "9a8d195771882de27811b39a33a5c77e47f4ac1173e4560607f317e609838fea"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/13852#issuecomment-5523691997",
+          "bodySha256": "5d8e7a8a4731a6efcd20a7fcb63d83607dadb3964441cb959a30907602a313a8"
+        }
+      ]
+    },
+    {
+      "number": 16703,
+      "url": "https://github.com/stablyai/orca/issues/16703",
+      "bodySha256": "338c763ebb02fb27b75e1898d85b74d2a9ee39c2ec60247a483777716a18c93c",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/16703#issuecomment-5434798023",
+          "bodySha256": "fcc1ce292997d8f8d39ea62d944764d633eaf5f36c14ce6c1fb544c31f119943"
+        }
+      ]
+    }
+  ],
+  "tests": {
+    "backgroundLaunch": true,
+    "files": [
+      "src/main/ssh/ssh-relay-cross-version-isolation.test.ts",
+      "src/relay/relay-handshake-roundtrip.test.ts"
+    ],
+    "passed": 7,
+    "failed": 0,
+    "scope": "Existing cross-version deploy isolation and actual local-socket handshake; no remote host/app window."
+  }
+}

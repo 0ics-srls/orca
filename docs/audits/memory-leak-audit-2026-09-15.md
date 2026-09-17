@@ -1,6 +1,6 @@
 # Memory leak audit (2026-09-15)
 
-The audit produced **49 separate PRs**: 44 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
+The audit produced **52 separate PRs**: 47 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
 reproduced mechanisms are terminal hyperlink metadata retention, stalled daemon
 output, stalled CDP delivery, oversized strings retained by small text tails,
 unbounded transcript record assembly, invisible WebGL glyph caches, and contrast-color caches. They establish real defects in code paths that
@@ -60,10 +60,10 @@ found a race that could kill live work; it is excluded from the fix count. The l
 The [issue ledger](./memory-leak-scan-2026-09-15.md#github-memory-issue-correlation)
 accounts for the memory/process-resource title matches and additional reports
 from body searches. The [search index](./memory-issue-index-2026-09-15.json)
-preserves 58 original title matches plus three later reports, with explicit
-unrelated exclusions. The latest batched recheck found 60 open matches and #9141
-still absent. All six searches returned a complete first page below the 100-result
-cap. The new editor reports #21121/#21122 have identical bodies; four baseline
+preserves 58 original title matches plus nine later reports, with explicit
+unrelated exclusions. The expanded batched recheck found 66 open matches and #9141
+still absent. All nine searches, now including `heap`, `RSS` and `swap`, returned
+a complete first page below the 100-result cap. The editor reports #21121/#21122 have identical bodies; four baseline
 store controls and existing PRs #21124/#21125 are recorded in the
 [editor review](./editor-duplicate-issue-review/README.md). For headless/mobile
 [#21066](https://github.com/stablyai/orca/issues/21066), an initially unbound tab's
@@ -77,6 +77,13 @@ safe cleanup must also protect a newer live owner.
 The ledger separates reproduced retaining paths, ownership/cleanup gaps,
 intentional resource policies, historical fixes, and incidents without enough
 attribution evidence. It also records existing PRs rather than duplicating them.
+The expanded search adds renderer exit-code-5 report #10382 and SSH relay version
+swap #13852; four other new matches concern UI/configuration/archive swaps.
+The SSH stranding mechanism is explicit in current endpoint, handshake and
+cross-version isolation code. Existing discovery preserves live work; it does
+not restore attach across builds. The [renderer telemetry review](./renderer-exit5-telemetry/README.md)
+explains sampling limits and repeated recovery through 89 current tests and five
+historical actual-source controls. The renderer crash remains unattributed.
 In particular, Linux/Windows Chromium descriptor inheritance remains covered by
 [#16963](https://github.com/stablyai/orca/pull/16963); renderer string-slice cleanup
 from #13040 already exists in the reported release. The main and daemon xterm
@@ -123,20 +130,20 @@ because the retaining path crosses that boundary.
 
 | Category       | Inventoried files |
 | -------------- | ----------------: |
-| Source         |            25,659 |
-| Config         |               893 |
-| Documentation  |               300 |
-| Asset/other    |               226 |
-| **Total rows** |        **27,078** |
+| Source         |            25,685 |
+| Config         |               920 |
+| Documentation  |               311 |
+| Asset/other    |               231 |
+| **Total rows** |        **27,147** |
 
 The [file inventory](./memory-leak-file-inventory-2026-09-15.tsv) records size and
 SHA-256 for every tracked path except the inventory itself. That self-exclusion
-avoids a circular hash; symlinks are hashed as link text. Thus 27,078 rows plus
-the inventory account for 27,079 tracked paths. Hashes describe the final
+avoids a circular hash; symlinks are hashed as link text. Thus 27,147 rows plus
+the inventory account for 27,148 tracked paths. Hashes describe the final
 worktree contents, including staged evidence files, rather than only HEAD.
 
 The [mechanical search results](./memory-pattern-scan-2026-09-15.json) record
-25,659 source files searched, including 7,877 matching files, and per-file hits for
+25,685 source files searched, including 7,888 matching files, and per-file hits for
 listener, timer, subscription, disposal, Map/Set, buffer-concatenation and shared-promise signals. Zero-hit source
 files remain represented in the inventory. These searches include comments and
 tests; unequal add/remove counts do not establish a leak. Candidate review traced
@@ -200,3 +207,34 @@ The [speech-worker proof](./speech-worker-audio-queue/README.md) confirms 16 MiB
 [#21139](https://github.com/stablyai/orca/pull/21139) releases completed terminal spawn inputs captured by session-exit and foreground-confirmation callbacks. Three live sessions retain three sets of original options/environment/history before and zero after; the seeded terminal content remains readable. Actual admission narrows signal cleanup to stream detach. The 67-test run, desktop typechecks, independent admission review and post-commit proof pass. This path can run locally, but restore traffic and incident-scale retained bytes remain unproven. Native merged-environment capture is separate. [Artifacts](./terminal-completed-spawn-inputs/README.md).
 
 [#21140](https://github.com/stablyai/orca/pull/21140) removes that separate native-wrapper capture by copying its immutable exit-status boolean before registering the callback. Actual wrapper proofs release the merged environment and arguments while the native event owner stays live; PATH, exit interpretation, foreground lookup and disposal remain covered. The 114-test run, Node typecheck, independent review and post-commit proof pass. Environment strings may have other owners, so object collection does not imply equal RSS reduction. [Artifacts](./native-pty-spawn-env-retention/README.md).
+
+## Empty streamed output and terminal mode tails
+
+[#21142](https://github.com/stablyai/orca/pull/21142) prevents empty Codex text deltas from growing an array outside its byte accounting. Four batches retain 65,536 slots before and zero afterward, with identical scheduling and publication. Current and reported-release module overlays pass on Node and Electron. This is an entry-count reproduction; the incident frequency and byte contribution remain unknown. [Artifacts](./empty-streamed-delta-retention/README.md).
+
+The [#20960](https://github.com/stablyai/orca/pull/20960) follow-up copies retained kitty keyboard and headless mouse-mode scan tails. Ordinary 18-character unfinished sequences can retain their input chunk: 32 normal 64 Ki-character inputs keep about 2.1 MB before and owner-scale kilobytes afterward. All 98 focused tests and 84 Node/Electron proof cases pass. This remains a last-input cost per owner, with separate V8 regexp statics explicitly excluded from the measurement. [Artifacts](./terminal-mode-tail-retention/README.md).
+
+The same PR now covers plugin worker stdout/stderr tails and emitted log lines.
+Two hundred short log rows from 64 KiB inputs retain about 13.15 MB before and
+43 KB after; truncated rows keep their legitimate capped text. Worker stream end
+does not retire the service's log ring. Twenty tests and 48 Node/Electron cases
+pass independently, including both string copiers, UTF-16 and stream controls.
+This feature-gated path is bounded parent retention for fixed owners and chunk
+size, not proof of a production growth rate. [Artifacts](./plugin-worker-output-retention/README.md).
+
+## Shared filesystem waits and completed SSH writes
+
+[#21144](https://github.com/stablyai/orca/pull/21144) releases canceled working-directory
+callers while the shared native stat stays owned. Both runtimes release 32 signals
+without changing the one underlying operation, UNC slots or callback order.
+Thirty-one tests and 54 ordering/lifecycle cases per runtime pass; small empty
+reaction/holder records still remain until native settlement.
+[Artifacts](./working-directory-wait-retention/README.md).
+
+[#21150](https://github.com/stablyai/orca/pull/21150) clears completed SSH writer
+entries behind a rolling nonempty queue. Both runtimes drop 2,048 completed
+buffers/callbacks to zero while retaining the same two queued frames. A real
+Node writable control preserves the in-flight buffer and releases 127 completed
+ones. Thirty-one tests, independent scheduling review and both runtime proofs
+pass. This SSH mechanism does not explain #19831's all-local workload.
+[Artifacts](./ssh-writer-consumed-prefix/README.md).

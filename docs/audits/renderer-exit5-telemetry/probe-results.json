@@ -1,0 +1,127 @@
+{
+  "node": "v26.6.0",
+  "reportedCommit": "ea2d3e05d664ab21ba35b5272004398daf2884cd",
+  "passed": 5,
+  "sourcePaths": [
+    "src/main/crash-reporting/crash-breadcrumb-store.ts",
+    "src/main/crash-reporting/process-gone-classification.ts",
+    "src/main/crash-reporting/process-gone-diagnostics.ts",
+    "src/main/crash-reporting/renderer-recovery-circuit-breaker.ts",
+    "src/renderer/src/lib/crash-diagnostics.ts",
+    "src/shared/crash-reporting.ts"
+  ],
+  "cases": [
+    {
+      "name": "historical sampler reads startup and interval, without exact bridge or crash hook",
+      "samples": [25, 25, 25, 1297],
+      "intervalMs": 60000,
+      "exactReads": 0,
+      "limit": "A controlled performance.memory source; this does not reproduce Blink cache duration or an actual crash.",
+      "passed": true
+    },
+    {
+      "name": "historical crash classification preserves crashed/5 without inferring OOM",
+      "crashed5Recorded": true,
+      "crashed5Recoverable": true,
+      "killed15Recorded": false,
+      "oomRecordedSeparately": true,
+      "passed": true
+    },
+    {
+      "name": "all eight reported recovery intervals pass the historical circuit breaker",
+      "intervalsSeconds": [0, 331, 1293, 115, 211, 116, 164, 84],
+      "decisions": [
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        },
+        {
+          "allowed": true,
+          "recentRecoveryCount": 1
+        }
+      ],
+      "fastFourthAllowed": false,
+      "passed": true
+    },
+    {
+      "name": "historical survivor metrics cannot reconstruct the absent renderer footprint",
+      "metrics": {
+        "processMetricsCount": 3,
+        "processMetricsBrowserCount": 1,
+        "processMetricsBrowserWorkingSetMB": 1200,
+        "processMetricsRendererCount": 0,
+        "processMetricsRendererWorkingSetMB": 0,
+        "processMetricsGpuCount": 1,
+        "processMetricsGpuWorkingSetMB": 154,
+        "processMetricsUtilityCount": 1,
+        "processMetricsUtilityWorkingSetMB": 110,
+        "processMetricsOtherCount": 0,
+        "processMetricsOtherWorkingSetMB": 0,
+        "processMetricsLargestPid": 1,
+        "processMetricsLargestType": "Browser",
+        "processMetricsLargestWorkingSetMB": 1200
+      },
+      "limit": "Supplied survivor inventory; zero absent-renderer bucket means no row, not zero pre-death memory.",
+      "passed": true
+    },
+    {
+      "name": "historical breadcrumb ring has no renderer generation boundary",
+      "beforeEviction": [
+        {
+          "createdAt": "2026-09-17T03:58:20.134Z",
+          "name": "renderer_memory",
+          "data": {
+            "reason": "interval",
+            "usedHeapMB": 1297
+          }
+        },
+        {
+          "createdAt": "2026-09-17T03:58:20.136Z",
+          "name": "renderer_recovery_reload"
+        },
+        {
+          "createdAt": "2026-09-17T03:58:20.136Z",
+          "name": "renderer_memory",
+          "data": {
+            "reason": "startup",
+            "usedHeapMB": 25
+          }
+        }
+      ],
+      "afterEvictionCount": 30,
+      "limit": "Controlled breadcrumb sequence establishes store semantics, not actual attribution of the issue report.",
+      "passed": true
+    }
+  ],
+  "exclusions": [
+    "No UI, native process, affected-host trace replay, heap allocation measurement, or actual Blink quantization run."
+  ],
+  "artifactHashes": {
+    "probe.cjs": "466370e37af0aeba2a53d7c9746e16f1749a58f5106bd5f076577e47a0e81764",
+    "source-hashes.json": "92cf5ff5f8e5f819b24ce0a4e19f0ae03f248670c28ec125a3025b2f9ac65da4"
+  }
+}

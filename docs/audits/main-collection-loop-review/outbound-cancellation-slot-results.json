@@ -1,0 +1,67 @@
+{
+  "sourcePath": "src/shared/ws-outbound-backpressure-queue.ts",
+  "sourceSha256": "73bf7ff3c10c42ada557045ac4be57f7676b87678984985f2dfe1b99a6e23e17",
+  "runnerSha256": "055649a287cfde2c8694d1f18d4b580a07b6cdfa65dd1056b3f0bd704715c406",
+  "evaluatedBundleSha256": "a8eeacdf980d4756cbb340208e7073a78e5e8d78bdb67d99df187ab913924d3e",
+  "runtime": {
+    "node": "26.6.0",
+    "acorn": "8.17.0",
+    "ada": "4.0.0",
+    "amaro": "1.1.11",
+    "ares": "1.34.8",
+    "brotli": "1.2.0",
+    "cldr": "48.0",
+    "icu": "78.3",
+    "libffi": "3.7.1",
+    "llhttp": "9.4.3",
+    "merve": "1.2.2",
+    "modules": "147",
+    "napi": "10",
+    "nbytes": "0.1.4",
+    "ncrypto": "0.0.1",
+    "nghttp2": "1.70.0",
+    "nghttp3": "",
+    "ngtcp2": "",
+    "openssl": "3.6.3",
+    "simdjson": "4.6.6",
+    "simdutf": "7.7.0",
+    "sqlite": "3.53.4",
+    "tz": "2026a",
+    "undici": "8.9.0",
+    "unicode": "17.0",
+    "uv": "1.52.1",
+    "uvwasi": "0.0.23",
+    "v8": "14.6.202.34-node.26",
+    "zlib": "1.2.12",
+    "zstd": "1.5.7"
+  },
+  "batches": [
+    {
+      "queuedBytes": 5,
+      "queuedFrames": 1,
+      "storageSlots": 2049
+    },
+    {
+      "queuedBytes": 5,
+      "queuedFrames": 1,
+      "storageSlots": 4097
+    },
+    {
+      "queuedBytes": 5,
+      "queuedFrames": 1,
+      "storageSlots": 6145
+    },
+    {
+      "queuedBytes": 5,
+      "queuedFrames": 1,
+      "storageSlots": 8193
+    }
+  ],
+  "afterDrain": {
+    "queuedBytes": 0,
+    "queuedFrames": 0,
+    "storageSlots": 0
+  },
+  "productionReachability": "No production reference to enqueueCancelable found in checked-out repository; ordinary enqueue discards cancellation handle. API-only capacity gap, not promoted as an incident explanation or product fix.",
+  "scope": "Canceled slots contain undefined; retained frame payloads and byte claims are released. No heap or RSS measurement."
+}

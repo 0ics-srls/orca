@@ -1,0 +1,184 @@
+{
+  "workingHead": "2e83de3154c4ee1bbeea816734b892c34500a5cc",
+  "reportedTag": "v1.4.152",
+  "reportedCommit": "ea2d3e05d664ab21ba35b5272004398daf2884cd",
+  "hashNormalization": "CRLF to LF",
+  "historical": {
+    "src/renderer/src/lib/crash-diagnostics.ts": {
+      "sha256": "184ce457e798820f12b054c24dc4cba60975bd025320e617255b82ffba43c289",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/renderer/src/lib/crash-diagnostics.ts"
+    },
+    "src/main/crash-reporting/process-gone-classification.ts": {
+      "sha256": "31dd6f14c829118d9db71e26084a412262d3f5d9a6665c15a245544d9c1a040d",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/crash-reporting/process-gone-classification.ts"
+    },
+    "src/main/crash-reporting/renderer-recovery-circuit-breaker.ts": {
+      "sha256": "7f13a94bd051bd24554105dd1effc09e12b83d334e1ec44af9266d39f2a5ea7d",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/crash-reporting/renderer-recovery-circuit-breaker.ts"
+    },
+    "src/main/crash-reporting/process-gone-diagnostics.ts": {
+      "sha256": "989ddf66c854e1e3b3f3bc09c6f154b2d5aca6603ebd72a41b4f391bf13d131e",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/crash-reporting/process-gone-diagnostics.ts"
+    },
+    "src/main/crash-reporting/crash-breadcrumb-store.ts": {
+      "sha256": "e33e89e1f26c577022cd53426223da2882c8928f39a678e5427a11ab5bc57ee8",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/crash-reporting/crash-breadcrumb-store.ts"
+    },
+    "src/main/crash-reporting/process-gone-recorder.ts": {
+      "sha256": "563fdf03b107162c6f2042589ebe7557517082662b4084fc33dd4d85fb2f4aee",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/crash-reporting/process-gone-recorder.ts"
+    },
+    "src/main/window/createMainWindow.ts": {
+      "sha256": "8660c40ced21339395f3b7b73533bc7a2981439a4ca080f407e8c48c008264b4",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/window/createMainWindow.ts"
+    },
+    "src/main/ipc/crash-reporting.ts": {
+      "sha256": "b61b74c35b7e482eb08a8ee69a150a5a02e754f63d856d0f0b52e59a8faa24e5",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/ipc/crash-reporting.ts"
+    },
+    "src/main/startup/renderer-heap-headroom.ts": {
+      "sha256": "0cda8b8e052590895aec51db82b040540c368b15818884c3013a013de18df662",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/main/startup/renderer-heap-headroom.ts"
+    },
+    "src/shared/crash-reporting.ts": {
+      "sha256": "a924107691fbccd55e084f582e575a08a1718f855361d061308dad3d53b5074e",
+      "sourceUrl": "https://github.com/stablyai/orca/blob/ea2d3e05d664ab21ba35b5272004398daf2884cd/src/shared/crash-reporting.ts"
+    }
+  },
+  "working": {
+    "src/renderer/src/lib/crash-diagnostics.ts": {
+      "sha256": "5666a72a6e60078c1f50ef3c6f253268fdf7c9925c74534525dbb82541003039",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/renderer/src/lib/crash-diagnostics.ts"
+    },
+    "src/renderer/src/lib/renderer-memory-sampling.ts": {
+      "sha256": "ce57781a3c0f3c9e0e7e1dd9e3124c8a5da48f9383d47a0123b2e6f074efee0b",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/renderer/src/lib/renderer-memory-sampling.ts"
+    },
+    "src/shared/renderer-heap-statistics.ts": {
+      "sha256": "b0aad747c0e34e9ef93df1047078b54c8419bf43dad348d9d0420e36516e80a8",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/shared/renderer-heap-statistics.ts"
+    },
+    "src/shared/renderer-process-memory.ts": {
+      "sha256": "3a1e39ed4d6f3e671363cad7ab4028aeb081d3e2d222ab9273481c4aca494ac7",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/shared/renderer-process-memory.ts"
+    },
+    "src/preload/renderer-heap-statistics-reader.ts": {
+      "sha256": "3f533f4065b858f20206483af54522c8a1c1aa31c75c8cd3dbfba79e5eae43bd",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/preload/renderer-heap-statistics-reader.ts"
+    },
+    "src/preload/renderer-process-memory-reader.ts": {
+      "sha256": "323525e4c476110b2a5d3a416e988c408b93af743874885e45846f10a53f4dad",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/preload/renderer-process-memory-reader.ts"
+    },
+    "src/preload/api/crash-reports-bridge.ts": {
+      "sha256": "74c795bfbb4df687a43d6d878fd58d3d408836c866ca0a6c3086ad1654a6dacf",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/preload/api/crash-reports-bridge.ts"
+    },
+    "src/main/crash-reporting/process-gone-classification.ts": {
+      "sha256": "a12753cb05a7a10173fc12be828d1d78d9d20c5db185054dbafaf5141b512a98",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/process-gone-classification.ts"
+    },
+    "src/main/crash-reporting/process-gone-recorder.ts": {
+      "sha256": "82391c653f0f895278eab085e8d5af8b7d25b1ae95e33120b2b9e44f07a65a5d",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/process-gone-recorder.ts"
+    },
+    "src/main/crash-reporting/process-gone-diagnostics.ts": {
+      "sha256": "e1f2e007ccd8c92227dcb1348a6a671876afe919fa1d2aabea598402b472e77d",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/process-gone-diagnostics.ts"
+    },
+    "src/main/crash-reporting/crash-breadcrumb-store.ts": {
+      "sha256": "8848be8a897e0d1a214dbbaf87a0377d493ee83358763c0fc286e693889b2cb9",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/crash-breadcrumb-store.ts"
+    },
+    "src/main/crash-reporting/renderer-recovery-circuit-breaker.ts": {
+      "sha256": "7f13a94bd051bd24554105dd1effc09e12b83d334e1ec44af9266d39f2a5ea7d",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/renderer-recovery-circuit-breaker.ts"
+    },
+    "src/main/window/main-window-focus-lifecycle.ts": {
+      "sha256": "3f8c1d7399dcda6cbf20f908214984654ac50b56aec11136c111b68aa7da7b33",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/window/main-window-focus-lifecycle.ts"
+    },
+    "src/main/ipc/crash-reporting.ts": {
+      "sha256": "9ac5d8ae121e00285a9afe53dc5df721825d684b919e5337cb36c8608846d79e",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/ipc/crash-reporting.ts"
+    },
+    "src/shared/crash-breadcrumb-origin.ts": {
+      "sha256": "290e06fc1df006ccdb7ee420d69cea18fac90c1dbe3370aabd2e6540d3aa98a7",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/shared/crash-breadcrumb-origin.ts"
+    },
+    "src/shared/posix-wait-status.ts": {
+      "sha256": "1eb72525881baa2815548d31d2b83aaecf88e5dfd0258dbcaa5cda1e8fdcd69f",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/shared/posix-wait-status.ts"
+    },
+    "src/main/crash-reporting/minidump-crash-signature.ts": {
+      "sha256": "91a87850fd5b303cc1607825886f8ee43c68b15e5367d19632726fa93aa48c8d",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/minidump-crash-signature.ts"
+    },
+    "src/main/startup/renderer-heap-headroom.ts": {
+      "sha256": "0cda8b8e052590895aec51db82b040540c368b15818884c3013a013de18df662",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/startup/renderer-heap-headroom.ts"
+    },
+    "src/preload/renderer-heap-statistics-reader.test.ts": {
+      "sha256": "61ef775987edd3f0f0aa6e9ce695d89a42dfd23aead29436dd73e80dc3e64e8e",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/preload/renderer-heap-statistics-reader.test.ts"
+    },
+    "src/preload/renderer-process-memory-reader.test.ts": {
+      "sha256": "06fde1c28de68ebd8cb11662282c367f286080e4b733fcc70d7e7b95059274d2",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/preload/renderer-process-memory-reader.test.ts"
+    },
+    "src/renderer/src/lib/crash-diagnostics.test.ts": {
+      "sha256": "d5f705d890ca708c613c988108c9cdcd6c9ff928bc48d9a63378db8fe9859266",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/renderer/src/lib/crash-diagnostics.test.ts"
+    },
+    "src/main/crash-reporting/process-gone-classification.test.ts": {
+      "sha256": "c8e9fcf96743247ee5ca301e9492594ca7ec6dfee14776e7fea86378e711f86e",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/process-gone-classification.test.ts"
+    },
+    "src/main/crash-reporting/process-gone-diagnostics.test.ts": {
+      "sha256": "28c09f131cd3194391c4e45293d36006c91ed2b98c7715bd3d73de32d32be00b",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/process-gone-diagnostics.test.ts"
+    },
+    "src/main/crash-reporting/renderer-recovery-circuit-breaker.test.ts": {
+      "sha256": "eef1e4f1e5a8f91609cce350c8ef1928422c38627f5a00f411dc1f62e504513a",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/main/crash-reporting/renderer-recovery-circuit-breaker.test.ts"
+    },
+    "src/shared/posix-wait-status.test.ts": {
+      "sha256": "39e3de62a520b26befd0f481d0b4d2f5b09925e2d69837c011befafe1e81dc47",
+      "main291bIdentical": true,
+      "sourceUrl": "https://github.com/stablyai/orca/blob/291b4ddd6f1c1af480169885e0fda7f9c78ff053/src/shared/posix-wait-status.test.ts"
+    },
+    "node_modules/electron/electron.d.ts": {
+      "sha256": "aef153c11d8cba6ee95dfe169b59859cde24267e72a56d6de1ca611ef9d89f40"
+    }
+  },
+  "landings": {
+    "c67aadbc1894e1dc58ea53748ff1d1f16705d733": "2026-07-25 fix(crash-reporting): record exact V8 heap sizes, not Blink's quantized ones (#10683)",
+    "91a500712c45c2ecfce4e04bf73c052fcae685df": "2026-08-25 fix(crash-reporting): see the renderer memory the heap counters never report (#16449)"
+  },
+  "reportedTagObject": "47fb5764841444d1f7c7064b735e2fc415125a7b",
+  "mainReference": "291b4ddd6f1c1af480169885e0fda7f9c78ff053"
+}

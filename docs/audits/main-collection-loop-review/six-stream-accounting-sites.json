@@ -1,0 +1,125 @@
+{
+  "head": "96970f9b6efe915f9578b765c93f3d06880ccc2d",
+  "rows": [
+    {
+      "path": "src/shared/browser-network-tunnel-stream-framing.ts",
+      "lines": "12-18,36-40,125-156,159-200",
+      "verdict": "No zero-length/tiny-input retention bypass found.",
+      "evidence": "Encoder rejects empty payloads. Decoder ignores empty feed, validates 1..65552-byte frame and stores only fixed header + one frame; input-chunk retained-byte check is 2 MiB. Writer reserves length-prefix bytes before allocating and counts queued + in-flight frames: 1 MiB/512 frames; send(empty) refuses without enqueue. close clears queued storage, with at most one native write callback retaining its already-handed frame until I/O settles.",
+      "callers": [
+        "src/relay/wsl-browser-network-relay.ts",
+        "src/main/browser/wsl-browser-network-execution-route.ts"
+      ]
+    },
+    {
+      "path": "src/shared/growing-byte-buffer.ts",
+      "lines": "9-24,27-49,64-84,98-109",
+      "verdict": "No empty-chunk metadata array; two shipped users impose byte budgets.",
+      "evidence": "append(empty) returns, and storage is one copied geometrically-grown Buffer, not a chunk list. Quick Open limits a partial field to 64 KiB and clears/replaces storage after field/error/abort. SOCKS pending upstream enforces 256 KiB plus a 10-second opening timeout, transfers storage after connection, and clears on failure/close. retainSuffix/discardPrefix intentionally keep old capacity, but neither has a production caller; do not promote an API-only high-water concern.",
+      "callers": [
+        "src/shared/quick-open-listing-limits.ts",
+        "src/main/browser/remote-browser-socks-server.ts"
+      ]
+    },
+    {
+      "path": "src/main/ssh/ssh-multiplexer-transport-writer.ts",
+      "lines": "77-79,114-179,268-308",
+      "verdict": "NEW demonstrated consumed-prefix retention in its lane scheduler; separate ignored proof.",
+      "evidence": "Logical ordinary/control limits (2 MiB/2048 frames and protocol max-message+header/512 frames), one coalesced liveness write and settled guards all account correctly. However scheduler.shift advances head without clearing selected entries; a lane that stays nonempty retains every settled WriterEntry+Buffer+callback after writer release decrements all counters. Actual PTY helper\u2192multiplexer\u2192writer proof retains 2048 completed Buffers with only 2 live queued frames/706 logical bytes. Node and Electron agree; ignored clear-slot + existing relay-buffer compaction pattern yields 0 completed Buffers/2 slots. Full drain or dispose cleans baseline. No product changes.",
+      "callers": [
+        "src/main/ssh/ssh-multiplexer-writer-lane-scheduler.ts",
+        "src/main/ssh/ssh-channel-multiplexer.ts",
+        "src/main/providers/ssh-pty-write.ts",
+        "src/main/ssh/ssh-relay-deploy-helpers.ts",
+        "src/shared/relay-frame-buffer.ts"
+      ]
+    },
+    {
+      "path": "src/main/ssh/ssh-git-response-stream-reader.ts",
+      "lines": "16,61-68,72-80,90-99,112-164,212-217,282-305",
+      "verdict": "No shipped empty-chunk producer found; malformed-peer validation gap is unpromoted.",
+      "evidence": "Before sentinel pending frame count is 64. After sentinel parts[] appends even decoded empty input and validates announced total bytes/chunk count only on End; matching malformed chunks refresh the 30-second inactivity deadline, so fabricated empty/extra chunks can bypass announced totals. Actual shared relay registry constructs nonempty bounded base64 chunks from one finite serialized payload, emits each exactly once with increasing sequence and final End, and exposes finite chunkCount. No current producer can drive empty/extra chunks; this is not an ordinary-code growth proof. Full result reassembly remains input-sized. Fail/cancel/disposal removes subscriptions and timer; raw request has its own timeout and normal branch settles before collection.",
+      "callers": [
+        "src/relay/git-response-stream.ts",
+        "src/relay/protocol.ts",
+        "src/main/ssh/relay-protocol.ts",
+        "src/main/providers/ssh-git-provider.ts",
+        "src/main/providers/ssh-git-read-provider.ts",
+        "src/main/providers/ssh-filesystem-provider.ts"
+      ]
+    },
+    {
+      "path": "src/main/native-chat/transcript-stream-lines.ts",
+      "lines": "22-40,53-72,87-141",
+      "verdict": "No zero-length pending-fragment accumulation; retain existing input-size caveats.",
+      "evidence": "write(empty) or StringDecoder empty output never enters pending.push; every newline moves lineStart and resets fragments. Nonempty tiny pieces are proportional to record bytes; split yields records from only one input chunk before reading another. AI Vault supplies existing 10 MiB record quota. Legacy import supplies existing 16 MiB raw source limit (ML-021). Claude branch proof streams a fixed initial file prefix; largest record and UUID graph remain input-sized as already disclosed in ML-043, with no new arbitrary cap. Legacy whole transcript reader reaches only read-cache export, which has no current production caller; do not claim current active full-reader growth.",
+      "callers": [
+        "src/main/ai-vault/remote-session-content-lines.ts",
+        "src/main/ai-vault/session-transcript-record-budget.ts",
+        "src/main/native-chat/agent-session-journal/journal-legacy-import.ts",
+        "src/main/claude/claude-transcript-branch-proof.ts",
+        "src/main/native-chat/transcript-reader.ts",
+        "src/main/native-chat/transcript-read-cache.ts",
+        "src/main/native-chat/wsl-transcript-fs-access.ts"
+      ]
+    },
+    {
+      "path": "src/main/runtime/rpc/terminal-source-range-ledger.ts",
+      "lines": "96-105,107-181,199-237,251-305",
+      "verdict": "Positive-byte admission bounds frame count; no demonstrated zero-byte bypass.",
+      "evidence": "canAccept requires positive safe integer bytes with 2 MiB/stream and 16 MiB/connection reservations, plus one pending admission. ACK removes all completed frames, releases acknowledged bytes, and retains only the partially acknowledged first frame when applicable. Rollback releases pending reservation; transfer commit/close clear frames and unregister. Caller charges encoded payload length; normal empty output is discarded by batcher, while transformed zero-display output has positive JSON length. SSH intake passes a singleton source span; batcher aggregates only nonempty normal data or immediately flushes transformed spans. Tiny normal ranges can have object overhead well above byte charge, but all represent positive source/display progress. Generic API permits synthetic large range arrays; this alone is not shipped reachability. Active stream count 128; ACK windows additionally bound output to 2 MiB/stream and 8 MiB/connection.",
+      "callers": [
+        "src/main/runtime/rpc/terminal-source-range-registry.ts",
+        "src/main/runtime/rpc/terminal-source-range-validation.ts",
+        "src/main/runtime/rpc/terminal-output-frame-chunks.ts",
+        "src/main/runtime/rpc/methods/terminal/terminal-output-batcher.ts",
+        "src/main/runtime/rpc/methods/terminal/terminal-multiplex-frame-delivery.ts",
+        "src/main/runtime/rpc/methods/terminal/terminal-multiplex-stream-initialization.ts",
+        "src/main/runtime/rpc/methods/terminal/terminal-multiplex-flow-control.ts",
+        "src/shared/terminal-output-source-range.ts",
+        "src/shared/terminal-multiplex-flow-control.ts",
+        "src/main/ipc/pty/delivery/ssh-intake.ts"
+      ]
+    }
+  ],
+  "canonicalLfSha256": {
+    "src/main/ai-vault/remote-session-content-lines.ts": "3e6da0e99a2abe4ec31a33d5bb4846799dd2b2e86e8a4b35239ea835c3b6db78",
+    "src/main/ai-vault/session-transcript-record-budget.ts": "dc6632ad6cab7e98ccda78a4e82ea5ab9dee905777b2da33f0d3ab51855d5813",
+    "src/main/browser/remote-browser-socks-server.ts": "f508868699b7d922cc1cf9c0e3b701c98d4cad31070d2448130c0d60be1e47b7",
+    "src/main/browser/wsl-browser-network-execution-route.ts": "7dbf998a5e674b38c3c15fa40444af06718fc2a995b7af9586f736ff526fe5f5",
+    "src/main/claude/claude-transcript-branch-proof.ts": "8688711f711adf434c596dda729018e43cfa46ba746590187388e9f5e864648f",
+    "src/main/ipc/pty/delivery/ssh-intake.ts": "a854c369f8357f6e57cf96f76b464e82277e7847572fbc2ab7224b8e7018c14c",
+    "src/main/native-chat/agent-session-journal/journal-legacy-import.ts": "88c007b4fb83eba6ec5fdf21c50b4c4aff35199cc4eed92abe3a1c29addfc5f3",
+    "src/main/native-chat/transcript-read-cache.ts": "7494de59c2177179f88fc7842f75318d317e624a52ea12674aa87688dcf06afe",
+    "src/main/native-chat/transcript-reader.ts": "4b3b9af283fece28cc274f7405b0c78c5ad95d9ae88c59ed750bef61574d24ca",
+    "src/main/native-chat/transcript-stream-lines.ts": "5f3a0a1e5b3d003076452fa22234af00502808ed6463672c0e58aa49ae5b6aa1",
+    "src/main/native-chat/wsl-transcript-fs-access.ts": "707125ebdd120e342255d12660249bf0bdfd72b8335701f5efff028f4e66dab5",
+    "src/main/providers/ssh-filesystem-provider.ts": "de6051f43ea272fe0a15b7ef5c6df5c8caedfa7adaada205386c4f19be7f04f2",
+    "src/main/providers/ssh-git-provider.ts": "7953259ddd023af87130408f73231fe4c676a04829b229bf19b70f83438d0174",
+    "src/main/providers/ssh-git-read-provider.ts": "859369b72bde86b93666acd6e236bfcd9df665b62cd359006bdf7d547aeb7e13",
+    "src/main/providers/ssh-pty-write.ts": "357024da7dc5bf2df1dabd43f6f90146afa239d414e29f04b17f86a6351520ae",
+    "src/main/runtime/rpc/methods/terminal/terminal-multiplex-flow-control.ts": "e63a615d1f174e93b13ae234a8cc3030570628b5617c11079df2c3a31f7ee578",
+    "src/main/runtime/rpc/methods/terminal/terminal-multiplex-frame-delivery.ts": "a10626f33b803ab9d627812cefc5a7372e92e7bc9c336cea48ea6122ae72f963",
+    "src/main/runtime/rpc/methods/terminal/terminal-multiplex-stream-initialization.ts": "7dfa3be7cb935a19e9139e31a73fda1b47ecdf69d832effc6cc248fc81731e0a",
+    "src/main/runtime/rpc/methods/terminal/terminal-output-batcher.ts": "de99bcae5a0565504ec446f8779663dd2845b252fa23c16831d3a75ab0711ba5",
+    "src/main/runtime/rpc/terminal-output-frame-chunks.ts": "232b0ceb6ade396beb0122aac97400e93d2588434f6cf1c67824bf9384890845",
+    "src/main/runtime/rpc/terminal-source-range-ledger.ts": "1ec52fe96dcda0d4875219b47b93964e6bce6eece5235bc7908f0a49a674b343",
+    "src/main/runtime/rpc/terminal-source-range-registry.ts": "b61d4cfb462c2c719f1375be9c9d268da649ce2b71fbd423369a386f4bae589c",
+    "src/main/runtime/rpc/terminal-source-range-validation.ts": "fa87134b7c53047aec29606c72585854025f7541dc421d03b6b713e0a002efd7",
+    "src/main/ssh/relay-protocol.ts": "644aa6f2087b5867d41006bfdcec78ffba693157a2912feb8f82b120f5647b34",
+    "src/main/ssh/ssh-channel-multiplexer.ts": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108",
+    "src/main/ssh/ssh-git-response-stream-reader.ts": "8e3a2a5606f95ce1c70c1397ca5a807d90989074ea2be41497785c269381af0e",
+    "src/main/ssh/ssh-multiplexer-transport-writer.ts": "433a2cc400b5ed9743871ca03aac06d31a079ef23c42c2a2759f78967312d071",
+    "src/main/ssh/ssh-multiplexer-writer-lane-scheduler.ts": "3e5fe7a1e3537505baf42869449193fc0448339d851254a49527ec2a1c7cbb50",
+    "src/main/ssh/ssh-relay-deploy-helpers.ts": "5452b8a441268a42abe09ae71ae64c5684e070a7469eed0b421ab4cd8e41abae",
+    "src/relay/git-response-stream.ts": "953495aa5255d262e4cd4c6417d4b2d1f1391bb1b9a86f020e866ad8d6b58bbc",
+    "src/relay/protocol.ts": "faebaded7e8c8b98f021c791b4519d78d58be3879937fe2ed2cef68b22404060",
+    "src/relay/wsl-browser-network-relay.ts": "c94789582a60d8daeea51562db5707821102aed21e1844670425bff990c203a4",
+    "src/shared/browser-network-tunnel-stream-framing.ts": "8a735f634f5f17e13236ff462031924fb2db484a256aa1ed0639a975b7b67800",
+    "src/shared/growing-byte-buffer.ts": "6d2372f53b2c490ea2372f2ce503cc8a4bf9941d854112c4f0004c34f3a8d0ca",
+    "src/shared/quick-open-listing-limits.ts": "b27c21a88683bca11833b773f5203587d03e986a51a6532179e64f1a3752dda6",
+    "src/shared/relay-frame-buffer.ts": "f89fcd33489894c34f79ba8fd5e5634487555a7c34fc8e7c054229ae1c20e0be",
+    "src/shared/terminal-multiplex-flow-control.ts": "1044573cdf3c5c429c2ab838cc8c950f8c554ee5ec0a7ed98ef4392442094366",
+    "src/shared/terminal-output-source-range.ts": "c688a42096b547d653e0f91efb840c0ad4471d4951475401797ae1668623ece3"
+  }
+}

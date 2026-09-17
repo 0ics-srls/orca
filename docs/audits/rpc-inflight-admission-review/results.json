@@ -1,0 +1,29 @@
+{
+  "runtime": "26.6.0",
+  "sourceHashes": {
+    "src/main/runtime/rpc/unix-socket-transport.ts": "3052d9ac2777535480e1376ace4960d784fc1a37ce9e1a6cac0c7e1747e88377",
+    "src/main/runtime/runtime-rpc/runtime-rpc-request-admission.ts": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39",
+    "src/main/runtime/runtime-rpc/runtime-rpc-long-poll.ts": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f",
+    "src/main/runtime/rpc/dispatcher.ts": "1753b9ab3244bc6a1441511c16632a341ec5617b2b73308ba0914d02c9f54fc2",
+    "src/main/runtime/rpc/dispatcher-unary-method-invocation.ts": "32f5a00d3ef58b6501851dae935f7e36dec96246e48b94e6a621125b8f638a2c",
+    "src/main/runtime/rpc/methods/worktree-catalog-methods.ts": "0205845ab6e44e2c4e2ff100860a3cc496c7e209de18f43ab6994f96550e6790",
+    "src/main/runtime/rpc/methods/terminal/terminal-lifecycle-methods.ts": "64e90871b23b2dab1c5e3eb58d98e1e128dd372312fb565df828d97e1050f0a3"
+  },
+  "fixtureSha256": "46c417fc4640f545cd640a77bd1404f6de5c57164c1805193e07c0f85b6eb3f8",
+  "observations": {
+    "ordinaryCallsOnOneConnection": 128,
+    "ordinarySignalsPassed": 0,
+    "ordinaryCallsAfterSocketClose": 128,
+    "ordinaryCallsAfterProviderSettlement": 0,
+    "longPollsOffered": 32,
+    "longPollsAdmitted": 16,
+    "longPollsRejected": 16,
+    "longPollsAfterSocketClose": 0
+  },
+  "limits": [
+    "Fake socket; no real network, native process, filesystem stall or affected host.",
+    "Actual auth/admission, dispatcher and two production methods; runtime provider operations deliberately deferred.",
+    "Demonstrates conditional pending-request accumulation; does not establish a permanently pending production provider or retained bytes.",
+    "Ordinary operations settle and transport cleanup completes; long polls remain admitted and aborted as designed."
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "reviewedHead": "ad2ae0213f437f7cb14250405c8222bb70bafc7d",
+  "scope": "Targeted ownership/cursor/compaction reads, no new runtime reproduction for these negative/qualified controls. SSH scheduler proof is separate.",
+  "sources": [
+    {
+      "path": "src/shared/relay-frame-buffer.ts",
+      "sha256": "f89fcd33489894c34f79ba8fd5e5634487555a7c34fc8e7c054229ae1c20e0be"
+    },
+    {
+      "path": "src/relay/dispatcher-writer-admission.ts",
+      "sha256": "12e05ba04de5687c0a0db1e44eddf342cb0c21b9653eef2aeff7b5ccd2039797"
+    },
+    {
+      "path": "src/main/runtime/recent-pty-output-buffer.ts",
+      "sha256": "3c02b54567850b4f94a25e06142eef247c383a74fb702fe8f45fbfeb1a2488b8"
+    },
+    {
+      "path": "src/relay/pty-source-sent-boundaries.ts",
+      "sha256": "8e6becd99ec2c33981cc0fb56c820072dc4b6b69febaf2c1c20e1932e2593faf"
+    },
+    {
+      "path": "src/relay/pty-source-credit-record.ts",
+      "sha256": "2d5a90fa9aeccc95bee81e7a4474777579737b9d9ecba89af9a7ca0464aa8c1e"
+    },
+    {
+      "path": "src/relay/pty-source-credit-settlement.ts",
+      "sha256": "1845d77f4259ae7ad94288c3c83eec414a1523ba519ab68e4a9a5838d772302e"
+    },
+    {
+      "path": "src/main/git/command-runner/git-admission-waiter-queue.ts",
+      "sha256": "9b39e1a26cace97e4162194244c6c027bf242ce6cd03d93381cdfdd9ff7a1cc2"
+    },
+    {
+      "path": "src/main/git/command-runner/git-admission-candidate-heap.ts",
+      "sha256": "6ff4eabf0691aa3d0d66e81c01c48b2bfb9e8e565202a08581a53591ea35b5f9"
+    },
+    {
+      "path": "src/shared/map-with-concurrency.ts",
+      "sha256": "18ec54a56f444b6b79c3430cc3f73e9caaed2b9ddae5715ea16d36953d9cee59"
+    }
+  ]
+}

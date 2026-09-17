@@ -1,0 +1,457 @@
+{
+  "reviewPath": "docs/audits/main-collection-loop-review/twenty-main-shared-loop-sites.md",
+  "reviewedHead": "e73e91319ac6e0c8fd49529dda850761631d5d5c",
+  "sourceNormalization": "CRLF to LF",
+  "scope": "20 selected additional main/shared synchronous-loop sites, read with callers and lifetime boundaries. Not an exhaustive review; no affected-host or packaged-release attribution. All tests/background probes use ORCA_BACKGROUND_LAUNCH=1.",
+  "exclusionInputs": [
+    {
+      "path": "docs/audits/main-collection-loop-review/further-progress-sites.json",
+      "sha256": "00b483a55e2cec82efc6c193c0656330c288e17791e97a0addee6f4d55159d7c"
+    },
+    {
+      "path": "docs/audits/main-collection-loop-review/results.json",
+      "sha256": "498ab3e7e73b9756d28925d899529bf6ea69e0f166fa23965c7288ff9b9ab103"
+    },
+    {
+      "path": "docs/audits/main-collection-loop-review/twelve-retention-sites.json",
+      "sha256": "912c063cae2102a79c709b2eab986543ef4ff8a7c4ede0d40089b63bc3f240ce"
+    },
+    {
+      "path": "docs/audits/main-collection-loop-review/additional-sites.json",
+      "sha256": "00c9d8f79d2b96b5d1a62b49558f6daf880d7c221a9bb4a882df28bf4fbe38d3"
+    },
+    {
+      "path": "docs/audits/main-collection-loop-review/twenty-additional-sites.json",
+      "sha256": "ae46fbf30754dc5380069285e84950e6ba774586074f9c3c9b9627aeae08a84b"
+    },
+    {
+      "path": "docs/audits/main-collection-loop-review/README.md",
+      "sha256": "9a9214e31acc24b6c1edd43604685fabc4c72a591e4667b66a21e0f6faa9155c"
+    },
+    {
+      "path": "docs/audits/memory-leak-audit-2026-09-15.md",
+      "sha256": "9004f2464b21247e32f7ec9d6bb6e92ec8291f8407d9f9f2484ae9b218b98466"
+    },
+    {
+      "path": "docs/audits/memory-leak-scan-2026-09-15.md",
+      "sha256": "1e999d52409112c6c2c35d9a3af66f4b7fa5f1a76ea0d6ddbb27ffc7ab9c2b5c"
+    }
+  ],
+  "sites": [
+    {
+      "path": "src/main/computer/macos-native-provider-transport.ts",
+      "lines": "74",
+      "sha256": "c9a025550fb0049f145e7c130640a5f1bfa80425e08fbb65f686d45d950f10f5",
+      "progressAndOwnership": "Newline consumption strictly shortens pending text; no newline returns. The caller clears pending text on shutdown, socket close/error and process replacement. Every request has a 60-second timer that shuts down this client.",
+      "limitsAndAssessment": "No line-byte cap in this class. Complete helper JSON and newline-less traffic can allocate input-sized memory before timeout. No ordinary runaway helper producer or persistent leak established.",
+      "supportingSources": [
+        {
+          "path": "src/main/computer/macos-native-provider-client.ts",
+          "sha256": "5d933e0b75d2b8e8c8f2dc5e6a0091f18731936dbe3004c940fb209623054a7a"
+        }
+      ]
+    },
+    {
+      "path": "src/main/runtime/rpc/unix-socket-transport.ts",
+      "lines": "127,155",
+      "sha256": "3052d9ac2777535480e1376ace4960d784fc1a37ce9e1a6cac0c7e1747e88377",
+      "progressAndOwnership": "Each line is consumed before dispatch. The per-connection cleanup Set removes replied requests; close aborts every remaining controller, clears the Set and removes the socket. Input admission is 1 MiB, active connections 32 and socket idle lifetime 30 seconds. Actual admission caps long polls at 16, with narrower specialized classes.",
+      "limitsAndAssessment": "Ordinary requests explicitly bypass long-poll counters and receive no abort signal at dispatcher invocation. A bounded actual-auth/dispatcher/method control defers worktree.list and tests concurrent calls, socket close and provider settlement. This is a conditional capacity boundary, not an established indefinite production stall or incident attribution.",
+      "supportingSources": [
+        {
+          "path": "src/main/runtime/runtime-rpc/runtime-rpc-request-admission.ts",
+          "sha256": "55701c215abd0def001f11d6c32cadadf1928d45ddcb6dd2fb6fc71c4744dc39"
+        },
+        {
+          "path": "src/main/runtime/runtime-rpc/runtime-rpc-long-poll.ts",
+          "sha256": "211acfd93a56b3fba1ca211ff7138c78f17d3883e713faba705af45664c6ba6f"
+        },
+        {
+          "path": "src/main/runtime/runtime-rpc/runtime-rpc-lifecycle.ts",
+          "sha256": "899fc92a756a75a49f70deb768023aa75f046d19405e04b70b0f00bb061bad1d"
+        },
+        {
+          "path": "src/main/runtime/rpc/dispatcher.ts",
+          "sha256": "1753b9ab3244bc6a1441511c16632a341ec5617b2b73308ba0914d02c9f54fc2"
+        },
+        {
+          "path": "src/main/runtime/rpc/dispatcher-unary-method-invocation.ts",
+          "sha256": "32f5a00d3ef58b6501851dae935f7e36dec96246e48b94e6a621125b8f638a2c"
+        },
+        {
+          "path": "src/main/runtime/rpc/methods/worktree-catalog-methods.ts",
+          "sha256": "0205845ab6e44e2c4e2ff100860a3cc496c7e209de18f43ab6994f96550e6790"
+        },
+        {
+          "path": "src/main/runtime/runtime-managed-worktree-queries.ts",
+          "sha256": "f22a16f2c905ef1d2a6b10b4803949cb4356bb6c480dd644c9b16adfddbf1fc4"
+        },
+        {
+          "path": "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts",
+          "sha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a"
+        }
+      ]
+    },
+    {
+      "path": "src/main/orcad/orcad-sidecar-runtime-client.ts",
+      "lines": "87",
+      "sha256": "126cd062e8bbd8fe0d7fa794bba1f93adb2e4c9a6b3686ffb6e2433ade872e29",
+      "progressAndOwnership": "Response parsing consumes through a newline, skips blank lines, and stops at settlement. Response allowance is 64 MiB per request. A timer defaults to 90 seconds; valid keepalive frames refresh it. Finish is idempotent, clears the timer and ends the socket; timeout/error destroys it.",
+      "limitsAndAssessment": "Keepalives make this an idle deadline, not an absolute wall-clock deadline. Extra data after a terminal response can still enter the data handler until peer/socket close, bounded by the same response cap. No ordinary continuing-after-result producer or persistent ownership leak established. Concurrent requests multiply the allowance.",
+      "supportingSources": [
+        {
+          "path": "src/main/orcad/electron-serve-browser-process.ts",
+          "sha256": "f53c831c95a3822594ad2c05eb6d97ec6e9628a2191407a3352b1dc101741fde"
+        }
+      ]
+    },
+    {
+      "path": "src/main/jira/request-queue.ts",
+      "lines": "47",
+      "sha256": "7483d7d4128d2b4ad44369fe25d522777eb0f1eecc9b204e583ca8e4416ed783",
+      "progressAndOwnership": "Release shifts each queued waiter before granting or skipping it; abort removes a queued entry, and grant removes its abort listener. Four requests run concurrently. Reviewed read/search/mutation/metadata callers release acquired slots in finally.",
+      "limitsAndAssessment": "The waiter queue has no count or byte cap. Some callers omit AbortSignal. Authenticated fetch has no common request timeout in this layer. Four prolonged network operations plus further requests can accumulate queued closures, but no sustained production retry/poll producer or actual indefinite network stall has been demonstrated.",
+      "supportingSources": [
+        {
+          "path": "src/main/jira/authenticated-request.ts",
+          "sha256": "bcbf9263771b6cea60e9930c6173487b85fb5e1ac12150a4afa1a5a90dc82780"
+        },
+        {
+          "path": "src/main/jira/client.ts",
+          "sha256": "2c1319e8b5af933cb19de914cd0be874fcc8c76829dfb5642691a5ebe782fb6f"
+        },
+        {
+          "path": "src/main/jira/jira-issue-read.ts",
+          "sha256": "81d6871675875691cbe20a8bfbe3fa0e317f9e71d0062c7b96de892e4427fd6c"
+        },
+        {
+          "path": "src/main/jira/jira-issue-search.ts",
+          "sha256": "d41ccb1f474011a834607bb40760635af13e11dc02cbefc44b90ae40607f830e"
+        }
+      ]
+    },
+    {
+      "path": "src/main/automations/external-automation-probe-scheduler.ts",
+      "lines": "126,134,142",
+      "sha256": "902a82b2696bbaacad355bc1920f68f455a5c354210ee82e2ab2a03e041995d6",
+      "progressAndOwnership": "Pump shifts entries before starting; active ownership is set before running. Production concurrency is four; identical keys coalesce. Final settlement removes active/shared ownership and pumps again. Queued cancellation removes the entry; active cancellation rejects the consumer but holds its real slot until provider settlement. Priority hold release is idempotent.",
+      "limitsAndAssessment": "Queue count/bytes are separate from running concurrency. Production run callbacks are async. Local command lookup has a five-second timeout and SSH mux requests default to 30 seconds; local JSON filesystem reads remain OS-lifetime dependent. No ordinary indefinitely pending producer established; custom NaN capacity or synchronous callback throws were not promoted as production findings.",
+      "supportingSources": [
+        {
+          "path": "src/main/automations/external-manager.ts",
+          "sha256": "cd5b9e76ba6ed92205171d031893bcfe247cda35803c9491c1fff557b201573c"
+        },
+        {
+          "path": "src/main/automations/external-manager-discovery.ts",
+          "sha256": "50369ae36c70dacd532a64c1dce72041918677d9c8816844b1ea25c0ae563bff"
+        },
+        {
+          "path": "src/main/automations/external-manager-local-command.ts",
+          "sha256": "fa42f9c4a7f4bf42d8aea4462d7161c79a50f8db32ee39bf74ceb1a9400fa6a3"
+        },
+        {
+          "path": "src/main/ipc/automations.ts",
+          "sha256": "c53f9226e50094c20a069f871c7ae6963da6c9ed603f7e12ad65b317ea5d3624"
+        },
+        {
+          "path": "src/main/ssh/ssh-channel-multiplexer.ts",
+          "sha256": "9ecd88963fec72901596bd25d2cb4c8666ef41d3c8a968242c6eef52095ee108"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/terminal-history-seed-chunks.ts",
+      "lines": "23,35,67",
+      "sha256": "a2616cd2815d92ba8dbe9ddad9d34adc08076a33765010ee18e82c4905adee3f",
+      "progressAndOwnership": "The chunk end advances, or a surrogate-boundary adjustment is forced forward by one unit. Cross-segment surrogate carry is at most one UTF-16 unit. Chunks are 512 Ki UTF-16 units and inline mode stops at 1 Mi units. The actual daemon spawn sender awaits each append request before requesting the next chunk; failure aborts the transfer.",
+      "limitsAndAssessment": "This bounds transferred chunks and pending requests, not the original seed segments retained while the spawn is pending. Substring backing memory and measurement Buffers are separate. Completed spawn input lifetime is covered by its existing dedicated artifact; no new growing loop identified here.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/daemon-pty-spawn-request.ts",
+          "sha256": "d3c2e9f8995c73df427dea36e0ea64508fef6fd5880616df9ad430e34d3acb3e"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/terminal-history-restorable-retention.ts",
+      "lines": "18,37,49",
+      "sha256": "1bfc897132026875086cb99e9d2d5df73db793cd6cef916706934b215bfd7b7d",
+      "progressAndOwnership": "The min-heap keeps the newest 10,000 metadata entries by default. Sift descends to a child index or stops; production enumeration reads one directory entry at a time and closes the directory in finally.",
+      "limitsAndAssessment": "The scan may visit arbitrarily many directory entries even though the retained heap is bounded. Entry metadata/string bytes are not charged by the count. No custom invalid limit was found in production, and no non-progressing loop or additional retained owner was established.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/history-reader.ts",
+          "sha256": "8579629f0d023bad3d652661c6f767ad5be767a2759c2978b114645df0814a3d"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/daemon-health.ts",
+      "lines": "77,189",
+      "sha256": "c1ba2c5c687bfbf6d99ee82f51b81d9eac238ff90f48af23a086d10ceb2ed114",
+      "progressAndOwnership": "Both health parsers consume a full line or await more data. A three-second absolute timer settles each probe. Settlement clears its timer, removes owned listeners and destroys the socket.",
+      "limitsAndAssessment": "There is no input-byte cap during the three-second probe. Ordinary local-daemon health replies are small; a large finite input remains possible. No lifetime beyond the owned socket/timer was established.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/daemon-health.ts",
+          "sha256": "c1ba2c5c687bfbf6d99ee82f51b81d9eac238ff90f48af23a086d10ceb2ed114"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/daemon-durable-history-snapshot.ts",
+      "lines": "81,110,156,169",
+      "sha256": "35c3b071f3cd5f41e6d2f507f029057663983cf42ec211180fabb9f775cc5072",
+      "progressAndOwnership": "Ownership replay slices past each complete shell lifecycle trigger. The scanner clears its armed state and retained tail on a complete trigger, and the returned trigger end advances beyond the incomplete prior prefix. The scratch emulator is always disposed in finally after success or fallback.",
+      "limitsAndAssessment": "History and replay inputs are finite but input-sized; scrollback is capped separately from dimensions. Newline counting splits the ANSI string transiently. No persistent growing collection was established in this function.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/terminal-shell-lifecycle-scanner.ts",
+          "sha256": "2bc25f07183c727e5d4e9d5670bbcaa015e37f74abadba422b6bf8f040fdc04c"
+        },
+        {
+          "path": "src/main/daemon/daemon-pty-buffer-snapshots.ts",
+          "sha256": "dd0e66898c3035be4c4fe41138a26f00f2d9d84e3999e328c77aa4cc2f29faf9"
+        },
+        {
+          "path": "src/main/daemon/daemon-pty-checkpoint-persistence.ts",
+          "sha256": "2cbe518533013d4208e10c34c40ece45368c11366a9db898fc043c9d19b7fad0"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/terminal-shell-recovery-barrier.ts",
+      "lines": "101,118,153,232,300,334",
+      "sha256": "cc1c671618c9d53d46c05a60730cdcf0eee8a2497df5f8f89edb99df1a298913",
+      "progressAndOwnership": "Recovery replay consumes scanner triggers and limits nested recovery episodes to 16. Output waiting on proof has a 750-ms timer and defaults to 262,144 code units; overflow ends the episode and flushes. Disposal clears timer, queue and idle waiters; stale episode/generation checks reject obsolete proof completions.",
+      "limitsAndAssessment": "The quantity called bytes is string length; one incoming chunk is pushed before overflow handling. Async raw proof lifetime can exceed the logical wait deadline. Reviewed ownership is per live session, not a global byte bound or proof that an OS probe always settles.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/session-output-pipeline.ts",
+          "sha256": "94f6f221d85388274d585ad714fda25c32a824942950074e4e95b85c94a6771f"
+        },
+        {
+          "path": "src/main/daemon/terminal-shell-lifecycle-scanner.ts",
+          "sha256": "2bc25f07183c727e5d4e9d5670bbcaa015e37f74abadba422b6bf8f040fdc04c"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/terminal-view-attribute-responder.ts",
+      "lines": "86,110,145",
+      "sha256": "51fa68da93e150a2c15072999b63b3440fb5540b67d732020ca287123ae20fa7",
+      "progressAndOwnership": "OSC palette parsing removes two slots per iteration. Color override keys are restricted to valid ANSI indices or the three special colors. HeadlessEmulator registers these handlers once; xterm disposal owns handler lifetime and explicit clearing removes overrides.",
+      "limitsAndAssessment": "Splitting the OSC payload is input-sized and repeated shift can be quadratic, but the loop does not add slots. Parser admission and terminal dimensions are separate bounds; no additional lifetime leak established.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/headless-emulator.ts",
+          "sha256": "ace96102285c3967cd9544e7696fe73e1ac6df576b476939aa9819f5c298bab6"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/terminal-mouse-mode-mirror.ts",
+      "lines": "54,63",
+      "sha256": "e8f4888dabee5c4cc50b0f15584b3b1b5e2da4db1ba25695dd5762ef9c4a6fb3",
+      "progressAndOwnership": "Positive-width escape regex matches advance. Parameter iteration is finite and only scalar mouse modes survive. Incomplete prefixes are logically limited to 4,096 code units. Actual HeadlessEmulator parsed-write and synchronous-write paths feed this mirror.",
+      "limitsAndAssessment": "The retained suffix is sliced from the full input. This is a sibling of the already assigned kitty escape-tail backing-string candidate, not a separately counted new mechanism. The RPC audit agent owns the comparative Node/Electron backing-memory proof; this review records static reachability only.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/headless-emulator.ts",
+          "sha256": "ace96102285c3967cd9544e7696fe73e1ac6df576b476939aa9819f5c298bab6"
+        }
+      ]
+    },
+    {
+      "path": "src/main/daemon/startup-device-attributes-responder.ts",
+      "lines": "34",
+      "sha256": "de1092ba15ec03cdd2fb08b33cd5ba5a04f26b19616476e3c7f717e54d337b7b",
+      "progressAndOwnership": "DA1 filtering consumes a complete query, advances past an unmatched candidate, or retains a proper prefix of one of two short queries. Release returns and clears the pending prefix; SessionOutputPlane releases filter authority and forwards any held data.",
+      "limitsAndAssessment": "The incomplete prefix is at most three UTF-16 units, while returned output is input-sized. No growing loop identified; short string length alone is not an allocator backing-storage measurement.",
+      "supportingSources": [
+        {
+          "path": "src/main/daemon/session-output-plane.ts",
+          "sha256": "505e4319ef6666101770991e93aa69b97bea6d8c2c60f1ddf9f6ffe02adf7487"
+        }
+      ]
+    },
+    {
+      "path": "src/main/runtime/worktree-terminal-mutation-lock.ts",
+      "lines": "131",
+      "sha256": "2b7551d3e4fd4dddbdbe5311f40e7f953edfaee88394dfe6918e657ee12b6758",
+      "progressAndOwnership": "Drain shifts before granting. Shared grants increment active spawn count; an exclusive grant blocks the next iteration. Promise continuations run after the synchronous drain. Release is idempotent and removes an empty state only when it is still the current owner. Deadline rejection removes its queued entry.",
+      "limitsAndAssessment": "A live operation can hold ownership until actual completion and callers without deadlines can wait without a count/byte cap. Production shared spawn and exclusive mutation callers release in finally. No indefinitely pending native producer or byte-growth incident was established.",
+      "supportingSources": [
+        {
+          "path": "src/main/runtime/orca-runtime-stop-terminals-for-worktree.ts",
+          "sha256": "7b69d511258fe5944d71644c8781a95778c41dd37eaa3473674aa758375e8700"
+        },
+        {
+          "path": "src/main/ipc/pty/runtime/spawn-execute.ts",
+          "sha256": "b35128bc7010f8b6e4788dc3b8ebbe0ad1222b7e71840ecb4e5c572ab273b76d"
+        }
+      ]
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-conversation-command-controller.ts",
+      "lines": "63,77",
+      "sha256": "0b322ceef37531efd3e06c9fa6a6d45ed04f1fe48feabc1809ce6e5477474234",
+      "progressAndOwnership": "Replacement traversal follows one link per step, memoizes resolved destinations and breaks cycles through a per-walk visited Set. Command ownership is a per-session operation key plus refcount; a finally path decrements and deletes the exact final entry.",
+      "limitsAndAssessment": "Record/index/visited allocations scale with the input history. A pending command retains its ownership until settlement; no ended-owner growth established. No universal history-byte limit is proved by this loop.",
+      "supportingSources": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-host.ts",
+          "sha256": "036107aa9d70e51c84a4845f7d5cc27082bb71255cd617c314035a33fa1fbeef"
+        }
+      ]
+    },
+    {
+      "path": "src/main/skills/skill-package-deterministic-gzip.ts",
+      "lines": "32",
+      "sha256": "2f148e520baef6083593967fd8d92fdaef8ae537d09dcb9e7aecdb20a8b436b7",
+      "progressAndOwnership": "Gzip staging is a 65,535-byte pending Buffer. Each copy advances offset; filling the buffer emits a stored block and resets its pending count. The archive writer awaits backpressure and pipes through compressed-byte admission to the file sink; failures destroy the gzip stream and await sink settlement.",
+      "limitsAndAssessment": "Transform.push can queue output for the current incoming chunk before upstream backpressure resumes. This bounds staging, not all transient bytes of an arbitrarily large already-admitted input chunk. No self-growing loop found.",
+      "supportingSources": [
+        {
+          "path": "src/main/skills/skill-package-tar.ts",
+          "sha256": "2a6ac122604cbca5a6297017029ff838a5b943167c201dc94867e59fa32bbc69"
+        },
+        {
+          "path": "src/shared/skill-package-manifest.ts",
+          "sha256": "52f29f85154f1873fbb17c0797be587a1a8e4bbbe92c6aa55c34ef497c6c244f"
+        }
+      ]
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/agent-session-delta-coalescer.ts",
+      "lines": "119,134,247",
+      "sha256": "48828e4ee21858075cbb87ec1caa4a82991a55f80928482615d1df7ec5dc0fb2",
+      "progressAndOwnership": "Ordinary stream eviction removes a selected stream, removes a newly protected entry from the evictable set, or returns under backpressure. UTF-8 truncation decrements a byte offset. Production Codex keys include a colon and Claude keys include provider identity, so the artificial empty-key branch is not a demonstrated caller case.",
+      "limitsAndAssessment": "New separate candidate: empty delta strings append a persistent chunks-array slot while both byte counters remain zero; flush joins without compacting. Actual Codex stream control retains 16,384\u219265,536 slots across four flushes. Forget/dispose clear them. Narrow approved candidate guards only the push and preserves stream creation, dirty publication, timer and admission semantics. Nonempty tiny-chunk overhead and transient overflow concatenation remain separate.",
+      "supportingSources": [
+        {
+          "path": "src/main/codex/codex-structured-item-streams.ts",
+          "sha256": "b70c3306e8bec3587342afc3bc156f40903513fa7ff3865b217ba4cc912cd89f"
+        },
+        {
+          "path": "src/main/codex/codex-structured-item-stream-bounds.ts",
+          "sha256": "88e9efa8a9c163905f1a5eb5eaf316fba2f194d76c5a94ed7f55636cc0d74ae0"
+        },
+        {
+          "path": "src/main/codex/codex-structured-journal-translation.ts",
+          "sha256": "56e17b9649471e804d29d1d54a3e14b4298ca8af2e25c4759dc37fce000b06a1"
+        },
+        {
+          "path": "src/main/claude/claude-streamed-text-checkpoints.ts",
+          "sha256": "a0e435f5fcf73f37e48e5363f8f9245d992a0d6c0a80abdf5cc5c72b2595fe6d"
+        },
+        {
+          "path": "src/shared/agent-session-journal-item-key.ts",
+          "sha256": "09ebe4758e3f38b5b7591f07f7b4dbfd04c7cc01713c9b0afe03b07b656d1fe8"
+        }
+      ],
+      "followUp": {
+        "path": "docs/audits/empty-streamed-delta-retention/README.md",
+        "fixedSourceSha256": "7caf0f24250b42e0ac4fe99e93bcbe0a4acb7cb3465fdde6b248d8bf6ba0d2d0",
+        "status": "Narrow push guard promoted; four-phase Node/Electron source proof preserves publication behavior."
+      }
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/agent-session-history-page-bounds.ts",
+      "lines": "72,98,102,110,125",
+      "sha256": "57e49a0ea59cdccf4a4fc1532d43d2c127b077233602139b2d36d79fd547fc9d",
+      "progressAndOwnership": "Each whole-sequence group advances the cursor to a distinct run boundary. Byte bounding emits admitted groups or truncates the first oversized group then stops. The submissions cache uses a WeakMap keyed by the existing snapshot array.",
+      "limitsAndAssessment": "JSON serialization happens before admission and a single atomic sequence group can exceed an item-count target. Text truncation does not prove total group-frame overhead is under the budget. Original snapshots are separately owned; no new persistent strong cache root established.",
+      "supportingSources": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/agent-session-history-page.ts",
+          "sha256": "f0c7530bf972642b2e55e9ce39166fa913ddd1744adcef4d43fd8765a25df65e"
+        }
+      ]
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-agent-session-subscribers.ts",
+      "lines": "130,168,186,205,236",
+      "sha256": "4c948fd869aedbe9b3960ba7ed64dd4adbba4590034de63ab0da145ac50fb19d",
+      "progressAndOwnership": "Catch-up sends a page only while its sequence advances; no advancement, no newer rows or subscriber removal returns. Fan-out traverses snapshots of subscriber values. Close and emit failure remove the subscriber and delete an empty session map. Provider ended/turn-settlement paths explicitly publish null activity before ordinary sink teardown drains.",
+      "limitsAndAssessment": "Per-page bounds do not by themselves bound all queued outbound transport bytes. ActivityBySession clears on null publication rather than subscriber disconnect; ordinary ended paths provide that publication. Failed/aborted sink ownership remains a separate exceptional-lifecycle question, not a proved leak here. No synchronous journal append from the reviewed transport emit path was established.",
+      "supportingSources": [
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-event-sink.ts",
+          "sha256": "dd5c8223d28f2348e03e189d05c70df43c7213907f83b410a3fab49f381a7852"
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-eviction.ts",
+          "sha256": "6f5040fedeedf498b083677bfc1ab9a59b7cfd1802fa7428769646f807a07c44"
+        },
+        {
+          "path": "src/main/native-chat/agent-session-wire/structured-agent-session-host-lifetime.ts",
+          "sha256": "9795ef145d69fde19178f4819d3c06f735a6ea7fa97c5bce21a11a17f797b740"
+        },
+        {
+          "path": "src/main/codex/codex-structured-journal-translation.ts",
+          "sha256": "56e17b9649471e804d29d1d54a3e14b4298ca8af2e25c4759dc37fce000b06a1"
+        },
+        {
+          "path": "src/main/claude/claude-structured-journal-translation.ts",
+          "sha256": "286884b5e4ca61757b3866aca5dcb1cf778ff93f824381b04d40f7ee68a0615b"
+        }
+      ]
+    },
+    {
+      "path": "src/shared/pty-startup-ingress.ts",
+      "lines": "119,181,252,301",
+      "sha256": "70c693b9d461a4e3b02881244162ae05735da2ddbafbc20240e0f467b50ccf6e",
+      "progressAndOwnership": "Serial drain shifts operations before execution and guards reentry. Echo/query scanning consumes a positive-width match, advances an escape candidate, or returns with an incomplete suffix. Query tails are limited to 64 units; echo hold is 500 ms; startup teardown closes timers and delivery. Expected echoes are capped at 64 with a 256 KiB search allowance, reduced after deadline.",
+      "limitsAndAssessment": "Production native output arrives asynchronously; no callback was found that synchronously re-enqueues forever. Source-span slices and current input ownership require a separate backing-storage analysis. Query/echo limits are per ingress owner, not whole-process byte bounds.",
+      "supportingSources": [
+        {
+          "path": "src/shared/pty-startup-reply-delivery.ts",
+          "sha256": "228664a21850922a2b9742d7b36dee10938d3f45df3f1210a1c60a2561cf9e12"
+        },
+        {
+          "path": "src/main/daemon/session.ts",
+          "sha256": "ddd71285f6e72bcee012e7a9955170be4fb59c8e41e70971bc629c13504a4338"
+        },
+        {
+          "path": "src/main/providers/local-pty-session-activation.ts",
+          "sha256": "7f6dd5b11c3d7d825dd5f79ba9db772f1240104029bb652dcf2bc4ba5c3d0d7f"
+        }
+      ]
+    }
+  ],
+  "separateCandidates": [
+    {
+      "candidate": "empty streamed text array slots",
+      "status": "Promoted narrow guard; actual Codex caller, named main/v198 module overlays, matching publication/scheduling behavior.",
+      "proof": "docs/audits/empty-streamed-delta-retention/reproduce.cjs"
+    },
+    {
+      "candidate": "mouse escape-tail backing string",
+      "status": "same candidate family as kitty tail; comparative proof owned by rpc_queue_retention"
+    },
+    {
+      "candidate": "ordinary RPC in-flight capacity",
+      "status": "conditional pending-handler capacity, with settlement and long-poll negative controls; no real permanently stalled provider proved",
+      "proof": "notes/main-growth-producers/short-rpc-inflight.test.mjs"
+    },
+    {
+      "candidate": "Jira wait queue pressure",
+      "status": "source candidate only; no sustained ordinary producer or actual indefinite network operation established"
+    }
+  ],
+  "proofs": [
+    {
+      "path": "notes/main-growth-producers/short-rpc-inflight.test.mjs",
+      "sha256": "e3ff3e48ad4847943bc236d4fcdebb63310cd65f08c4540211966635951d1df3"
+    },
+    {
+      "path": "notes/main-growth-producers/short-rpc.config.mjs",
+      "sha256": "1815a077ec8746f9b8bc3b9a64c51699c162b65308d752924dfb64b6d67aed27"
+    },
+    {
+      "path": "notes/main-growth-producers/short-rpc-inflight-results.json",
+      "sha256": "c020f41c314d8756e22ab476bc3433f9badc08bbdbc3b9e70dbf8b08c3c40f4b"
+    }
+  ]
+}

@@ -66,6 +66,20 @@ A [twelve-file progress and retention follow-up](./twelve-retention-sites.md) co
 
 ## Further ownership checks
 
+A further [twenty-site review](./twenty-main-shared-loop-sites.md) covers transport
+admission, terminal parsers, native-provider framing, journals and package output.
+Its [ordinary RPC diagnostic](../rpc-inflight-admission-review/README.md) separates
+pending ordinary provider calls from bounded long polls. A separate
+[byte-accounting and shared-wait review](./byte-accounting-and-wait-boundaries.md)
+records 28 primary/supporting source reads and an API-only cancellation-slot
+case that has no production caller in this checkout. These findings are not a
+claim that every remaining mechanical candidate has been manually reviewed.
+
+A [six-site stream accounting review](./six-stream-accounting-sites.md) records
+38 source/caller hashes. It found the separate SSH writer consumed-prefix defect,
+while distinguishing ordinary producers from malformed-peer empty chunks and
+unused buffer APIs. Its source manifest preserves the pre-fix checkpoint.
+
 - GitLab admission removes each selected entry before granting it; timeout removes its own queued entry and clears its timer. Reviewed issue, merge-state and authentication callers release their acquired slot in `finally`. This is a lifetime bound on queued waits, not an aggregate request-byte limit.
 - Workspace-space traversal advances each frame index and retires its entry array after dispatch. Local classification uses `lstat`; remote classification checks symlink identity before descending. Listing admission enforces 100,000 entries per directory and an estimated 64 MiB live-listing budget. Completed parent aggregates and active jobs are separate from that charge, so the budget is not a whole-process or arbitrary-depth bound.
 - Plugin language-catalog traversal removes a frame per iteration and rejects repeated/cyclic objects, depth over 16, or more than 20,000 entries. The JSON parse and `Object.keys` allocation occur before those traversal checks; this does not prove a pre-parse byte bound.
@@ -73,3 +87,29 @@ A [twelve-file progress and retention follow-up](./twelve-retention-sites.md) co
 - WSL auth filesystem admission removes queued work before starting and removes aborted queued entries. Its three reviewed callers coalesce a raw operation by path until actual settlement. The follow-up [auth waiter proof](../auth-filesystem-wait-retention/README.md) reproduces retained expired Errors on Electron and verifies detachable waiters preserve ordering. [#21135](https://github.com/stablyai/orca/pull/21135) removes those reactions; no actual native filesystem stall or incident magnitude was established.
 
 The follow-up also traced several shared-promise callers. Worktree metadata resolution races a fresh filesystem traversal on each call, so a timeout does not itself demonstrate repeated reactions on one shared promise. WSL environment probes cap subprocess output at 64 KiB and execution at ten seconds; process-table evidence joins a capture with its own longer timeout. Those controls limit ordinary reaction lifetime while leaving operating-system stalls separate. The desktop script request queue retains expired closures behind its predecessor, but its actual host aborts and rejects the active request on a timer and limits startup retries. No indefinitely pending ordinary producer was established in that review. Daemon shared preparation and terminal creation waits remain additional candidates for cancellation-lifetime analysis.
+
+## Consumed-prefix comparison
+
+The SSH writer finding prompted targeted comparison of other cursor-based owners.
+`RelayFrameBuffer` and the relay dispatcher writer clear consumed slots and
+compact the prefix. `RecentPtyOutputBuffer` clears fully dropped string slots,
+compacts after 1,024 drops, rejects empty appends and preserves the partially
+consumed head for its documented candidate-backfill obligation. Relay sent
+boundaries retain primitive sequence numbers and compact when the dropped prefix
+occupies at least half the array. Source-credit delivery retains sent spans until
+credit acknowledgement, then shifts reclaimed spans and adjusts its send cursor;
+selection alone does not end that ownership.
+
+Git admission compacts its consumed prefix at 256 entries and separately filters
+canceled tombstones. Its candidate heaps discard invalid roots and rebuild when
+storage exceeds twice the live-lane count plus 64. These policies can retain
+bounded stale records between compactions; they do not match an indefinitely
+growing consumed prefix. The shared concurrency mapper retains its input and
+ordered result arrays for the batch lifetime; worker count is a concurrency
+limit, not a total input-memory cap. A rejected worker does not cancel sibling
+workers, so a caller's rejection alone does not end their ownership.
+
+These are targeted source observations, recorded in
+`consumed-prefix-comparison.json`, not a universal capacity proof or a claim that
+native operations always finish. The SSH scheduler's distinct completed-entry
+path has its own actual-source before/after proof.

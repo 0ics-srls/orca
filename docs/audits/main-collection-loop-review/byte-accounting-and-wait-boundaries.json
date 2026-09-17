@@ -1,0 +1,124 @@
+{
+  "reviewedHead": "a8c4bed3fa4191d731bb28826d00318f18a5db0a",
+  "reviewPath": "docs/audits/main-collection-loop-review/byte-accounting-and-wait-boundaries.md",
+  "scope": "28 targeted primary and supporting module reads; no claim of 28 new findings or all-callers/ordering coverage",
+  "sources": [
+    {
+      "path": "src/main/daemon/cold-restore-payload-cache.ts",
+      "sha256": "6e97bb387ec9b00619226685934126a90e4572720de3ed6a16de0cf8f43ceb77"
+    },
+    {
+      "path": "src/main/daemon/terminal-history-seed-transfer-registry.ts",
+      "sha256": "262731857991b84e7bbe3fb113c48c93d6e6512d4a5f98d2a2e2505ead7a4331"
+    },
+    {
+      "path": "src/main/git/source-control/settled-diff-cache.ts",
+      "sha256": "02f88cdabd6a195264bb9043f66e94a78a098bb2445553db2acf3fac3863198d"
+    },
+    {
+      "path": "src/shared/ws-outbound-backpressure-queue.ts",
+      "sha256": "73bf7ff3c10c42ada557045ac4be57f7676b87678984985f2dfe1b99a6e23e17"
+    },
+    {
+      "path": "src/main/browser/browser-network-tunnel-outbound-memory-budget.ts",
+      "sha256": "e30dd41c2bba68a6c9789da4aae0295bbe97005f8fe28486b51399338b59abd0"
+    },
+    {
+      "path": "src/main/browser/browser-network-tunnel-resource-budget.ts",
+      "sha256": "2bace3438e4ada66527f52a4ee0023d466391c3388edf06501a9b47c70ad8fa5"
+    },
+    {
+      "path": "src/main/runtime/rpc/mobile-e2ee-outbound-memory-budget.ts",
+      "sha256": "1536385680c95497ed4c014d30cba31e638bebad94297bf0b047fb4031134398"
+    },
+    {
+      "path": "src/main/browser/browser-client-upload-staging.ts",
+      "sha256": "fa0fe89ba415f707e35bba06f9c6d72924dd2ef73a33c8130174fda751efdb6c"
+    },
+    {
+      "path": "src/main/ipc/runtime-upload-file-stream.ts",
+      "sha256": "3e1cbf889afca7ac0fd936f66f8d4d662f893d1626a37fcc68df932416daec7f"
+    },
+    {
+      "path": "src/main/daemon/terminal-shell-recovery-barrier.ts",
+      "sha256": "cc1c671618c9d53d46c05a60730cdcf0eee8a2497df5f8f89edb99df1a298913"
+    },
+    {
+      "path": "src/main/codex/codex-structured-acquisition-window.ts",
+      "sha256": "6828970d450a53fcb30ecc0ecb20d8452395bf579cc2295ee53415c299d039a4"
+    },
+    {
+      "path": "src/main/native-chat/agent-session-wire/structured-agent-session-event-sink-queue.ts",
+      "sha256": "0a92e8e51745c973cbed8f3e97bd16b5e8803900f85b91fc46fc3ca4a7e3d134"
+    },
+    {
+      "path": "src/main/orcad/orcad-sidecar-runtime-client.ts",
+      "sha256": "126cd062e8bbd8fe0d7fa794bba1f93adb2e4c9a6b3686ffb6e2433ade872e29"
+    },
+    {
+      "path": "src/main/claude/claude-prompt-registry.ts",
+      "sha256": "565227f7d89c1036fc7c31d0d619483f8528e8a4f5205fa3f89a71a9053c39e4"
+    },
+    {
+      "path": "src/main/claude/claude-structured-inbound-control.ts",
+      "sha256": "dd797317708a9b33da7ffb3066c4b4a65a448afab0b94cadef003a15b3fceb31"
+    },
+    {
+      "path": "src/main/claude/claude-structured-prompt-ownership.ts",
+      "sha256": "3d222c2a636510bc75c69c4f342868a87d081666ebdfbf3105c9bccb4070d794"
+    },
+    {
+      "path": "src/main/claude/claude-structured-control-actions.ts",
+      "sha256": "4f7fd77eff5e8a8280397e9f077ddb662fd5a3741514502ffd270290d51c64a0"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-work-loop.ts",
+      "sha256": "774c5603346041c52da548d9a7cbad60c75be7cddee8b22b8515503acbadabed"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-service-registry.ts",
+      "sha256": "926cc902440ad7c7b346c1da8a178aa965c3cbbaed3a42afd63b572ec91186b0"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-indexer.ts",
+      "sha256": "ad01c5b44b0dff8c53eefd63d26f77d9bbea69935383c195020cdd9e0748c814"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-service.ts",
+      "sha256": "bddf5f58c79f5e8fd7b99f9c932d1b3ea205b7ea71a04b7bd1aa52fdb106cde7"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-child-service.ts",
+      "sha256": "49bf96acc37679dd0fbd92475c1c2afdd7871688f7a17999651565e69069f593"
+    },
+    {
+      "path": "src/main/ai-vault-search/session-search-in-process-service.ts",
+      "sha256": "1a12a3e75aa92bad9de48d6bcc336f1b9bc201ee3d5874f5e91c718f88eb2015"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-service-client.ts",
+      "sha256": "6a71b08c6cb7de3cd0d0aa1a193d32f2f8835f361af083b91fdf72ff55c1bedd"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-service-client-state.ts",
+      "sha256": "b6516ae06cfcdce44946a08441887f3987b020afcd0795c07635fe70a7f8f76c"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-service-spawn.ts",
+      "sha256": "064f1d299547ec05e63a451a77774098cdb0ce9cbf45406167be6cbbcb846e19"
+    },
+    {
+      "path": "src/main/ai-vault/session-scanner-service-search.ts",
+      "sha256": "a6153a71323ba794ef270b2e4b346995d6046549b34bd8d30ae7b9b395f0d145"
+    },
+    {
+      "path": "src/main/providers/working-directory-validation.ts",
+      "sha256": "197bcb7ab254d2bca8cdcc7d7f0214dedca825bbb0dc4f0d2dcbb41df4cec043"
+    }
+  ],
+  "installedSdkReference": {
+    "path": "node_modules/@anthropic-ai/claude-agent-sdk/sdk.mjs",
+    "sha256": "9235fac983c29e614d7f572a578406dc5dbda006305faa99f9447f577738eb93",
+    "scope": "Targeted handleControlRequest/cancel and canUseTool excerpts only; source tracing, not complete dependency audit."
+  }
+}
