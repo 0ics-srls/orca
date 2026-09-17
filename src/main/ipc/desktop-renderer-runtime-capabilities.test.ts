@@ -34,7 +34,9 @@ import { DESKTOP_RENDERER_RUNTIME_CLIENT_CAPABILITIES } from './desktop-renderer
 const REMOTE_ONLY_BY_DECISION: readonly RuntimeCapability[] = [
   // Flips `requiresIntent` on, so an unattributed desktop tab close would start being refused.
   SESSION_TAB_CLOSE_INTENT_RUNTIME_CAPABILITY,
-  // Mixed-version wire terms: main and the renderer are one build, so none of these can skew.
+  // Carried as a group under one rationale, not audited one by one: these are mixed-version wire
+  // terms, and main and the renderer are a single build. Before moving any of them across, check
+  // what the host actually gates on it — the entry above is what that check looks like.
   AGENT_SESSION_BOUNDARY_RUNTIME_CAPABILITY,
   WORKTREE_VISIBILITY_DEFAULTS_RUNTIME_CAPABILITY,
   WORKTREE_VISIBILITY_SOURCE_DEFAULTS_RUNTIME_CAPABILITY,
@@ -48,8 +50,9 @@ const REMOTE_ONLY_BY_DECISION: readonly RuntimeCapability[] = [
   SESSION_TABS_RETIREMENT_PROOF_DELTA_RUNTIME_CAPABILITY
 ]
 
-/** Gates the renderer must pass against its own main process, which the remote lists do not carry
- *  because remote structured chat is negotiated per-peer rather than assumed. */
+/** Gates the renderer must pass against its own main process. The Electron remote list omits all
+ *  five; mobile advertises the structured ones, so this is an Electron-remote gap rather than a
+ *  statement that no remote client wants them. Why it is one is not recorded here. */
 const LOCAL_ONLY_BY_DECISION: readonly RuntimeCapability[] = [
   AGENT_SESSION_BACKGROUND_TASK_STOP_CAPABILITY,
   AGENT_SESSION_BACKGROUND_TASK_ROW_STOP_CAPABILITY,
