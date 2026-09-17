@@ -12,7 +12,7 @@ class CountingMap<K, V> extends Map<K, V> {
   visits = 0
   getCalls = 0
 
-  private countingIterator<T>(inner: IterableIterator<T>): IterableIterator<T> {
+  private countingIterator<T>(inner: MapIterator<T>): MapIterator<T> {
     const bump = (): void => {
       this.visits++
     }
@@ -28,17 +28,15 @@ class CountingMap<K, V> extends Map<K, V> {
       [Symbol.iterator]() {
         return this
       }
-    } as IterableIterator<T>
+    } as MapIterator<T>
   }
 
   override [Symbol.iterator](): MapIterator<[K, V]> {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: countingIterator wraps the real Map iterator and forwards every next() to it, so the result is that iterator with a counter attached.
-    return this.countingIterator(super[Symbol.iterator]()) as MapIterator<[K, V]>
+    return this.countingIterator(super[Symbol.iterator]())
   }
 
   override values(): MapIterator<V> {
-    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the same wrapper as [Symbol.iterator] above, over super.values().
-    return this.countingIterator(super.values()) as MapIterator<V>
+    return this.countingIterator(super.values())
   }
 
   override get(key: K): V | undefined {
