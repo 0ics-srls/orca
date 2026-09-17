@@ -18,7 +18,7 @@ import {
   resetUninstallFixtures,
   uninstallGate,
   uninstallWorkerController
-} from './__mocks__/plugin-uninstall-log-fixture'
+} from './__mocks__/plugin-uninstall-log-test-fixture'
 
 beforeEach(prepareUninstallFixture)
 afterEach(resetUninstallFixtures)

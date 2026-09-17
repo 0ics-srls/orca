@@ -427,7 +427,7 @@
       "fixed": "3a59cccd8cf923506aacad58f1c5d11b49f47a21e6c6dee8559912ee3c5cefb5",
       "main": "3a59cccd8cf923506aacad58f1c5d11b49f47a21e6c6dee8559912ee3c5cefb5"
     },
-    "src/main/plugins/__mocks__/plugin-uninstall-log-fixture.ts": {
+    "src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts": {
       "before": "e57a605189db26e8c79a24218291afa4ca719998a84760a89357a2ca0d6d2938",
       "fixed": "e57a605189db26e8c79a24218291afa4ca719998a84760a89357a2ca0d6d2938",
       "main": null
@@ -658,8 +658,8 @@
       "main": "1daec9c1612229be01399e9c6d56a0f6cba531daeab2821509e75a28c2666859"
     },
     "src/main/plugins/plugin-uninstall-log-retention.test.ts": {
-      "before": "742ccc1260d7f62e81f72b4787f5402a86b4aaf6ac80ea9e2fd326ccd53ef2c3",
-      "fixed": "742ccc1260d7f62e81f72b4787f5402a86b4aaf6ac80ea9e2fd326ccd53ef2c3",
+      "before": "3ff50988b9951a922332e0ceab9bfd48ac5f4f0a2f44b6ba6738df24926ba0e2",
+      "fixed": "3ff50988b9951a922332e0ceab9bfd48ac5f4f0a2f44b6ba6738df24926ba0e2",
       "main": null
     },
     "src/main/plugins/plugin-uninstall-worker-fixture.ts": {

@@ -141,19 +141,19 @@
     "scope": "Prior eight-product proposal before the final behavior-preserving installation-state extraction; final-source validation is separately recorded above."
   },
   "artifactHashes": {
-    "README.md": "3274f7a828bef468a73419703e08a6526614953d4d436defda0cae903d546739",
-    "before-electron-results.json": "3a65b50840d1fb764884bdaf4f8088b646c2364f9569dc7e29d8fa4e0ee162b0",
-    "before-node-results.json": "00b7ffb2bc519e29da35591ea0475f7fcdd8c793755085f3432a4cb93ebda24f",
+    "README.md": "4558f068f3ad8b902389240c045015646c1bde50a319c0ba3e5cfa640cf9c8a2",
+    "before-electron-results.json": "b648b6afccca5b0327681b81bbd06bc73911699d481369cd5a86681073616954",
+    "before-node-results.json": "145c20439e921378524222d2edb42b092ea4ccd16e6b6a8a54a087802e51d5bd",
     "before.config.mjs": "9108bd4454f572fbe8db118a9a8eb8d0c8ec76449af7f6c50a22ced7fd119f47",
     "dependency-context.patch": "1b2886e2bc2817bc0a10eab93911984edc0366b170208bf4e8a3d1b3044c6b62",
     "fix.patch": "c4d233307fb6903d012f8288d1da5bb6172b872bc7f3220625a19607d97d87d0",
-    "fixed-electron-results.json": "5bd31ffcfac33e6120bd38f06600e865b1b4ea88c5ccf6db5f6d1827d3cb2d68",
-    "fixed-node-results.json": "c685b0fd9a03f855a1148b063e483d560cf81a28cdc91b9716dc6e299064c9d9",
+    "fixed-electron-results.json": "1b596d79dfb24d72672ba2e90707299f58dcef0fa48cab99a519ed657c3c7806",
+    "fixed-node-results.json": "e9453892d3bc722a31d74324fe0dd429bf15b0fdcf9eca18f02a0a84ed893f3c",
     "loader-controls.cjs": "1070e52b4e399bb7377027110e1cfa6ba6a4f511372dc88ca1129d9f6d94ec72",
-    "loader-results.json": "5f0d9fbc885b0b943eb13c98d385bac8ea5e5dd9f8cacfd678bc600beda8b289",
+    "loader-results.json": "ad73a3466962a76358021089c1dc9b8561566c47654484d8b35d810eb30fb162",
     "phase.config.mjs": "eceb5c74c19fed28cfa9b0341e571369dca1f4e7f2f5486b549cb179fbae6fa9",
-    "scenario.test.mjs": "dce033d89bb317b30d4f19a73b383100fb5daf79c86c66c52a718b9619f69aa9",
-    "source-versions.json": "dad6e454d3da88110e5f8617c50036e00fd63b0cb3666dc79c3c6a2751db3f75",
+    "scenario.test.mjs": "836c185a99997942b5d0461dab5b1f08efac12da68e04f7891ddfda2dd09a7be",
+    "source-versions.json": "533a02e076fb6f9ae6665ddf6371edd6e61532b2a2890a4f129da1a9c56fe1ee",
     "sources.cjs": "a04aa4c72c9eeaf2a1814e5f0919bc0128f8c7a605a43ab9e5c6ddaf2ece2f38"
   },
   "artifactQuality": {
@@ -196,12 +196,31 @@
     "nativeIntegrationSuiteRun": false
   },
   "fixtureAccess": {
-    "module": "src/main/plugins/__mocks__/plugin-uninstall-log-fixture.ts",
+    "module": "src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture.ts",
     "checkedPropertyAccess": true,
     "refreshHeldWithReceiverBoundSpy": true,
     "reflectGetApplyUsed": false,
     "existingModuleMockPolicy": "**/__mocks__/**",
     "explicitAntiSlopPublicationFiles": 23,
-    "exitCode": 0
+    "exitCode": 0,
+    "childProcessTestPolicy": "Existing isTestFile test-fixture filename exemption; original typed fork mock preserved; no allowlist/pin change."
+  },
+  "reviewCorrection20260917": {
+    "publishedHead": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+    "failure": "New test support filename counted as production child_process importer",
+    "fix": "Rename fixture to plugin-uninstall-log-test-fixture.ts and update three tests plus comparative scenario/source fences",
+    "focusedChecks": {
+      "passed": 23,
+      "files": 5,
+      "includes": "17 uninstall cases, 4 import-boundary checks, 2 native worker supervision cases",
+      "platform": "darwin arm64"
+    },
+    "nodeTypecheckExitCode": 0,
+    "ordinaryLintExitCode": 0,
+    "antiSlopExitCode": 0,
+    "portableCasesReexecuted": 16,
+    "portableExitCodes": 0,
+    "loaderControlsExitCode": 0,
+    "userVisiblePolicy": "Successful uninstall discards old 200-row history; same-key reinstall starts fresh. Installed/crashed/failed-removal history remains."
   }
 }

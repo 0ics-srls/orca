@@ -10,7 +10,7 @@ import {
   removeThroughPluginIpc,
   resetUninstallFixtures,
   uninstallWorkerPorts
-} from '../../../src/main/plugins/__mocks__/plugin-uninstall-log-fixture'
+} from '../../../src/main/plugins/__mocks__/plugin-uninstall-log-test-fixture'
 
 const require = createRequire(import.meta.url)
 const { loadSources, sha256, readText } = require('./sources.cjs')

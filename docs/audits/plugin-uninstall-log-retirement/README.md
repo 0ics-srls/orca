@@ -43,6 +43,14 @@ ORCA_BACKGROUND_LAUNCH=1 node docs/audits/plugin-uninstall-log-retirement/loader
 
 For Electron's installed Node runtime, use the installed Electron executable with `ELECTRON_RUN_AS_NODE=1 ORCA_BACKGROUND_LAUNCH=1` and `node_modules/vitest/vitest.mjs` followed by the same `run --config` arguments. `ORCA_PLUGIN_LOG_OUTPUT` and `ORCA_PLUGIN_LOG_LOADER_OUTPUT` select alternate report paths. `before.config.mjs` runs the six permanent retention cases against baseline and is expected to fail those retention assertions.
 
-## Limits
+## Review correction, 2026-09-17
+
+The first published head failed the child-process import boundary because the mock support filename did not identify it as a test fixture. Renaming it to `__mocks__/plugin-uninstall-log-test-fixture.ts` uses the guard's existing test-fixture exemption. The native fork mock and real host/SDK IPC lifecycle remain unchanged; no production importer, allowlist or count limit changed.
+
+After the rename, 23 checks passed across the three uninstall suites, the child-process boundary suite and the two native worker supervision cases on macOS. Node typecheck, ordinary lint and anti-slop passed. All 16 before/fixed comparative controls passed again across Node and Electron's Node runtime, and loader controls passed with the renamed source fences. The prior 89-test batch above remains historical evidence for the unchanged product code.
+
+Successful uninstall now discards the previous installation's 200-row in-memory history. The settings UI already removes the deleted plugin's log row, but reinstalling the same key no longer resurrects that old history. This is an explicit lifetime policy change, not a claim of identical observable output in every uninstall/reinstall sequence.
+
+## Remaining limits
 
 This explains a code-level main-process owner that survives successful uninstalls. It does not establish plugin usage, uninstall rate, field allocation size, or attribution for #19831 or any other incident. Installed, disabled, crashed, development and externally deleted plugin histories are not comprehensively retired by this change. Sequential filesystem deletion is not a rollback transaction; failure retains discovery/history for retry. The in-process mutation queues do not make external or cross-process lockfile edits atomic. If a bundled successor appears during shutdown, the old worker may already have stopped before removal is refused; the successor remains installed and can activate afterward.

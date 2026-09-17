@@ -12,18 +12,13 @@ export function useDiffSectionModelLifecycle(params: {
   setSectionRootNode: (node: HTMLDivElement | null) => void
 } {
   const disposeDiffModels = useCallback(() => {
-    if (disposeTimerRef.current !== null) {
-      window.clearTimeout(disposeTimerRef.current)
-    }
-    disposeTimerRef.current = window.setTimeout(() => {
-      disposeTimerRef.current = null
+    window.setTimeout(() => {
       disposeUnattachedMonacoModelPaths(monaco, [
         `${params.modelPathBase}:original`,
         `${params.modelPathBase}:modified`
       ])
     }, 0)
   }, [params.modelPathBase])
-  const disposeTimerRef = useRef<number | null>(null)
   const disposeDiffModelsRef = useRef(disposeDiffModels)
   // Keep callback-ref dispose path on the latest disposer without render-time mutation.
   useEffect(() => {
@@ -42,15 +37,6 @@ export function useDiffSectionModelLifecycle(params: {
       disposeDiffModels()
     }
   }, [disposeDiffModels, params.collapsed])
-
-  useEffect(() => {
-    return () => {
-      if (disposeTimerRef.current !== null) {
-        window.clearTimeout(disposeTimerRef.current)
-        disposeTimerRef.current = null
-      }
-    }
-  }, [])
 
   return { disposeDiffModels, setSectionRootNode }
 }
