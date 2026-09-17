@@ -53,6 +53,14 @@ function agentSessionStoreStateChanged(
   )
 }
 
+/** What an exclusive inspection can see, and whether that is provably everything. */
+export type AgentSessionStoreExclusiveInspection = {
+  records: readonly AgentSessionRecord[]
+  // False when this catalogue is not provably whole: a quarantined record could
+  // name the very session a caller is asking about, so absence is not an answer.
+  complete: boolean
+}
+
 export class AgentSessionStoreTransactionQueue {
   private queue: Promise<unknown> = Promise.resolve()
   private diskRecoveredFromBackup: boolean
@@ -143,6 +151,33 @@ export class AgentSessionStoreTransactionQueue {
           this.state.visibleSessionIdsIndexPresent = visibleSessionIdsIndexPresent
           throw error
         }
+      })
+    )
+    this.queue = run.catch(() => {})
+    return run
+  }
+
+  // Reads the refreshed catalogue under the same queue and cross-process lock as
+  // transact, so a decision taken inside `inspect` cannot be overtaken by a
+  // reservation before the caller acts on it. Unlike transact it awaits its
+  // callback and never mutates, saves or rolls back — and it does not refuse a
+  // read-only store, because a caller that must not act on a partial view reads
+  // `complete` instead of catching a throw.
+  inspectExclusive<T>(
+    inspect: (inspection: AgentSessionStoreExclusiveInspection) => Promise<T>
+  ): Promise<T> {
+    const run = this.queue.then(() =>
+      withAgentSessionStoreTransactionLock(this.filePath, async () => {
+        await this.refreshExternallyChangedState()
+        return await inspect({
+          records: [...this.state.records.values()],
+          // listRecords() cannot see a quarantined record, and a backup-derived
+          // or read-only store may be missing rows outright.
+          complete:
+            !this.readOnly &&
+            !this.diskRecoveredFromBackup &&
+            this.state.unreadableRecords.size === 0
+        })
       })
     )
     this.queue = run.catch(() => {})

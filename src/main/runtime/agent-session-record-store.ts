@@ -72,7 +72,8 @@ import {
 } from './agent-session-claim-key-retention'
 import {
   AgentSessionStoreTransactionQueue,
-  markAgentSessionStoreLeasesUnreconciled
+  markAgentSessionStoreLeasesUnreconciled,
+  type AgentSessionStoreExclusiveInspection
 } from './agent-session-store-transaction-queue'
 
 export const AGENT_SESSION_LEASE_TTL_MS = 30_000,
@@ -130,9 +131,19 @@ export class AgentSessionRecordStore {
   })
 
   /** Persist the user-visible tab reference separately from the rollback-sensitive profile tabs. */
-  setSessionTabVisibility(sessionId: string, visible: boolean): Promise<void> {
-    return this.transact(() => setVisibleSessionId(this.state, sessionId, visible))
-  }
+  setSessionTabVisibility = (sessionId: string, visible: boolean): Promise<void> =>
+    this.transact(() => setVisibleSessionId(this.state, sessionId, visible))
+
+  /**
+   * Decide and act on session ownership without a reservation slipping in between.
+   * `act` runs holding the same lock reservation takes, so it is the seam for an
+   * irreversible effect whose safety depends on what the catalogue said a moment
+   * ago — deleting provider history the writer may still be using. Nothing
+   * mutable escapes: the callback receives records by value and cannot write.
+   */
+  withExclusiveHistoryInspection = <T>(
+    act: (inspection: AgentSessionStoreExclusiveInspection) => Promise<T>
+  ): Promise<T> => this.transactions.inspectExclusive(act)
 
   listByScope(location: AgentSessionExecutionLocation): AgentSessionRecord[] {
     const scope = agentSessionScopeKey(location)
@@ -157,9 +168,7 @@ export class AgentSessionRecordStore {
     )
 
   /** A record this build cannot validate: readable as present, never grantable as a writer. */
-  isSessionUnreadable(sessionId: string): boolean {
-    return this.state.unreadableRecords.has(sessionId)
-  }
+  isSessionUnreadable = (sessionId: string): boolean => this.state.unreadableRecords.has(sessionId)
 
   listOperationRows = (): AgentSessionOperationRow[] => [...this.state.operations.values()]
 
