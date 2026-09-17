@@ -3,16 +3,18 @@ import { commitConversationCommandRecord } from './agent-session-conversation-co
 import { setAgentSessionRecordConversationName } from './agent-session-record-conversation-name'
 /** Durable single-writer session records and their operation ledger. */
 
-import {
-  settleAgentSessionOperation,
-  type AgentSessionOperationDecision,
-  type AgentSessionOperationOutcome,
-  type AgentSessionOperationRow
+import type {
+  AgentSessionOperationClaim,
+  AgentSessionOperationDecision,
+  AgentSessionOperationOutcome,
+  AgentSessionOperationRow
 } from '../../shared/agent-session-operation-ledger'
 import {
-  admitAgentSessionGlobalOperationRow,
+  admitAgentSessionGlobalOperationInto,
   admitAgentSessionMutationOperation,
-  admitAgentSessionOperationRow,
+  admitAgentSessionOperationInto,
+  claimAgentSessionOperationInto,
+  settleAgentSessionOperationInto,
   type AgentSessionMutationOperationAdmission,
   type AgentSessionOperationAdmission
 } from './agent-session-operation-admission'
@@ -76,7 +78,6 @@ import {
 
 export const AGENT_SESSION_LEASE_TTL_MS = 30_000,
   AGENT_SESSION_LEASE_RENEW_INTERVAL_MS = 10_000
-export { AGENT_SESSION_CLAIM_KEY_RETENTION_MS } from './agent-session-claim-key-retention'
 
 export class AgentSessionRecordStore {
   /** Teardown's record of what was working; spent once by the resume that uses one. */
@@ -280,38 +281,33 @@ export class AgentSessionRecordStore {
   }
 
   /** Admits one non-reservation mutation through the durable ledger. */
-  async admitOperation(
-    args: AgentSessionOperationAdmission
-  ): Promise<AgentSessionOperationDecision> {
-    return this.transact(() => {
-      const admitted = admitAgentSessionOperationRow(this.state.operations, args)
-      this.state.operations = admitted.rows
-      return admitted.decision
-    })
-  }
+  admitOperation = (args: AgentSessionOperationAdmission): Promise<AgentSessionOperationDecision> =>
+    this.transact(() => admitAgentSessionOperationInto(this.state, args))
 
   /** Send ids stay global after a caller reconnects under a different identity. */
-  async admitGlobalOperation(
+  admitGlobalOperation = (
     args: AgentSessionOperationAdmission
-  ): Promise<AgentSessionOperationDecision> {
-    return this.transact(() => {
-      const admitted = admitAgentSessionGlobalOperationRow(this.state.operations, args)
-      this.state.operations = admitted.rows
-      return admitted.decision
-    })
-  }
+  ): Promise<AgentSessionOperationDecision> =>
+    this.transact(() => admitAgentSessionGlobalOperationInto(this.state, args))
 
   admitMutationOperation = (args: AgentSessionMutationOperationAdmission) =>
     this.transact(() => admitAgentSessionMutationOperation(this.state, args))
+
+  /** Durable compare-and-swap for the right to run an admitted operation's effect: two replays both
+   *  read `pending`, and only a conditional swap tells the one that may run from the one that must
+   *  replay. */
+  claimOperation = (args: {
+    callerKey: string
+    operationId: string
+  }): Promise<AgentSessionOperationClaim> =>
+    this.transact(() => claimAgentSessionOperationInto(this.state, args))
 
   async recordOperationOutcome(args: {
     callerKey?: string
     operationId: string
     outcome: AgentSessionOperationOutcome
   }): Promise<void> {
-    await this.transact(() => {
-      this.state.operations = settleAgentSessionOperation(this.state.operations, args)
-    })
+    await this.transact(() => settleAgentSessionOperationInto(this.state, args))
   }
 
   async markClaimConflicted(sessionId: string, now: number): Promise<AgentSessionRecord> {
@@ -327,8 +323,9 @@ export class AgentSessionRecordStore {
   replaceSessionOptions = (args: AgentSessionOptionsReplacement): Promise<AgentSessionRecord> =>
     this.mutate(args.sessionId, (record) => replaceAgentSessionRecordOptions(record, args))
 
-  retireClaimKey = (keyId: string, now: number): Promise<void> =>
-    this.transact(() => retireAgentSessionClaimKey(this.state, keyId, now))
+  async retireClaimKey(keyId: string, now: number): Promise<void> {
+    await this.transact(() => retireAgentSessionClaimKey(this.state, keyId, now))
+  }
 
   private async mutate(
     sessionId: string,

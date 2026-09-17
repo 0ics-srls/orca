@@ -1,10 +1,9 @@
-// How long a retired claim key stays verifiable, and the two reads that depend on it.
-//
-// Split off the record store so that class stays within its size budget; the rule itself is
-// unchanged: a rotation must never strand an agent that is still running under the old key.
+// Retired execution-claim keys. Split from the store on the same rule its ledger admission is:
+// the state transition lives here, the transaction stays in the store.
 
 import type { AgentSessionStoreState } from './agent-session-record-store-file'
 
+/** Retired claim keys stay verifiable this long so a rotation cannot strand a running agent. */
 export const AGENT_SESSION_CLAIM_KEY_RETENTION_MS = 30 * 24 * 60 * 60 * 1000
 
 export function isAgentSessionClaimKeyVerifiable(

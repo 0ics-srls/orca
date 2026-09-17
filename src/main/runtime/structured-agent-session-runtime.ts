@@ -19,6 +19,7 @@ import {
 } from './structured-agent-session-runtime-teardown'
 import { rotateAgentSessionLaunchGeneration } from './agent-session-launch-generation'
 import { createCodexStructuredLaunchResolver } from '../codex/codex-structured-launch-resolution'
+import type { CodexStructuredPermissionPolicy } from '../codex/codex-structured-permission-policy'
 import {
   CodexStructuredSessionAdapter,
   type CodexStructuredSessionAdapterDeps
@@ -84,8 +85,8 @@ export type StructuredAgentSessionRuntimeDeps = {
   resolveClaudeAuthPolicy: () => Promise<ClaudeStructuredAuthPolicy> | ClaudeStructuredAuthPolicy
   /** The user's Agent Permissions setting for Claude; absent means prompting. */
   resolveClaudePermissionMode?: () => Promise<PermissionMode> | PermissionMode
-  /** The same setting for Codex, as app-server argv; absent means its approval prompts stay on. */
-  resolveCodexPermissionArgs?: () => string[]
+  /** The same setting for Codex, as app-server thread policy. */
+  resolveCodexPermissionPolicy?: () => CodexStructuredPermissionPolicy
   /** Raw settings getter; the reader that fails closed around it is built here, in checked code. */
   getClaudeManagedAccountGateSettings?: () => ClaudeManagedAccountGateSettings
   resolveEnvironment?: () => Promise<NodeJS.ProcessEnv>
@@ -229,8 +230,8 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
         store,
         resolveWorkspacePath: deps.resolveWorkspacePath,
         resolveEnvironment: resolveCodexEnvironment,
-        ...(deps.resolveCodexPermissionArgs
-          ? { resolvePermissionArgs: deps.resolveCodexPermissionArgs }
+        ...(deps.resolveCodexPermissionPolicy
+          ? { resolvePermissionPolicy: deps.resolveCodexPermissionPolicy }
           : {}),
         ...(deps.resolveCodexCommand ? { resolveCommand: deps.resolveCodexCommand } : {})
       }),
