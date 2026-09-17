@@ -1,4 +1,5 @@
 import { loader } from '@monaco-editor/react'
+import { editorModelRegistry } from './editor-model-registry'
 import * as monaco from 'monaco-editor'
 import { typescript as monacoTS } from 'monaco-editor'
 import 'monaco-editor/min/vs/editor/editor.main.css'
@@ -92,3 +93,8 @@ loader.config({ monaco })
 
 // Re-export for convenience
 export { monaco }
+
+const unregisterEditorModelRegistry = editorModelRegistry.register(monaco)
+if (import.meta.hot) {
+  import.meta.hot.dispose(unregisterEditorModelRegistry)
+}

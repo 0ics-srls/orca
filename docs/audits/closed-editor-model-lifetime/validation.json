@@ -1,0 +1,98 @@
+{
+  "permanentTests": {
+    "cases": 17,
+    "files": 4,
+    "exitCode": 0
+  },
+  "permanentAndExistingCompatibilityTests": {
+    "cases": 37,
+    "files": 7,
+    "exitCode": 0
+  },
+  "actualFullWebTypecheck": {
+    "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm tc:web",
+    "exitCode": 0
+  },
+  "comparativeProof": {
+    "graphs": ["worktree", "main"],
+    "variants": ["before", "fixed"],
+    "runtimes": {
+      "node": "26.6.0",
+      "electron": "43.7.0 / Node 24.21.0"
+    },
+    "casesPerRun": 4,
+    "runs": 8,
+    "cases": 32,
+    "exitCodes": [0, 0, 0, 0, 0, 0, 0, 0]
+  },
+  "independentReview": {
+    "casesPerRuntime": 6,
+    "runtimes": 2,
+    "totalCases": 12,
+    "exitCodes": [0, 0],
+    "scope": "Additional ignored review proof; not the four-control durable runner."
+  },
+  "sourceFence": {
+    "repositoryPaths": 1021,
+    "contextDifferences": 22,
+    "dependencyHashes": 12,
+    "allNamedWorktreeBaselineHashesVerified": true,
+    "historicalComparison": "Four static v1.4.170 paths only",
+    "mainMarkdownAliasRegistrationPreserved": true
+  },
+  "loaderControls": {
+    "graphVariantCombinations": 4,
+    "canonicalLfAndSyntheticCrlfEquivalent": true,
+    "simulatedPublicationCheckoutEquivalent": true,
+    "driftRejected": true
+  },
+  "quality": {
+    "ordinary": {
+      "exitCode": 0,
+      "files": 17
+    },
+    "casting": {
+      "exitCode": 0,
+      "files": 17
+    },
+    "type-aware": {
+      "exitCode": 0,
+      "files": 17
+    },
+    "react": {
+      "exitCode": 0,
+      "files": 17
+    },
+    "design": {
+      "exitCode": 0,
+      "files": 17
+    }
+  },
+  "artifactHashes": {
+    "README.md": "98c70235ea153998380e79d367072ad2eb6d5a3ea8042e1138d2b4378d4ada4f",
+    "fix.patch": "c725f2a6c8ff66ea2a59a3fdc4bba24773d1b42eb371ae54e3c135ae9d6593cd",
+    "lifecycle.test.mjs": "afc0b7e45e056d1f730ac58f266094471b58187646c91b4436b909544a3a4e29",
+    "loader-controls.cjs": "4cdcf0309ff0acce00cff5f5b17ce91236f5eaa27245de65c651dd4c6535a352",
+    "loader-results.json": "c8c93567b6035a8057b103ae9a1c46dccbe562a04b51bc38a00bf930d4b51a5c",
+    "main-before-electron-results.json": "3d0c320dd69b031b1c57f9ba80a1be28cb512b671e550440c8d67a762b0b1721",
+    "main-before-node-results.json": "b5ba920f1f1e58b9a4a793516c7e2e3b5d1c4e631d323739a8b2224375648bf9",
+    "main-context.patch": "faab10d72b52b184fdb212da1b5af53550d4937208b04266afa3d0b3d3c446dc",
+    "main-fixed-electron-results.json": "b53e0f8a7f3ddddfcbda7f947993d0ecaafd5ac874cab04910149686cfdc58e0",
+    "main-fixed-node-results.json": "309cd9b24fd4cbb274c2d372c96581d9ecd13c8de800e3923289f19e4a4c4dbc",
+    "source-versions.json": "4ee4ae0901343e818ec4a396cc7bcaf11289b1ab7b58018e48ed5ae84778f884",
+    "sources.cjs": "d5914770eb9db3c75b153b55d7f2f94415d3ab1850bc5b021be1165d104828be",
+    "vitest.config.mjs": "bfe98cdc66445e31801a9b64f698f158110dc7a8b1ec8f92ef7f99a5fb296444",
+    "worktree-before-electron-results.json": "3d7ca347967a4e2eee5428b3492de7d5053fd422b6f5033252be82cb765e9bfb",
+    "worktree-before-node-results.json": "e538c14953cd9b3310fac11a690a34927f300b0e75f49380fb1bee3055ae11b8",
+    "worktree-fixed-electron-results.json": "6fc3f80bb1682071d3e973c62985e11d8a9571c3330809ed7a20e5724f3a9a39",
+    "worktree-fixed-node-results.json": "957859be38734c836e102a357d694c2989fd888a333e0a754e074b4735dfac0b"
+  },
+  "fullFileWhitespace": {
+    "files": 31,
+    "diagnostics": 0
+  },
+  "sourceFormatting": {
+    "files": 13,
+    "exitCode": 0
+  }
+}

@@ -1,0 +1,38 @@
+{
+  "observations": [
+    {
+      "graph": "worktree",
+      "variant": "before",
+      "sources": 1019,
+      "canonicalLfMatches": true,
+      "simulatedMainCheckoutMatches": true,
+      "graphSha256": "135b131bc7a3023e0e88c572802c4b837eb968af74e49a71ea93a97ba3454bd9"
+    },
+    {
+      "graph": "worktree",
+      "variant": "fixed",
+      "sources": 1021,
+      "canonicalLfMatches": true,
+      "simulatedMainCheckoutMatches": true,
+      "graphSha256": "e89fae0a61015446e8de9252fa47f1e8aeeb0044eec5da03fab083e437fa41bd"
+    },
+    {
+      "graph": "main",
+      "variant": "before",
+      "sources": 1017,
+      "canonicalLfMatches": true,
+      "simulatedMainCheckoutMatches": true,
+      "graphSha256": "9b092ce86caf62164bc106a6ac8a382b9b487c5abbaadcfaedd371c3755a1a50"
+    },
+    {
+      "graph": "main",
+      "variant": "fixed",
+      "sources": 1019,
+      "canonicalLfMatches": true,
+      "simulatedMainCheckoutMatches": true,
+      "graphSha256": "53be6c5fb9cb4b60386a7ab30b960f078f24b887c036c68836d4c5c7b17a767e"
+    }
+  ],
+  "mainMarkdownAliasesPreserved": true,
+  "driftRejected": true
+}
