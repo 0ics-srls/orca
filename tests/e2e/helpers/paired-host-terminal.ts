@@ -17,12 +17,12 @@ export type PairedHostTerminal = {
   webTabId: string
 }
 
-export async function callEnvironment<TResult>(
+export async function callEnvironment(
   page: Page,
   environmentId: string,
   method: string,
   params: unknown
-): Promise<TResult> {
+): Promise<unknown> {
   return page.evaluate(
     async ({ environmentId, method, params }) => {
       const response = await window.api.runtimeEnvironments.call({
@@ -36,7 +36,26 @@ export async function callEnvironment<TResult>(
       return response.result
     },
     { environmentId, method, params }
-  ) as Promise<TResult>
+  )
+}
+
+/** Validates rather than asserts: an RPC shape change should fail here with the shape named, not
+ *  surface later as an undefined surface id. */
+function readCreatedTerminalTab(result: unknown): { id: string; terminal: string } {
+  if (
+    typeof result === 'object' &&
+    result !== null &&
+    'tab' in result &&
+    typeof result.tab === 'object' &&
+    result.tab !== null &&
+    'id' in result.tab &&
+    typeof result.tab.id === 'string' &&
+    'terminal' in result.tab &&
+    typeof result.tab.terminal === 'string'
+  ) {
+    return { id: result.tab.id, terminal: result.tab.terminal }
+  }
+  throw new Error(`host session terminal was not created: ${JSON.stringify(result)}`)
 }
 
 export async function createPairedHostTerminal(
@@ -45,28 +64,18 @@ export async function createPairedHostTerminal(
   worktreeId: string,
   command: string
 ): Promise<PairedHostTerminal> {
-  const result = await callEnvironment<{ tab: { id: string; terminal: string | null } }>(
-    page,
-    environmentId,
-    'session.tabs.createTerminal',
-    {
+  const tab = readCreatedTerminalTab(
+    await callEnvironment(page, environmentId, 'session.tabs.createTerminal', {
       worktree: `id:${worktreeId}`,
       command,
       activate: false,
       select: false,
       navigation: 'caller'
-    }
+    })
   )
-  if (!result.tab.terminal) {
-    throw new Error('host session terminal was not created')
-  }
   // Why: the host answers with a `tabId::leafId` surface id; client tabs mirror the parent tab.
-  const hostTabId = result.tab.id.split(HOST_TERMINAL_SURFACE_SEPARATOR)[0]
-  return {
-    hostTabId,
-    terminal: result.tab.terminal,
-    webTabId: toWebTerminalSurfaceTabId(hostTabId)
-  }
+  const hostTabId = tab.id.split(HOST_TERMINAL_SURFACE_SEPARATOR)[0]
+  return { hostTabId, terminal: tab.terminal, webTabId: toWebTerminalSurfaceTabId(hostTabId) }
 }
 
 export async function openPairedClientTab(
