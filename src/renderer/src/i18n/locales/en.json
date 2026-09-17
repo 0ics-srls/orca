@@ -6884,7 +6884,10 @@
           "cliSkillTerminalTitle": "CLI skill setup",
           "cliSkillTerminalAria": "CLI skill install terminal",
           "installFailureUnknownReason": "Orca could not finish CLI registration and reported no reason.",
-          "installFailureConflictRemedy": "Remove {{value0}} and register again if it is no longer needed."
+          "installFailureConflictRemedy": "Remove {{value0}} and register again if it is no longer needed.",
+          "6f894ef9c2": "Show in Finder",
+          "cbe55e4d48": "Show in Explorer",
+          "9fd4023db0": "Show in File Manager"
         },
         "CliSkillRuntimeSetup": {
           "04325573f8": "WSL",
@@ -11678,7 +11681,6 @@
           "account": "Orca account",
           "connected": "Connected",
           "signInRequired": "Sign in is required to upload and manage artifacts.",
-          "signingIn": "Signing in…",
           "signIn": "Sign in to Orca",
           "title": "Artifacts",
           "description": "Share HTML and Markdown files with your team and manage their public links.",
@@ -11723,7 +11725,6 @@
           "checking": "Checking account status…",
           "account": "Orca account",
           "signOut": "Sign out",
-          "signingIn": "Signing in…",
           "signInAgain": "Sign in again",
           "signIn": "Sign in to Orca",
           "title": "Orca Account",
@@ -11788,7 +11789,6 @@
           "signInTitle": "Sign in to share skills",
           "signInWebDescription": "Publishing and link management are available in the Orca desktop app.",
           "signInDescription": "Use your Orca account to publish bundles and manage their links. Recipients do not need an account.",
-          "signingIn": "Signing in…",
           "signInAgain": "Sign in again",
           "signIn": "Sign in to Orca",
           "howToTitle": "How to share skills",
@@ -16825,7 +16825,6 @@
           "refresh": "Refresh",
           "signInHeading": "Sign in to Orca",
           "signInCopy": "Sign in to view and manage artifacts shared through your account.",
-          "signingIn": "Signing in…",
           "signIn": "Sign in to Orca",
           "empty": "No shared artifacts",
           "emptyCopy": "Open an HTML or Markdown file and select Share as artifact, or ask your agent to share it.",
@@ -16874,7 +16873,6 @@
           "confirmDescription": "This publishes the current file at a link anyone with the URL can view.",
           "accountTitle": "Orca account",
           "accountDescription": "Sign in to create and manage this link.",
-          "signingIn": "Signing in…",
           "signInAgain": "Sign in again",
           "signIn": "Sign in",
           "publishingOffTitle": "Artifact sharing is off",
@@ -16979,7 +16977,6 @@
         "4b7d2e8f1a": "Connect Orca Mobile to this desktop across cellular or any Wi-Fi.",
         "9a4c6b2d7e": "Skill sharing",
         "3d8e5f1b9c": "Share skills behind an unlisted link and install them on any machine you use.",
-        "7e1a9c4d2f": "Signing in…",
         "c5b3e8a17d": "Sign in to Orca"
       }
     },
@@ -17197,6 +17194,8 @@
         "countOne": "1 tool call",
         "countN": "{{value0}} tool calls",
         "moreCalls": "+{{value0}} more",
+        "failedCount": "{{value0}} failed",
+        "failedCallsLabel": "Failed tool calls: {{value0}}",
         "runningPreview": "Running {{preview}}",
         "runningCommand": "Running command",
         "runningNamedPreview": "Running {{toolName}} {{preview}}",
@@ -17319,7 +17318,13 @@
         "title": "Allow {{value0}}?",
         "allow": "Allow",
         "deny": "Deny",
-        "cancel": "Cancel"
+        "cancel": "Cancel",
+        "reason": "Reason",
+        "blockedPath": "Blocked path",
+        "askRule": "Ask rule",
+        "plan": {
+          "file": "Plan file"
+        }
       },
       "launchPromptNotDelivered": "Not delivered — check the terminal",
       "structuredSessionCloseFailed": "Could not close this chat session",
