@@ -356,21 +356,43 @@ describe('tui-idle evidence ranking', () => {
     ).toMatchObject({ state: 'ready', source: 'title', agent: 'codex' })
   })
 
-  it('does not let a retained explicit title satisfy a new wait operation', async () => {
+  // #12536: asking whether a terminal is idle must answer from what is true now. Fencing this
+  // read against the operation that performs it demands a transition that already happened, so an
+  // idle, silent agent never settles and the wait runs to timeout.
+  it('settles a wait that starts on an already-idle terminal', async () => {
     const pty = makeTuiIdlePty({
       lastAgentStatus: 'idle',
       lastOscTitle: EXPLICIT_IDLE_TITLE
     })
     const { wait } = createWait({ pty, agent: 'codex' })
+    await expect(
+      wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 5_000 })
+    ).resolves.toMatchObject({ satisfied: true })
+  })
+
+  // The protection a retained title needs is not "was this byte newer than my operation" — it is
+  // that an unfinished provider turn has not been retracted. A stale working row is not permission
+  // to promote the idle title that was already on screen before that turn opened.
+  it('does not let a retained explicit title satisfy a wait while a provider turn is unfinished', async () => {
+    const pty = makeTuiIdlePty({
+      lastAgentStatus: 'idle',
+      lastOscTitle: EXPLICIT_IDLE_TITLE
+    })
+    const { wait } = createWait({
+      pty,
+      agent: 'codex',
+      firstPartyStatus: {
+        state: 'working',
+        updatedAt: Date.now() - 31 * 60 * 1000
+      }
+    })
     const result = wait.wait(HANDLE, { condition: 'tui-idle', timeoutMs: 5_000 })
     const settled = watch(result)
 
     await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
     expect(settled).not.toHaveBeenCalled()
-
-    pty.lastOscTitleAt = 2
-    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS)
-    await expect(result).resolves.toMatchObject({ satisfied: true })
+    await vi.advanceTimersByTimeAsync(5_000)
+    await expect(result).resolves.toMatchObject({ satisfied: false })
   })
 
   it('rejects newer readiness evidence from a replacement attachment', () => {
