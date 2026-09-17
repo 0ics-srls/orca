@@ -23,7 +23,6 @@ import {
 import { parkUntilHostMirrorHandleLands } from './host-mirror-handle-gap-wait'
 import { resolveWorkspaceTerminalHostAuthority } from './workspace-terminal-host-authority'
 import { parkUntilHostSessionMirrorHydrates } from '@/runtime/host-session-mirror-hydration'
-import { isAgentStatusTurnComplete } from '../../../shared/agent-completion-time'
 
 export type { ResumeSleepingAgentSessionsOptions } from './sleeping-agent-session-launch'
 
@@ -137,10 +136,12 @@ function activeOrQueuedResumeClaimsProviderSession(
     ) {
       return true
     }
-    // A launch-membership boundary row is a `done` that never carried a turn, so it must keep
-    // claiming the provider session rather than read as a finished one and release the record.
+    // Deliberately `state`, not the turn-complete predicate: a launch-membership row carries no
+    // provider session, so the equality guard above already excludes it and widening this arm to
+    // boundary rows would only reach SessionStart/compact rows — whose records this claim then
+    // clears, turning a pending auto-resume into a deleted one.
     if (
-      !isAgentStatusTurnComplete(entry) &&
+      entry.state !== 'done' &&
       worktreeTabIds.has(tabId ?? '') &&
       entry.worktreeId === record.worktreeId
     ) {
