@@ -1,4 +1,5 @@
 import { EMPTY_NARROWED_BY_KEY } from './graph-state'
+import { narrowedEntriesEqual } from './mobile-session-capture'
 import type { TabKeyedPartition, TerminalTabOwnershipIndex } from './types'
 
 /**
@@ -41,7 +42,7 @@ export function createTabKeyedRecordPartitioner<T>(): (
     const partition = new Map<string, ReadonlyMap<string, T>>(built)
     for (const [worktreeId, bucket] of built) {
       const previousBucket = previous?.get(worktreeId)
-      if (previousBucket && bucketsEqual(previousBucket, bucket)) {
+      if (previousBucket && narrowedEntriesEqual(previousBucket, bucket)) {
         partition.set(worktreeId, previousBucket)
       }
     }
@@ -58,16 +59,4 @@ export function tabKeyedRecordBucket<T>(
   worktreeId: string
 ): ReadonlyMap<string, T> {
   return partition.get(worktreeId) ?? EMPTY_NARROWED_BY_KEY
-}
-
-function bucketsEqual<T>(a: ReadonlyMap<string, T>, b: ReadonlyMap<string, T>): boolean {
-  if (a.size !== b.size) {
-    return false
-  }
-  for (const [key, value] of a) {
-    if (b.get(key) !== value) {
-      return false
-    }
-  }
-  return true
 }
