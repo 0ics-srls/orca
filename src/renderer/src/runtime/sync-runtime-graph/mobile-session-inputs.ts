@@ -10,10 +10,8 @@ import {
   EMPTY_WORKTREE_TERMINAL_TABS,
   EMPTY_WORKTREE_UNIFIED_TABS,
   EMPTY_LAYOUT_BY_WORKTREE,
-  getMobileSessionAgentStatusCache,
   getTerminalTabOwnershipIndex,
-  graphState,
-  setMobileSessionAgentStatusCache
+  graphState
 } from './graph-state'
 import type {
   MobileSessionAgentStatusByWorktree,
@@ -72,7 +70,7 @@ export function buildMobileSessionAgentStatusByWorktree(
   agentStatusByPaneKey: AppState['agentStatusByPaneKey'],
   tabsByWorktree: AppState['tabsByWorktree']
 ): MobileSessionAgentStatusByWorktree {
-  const cached = getMobileSessionAgentStatusCache()
+  const cached = graphState.cachedMobileSessionAgentStatus
   if (cached?.agentStatusSource === agentStatusByPaneKey && cached.tabsSource === tabsByWorktree) {
     return cached.byWorktreeId
   }
@@ -103,11 +101,11 @@ export function buildMobileSessionAgentStatusByWorktree(
       byWorktreeId.set(worktreeId, previousBucket)
     }
   }
-  setMobileSessionAgentStatusCache({
+  graphState.cachedMobileSessionAgentStatus = {
     agentStatusSource: agentStatusByPaneKey,
     tabsSource: tabsByWorktree,
     byWorktreeId
-  })
+  }
   return byWorktreeId
 }
 

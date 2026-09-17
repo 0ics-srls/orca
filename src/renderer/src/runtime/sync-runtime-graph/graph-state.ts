@@ -67,6 +67,7 @@ export const graphState = {
   cachedOpenFilesProjection: null as OpenFilesProjectionCache | null,
   cachedBrowserWorkspacesProjection: null as BrowserWorkspacesProjectionCache | null,
   cachedBrowserPagesProjection: null as BrowserPagesProjectionCache | null,
+  cachedMobileSessionAgentStatus: null as MobileSessionAgentStatusCache | null,
   cachedOpenFileIndexesSource: null as AppState['openFiles'] | null,
   cachedOpenFileIndexes: null as OpenFileIndexes | null,
   cachedEditorDraftHashes: null as EditorDraftHashCache | null,
@@ -76,22 +77,11 @@ export const graphState = {
   hasCachedMobileTerminalTheme: false
 }
 
-// Why module-local and not `graphState` fields: these are scan memos owned by this module,
-// and a plain `let` carries its nullable type without a cast.
-let ambiguousTerminalTabIdsCache: TerminalTabOwnershipIndex | null = null
-let mobileSessionAgentStatusCache: MobileSessionAgentStatusCache | null = null
-
-export function getMobileSessionAgentStatusCache(): MobileSessionAgentStatusCache | null {
-  return mobileSessionAgentStatusCache
-}
-
-export function setMobileSessionAgentStatusCache(cache: MobileSessionAgentStatusCache): void {
-  mobileSessionAgentStatusCache = cache
-}
+let terminalTabOwnershipIndexCache: TerminalTabOwnershipIndex | null = null
 
 export function resetRuntimeGraphSliceScanCaches(): void {
-  ambiguousTerminalTabIdsCache = null
-  mobileSessionAgentStatusCache = null
+  terminalTabOwnershipIndexCache = null
+  graphState.cachedMobileSessionAgentStatus = null
 }
 
 export function registeredTerminalTabKey(
@@ -170,7 +160,7 @@ export function findRegisteredTerminalTab(
 export function getTerminalTabOwnershipIndex(
   tabsByWorktree: AppState['tabsByWorktree']
 ): TerminalTabOwnershipIndex {
-  const cached = ambiguousTerminalTabIdsCache
+  const cached = terminalTabOwnershipIndexCache
   if (cached?.source === tabsByWorktree) {
     return cached
   }
@@ -200,7 +190,7 @@ export function getTerminalTabOwnershipIndex(
       ? previousAmbiguous
       : ambiguousTabIds
   }
-  ambiguousTerminalTabIdsCache = index
+  terminalTabOwnershipIndexCache = index
   return index
 }
 
