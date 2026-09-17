@@ -2,26 +2,26 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createWorktreeWithNameRetry } from '../../../../../mobile/src/tasks/worktree-create-retry'
-import type { RpcClient } from '../../../../../mobile/src/transport/rpc-client'
-import { markRpcDeliveryUnknown } from '../../../../../mobile/src/transport/rpc-delivery-ambiguity'
-import { LogicalClientCutoverError } from '../../../../../mobile/src/transport/stable-logical-rpc-client'
+import { createWorktreeWithNameRetry } from '../../mobile/src/tasks/worktree-create-retry'
+import type { RpcClient } from '../../mobile/src/transport/rpc-client'
+import { markRpcDeliveryUnknown } from '../../mobile/src/transport/rpc-delivery-ambiguity'
+import { LogicalClientCutoverError } from '../../mobile/src/transport/stable-logical-rpc-client'
 import {
   AGENT_SESSION_MAX_NEW_OPERATION_AGE_MS,
   AGENT_SESSION_OPERATION_FUTURE_SKEW_MS
-} from '../../../../shared/agent-session-host-authority'
-import { setStructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-registry'
-import type { StructuredAgentSessionHost } from '../../../native-chat/agent-session-wire/structured-agent-session-host'
-import { AgentSessionRecordStore } from '../../agent-session-record-store'
-import type { OrcaRuntimeService } from '../../orca-runtime'
-import { RpcDispatcher } from '../dispatcher'
-import { runtimeStub } from './agent-launch.test-fixture'
+} from '../../src/shared/agent-session-host-authority'
+import { setStructuredAgentSessionHost } from '../../src/main/native-chat/agent-session-wire/structured-agent-session-registry'
+import type { StructuredAgentSessionHost } from '../../src/main/native-chat/agent-session-wire/structured-agent-session-host'
+import { AgentSessionRecordStore } from '../../src/main/runtime/agent-session-record-store'
+import type { OrcaRuntimeService } from '../../src/main/runtime/orca-runtime'
+import { RpcDispatcher } from '../../src/main/runtime/rpc/dispatcher'
+import { runtimeStub } from '../../src/main/runtime/rpc/methods/agent-launch.test-fixture'
 
 const createStructuredSession = vi.fn()
-vi.mock('./structured-agent-session-create', () => ({
+vi.mock('../../src/main/runtime/rpc/methods/structured-agent-session-create', () => ({
   createStructuredAgentSessionForWorktree: (...args: unknown[]) => createStructuredSession(...args)
 }))
-const { AGENT_LAUNCH_METHODS } = await import('./agent-launch')
+const { AGENT_LAUNCH_METHODS } = await import('../../src/main/runtime/rpc/methods/agent-launch')
 
 let directory: string
 let store: AgentSessionRecordStore
