@@ -33,6 +33,7 @@ function serviceWithMode(mode: { current: MobilePairingConnectionMode }): {
     demandLedger: { acquireTransient: () => release },
     refreshDemand: () => {}
   })
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: withTransientDemand is private; the fixture calls it directly and supplies only the fields it touches.
   const host = service as unknown as TransientDemandHost
   return {
     run: (operation) => host.withTransientDemand.call(service, 'pairing', 'device-1', operation),
@@ -42,7 +43,7 @@ function serviceWithMode(mode: { current: MobilePairingConnectionMode }): {
 
 describe('DesktopRelayService policy flip during an in-flight grant', () => {
   it('names the LAN flip rather than the generic control-not-active code', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const { run, release } = serviceWithMode(mode)
 
     await expect(
@@ -56,7 +57,7 @@ describe('DesktopRelayService policy flip during an in-flight grant', () => {
   })
 
   it('does not rewrite a failure the policy had nothing to do with', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const { run } = serviceWithMode(mode)
 
     await expect(
@@ -67,7 +68,7 @@ describe('DesktopRelayService policy flip during an in-flight grant', () => {
   })
 
   it('still refuses at the entry gate when the policy already excludes the device', async () => {
-    const mode = { current: 'local-only' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'local-only' }
     const { run } = serviceWithMode(mode)
     const operation = vi.fn(async () => 'unreachable')
 
@@ -76,7 +77,7 @@ describe('DesktopRelayService policy flip during an in-flight grant', () => {
   })
 
   it('leaves a successful grant alone even if the policy flips under it', async () => {
-    const mode = { current: 'automatic' as MobilePairingConnectionMode }
+    const mode: { current: MobilePairingConnectionMode } = { current: 'automatic' }
     const { run } = serviceWithMode(mode)
 
     await expect(
