@@ -34,6 +34,7 @@
     "test:repro:remote-agent-session": "pnpm run build:cli && pnpm run build:electron-vite && node config/scripts/remote-agent-session-authority-repro.mjs",
     "capture:agent-transcript": "node config/scripts/ensure-native-runtime.mjs --runtime=node && node config/scripts/capture-agent-pty-transcript.mjs",
     "check:reliability-gates": "node config/scripts/check-reliability-gates.mjs",
+    "check:no-nul-bytes": "node config/scripts/check-no-nul-bytes.mjs",
     "check:max-lines-ratchet": "node config/scripts/check-max-lines-ratchet.mjs",
     "check:ts-nocheck-ratchet": "node config/scripts/check-ts-nocheck-ratchet.mjs",
     "check:runtime-electron-ratchet": "node config/scripts/check-runtime-electron-ratchet.mjs",
@@ -315,6 +316,7 @@
   },
   "lint-staged": {
     "{*.{ts,tsx,js,jsx,mjs,mts,cts},!(cloud)/**/*.{ts,tsx,js,jsx,mjs,mts,cts}}": [
+      "node config/scripts/check-no-nul-bytes.mjs",
       "oxlint",
       "oxlint --config config/oxlint-react-doctor.json",
       "oxfmt --write"
