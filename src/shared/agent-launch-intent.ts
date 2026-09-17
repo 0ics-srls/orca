@@ -48,18 +48,6 @@ export type AgentLaunchTarget =
  *  terminal agent: a running PTY keeps its execution transport. */
 export type AgentLaunchReusedTerminal = { handle: string }
 
-/**
- * Facts that only the calling surface knows and that the route has to see. These are inputs to the
- * decision, not requests: a caller states that it is passing custom agent arguments, and the host
- * concludes that a terminal is required.
- */
-export type AgentLaunchCustomization = {
-  /** Explicit per-launch agent argv. Only a TUI applies these. */
-  agentArgs?: string
-  /** A subdirectory the agent should start in. Only a TUI applies this. */
-  cwd?: string
-}
-
 export type AgentLaunchIntent = {
   agent: TuiAgent
   target: AgentLaunchTarget
@@ -67,37 +55,82 @@ export type AgentLaunchIntent = {
   /** Seeded launch options, narrowed by the host to what a structured create accepts. */
   sessionOptions?: Readonly<Record<string, unknown>>
   reuseTerminal?: AgentLaunchReusedTerminal
-  customization?: AgentLaunchCustomization
 }
 
 /** The surface the host actually created. */
 export type AgentLaunchOutcome =
   | { kind: 'structured'; sessionId: string; handle: string }
-  | { kind: 'terminal'; handle: string; warning?: string }
+  | { kind: 'terminal'; handle: string }
+/**
+ * What became of the launch text.
+ *
+ * An enum rather than a boolean because "not delivered" and "handed to a surface that delivers it
+ * out of band" are different answers, and a caller deciding whether to resend needs to tell them
+ * apart. A receipt may under-claim — reporting a delivery it cannot vouch for as `not-delivered` is
+ * a wasted resend, while over-claiming loses the text silently.
+ */
+export type AgentLaunchPromptOutcome = AgentLaunchPromptDisposal['outcome']
 
-/** Whether the launch text was delivered, for a caller that needs to report or retry it. */
+/** `messageId` hangs off the `journaled` arm rather than sitting optional beside all three: a
+ *  producer must not be able to claim the text was committed and then not say where. */
+type AgentLaunchPromptDisposal =
+  /** Committed to the session's transcript, which `messageId` names. */
+  | { outcome: 'journaled'; messageId: string }
+  /** Written to a PTY, whose consumption only the pane's owner observes. */
+  | { outcome: 'handed-to-terminal' }
+  /** Not delivered by this call; the caller still owns the text. */
+  | { outcome: 'not-delivered' }
+
 export type AgentLaunchPromptReceipt = {
   delivery: AgentLaunchPromptDelivery
-  delivered: boolean
-}
+} & AgentLaunchPromptDisposal
 
 export type AgentLaunchResult = {
   outcome: AgentLaunchOutcome
   /** The workspace the agent runs in, resolved or created. */
   worktreeId: string
+  /**
+   * The launch completed but something in it did not: a startup terminal that failed to spawn,
+   * untracked files that could not be copied. `worktree.create` returns this at the top level and
+   * mobile already surfaces it, so a launch that drops it lands the user on a workspace that is
+   * quietly incomplete.
+   *
+   * Top level rather than on the outcome, and deliberately the ONLY place a launch warning lives:
+   * it is produced by the create as often as by the surface, it applies to a structured session
+   * and a terminal alike, and a reader should not have to branch on `outcome.kind` to discover
+   * that the workspace it just opened is missing something.
+   */
+  warning?: string
   /** Why the outcome is what it is — always populated, so a downgrade is never silent. */
   receipt: AgentLaunchModeReceipt
   prompt?: AgentLaunchPromptReceipt
 }
 
+export type AgentLaunchMode = 'structured' | 'terminal'
+
+/** Why a launch ran in the mode it did. `user_default` is the preference being honoured; every
+ *  other member is a reason the preference could not be applied to this launch. */
+export type AgentLaunchModeReason =
+  | 'user_default'
+  | 'remote_execution_host'
+  | 'reused_terminal'
+  | 'agent_without_structured_session'
+  | 'tui_launch_command'
+  | 'structured_sessions_unavailable'
+  | 'structured_support_unknown'
+  | 'wsl_execution_runtime'
+  | 'codex_on_windows'
+  | 'structured_unsupported_on_host'
+
 /** Restates `WorkerStartModeReceipt` in surface-neutral terms so orchestration's receipt and a
  *  mobile or renderer launch report the same vocabulary. */
 export type AgentLaunchModeReceipt = {
-  mode: 'structured' | 'terminal'
+  /** The mode the launch actually ran in. */
+  mode: AgentLaunchMode
   /** The user's settings default for a new agent tab. */
-  preferred: 'structured' | 'terminal'
-  reason: string
-  /** One sentence, always present. */
+  preferred: AgentLaunchMode
+  reason: AgentLaunchModeReason
+  /** One sentence, always present, so a fallback is never silent. */
   detail: string
 }
 
@@ -122,12 +155,13 @@ export const AGENT_LAUNCH_RESERVED_CREATE_FIELDS = [
 /** Strips the reserved agent fields from a create payload. Callers migrating from
  *  `worktree.create` pass their existing params; this keeps a stale `startupAgent` from
  *  re-creating the agent-first path the router exists to replace. */
-export function withoutReservedAgentCreateFields(
-  create: Readonly<Record<string, unknown>>
-): Record<string, unknown> {
+export function withoutReservedAgentCreateFields<Create extends Readonly<Record<string, unknown>>>(
+  create: Create
+): Create {
   const stripped: Record<string, unknown> = { ...create }
   for (const field of AGENT_LAUNCH_RESERVED_CREATE_FIELDS) {
     delete stripped[field]
   }
-  return stripped
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every reserved field is optional on a create payload, so dropping them leaves the caller's own shape.
+  return stripped as Create
 }

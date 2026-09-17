@@ -79,6 +79,7 @@ export const AI_VAULT_SESSION_TITLES_RUNTIME_CAPABILITY = 'aiVault.session-title
 // offscreen backend). Advertised only when that backend is actually available, so
 // clients never fall back to a local desktop browser tab for a remote-owned page.
 export const BROWSER_HEADLESS_RUNTIME_CAPABILITY = 'browser.headless.v1' as const
+export const BROWSER_IDENTITY_RUNTIME_CAPABILITY = 'browser.identity.v1' as const
 export const BROWSER_SCREENCAST_RUNTIME_CAPABILITY = 'browser.screencast.v1' as const
 export const BROWSER_CERTIFICATE_TRUST_RUNTIME_CAPABILITY = 'browser.certificate-trust.v1' as const
 // Why: older hosts discard browser.tabCreate's page field, so clients may only
@@ -251,7 +252,8 @@ export const NOTIFICATIONS_REMOTE_PUSH_RUNTIME_CAPABILITY = 'notifications.remot
  * picks: a structured session it can open, or a terminal agent. A client that renders only one of
  * the two keeps using the surface-specific methods.
  */
-export const AGENT_LAUNCH_RUNTIME_CAPABILITY = 'agent.launch.v1' as const
+// v2 makes prompt delivery an outcome union and top-level warnings the only supported shape.
+export const AGENT_LAUNCH_RUNTIME_CAPABILITY = 'agent.launch.v2' as const
 
 // Generic native clients include the CLI and must not claim Electron-only page
 // placement support.
