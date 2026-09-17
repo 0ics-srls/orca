@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import { StructuredAgentSessionHost } from './structured-agent-session-host'
+import { AgentSessionJournal } from '../agent-session-journal/journal-store'
 import { pendingApproval } from './structured-agent-session-restart-resume-test-harness'
 import { restartContinuationEnvelope } from './structured-agent-session-restart-continuation'
 import { STRUCTURED_AGENT_SESSION_RESTART_CONTINUATION_CALLER } from './structured-agent-session-restart-resume-wiring'
@@ -177,7 +178,9 @@ it.each(['turn', 'message'] as const)(
       { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
     ])
     expect(dispatch).not.toHaveBeenCalled()
-    expect(host.journalSnapshot(SESSION).submissions).toHaveLength(0)
+    expect(host.journalSnapshot(SESSION).submissions).toMatchObject([
+      { dispatchState: 'rejected', reason: 'agent_session_restart_work_superseded' }
+    ])
     host.release(SESSION, 'pane')
     expect(host.isHeld(SESSION)).toBe(false)
   }
@@ -212,7 +215,8 @@ it('refuses a completed turn even when its original delivery acknowledgement is 
     { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
   ])
   expect(dispatch).not.toHaveBeenCalled()
-  expect(host.journalSnapshot(SESSION).submissions).toHaveLength(1)
+  expect(host.journalSnapshot(SESSION).submissions).toHaveLength(2)
+  expect(host.journalSnapshot(SESSION).submissions[1]?.dispatchState).toBe('rejected')
   host.release(SESSION, 'pane')
   expect(host.isHeld(SESSION)).toBe(false)
 })
@@ -273,7 +277,8 @@ it.each([
       { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
     ])
     expect(dispatch).not.toHaveBeenCalled()
-    expect(host.journalSnapshot(SESSION).submissions).toHaveLength(1)
+    expect(host.journalSnapshot(SESSION).submissions).toHaveLength(2)
+    expect(host.journalSnapshot(SESSION).submissions[1]?.dispatchState).toBe('rejected')
     host.release(SESSION, 'pane')
     expect(host.isHeld(SESSION)).toBe(false)
     expect(await host.restartResume.continueAfterRestart([SESSION], 'retry')).toEqual({
@@ -289,6 +294,72 @@ it.each([
     warning.mockRestore()
   }
 )
+
+it.each(['completed', 'approval', 'question'] as const)(
+  'refuses provider %s evidence accepted while recording the continuation',
+  async (event) => {
+    const { host, acquire, dispatch } = await interruptedRestart()
+    await host.restartResume.list()
+    await host.hold(SESSION, 'pane')
+    const events = acquire.mock.calls[0]?.[0].events
+    if (!events) {
+      throw new Error('missing resumed provider event sink')
+    }
+    const append = AgentSessionJournal.prototype.appendSubmission
+    const writing = vi.spyOn(AgentSessionJournal.prototype, 'appendSubmission')
+    writing.mockImplementationOnce(async function (this: AgentSessionJournal, input) {
+      const cursor = await append.call(this, input)
+      events.appendItem(
+        { provider: 'codex', threadId: THREAD, turnId: 'interrupted-turn', ordinal: 1 },
+        event === 'completed'
+          ? { kind: 'turn', turnId: 'interrupted-turn', state: 'completed' }
+          : { ...pendingApproval().body, question: 'Which action?', kind: event },
+        { lifecycle: true }
+      )
+      return cursor
+    })
+    try {
+      const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+      expect(result.continued).toMatchObject([{ outcome: 'refused' }])
+      expect(dispatch).not.toHaveBeenCalled()
+    } finally {
+      writing.mockRestore()
+      host.release(SESSION, 'pane')
+    }
+  }
+)
+
+it('refuses events accepted after the dispatch barrier was captured', async () => {
+  const { host, acquire, dispatch } = await interruptedRestart()
+  await host.restartResume.list()
+  await host.hold(SESSION, 'pane')
+  const events = acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing resumed provider event sink')
+  }
+  const flush = host.flushStreamedEvents
+  const draining = vi.spyOn(host, 'flushStreamedEvents').mockImplementationOnce(async (id) => {
+    await flush(id)
+    for (let ordinal = 2; ordinal < 6; ordinal += 1) {
+      events.appendItem(
+        { provider: 'codex', threadId: THREAD, turnId: 'interrupted-turn', ordinal },
+        ordinal === 5 ? pendingApproval().body : { kind: 'status', text: 'Provider tail' }
+      )
+    }
+  })
+  try {
+    const result = await host.restartResume.continueAfterRestart([SESSION], 'modal')
+    expect(result.continued).toMatchObject([
+      { outcome: 'refused', reason: 'agent_session_admission_evidence_unavailable' }
+    ])
+    expect(dispatch).not.toHaveBeenCalled()
+    await flush(SESSION)
+    expect(dispatch).not.toHaveBeenCalled()
+  } finally {
+    draining.mockRestore()
+    host.release(SESSION, 'pane')
+  }
+})
 
 it('replays the same logical continuation through the durable send ledger', async () => {
   const { host, store, dispatch, marker } = await interruptedRestart()
@@ -313,6 +384,7 @@ it.each([false, true])(
   'keeps dispatched delivery unconfirmed when settlement fails (uncertainty write fails: %s)',
   async (uncertaintyFails) => {
     const { host, store, dispatch } = await interruptedRestart()
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
     expect(await host.restartResume.list()).toHaveLength(1)
     await host.hold(SESSION, 'pane')
     const settle = store.recordOperationOutcome.bind(store)
@@ -336,6 +408,10 @@ it.each([false, true])(
     expect(host.isHeld(SESSION)).toBe(false)
     await host.restartResume.continueAfterRestart([SESSION], 'retry')
     expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(warning.mock.calls.flat()).not.toContainEqual(
+      expect.objectContaining({ message: 'operation outcome could not be persisted' })
+    )
+    warning.mockRestore()
   }
 )
 

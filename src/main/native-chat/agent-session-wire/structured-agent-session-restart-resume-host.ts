@@ -2,6 +2,7 @@
 // A crash after take loses the offer; ordinary chat acquisition remains independent.
 
 import { randomUUID } from 'node:crypto'
+import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import type {
@@ -143,13 +144,18 @@ export function createStructuredAgentSessionRestartResume(
   const derive = (
     markers: readonly AgentSessionResumeMarker[],
     leaseState: 'must-be-released' | 'may-be-held',
-    providerStopped = false
+    providerStopped = false,
+    pendingContinuationId?: string
   ): StructuredAgentSessionResumeCandidate[] => {
     const items = new Map<string, AgentJournalRenderItem[]>()
     const itemsFor = (sessionId: string): AgentJournalRenderItem[] => {
       let snapshot = items.get(sessionId)
       if (!snapshot) {
         snapshot = sessions.get(sessionId)?.journal.snapshot().items ?? []
+        if (pendingContinuationId) {
+          const ownItemId = agentJournalSubmissionKey(pendingContinuationId)
+          snapshot = snapshot.filter((item) => item.itemId !== ownItemId)
+        }
         items.set(sessionId, snapshot)
       }
       return snapshot
@@ -242,9 +248,12 @@ export function createStructuredAgentSessionRestartResume(
             send: (input) =>
               surfaces.send({
                 ...input,
-                // Acquisition reconciles history; validate again inside the serialized send.
+                // The pending continuation itself is not newer user work.
                 beforeRun: () => {
-                  if (derive([marker], 'may-be-held').length !== 1) {
+                  if (
+                    derive([marker], 'may-be-held', false, input.envelope.clientOperationId)
+                      .length !== 1
+                  ) {
                     throw new RestartContinuationSupersededError()
                   }
                 }

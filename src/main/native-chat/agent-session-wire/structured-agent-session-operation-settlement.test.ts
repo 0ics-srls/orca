@@ -16,6 +16,8 @@ import {
   HOST_TEST_THREAD as THREAD
 } from './structured-agent-session-host-test-data'
 import type { AgentSessionTurnContext } from './structured-agent-session-turns'
+import { sendPlan } from './structured-agent-session-mutation-plans'
+import { hostTestMessage } from './structured-agent-session-host-test-data'
 
 async function context(): Promise<AgentSessionTurnContext> {
   return {
@@ -83,32 +85,52 @@ it.each([1, 2])(
   }
 )
 
-it.each(['stalled', 'failed'] as const)(
+it.each(['stalled', 'failed', 'stalled-with-refusal-write'] as const)(
   'refuses a %s admission barrier without late dispatch',
   async (barrier) => {
     const ctx = await context()
     const { store } = hostTestState()
     vi.spyOn(store, 'recordOperationOutcome').mockResolvedValue()
     const pending = Promise.withResolvers<void>()
-    ctx.flushStreamedEvents = () =>
-      barrier === 'stalled' ? pending.promise : Promise.reject(new Error('disk unavailable'))
+    const waiting = Promise.withResolvers<void>()
+    const refusing = Promise.withResolvers<void>()
+    if (barrier === 'stalled-with-refusal-write') {
+      vi.spyOn(ctx.journal, 'resolveDispatch').mockImplementationOnce(() => {
+        refusing.resolve()
+        return pending.promise.then(() => ctx.journal.cursor())
+      })
+      vi.spyOn(console, 'warn').mockImplementation(() => {})
+    }
+    ctx.flushStreamedEvents = () => {
+      waiting.resolve()
+      return barrier === 'failed' ? Promise.reject(new Error('disk unavailable')) : pending.promise
+    }
     const beforeRun = vi.fn()
-    const run = vi.fn(async () => ({ ok: true as const, value: 'sent' }))
+    const body = hostTestMessage('Continue the interrupted work')
+    const operation = envelope('agentSession.send', { body })
     vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
     const result = runSettledAgentSessionMutation({
       store,
       operationCallerKey: 'test',
-      envelope: envelope('agentSession.send', {}),
+      envelope: operation,
       context: ctx,
-      plan: { method: 'agentSession.send', fields: {}, beforeRun, run, replay: () => null }
+      plan: sendPlan({ envelope: operation, body, beforeRun })
     }).catch((error: unknown) => error)
+    await waiting.promise
     await vi.advanceTimersByTimeAsync(AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS)
+    if (barrier === 'stalled-with-refusal-write') {
+      await refusing.promise
+      await vi.advanceTimersByTimeAsync(AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS)
+    }
     expect(await result).toBeInstanceOf(AgentSessionPreDispatchError)
     expect(beforeRun).not.toHaveBeenCalled()
-    expect(run).not.toHaveBeenCalled()
+    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
+    expect(ctx.journal.submissions()[0]?.dispatchState).toBe(
+      barrier === 'stalled-with-refusal-write' ? 'pending' : 'rejected'
+    )
     pending.resolve()
     await vi.advanceTimersByTimeAsync(0)
-    expect(run).not.toHaveBeenCalled()
+    expect(ctx.adapter.dispatch).not.toHaveBeenCalled()
     expect(vi.getTimerCount()).toBe(0)
   }
 )

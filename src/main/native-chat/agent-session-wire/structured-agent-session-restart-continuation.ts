@@ -139,7 +139,7 @@ export async function continueStructuredAgentSessionAfterRestart(
       throw error
     }
     // Persistence can fail after dispatch; a thrown send is not proof of non-delivery.
-    console.warn('[structured-agent-session] restart continuation send failed', error)
+    console.warn('[structured-agent-session] restart continuation send failed')
     return null
   })
   if (!sent) {

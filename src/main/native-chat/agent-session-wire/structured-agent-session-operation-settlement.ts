@@ -1,4 +1,3 @@
-import { withTimeout } from '../../../shared/promise-timeout-fallback'
 import type { AgentSessionMutationEnvelope } from '../../../shared/agent-session-wire'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
 import type { MutationPlan } from './structured-agent-session-mutation-plans'
@@ -34,19 +33,10 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
     if (input.plan.markUnknownBeforeRun) {
       await settle({ status: 'unknown' })
     }
-    if (input.plan.beforeRun) {
-      // Admission predicates must include provider lifecycle already accepted by the host.
-      const ready = await withTimeout(
-        input.context.flushStreamedEvents().then(() => true),
-        AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
-        false
-      )
-      if (!ready) {
-        throw new AgentSessionPreDispatchError('agent_session_admission_evidence_unavailable')
-      }
-      input.plan.beforeRun()
-    }
-    outcome = await input.plan.run(input.context)
+    outcome = await input.plan.run({
+      ...input.context,
+      ...(input.plan.beforeRun ? { beforeDispatch: input.plan.beforeRun } : {})
+    })
     await settle(
       outcome.ok
         ? (input.plan.settledOutcome?.(outcome.value) ?? {

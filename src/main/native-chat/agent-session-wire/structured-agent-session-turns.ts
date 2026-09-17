@@ -23,6 +23,11 @@ import type {
   StructuredAgentSessionAdapter
 } from './structured-agent-session-adapter'
 import { validatePendingPrompt } from './structured-agent-session-prompt-state'
+import { withTimeout } from '../../../shared/promise-timeout-fallback'
+import {
+  AgentSessionPreDispatchError,
+  AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS
+} from './structured-agent-session-operation-settlement'
 export { performSetOption } from './structured-agent-session-turns-options'
 export { performPrompt } from './structured-agent-session-turns-prompt'
 
@@ -38,6 +43,9 @@ export type AgentSessionTurnContext = {
   publish: () => void
   /** Drains provider lifecycle already accepted by the execution host. */
   flushStreamedEvents: () => Promise<void>
+  hasPendingStreamedEvents?: () => boolean
+  /** Re-derives authorization after submission persistence, immediately before provider dispatch. */
+  beforeDispatch?: () => void
   now: () => number
 }
 
@@ -57,6 +65,18 @@ async function dispatchSafely(
   body: AgentJournalMessageItem,
   requestedAt: number | undefined
 ): Promise<AgentSessionDispatchOutcome> {
+  if (ctx.beforeDispatch) {
+    const ready = await withTimeout(
+      ctx.flushStreamedEvents().then(() => true),
+      AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
+      false
+    )
+    // A fixed barrier may finish while newer events are still queued; never dispatch past them.
+    if (!ready || ctx.hasPendingStreamedEvents?.()) {
+      throw new AgentSessionPreDispatchError('agent_session_admission_evidence_unavailable')
+    }
+    ctx.beforeDispatch()
+  }
   try {
     return await ctx.adapter.dispatch({
       sessionId: ctx.sessionId,
@@ -123,7 +143,29 @@ export async function performSend(
   const requestedAt = ctx.journal
     .submissions()
     .find((entry) => entry.clientMessageId === input.clientMessageId)?.submittedAt
-  const outcome = await dispatchSafely(ctx, input.clientMessageId, input.body, requestedAt)
+  const outcome = await dispatchSafely(ctx, input.clientMessageId, input.body, requestedAt).catch(
+    async (error: unknown) => {
+      if (error instanceof AgentSessionPreDispatchError) {
+        const recorded = await withTimeout(
+          ctx.journal
+            .resolveDispatch({
+              clientMessageId: input.clientMessageId,
+              state: 'rejected',
+              reason: error.message,
+              fence: ctx.fence
+            })
+            .then(() => true),
+          AGENT_SESSION_ADMISSION_BARRIER_TIMEOUT_MS,
+          false
+        )
+        if (!recorded) {
+          console.warn('[structured-agent-session] pre-dispatch refusal persistence failed')
+        }
+        ctx.publish()
+      }
+      throw error
+    }
+  )
   // An admission needs no dispatch row: the submission is already pending.
   if (outcome.state === 'admitted') {
     ctx.publish()
