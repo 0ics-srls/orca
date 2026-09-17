@@ -11,6 +11,7 @@ export function requestEmptyTerminalTabRetirement(
   reason: string
 ): void {
   if (
+    typeof window === 'undefined' ||
     reason !== 'user' ||
     plan.ptyIds.length > 0 ||
     !plan.worktreeId ||

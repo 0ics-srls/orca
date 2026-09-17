@@ -35,7 +35,7 @@
     },
     "src/renderer/src/store/terminals/terminal-tab-close-empty.ts": {
       "before": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "after": "3f31758409998c7e4f08a5f6fdf9e24b4ba2c1a729681b624ace8a93d35973bb"
+      "after": "92d598a04ed0f22dc1d72ff1e506fcbebc65dcd6f8ef29342b63321e68bc8ac7"
     },
     "src/renderer/src/store/terminals/terminal-tab-close.ts": {
       "before": "b299252be75b2612fefd753807703863cd3e3984b9a72976b3d861557ce8f9c3",

@@ -89,3 +89,13 @@ it('an older preload still permits renderer close without a host acknowledgement
   expect(() => f.store.getState().closeTab(TAB)).not.toThrow()
   expect(f.retire).not.toHaveBeenCalled()
 })
+
+it('keeps store-only close available without a renderer window', () => {
+  const f = fixture()
+  f.store.getState().createTab(WORKTREE, undefined, undefined, { id: TAB, activate: false })
+  vi.stubGlobal('window', undefined)
+
+  expect(() => f.store.getState().closeTab(TAB)).not.toThrow()
+  expect(f.store.getState().tabsByWorktree[WORKTREE]).toEqual([])
+  expect(f.retire).not.toHaveBeenCalled()
+})
