@@ -183,6 +183,15 @@ describe('relay boot-time lock targets', () => {
     })
   })
 
+  it('leaves the dollar-quoted statement-stats migration byte-identical', () => {
+    // Its body is a PL/pgSQL block full of commas and parentheses. Reading the tag as anything but
+    // opaque would change the text classification sees, and it is the only such statement relay has.
+    const doBlock = relayPostgresSchemaStatements().find((statement) => statement.startsWith('DO '))
+    expect(doBlock).toBeDefined()
+    expect(sqlWithoutComments(doBlock!)).toBe(doBlock)
+    expect(takesRelationLock(doBlock!)).toBe(false)
+  })
+
   it('leaves every statement classifiable once its leading comments are stripped', () => {
     for (const statement of relayPostgresSchemaStatements()) {
       expect(sqlWithoutComments(statement)).toMatch(/^(?:CREATE|ALTER|DO)\s/i)

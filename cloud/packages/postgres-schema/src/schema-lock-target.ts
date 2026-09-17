@@ -20,6 +20,20 @@ const NOT_KEYWORD = '(?!(?:CONCURRENTLY|IF|NOT|EXISTS|ON|ONLY)\\b)'
 const IDENTIFIER = `"(?:[^"]|"")*"|${NOT_KEYWORD}[A-Za-z_][A-Za-z0-9_$]*`
 const QUALIFIED = `((?:${IDENTIFIER})(?:\\.(?:${IDENTIFIER}))?)`
 
+// `$$...$$` and `$tag$...$tag$` are opaque: a comment marker, comma, parenthesis or bracket inside
+// one is text. The closing delimiter must match the opening tag exactly, so an inner `$$` inside a
+// `$tag$` body is more text rather than the end. The tag cannot start with a digit, which is what
+// keeps a `$1` placeholder from reading as an opener.
+const DOLLAR_QUOTE = /\$(?:[A-Za-z_][A-Za-z0-9_]*)?\$/y
+
+function dollarQuoteEnd(sql: string, index: number): number | undefined {
+  DOLLAR_QUOTE.lastIndex = index
+  const opener = DOLLAR_QUOTE.exec(sql)?.[0]
+  if (opener === undefined) return undefined
+  const close = sql.indexOf(opener, index + opener.length)
+  return close === -1 ? sql.length : close + opener.length
+}
+
 // Every comment, not only the block a ';'-split schema glues above a statement. A comment between
 // two keywords (`ADD /* note */ COLUMN`) is invisible to the classification regexes AND to the
 // must-parse shapes, so it used to yield no target and no throw: the statement ran with no
@@ -44,6 +58,14 @@ export function sqlWithoutComments(statement: string): string {
       quote = character
       stripped += character
       continue
+    }
+    if (character === '$') {
+      const end = dollarQuoteEnd(statement, index)
+      if (end !== undefined) {
+        stripped += statement.slice(index, end)
+        index = end - 1
+        continue
+      }
     }
     if (character === '-' && statement[index + 1] === '-') {
       const newline = statement.indexOf('\n', index)
@@ -192,9 +214,9 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
 
 const ALTER_TABLE = /^ALTER\s+TABLE\b/i
 
-// A comma that separates ALTER TABLE subcommands rather than sitting inside a type, a default, or a
-// CHECK body. Takes comment-free SQL. Square brackets count as depth too, or an array type or
-// `DEFAULT ARRAY[1, 2]` reads as a second subcommand and fails the boot.
+// A comma that separates ALTER TABLE subcommands rather than sitting inside a type, a default, a
+// CHECK body or a dollar-quoted body. Takes comment-free SQL. Square brackets count as depth too,
+// or an array type or `DEFAULT ARRAY[1, 2]` reads as a second subcommand and fails the boot.
 function hasTopLevelComma(sql: string): boolean {
   let depth = 0
   let quote: string | undefined
@@ -205,6 +227,13 @@ function hasTopLevelComma(sql: string): boolean {
       if (sql[index + 1] === quote) index += 1
       else quote = undefined
       continue
+    }
+    if (character === '$') {
+      const end = dollarQuoteEnd(sql, index)
+      if (end !== undefined) {
+        index = end - 1
+        continue
+      }
     }
     if (character === "'" || character === '"') quote = character
     else if (character === '(' || character === '[') depth += 1

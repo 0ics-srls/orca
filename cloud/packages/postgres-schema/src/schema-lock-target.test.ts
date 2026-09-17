@@ -365,3 +365,55 @@ describe('multi-action ALTER TABLE', () => {
     expect(() => requireSchemaLockTarget('CREATE INDEX IF NOT EXISTS i ON t(a, b)')).not.toThrow()
   })
 })
+
+describe('dollar-quoted bodies', () => {
+  it('does not read a comment marker inside a dollar-quoted default as a comment', () => {
+    expect(sqlWithoutComments('ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$--$$')).toBe(
+      'ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$--$$'
+    )
+    expect(requireSchemaLockTarget('ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$--$$')).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'c',
+      skipWhen: 'present'
+    })
+  })
+
+  it('does not count a comma inside a dollar-quoted default as a second subcommand', () => {
+    expect(() =>
+      requireSchemaLockTarget('ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$a, b$$')
+    ).not.toThrow()
+  })
+
+  it('reads an inner $$ inside a tagged body as text, not as the close', () => {
+    // The closing delimiter has to match the opening tag, so the comma and the comment marker
+    // between the inner $$ pair are still inside the body.
+    const statement = 'ALTER TABLE t ADD COLUMN c TEXT DEFAULT $tag$ a $$ -- b, c $$ d $tag$'
+    expect(sqlWithoutComments(statement)).toBe(statement)
+    expect(() => requireSchemaLockTarget(statement)).not.toThrow()
+    expect(schemaLockTarget(statement)).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'c',
+      skipWhen: 'present'
+    })
+  })
+
+  it('still catches a second subcommand after a dollar-quoted default', () => {
+    expect(() =>
+      requireSchemaLockTarget('ALTER TABLE t ADD COLUMN a TEXT DEFAULT $$x, y$$, ADD COLUMN b TEXT')
+    ).toThrow(/unparsed_schema_lock_target/)
+  })
+
+  it('leaves a numbered placeholder alone, because a tag cannot start with a digit', () => {
+    expect(sqlWithoutComments('ALTER TABLE t ADD COLUMN c TEXT -- $1 and $2')).toBe(
+      'ALTER TABLE t ADD COLUMN c TEXT'
+    )
+  })
+
+  it('treats an unterminated dollar quote as opaque to the end', () => {
+    expect(sqlWithoutComments('ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$ -- unterminated')).toBe(
+      'ALTER TABLE t ADD COLUMN c TEXT DEFAULT $$ -- unterminated'
+    )
+  })
+})
