@@ -5338,7 +5338,11 @@
     "config/scripts/happy-dom-offscreen-canvas.ts": "888cef91689976d56d944a2069cd4a163aac301936e20180ace8881cc0e4b2a0",
     "config/scripts/happy-dom-mutation-observer-retention.ts": "15afb5c70ec9914313fbaea43942e974b77ef41ca672f27301daf93bc8dcec45",
     "config/scripts/vitest-host-ports-setup.ts": "13bad1952f2da1a3c0042d06cbc375dc03ec112552d91661589ea2c64d159b21",
-    "src/main/ipc/runtime-environment-session-retirement.test.ts": "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5"
+    "src/main/ipc/runtime-environment-session-retirement.test.ts": [
+      "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5",
+      "6a66611984afeed33ec4d418d60a991d8c0f14d29647af506b398966ee0491e7"
+    ],
+    "config/scripts/ci-shard-assignment.mjs": "a7b57ff68bdbfab909b753bc117edbcc0da2029b552ab1176d815b2d2142f49b"
   },
   "evaluated": {
     "current-before": {
@@ -9972,6 +9976,19 @@
       "src/shared/wsl-login-shell-command.ts": "69445d4cb6eae151ef28ed4fe320774bad9c46577f8a2263c14a14ecfdb28075",
       "src/shared/wsl-paths.ts": "1d9dcf5a1ff6693c02ff60a6b074eb2ebb7e83bda12aceba7e0b208d410b6d1a",
       "src/shared/zod-salvage.ts": "a2bbfe083efc5927632f181cb9295038b3b2399ad94bec418e2c55620f5db35e"
+    }
+  },
+  "fixtureVariants": {
+    "src/main/ipc/runtime-environment-session-retirement.test.ts": {
+      "current": {
+        "sha256": "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5",
+        "sessionHandlerParameters": 2
+      },
+      "main": {
+        "sha256": "6a66611984afeed33ec4d418d60a991d8c0f14d29647af506b398966ee0491e7",
+        "sessionHandlerParameters": 1
+      },
+      "reason": "Main has no unrelated empty-tab retirement handler. Its permanent fixture omits the audit branch-only second runtime argument. Both exact fixture hashes are accepted; reports record actual source hash."
     }
   }
 }

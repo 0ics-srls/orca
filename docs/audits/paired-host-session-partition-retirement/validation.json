@@ -89,5 +89,42 @@
     "Rollback check is partition presence, not a same-ID incarnation fence",
     "Renderer retained objects and existing unknown historical partitions are not swept",
     "No RSS, byte reduction, or exclusive incident attribution claimed"
-  ]
+  ],
+  "publicationFixtureCiCorrection": {
+    "failedHead": "ace839c0ffdd9659fdf65d19e0c74284658fbd7d",
+    "job": "https://github.com/stablyai/orca/actions/runs/35190942403/job/105103456606",
+    "introducedFailure": "TS2554 at runtime-environment-session-retirement.test.ts:89: main handler expects1argument; audit fixture passed2 for an unrelated empty-tab feature",
+    "correction": "Publication-only one-argument permanent fixture; primary keeps its actual two-argument signature. Exact fixture variants fenced and actual source hashes recorded. No product change.",
+    "primaryFixtureSha256": "af07f07c8bc866d3556c931e7b1ddcdb6e45dcd8df2bc14ad3d93c79754413a5",
+    "mainFixtureSha256": "6a66611984afeed33ec4d418d60a991d8c0f14d29647af506b398966ee0491e7",
+    "primaryPermanentTests": {
+      "passed": 28,
+      "failed": 0,
+      "suites": 2
+    },
+    "mainProjectedPermanentTests": {
+      "passed": 16,
+      "failed": 0,
+      "suites": 1
+    },
+    "baselinePermanentTests": {
+      "passed": 5,
+      "expectedFailures": 11
+    },
+    "portableNodeCases": 78,
+    "portableElectronCases": 78,
+    "namedPublicationNodeTypecheck": {
+      "exitCode": 0,
+      "sourceCommit": "ace839c0ffdd9659fdf65d19e0c74284658fbd7d",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 node_modules/.bin/tsc --noEmit -p config/tsconfig.node.json",
+      "scope": "Named publication source files exported into an ignored directory, with only the corrected one-argument fixture; installed working node_modules. Not a historical dependency install."
+    },
+    "configurationFenceAddition": "config/scripts/ci-shard-assignment.mjs, imported by the already fenced unit sequencer",
+    "physicalMainArtifactRun": {
+      "passed": true,
+      "cases": 78,
+      "workingFlavor": "mainFixed",
+      "fixtureSha256": "6a66611984afeed33ec4d418d60a991d8c0f14d29647af506b398966ee0491e7"
+    }
+  }
 }

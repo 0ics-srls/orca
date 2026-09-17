@@ -58,8 +58,12 @@ function loadVariants(readSource) {
     flavor,
     'Working source graph matches no exact audited/publication before/fixed identity'
   )
+  const runnerHashes = {}
   for (const [file, expected] of Object.entries(versions.runnerSources)) {
-    assert.equal(sha(read(path.join(root, file))), expected, `Runner source drift: ${file}`)
+    const actual = sha(read(path.join(root, file)))
+    const accepted = Array.isArray(expected) ? expected : [expected]
+    assert.ok(accepted.includes(actual), `Runner source drift: ${file}`)
+    runnerHashes[file] = actual
   }
   let fixed = physical
   if (flavor === 'currentBefore') {
@@ -76,6 +80,7 @@ function loadVariants(readSource) {
   const recovery = 'src/main/runtime/runtime-legacy-worker-terminal-recovery-persistence.ts'
   return {
     flavor,
+    runnerHashes,
     maps: {
       'current-fixed': fixed,
       'current-before': currentBefore,
@@ -134,7 +139,7 @@ function phasePlugin(phase) {
         return undefined
       }
       if (versions.runnerSources[file]) {
-        assert.equal(sha(_source.replaceAll('\r\n', '\n')), versions.runnerSources[file])
+        assert.equal(sha(_source.replaceAll('\r\n', '\n')), loaded.runnerHashes[file])
         return undefined
       }
       assert.ok(expected[file], `Unfenced evaluated module: ${phase}:${file}`)

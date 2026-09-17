@@ -43,6 +43,8 @@ Expected: **11 failures, 5 passes**. These cover late ingress, first-use catalog
 
 ## Source identity and publication portability
 
+The first publication CI typecheck found an introduced fixture mismatch: main's `registerSessionHandlers` accepts one argument, whereas the audit branch accepts a second runtime for an unrelated empty-tab feature. The published permanent fixture now uses the one-argument call; the audit fixture retains its real two-argument signature. `fixtureVariants` records both exact hashes, the loader accepts only those identities, and reports record the actual configuration/fixture hashes. No product behavior changed in this correction.
+
 `source-versions.json` fences a union of **888 source paths**, with exact evaluated graphs of 857/860 modules for current before/fixed and 679/682 for publication main before/fixed. The publication base is **291b4ddd6f1c1af480169885e0fda7f9c78ff053**. Main has older internal module paths, so this artifact supplies the full evaluated source differences rather than importing current dependencies behind a five-file overlay.
 
 `fix.patch` and `main-fix.patch` independently map their exact baselines to their fixes. `publication.patch` reversibly maps the current fixed graph to the main fixed graph. The loader accepts all four complete exact identities, rejects drift, reconstructs each variant in memory, and verifies every evaluated module hash. The runner checks all four reconstruction inputs, canonical CRLF reads, and exact evaluated graph equality. All patches have zero context. No Git checkout/ref or ignored notes are required to run the artifact. Reports record actual evaluated hashes and runtime versions.

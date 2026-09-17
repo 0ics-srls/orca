@@ -85,8 +85,7 @@ function fixture() {
     getUserDataPath: () => dir,
     invalidateTransport
   })
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: These tests invoke only session writes; the retirement channel's runtime is never accessed.
-  registerSessionHandlers(store, undefined as never)
+  registerSessionHandlers(store)
   registerRendererShutdownCheckpointHandler(store)
   cleanups.push(() => {
     store.flush()
