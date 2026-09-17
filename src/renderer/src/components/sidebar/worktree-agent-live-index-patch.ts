@@ -1,3 +1,4 @@
+import { resolveAgentStatusWorktreeId } from '@/lib/agent-status-worktree-attribution'
 import type { AppState } from '@/store/types'
 import type { AgentStatusEntry } from '../../../../shared/agent-status-types'
 import { parsePaneKey } from '../../../../shared/stable-pane-id'
@@ -32,6 +33,9 @@ export function liveEntryWorktreeId(
   }
   const tabWorktreeId = tabIdToWorktreeId.get(parsed.tabId)
   const remote = Boolean(entry.connectionId) || isWebTerminalSurfaceTabId(parsed.tabId)
+  if (remote) {
+    return resolveAgentStatusWorktreeId(entry, tabIdToWorktreeId) ?? undefined
+  }
   return tabWorktreeId ?? (entry.state === 'done' && !remote ? undefined : entry.worktreeId)
 }
 
