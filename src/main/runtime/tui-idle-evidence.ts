@@ -186,14 +186,19 @@ function hasEvidenceAfter(
   return cursor.screenCaptureRevision === null || capture.revision > cursor.screenCaptureRevision
 }
 
-function hasEvidenceAfterFirstPartyStatus(
+/**
+ * Whether the provider itself has spoken again since it claimed an unfinished turn.
+ *
+ * Only a provider-written title counts. A screen capture is a read ORCA chose to perform
+ * (`terminal wait` asks for `freshVisibleCapture`), so it re-reads whatever was already on
+ * the screen. Its capture revision and output sequence therefore date the read, not the
+ * provider — and an `ESC[H`, an OSC title repaint, or a status-line tick advances the
+ * sequence without the provider leaving the turn at all.
+ */
+function hasProviderFactAfterFirstPartyStatus(
   record: TuiIdleEvidenceRecord,
-  status: FirstPartyAgentStatus,
-  source: 'title' | 'screen'
+  status: NonNullable<FirstPartyAgentStatus>
 ): boolean {
-  if (!status) {
-    return true
-  }
   if (
     status.attachmentId !== undefined &&
     status.attachmentId !== null &&
@@ -201,22 +206,9 @@ function hasEvidenceAfterFirstPartyStatus(
   ) {
     return false
   }
-  if (source === 'title') {
-    return (
-      typeof record.lastOscTitleObservedAt === 'number' &&
-      record.lastOscTitleObservedAt > status.updatedAt
-    )
-  }
-  // A screen capture is a host observation, not a replayed stream timestamp. The
-  // operation cursor fences old captures; once a new same-attachment frame exists,
-  // it is newer evidence even when the provider screen itself is unchanged.
-  return Boolean(
-    record.screenCapture &&
-    (status.attachmentId === undefined ||
-      status.attachmentId === null ||
-      record.screenCapture.attachmentId === status.attachmentId) &&
-    (status.outputSequence === undefined ||
-      record.screenCapture.outputSequence > status.outputSequence)
+  return (
+    typeof record.lastOscTitleObservedAt === 'number' &&
+    record.lastOscTitleObservedAt > status.updatedAt
   )
 }
 
@@ -236,14 +228,14 @@ export function observeTuiIdle(input: TuiIdleSatisfactionInput): TuiIdleObservat
     return { state: 'busy', source: 'first-party', agent }
   }
   // A stale first-party row is not permission to promote whatever title or tail happened to be
-  // retained. Require a newer, same-attachment observation so reconnect/replay cannot turn old
-  // screen state into readiness after the provider fact ages out.
-  if (
-    input.firstPartyStatus &&
-    input.firstPartyStatus.state !== 'done' &&
-    !hasEvidenceAfterFirstPartyStatus(input.record, input.firstPartyStatus, 'title') &&
-    !hasEvidenceAfterFirstPartyStatus(input.record, input.firstPartyStatus, 'screen')
-  ) {
+  // retained: ageing out loses the evidence that the turn was open, it never supplies evidence
+  // that the turn closed. Only the provider retracts its own claim — a `done` frame replaces this
+  // row outright, and a later provider-written title clears it. An Orca-initiated read never does.
+  const unfinishedTurn =
+    input.firstPartyStatus && input.firstPartyStatus.state !== 'done'
+      ? input.firstPartyStatus
+      : null
+  if (unfinishedTurn && !hasProviderFactAfterFirstPartyStatus(input.record, unfinishedTurn)) {
     return { state: 'unknown', source: 'first-party', agent }
   }
   // A provider-owned working title is a positive busy observation for title-capable launch
@@ -266,7 +258,10 @@ export function observeTuiIdle(input: TuiIdleSatisfactionInput): TuiIdleObservat
   if (
     input.readPositiveBodyEvidence() &&
     bodyAgent === agent &&
-    supportsEvidence(agent, bodySource)
+    supportsEvidence(agent, bodySource) &&
+    // A provider title reopened the evaluation above, but it vouches only for itself: retained
+    // screen text can still predate the turn, so a title byte must not unlock it.
+    !(unfinishedTurn && bodySource === 'screen')
   ) {
     if (!input.evidenceCursor || hasEvidenceAfter(input.record, input.evidenceCursor, bodySource)) {
       return { state: 'ready', source: bodySource, agent }

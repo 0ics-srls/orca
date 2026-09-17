@@ -13,10 +13,10 @@ import type { AgentStatus } from '../../shared/agent-detection'
 import type { TuiAgent } from '../../shared/tui-agent'
 import type { RuntimeLeafRecord, RuntimePtyWorktreeRecord } from './runtime-terminal-state-records'
 import type { RuntimeScreenCapture } from './orca-runtime-core'
-import type { FirstPartyAgentStatus } from './tui-idle-evidence'
 import {
   captureTuiIdleEvidenceCursor,
   observeTuiIdle,
+  type FirstPartyAgentStatus,
   type TuiIdleEvidenceRecord
 } from './tui-idle-evidence'
 
@@ -522,6 +522,9 @@ describe('tui-idle evidence ranking', () => {
         positiveBodyEvidenceAgent: 'codex'
       })
     ).toMatchObject({ state: 'unknown', source: 'first-party', agent: 'codex' })
+    // The unrelated byte case: `ESC[H` moved the sequence 42 -> 43 and the probe took a fresh
+    // capture, but the provider painted nothing and the screen still shows the pre-turn prompt.
+    // Transport position dates OUR read, so it cannot retract the provider's own working claim.
     expect(
       observeTuiIdle({
         record: { ...record, screenCapture: { ...capture, outputSequence: 43, revision: 9 } },
@@ -539,7 +542,84 @@ describe('tui-idle evidence ranking', () => {
         readPositiveBodyEvidence: () => true,
         positiveBodyEvidenceAgent: 'codex'
       })
+    ).toMatchObject({ state: 'unknown', source: 'first-party', agent: 'codex' })
+  })
+
+  it('lets the provider retract its own turn with a done frame', () => {
+    const capture = {
+      attachmentId: 'inc-1',
+      generation: 3,
+      outputSequence: 42,
+      revision: 8,
+      source: 'headless' as const
+    }
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      attachmentId: 'inc-1',
+      screenCapture: capture
+    }
+    // A `done` frame replaces the row outright, so there is no unfinished turn left to clear and
+    // screen evidence is usable again. This is the path a normal Codex turn end takes.
+    expect(
+      observeTuiIdle({
+        record: { ...record, screenCapture: { ...capture, revision: 9 } },
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'done',
+          updatedAt: Date.now() - 31 * 60 * 1000,
+          outputSequence: 42,
+          attachmentId: 'inc-1'
+        },
+        evidenceCursor: captureTuiIdleEvidenceCursor({
+          ...record,
+          screenCapture: { ...capture, revision: 8 }
+        }),
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
     ).toMatchObject({ state: 'ready', source: 'screen', agent: 'codex' })
+  })
+
+  it('does not let a provider title unlock retained screen text after an open turn', () => {
+    const capture = {
+      attachmentId: 'inc-1',
+      generation: 3,
+      outputSequence: 42,
+      revision: 8,
+      source: 'headless' as const
+    }
+    const statusAt = Date.now() - 31 * 60 * 1000
+    const record: TuiIdleEvidenceRecord = {
+      lastAgentStatus: 'idle',
+      // Name-only, so it carries no explicit idle marker of its own.
+      lastOscTitle: NAME_ONLY_TITLE,
+      lastOutputAt: null,
+      lastOscTitleObservedAt: statusAt + 1_000,
+      attachmentId: 'inc-1',
+      screenCapture: capture
+    }
+    // The title is newer than the working row, so the provider did speak again — but a title
+    // vouches only for itself. The retained ready banner underneath it still predates the turn.
+    expect(
+      observeTuiIdle({
+        record: { ...record, screenCapture: { ...capture, revision: 9 } },
+        agent: 'codex',
+        firstPartyStatus: {
+          state: 'working',
+          updatedAt: statusAt,
+          outputSequence: 42,
+          attachmentId: 'inc-1'
+        },
+        evidenceCursor: captureTuiIdleEvidenceCursor({
+          ...record,
+          screenCapture: { ...capture, revision: 8 }
+        }),
+        readPositiveBodyEvidence: () => true,
+        positiveBodyEvidenceAgent: 'codex'
+      })
+    ).not.toMatchObject({ state: 'ready' })
   })
 
   it('does not treat an unknown attachment as a wildcard for a replacement', () => {

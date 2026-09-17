@@ -74,15 +74,17 @@ export class RuntimeTerminalWait {
       if (condition === 'tui-idle' && ptyBlockedReason) {
         return buildPtyTerminalWaitBlockedResult(handle, condition, pty.pty, ptyBlockedReason)
       }
-      if (
-        condition === 'tui-idle' &&
-        this.evidence.isPtySatisfied(pty.pty, ptyWaitText, ptyEvidenceCursor)
-      ) {
+      // No cursor here, deliberately: the fence exists so a DEFERRED decision cannot settle on
+      // evidence that predates this operation. This read is the operation, and an already-idle
+      // agent's evidence necessarily predates it — fencing it against a snapshot of itself asks
+      // for a transition that already happened and can never arrive, so the wait times out on a
+      // terminal that was idle the whole time.
+      if (condition === 'tui-idle' && this.evidence.isPtySatisfied(pty.pty, ptyWaitText)) {
         return buildPtyTerminalWaitResult(
           handle,
           condition,
           pty.pty,
-          this.evidence.result(this.evidence.observePty(pty.pty, ptyWaitText, ptyEvidenceCursor))
+          this.evidence.result(this.evidence.observePty(pty.pty, ptyWaitText))
         )
       }
       return await new Promise<RuntimeTerminalWaitResult>((resolve, reject) => {
@@ -191,15 +193,14 @@ export class RuntimeTerminalWait {
     // agent is blocked on user approval, not finished with its task.
     const leafEvidenceCursor =
       condition === 'tui-idle' ? this.evidence.captureLeaf(leaf) : undefined
-    if (
-      condition === 'tui-idle' &&
-      this.evidence.isLeafSatisfied(leaf, leafWaitText, leafEvidenceCursor)
-    ) {
+    // Unfenced for the same reason as the PTY read above: this synchronous look IS the operation,
+    // so requiring evidence newer than it would reject the already-idle case it exists to catch.
+    if (condition === 'tui-idle' && this.evidence.isLeafSatisfied(leaf, leafWaitText)) {
       return buildTerminalWaitResult(
         handle,
         condition,
         leaf,
-        this.evidence.result(this.evidence.observeLeaf(leaf, leafWaitText, leafEvidenceCursor))
+        this.evidence.result(this.evidence.observeLeaf(leaf, leafWaitText))
       )
     }
 
