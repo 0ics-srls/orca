@@ -20,9 +20,13 @@ import type {
 } from '../../../shared/agent-session-resume-marker'
 import {
   latestStructuredAgentSessionPrompt,
+  latestStructuredAgentSessionUserItem,
   newestStructuredAgentSessionTurn
 } from '../../../shared/structured-agent-session-projection'
-import type { AgentJournalMessageItem } from '../../../shared/agent-session-journal-types'
+import type {
+  AgentJournalMessageItem,
+  AgentJournalRenderItem
+} from '../../../shared/agent-session-journal-types'
 import type {
   AgentSessionMutationEnvelope,
   AgentSessionMutationResult,
@@ -106,7 +110,6 @@ export function createStructuredAgentSessionRestartResume(
   surfaces: StructuredAgentSessionRestartResumeSurfaces
 ): StructuredAgentSessionRestartResume {
   const admission = new StructuredAgentSessionResumeAdmission()
-  const itemsFor = (sessionId: string) => sessions.get(sessionId)?.journal.snapshot().items ?? []
   // `previous: null` accepts nothing, and markers stamped `unproven` can never match a real launch
   // id, so an unwired host neither claims nor creates anything actionable.
   const launch = deps.launchGeneration ?? { current: 'unproven', previous: null }
@@ -166,8 +169,17 @@ export function createStructuredAgentSessionRestartResume(
   const derive = (
     markers: readonly AgentSessionResumeMarker[],
     leaseState: 'must-be-released' | 'may-be-held'
-  ): StructuredAgentSessionResumeCandidate[] =>
-    structuredAgentSessionResumableSet({
+  ): StructuredAgentSessionResumeCandidate[] => {
+    const items = new Map<string, AgentJournalRenderItem[]>()
+    const itemsFor = (sessionId: string): AgentJournalRenderItem[] => {
+      let snapshot = items.get(sessionId)
+      if (!snapshot) {
+        snapshot = sessions.get(sessionId)?.journal.snapshot().items ?? []
+        items.set(sessionId, snapshot)
+      }
+      return snapshot
+    }
+    return structuredAgentSessionResumableSet({
       markers,
       getRecord: deps.store.getRecord,
       supportsRecord: (record) => adapterSupportsRecord(deps.adapter, record),
@@ -178,9 +190,12 @@ export function createStructuredAgentSessionRestartResume(
           ?.journal.submissions()
           .find((submission) => submission.clientMessageId === clientMessageId) ?? null,
       latestPrompt: (sessionId) => latestStructuredAgentSessionPrompt(itemsFor(sessionId)),
+      latestUserItemId: (sessionId) =>
+        latestStructuredAgentSessionUserItem(itemsFor(sessionId))?.itemId ?? null,
       now: surfaces.now(),
       leaseState
     })
+  }
 
   const list = async (): Promise<StructuredAgentSessionResumeCandidate[]> =>
     derive(await revealClaimed(), 'must-be-released')

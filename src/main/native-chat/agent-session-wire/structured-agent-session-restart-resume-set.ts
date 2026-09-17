@@ -57,6 +57,7 @@ export type StructuredAgentSessionResumeSetInput = {
   /** The journalled submission with that client message id, for work that never became a turn. */
   journalSubmission: (sessionId: string, clientMessageId: string) => AgentJournalSubmission | null
   latestPrompt: (sessionId: string) => string
+  latestUserItemId: (sessionId: string) => string | null
   now: number
   /**
    * Whether the lease must be free.
@@ -166,7 +167,10 @@ export function structuredAgentSessionResumableSet(
     if (!head || agentSessionProviderHandleRoot(head.handle) !== marker.providerHandleRoot) {
       continue
     }
-    if (!journalAgreesWorkWasCutOff(input, marker)) {
+    if (
+      input.latestUserItemId(marker.sessionId) !== marker.latestUserItemId ||
+      !journalAgreesWorkWasCutOff(input, marker)
+    ) {
       continue
     }
     const model = normalizeOptionalField(record.options?.model, AGENT_MODEL_MAX_LENGTH)

@@ -165,6 +165,7 @@ export function marker(
     trigger: 'quit',
     providerHandleRoot: HANDLE_ROOT,
     launchId: LAUNCH_PREVIOUS,
+    latestUserItemId: null,
     ...overrides
   }
 }

@@ -240,13 +240,20 @@ function messageProse(blocks: readonly NativeChatBlock[]): string {
 export function latestStructuredAgentSessionPrompt(
   items: readonly AgentJournalRenderItem[]
 ): string {
+  const body = latestStructuredAgentSessionUserItem(items)?.body
+  return body?.kind === 'message' ? messageProse(body.blocks) : ''
+}
+
+export function latestStructuredAgentSessionUserItem(
+  items: readonly AgentJournalRenderItem[]
+): AgentJournalRenderItem | null {
   for (let index = items.length - 1; index >= 0; index -= 1) {
-    const body = items[index]?.body
-    if (body?.kind === 'message' && body.role === 'user') {
-      return messageProse(body.blocks)
+    const item = items[index]
+    if (item?.body.kind === 'message' && item.body.role === 'user') {
+      return item
     }
   }
-  return ''
+  return null
 }
 
 /** The newest assistant prose in the latest user turn. Tool-only assistant items

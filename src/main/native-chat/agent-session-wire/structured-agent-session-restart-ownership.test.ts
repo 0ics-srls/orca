@@ -21,7 +21,10 @@ import {
 
 const GRACE = 15_000
 
-async function interruptedRestart(work: 'turn' | 'submission' = 'turn') {
+async function interruptedRestart(
+  work: 'turn' | 'submission' = 'turn',
+  historyBoundaryConsistent = true
+) {
   const previous = hostTestState()
   await attach()
   const events = previous.acquire.mock.calls[0]?.[0].events
@@ -54,7 +57,7 @@ async function interruptedRestart(work: 'turn' | 'submission' = 'turn') {
         ? {
             providerHistoryWindow: async () => ({
               items: [],
-              boundaryConsistent: true,
+              boundaryConsistent: historyBoundaryConsistent,
               turnInFlight: false
             })
           }
@@ -77,6 +80,46 @@ async function interruptedRestart(work: 'turn' | 'submission' = 'turn') {
 
 afterEach(() => vi.useRealTimers())
 
+it.each(['turn', 'submission'] as const)(
+  'does not continue a marked %s after the user submits new work without a provider echo',
+  async (work) => {
+    const { host, dispatch } = await interruptedRestart(work, false)
+    expect(await host.restartResume.list()).toHaveLength(1)
+    await host.hold(SESSION, 'pane')
+    dispatch.mockResolvedValueOnce({ state: 'admitted' })
+    const body = hostTestMessage('Stop the old task and do this instead')
+    await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
+    await host.restartResume.continueAfterRestart([SESSION], 'modal')
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(host.journalSnapshot(SESSION).submissions).toHaveLength(work === 'turn' ? 1 : 2)
+    host.release(SESSION, 'pane')
+    expect(host.isHeld(SESSION)).toBe(false)
+  }
+)
+
+it('preserves the offer when the original submission receives its provider echo', async () => {
+  const { host, acquire, dispatch } = await interruptedRestart('submission', false)
+  expect(await host.restartResume.list()).toHaveLength(1)
+  await host.hold(SESSION, 'pane')
+  const events = acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing resumed provider event sink')
+  }
+  events.appendItem(
+    { provider: 'codex', threadId: THREAD, turnId: 'original-turn', ordinal: 1 },
+    hostTestMessage('Perform the original task')
+  )
+  await host.flushStreamedEvents(SESSION)
+  expect(host.journalSnapshot(SESSION).submissions[0]?.dispatchState).toBe('accepted')
+  expect(
+    (await host.restartResume.continueAfterRestart([SESSION], 'modal')).continued
+  ).toMatchObject([{ outcome: 'continued' }])
+  expect(acquire).toHaveBeenCalledTimes(1)
+  expect(dispatch).toHaveBeenCalledTimes(1)
+  host.release(SESSION, 'pane')
+  expect(host.isHeld(SESSION)).toBe(false)
+})
+
 it('does not continue work that acquisition proves was never delivered', async () => {
   const { host, acquire, dispatch } = await interruptedRestart('submission')
   expect(await host.restartResume.list()).toHaveLength(1)
@@ -91,38 +134,43 @@ it('does not continue work that acquisition proves was never delivered', async (
   expect(host.isHeld(SESSION)).toBe(false)
 })
 
-it('checks interrupted work at send admission after a newer turn supersedes it', async () => {
-  const { host, store, acquire, dispatch } = await interruptedRestart()
-  expect(await host.restartResume.list()).toHaveLength(1)
-  await host.hold(SESSION, 'pane')
-  const events = acquire.mock.calls[0]?.[0].events
-  if (!events) {
-    throw new Error('missing resumed provider event sink')
+it.each(['turn', 'message'] as const)(
+  'checks interrupted work at send admission after a newer %s supersedes it',
+  async (newer) => {
+    const { host, store, acquire, dispatch } = await interruptedRestart()
+    expect(await host.restartResume.list()).toHaveLength(1)
+    await host.hold(SESSION, 'pane')
+    const events = acquire.mock.calls[0]?.[0].events
+    if (!events) {
+      throw new Error('missing resumed provider event sink')
+    }
+    const admitting = Promise.withResolvers<void>()
+    const proceed = Promise.withResolvers<void>()
+    const admit = store.admitMutationOperation
+    vi.spyOn(store, 'admitMutationOperation').mockImplementationOnce(async (input) => {
+      admitting.resolve()
+      await proceed.promise
+      return admit(input)
+    })
+    const continuing = host.restartResume.continueAfterRestart([SESSION], 'modal')
+    await admitting.promise
+    events.appendItem(
+      { provider: 'codex', threadId: THREAD, turnId: 'newer-turn', ordinal: 1 },
+      newer === 'turn'
+        ? { kind: 'turn', turnId: 'newer-turn', state: 'completed' }
+        : hostTestMessage('A newer task from another client')
+    )
+    await host.flushStreamedEvents(SESSION)
+    proceed.resolve()
+    expect((await continuing).resumed).toMatchObject([
+      { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
+    ])
+    expect(dispatch).not.toHaveBeenCalled()
+    expect(host.journalSnapshot(SESSION).submissions).toHaveLength(0)
+    host.release(SESSION, 'pane')
+    expect(host.isHeld(SESSION)).toBe(false)
   }
-  const admitting = Promise.withResolvers<void>()
-  const proceed = Promise.withResolvers<void>()
-  const admit = store.admitMutationOperation
-  vi.spyOn(store, 'admitMutationOperation').mockImplementationOnce(async (input) => {
-    admitting.resolve()
-    await proceed.promise
-    return admit(input)
-  })
-  const continuing = host.restartResume.continueAfterRestart([SESSION], 'modal')
-  await admitting.promise
-  events.appendItem(
-    { provider: 'codex', threadId: THREAD, turnId: 'newer-turn', ordinal: 1 },
-    { kind: 'turn', turnId: 'newer-turn', state: 'completed' }
-  )
-  await host.flushStreamedEvents(SESSION)
-  proceed.resolve()
-  expect((await continuing).resumed).toMatchObject([
-    { outcome: 'refused', reason: 'agent_session_restart_work_superseded' }
-  ])
-  expect(dispatch).not.toHaveBeenCalled()
-  expect(host.journalSnapshot(SESSION).submissions).toHaveLength(0)
-  host.release(SESSION, 'pane')
-  expect(host.isHeld(SESSION)).toBe(false)
-})
+)
 
 it('replays the same logical continuation through the durable send ledger', async () => {
   const { host, store, dispatch } = await interruptedRestart()

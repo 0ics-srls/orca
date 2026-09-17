@@ -14,7 +14,10 @@ import {
   agentSessionProviderHandleChainHead,
   agentSessionProviderHandleRoot
 } from '../../../shared/agent-session-provider-handle'
-import { projectStructuredAgentSessionStatus } from '../../../shared/structured-agent-session-projection'
+import {
+  latestStructuredAgentSessionUserItem,
+  projectStructuredAgentSessionStatus
+} from '../../../shared/structured-agent-session-projection'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type {
   AgentSessionResumeMarker,
@@ -113,6 +116,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
     markers.push({
       sessionId,
       work,
+      latestUserItemId: latestStructuredAgentSessionUserItem(snapshot.items)?.itemId ?? null,
       recordedAt: input.now,
       trigger: input.trigger,
       launchId: input.launchId,

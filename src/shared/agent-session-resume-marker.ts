@@ -37,6 +37,8 @@ export type AgentSessionResumeMarker = {
   /** The work in flight when teardown observed it — a running turn, or a send that had not yet
    *  become one. */
   work: AgentSessionResumeWork
+  /** The user message observed at teardown; a newer one supersedes this offer before its turn opens. */
+  latestUserItemId: string | null
   /** Execution host's clock at teardown. */
   recordedAt: number
   trigger: AgentSessionResumeTrigger
@@ -84,6 +86,7 @@ const agentSessionResumeWorkSchema = z.object({
 const agentSessionResumeMarkerSchema = z.object({
   sessionId: markerField,
   work: agentSessionResumeWorkSchema,
+  latestUserItemId: markerField.nullable(),
   recordedAt: z.number().int().nonnegative(),
   trigger: z.enum(AGENT_SESSION_RESUME_TRIGGERS),
   providerHandleRoot: markerField,

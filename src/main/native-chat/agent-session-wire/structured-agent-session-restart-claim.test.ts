@@ -4,7 +4,7 @@
 // whole TTL. Two things bound it, and both are asserted here: it is scoped to the launch that wrote
 // it, and the next launch deletes every durable copy in the same step that it claims them.
 
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 import type { AgentSessionWireRefusal } from '../../../shared/agent-session-wire'
@@ -248,6 +248,17 @@ describe('claiming the previous launch markers', () => {
 })
 
 describe('the restart-resume surface', () => {
+  it('renders one journal snapshot per marked session when listing an offer', async () => {
+    const sessionJournal = journal([turnItem('turn-1', 'interrupted')])
+    const snapshot = vi.spyOn(sessionJournal, 'snapshot')
+    const { restartResume } = surface({
+      sessions: new Map([[SESSION, { journal: sessionJournal, hasProviderChild: false, fence: 1 }]])
+    })
+
+    expect(await restartResume.list()).toHaveLength(1)
+    expect(snapshot).toHaveBeenCalledTimes(1)
+  })
+
   // The structural guarantee behind "the checkbox can never continue": the reconnect path contains
   // no send at all, so no setting, and no automatic launch, can turn it into a continuation.
   it('never sends a message when reconnecting', async () => {
@@ -394,7 +405,8 @@ describe('the restart-resume surface', () => {
         recordedAt: NOW,
         trigger: 'update',
         launchId: LAUNCH_CURRENT,
-        providerHandleRoot: HANDLE_ROOT
+        providerHandleRoot: HANDLE_ROOT,
+        latestUserItemId: null
       }
     ])
   })

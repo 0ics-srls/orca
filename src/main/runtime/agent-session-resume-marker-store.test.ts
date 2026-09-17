@@ -23,6 +23,7 @@ function marker(overrides: Partial<AgentSessionResumeMarker> = {}): AgentSession
     trigger: 'quit',
     providerHandleRoot: 'codex:"thread-1"',
     launchId: 'launch-previous',
+    latestUserItemId: null,
     ...overrides
   }
 }
@@ -125,5 +126,18 @@ describe('durable resume markers', () => {
     await writeFile(filePath, JSON.stringify(parsed))
 
     expect((await openStore()).resumeMarkers.list(NOW)).toEqual([])
+  })
+
+  it('drops older markers without user-message identity while preserving the store', async () => {
+    const store = await openStore()
+    await store.resumeMarkers.record([marker(), marker({ sessionId: 'new-marker' })], NOW)
+    const filePath = agentSessionStorePath(directory)
+    const parsed = JSON.parse(await readFile(filePath, 'utf-8'))
+    delete parsed.resumeMarkers[SESSION].latestUserItemId
+    await writeFile(filePath, JSON.stringify(parsed))
+
+    const reopened = await openStore()
+    expect(reopened.resumeMarkers.list(NOW)).toEqual([marker({ sessionId: 'new-marker' })])
+    expect(JSON.parse(await readFile(filePath, 'utf-8')).resumeMarkers).toHaveProperty(SESSION)
   })
 })

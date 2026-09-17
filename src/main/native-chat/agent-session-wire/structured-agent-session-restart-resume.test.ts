@@ -56,6 +56,7 @@ function resumableSet(input: {
     journalSubmission: (_sessionId, clientMessageId) =>
       submissions.find((entry) => entry.clientMessageId === clientMessageId) ?? null,
     latestPrompt: () => 'fix the auth bug',
+    latestUserItemId: () => null,
     now: input.now ?? NOW
   })
 }
@@ -79,7 +80,8 @@ describe('deriving what was working at teardown', () => {
         recordedAt: NOW,
         trigger: 'quit',
         launchId: LAUNCH_CURRENT,
-        providerHandleRoot: HANDLE_ROOT
+        providerHandleRoot: HANDLE_ROOT,
+        latestUserItemId: null
       }
     ])
   })
@@ -292,6 +294,7 @@ describe('the resumable set', () => {
       journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
       journalSubmission: () => null,
       latestPrompt: () => '',
+      latestUserItemId: () => null,
       now: NOW
     })
 
@@ -307,6 +310,7 @@ describe('the resumable set', () => {
         journalTurn: () => ({ turnId: 'turn-1', state: 'interrupted' }),
         journalSubmission: () => null,
         latestPrompt: () => '',
+        latestUserItemId: () => null,
         now: NOW
       })
     ).toEqual([])
