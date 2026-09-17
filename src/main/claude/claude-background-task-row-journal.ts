@@ -50,6 +50,7 @@ export function resolveClaudeBackgroundTaskIdentity(
 ): AgentJournalItemIdentity {
   let maxGeneration = 0
   let matchingGeneration: number | undefined
+  let parentlessGeneration: number | undefined
   journal.visitItems((itemId, _sequence, body) => {
     const identity = parseAgentJournalItemKey(itemId)
     if (!identity || identity.provider !== 'orca') {
@@ -66,11 +67,14 @@ export function resolveClaudeBackgroundTaskIdentity(
     maxGeneration = Math.max(maxGeneration, generation)
     if (taskBlock.parentToolUseId === toolUseId) {
       matchingGeneration = Math.max(matchingGeneration ?? 0, generation)
+    } else if (taskBlock.parentToolUseId === undefined) {
+      parentlessGeneration = Math.max(parentlessGeneration ?? 0, generation)
     }
   })
+  // A prior parentless row cannot be proved distinct from the later aliased outcome.
   return claudeBackgroundTaskIdentity(
     id,
-    matchingGeneration ?? (maxGeneration === 0 ? 1 : maxGeneration + 1)
+    matchingGeneration ?? parentlessGeneration ?? (maxGeneration === 0 ? 1 : maxGeneration + 1)
   )
 }
 

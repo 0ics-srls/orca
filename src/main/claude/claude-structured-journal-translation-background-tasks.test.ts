@@ -12,6 +12,7 @@ import {
 } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
 import type { AgentSessionJournal } from '../native-chat/agent-session-journal/journal-store'
 import { createClaudeJournalTranslator } from './claude-structured-journal-translation'
+import { blockOf } from './claude-background-task-row-test-support'
 
 // The frames below are the ones the reported session actually carried: two real
 // failures that printed THREE red rows whose visible text was the wire opcode,
@@ -118,6 +119,23 @@ function playFailedBackgroundCommand(translator: ReturnType<typeof harness>['tra
   )
 }
 
+function fillLiveTaskRows(translator: ReturnType<typeof harness>['translator']): void {
+  for (let index = 0; index < 64; index += 1) {
+    const toolUseId = `toolu-live-${index}`
+    spawnToolCall(translator, toolUseId)
+    translator.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: `live-${index}`,
+        tool_use_id: toolUseId,
+        task_type: 'local_bash',
+        description: `live ${index}`,
+        is_backgrounded: true
+      })
+    )
+  }
+}
+
 function persistedTarget(
   persisted: Map<string, AgentJournalItemBody>
 ): StructuredAgentSessionEventTarget {
@@ -142,6 +160,107 @@ function persistedTarget(
 }
 
 describe('claude journal translation — background task rows', () => {
+  it('coalesces an unbound overflow patch and aliased final notification', async () => {
+    const persisted = new Map<string, AgentJournalItemBody>()
+    const deferred = createDeferredStructuredAgentSessionEventSink()
+    const translator = createClaudeJournalTranslator({
+      sink: deferred.sink,
+      fallbackIdPrefix: 'test'
+    })
+    fillLiveTaskRows(translator)
+    translator.handle(
+      systemFrame({ subtype: 'task_started', task_id: 'queued-overflow', task_type: 'local_bash' })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_updated',
+        task_id: 'queued-overflow',
+        patch: { status: 'failed' }
+      })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'queued-overflow',
+        tool_use_id: 'toolu-final',
+        status: 'stopped',
+        summary: 'No completion record was found'
+      })
+    )
+    deferred.bind(persistedTarget(persisted))
+    await deferred.drained()
+
+    expect([...persisted.keys()].filter((key) => key.includes('queued-overflow'))).toEqual([
+      'orca:claude-background-task%3Aqueued-overflow'
+    ])
+    expect(blockOf(persisted.get('orca:claude-background-task%3Aqueued-overflow'))).toMatchObject({
+      state: 'idle',
+      parentToolUseId: 'toolu-final',
+      summary: 'No completion record was found'
+    })
+  })
+
+  it('reconciles an aliased notification after a parentless overflow patch was persisted', async () => {
+    const persisted = new Map<string, AgentJournalItemBody>()
+    const deferred = createDeferredStructuredAgentSessionEventSink()
+    deferred.bind(persistedTarget(persisted))
+    const first = createClaudeJournalTranslator({ sink: deferred.sink, fallbackIdPrefix: 'first' })
+    fillLiveTaskRows(first)
+    first.handle(
+      systemFrame({ subtype: 'task_started', task_id: 'bound-overflow', task_type: 'local_bash' })
+    )
+    first.handle(
+      systemFrame({
+        subtype: 'task_updated',
+        task_id: 'bound-overflow',
+        patch: { status: 'failed' }
+      })
+    )
+    await deferred.drained()
+
+    const resumed = createClaudeJournalTranslator({
+      sink: deferred.sink,
+      fallbackIdPrefix: 'resumed'
+    })
+    resumed.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: 'bound-overflow',
+        tool_use_id: 'toolu-first',
+        status: 'stopped',
+        summary: 'No completion record was found'
+      })
+    )
+    await deferred.drained()
+    expect([...persisted.keys()].filter((key) => key.includes('bound-overflow'))).toEqual([
+      'orca:claude-background-task%3Abound-overflow'
+    ])
+    expect(blockOf(persisted.get('orca:claude-background-task%3Abound-overflow'))).toMatchObject({
+      state: 'idle',
+      parentToolUseId: 'toolu-first'
+    })
+
+    const restarted = createClaudeJournalTranslator({
+      sink: deferred.sink,
+      fallbackIdPrefix: 'next'
+    })
+    spawnToolCall(restarted, 'toolu-second')
+    restarted.handle(
+      systemFrame({
+        subtype: 'task_started',
+        task_id: 'bound-overflow',
+        tool_use_id: 'toolu-second',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    await deferred.drained()
+    expect([...persisted.keys()].filter((key) => key.includes('bound-overflow'))).toEqual([
+      'orca:claude-background-task%3Abound-overflow',
+      'orca:claude-background-task%3Abound-overflow%232'
+    ])
+  })
+
   it('resolves a queued restart identity after the sink rebinds', async () => {
     const persisted = new Map<string, AgentJournalItemBody>()
     const deferred = createDeferredStructuredAgentSessionEventSink()
@@ -379,22 +498,9 @@ describe('claude journal translation — background task rows', () => {
     expect(fallbackRows()).toEqual(['Background command "Wait" failed with exit code 1'])
   })
 
-  it('keeps a refused live task failure visible through the generic fallback', () => {
-    const { translator, fallbackRows } = harness()
-    for (let index = 0; index < 64; index += 1) {
-      const toolUseId = `toolu-live-${index}`
-      spawnToolCall(translator, toolUseId)
-      translator.handle(
-        systemFrame({
-          subtype: 'task_started',
-          task_id: `live-${index}`,
-          tool_use_id: toolUseId,
-          task_type: 'local_bash',
-          description: `live ${index}`,
-          is_backgrounded: true
-        })
-      )
-    }
+  it('keeps a refused live task failure on one typed terminal row', () => {
+    const { translator, fallbackRows, taskRowIds, taskRowTexts } = harness()
+    fillLiveTaskRows(translator)
 
     spawnToolCall(translator, 'toolu-overflow')
     translator.handle(
@@ -439,11 +545,100 @@ describe('claude journal translation — background task rows', () => {
       })
     )
 
-    expect(fallbackRows().at(-1)).toBe('overflow failed')
-    expect(fallbackRows().at(-2)).toBe('Background task failed')
-    expect(fallbackRows().at(-2)).not.toContain('message:system:task_')
-    expect(fallbackRows()).toHaveLength(2)
+    expect(fallbackRows()).toEqual([])
+    expect(
+      taskRowIds().filter((id) => id === 'claude-background-task:overflow-fallback')
+    ).toHaveLength(2)
+    expect(taskRowTexts().at(-1)).toBe('overflow failed')
   })
+
+  it('prints a notification-first failure only once when every typed slot is live', () => {
+    const { translator, fallbackRows, taskRowIds } = harness()
+    fillLiveTaskRows(translator)
+    const notification = systemFrame({
+      subtype: 'task_notification',
+      task_id: 'orphan-overflow',
+      status: 'failed',
+      summary: 'orphan overflow failed'
+    })
+
+    translator.handle(notification)
+    translator.handle(notification)
+
+    expect(fallbackRows()).toEqual([])
+    expect(
+      taskRowIds().filter((id) => id === 'claude-background-task:orphan-overflow')
+    ).toHaveLength(1)
+  })
+
+  it('keeps fallback ownership when a finished overflow task redelivers its start', () => {
+    const { translator, fallbackRows, taskRowIds } = harness()
+    fillLiveTaskRows(translator)
+    spawnToolCall(translator, 'toolu-overflow')
+    const start = systemFrame({
+      subtype: 'task_started',
+      task_id: 'overflow-redelivery',
+      tool_use_id: 'toolu-overflow',
+      task_type: 'local_bash',
+      is_backgrounded: true
+    })
+    const notification = systemFrame({
+      subtype: 'task_notification',
+      task_id: 'overflow-redelivery',
+      tool_use_id: 'toolu-overflow',
+      status: 'failed',
+      summary: 'overflow redelivery failed'
+    })
+    translator.handle(start)
+    translator.handle(notification)
+    translator.handle(start)
+    translator.handle(
+      systemFrame({ subtype: 'task_notification', task_id: 'live-0', status: 'completed' })
+    )
+    translator.handle(notification)
+
+    expect(fallbackRows()).toEqual([])
+    expect(
+      taskRowIds().filter((id) => id === 'claude-background-task:overflow-redelivery')
+    ).toHaveLength(1)
+  })
+
+  it.each(['completed', 'stopped'])(
+    'reports a capacity-refused %s task without a generic frame row',
+    (status) => {
+      const { translator, fallbackRows, taskRowIds, taskRowTexts } = harness()
+      fillLiveTaskRows(translator)
+      translator.handle(
+        systemFrame({
+          subtype: 'task_started',
+          task_id: 'overflow-success',
+          task_type: 'local_bash',
+          is_backgrounded: true
+        })
+      )
+      translator.handle(
+        systemFrame({
+          subtype: 'task_updated',
+          task_id: 'overflow-success',
+          patch: { status }
+        })
+      )
+      translator.handle(
+        systemFrame({
+          subtype: 'task_notification',
+          task_id: 'overflow-success',
+          status,
+          summary: `task ${status}`
+        })
+      )
+
+      expect(fallbackRows()).toEqual([])
+      expect(
+        taskRowIds().filter((id) => id === 'claude-background-task:overflow-success')
+      ).toHaveLength(2)
+      expect(taskRowTexts().at(-1)).toBe(`task ${status}`)
+    }
+  )
 
   it('settles live background rows when the provider ends before disposal', () => {
     const { translator, taskRowTexts } = harness()
@@ -529,6 +724,58 @@ describe('claude journal translation — background task rows', () => {
         tool_use_id: 'toolu_01CqPd7y',
         status: 'failed',
         summary: 'monitor stopped'
+      })
+    )
+
+    expect(taskRowIds()).toEqual([])
+    expect(fallbackRows()).toEqual([])
+  })
+
+  it('keeps a monitor without a start frame owned by its top-level tool result', () => {
+    const { translator, taskRowIds, fallbackRows } = harness()
+    const toolUseId = 'toolu-monitor'
+    const taskId = 'bm5w1s2mv'
+    translator.handle({
+      type: 'message',
+      sessionId: 'orca-session',
+      message: {
+        type: 'assistant',
+        uuid: 'monitor-call',
+        session_id: 'claude-session',
+        parent_tool_use_id: null,
+        message: {
+          role: 'assistant',
+          content: [
+            { type: 'tool_use', id: toolUseId, name: 'Monitor', input: { persistent: true } }
+          ]
+        }
+      }
+    })
+    translator.handle({
+      type: 'message',
+      sessionId: 'orca-session',
+      message: {
+        type: 'user',
+        uuid: 'monitor-result',
+        session_id: 'claude-session',
+        parent_tool_use_id: null,
+        message: {
+          role: 'user',
+          content: [{ type: 'tool_result', tool_use_id: toolUseId, content: 'Monitor started' }]
+        },
+        tool_use_result: { taskId, timeoutMs: 0, persistent: true }
+      }
+    })
+    translator.handle(
+      systemFrame({ subtype: 'task_updated', task_id: taskId, patch: { status: 'completed' } })
+    )
+    translator.handle(
+      systemFrame({
+        subtype: 'task_notification',
+        task_id: taskId,
+        tool_use_id: '',
+        status: 'completed',
+        summary: 'Monitor event: workflow journal results'
       })
     )
 

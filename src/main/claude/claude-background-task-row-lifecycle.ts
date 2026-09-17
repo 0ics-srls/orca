@@ -20,6 +20,7 @@ import {
 export type ClaudeBackgroundTaskRow = {
   block: NativeChatBackgroundTaskBlock
   lastSerialized: string | null
+  /** Immutable alias for persistence/coalescing; the final frame may enrich the block's parent. */
   toolUseId?: string
   /** Whether the provider's terminal notification finalized this run. */
   terminalNotificationReceived: boolean
@@ -132,9 +133,27 @@ export function newClaudeBackgroundTaskRowFromNotification(
   generation: number
 ): ClaudeBackgroundTaskRow {
   const row = newClaudeBackgroundTaskRow(id, message, now, generation)
-  reviseClaudeBackgroundTaskRow(row, claudeBackgroundTaskNotificationChange(message), now)
-  row.terminalNotificationReceived = true
+  finalizeClaudeBackgroundTaskRow(row, message, now)
   return row
+}
+
+/** A status patch is provisional; the notification supplies the final verdict. */
+export function finalizeClaudeBackgroundTaskRow(
+  row: ClaudeBackgroundTaskRow,
+  message: Record<string, unknown>,
+  now: number
+): void {
+  reviseClaudeBackgroundTaskRow(row, claudeBackgroundTaskNotificationChange(message), now)
+  const notificationToolUseId = claudeBackgroundTaskToolUseId(message)
+  row.block = {
+    ...row.block,
+    ...(row.block.parentToolUseId === undefined && notificationToolUseId !== undefined
+      ? { parentToolUseId: notificationToolUseId }
+      : {}),
+    state: terminalClaudeTaskRunState(message.status) ?? 'done',
+    settledAt: now
+  }
+  row.terminalNotificationReceived = true
 }
 
 export function shouldRestartClaudeBackgroundTaskRow(
@@ -149,7 +168,8 @@ export function shouldRestartClaudeBackgroundTaskRow(
   // that has already been evicted: only when BOTH runs name their parent is a
   // different alias the provider's restart signal. A finished run that named no
   // parent cannot be proved distinct from this announcement, so it stands.
-  return row.toolUseId !== undefined && toolUseId !== undefined && toolUseId !== row.toolUseId
+  const parentToolUseId = row.block.parentToolUseId
+  return parentToolUseId !== undefined && toolUseId !== undefined && toolUseId !== parentToolUseId
 }
 
 /** Task types the transcript materializes as a row.

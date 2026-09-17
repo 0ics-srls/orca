@@ -131,6 +131,7 @@ export function createClaudeJournalTranslator(
     streamedText,
     subagents,
     forwardedTools,
+    backgroundTasks,
     providerFallback,
     turn
   }

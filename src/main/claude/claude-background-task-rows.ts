@@ -6,15 +6,13 @@ import type { StructuredAgentSessionEventSink } from '../native-chat/agent-sessi
 import {
   classifyClaudeBackgroundTaskKind,
   record,
-  taskDescription,
-  taskId as readTaskId,
-  taskName
+  taskAliasId
 } from './claude-background-task-frames'
 import {
-  claudeBackgroundTaskNotificationChange,
   claudeBackgroundTaskPatchChange,
   claudeBackgroundTaskToolUseId,
   canonicalClaudeBackgroundTaskId,
+  finalizeClaudeBackgroundTaskRow,
   isClaudeBackgroundTranscriptTask,
   newClaudeBackgroundTaskRow,
   newClaudeBackgroundTaskRowFromNotification,
@@ -29,8 +27,10 @@ import {
   type ClaudeBackgroundTaskLedgerSizes
 } from './claude-background-task-memory'
 import { writeClaudeBackgroundTaskRow } from './claude-background-task-row-journal'
+import { observeClaudeBackgroundTaskRoster } from './claude-background-task-roster'
 import { ClaudeSubagentIds } from './claude-subagent-id-aliases'
 import { isClaudeSubagentTask } from './claude-subagent-task-frames'
+import { ClaudeOverflowTerminalRows } from './claude-overflow-terminal-rows'
 
 const MAX_TASK_ROWS = 64
 
@@ -57,18 +57,22 @@ export type ClaudeBackgroundTaskRowsDeps = {
 
 export class ClaudeBackgroundTaskRows {
   private readonly rows = new Map<string, ClaudeBackgroundTaskRow>()
+  private readonly overflowTerminalRows: ClaudeOverflowTerminalRows
   private readonly ledgers = new ClaudeBackgroundTaskLedgers()
   private readonly ids = new ClaudeSubagentIds()
   private readonly now: () => number
 
   constructor(private readonly deps: ClaudeBackgroundTaskRowsDeps) {
     this.now = deps.now ?? (() => Date.now())
+    this.overflowTerminalRows = new ClaudeOverflowTerminalRows(this.ledgers, this.now, (id, row) =>
+      this.writeRow(id, row)
+    )
   }
 
   /** @internal - exposed for tests only: what the bounded ledgers are holding,
    *  so eviction can be proved without reaching into the collections. */
-  get ledgerSizes(): ClaudeBackgroundTaskLedgerSizes {
-    return this.ledgers.sizes
+  get ledgerSizes(): ClaudeBackgroundTaskLedgerSizes & { readonly overflowTerminalRows: number } {
+    return { ...this.ledgers.sizes, overflowTerminalRows: this.overflowTerminalRows.size }
   }
 
   /** The frame being journaled right now, so a write can open its turn. Null
@@ -84,6 +88,15 @@ export class ClaudeBackgroundTaskRows {
     }
   }
 
+  /** A Monitor result can identify its task before any lifecycle announcement.
+   *  Its later notification belongs to that tool call, not a transcript row. */
+  observeMonitorToolResult(taskId: unknown): void {
+    const id = taskAliasId(taskId)
+    if (id !== undefined) {
+      this.ledgers.rememberForeign(id, 'ambient')
+    }
+  }
+
   private observeFrame(message: Record<string, unknown>): boolean {
     if (message.type !== 'system') {
       return false
@@ -92,7 +105,9 @@ export class ClaudeBackgroundTaskRows {
       if (!Array.isArray(message.tasks)) {
         return false
       }
-      this.observeAggregateRoster(message.tasks)
+      observeClaudeBackgroundTaskRoster(message.tasks, this.rows, (id, change) =>
+        this.revise(id, change)
+      )
       return true
     }
     if (typeof message.subtype !== 'string' || !TASK_SUBTYPES.has(message.subtype)) {
@@ -125,6 +140,7 @@ export class ClaudeBackgroundTaskRows {
   dispose(): void {
     this.settleSession()
     this.rows.clear()
+    this.overflowTerminalRows.clear()
     this.ledgers.clear()
     this.ids.clear()
   }
@@ -160,9 +176,9 @@ export class ClaudeBackgroundTaskRows {
       this.ledgers.rememberForeign(id, 'foreground')
       return true
     }
-    this.ledgers.foreign.delete(id)
     const existing = this.rows.get(id)
     if (existing) {
+      this.ledgers.foreign.delete(id)
       // A task that already exists and has not finished is not re-opened: a
       // duplicate announcement is a redelivery, not a second run, and treating
       // it as one would restate a row the user is already reading.
@@ -190,6 +206,7 @@ export class ClaudeBackgroundTaskRows {
       }
       restartedTerminal = true
     }
+    this.ledgers.foreign.delete(id)
     if (!this.admitsFirstRun(message)) {
       // The refusal is recorded, not forgotten: the task belongs to the
       // sidechain that spawned it, so its later frames find an owner here
@@ -231,13 +248,8 @@ export class ClaudeBackgroundTaskRows {
   private observeNotification(id: string, message: Record<string, unknown>): boolean {
     if (this.ledgers.fallbackTaskIds.has(id)) {
       this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
-      this.ledgers.fallbackTaskIds.delete(id)
-      // The generic fallback has now printed this outcome, so the task is owned
-      // elsewhere: a redelivery must neither print again nor mint the typed row
-      // capacity refused. A restart announcement still lifts this, as it lifts
-      // every other foreign owner.
-      this.ledgers.rememberForeign(id, 'fallback')
-      return false
+      this.overflowTerminalRows.observeNotification(id, message)
+      return true
     }
     const row = this.rows.get(id)
     if (row && row.terminalNotificationReceived) {
@@ -251,8 +263,9 @@ export class ClaudeBackgroundTaskRows {
     if (!row) {
       return this.openTerminalRow(id, message)
     }
-    this.revise(id, claudeBackgroundTaskNotificationChange(message))
-    row.terminalNotificationReceived = true
+    const wasLive = !isSettledBackgroundTaskState(row.block.state)
+    finalizeClaudeBackgroundTaskRow(row, message, this.now())
+    this.write(id, wasLive)
     return true
   }
 
@@ -262,8 +275,8 @@ export class ClaudeBackgroundTaskRows {
    *  is not a reason to render nothing. */
   private openTerminalRow(id: string, message: Record<string, unknown>): boolean {
     if (!ensureClaudeBackgroundTaskRowSlot(this.rows, MAX_TASK_ROWS)) {
-      this.ledgers.rememberFallback(id)
-      return false
+      this.overflowTerminalRows.observeNotificationWithoutSlot(id, message)
+      return true
     }
     const generation = this.ledgers.generations.next(id)
     this.rows.set(
@@ -279,6 +292,8 @@ export class ClaudeBackgroundTaskRows {
       const change = claudeBackgroundTaskPatchChange(message)
       if (change.state && isSettledBackgroundTaskState(change.state)) {
         this.ledgers.rememberTerminal(this.rows, id, claudeBackgroundTaskToolUseId(message))
+        this.overflowTerminalRows.observePatch(id, message, change)
+        return true
       }
       return false
     }
@@ -306,45 +321,6 @@ export class ClaudeBackgroundTaskRows {
     return true
   }
 
-  private observeAggregateRoster(value: unknown): void {
-    if (!Array.isArray(value)) {
-      return
-    }
-    for (const entry of value) {
-      const task = record(entry)
-      const id = task === null ? null : readTaskId(task)
-      const row = id === null ? undefined : this.rows.get(id)
-      if (
-        task === null ||
-        id === null ||
-        task.ambient === true ||
-        !row ||
-        isSettledBackgroundTaskState(row.block.state)
-      ) {
-        continue
-      }
-      // Membership is the ONLY liveness this payload carries: it is the whole
-      // live set after a change, so presence means live and absence means
-      // merely "no longer listed", never an outcome. Its per-entry status is
-      // NOT read, because the payload has no such field — reading one derived a
-      // state that was always undefined and left the reopen branch it guarded
-      // unreachable on every real payload.
-      //
-      // Presence does not revive a settled row either. The payload is a level
-      // signal whose ordering against the start/stop edges is unspecified, and
-      // it carries no evidence of a NEW run — so a row that reported its own
-      // outcome keeps it, and the task's own frames remain the only thing that
-      // opens or settles one. Only the identity fields it really sends are read.
-      this.revise(id, {
-        label: taskDescription(task.description) ?? taskName(task),
-        kind:
-          task.task_type === undefined
-            ? undefined
-            : classifyClaudeBackgroundTaskKind(task.task_type)
-      })
-    }
-  }
-
   private revise(id: string, change: ClaudeBackgroundTaskChange): void {
     const row = this.rows.get(id)
     if (!row) {
@@ -360,6 +336,10 @@ export class ClaudeBackgroundTaskRows {
     if (!row) {
       return
     }
+    this.writeRow(id, row, openOutputTurn)
+  }
+
+  private writeRow(id: string, row: ClaudeBackgroundTaskRow, openOutputTurn = true): void {
     const journaling = this.journaling
     writeClaudeBackgroundTaskRow(this.deps.sink, id, row, () => {
       if (journaling && openOutputTurn) {

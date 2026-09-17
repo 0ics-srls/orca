@@ -12,8 +12,10 @@ import {
   DEFAULT_JOURNAL_PAYLOAD_LIMITS
 } from '../native-chat/agent-session-journal/journal-payload-bounds'
 import type { StructuredAgentSessionEventSink } from '../native-chat/agent-session-wire/structured-agent-session-event-sink'
+import type { ClaudeBackgroundTaskRows } from './claude-background-task-rows'
 import type { ClaudeForwardedToolRegistry } from './claude-forwarded-tool-registry'
 import {
+  claudeRecord,
   claudeMessageBody,
   claudeMessageIdentity,
   claudeOutputEnvelope,
@@ -43,6 +45,7 @@ export type ClaudeMessageJournalContext = {
   streamedText: ReturnType<typeof createClaudeStreamedTextCheckpoints>
   subagents: ClaudeSubagentRoster
   forwardedTools: ClaudeForwardedToolRegistry
+  backgroundTasks: ClaudeBackgroundTaskRows
   providerFallback: ClaudeProviderFrameFallback
   /** The session's open turn. Sole owner of turn identity and of the reopen
    *  latch; this module asks it rather than tracking a copy. */
@@ -97,7 +100,8 @@ export function journalClaudeMessage(
     ctx.sink.appendItem(claudeToolIdentity(envelope.sessionId, tool.id), claudeToolBody({ tool }))
     changed = true
   }
-  for (const result of claudeToolResults(envelope)) {
+  const results = claudeToolResults(envelope)
+  for (const result of results) {
     const tool = ctx.tools.get(result.toolUseId) ?? {
       id: result.toolUseId,
       name: 'tool',
@@ -108,6 +112,14 @@ export function journalClaudeMessage(
       claudeToolBody({ tool, result })
     )
     ctx.subagents.observeToolResult(result.toolUseId, result.failed)
+    if (
+      results.length === 1 &&
+      envelope.parentToolUseId === null &&
+      tool.name === 'Monitor' &&
+      ctx.forwardedTools.has(result.toolUseId)
+    ) {
+      ctx.backgroundTasks.observeMonitorToolResult(claudeRecord(message.tool_use_result)?.taskId)
+    }
     ctx.tools.delete(result.toolUseId)
     changed = true
   }

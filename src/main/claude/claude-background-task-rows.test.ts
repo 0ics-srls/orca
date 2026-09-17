@@ -443,8 +443,8 @@ describe('claude background task rows', () => {
     expect(rows.observe({ ...START_BASH, task_id: 'overflow-live' })).toBe(false)
   })
 
-  it('keeps overflow frames on fallback until terminal, then ignores late duplicates', () => {
-    const { rows } = harness()
+  it('keeps one overflow terminal row across its update and notification', () => {
+    const { rows, keys, latest } = harness()
     for (let index = 0; index < 64; index += 1) {
       rows.observe({ ...START_BASH, task_id: `live-${index}` })
     }
@@ -457,7 +457,9 @@ describe('claude background task rows', () => {
         task_id: 'overflow-fallback',
         patch: { status: 'failed' }
       })
-    ).toBe(false)
+    ).toBe(true)
+    expect(keys().filter((id) => id === 'claude-background-task:overflow-fallback')).toHaveLength(1)
+    expect(latest()).toMatchObject({ state: 'blocked' })
     expect(
       rows.observe({
         type: 'system',
@@ -466,7 +468,7 @@ describe('claude background task rows', () => {
         status: 'failed',
         summary: 'overflow failed'
       })
-    ).toBe(false)
+    ).toBe(true)
     expect(
       rows.observe({
         type: 'system',
@@ -484,6 +486,48 @@ describe('claude background task rows', () => {
         summary: 'duplicate overflow failed'
       })
     ).toBe(true)
+    expect(keys().filter((id) => id === 'claude-background-task:overflow-fallback')).toHaveLength(2)
+    expect(latest()).toMatchObject({ state: 'blocked', summary: 'overflow failed' })
+  })
+
+  it('lets the final notification correct a provisional failed update', () => {
+    const { rows, latest, latestTwin } = harness()
+    rows.observe(START_BASH)
+    rows.observe({ ...FAILED_UPDATE, task_id: START_BASH.task_id })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: START_BASH.task_id,
+      status: 'stopped',
+      summary: 'No completion record was found'
+    })
+
+    expect(latest()).toMatchObject({ state: 'idle', summary: 'No completion record was found' })
+    expect(latestTwin()).toBe('No completion record was found')
+  })
+
+  it('corrects a capacity-refused failed update with the final stopped verdict', () => {
+    const { rows, latest, keys } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+    rows.observe({ ...START_BASH, task_id: 'overflow-stopped' })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_updated',
+      task_id: 'overflow-stopped',
+      patch: { status: 'failed' }
+    })
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'overflow-stopped',
+      status: 'stopped',
+      summary: 'No completion record was found'
+    })
+
+    expect(latest()).toMatchObject({ state: 'idle', summary: 'No completion record was found' })
+    expect(keys().filter((id) => id === 'claude-background-task:overflow-stopped')).toHaveLength(2)
   })
 
   it('preserves a fallback run alias across a duplicate terminal without one', () => {
@@ -501,7 +545,7 @@ describe('claude background task rows', () => {
         tool_use_id: FORWARDED_TOOL,
         status: 'completed'
       })
-    ).toBe(false)
+    ).toBe(true)
     expect(
       rows.observe({
         type: 'system',
@@ -560,6 +604,34 @@ describe('claude background task rows', () => {
     }
 
     expect(rows.ledgerSizes.fallbackTaskIds).toBeLessThanOrEqual(512)
+  })
+
+  it('bounds settled overflow rows while preserving the evicted outcome', () => {
+    const { rows, keys } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      rows.observe({ ...START_BASH, task_id: `live-${index}` })
+    }
+    for (let index = 0; index < 513; index += 1) {
+      const id = `overflow-${index}`
+      rows.observe({ ...START_BASH, task_id: id })
+      rows.observe({
+        type: 'system',
+        subtype: 'task_updated',
+        task_id: id,
+        patch: { status: 'failed' }
+      })
+    }
+    const beforeRedelivery = keys().length
+    expect(rows.ledgerSizes.overflowTerminalRows).toBeLessThanOrEqual(512)
+    rows.observe({
+      type: 'system',
+      subtype: 'task_notification',
+      task_id: 'overflow-0',
+      status: 'failed',
+      summary: 'late outcome'
+    })
+    expect(keys()).toHaveLength(beforeRedelivery)
+    expect(keys()).toContain('claude-background-task:overflow-0')
   })
 
   it('loses contact rather than claiming an outcome when the provider goes away', () => {
