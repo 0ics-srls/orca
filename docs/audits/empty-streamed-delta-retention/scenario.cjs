@@ -73,7 +73,9 @@ async function scenario(phase) {
   const deps = {
     emit(key, text, snapshot) {
       assert.equal(this, deps)
-      if (!accepting) return false
+      if (!accepting) {
+        return false
+      }
       emitted.push({ key, text, snapshot })
       return true
     },

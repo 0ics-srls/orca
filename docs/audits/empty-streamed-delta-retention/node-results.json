@@ -43,7 +43,7 @@
   },
   "artifactHashes": {
     "sources.cjs": "7902098e4cd0e07825684c778d7d2af74ba1438a55ccf0b9ffe6eb96f76698c8",
-    "scenario.cjs": "5c6886d9bb7821b557fa3d635ebf10210a978e329241b0be4fc28336f18ebb83",
+    "scenario.cjs": "66cfb53b821f631d2f57988c2fab5d28aa0da95fb4a6a3a2b8b643a82d233550",
     "reproduce.cjs": "e55b45abda1a7c6078cc3fc867f2553cf9ed6ffea10fbffdb61c99494d797fe1",
     "before.config.mjs": "a55e7576be2348edddc137af9c34fca4323bd060d325a1140ab0ede66618c6e9",
     "source-versions.json": "1038900fcbc3310ae4b38eb8603d0eea3d6a417c3835a70f3537d27eee6debc9",
