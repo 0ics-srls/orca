@@ -96,7 +96,12 @@ function approvalResponse(prompt: ClaudePendingPrompt, optionId: string): Permis
   }
   return {
     behavior: 'deny',
-    message: decision === 'cancel' ? 'User stopped this turn.' : 'User denied this action.',
+    message:
+      decision === 'cancel'
+        ? 'User stopped this turn.'
+        : prompt.subject?.kind === 'plan'
+          ? 'The user asked you to keep planning. Revise the plan and call ExitPlanMode again.'
+          : 'User denied this action.',
     ...(decision === 'cancel' ? { interrupt: true } : {}),
     toolUseID: prompt.toolUseId
   }

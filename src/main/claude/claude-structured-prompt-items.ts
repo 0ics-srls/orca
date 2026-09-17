@@ -22,12 +22,11 @@ const APPROVAL_LABELS: Record<ClaudeApprovalDecision, string> = {
   cancel: 'Stop'
 }
 
-const PLAN_APPROVAL_LABELS: Record<ClaudeApprovalDecision, string> = {
-  allow: 'Approve plan',
-  allowForSession: 'Approve plan for this session',
-  deny: 'Keep planning',
-  cancel: 'Stop'
-}
+const PLAN_APPROVAL_OPTIONS: readonly AgentJournalPromptOption[] = [
+  { id: 'allow', label: 'Approve plan' },
+  { id: 'deny', label: 'Keep planning' },
+  { id: 'cancel', label: 'Stop' }
+]
 
 const PENDING = {
   state: 'pending',
@@ -49,11 +48,11 @@ export function claudePromptIdentity(input: {
 }
 
 export function claudeApprovalItem(prompt: ClaudePendingPrompt): AgentJournalApprovalItem {
-  const detail = prompt.subject ? '' : truncateToolDetail(formatToolInput(prompt.input))
-  const labels = prompt.subject?.kind === 'plan' ? PLAN_APPROVAL_LABELS : APPROVAL_LABELS
+  const planSubject = prompt.subject?.kind === 'plan' ? prompt.subject : null
+  const detail = truncateToolDetail(planSubject?.text ?? formatToolInput(prompt.input))
   return boundJournalPromptBody({
     kind: 'approval',
-    title: prompt.title ?? `Allow ${prompt.toolName}?`,
+    title: prompt.title ?? (planSubject ? 'Review proposed plan' : `Allow ${prompt.toolName}?`),
     ...(prompt.displayName ? { displayName: prompt.displayName } : {}),
     ...(prompt.description ? { description: prompt.description } : {}),
     ...(prompt.decisionReason ? { decisionReason: prompt.decisionReason } : {}),
@@ -61,10 +60,12 @@ export function claudeApprovalItem(prompt: ClaudePendingPrompt): AgentJournalApp
     ...(prompt.matchedAskRule ? { matchedAskRule: prompt.matchedAskRule } : {}),
     ...(prompt.subject ? { subject: prompt.subject } : {}),
     detail: detail || null,
-    options: CLAUDE_APPROVAL_DECISIONS.map((decision) => ({
-      id: decision,
-      label: labels[decision]
-    })),
+    options: planSubject
+      ? PLAN_APPROVAL_OPTIONS.map((option) => ({ ...option }))
+      : CLAUDE_APPROVAL_DECISIONS.map((decision) => ({
+          id: decision,
+          label: APPROVAL_LABELS[decision]
+        })),
     resolution: { ...PENDING }
   })
 }

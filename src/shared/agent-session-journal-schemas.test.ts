@@ -57,7 +57,7 @@ const CANONICAL_BODIES: AgentJournalItemBody[] = [
     blockedPath: '/repo/PLAN.md',
     matchedAskRule: { source: 'project', toolName: 'ExitPlanMode', ruleContent: 'ask' },
     subject: { kind: 'plan', text: '# Plan\n\n- Ship it', filePath: '/repo/PLAN.md' },
-    detail: null,
+    detail: '# Plan\n\n- Ship it',
     options: [{ id: 'a', label: 'Yes' }],
     resolution: RESOLUTION
   },

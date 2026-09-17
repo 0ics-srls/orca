@@ -62,7 +62,7 @@ describe('Claude structured approval presentation', () => {
     })
   })
 
-  it('journals a plan as a typed subject without the generic JSON detail', () => {
+  it('journals a plan with typed presentation and readable compatibility detail', () => {
     const prompt = approvalPrompt(
       { plan: '# Release\n\n- Run tests', planFilePath: '/repo/plan.md' },
       {
@@ -75,14 +75,21 @@ describe('Claude structured approval presentation', () => {
       kind: 'approval',
       title: 'Claude wants to present its plan',
       subject: { kind: 'plan', text: '# Release\n\n- Run tests', filePath: '/repo/plan.md' },
-      detail: null,
+      detail: '# Release\n\n- Run tests',
       options: [
         { id: 'allow', label: 'Approve plan' },
-        { id: 'allowForSession', label: 'Approve plan for this session' },
         { id: 'deny', label: 'Keep planning' },
         { id: 'cancel', label: 'Stop' }
       ]
     })
+  })
+
+  it('uses a plan-specific fallback title when the harness omits one', () => {
+    const item = claudeApprovalItem(
+      approvalPrompt({ plan: '# Release' }, { subject: { kind: 'plan', text: '# Release' } })
+    )
+
+    expect(item.title).toBe('Review proposed plan')
   })
 
   it.each([{ plan: '' }, {}])(
@@ -105,12 +112,30 @@ describe('Claude structured approval presentation', () => {
     expect(item.detail?.endsWith('…')).toBe(true)
   })
 
-  it('denying authorizes nothing', () => {
-    const prompt = approvalPrompt({ plan: '# Release' })
+  it('keeps generic denial behavior unchanged', () => {
+    const prompt = approvalPrompt({ command: 'rm output.txt' }, { toolName: 'Bash' })
 
     expect(applyClaudePromptAnswer({ prompt }, 'deny')).toEqual({
       behavior: 'deny',
       message: 'User denied this action.',
+      toolUseID: 'tool-approval'
+    })
+  })
+
+  it('asks Claude to revise a rejected plan while accepting legacy session replies', () => {
+    const prompt = approvalPrompt(
+      { plan: '# Release' },
+      { subject: { kind: 'plan', text: '# Release' } }
+    )
+
+    expect(applyClaudePromptAnswer({ prompt }, 'deny')).toEqual({
+      behavior: 'deny',
+      message: 'The user asked you to keep planning. Revise the plan and call ExitPlanMode again.',
+      toolUseID: 'tool-approval'
+    })
+    expect(applyClaudePromptAnswer({ prompt }, 'allowForSession')).toEqual({
+      behavior: 'allow',
+      updatedInput: { plan: '# Release' },
       toolUseID: 'tool-approval'
     })
   })
