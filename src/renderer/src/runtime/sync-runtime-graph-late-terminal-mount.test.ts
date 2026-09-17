@@ -1,13 +1,9 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { TerminalLayoutSnapshot, TerminalTab } from '../../../shared/terminal-tab-types'
 import type { AppState } from '../store/types'
-import {
-  buildMobileSessionTabSnapshots,
-  registerRuntimeTerminalTab,
-  resetRuntimeMobileSyncProjectionCachesForTests
-} from './sync-runtime-graph'
-import { graphState, resetRuntimeGraphSliceScanCaches } from './sync-runtime-graph/graph-state'
-import { resetMobileSessionWorktreeIdCacheForTests } from './sync-runtime-graph/mobile-session-worktree-sources'
+import { buildMobileSessionTabSnapshots, registerRuntimeTerminalTab } from './sync-runtime-graph'
+import { graphState } from './sync-runtime-graph/graph-state'
+import { resetPublicationCaches } from './sync-runtime-graph-worktree-source-gate.test-support'
 
 /**
  * Mounting a TerminalPane writes to the registry, not to the store. A worktree whose snapshot was
@@ -104,13 +100,7 @@ function publishPtyId(state: AppState): string | null | undefined {
   return tab?.type === 'terminal' ? tab.ptyId : undefined
 }
 
-beforeEach(() => {
-  graphState.mobileSessionSnapshotCacheByWorktree.clear()
-  graphState.publishedMobileSessionSnapshotByWorktree.clear()
-  resetRuntimeGraphSliceScanCaches()
-  resetRuntimeMobileSyncProjectionCachesForTests()
-  resetMobileSessionWorktreeIdCacheForTests()
-})
+beforeEach(resetPublicationCaches)
 
 describe('a TerminalPane that mounts after its worktree was cached', () => {
   it('republishes the worktree even though no store slice moved', () => {
