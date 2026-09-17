@@ -47,5 +47,11 @@
   },
   "format": "All product TS and artifact CJS/MJS/MD/JSON checked with oxfmt --stdin-filepath; patch excluded.",
   "gitDiffCheckExitCode": 0,
-  "historicalCompatibility": "All three named baseline refs accept fix.patch and produce identical fixed SHA-256; all nine recorded provenance sources match main291b. No shared-waiter dependency."
+  "historicalCompatibility": "All three named baseline refs accept fix.patch and produce identical fixed SHA-256; all nine recorded provenance sources match main291b. No shared-waiter dependency.",
+  "artifactNormalization": {
+    "change": "Regenerated fix.patch with zero context so stored context blank lines do not appear as trailing whitespace when checked as a new artifact. Product/tests unchanged.",
+    "proofs": "Both Node/Electron 54-case ordering/lifecycle runs pass with the regenerated patch; formatted result files are byte-identical to the prior capture.",
+    "quality": "All six published code files explicitly scanned through five quality configurations with --no-ignore. Ordinary/type-aware/React/design scans pass; whole-file casting scan reports one unchanged assertion at product line84 present in the baseline. Root changed-lines gate since96970f9b passes all five scans across11 changed files with zero new findings.",
+    "whitespace": "All 12 publication files checked as complete additions; no whitespace diagnostics."
+  }
 }

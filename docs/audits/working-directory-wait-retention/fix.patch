@@ -2,10 +2,7 @@ diff --git a/src/main/providers/working-directory-validation.ts b/src/main/provi
 index 688cc85244..cf098cad2c 100644
 --- a/src/main/providers/working-directory-validation.ts
 +++ b/src/main/providers/working-directory-validation.ts
-@@ -162,18 +162,7 @@ export function validateWorkingDirectoryAsync(
-   if (!signal) {
-     return validation
-   }
+@@ -165,12 +165 @@ export function validateWorkingDirectoryAsync(
 -  const shared = validation
 -  // The shared probe outlives this caller; keep it from surfacing as unhandled.
 -  void shared.catch(() => {})
@@ -19,13 +16,7 @@ index 688cc85244..cf098cad2c 100644
 -    shared.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort))
 -  })
 +  return waitForWorkingDirectoryValidation(validation, cwd, signal)
- }
- 
- function validateWorkingDirectoryUncached(cwd: string): Promise<void> {
-@@ -202,3 +191,52 @@ async function probeWorkingDirectory(cwd: string): Promise<void> {
-     throw new Error(`Working directory "${cwd}" is not a directory.`)
-   }
- }
+@@ -204,0 +194,49 @@ async function probeWorkingDirectory(cwd: string): Promise<void> {
 +
 +type WorkingDirectoryWaiterHolder = {
 +  waiter: {
