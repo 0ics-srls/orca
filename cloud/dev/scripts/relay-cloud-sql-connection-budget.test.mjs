@@ -7,7 +7,7 @@ import {
 } from './relay-cloud-sql-connection-budget.mjs'
 
 test('production shared consumers keep allowance and reserve below the ceiling', () => {
-  // cells: 230 + 18 for the three asia-east2 pools at 16.
+  // cells: 20 pools at 10 (200) + the three asia-east2 pools at 16 (48).
   const report = readRelayCloudSqlConnectionBudget()
 
   assert.deepEqual(report.consumers, { cells: 248, directors: 15, auth: 20, api: 50 })
