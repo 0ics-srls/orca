@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { runProcess } from './child-process/run-process'
 import { buildAutomationShellStartup } from './automation-shell-startup'
+import { createAutomationShellReceiptScanner } from './automation-shell-exit-receipt'
 
 const shell = process.platform === 'win32' ? 'powershell' : 'posix'
 const program = process.platform === 'win32' ? 'powershell.exe' : '/bin/sh'
 
-async function runCommand(command: string) {
-  const startup = buildAutomationShellStartup(command, shell)
+async function runCommand(command: string, runId?: string) {
+  const startup = buildAutomationShellStartup(command, shell, runId)
   return await runProcess({
     program,
     args:
@@ -69,4 +70,41 @@ describe('automation shell startup', () => {
       expect(startup.launchConfig).toBeUndefined()
     }
   )
+})
+
+describe('tracked automation shell startup', () => {
+  it.each([
+    { command: 'exit 0', expected: 0 },
+    { command: 'exit 7', expected: 7 },
+    { command: shell === 'powershell' ? "Write-Error 'failed'" : 'false', expected: 1 },
+    {
+      command:
+        shell === 'powershell'
+          ? "cmd.exe /d /c 'exit 7'; Write-Output 'recovered'"
+          : "false; printf '%s\\n' recovered",
+      expected: 0
+    }
+  ])(
+    'reports the command result before the shell exits: $command',
+    async ({ command, expected }) => {
+      const result = await runCommand(command, 'tracked-run')
+      const receipts: number[] = []
+      createAutomationShellReceiptScanner('tracked-run', (code) => receipts.push(code)).scan(
+        result.stdout
+      )
+      expect(result.timedOut).toBe(false)
+      expect(result.code).toBe(expected)
+      expect(receipts).toEqual([expected])
+    }
+  )
+
+  it('reports invalid command failures in the receipt', async () => {
+    const result = await runCommand('orca_nonexistent_automation_command', 'tracked-run')
+    const receipts: number[] = []
+    createAutomationShellReceiptScanner('tracked-run', (code) => receipts.push(code)).scan(
+      result.stdout
+    )
+    expect(result.code).not.toBe(0)
+    expect(receipts).toEqual([result.code])
+  })
 })
