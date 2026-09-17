@@ -211,13 +211,14 @@ export default function MobilePage(): React.JSX.Element {
     } catch {
       // Network list is non-critical; the QR will still mint with default routing.
     } finally {
-      if (mountedRef.current) {
-        // Why: max, not assignment — an older visit's lookup landing last must not
-        // un-settle the visit a newer one already answered.
-        setAddressedFlowVisit((settled) => Math.max(settled, visit))
-        if (requestId === networkInterfacesRequestIdRef.current) {
-          setRefreshingNetworkInterfaces(false)
-        }
+      // Why: only the newest lookup may report a completion — a superseded one
+      // marking its visit addressed releases the mint against an address its own
+      // replacement is about to change. Plain assignment is safe because entering
+      // a flow bumps the visit and starts its own lookup, so the newest request
+      // always carries the highest visit.
+      if (mountedRef.current && requestId === networkInterfacesRequestIdRef.current) {
+        setAddressedFlowVisit(visit)
+        setRefreshingNetworkInterfaces(false)
       }
     }
   }, [mountedRef, pairingFlowVisit, selectAddressAfterRefresh])

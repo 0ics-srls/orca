@@ -140,7 +140,7 @@ vi.mock('./MobilePageContent', () => ({
 }))
 
 import MobilePage from './MobilePage'
-import { replacePairedMobileDevices } from './paired-mobile-devices'
+import { _resetPairedMobileDevicesCacheForTests } from './paired-mobile-devices'
 
 describe('MobilePage pairing connection mode', () => {
   const getPairingQR = vi.fn()
@@ -156,7 +156,7 @@ describe('MobilePage pairing connection mode', () => {
     listNetworkInterfaces.mockReset().mockResolvedValue({ interfaces: [] })
     // The paired-device cache is module state shared by every surface; reset it so
     // one test's phones cannot decide the next test's opening stage.
-    replacePairedMobileDevices([])
+    _resetPairedMobileDevicesCacheForTests()
     mocks.storeState = {
       closeMobilePage: vi.fn(),
       orcaProfileAuthStatus: { state: 'connected' },
@@ -694,6 +694,51 @@ describe('MobilePage pairing connection mode', () => {
     expect(screen.getByTestId('selected-address')).toHaveTextContent('none')
 
     resolveSecondLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
+    )
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    expect(getPairingQR).toHaveBeenCalledWith({
+      address: '10.0.0.9',
+      connectionMode: 'automatic'
+    })
+  })
+
+  it('does not release the mint when a superseded lookup for the same visit settles', async () => {
+    const user = userEvent.setup()
+    let resolveEntryLookup: ((value: Record<string, unknown>) => void) | undefined
+    let resolveManualLookup: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveEntryLookup = resolve
+          })
+      )
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveManualLookup = resolve
+          })
+      )
+    render(<MobilePage />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    // A manual refresh overlaps the entry lookup, so both belong to this visit —
+    // the visit counter cannot tell them apart, only the request epoch can.
+    await user.click(screen.getByRole('button', { name: 'Refresh addresses' }))
+    await waitFor(() => expect(listNetworkInterfaces).toHaveBeenCalledTimes(2))
+
+    // The superseded lookup answers first. Marking the visit addressed here would
+    // release the mint against an address its own replacement is about to change.
+    resolveEntryLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }] })
+    await waitFor(() => expect(screen.getByTestId('pair-loading')).toHaveTextContent('true'))
+    expect(getPairingQR).not.toHaveBeenCalled()
+    expect(screen.getByTestId('selected-address')).toHaveTextContent('none')
+
+    resolveManualLookup?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
     await waitFor(() =>
       expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
     )
