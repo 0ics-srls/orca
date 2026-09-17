@@ -13,8 +13,11 @@ import {
   CellRowLockScope,
   CellRowLockScopeSamples,
   emptyCellRowLockScopeCounts,
+  emptyCellRowLockScopeOutcome,
+  mergeCellRowLockScopeOutcomes,
   type CellRowLockKind,
-  type CellRowLockScopeCounts
+  type CellRowLockScopeCounts,
+  type CellRowLockScopeOutcome
 } from './cell-row-lock-scope.js'
 import { applyPostgresSchema } from './postgres-schema-startup.js'
 import { POSTGRES_STATEMENT_STATS_MIGRATION } from './postgres-statement-stats.js'
@@ -1031,6 +1034,25 @@ class PostgresDatabase implements RelayDatabase {
     operation: (transaction: RelayDatabase) => Promise<T>,
     options: RelayTransactionOptions = {}
   ): Promise<T> {
+    // Merged across attempts and recorded once below: a retry replays the same
+    // work, so counting per attempt reports one logical transaction up to
+    // POSTGRES_TRANSACTION_ATTEMPTS times -- and 55P03 is retryable, so the
+    // inflation is worst under exactly the contention these counters measure.
+    let merged = emptyCellRowLockScopeOutcome()
+    try {
+      return await this.attemptTransaction(operation, options, (outcome) => {
+        merged = mergeCellRowLockScopeOutcomes(merged, outcome)
+      })
+    } finally {
+      this.cellLockScopes.record(merged)
+    }
+  }
+
+  private async attemptTransaction<T>(
+    operation: (transaction: RelayDatabase) => Promise<T>,
+    options: RelayTransactionOptions,
+    onAttempt: (outcome: CellRowLockScopeOutcome) => void
+  ): Promise<T> {
     for (let attempt = 1; attempt <= POSTGRES_TRANSACTION_ATTEMPTS; attempt++) {
       const client = await this.pressure.connect()
       const cellLocks = new CellRowLockScope()
@@ -1071,8 +1093,7 @@ class PostgresDatabase implements RelayDatabase {
           )
         }
       } finally {
-        // Per attempt, like the lock counters above: a retry gets a fresh scope.
-        this.cellLockScopes.record(cellLocks.outcome())
+        onAttempt(cellLocks.outcome())
         client.release()
       }
       // A PostgreSQL transaction is unusable after an abort, so retry all work

@@ -319,29 +319,68 @@ describe.each(backends)('cell row lock scope ($name)', ({ name, open }) => {
     })
   })
 
+  // Why: an upsert that collides takes the existing row's lock and blocks, so it
+  // is a waiting acquisition like any other write. Verified against PostgreSQL:
+  // an upsert of a row another transaction holds FOR UPDATE waits out the lock
+  // timeout, and the two-transaction interleaving deadlocks. The guard used to
+  // route every INSERT to the free set-extension branch and stay silent on it,
+  // while the census in this same suite counted it as a lock site.
+  it('orders an upsert, which waits on the row it collides with', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.query(`${INSERT_CELL} ON CONFLICT (cell_id) DO UPDATE SET enabled = 1`, [
+          CELL_A,
+          `https://${CELL_A}.example`
+        ])
+      })
+    ).rejects.toThrow('out-of-order')
+  })
+
+  it('still treats a plain insert as free, since nobody could hold that row', async () => {
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(LOCK_ONE, [CELL_C])
+        await transaction.query(INSERT_CELL, [CELL_BELOW, `https://${CELL_BELOW}.example`])
+      })
+    ).resolves.toBeUndefined()
+  })
+
+  // Why: `checked` is the denominator for "the guard saw the population a per-cell
+  // conversion moves", and that population is every transaction taking a cell row
+  // lock. Counting only writes missed 44% of them across this suite -- including
+  // the fleet-wide lock the conversion replaces, which scored zero.
+  it('counts a transaction that only took a locked read', async () => {
+    consumeRelayCellRowLockScope(database)
+
+    await database.transaction(async (transaction) => {
+      await transaction.queryLocked(INVENTORY_LOCK)
+    })
+
+    expect(consumeRelayCellRowLockScope(database)).toEqual({
+      cellRowLockScopesChecked: 1,
+      cellRowLockScopesStoodDown: 0,
+      cellRowLockScopeViolations: 0
+    })
+  })
+
+  // Why shape and not row count: a lock naming no single cell can return one row
+  // in a fixture and many in production. Judging it by what came back makes the
+  // ratchet depend on the seed data.
+  it('reports an unordered multi-row lock even when one row comes back', async () => {
+    await database.query(`DELETE FROM relay_cells WHERE cell_id IN (?, ?)`, [CELL_A, CELL_B])
+
+    await expect(
+      database.transaction(async (transaction) => {
+        await transaction.queryLocked(UNORDERED_LOCK)
+      })
+    ).rejects.toThrow('unordered-lock')
+  })
   // Autocommit statements each commit on their own, so there is no order to
   // police and the guard must stay out of the way.
   it('leaves statements outside a transaction alone', async () => {
     await expect(database.query(RESERVE, [1, 0, CELL_C])).resolves.toBeDefined()
     await expect(database.query(RESERVE, [1, 0, CELL_A])).resolves.toBeDefined()
-  })
-
-  // Why: `checked` is the denominator the warn-only deploy rests on -- silence is
-  // only evidence if a write was judged. A read-only transaction inflates it into
-  // meaning less than it claims. The test that names this property used to hold a
-  // read AND a write, so it stayed green when reads began counting.
-  it('does not count a transaction that only read', async () => {
-    consumeRelayCellRowLockScope(database)
-
-    await database.transaction(async (transaction) => {
-      await transaction.queryLocked(LOCK_ONE, [CELL_A])
-    })
-
-    expect(consumeRelayCellRowLockScope(database)).toEqual({
-      cellRowLockScopesChecked: 0,
-      cellRowLockScopesStoodDown: 0,
-      cellRowLockScopeViolations: 0
-    })
   })
 
   // Why: standing down silently reads exactly like a clean transaction, which is

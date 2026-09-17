@@ -21,7 +21,29 @@ type CellRowLockViolation = {
   statement: string
 }
 
-type CellRowLockScopeOutcome = { checked: boolean; stoodDown: boolean; violations: number }
+export type CellRowLockScopeOutcome = {
+  checked: boolean
+  stoodDown: boolean
+  violations: number
+}
+
+export function emptyCellRowLockScopeOutcome(): CellRowLockScopeOutcome {
+  return { checked: false, stoodDown: false, violations: 0 }
+}
+
+// Why max and not sum: a retry replays the same statements, so a transaction that
+// violated, was retried and violated again is one logical violation seen twice.
+// Summing would make the count rise with contention rather than with breakage.
+export function mergeCellRowLockScopeOutcomes(
+  left: CellRowLockScopeOutcome,
+  right: CellRowLockScopeOutcome
+): CellRowLockScopeOutcome {
+  return {
+    checked: left.checked || right.checked,
+    stoodDown: left.stoodDown || right.stoodDown,
+    violations: Math.max(left.violations, right.violations)
+  }
+}
 
 // Why: `violations === 0` is only evidence if something was examined. Checked
 // counts transactions where at least one relay_cells write was evaluated, which
@@ -69,6 +91,14 @@ const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
 const CELL_TABLE_READ = /^\s*SELECT\b[\s\S]*?\bFROM\s+([A-Za-z_]\w*)/i
 const CELL_ID_EQUALS = /\bcell_id\s*=\s*\?/gi
 const ORDERED_LOCK = /\bORDER\s+BY\s+cell_id\s+ASC\b/i
+// An upsert is not the free set-extension a plain insert is: when the row it
+// names already exists it takes that row's lock and BLOCKS, so it is a waiting
+// acquisition and belongs under the order check. Proven against PostgreSQL 16 --
+// an upsert of a row another transaction held FOR UPDATE waited out the lock
+// timeout, and the obvious two-transaction interleaving deadlocks. The census in
+// this repo has always counted INSERT as a cell-row lock site; the guard used to
+// disagree with it.
+const CELL_UPSERT = /\bON\s+CONFLICT\b[\s\S]*\bDO\s+UPDATE\b/i
 
 export class CellRowLockScope {
   private readonly held = new Set<string>()
@@ -78,6 +108,9 @@ export class CellRowLockScope {
   private opaque = false
   private checked = false
   private violations = 0
+  // Set by a lock that took the whole inventory in order. While it holds, every
+  // row that existed is held, so an upsert naming an unheld row is creating one.
+  private coveredInventory = false
 
   // Why the wrapper: this runs inside the caller's try, so anything thrown here
   // escapes as that statement's failure and is mislabelled with its SQL phase on
@@ -100,16 +133,28 @@ export class CellRowLockScope {
     rows: SqlRow[]
   ): void {
     if (!sql.includes(CELL_TABLE)) return
-    // An insert adds a row nobody could have locked before it existed, so it
-    // extends what the transaction holds and takes no place in the order.
     if (CELL_INSERT.test(sql)) {
-      for (const cellId of insertedCellIds(sql, params)) this.held.add(cellId)
+      const inserted = insertedCellIds(sql, params)
+      // An upsert waits on the row it collides with, so a collision is ordered
+      // like any other write -- but creating a row nobody could name yet is free,
+      // and the statement text cannot tell the two apart. What settles it is
+      // whether the transaction already covered the inventory: under a
+      // fleet-wide lock every row that existed is held, so an unheld target did
+      // not exist and cannot be contended. Remove that lock -- which is exactly
+      // what the per-cell conversion does -- and the same upsert becomes a
+      // genuine unordered acquisition, which is when this starts reporting.
+      if (CELL_UPSERT.test(sql) && !this.coveredInventory) {
+        this.note()
+        this.acquire(inserted.length > 0 ? inserted : undefined, fingerprint(sql), 'wait')
+        return
+      }
+      for (const cellId of inserted) this.held.add(cellId)
       return
     }
     if (CELL_ROW_WRITE.test(sql)) {
       // A write blocks on a conflicting row lock, so it is always a wait. This is
       // how the release and acquire paths take one row late, and what bounds it.
-      if (!this.opaque) this.checked = true
+      this.note()
       this.acquire(namedCellIds(sql, params), fingerprint(sql), 'wait')
       return
     }
@@ -125,12 +170,23 @@ export class CellRowLockScope {
     return { checked: this.checked, stoodDown: this.opaque, violations: this.violations }
   }
 
+  // Why reads count too: `checked` is the denominator for "the guard saw the
+  // population a per-cell conversion moves", and that population is every
+  // transaction that acquires a cell row lock. Counting only writes missed 44% of
+  // them when measured across this suite -- including the fleet-wide
+  // `SELECT ... FOR UPDATE` the conversion exists to replace, which scored zero.
+  private note(): void {
+    if (!this.opaque) this.checked = true
+  }
+
   private acquireRead(sql: string, lock: CellRowLockKind, rows: SqlRow[]): void {
     if (this.opaque) return
     const statement = fingerprint(sql)
-    // A multi-row lock without ORDER BY takes its rows in whatever order the plan
-    // produces, so the acquisition order stops being a property of the code.
-    if (rows.length > 1 && !ORDERED_LOCK.test(sql)) {
+    // Shape, not row count: a lock that names no single cell may return one row
+    // in a fixture and many in production, so judging it by what came back makes
+    // the ratchet depend on the data. If it cannot return exactly one row by
+    // construction, its acquisition order has to be written down.
+    if (!ORDERED_LOCK.test(sql) && !namesOneCell(sql) && rows.length > 0) {
       this.report({ reason: 'unordered-lock', cellIds: [], held: [...this.held], statement })
     }
     const cellIds: string[] = []
@@ -143,6 +199,11 @@ export class CellRowLockScope {
       }
       cellIds.push(cellId)
     }
+    // Counted here and not on entry: a read that stands down was not judged, and
+    // counting it would put transactions the guard declined to reason about into
+    // the denominator that says how many it did.
+    this.note()
+    if (!namesOneCell(sql) && ORDERED_LOCK.test(sql)) this.coveredInventory = true
     this.acquire(cellIds, statement, lock)
   }
 
@@ -191,6 +252,13 @@ function alphanumeric(cellId: string): string {
 // literal would shift this, and no relay statement has one.
 function placeholderCount(sql: string): number {
   return (sql.match(/\?/g) ?? []).length
+}
+
+// Shape only, no parameters: whether the statement can return more than one row,
+// not whether it happened to. Exactly one `cell_id = ?` and no `OR` pins it to a
+// single row; anything else may widen in production even if a fixture returned one.
+function namesOneCell(sql: string): boolean {
+  return (sql.match(CELL_ID_EQUALS) ?? []).length === 1 && !/\bOR\b/i.test(sql)
 }
 
 function namedCellIds(sql: string, params: readonly unknown[]): string[] | undefined {
