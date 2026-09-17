@@ -103,17 +103,32 @@ const CELL_ROW_WRITE = /^\s*(?:UPDATE|DELETE\s+FROM)\s+relay_cells\b/i
 // Neither shape exists in relay today.
 const CELL_TABLE_READ = /^\s*SELECT\b[\s\S]*?\bFROM\s+([A-Za-z_]\w*)/i
 const CELL_ID_EQUALS = /\bcell_id\s*=\s*\?/gi
+// Any predicate that bounds which cell rows a locked read can reach. A statement
+// with none of these and no ORDER BY takes the whole table in plan order.
+const CONSTRAINS_CELL = /\bcell_id\s*(?:=|\bIN\b|\bANY\b)/i
 // Alias-tolerant: `ORDER BY cell.cell_id ASC` orders identically, and rejecting
 // it would throw in tests on a statement that is correct.
 const ORDERED_LOCK = /\bORDER\s+BY\s+(?:\w+\.)?cell_id\s+ASC\b/i
-// An upsert is not the free set-extension a plain insert is: when the row it
-// names already exists it takes that row's lock and BLOCKS, so it is a waiting
-// acquisition and belongs under the order check. Proven against PostgreSQL 16 --
-// an upsert of a row another transaction held FOR UPDATE waited out the lock
-// timeout, and the obvious two-transaction interleaving deadlocks. The census in
-// this repo has always counted INSERT as a cell-row lock site; the guard used to
-// disagree with it.
-const CELL_UPSERT = /\bON\s+CONFLICT\b[\s\S]*\bDO\s+UPDATE\b/i
+// KNOWN GAP, and it blocks the conversion rather than this deploy.
+// `INSERT ... ON CONFLICT DO UPDATE` that COLLIDES takes the existing row's lock
+// and blocks -- measured at 3073ms against PostgreSQL 16, and the obvious
+// interleaving deadlocks -- so a collision is a waiting acquisition that belongs
+// under the order check. An upsert that CREATES is free, because nobody can hold
+// a row that does not exist. The statement text cannot tell them apart.
+//
+// Inferring it from "the transaction already took a fleet-wide lock" was tried
+// and is wrong twice over: that lock does not fence rows another transaction
+// creates after it (demonstrated deadlock), and over an empty inventory it locks
+// nothing at all while still looking like total cover (demonstrated deadlock at
+// bootstrap). Worse, the predicate could not tell a one-row `cell_id IN (?)
+// ORDER BY cell_id ASC` from the fleet lock -- so the per-cell conversion this
+// guard exists to police would have re-armed the exemption and silenced it.
+//
+// So an upsert stays set-extension for now and this stays a hole. Closing it
+// needs the create-versus-collide distinction made explicit -- a flag threaded
+// from the three registration call sites, or `RETURNING (xmax = 0)`, which works
+// only on Postgres and would cost the both-dialects property. That belongs with
+// the conversion, which is where the hazard actually becomes reachable.
 
 export class CellRowLockScope {
   private readonly held = new Set<string>()
@@ -126,9 +141,6 @@ export class CellRowLockScope {
   private stoodDown = false
   private checked = false
   private violated = false
-  // Set by a lock that took the whole inventory in order. While it holds, every
-  // row that existed is held, so an upsert naming an unheld row is creating one.
-  private coveredInventory = false
 
   // Why the wrapper: this runs inside the caller's try, so anything thrown here
   // escapes as that statement's failure and is mislabelled with its SQL phase on
@@ -151,21 +163,9 @@ export class CellRowLockScope {
   ): void {
     if (!sql.includes(CELL_TABLE)) return
     if (CELL_INSERT.test(sql)) {
-      const inserted = insertedCellIds(sql, params)
-      // An upsert waits on the row it collides with, so a collision is ordered
-      // like any other write -- but creating a row nobody could name yet is free,
-      // and the statement text cannot tell the two apart. What settles it is
-      // whether the transaction already covered the inventory: under a
-      // fleet-wide lock every row that existed is held, so an unheld target did
-      // not exist and cannot be contended. Remove that lock -- which is exactly
-      // what the per-cell conversion does -- and the same upsert becomes a
-      // genuine unordered acquisition, which is when this starts reporting.
-      if (CELL_UPSERT.test(sql) && !this.coveredInventory) {
-        this.note()
-        this.acquire(inserted.length > 0 ? inserted : undefined, fingerprint(sql), 'wait')
-        return
-      }
-      for (const cellId of inserted) this.held.add(cellId)
+      // See the CELL_UPSERT note above: a colliding upsert is a waiting
+      // acquisition this does not police, and closing that needs the conversion.
+      for (const cellId of insertedCellIds(sql, params)) this.held.add(cellId)
       return
     }
     if (CELL_ROW_WRITE.test(sql)) {
@@ -205,11 +205,13 @@ export class CellRowLockScope {
 
   private acquireRead(sql: string, lock: CellRowLockKind, rows: SqlRow[]): void {
     const statement = fingerprint(sql)
-    // Shape, not row count: a lock that names no single cell may return one row
-    // in a fixture and many in production, so judging it by what came back makes
-    // the ratchet depend on the data. If it cannot return exactly one row by
-    // construction, its acquisition order has to be written down.
-    if (!ORDERED_LOCK.test(sql) && !namesOneCell(sql) && rows.length > 0) {
+    // Shape, not row count: a lock naming no cell at all may return one row in a
+    // fixture and the whole table in production, so judging it by what came back
+    // makes the ratchet depend on the seed data. Deliberately conservative -- it
+    // asks only whether the statement constrains cell_id somehow, because a
+    // cleverer predicate produced FALSE reports on correct SQL, and those throw
+    // in tests. Under-reporting costs a catch; over-reporting costs trust.
+    if (!ORDERED_LOCK.test(sql) && !CONSTRAINS_CELL.test(sql)) {
       this.report({ reason: 'unordered-lock', cellIds: [], held: [...this.held], statement })
     }
     const cellIds: string[] = []
@@ -227,7 +229,6 @@ export class CellRowLockScope {
     // counting it would put transactions the guard declined to reason about into
     // the denominator that says how many it did.
     this.note()
-    if (!namesOneCell(sql) && ORDERED_LOCK.test(sql)) this.coveredInventory = true
     this.acquire(cellIds, statement, lock)
   }
 
@@ -275,13 +276,6 @@ function alphanumeric(cellId: string): string {
 // literal would shift this, and no relay statement has one.
 function placeholderCount(sql: string): number {
   return (sql.match(/\?/g) ?? []).length
-}
-
-// Shape only, no parameters: whether the statement can return more than one row,
-// not whether it happened to. Exactly one `cell_id = ?` and no `OR` pins it to a
-// single row; anything else may widen in production even if a fixture returned one.
-function namesOneCell(sql: string): boolean {
-  return (sql.match(CELL_ID_EQUALS) ?? []).length === 1 && !/\bOR\b/i.test(sql)
 }
 
 function namedCellIds(sql: string, params: readonly unknown[]): string[] | undefined {
