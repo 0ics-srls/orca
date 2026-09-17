@@ -12,7 +12,9 @@ const mocks = vi.hoisted(() => ({
   guestOpenDevToolsMock: vi.fn(),
   webContentsFromIdMock: vi.fn(),
   screenGetCursorScreenPointMock: vi.fn(() => ({ x: 0, y: 0 })),
-  openPopupWithOriginBarMock: vi.fn()
+  openPopupWithOriginBarMock: vi.fn(),
+  processUserAgentMode: 'clean',
+  processUserAgent: ''
 }))
 
 vi.mock('electron', () => ({
@@ -28,9 +30,20 @@ vi.mock('./popup-origin-bar-window', () => ({
   openPopupWithOriginBar: mocks.openPopupWithOriginBarMock
 }))
 
+vi.mock('./browser-process-user-agent', () => ({
+  getBrowserProcessUserAgentIdentity: () => ({
+    mode: mocks.processUserAgentMode,
+    userAgent: mocks.processUserAgent
+  })
+}))
+
 import { browserManager } from './browser-manager'
 import { resetBrowserManagerMocks, resetBrowserManagerState } from './browser-manager-test-harness'
-import { createViewportGuestFactory } from './browser-manager-viewport-test-fixtures'
+import {
+  createViewportGuestFactory,
+  GUEST_CLEAN_UA,
+  GUEST_ELECTRON_UA
+} from './browser-manager-viewport-test-fixtures'
 
 const makeGuest = createViewportGuestFactory(mocks)
 const mobile = { width: 375, height: 667, deviceScaleFactor: 2, mobile: true }
@@ -41,22 +54,27 @@ const uaIntents = readViewportStateMap('viewportUaOverrideMobileByTabId')
 const presetIntents = readViewportStateMap('viewportPresetActiveByTabId')
 const pendingOperations = readViewportStateMap('viewportOpsByTabId')
 
-function readViewportStateMap(name: string): Map<unknown, unknown> {
-  const value: unknown = Reflect.get(browserManager, name)
+function readViewportStateMap(
+  name:
+    | 'webContentsIdByTabId'
+    | 'viewportUaOverrideMobileByTabId'
+    | 'viewportPresetActiveByTabId'
+    | 'viewportOpsByTabId'
+): Map<unknown, unknown> {
+  const value: unknown = browserManager[name]
   if (!(value instanceof Map)) {
     throw new Error(`Expected manager state map: ${name}`)
   }
   return value
 }
 
-function register(tab: string, id: number, native = false) {
+function register(tab: string, id: number) {
   const handle = makeGuest(id)
   guests.set(id, handle.guest)
   expect(
     browserManager.registerOffscreenGuest({
       browserPageId: tab,
-      webContentsId: id,
-      ...(native ? { userAgentMode: 'native' } : {})
+      webContentsId: id
     })
   ).toBe(true)
   return handle
@@ -82,6 +100,8 @@ describe('browser viewport operation ownership', () => {
     expect(process.env.ORCA_BACKGROUND_LAUNCH).toBe('1')
     resetBrowserManagerMocks(mocks)
     resetBrowserManagerState()
+    mocks.processUserAgentMode = 'clean'
+    mocks.processUserAgent = GUEST_CLEAN_UA
     guests.clear()
     mocks.webContentsFromIdMock.mockImplementation((id) => guests.get(id))
   })
@@ -185,8 +205,10 @@ describe('browser viewport operation ownership', () => {
     expect(uaIntents.get('late-apply')).toBe(false)
   })
 
-  it('an old native profile cannot write UA intent after replacement with a default profile', async () => {
-    const old = register('native-replacement', 112, true)
+  it('an old guest cannot write UA intent after replacement in native process mode', async () => {
+    mocks.processUserAgentMode = 'native'
+    mocks.processUserAgent = GUEST_ELECTRON_UA
+    const old = register('native-replacement', 112)
     const gate = pause(old, 'Emulation.setTouchEmulationEnabled')
     const pending = browserManager.setViewportOverride('native-replacement', mobile)
     await gate.entered
@@ -245,17 +267,24 @@ describe('browser viewport operation ownership', () => {
     expect(uaIntents.size).toBe(0)
   })
 
-  it.each([false, true])('native UA mode remains unchanged with mobile=%s', async (mobileMode) => {
-    const handle = register('native', 117, true)
-    await expect(
-      browserManager.setViewportOverride('native', mobileMode ? mobile : desktop)
-    ).resolves.toBe(true)
-    expect(handle.debuggerSendCommand).not.toHaveBeenCalledWith(
-      'Emulation.setUserAgentOverride',
-      expect.anything()
-    )
-    expect(uaIntents.size).toBe(0)
-  })
+  it.each([false, true])(
+    'keeps process-wide native UA behavior with mobile=%s',
+    async (mobileMode) => {
+      mocks.processUserAgentMode = 'native'
+      mocks.processUserAgent = GUEST_ELECTRON_UA
+      const handle = register('native', 117)
+      await expect(
+        browserManager.setViewportOverride('native', mobileMode ? mobile : desktop)
+      ).resolves.toBe(true)
+      expect(handle.debuggerSendCommand).toHaveBeenCalledWith(
+        'Emulation.setUserAgentOverride',
+        mobileMode
+          ? expect.objectContaining({ userAgent: expect.stringContaining('iPhone') })
+          : { userAgent: GUEST_ELECTRON_UA }
+      )
+      expect(uaIntents.get('native')).toBe(mobileMode)
+    }
+  )
 
   it('late rejected clears cannot repopulate all registries after unregisterAll', async () => {
     const operations: { gate: ReturnType<typeof pause>; pending: Promise<boolean> }[] = []
