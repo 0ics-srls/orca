@@ -64,8 +64,10 @@ export class ClaudeBackgroundTaskRows {
 
   constructor(private readonly deps: ClaudeBackgroundTaskRowsDeps) {
     this.now = deps.now ?? (() => Date.now())
-    this.overflowTerminalRows = new ClaudeOverflowTerminalRows(this.ledgers, this.now, (id, row) =>
-      this.writeRow(id, row)
+    this.overflowTerminalRows = new ClaudeOverflowTerminalRows(
+      this.ledgers,
+      this.now,
+      (id, row, openOutputTurn) => this.writeRow(id, row, openOutputTurn)
     )
   }
 

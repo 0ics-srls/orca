@@ -169,4 +169,46 @@ describe('a typed background-task row opens the turn it resumes', () => {
 
     expect(projected(items())).toBe('idle')
   })
+
+  it('does not reopen a completed turn when an overflow terminal row is enriched', () => {
+    const { translator, items } = harness()
+    for (let index = 0; index < 64; index += 1) {
+      translator.handle(
+        systemFrame(`start-${index}`, {
+          subtype: 'task_started',
+          task_id: `live-${index}`,
+          task_type: 'local_bash',
+          is_backgrounded: true
+        })
+      )
+    }
+    translator.handle(
+      systemFrame('overflow-start', {
+        subtype: 'task_started',
+        task_id: 'overflow-turn',
+        task_type: 'local_bash',
+        is_backgrounded: true
+      })
+    )
+    translator.handle(
+      systemFrame('overflow-update', {
+        subtype: 'task_updated',
+        task_id: 'overflow-turn',
+        patch: { status: 'failed' }
+      })
+    )
+    settleTurn(translator)
+    expect(projected(items())).toBe('idle')
+
+    translator.handle(
+      systemFrame('overflow-notification', {
+        subtype: 'task_notification',
+        task_id: 'overflow-turn',
+        status: 'stopped',
+        summary: 'No completion record was found'
+      })
+    )
+
+    expect(projected(items())).toBe('idle')
+  })
 })

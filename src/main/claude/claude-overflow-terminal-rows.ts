@@ -17,7 +17,11 @@ export class ClaudeOverflowTerminalRows {
   constructor(
     private readonly ledgers: ClaudeBackgroundTaskLedgers,
     private readonly now: () => number,
-    private readonly write: (id: string, row: ClaudeBackgroundTaskRow) => void
+    private readonly write: (
+      id: string,
+      row: ClaudeBackgroundTaskRow,
+      openOutputTurn?: boolean
+    ) => void
   ) {}
 
   get size(): number {
@@ -58,7 +62,7 @@ export class ClaudeOverflowTerminalRows {
     this.ledgers.fallbackTaskIds.delete(id)
     if (row) {
       finalizeClaudeBackgroundTaskRow(row, message, this.now())
-      this.write(id, row)
+      this.write(id, row, false)
     } else {
       this.writeNotification(id, message)
     }
