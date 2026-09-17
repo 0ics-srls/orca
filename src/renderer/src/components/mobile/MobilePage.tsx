@@ -66,7 +66,7 @@ export default function MobilePage(): React.JSX.Element {
   // "has this visit's lookup settled" is false until it answers, where "is a lookup
   // running" cannot tell overlapping lookups apart and clears on the first to land.
   const [pairingFlowVisit, setPairingFlowVisit] = useState(0)
-  const [addressedFlowVisit, setAddressedFlowVisit] = useState(-1)
+  const [addressedFlowVisit, setAddressedFlowVisit] = useState<number | null>(null)
   const pairingAddressSettled = addressedFlowVisit === pairingFlowVisit
   const networkInterfacesRequestIdRef = useRef(0)
   const mountedRef = useMountedRef()
@@ -293,6 +293,8 @@ export default function MobilePage(): React.JSX.Element {
   // Why: entering the flow must mint a fresh pairing token — clear stale QR
   // state so we never flash an expired code from a previous session.
   const enterFlow = (): void => {
+    // Why: the bump belongs here, not in the stage effect — an effect runs a render
+    // after Step 2 is already visible, so the auto-mint sees the old visit settled.
     setPairingFlowVisit((visit) => visit + 1)
     hasGeneratedRef.current = false
     setPairQrDataUrl(null)
