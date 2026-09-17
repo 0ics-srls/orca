@@ -267,7 +267,6 @@ describe('MobilePane pairing connection mode', () => {
       connectionMode: 'local-only'
     })
     await user.click(screen.getByRole('button', { name: 'Use LAN' }))
-    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent('local-only'))
     await waitFor(() =>
       expect(screen.queryByTestId('relay-mint-failure-notice')).not.toBeInTheDocument()
     )
@@ -276,6 +275,14 @@ describe('MobilePane pairing connection mode', () => {
     expect(updateSettings).not.toHaveBeenCalledWith(
       expect.objectContaining({ mobilePairingConnectionMode: 'local-only' })
     )
+    // The recovery moves the mint, not policy, so the radio must keep reading
+    // the host policy that is actually in force.
+    expect(screen.getByTestId('mode')).toHaveTextContent('automatic')
+    // And because the radio never moved, the equality guard in the change
+    // handler no longer swallows a later click on LAN.
+    await user.click(screen.getByRole('button', { name: 'choose-local' }))
+    expect(updateSettings).toHaveBeenCalledWith({ mobilePairingConnectionMode: 'local-only' })
+    expect(screen.getByTestId('mode')).toHaveTextContent('local-only')
   })
 
   it('does not show mint failure after an honest Relay mint', async () => {
@@ -408,7 +415,7 @@ describe('MobilePane pairing connection mode', () => {
       })
     })
     await waitFor(() => expect(screen.getByTestId('qr')).toHaveTextContent('base64,local'))
-    expect(screen.getByTestId('mode')).toHaveTextContent('local-only')
+    expect(screen.getByTestId('mode')).toHaveTextContent('automatic')
   })
 
   it('restores a saved local-only preference without user interaction', () => {

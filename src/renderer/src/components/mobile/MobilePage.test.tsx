@@ -443,12 +443,15 @@ describe('MobilePage pairing connection mode', () => {
       connectionMode: 'local-only'
     })
     await user.click(screen.getByRole('button', { name: 'Use LAN' }))
-    await waitFor(() => expect(screen.getByTestId('mode')).toHaveTextContent('local-only'))
+    await waitFor(() => expect(screen.getByTestId('pairing-qr')).toHaveTextContent('base64,local'))
     // Why: the persisted mode is host policy that withdraws Relay from every
     // paired phone; this button only promises a LAN QR (#18211).
     expect(mocks.storeState.updateSettings).not.toHaveBeenCalledWith(
       expect.objectContaining({ mobilePairingConnectionMode: 'local-only' })
     )
+    // The recovery moves the mint, not policy, so the radio must keep reading
+    // the host policy that is actually in force.
+    expect(screen.getByTestId('mode')).toHaveTextContent('automatic')
   })
 
   it('switches to LAN while a Relay retry is still unresolved', async () => {
