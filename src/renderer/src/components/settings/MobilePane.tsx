@@ -46,6 +46,9 @@ export function MobilePane(): React.JSX.Element {
   const signedIn = useAppStore((state) => state.orcaProfileAuthStatus?.state === 'connected')
   const settingsSearchQuery = useAppStore((state) => state.settingsSearchQuery)
   const [connectionMode, setConnectionMode] = useMobilePairingConnectionMode()
+  // Which path the next QR mints over, when that differs from host policy. The
+  // mint-failure LAN recovery sets it; the radio keeps showing host policy.
+  const [mintModeOverride, setMintModeOverride] = useState<MobilePairingConnectionMode | null>(null)
   const [rotateNextQr, setRotateNextQr] = useState(false)
   const codeCopiedResetTimerRef = useRef<number | null>(null)
   const wasSignedInRef = useRef(signedIn)
@@ -175,7 +178,7 @@ export function MobilePane(): React.JSX.Element {
         connectionModeOverride?: MobilePairingConnectionMode
       } = {}
     ) => {
-      const preferredMode = opts.connectionModeOverride ?? connectionMode
+      const preferredMode = opts.connectionModeOverride ?? mintModeOverride ?? connectionMode
       // Why: refuse signed-out Anywhere rather than degrading to a local-only QR
       // under the Relay label (canMint is the shared honesty gate).
       if (!canMintMobilePairingOffer({ connectionMode: preferredMode, signedIn })) {
@@ -255,6 +258,7 @@ export function MobilePane(): React.JSX.Element {
       clearCodeCopiedResetTimer,
       connectionMode,
       loadDevices,
+      mintModeOverride,
       mountedRef,
       rotateNextQr,
       selectedAddress,
@@ -263,7 +267,7 @@ export function MobilePane(): React.JSX.Element {
   )
 
   const changeConnectionMode = useCallback(
-    (nextMode: MobilePairingConnectionMode, options?: { persist?: boolean }) => {
+    (nextMode: MobilePairingConnectionMode) => {
       if (nextMode === connectionMode) {
         return
       }
@@ -271,36 +275,26 @@ export function MobilePane(): React.JSX.Element {
       // instead of snapping back to the default.
       handledModeRef.current = nextMode
       setConnectionMode(nextMode)
-      // Why: the persisted setting is host policy — it withdraws Relay from
-      // every paired phone. A mint-failure recovery button only promises a
-      // LAN QR, so it must not persist.
-      if (options?.persist !== false) {
-        void updateSettings({ mobilePairingConnectionMode: nextMode })
-      }
-      // Why: after a Relay mint failure, LAN should mint immediately — including
-      // when the renderer has not chosen an address yet (main picks the default).
-      const shouldRecoverWithLan = relayMintFailure != null && nextMode === 'local-only'
+      // An explicit policy pick supersedes a recovery mint.
+      setMintModeOverride(null)
+      void updateSettings({ mobilePairingConnectionMode: nextMode })
       // A displayed or in-flight code encodes the old connection policy. The
       // main process rotates on the mode mismatch, so don't arm a second rotate.
       invalidatePairing({ armRotate: false })
-      // Why: switching to LAN after a Relay failure should mint immediately.
-      if (
-        shouldRecoverWithLan &&
-        canMintMobilePairingOffer({ connectionMode: nextMode, signedIn })
-      ) {
-        void generateQR({ rotate: false, connectionModeOverride: 'local-only' })
-      }
     },
-    [
-      connectionMode,
-      generateQR,
-      invalidatePairing,
-      relayMintFailure,
-      signedIn,
-      updateSettings,
-      setConnectionMode
-    ]
+    [connectionMode, invalidatePairing, updateSettings, setConnectionMode]
   )
+
+  // Why not changeConnectionMode: the persisted setting is host policy and
+  // withdraws Relay from every paired phone. Recovery only promises a LAN QR,
+  // so it moves the mint and leaves policy — and the radio — alone.
+  const recoverWithLanMint = useCallback(() => {
+    setMintModeOverride('local-only')
+    invalidatePairing({ armRotate: false })
+    if (canMintMobilePairingOffer({ connectionMode: 'local-only', signedIn })) {
+      void generateQR({ rotate: false, connectionModeOverride: 'local-only' })
+    }
+  }, [generateQR, invalidatePairing, signedIn])
 
   const copyRelayDiagnostics = useCallback(async (): Promise<void> => {
     if (relayMintFailure == null) {
@@ -401,7 +395,7 @@ export function MobilePane(): React.JSX.Element {
       {relayMintFailure != null && connectionMode === 'automatic' ? (
         <MobileRelayMintFailureNotice
           failure={relayMintFailure}
-          onUseLan={() => changeConnectionMode('local-only', { persist: false })}
+          onUseLan={recoverWithLanMint}
           onRetry={() => void generateQR({ rotate: true })}
           onCopyDiagnostics={() => void copyRelayDiagnostics()}
           busy={loading}

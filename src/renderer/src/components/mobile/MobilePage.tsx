@@ -42,6 +42,9 @@ export default function MobilePage(): React.JSX.Element {
   const signedIn = useAppStore((state) => state.orcaProfileAuthStatus?.state === 'connected')
   const refreshAuthStatus = useAppStore((state) => state.fetchOrcaProfileAuthStatus)
   const [connectionMode, setConnectionMode] = useMobilePairingConnectionMode()
+  // Which path the next QR mints over, when that differs from host policy. The
+  // mint-failure LAN recovery sets it; the radio keeps showing host policy.
+  const [mintModeOverride, setMintModeOverride] = useState<MobilePairingConnectionMode | null>(null)
   const [networkInterfaces, setNetworkInterfaces] = useState<MobileNetworkInterface[]>([])
   const pairingAddressChangeRef = useRef<(change: MobilePairingAddressChange) => void>(() => {})
   const notifyPairingAddressChange = useCallback(
@@ -84,7 +87,7 @@ export default function MobilePage(): React.JSX.Element {
   )
 
   const { generatePairing } = useMobilePairingGeneration({
-    connectionMode,
+    connectionMode: mintModeOverride ?? connectionMode,
     signedIn,
     selectedAddress,
     mountedRef,
@@ -129,7 +132,7 @@ export default function MobilePage(): React.JSX.Element {
   }, [connectionMode, generatePairing, pairLoading, signedIn])
 
   const handleConnectionModeChange = useCallback(
-    (nextMode: MobilePairingConnectionMode, options?: { persist?: boolean }): void => {
+    (nextMode: MobilePairingConnectionMode): void => {
       if (nextMode === connectionMode) {
         return
       }
@@ -138,15 +141,20 @@ export default function MobilePage(): React.JSX.Element {
       // (below), which also covers cross-window preference syncs.
       setRelayMintFailure(null)
       setConnectionMode(nextMode)
-      // Why: the persisted setting is host policy — it withdraws Relay from
-      // every paired phone. A mint-failure recovery button only promises a
-      // LAN QR, so it must not persist.
-      if (options?.persist !== false) {
-        void updateSettings({ mobilePairingConnectionMode: nextMode })
-      }
+      // An explicit policy pick supersedes a recovery mint.
+      setMintModeOverride(null)
+      void updateSettings({ mobilePairingConnectionMode: nextMode })
     },
     [connectionMode, updateSettings, setConnectionMode]
   )
+
+  // Why not handleConnectionModeChange: the persisted setting is host policy and
+  // withdraws Relay from every paired phone. Recovery only promises a LAN QR, so
+  // it moves the mint and leaves policy — and the radio — alone.
+  const recoverWithLanMint = useCallback((): void => {
+    setMintModeOverride('local-only')
+    void generatePairing(false, undefined, 'local-only')
+  }, [generatePairing])
 
   const copyRelayDiagnostics = useCallback(async (): Promise<void> => {
     if (relayMintFailure == null) {
@@ -350,7 +358,7 @@ export default function MobilePage(): React.JSX.Element {
       relayMintFailure={
         connectionMode === 'automatic' && pairQrDataUrl == null ? relayMintFailure : null
       }
-      onUseLan={() => handleConnectionModeChange('local-only', { persist: false })}
+      onUseLan={recoverWithLanMint}
       onRetryRelay={() => void generatePairing(true)}
       onCopyRelayDiagnostics={() => void copyRelayDiagnostics()}
       platform={platform}
