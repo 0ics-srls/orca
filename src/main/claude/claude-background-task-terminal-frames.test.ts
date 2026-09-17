@@ -27,11 +27,13 @@ describe('claude background task terminal frames', () => {
       type: 'background-task',
       taskId: 'bjzenpq13',
       kind: 'unknown',
-      label: 'Locate the exact screenshot session',
       state: 'blocked',
       summary: 'Locate the exact screenshot session',
       parentToolUseId: 'toolu_01ASNfnDBEzt4w3ejLE12bGu'
     })
+    // The sentence carries the provider's words; the header falls back to the
+    // kind label, so one field is never drawn in two slots of the same row.
+    expect(latest()?.label).toBe('')
     expect(latestTwin()).toBe('Locate the exact screenshot session')
   })
 

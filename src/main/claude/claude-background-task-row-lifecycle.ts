@@ -123,7 +123,7 @@ export function newClaudeBackgroundTaskRow(
  *
  *  A terminal frame is self-sufficient: it states an outcome the transcript owes
  *  the user whether or not an announcement ever admitted the task, so the row is
- *  built from the frame's own fields — its summary as the label, its status as
+ *  built from the frame's own fields — its summary as the sentence, its status as
  *  the state, its error, output path and usage. */
 export function newClaudeBackgroundTaskRowFromNotification(
   id: string,
@@ -132,11 +132,7 @@ export function newClaudeBackgroundTaskRowFromNotification(
   generation: number
 ): ClaudeBackgroundTaskRow {
   const row = newClaudeBackgroundTaskRow(id, message, now, generation)
-  reviseClaudeBackgroundTaskRow(
-    row,
-    { ...claudeBackgroundTaskNotificationChange(message), label: taskText(message.summary) },
-    now
-  )
+  reviseClaudeBackgroundTaskRow(row, claudeBackgroundTaskNotificationChange(message), now)
   row.terminalNotificationReceived = true
   return row
 }
