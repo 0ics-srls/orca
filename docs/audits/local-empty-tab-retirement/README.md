@@ -8,6 +8,8 @@ that this metadata path caused the reported gigabyte growth in #19831 or #19768.
 
 ## Result
 
+CI follow-up found that store-only close tests have no renderer `window`. The optional request now exits before touching the bridge in that environment. Both affected suites and the retirement suites pass (42 tests), including a direct windowless-close regression. The before/after restart proof still has the expected two baseline failures and ten fixed passes.
+
 The portable proof enters the actual renderer `closeTab`, preload session bridge, registered
 main IPC handler, Store, runtime and disk reload. It uses paired fixture IPC ports, temporary
 state and no real window, PTY, shell, SSH connection or external host.

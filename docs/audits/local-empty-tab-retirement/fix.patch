@@ -289,7 +289,7 @@
      set: (args: WorkspaceSessionState, hostId?: ExecutionHostId) => Promise<void>
 --- /dev/null
 +++ b/src/renderer/src/store/terminals/terminal-tab-close-empty.ts
-@@ -0,0 +1,41 @@
+@@ -0,0 +1,42 @@
 +import { captureEmptyTerminalTabRetirement } from '../../../../shared/empty-terminal-tab-retirement'
 +import { getExecutionHostIdForWorktree } from '@/lib/worktree-runtime-owner'
 +import { getConnectionIdFromState } from '@/lib/connection-owner-resolution'
@@ -303,6 +303,7 @@
 +  reason: string
 +): void {
 +  if (
++    typeof window === 'undefined' ||
 +    reason !== 'user' ||
 +    plan.ptyIds.length > 0 ||
 +    !plan.worktreeId ||
