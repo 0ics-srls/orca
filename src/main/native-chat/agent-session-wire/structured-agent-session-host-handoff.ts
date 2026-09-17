@@ -14,7 +14,7 @@ import type { StructuredAgentSessionHostDeps } from './structured-agent-session-
 import type { StructuredAgentSessionHostSession } from './structured-agent-session-host-types'
 import { StructuredAgentSessionHandoffCoordinator } from './structured-agent-session-handoff'
 import { recoverDeadTuiHandoffStatus } from './structured-agent-session-dead-tui-recovery'
-import { readNativeSessionOptions } from './structured-agent-session-option-restoration'
+import { readNativeSessionOptionRestoration } from './structured-agent-session-option-restoration'
 import type { AgentSessionSubscribers } from './structured-agent-session-subscribers'
 import { StructuredTuiTranscriptCatchup } from './structured-tui-transcript-catchup'
 import { adapterSupportsCreateIfDeclared } from './structured-agent-session-provider-support'
@@ -248,11 +248,14 @@ export async function acquireNativeHandoffOwner(
     fence: input.fence,
     spawnToken: input.spawnToken,
     ...(record.options ? { options: record.options } : {}),
+    ...(record.permissionModeRestoreValue
+      ? { permissionModeRestoreValue: record.permissionModeRestoreValue }
+      : {}),
     events: eventSink.sink
   })
   let proved: AgentSessionRecord
   try {
-    const options = await readNativeSessionOptions({
+    const restoration = await readNativeSessionOptionRestoration({
       adapter: deps.adapter,
       sessionId: input.sessionId,
       fence: input.fence,
@@ -269,7 +272,14 @@ export async function acquireNativeHandoffOwner(
       fence: input.fence,
       link: acquired.link,
       now: host.now(),
-      ...(options ? { options } : {})
+      ...(restoration
+        ? {
+            options: restoration.options,
+            ...(restoration.permissionModeRestoreValue
+              ? { permissionModeRestoreValue: restoration.permissionModeRestoreValue }
+              : {})
+          }
+        : {})
     })
   } catch (error) {
     return rethrowAfterAgentSessionAcquisitionCleanup(deps.adapter, input.sessionId, error)

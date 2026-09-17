@@ -17,6 +17,7 @@ import type { ClaudeSession } from './claude-structured-session-state'
 import { decodeStructuredAgentSessionOptionValue } from '../../shared/structured-agent-session-option-codec'
 import { readStructuredAgentSessionPermissionMode } from '../../shared/structured-agent-session-permission-mode'
 import { setClaudeStructuredPermissionMode } from './claude-structured-permission-mode'
+import { claudeCurrentDispatchHasRetiredWaiter } from './claude-structured-dispatch-ownership'
 
 const OPTION_ORDER = ['model', 'effort', 'fastMode', 'permissionMode'] as const
 
@@ -54,9 +55,13 @@ export async function setClaudeStructuredOption(
     throw new AgentSessionOptionRejectedError(`claude permission mode ${input.value} is invalid`)
   }
   if (permissionMode) {
-    if (session.translator?.currentTurnId) {
+    if (
+      session.translator?.currentTurnId ||
+      session.dispatchWaiters.length > 0 ||
+      claudeCurrentDispatchHasRetiredWaiter(session)
+    ) {
       throw new AgentSessionOptionRejectedError(
-        'claude permission mode cannot change while a turn is running'
+        'claude permission mode cannot change while a turn or send is unsettled'
       )
     }
     if (
@@ -229,10 +234,14 @@ export async function restoreClaudeStructuredSessionOptions(
   session: ClaudeSession,
   timeoutMs: number | undefined
 ): Promise<void> {
+  const restoresPermissionMode = session.options.has('permissionMode')
   // Any write that was already in flight belongs to the previous acquisition
   // state and must not repopulate this map after restore starts.
   session.optionMutationSequence += 1
   session.permissionModeMutationSequence += 1
+  if (!restoresPermissionMode) {
+    session.reportedPermissionModeMutation = session.permissionModeMutationSequence
+  }
   // The fence bump is not a write, so the report the session already holds is still
   // current as of this instant; leaving the stamp behind would make every restored
   // session read as unconfirmed until its next turn.
@@ -240,11 +249,22 @@ export async function restoreClaudeStructuredSessionOptions(
   const options = [...session.options.entries()]
   session.options.clear()
   for (const [key, value] of options) {
+    const permissionMode =
+      key === 'permissionMode' ? readStructuredAgentSessionPermissionMode(value) : null
+    const retriesApprovedExit =
+      permissionMode !== null &&
+      permissionMode !== 'plan' &&
+      permissionMode === session.basePermissionMode
     try {
-      await setClaudeStructuredOption(session, { key, value }, timeoutMs)
+      await (retriesApprovedExit
+        ? setClaudeStructuredPermissionMode(session, permissionMode, timeoutMs, 'keep-requested')
+        : setClaudeStructuredOption(session, { key, value }, timeoutMs))
     } catch (error) {
       if (!isAgentSessionOptionRejectedError(error)) {
         throw error
+      }
+      if (retriesApprovedExit) {
+        continue
       }
       // A stale or unavailable preference must not poison every future acquire;
       // the provider's current value remains authoritative and is re-persisted.

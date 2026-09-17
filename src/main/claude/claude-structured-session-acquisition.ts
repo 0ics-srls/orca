@@ -259,6 +259,9 @@ export async function acquireClaudeSession({
         process,
         acquisitionGeneration: mintClaudeAcquisitionGeneration(deps),
         options: acquisitionOptions.options,
+        ...(input.permissionModeRestoreValue
+          ? { permissionModeRestoreValue: input.permissionModeRestoreValue }
+          : {}),
         capabilities: readClaudeCapabilities(init, initialization),
         ...(deps.mintLinkId ? { linkId: deps.mintLinkId() } : {}),
         observedAt: deps.now?.() ?? Date.now()

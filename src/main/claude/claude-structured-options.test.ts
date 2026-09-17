@@ -11,6 +11,7 @@ import {
   observeClaudeUserPermissionMode,
   readClaudeStructuredSessionOptions
 } from './claude-structured-session-options'
+import { ClaudeControlRequestError } from './claude-stream-json-connection'
 
 function sessionFor(setModel: ClaudeSession['connection']['setModel']): ClaudeSession {
   return {
@@ -94,6 +95,78 @@ function permissionModeSession(
 }
 
 describe('Claude structured plan mode', () => {
+  it('keeps autonomous reports fenced after an acquisition with no permission restore', async () => {
+    const { session } = permissionModeSession()
+
+    await restoreClaudeStructuredSessionOptions(session, undefined)
+    observeClaudeUserPermissionMode(session, { permissionMode: 'plan' })
+
+    expect(session.permissionModeMutationSequence).toBe(1)
+    expect(session.reportedPermissionModeMutation).toBe(1)
+    expect(session.reportedOptions.permissionMode).toBe('acceptEdits')
+    expect(session.confirmedOptions.has('permissionMode')).toBe(true)
+  })
+
+  it('ignores autonomous provider permission reports without a user-owned mutation', () => {
+    const { session } = permissionModeSession()
+    const optionsChanged = vi.fn()
+    session.confirmedOptions.delete('permissionMode')
+    session.events = {
+      appendItem: vi.fn(),
+      appendTombstone: vi.fn(),
+      publish: vi.fn(),
+      optionsChanged
+    }
+
+    observeClaudeUserPermissionMode(session, { permissionMode: 'plan' })
+
+    expect(session.reportedOptions.permissionMode).toBe('acceptEdits')
+    expect(session.confirmedOptions.has('permissionMode')).toBe(false)
+    expect(optionsChanged).not.toHaveBeenCalled()
+  })
+
+  it('rejects a permission change while an outcome-unknown send can still start a turn', async () => {
+    const { session, setPermissionMode } = permissionModeSession()
+    session.dispatchSequence = 1
+    session.retiredDispatchWaiters.push({
+      resolve: vi.fn(),
+      acceptsResult: false,
+      clientMessageId: 'unconfirmed-send',
+      sentUuid: 'sent-uuid',
+      dispatchSequence: 1,
+      requestedAt: 1,
+      retired: true,
+      replayContentKey: 'content'
+    })
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'permissionMode', value: 'plan' }, undefined)
+    ).rejects.toThrow('cannot change while a turn or send is unsettled')
+
+    expect(setPermissionMode).not.toHaveBeenCalled()
+  })
+
+  it('does not let an archival replay identity permanently block permission changes', async () => {
+    const { session, setPermissionMode } = permissionModeSession()
+    session.dispatchSequence = 2
+    session.retiredDispatchWaiters.push({
+      resolve: vi.fn(),
+      acceptsResult: false,
+      clientMessageId: 'older-unconfirmed-send',
+      sentUuid: 'older-sent-uuid',
+      dispatchSequence: 1,
+      requestedAt: 1,
+      retired: true,
+      replayContentKey: 'older-content'
+    })
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'permissionMode', value: 'plan' }, undefined)
+    ).resolves.toMatchObject({ permissionMode: 'plan' })
+
+    expect(setPermissionMode).toHaveBeenCalledWith('plan', { timeoutMs: undefined })
+  })
+
   it('selects plan through set_permission_mode and confirms the readback', async () => {
     const { session, setPermissionMode, getSettings } = permissionModeSession()
 
@@ -144,7 +217,7 @@ describe('Claude structured plan mode', () => {
     expect(session.confirmedOptions.has('permissionMode')).toBe(false)
   })
 
-  it('settles an approved plan exit when readback is absent and waits for matching late evidence', async () => {
+  it('keeps an approved plan exit durable while waiting for matching late evidence', async () => {
     const { session, getSettings } = permissionModeSession('acceptEdits', false)
     const optionsChanged = vi.fn()
     session.events = {
@@ -160,9 +233,9 @@ describe('Claude structured plan mode', () => {
 
     await expect(
       setClaudeStructuredOption(session, { key: 'permissionMode', value: 'acceptEdits' }, undefined)
-    ).resolves.toEqual({})
+    ).resolves.toEqual({ permissionMode: 'acceptEdits' })
 
-    expect(session.options.has('permissionMode')).toBe(false)
+    expect(session.options.get('permissionMode')).toBe('acceptEdits')
     expect(session.reportedOptions.permissionMode).toBe('plan')
     expect(session.confirmedOptions.has('permissionMode')).toBe(false)
     await expect(readClaudeStructuredSessionOptions(session, undefined)).resolves.toMatchObject({
@@ -185,6 +258,27 @@ describe('Claude structured plan mode', () => {
     expect(session.reportedOptions.permissionMode).toBe('acceptEdits')
     expect(session.confirmedOptions.has('permissionMode')).toBe(true)
     expect(optionsChanged).toHaveBeenCalledOnce()
+  })
+
+  it('lets a later explicit Plan choice supersede an unconfirmed exit restore', async () => {
+    const { session, getSettings } = permissionModeSession('acceptEdits', false)
+    session.options.set('permissionMode', 'plan')
+    session.reportedOptions.permissionMode = 'plan'
+    session.confirmedOptions.add('permissionMode')
+    getSettings.mockResolvedValue({ applied: { permissionMode: 'plan' } })
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'permissionMode', value: 'acceptEdits' }, undefined)
+    ).resolves.toEqual({ permissionMode: 'acceptEdits' })
+    await expect(
+      setClaudeStructuredOption(session, { key: 'permissionMode', value: 'plan' }, undefined)
+    ).resolves.toEqual({ permissionMode: 'plan' })
+
+    observeClaudeUserPermissionMode(session, { permissionMode: 'acceptEdits' })
+
+    expect(session.options.get('permissionMode')).toBe('plan')
+    expect(session.reportedOptions.permissionMode).toBe('plan')
+    expect(session.confirmedOptions.has('permissionMode')).toBe(true)
   })
 
   it('keeps the requested permission mode visible while provider evidence confirms it', async () => {
@@ -283,6 +377,23 @@ describe('Claude structured plan mode', () => {
     expect(session.basePermissionMode).toBe('acceptEdits')
   })
 
+  it('closes permission report ownership after a failed manual change rolls back', async () => {
+    const { session } = permissionModeSession()
+    session.connection.setPermissionMode = vi.fn(async () => {
+      throw new Error('transport failed')
+    })
+
+    await expect(
+      setClaudeStructuredOption(session, { key: 'permissionMode', value: 'plan' }, undefined)
+    ).rejects.toThrow('transport failed')
+    observeClaudeUserPermissionMode(session, { permissionMode: 'plan' })
+
+    expect(session.options.has('permissionMode')).toBe(false)
+    expect(session.reportedPermissionModeMutation).toBe(session.permissionModeMutationSequence)
+    expect(session.reportedOptions.permissionMode).toBe('acceptEdits')
+    expect(session.confirmedOptions.has('permissionMode')).toBe(true)
+  })
+
   it('fences an in-flight permission write when restored options take ownership', async () => {
     const { session, setPermissionMode, getSettings } = permissionModeSession()
     const firstApply = Promise.withResolvers<void>()
@@ -304,7 +415,7 @@ describe('Claude structured plan mode', () => {
     expect(session.confirmedOptions.has('permissionMode')).toBe(true)
   })
 
-  it('keeps the accepted exit intent when readback still reports plan', async () => {
+  it('keeps the accepted exit intent durable when readback still reports plan', async () => {
     const { session, setPermissionMode, getSettings } = permissionModeSession('acceptEdits', false)
     session.options.set('permissionMode', 'plan')
     session.reportedOptions.permissionMode = 'plan'
@@ -312,13 +423,26 @@ describe('Claude structured plan mode', () => {
 
     await expect(
       setClaudeStructuredOption(session, { key: 'permissionMode', value: 'acceptEdits' }, undefined)
-    ).resolves.toEqual({})
+    ).resolves.toEqual({ permissionMode: 'acceptEdits' })
 
     expect(setPermissionMode).toHaveBeenCalledWith('acceptEdits', { timeoutMs: undefined })
     expect(getSettings).toHaveBeenCalledOnce()
-    expect(session.options.has('permissionMode')).toBe(false)
+    expect(session.options.get('permissionMode')).toBe('acceptEdits')
     expect(session.reportedOptions.permissionMode).toBe('plan')
     expect(session.confirmedOptions.has('permissionMode')).toBe(false)
+  })
+
+  it('retains an approved exit for the next acquisition when its retry fails', async () => {
+    const { session } = permissionModeSession('acceptEdits', false)
+    session.options.set('permissionMode', 'acceptEdits')
+    session.connection.setPermissionMode = vi.fn(async () => {
+      throw new ClaudeControlRequestError('set_permission_mode', 'temporarily unavailable')
+    })
+
+    await restoreClaudeStructuredSessionOptions(session, undefined)
+
+    expect(session.options.get('permissionMode')).toBe('acceptEdits')
+    expect(session.restoreSkippedOptions.has('permissionMode')).toBe(false)
   })
 })
 

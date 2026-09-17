@@ -51,6 +51,12 @@ export function readClaudeSettingsPermissionMode(
 
 export function observeClaudeUserPermissionMode(session: ClaudeSession, value: unknown): void {
   if (
+    !session.options.has('permissionMode') &&
+    session.reportedPermissionModeMutation === session.permissionModeMutationSequence
+  ) {
+    return
+  }
+  if (
     session.confirmedOptions.has('permissionMode') &&
     session.reportedPermissionModeMutation === session.permissionModeMutationSequence
   ) {

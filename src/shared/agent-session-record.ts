@@ -18,6 +18,16 @@ import {
   type AgentSessionHandleProvider,
   type AgentSessionProviderHandleLink
 } from './agent-session-provider-handle'
+import {
+  isStructuredAgentSessionPermissionModeRestoreValue,
+  type StructuredAgentSessionPermissionMode
+} from './structured-agent-session-permission-mode'
+import { isAgentSessionLaunchArgs, type AgentSessionLaunchArgs } from './agent-session-launch-args'
+import { isAgentSessionId } from './agent-session-id'
+
+export { isAgentSessionLaunchArgs } from './agent-session-launch-args'
+export type { AgentSessionLaunchArgs } from './agent-session-launch-args'
+export { isAgentSessionId } from './agent-session-id'
 
 export const AGENT_SESSION_RECORD_SCHEMA_VERSION = 2 as const
 
@@ -45,9 +55,6 @@ export type AgentSessionAccountHome = {
 
 /** Provider launch environment captured by the host when the session is created. */
 export type AgentSessionLaunchEnv = Record<string, string>
-
-/** Provider CLI arguments captured by the host when the session is created. */
-export type AgentSessionLaunchArgs = string[]
 
 export type AgentSessionOwnerRuntimeKind = 'native' | 'tui'
 
@@ -131,6 +138,8 @@ export type AgentSessionRecord = {
   accountHome: AgentSessionAccountHome
   /** Provider options acknowledged for the next turn, restored across owner replacement. */
   options?: Record<string, string>
+  /** Non-Plan permission mode captured before this session first entered Plan. */
+  permissionModeRestoreValue?: StructuredAgentSessionPermissionMode
   rewind?: AgentSessionRewindRecord
   conversationCommand?: AgentSessionConversationCommandRecord
   /** The name Orca gave this conversation, so a later acquisition need not name it again. */
@@ -152,16 +161,8 @@ const MAX_ID_LENGTH = 512
 const MAX_PATH_LENGTH = 4096
 const MAX_LAUNCH_ENV_ENTRIES = 256
 const MAX_LAUNCH_ENV_VALUE_LENGTH = 65_536
-const MAX_LAUNCH_ARGS = 256
-const MAX_LAUNCH_ARGS_BYTES = 16 * 1024
-const SESSION_ID_PATTERN = /^[A-Za-z0-9_-]{8,128}$/
-
 function isBoundedString(value: unknown, max: number): value is string {
   return typeof value === 'string' && value.length > 0 && value.length <= max
-}
-
-export function isAgentSessionId(value: unknown): value is string {
-  return typeof value === 'string' && SESSION_ID_PATTERN.test(value)
 }
 
 /** NUL cannot occur in a host id, distro name, or workspace id, so no component can forge a join. */
@@ -345,6 +346,8 @@ export function isAgentSessionRecord(value: unknown): value is AgentSessionRecor
     isAgentSessionProviderHandleChain(record.providerHandleChain) &&
     isAgentSessionAccountHome(record.accountHome) &&
     (record.options === undefined || isAgentSessionOptions(record.options)) &&
+    (record.permissionModeRestoreValue === undefined ||
+      isStructuredAgentSessionPermissionModeRestoreValue(record.permissionModeRestoreValue)) &&
     (record.rewind === undefined || isAgentSessionRewindRecord(record.rewind)) &&
     (record.conversationCommand === undefined ||
       isAgentSessionConversationCommandRecord(record.conversationCommand)) &&
@@ -367,14 +370,5 @@ export function isAgentSessionRecord(value: unknown): value is AgentSessionRecor
       (validated.lease.ownerProcess !== null &&
         head?.linkId === validated.lease.provenHandleLinkId &&
         head.mintedAtFence === validated.lease.runtimeFence))
-  )
-}
-
-export function isAgentSessionLaunchArgs(value: unknown): value is AgentSessionLaunchArgs {
-  return (
-    Array.isArray(value) &&
-    value.length <= MAX_LAUNCH_ARGS &&
-    value.every((arg) => typeof arg === 'string' && !arg.includes('\0')) &&
-    Buffer.byteLength(JSON.stringify(value), 'utf8') <= MAX_LAUNCH_ARGS_BYTES
   )
 }

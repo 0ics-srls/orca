@@ -8,7 +8,7 @@ import {
 } from './structured-agent-session-adapter'
 import { journalIdentityFor } from './structured-agent-session-attach'
 import type { AttachFlowInput } from './structured-agent-session-attach-flow'
-import { readNativeSessionOptions } from './structured-agent-session-option-restoration'
+import { readNativeSessionOptionRestoration } from './structured-agent-session-option-restoration'
 import { withAgentSessionCreatePhase } from '../../observability/agent-session-instrumentation'
 
 /** A reservation with no process behind it is only a promise to spawn; the
@@ -44,16 +44,22 @@ export async function acquireOwner(
       // Retries must recover the original reservation, not mint a second child.
       spawnToken,
       ...(record.options ? { options: record.options } : {}),
+      ...(record.permissionModeRestoreValue
+        ? { permissionModeRestoreValue: record.permissionModeRestoreValue }
+        : {}),
       ...(input.eventSink ? { events: input.eventSink } : {}),
       ...(input.recordPhase ? { recordPhase: input.recordPhase } : {})
     })
-    const options = await withAgentSessionCreatePhase('restore_options', input.recordPhase, () =>
-      readNativeSessionOptions({
-        adapter: input.adapter,
-        sessionId: record.sessionId,
-        fence,
-        ...(record.options ? { priorOptions: record.options } : {})
-      })
+    const restoration = await withAgentSessionCreatePhase(
+      'restore_options',
+      input.recordPhase,
+      () =>
+        readNativeSessionOptionRestoration({
+          adapter: input.adapter,
+          sessionId: record.sessionId,
+          fence,
+          ...(record.options ? { priorOptions: record.options } : {})
+        })
     )
     if (record.lease.ownerProcess === null) {
       await input.store.commitProcessIdentity({
@@ -70,7 +76,14 @@ export async function acquireOwner(
       fence,
       link: acquired.link,
       now: input.now(),
-      ...(options ? { options } : {})
+      ...(restoration
+        ? {
+            options: restoration.options,
+            ...(restoration.permissionModeRestoreValue
+              ? { permissionModeRestoreValue: restoration.permissionModeRestoreValue }
+              : {})
+          }
+        : {})
     })
     return {
       record: proved,

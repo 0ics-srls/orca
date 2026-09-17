@@ -533,6 +533,26 @@ describe('respondToPrompt', () => {
 })
 
 describe('setOption', () => {
+  it('notifies every subscriber after an explicit option change', async () => {
+    await attach()
+    const events: AgentSessionSubscribeEvent[] = []
+    const unsubscribe = host.subscribe({
+      id: 'options-observer',
+      sessionId: SESSION,
+      emit: (event) => events.push(event)
+    })
+    setOption.mockResolvedValueOnce({ permissionMode: 'plan' })
+    const optionFields = { key: 'permissionMode', value: 'plan' }
+
+    await host.setOption(CALLER, {
+      envelope: envelope('agentSession.setOption', optionFields),
+      ...optionFields
+    })
+
+    expect(events).toContainEqual(expect.objectContaining({ type: 'batch', optionsChanged: true }))
+    unsubscribe()
+  })
+
   it('goes to the provider and writes nothing to the journal', async () => {
     await attach()
     setOption.mockResolvedValueOnce({ model: 'gpt-5', effort: 'high' })

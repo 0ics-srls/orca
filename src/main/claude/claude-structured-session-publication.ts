@@ -24,6 +24,7 @@ export function createClaudeSessionPublication(input: {
   linkId?: string
   observedAt: number
   options?: ReadonlyMap<string, string>
+  permissionModeRestoreValue?: ClaudeSession['basePermissionMode']
   capabilities: readonly string[]
   /** Read from `get_settings`; `system/init` never reports an effort. */
   effort: string | null
@@ -39,13 +40,14 @@ export function createClaudeSessionPublication(input: {
     input.options?.get('permissionMode')
   )
   const reportedPermissionMode = input.init.permissionMode ?? undefined
-  // A saved non-plan value is unfinished approved-exit intent and carries its base across reacquire.
+  // The durable baseline wins; current provider state seeds only a session with no prior owner.
   const basePermissionMode =
-    persistedPermissionMode && persistedPermissionMode !== 'plan'
+    input.permissionModeRestoreValue ??
+    (persistedPermissionMode && persistedPermissionMode !== 'plan'
       ? persistedPermissionMode
       : reportedPermissionMode && reportedPermissionMode !== 'plan'
         ? reportedPermissionMode
-        : undefined
+        : undefined)
   return {
     acquisition: {
       process: input.process,

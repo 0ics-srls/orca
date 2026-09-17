@@ -43,10 +43,9 @@ function restorePermissionModeIntent(
   } else {
     session.options.set('permissionMode', previousPermissionMode)
   }
-  if (
-    session.reportedPermissionModeMutation === mutationSequence &&
-    session.reportedOptions.permissionMode === previousPermissionMode
-  ) {
+  session.reportedPermissionModeMutation = mutationSequence
+  const previousDesiredPermissionMode = previousPermissionMode ?? session.basePermissionMode
+  if (session.reportedOptions.permissionMode === previousDesiredPermissionMode) {
     session.confirmedOptions.add('permissionMode')
   } else {
     session.confirmedOptions.delete('permissionMode')
@@ -93,7 +92,7 @@ export async function setClaudeStructuredPermissionMode(
       session.confirmedOptions.delete('permissionMode')
     }
   }
-  if (permissionMode === 'plan') {
+  if (permissionMode === 'plan' || !session.confirmedOptions.has('permissionMode')) {
     return Object.fromEntries(session.options)
   }
   session.options.delete('permissionMode')
@@ -109,23 +108,34 @@ export async function restoreClaudePermissionModeAfterApprovedPrompt(
   if (session.options.get('permissionMode') !== 'plan' || !restoreValue) {
     return
   }
-  let options: Readonly<Record<string, string>> = Object.fromEntries(session.options)
+  const providerSettlement = setClaudeStructuredPermissionMode(
+    session,
+    restoreValue,
+    timeoutMs,
+    'keep-requested'
+  ).then(
+    (options) => ({ options }),
+    (error: unknown) => ({ options: Object.fromEntries(session.options), error })
+  )
+  const requestedOptions: Readonly<Record<string, string>> = Object.fromEntries(session.options)
+  // Let the caller settle the provider prompt after control starts and before durable bookkeeping.
+  await new Promise<void>((resolve) => setImmediate(resolve))
   let failure: unknown
   try {
-    options = await setClaudeStructuredPermissionMode(
-      session,
-      restoreValue,
-      timeoutMs,
-      'keep-requested'
-    )
+    await settleOptions?.(requestedOptions)
   } catch (error) {
     failure = error
-    options = Object.fromEntries(session.options)
   }
-  try {
-    await settleOptions?.(options)
-  } catch (error) {
-    failure ??= error
+  const settled = await providerSettlement
+  if ('error' in settled) {
+    failure ??= settled.error
+  }
+  if (settled.options.permissionMode !== restoreValue) {
+    try {
+      await settleOptions?.(settled.options)
+    } catch (error) {
+      failure ??= error
+    }
   }
   if (failure !== undefined) {
     console.warn('[claude] failed to settle permission mode after ExitPlanMode approval', {

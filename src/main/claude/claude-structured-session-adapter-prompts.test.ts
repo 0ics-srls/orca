@@ -68,7 +68,9 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
     })
     expect(answerSettled).toBe(true)
     expect(writtenModes).toEqual(['plan', 'acceptEdits'])
-    await vi.waitFor(() => expect(settleOptions).toHaveBeenCalledWith({}))
+    await vi.waitFor(() =>
+      expect(settleOptions).toHaveBeenCalledWith({ permissionMode: 'acceptEdits' })
+    )
     expect(order).toEqual(['restore-started', 'prompt-resolved', 'settlement-started'])
     let adapterSettled = false
     void answering.then(() => {
@@ -78,6 +80,7 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
     expect(adapterSettled).toBe(false)
     durableSettlement.resolve()
     await answering
+    expect(settleOptions).toHaveBeenLastCalledWith({})
     await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
       permissionModeRestoreValue: 'acceptEdits',
       current: { permissionMode: 'acceptEdits' }
@@ -135,7 +138,7 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
     }
   )
 
-  it('rejects external permission changes during a turn but allows approved plan exit', async () => {
+  it('rejects external permission changes after send admission and during its turn', async () => {
     let permissionMode = 'acceptEdits'
     const claude = fakeClaude({
       initPermissionMode: 'acceptEdits',
@@ -159,6 +162,16 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
       body: USER_MESSAGE,
       fence: 7
     })
+
+    await expect(
+      adapter.setOption({
+        sessionId: 'session-1',
+        key: 'permissionMode',
+        value: 'acceptEdits',
+        fence: 7
+      })
+    ).rejects.toThrow('cannot change while a turn or send is unsettled')
+
     const sent = claude.connections[0]!.sent[0]!
     claude.connections[0]!.handlers.onMessage?.({ ...sent, uuid: 'planning-turn-provider' })
 
@@ -169,7 +182,7 @@ describe('ClaudeStructuredSessionAdapter prompts', () => {
         value: 'acceptEdits',
         fence: 7
       })
-    ).rejects.toThrow('cannot change while a turn is running')
+    ).rejects.toThrow('cannot change while a turn or send is unsettled')
 
     const answered = invokeCanUseTool(
       claude.connections[0],

@@ -265,6 +265,30 @@ describe('ClaudeStructuredSessionAdapter.acquire', () => {
     })
   })
 
+  it('retains the immutable exit mode when reacquiring a session still in plan', async () => {
+    const claude = fakeClaude({
+      initPermissionMode: 'plan',
+      routes: { get_settings: () => ({ applied: { permissionMode: 'plan' } }) }
+    })
+    const adapter = adapterFor(claude, { resumed: true })
+
+    await adapter.acquire({
+      identity: identityFor(),
+      fence: 7,
+      spawnToken: 'spawn-9',
+      options: { permissionMode: 'plan' },
+      permissionModeRestoreValue: 'acceptEdits'
+    })
+
+    await expect(adapter.readOptions({ sessionId: 'session-1', fence: 7 })).resolves.toMatchObject({
+      permissionModeRestoreValue: 'acceptEdits',
+      current: {
+        permissionMode: 'plan',
+        confirmed: expect.arrayContaining(['permissionMode'])
+      }
+    })
+  })
+
   it('does not treat a transport timeout while restoring an option as recoverable', async () => {
     const claude = fakeClaude({
       routes: {

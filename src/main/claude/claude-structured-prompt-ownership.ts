@@ -10,6 +10,7 @@ import {
   supportsClaudeQueuedInterruptCancellation
 } from './claude-structured-control-actions'
 import type { ClaudeLateDispatchSettlement } from './claude-structured-dispatch'
+import { claudeCurrentDispatchHasRetiredWaiter } from './claude-structured-dispatch-ownership'
 import type { ClaudeSession } from './claude-structured-session-state'
 
 /** Conservative user-facing window: below the 10s init and 30s control deadlines, trading
@@ -136,16 +137,12 @@ export async function cancelClaudeStructuredTurn(input: {
     dispatchAdmissionIsCurrent() ||
     (Boolean(prompt) && supportsClaudeQueuedInterruptCancellation(session))
   const compactionOwnsTurn = (): boolean => compactions.ownsTurn(request.sessionId, request.turnId)
-  const currentDispatchHasRetiredWaiter = (): boolean =>
-    session.retiredDispatchWaiters.some(
-      (waiter) => waiter.dispatchSequence === session.dispatchSequence
-    )
   let dispatchAdmissionExpired = false
   if (
     !prompt &&
     !compactionOwnsTurn() &&
     !dispatchAdmissionAllowsCancellation() &&
-    (request.dispatchStatus !== undefined || currentDispatchHasRetiredWaiter())
+    (request.dispatchStatus !== undefined || claudeCurrentDispatchHasRetiredWaiter(session))
   ) {
     dispatchAdmissionExpired = !(await waitForClaudeDispatchAdmission(
       dispatchAdmissionAllowsCancellation
