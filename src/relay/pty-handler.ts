@@ -90,6 +90,7 @@ import { expandWindowsPathEnvironmentVariables } from '../shared/windows-environ
 import { pruneRetiredPtyIncarnations } from '../shared/retired-pty-incarnations'
 import {
   agentSessionOwnerBindingsEqual,
+  canRetireDiscoveredProcessFromObservation,
   ClaimedAgentPtyOwnerRegistry
 } from '../shared/claimed-agent-pty-owner'
 import { agentStatusExecutionBindingEnv } from '../shared/agent-status-run'
@@ -117,7 +118,6 @@ import {
   verifiedAgentProviderIdentitiesEqual,
   type VerifiedAgentDiscovery
 } from '../shared/agent-status-verified-discovery'
-import { canRetireDiscoveredProcessFromObservation } from '../shared/claimed-agent-pty-owner'
 import { parsePaneKey } from '../shared/stable-pane-id'
 import { readPtySlavePath } from '../shared/pty-slave-line-discipline-echo'
 import { chargedPtyRetainedStringBytes } from '../shared/pty-retained-string-memory'

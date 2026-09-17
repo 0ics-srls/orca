@@ -5,6 +5,7 @@ import type { TuiAgent } from '../../shared/tui-agent'
 import { parseWslUncPath } from '../../shared/wsl-paths'
 import type {
   AgentLaunchPreferences,
+  AgentSessionExecutionClaim,
   RuntimeAgentSessionRpcCaller,
   RuntimeEnsureAgentSessionRequest,
   RuntimeEnsureAgentSessionResult
@@ -21,7 +22,6 @@ import {
 import type { AgentSessionLaunchArgs } from '../../shared/agent-session-record'
 import { resolveStartupShell } from '../../shared/tui-agent-startup-shell'
 import { resolveAgentSessionResumeArgs } from './agent-session-resume-args'
-import type { AgentSessionExecutionClaim } from '../../shared/agent-session-host-authority'
 
 export class OrcaRuntimeWithGetAgentSessionExecutionNamespace extends OrcaRuntimeWithResolveWorktreeRemovalTarget {
   protected getAgentSessionExecutionNamespace(

@@ -3,7 +3,6 @@ import type {
   AgentSessionSurfaceBinding
 } from '../../shared/agent-session-host-authority'
 import type { ResumableTuiAgent } from '../../shared/agent-session-resume'
-import { admitVerifiedAgentDiscovery } from '../../shared/agent-status-verified-discovery'
 import { getStrictProcessTableSnapshotWithAge } from '../../shared/process-table-snapshot-reader'
 import {
   buildVerifiedAgentProcessDiscovery,
@@ -12,6 +11,7 @@ import {
 import { agentSessionOwners } from '../ipc/pty/pane/agent-session-owners'
 import { canRetireDiscoveredProcessFromObservation } from '../../shared/claimed-agent-pty-owner'
 import {
+  admitVerifiedAgentDiscovery,
   verifiedAgentProviderIdentitiesEqual,
   type VerifiedAgentDiscovery
 } from '../../shared/agent-status-verified-discovery'

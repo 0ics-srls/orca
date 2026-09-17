@@ -56,17 +56,16 @@ import type { ProcessTableRow } from '../shared/process-table-snapshot'
 
 type ProcessTableSnapshotModule = typeof processTableSnapshotModule
 import * as ptyShellUtils from './pty-shell-utils'
-import type { PtyHandler } from './pty-handler'
+import { PtyHandler as DiscoveryPtyHandler, type PtyHandler } from './pty-handler'
 import {
   beginPtyHandlerTest,
   createPtyRequestHelpers,
-  endPtyHandlerTest
+  endPtyHandlerTest,
+  TEST_PTY_ID_MINT_EPOCH,
+  type MockDispatcher
 } from './pty-handler-test-harness'
-import type { MockDispatcher } from './pty-handler-test-harness'
 import { createEphemeralAgentSessionClaimSigner } from '../main/runtime/agent-session-claim-identity'
 import type { RelayDispatcher } from './dispatcher'
-import { PtyHandler as DiscoveryPtyHandler } from './pty-handler'
-import { TEST_PTY_ID_MINT_EPOCH } from './pty-handler-test-harness'
 import { isAgentSessionOwnerBinding } from '../shared/agent-session-host-authority'
 
 type ProcessSummary = { id: string; title: string }

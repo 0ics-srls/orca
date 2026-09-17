@@ -5,7 +5,8 @@ import type {
 } from '../../../../shared/agent-session-resume'
 import type {
   AgentLaunchPreferences,
-  AgentPromptDelivery
+  AgentPromptDelivery,
+  AgentSessionExecutionClaim
 } from '../../../../shared/agent-session-host-authority'
 import type { StartupCommandDelivery } from '../../../../shared/codex-startup-delivery'
 import type { ProjectExecutionRuntimeResolution } from '../../../../shared/project-execution-runtime'
@@ -13,7 +14,6 @@ import type { EventProps } from '../../../../shared/telemetry-events'
 import type { TerminalOscColorQueryReplyColors } from '../../../../shared/terminal-osc-color-reply'
 import type { TuiAgent } from '../../../../shared/tui-agent'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
-import type { AgentSessionExecutionClaim } from '../../../../shared/agent-session-host-authority'
 import type { PtyDataMeta } from './pty-dispatcher'
 import type { RemoteRuntimeSnapshotOutcome } from '../../runtime/remote-runtime-terminal-multiplexer'
 import type { PtyPreconnectInputEntry } from './pty-preconnect-input-buffer'

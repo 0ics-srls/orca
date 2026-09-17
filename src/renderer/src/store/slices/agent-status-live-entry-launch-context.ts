@@ -6,8 +6,12 @@ import {
   type AgentProviderSessionMetadata,
   type SleepingAgentLaunchConfig
 } from '../../../../shared/agent-session-resume'
-import type { AgentStatusEntry, AgentStatusPayload } from './agent-status-contract'
-import type { AgentStatusMetadata, AgentStatusRouting } from './agent-status-contract'
+import type {
+  AgentStatusEntry,
+  AgentStatusMetadata,
+  AgentStatusPayload,
+  AgentStatusRouting
+} from './agent-status-contract'
 import type { resolveAgentStatusIdentity } from '../../../../shared/agent-status-identity'
 import { registryEntryMatchesStatus } from './agent-status-launch-config'
 import { getTabIdFromPaneKey } from './agent-status-pane-key-tab-binding'

@@ -8,17 +8,15 @@ import { classifyError } from '../../../telemetry/classify-error'
 import { track } from '../../../telemetry/client'
 import { getCohortAtEmit } from '../../../telemetry/cohort-classifier'
 import { agentKindSchema } from '../../../../shared/telemetry-events'
-import { normalizeNodePtySpawnError } from '../provider/liveness'
+import { isProviderAgentSessionOwnerLive, normalizeNodePtySpawnError } from '../provider/liveness'
 import { resolveStablePaneOwner, spawnForStablePane } from '../pane/stable-owner'
 import {
   agentSessionOwners,
   assertSpawnReplyWasLive,
   reconcileAgentSessionOwnerListings
 } from '../pane/agent-session-owners'
-import { deletePtyOwnership } from '../provider/ownership-state'
-import { ptyIncarnationById } from '../provider/ownership-state'
+import { deletePtyOwnership, ptyIncarnationById } from '../provider/ownership-state'
 import { tryGetProviderForAgentSessionOwner } from '../provider/registry'
-import { isProviderAgentSessionOwnerLive } from '../provider/liveness'
 import { ptySizes } from '../delivery/visibility-state'
 import { clearProviderPtyState } from '../provider/state-cleanup'
 import { agentStatusExecutionBindingEnv } from '../../../../shared/agent-status-run'
