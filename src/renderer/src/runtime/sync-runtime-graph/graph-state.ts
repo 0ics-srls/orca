@@ -67,7 +67,6 @@ export const graphState = {
   cachedOpenFilesProjection: null as OpenFilesProjectionCache | null,
   cachedBrowserWorkspacesProjection: null as BrowserWorkspacesProjectionCache | null,
   cachedBrowserPagesProjection: null as BrowserPagesProjectionCache | null,
-  cachedMobileSessionAgentStatus: null as MobileSessionAgentStatusCache | null,
   cachedOpenFileIndexesSource: null as AppState['openFiles'] | null,
   cachedOpenFileIndexes: null as OpenFileIndexes | null,
   cachedEditorDraftHashes: null as EditorDraftHashCache | null,
@@ -77,11 +76,22 @@ export const graphState = {
   hasCachedMobileTerminalTheme: false
 }
 
+// Module-local rather than `graphState` fields: a nullable field on that object literal needs an
+// `as` cast, which the changed-code casting gate rejects.
 let terminalTabOwnershipIndexCache: TerminalTabOwnershipIndex | null = null
+let mobileSessionAgentStatusCache: MobileSessionAgentStatusCache | null = null
+
+export function getMobileSessionAgentStatusCache(): MobileSessionAgentStatusCache | null {
+  return mobileSessionAgentStatusCache
+}
+
+export function setMobileSessionAgentStatusCache(cache: MobileSessionAgentStatusCache): void {
+  mobileSessionAgentStatusCache = cache
+}
 
 export function resetRuntimeGraphSliceScanCaches(): void {
   terminalTabOwnershipIndexCache = null
-  graphState.cachedMobileSessionAgentStatus = null
+  mobileSessionAgentStatusCache = null
 }
 
 export function registeredTerminalTabKey(
