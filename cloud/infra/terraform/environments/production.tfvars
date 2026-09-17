@@ -38,10 +38,6 @@ relay_gce_fenced_cells = [
   "production-gce-c1",
   "production-gce-c2",
   "production-gce-c3",
-  # c4/c5 measured ~1 connection each on 40-day-old images (2026-09-16). Fence them only after
-  # fence-source drains and attests each one; this list is that operation's prerequisite, not its trigger.
-  "production-gce-c4",
-  "production-gce-c5",
   "production-gce-c6",
   "production-gce-c11",
   "production-gce-c12"
