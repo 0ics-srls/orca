@@ -230,7 +230,6 @@ export function resetPublicationCaches(): void {
 
 export type GateSide = {
   state: AppState
-  owners: ReturnType<typeof getTerminalTabOwnershipIndex>
   publication: MobileSessionPublicationInputs
 }
 
@@ -246,7 +245,6 @@ export function gateSideOf(state: AppState): GateSide {
   const owners = getTerminalTabOwnershipIndex(state.tabsByWorktree)
   return {
     state,
-    owners,
     publication: {
       browserTabsByWorktree: getBrowserTabsByWorktree(state),
       openFileIndexes: getOpenFileIndexes(state.openFiles),
@@ -259,7 +257,8 @@ export function gateSideOf(state: AppState): GateSide {
       runtimePaneTitleByWorktree: partitionTitles(state.runtimePaneTitlesByTabId, owners),
       launchDraftByWorktree: partitionDrafts(state.nativeChatLaunchDraftByTabId, owners),
       generatedTitlesEnabled: state.settings?.tabAutoGenerateTitle === true,
-      terminalTheme: getMobileTerminalTheme(state, false)
+      terminalTheme: getMobileTerminalTheme(state, false),
+      ambiguousTabIds: owners.ambiguousTabIds
     }
   }
 }

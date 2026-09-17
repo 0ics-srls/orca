@@ -6,7 +6,6 @@ import type {
 } from '../../../../shared/runtime-types'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import {
-  collectAmbiguousTerminalTabIds,
   EMPTY_AGENT_STATUS_BY_PANE_KEY,
   getTerminalTabOwnershipIndex,
   graphState,
@@ -52,10 +51,7 @@ const partitionLaunchDrafts =
 
 export function buildMobileSessionTabSnapshots(
   state: AppState,
-  systemPrefersDark = getSystemPrefersDark(),
-  ambiguousTerminalTabIds: ReadonlySet<string> = collectAmbiguousTerminalTabIds(
-    state.tabsByWorktree
-  )
+  systemPrefersDark = getSystemPrefersDark()
 ): RuntimeMobileSessionTabsSnapshot[] {
   const openFileIndexes = getOpenFileIndexes(state.openFiles)
   // The shared empty constant, not a fresh literal: this doubles as the worktree-id memo's key.
@@ -74,7 +70,8 @@ export function buildMobileSessionTabSnapshots(
     runtimePaneTitleByWorktree: partitionRuntimePaneTitles(state.runtimePaneTitlesByTabId, owners),
     launchDraftByWorktree: partitionLaunchDrafts(state.nativeChatLaunchDraftByTabId, owners),
     generatedTitlesEnabled: state.settings?.tabAutoGenerateTitle === true,
-    terminalTheme: getMobileTerminalTheme(state, systemPrefersDark)
+    terminalTheme: getMobileTerminalTheme(state, systemPrefersDark),
+    ambiguousTabIds: owners.ambiguousTabIds
   }
   const liveFolderWorkspaceIds = new Set(
     (state.folderWorkspaces ?? []).map((workspace) => workspace.id)
@@ -92,12 +89,7 @@ export function buildMobileSessionTabSnapshots(
       continue
     }
     const cached = graphState.mobileSessionSnapshotCacheByWorktree.get(worktreeId)
-    const sourceRefs = collectMobileSessionWorktreeSourceRefs(
-      state,
-      worktreeId,
-      publicationInputs,
-      owners
-    )
+    const sourceRefs = collectMobileSessionWorktreeSourceRefs(state, worktreeId, publicationInputs)
     // A worktree with no mounted TerminalPane has no live input outside the store, so unchanged
     // sources prove the rebuild below would land on `canReuseMobileSessionSnapshot` anyway. Mounted
     // worktrees still rebuild: their PaneManager/DOM state can move with no store mutation at all.
@@ -114,12 +106,7 @@ export function buildMobileSessionTabSnapshots(
       snapshots.push(cached.snapshot)
       continue
     }
-    const inputs = buildMobileSessionWorktreeInputs(
-      state,
-      worktreeId,
-      publicationInputs,
-      ambiguousTerminalTabIds
-    )
+    const inputs = buildMobileSessionWorktreeInputs(state, worktreeId, publicationInputs)
     if (cached && canReuseMobileSessionSnapshot(cached.inputs, inputs)) {
       graphState.mobileSessionSnapshotCacheByWorktree.set(worktreeId, { ...cached, sourceRefs })
       snapshots.push(cached.snapshot)

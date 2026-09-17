@@ -120,9 +120,9 @@ function resolveWorktreeInstanceId(state: AppState, worktreeId: string): string 
 export function buildMobileSessionWorktreeInputs(
   state: AppState,
   worktreeId: string,
-  publication: MobileSessionPublicationInputs,
-  ambiguousTerminalTabIds: ReadonlySet<string>
+  publication: MobileSessionPublicationInputs
 ): MobileSessionWorktreeInputs {
+  const ambiguousTerminalTabIds = publication.ambiguousTabIds
   // Legacy layout/title maps are keyed only by tab id. Omit ambiguous ids until
   // hydration repairs ownership instead of publishing one worktree's metadata for another.
   const sourceTerminalTabs = state.tabsByWorktree[worktreeId] ?? EMPTY_WORKTREE_TERMINAL_TABS

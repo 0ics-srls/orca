@@ -143,6 +143,7 @@ export type MobileSessionPublicationInputs = {
   >
   generatedTitlesEnabled: boolean
   terminalTheme: RuntimeMobileTerminalTheme | undefined
+  ambiguousTabIds: ReadonlySet<string>
 }
 /**
  * Every store and publication value one worktree's snapshot is derived from.

@@ -209,11 +209,6 @@ function sameMembers(
   return true
 }
 
-export function collectAmbiguousTerminalTabIds(
-  tabsByWorktree: AppState['tabsByWorktree']
-): ReadonlySet<string> {
-  return getTerminalTabOwnershipIndex(tabsByWorktree).ambiguousTabIds
-}
 
 // Structural equality under JSON-serialization semantics (undefined-valued keys are absent).
 export function jsonContentEquals(a: unknown, b: unknown): boolean {

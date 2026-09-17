@@ -129,21 +129,16 @@ function censusOf(side: GateSide): {
 } {
   return {
     builder: recordStateReads(side.state, (observed) => {
-      buildMobileSessionWorktreeInputs(
-        observed,
-        DIRTY_WT,
-        side.publication,
-        side.owners.ambiguousTabIds
-      )
+      buildMobileSessionWorktreeInputs(observed, DIRTY_WT, side.publication)
     }),
     collector: recordStateReads(side.state, (observed) => {
-      collectMobileSessionWorktreeSourceRefs(observed, DIRTY_WT, side.publication, side.owners)
+      collectMobileSessionWorktreeSourceRefs(observed, DIRTY_WT, side.publication)
     }),
     builderPublication: recordPublicationReads(side.publication, (observed) => {
-      buildMobileSessionWorktreeInputs(side.state, DIRTY_WT, observed, side.owners.ambiguousTabIds)
+      buildMobileSessionWorktreeInputs(side.state, DIRTY_WT, observed)
     }),
     collectorPublication: recordPublicationReads(side.publication, (observed) => {
-      collectMobileSessionWorktreeSourceRefs(side.state, DIRTY_WT, observed, side.owners)
+      collectMobileSessionWorktreeSourceRefs(side.state, DIRTY_WT, observed)
     })
   }
 }
@@ -169,6 +164,7 @@ const BUILDER_STATE_SLICES = [
 
 const BUILDER_PUBLICATION_FIELDS = [
   'agentStatusByWorktreeId',
+  'ambiguousTabIds',
   'browserTabsByWorktree',
   'editorDraftVersionByFileId',
   'generatedTitlesEnabled',
@@ -218,20 +214,10 @@ describe('the gate reads every store value the inputs builder reads', () => {
     const { state } = makeGateState(2)
     const side = gateSideOf(state)
     const builder = recordStateReads(side.state, (observed) => {
-      buildMobileSessionWorktreeInputs(
-        observed,
-        DIRTY_WT,
-        side.publication,
-        side.owners.ambiguousTabIds
-      )
+      buildMobileSessionWorktreeInputs(observed, DIRTY_WT, side.publication)
     })
     const wrongWorktree = recordStateReads(side.state, (observed) => {
-      collectMobileSessionWorktreeSourceRefs(
-        observed,
-        'repo::/gate-filler-0',
-        side.publication,
-        side.owners
-      )
+      collectMobileSessionWorktreeSourceRefs(observed, 'repo::/gate-filler-0', side.publication)
     })
 
     expect(uncoveredReads(builder, wrongWorktree)).toContain(`tabsByWorktree.${DIRTY_WT}`)

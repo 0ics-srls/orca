@@ -27,16 +27,11 @@ beforeEach(() => {
 })
 
 function inputsOf(side: GateSide): ReturnType<typeof buildMobileSessionWorktreeInputs> {
-  return buildMobileSessionWorktreeInputs(
-    side.state,
-    DIRTY_WT,
-    side.publication,
-    side.owners.ambiguousTabIds
-  )
+  return buildMobileSessionWorktreeInputs(side.state, DIRTY_WT, side.publication)
 }
 
 function refsOf(side: GateSide): ReturnType<typeof collectMobileSessionWorktreeSourceRefs> {
-  return collectMobileSessionWorktreeSourceRefs(side.state, DIRTY_WT, side.publication, side.owners)
+  return collectMobileSessionWorktreeSourceRefs(side.state, DIRTY_WT, side.publication)
 }
 
 describe('equal source refs imply the skipped rebuild would have been reusable', () => {

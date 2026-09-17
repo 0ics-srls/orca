@@ -7,7 +7,7 @@ import {
   registerRuntimeTerminalTab,
   resetRuntimeMobileSyncProjectionCachesForTests
 } from './sync-runtime-graph'
-import { collectAmbiguousTerminalTabIds, graphState } from './sync-runtime-graph/graph-state'
+import { getTerminalTabOwnershipIndex, graphState } from './sync-runtime-graph/graph-state'
 import { buildMobileSessionAgentStatusByWorktree } from './sync-runtime-graph/mobile-session-inputs'
 
 /**
@@ -82,12 +82,12 @@ describe('ambiguous terminal tab id memoization', () => {
   it('scans the tabs once across many publications with an unchanged slice', () => {
     const { tabsByWorktree, idReads, resetIdReads } = makeCountingTabs(WORKTREES)
 
-    collectAmbiguousTerminalTabIds(tabsByWorktree)
+    getTerminalTabOwnershipIndex(tabsByWorktree)
     expect(idReads()).toBeGreaterThan(0)
     resetIdReads()
 
     for (let publication = 0; publication < PUBLICATIONS; publication += 1) {
-      collectAmbiguousTerminalTabIds(tabsByWorktree)
+      getTerminalTabOwnershipIndex(tabsByWorktree)
     }
 
     expect(idReads()).toBe(0)
@@ -96,12 +96,12 @@ describe('ambiguous terminal tab id memoization', () => {
   it('rescans when the tabs slice is replaced', () => {
     const { tabsByWorktree, idReads, resetIdReads } = makeCountingTabs(WORKTREES)
 
-    collectAmbiguousTerminalTabIds(tabsByWorktree)
+    getTerminalTabOwnershipIndex(tabsByWorktree)
     const firstScanReads = idReads()
     resetIdReads()
 
     // A copy-on-write replacement is what every tab writer produces; the memo must not survive it.
-    collectAmbiguousTerminalTabIds({ ...tabsByWorktree })
+    getTerminalTabOwnershipIndex({ ...tabsByWorktree })
 
     expect(idReads()).toBe(firstScanReads)
   })
@@ -109,13 +109,13 @@ describe('ambiguous terminal tab id memoization', () => {
   it('reports a duplicate id introduced by a replacement slice', () => {
     const { tabsByWorktree } = makeCountingTabs(2)
 
-    expect([...collectAmbiguousTerminalTabIds(tabsByWorktree)]).toEqual([])
+    expect([...getTerminalTabOwnershipIndex(tabsByWorktree).ambiguousTabIds]).toEqual([])
     const duplicated: AppState['tabsByWorktree'] = {
       ...tabsByWorktree,
       'repo::/memo-wt-1': [makeTab('memo-term-0', 'repo::/memo-wt-1', 'Clone')]
     }
 
-    expect([...collectAmbiguousTerminalTabIds(duplicated)]).toEqual(['memo-term-0'])
+    expect([...getTerminalTabOwnershipIndex(duplicated).ambiguousTabIds]).toEqual(['memo-term-0'])
   })
 })
 

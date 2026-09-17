@@ -1,11 +1,7 @@
 import type { AppState } from '@/store/types'
 import { EMPTY_LAYOUT_BY_WORKTREE } from './graph-state'
 import { tabKeyedRecordBucket } from './tab-keyed-record-partition'
-import type {
-  MobileSessionPublicationInputs,
-  MobileSessionWorktreeSourceRefs,
-  TerminalTabOwnershipIndex
-} from './types'
+import type { MobileSessionPublicationInputs, MobileSessionWorktreeSourceRefs } from './types'
 
 /**
  * Every store and publication value one worktree's snapshot is derived from, at the granularity
@@ -34,8 +30,7 @@ import type {
 export function collectMobileSessionWorktreeSourceRefs(
   state: AppState,
   worktreeId: string,
-  publication: MobileSessionPublicationInputs,
-  owners: TerminalTabOwnershipIndex
+  publication: MobileSessionPublicationInputs
 ): MobileSessionWorktreeSourceRefs {
   return {
     terminalTabs: state.tabsByWorktree[worktreeId],
@@ -63,7 +58,7 @@ export function collectMobileSessionWorktreeSourceRefs(
     agentStatusBucket: publication.agentStatusByWorktreeId.get(worktreeId),
     generatedTitlesEnabled: publication.generatedTitlesEnabled,
     terminalTheme: publication.terminalTheme,
-    ambiguousTabIds: owners.ambiguousTabIds
+    ambiguousTabIds: publication.ambiguousTabIds
   }
 }
 

@@ -37,11 +37,7 @@ export async function syncRuntimeGraph(): Promise<void> {
   const tabOwnership = getTerminalTabOwnershipIndex(state.tabsByWorktree)
   const ambiguousTerminalTabIds = tabOwnership.ambiguousTabIds
   const generatedTitlesEnabled = state.settings?.tabAutoGenerateTitle === true
-  const mobileSessionTabs = buildMobileSessionTabSnapshots(
-    state,
-    systemPrefersDark,
-    ambiguousTerminalTabIds
-  )
+  const mobileSessionTabs = buildMobileSessionTabSnapshots(state, systemPrefersDark)
   const publication = partitionMobileSessionPublication(mobileSessionTabs)
   const graph: RuntimeRendererSyncWindowGraph = {
     tabs: [],
