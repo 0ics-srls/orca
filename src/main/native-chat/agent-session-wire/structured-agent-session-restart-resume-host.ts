@@ -36,6 +36,7 @@ import {
 } from './structured-agent-session-restart-resume-runner'
 import {
   continueStructuredAgentSessionAfterRestart,
+  RestartContinuationSupersededError,
   type StructuredAgentSessionContinuationOutcome
 } from './structured-agent-session-restart-continuation'
 import { structuredAgentSessionsWorkingAtTeardown } from './structured-agent-session-working-at-teardown'
@@ -235,7 +236,7 @@ export function createStructuredAgentSessionRestartResume(
                 // Acquisition reconciles history; validate again inside the serialized send.
                 beforeRun: () => {
                   if (derive([marker], 'may-be-held').length !== 1) {
-                    throw new Error('agent_session_restart_work_superseded')
+                    throw new RestartContinuationSupersededError()
                   }
                 }
               }),

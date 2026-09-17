@@ -34,6 +34,14 @@ export type StructuredAgentSessionContinuationOutcome = {
   reason?: string
 }
 
+/** Only this pre-dispatch failure proves a thrown send did not deliver. */
+export class RestartContinuationSupersededError extends Error {
+  constructor() {
+    super('agent_session_restart_work_superseded')
+    this.name = 'RestartContinuationSupersededError'
+  }
+}
+
 /** The message body, built once so both the send and any test read the same text. */
 export function restartContinuationBody(): AgentJournalMessageItem {
   return {
@@ -125,7 +133,17 @@ export async function continueStructuredAgentSessionAfterRestart(
     return { sessionId, outcome: 'refused', reason: 'agent_session_not_attached' }
   }
   const { envelope, body } = restartContinuationEnvelope(sessionId, fence, marker)
-  const sent = await deps.send({ envelope, body })
+  const sent = await deps.send({ envelope, body }).catch((error: unknown) => {
+    if (error instanceof RestartContinuationSupersededError) {
+      throw error
+    }
+    // Persistence can fail after dispatch; a thrown send is not proof of non-delivery.
+    console.warn('[structured-agent-session] restart continuation send failed', error)
+    return null
+  })
+  if (!sent) {
+    return { sessionId, outcome: 'unknown' }
+  }
   if (!sent.ok) {
     return {
       sessionId,

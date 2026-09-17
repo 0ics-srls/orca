@@ -22,7 +22,11 @@ export async function runSettledAgentSessionMutation<TValue>(input: {
     if (input.plan.markUnknownBeforeRun) {
       await settle({ status: 'unknown' })
     }
-    input.plan.beforeRun?.()
+    if (input.plan.beforeRun) {
+      // Admission predicates must include provider lifecycle already accepted by the host.
+      await input.context.flushStreamedEvents()
+      input.plan.beforeRun()
+    }
     const outcome = await input.plan.run(input.context)
     await settle(
       outcome.ok
