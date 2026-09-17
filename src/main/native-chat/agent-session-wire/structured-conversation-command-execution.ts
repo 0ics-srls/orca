@@ -25,6 +25,8 @@ type ExecutionOwner = {
   report: (entry: PendingConversationCommand, error: unknown) => void
 }
 
+const STALE_COMMAND_COMPLETION = new Error('Conversation operation became stale after recovery.')
+
 export class StructuredConversationCommandExecution {
   constructor(
     private readonly context: () => StructuredAgentSessionMutationContext,
@@ -172,6 +174,7 @@ export class StructuredConversationCommandExecution {
           .close(replacementSessionId)
           .catch((error) => this.owner.report(entry, error))
       }
+      await this.markUnknown(entry, STALE_COMMAND_COMPLETION, true)
       return
     }
     await this.complete(entry, attachError ?? undefined, Boolean(attachError))
@@ -188,6 +191,7 @@ export class StructuredConversationCommandExecution {
     }
     await this.context().serialize(execution.turn.sessionId, async () => {
       if (!this.canSettle(entry, execution)) {
+        await this.markUnknownInLane(entry, STALE_COMMAND_COMPLETION, true)
         return
       }
       const value: AgentSessionConversationCommandRecord = {

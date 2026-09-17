@@ -126,4 +126,67 @@ describe('host conversation command concurrency', () => {
       { ok: true, value: { state: 'completed' } }
     )
   })
+
+  it('retires a provider completion that arrives after recovery advances the generation', async () => {
+    await host.hold(HOST_TEST_SESSION, 'conversation-surface')
+    const completion = Promise.withResolvers<Record<string, never>>()
+    compact.mockReturnValueOnce(completion.promise)
+    const running = host.conversationCommand(CALLER, commandParams('compact'))
+    await vi.waitFor(() => expect(compact).toHaveBeenCalledOnce())
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: HOST_TEST_SESSION,
+      reason: 'provider exited',
+      cause: 'unexpected-exit',
+      fence,
+      acquisitionGeneration: 'generation-1'
+    })
+    expect(store.getRecord(HOST_TEST_SESSION)?.lease.runtimeFence).toBeGreaterThan(fence)
+    completion.resolve({})
+
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    await expect(host.conversationCommand(CALLER, commandParams('compact'))).resolves.toMatchObject(
+      { ok: true, value: { state: 'completed' } }
+    )
+  })
+
+  it('retires a clear replacement that finishes after recovery advances the generation', async () => {
+    await host.hold(HOST_TEST_SESSION, 'conversation-surface')
+    const originalAttach = host.attach.bind(host)
+    const replacementStarted = Promise.withResolvers<void>()
+    const releaseReplacement = Promise.withResolvers<void>()
+    vi.spyOn(host, 'attach').mockImplementation(async (caller, params) => {
+      if (params.envelope.sessionId.startsWith('clear-')) {
+        replacementStarted.resolve()
+        await releaseReplacement.promise
+      }
+      return originalAttach(caller, params)
+    })
+    const params = commandParams('clear')
+    const running = host.conversationCommand(CALLER, params)
+    await replacementStarted.promise
+    const fence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+
+    await host.handleAdapterEvent({
+      type: 'ended',
+      sessionId: HOST_TEST_SESSION,
+      reason: 'provider exited',
+      cause: 'unexpected-exit',
+      fence,
+      acquisitionGeneration: 'generation-1'
+    })
+    expect(store.getRecord(HOST_TEST_SESSION)?.lease.runtimeFence).toBeGreaterThan(fence)
+    releaseReplacement.resolve()
+
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    const recoveredFence = store.getRecord(HOST_TEST_SESSION)!.lease.runtimeFence
+    await expect(
+      host.conversationCommand(CALLER, {
+        ...params,
+        envelope: { ...params.envelope, expectedRuntimeFence: recoveredFence }
+      })
+    ).resolves.toMatchObject({ ok: true, value: { state: 'completed' } })
+  })
 })
