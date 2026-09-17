@@ -6,6 +6,9 @@ import { markRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
 import { useMobileSessionTerminalCreateActions } from './use-mobile-session-terminal-create-actions'
 import { SESSION_TABS_SPLIT_GROUP_PLACEMENT_RUNTIME_CAPABILITY } from '../../../src/shared/protocol-version'
 
+type PlacementTab = { id: string; parentTabId?: string }
+type PlacementUpdater = (previous: PlacementTab[]) => PlacementTab[]
+
 vi.mock('../platform/haptics', () => ({
   triggerSuccess: vi.fn(),
   triggerError: vi.fn()
@@ -41,7 +44,7 @@ function createScope(client: RpcClient) {
     connState: 'connected',
     setTerminals: vi.fn(),
     terminalsRef: { current: [] },
-    setSessionTabs: vi.fn(),
+    setSessionTabs: vi.fn<(updater: PlacementUpdater) => void>(),
     defaultTerminalHandlesToLiveInput: vi.fn(),
     setActiveHandle: vi.fn(),
     activeSessionTabId: 'existing-tab',
@@ -330,11 +333,12 @@ describe('optimistic placement of a created tab', () => {
 
   function tabIdsAfterCreate(
     scope: ReturnType<typeof createScope>,
-    prior: { id: string }[]
+    prior: PlacementTab[]
   ): string[] {
-    const updater = (scope.setSessionTabs as ReturnType<typeof vi.fn>).mock.calls.at(-1)?.[0] as (
-      prev: { id: string }[]
-    ) => { id: string }[]
+    const updater = scope.setSessionTabs.mock.calls.at(-1)?.[0]
+    if (!updater) {
+      throw new Error('Expected a session tab updater')
+    }
     return updater(prior).map((tab) => tab.id)
   }
 
