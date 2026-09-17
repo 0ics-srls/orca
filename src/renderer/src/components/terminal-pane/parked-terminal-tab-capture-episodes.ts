@@ -21,7 +21,10 @@ export function captureNewlyParkedTerminalTabs(
   if (capturedTabIds.size === parkedTabIds.size) {
     return
   }
-  const repos = useAppStore.getState().repos
+  // Why the fallback: capture is best-effort evidence and must never throw out of the park pass.
+  // An unhydrated catalog also fails open in shouldPreserveTerminalScrollbackBuffers — the safe
+  // direction, since a worktree wrongly judged local would park with no copy at all.
+  const repos = useAppStore.getState().repos ?? []
   for (const tabId of parkedTabIds) {
     if (capturedTabIds.has(tabId)) {
       continue
