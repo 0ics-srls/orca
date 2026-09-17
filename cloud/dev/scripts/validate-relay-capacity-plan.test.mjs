@@ -863,6 +863,11 @@ test('the reviewed database pool is pinned for the cells that emit one', () => {
     () => validateCapacityPlan(rollPlan(undefined, '16'), asiaConfig),
     /reviewed image and capacity/
   )
+  // A line already on the live template is still unreviewed without the pin, even standing still.
+  assert.throws(
+    () => validateCapacityPlan(rollPlan('16', '16'), asiaConfig),
+    /reviewed image and capacity/
+  )
   // A pin must also fail closed when the plan drops the line it names.
   assert.throws(
     () => validateCapacityPlan(rollPlan('16', undefined), { ...asiaConfig, databasePoolMax: '16' }),
