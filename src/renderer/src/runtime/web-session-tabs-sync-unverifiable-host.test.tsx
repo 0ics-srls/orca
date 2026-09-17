@@ -3,6 +3,7 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeHostStatusSnapshot } from '../../../shared/runtime-host-status'
+import type { RuntimeStatus } from '../../../shared/runtime-types'
 import type { PublicKnownRuntimeEnvironment } from '../../../shared/runtime-environments'
 import type * as WorktreeRuntimeOwnerModule from '@/lib/worktree-runtime-owner'
 
@@ -24,7 +25,7 @@ vi.mock('@/lib/worktree-runtime-owner', async (importOriginal) => {
 })
 
 import { useAppStore } from '@/store'
-import type { AppState } from '@/store/types'
+import type { RuntimeEnvironmentStatus } from '@/store/slices/runtime-status-types'
 import { replaceRuntimeEnvironmentRevisions } from './runtime-environment-revision'
 import { clearHostLiveTerminalProbesForTests } from './host-live-terminal-probe'
 import {
@@ -64,24 +65,31 @@ async function settle(): Promise<void> {
   await Promise.resolve()
 }
 
+function makeStatus(runtimeId: string): RuntimeStatus {
+  return {
+    runtimeId,
+    rendererGraphEpoch: 0,
+    graphStatus: 'ready',
+    authoritativeWindowId: null,
+    liveTabCount: 0,
+    liveLeafCount: 0
+  }
+}
+
 function verifiedSnapshot(): RuntimeHostStatusSnapshot {
   return {
     environmentId: ENV_A,
     pairingRevision: REVISION_A,
     sequence: 1,
     checkedAt: 1,
-    status: { runtimeId: 'runtime-a' } as RuntimeHostStatusSnapshot['status'],
+    status: makeStatus('runtime-a'),
     verification: 'verified',
     transport: 'ready'
   }
 }
 
-function setRuntimeStatusEntry(entry: unknown): void {
-  useAppStore.setState({
-    runtimeStatusByEnvironmentId: new Map([
-      [ENV_A, entry]
-    ]) as AppState['runtimeStatusByEnvironmentId']
-  })
+function setRuntimeStatusEntry(entry: RuntimeEnvironmentStatus): void {
+  useAppStore.setState({ runtimeStatusByEnvironmentId: new Map([[ENV_A, entry]]) })
 }
 
 function activeTabsSubscriptions(): RuntimeSubscription[] {
@@ -101,6 +109,7 @@ describe('useWebSessionTabsSync under an unverifiable host probe', () => {
     })
     resetWebSessionTabsSnapshotFreshnessForTests()
     clearHostLiveTerminalProbesForTests()
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the mirror scan and revision ledger read only id, createdAt and pairingRevision.
     const runtimeEnvironments = [
       { id: ENV_A, createdAt: 100, pairingRevision: REVISION_A }
     ] as PublicKnownRuntimeEnvironment[]
@@ -115,12 +124,13 @@ describe('useWebSessionTabsSync under an unverifiable host probe', () => {
           [
             ENV_A,
             {
-              status: { runtimeId: 'runtime-a' },
+              status: makeStatus('runtime-a'),
               snapshot: verifiedSnapshot(),
+              checkedAt: 1,
               connectionGeneration: 1
             }
           ]
-        ]) as AppState['runtimeStatusByEnvironmentId']
+        ])
       },
       true
     )
@@ -145,6 +155,7 @@ describe('useWebSessionTabsSync under an unverifiable host probe', () => {
       setRuntimeStatusEntry({
         status: null,
         snapshot: { ...verifiedSnapshot(), sequence: 2, checkedAt: 2, verification: 'unavailable' },
+        checkedAt: 2,
         connectionGeneration: 1
       })
       await settle()
@@ -161,13 +172,14 @@ describe('useWebSessionTabsSync under an unverifiable host probe', () => {
 
     await act(async () => {
       setRuntimeStatusEntry({
-        status: { runtimeId: 'runtime-b' },
+        status: makeStatus('runtime-b'),
         snapshot: {
           ...verifiedSnapshot(),
           sequence: 2,
           checkedAt: 2,
-          status: { runtimeId: 'runtime-b' } as RuntimeHostStatusSnapshot['status']
+          status: makeStatus('runtime-b')
         },
+        checkedAt: 2,
         connectionGeneration: 1
       })
       await settle()

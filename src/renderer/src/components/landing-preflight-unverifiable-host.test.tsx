@@ -3,7 +3,9 @@
 import { act, cleanup, renderHook } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RuntimeHostStatusSnapshot } from '../../../shared/runtime-host-status'
+import type { RuntimeStatus } from '../../../shared/runtime-types'
 import { useAppStore } from '../store'
+import type { RuntimeEnvironmentStatus } from '../store/slices/runtime-status-types'
 import type { AppState } from '../store/types'
 import { useLandingPreflightRuntime } from './landing-preflight-runtime'
 
@@ -12,24 +14,33 @@ const initialState = useAppStore.getInitialState()
 const invalidate = vi.fn()
 const refresh = vi.fn(async () => {})
 
+function makeStatus(): RuntimeStatus {
+  return {
+    runtimeId: 'runtime-a',
+    rendererGraphEpoch: 0,
+    graphStatus: 'ready',
+    authoritativeWindowId: null,
+    liveTabCount: 0,
+    liveLeafCount: 0
+  }
+}
+
 function snapshot(overrides: Partial<RuntimeHostStatusSnapshot> = {}): RuntimeHostStatusSnapshot {
   return {
     environmentId: ENVIRONMENT_ID,
     pairingRevision: 1,
     sequence: 1,
     checkedAt: 1,
-    status: { runtimeId: 'runtime-a' } as RuntimeHostStatusSnapshot['status'],
+    status: makeStatus(),
     verification: 'verified',
     transport: 'ready',
     ...overrides
   }
 }
 
-function setStatusEntry(entry: unknown): void {
+function setStatusEntry(entry: RuntimeEnvironmentStatus): void {
   useAppStore.setState({
-    runtimeStatusByEnvironmentId: new Map([
-      [ENVIRONMENT_ID, entry]
-    ]) as AppState['runtimeStatusByEnvironmentId']
+    runtimeStatusByEnvironmentId: new Map([[ENVIRONMENT_ID, entry]])
   })
 }
 
@@ -40,13 +51,14 @@ describe('landing preflight under an unverifiable host probe', () => {
     useAppStore.setState(
       {
         ...initialState,
+        // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the hook under test reads only activeRuntimeEnvironmentId; the rest of GlobalSettings never reaches it.
         settings: { activeRuntimeEnvironmentId: ENVIRONMENT_ID } as AppState['settings'],
         invalidatePreflightStatus: invalidate,
         refreshPreflightStatus: refresh
       },
       true
     )
-    setStatusEntry({ status: { runtimeId: 'runtime-a' }, snapshot: snapshot(), checkedAt: 1 })
+    setStatusEntry({ status: makeStatus(), snapshot: snapshot(), checkedAt: 1 })
   })
 
   afterEach(() => {

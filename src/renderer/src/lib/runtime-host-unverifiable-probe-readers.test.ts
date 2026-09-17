@@ -12,7 +12,14 @@ import {
 } from '@/store/slices/runtime-environment-ssh-selectors'
 
 const ENVIRONMENT_ID = 'environment-a'
-const VERIFIED_STATUS = { runtimeId: 'runtime-a' } as RuntimeStatus
+const VERIFIED_STATUS: RuntimeStatus = {
+  runtimeId: 'runtime-a',
+  rendererGraphEpoch: 0,
+  graphStatus: 'ready',
+  authoritativeWindowId: null,
+  liveTabCount: 0,
+  liveLeafCount: 0
+}
 
 function snapshot(overrides: Partial<RuntimeHostStatusSnapshot> = {}): RuntimeHostStatusSnapshot {
   return {
@@ -51,6 +58,7 @@ function syncState(
     snapshot?: RuntimeHostStatusSnapshot
   } | null
 ): RuntimeEnvironmentStoreSyncState {
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the readers under test consult only the four fields below; the rest of AppState never reaches them.
   return {
     runtimeEnvironments: [{ id: ENVIRONMENT_ID, createdAt: 1 }],
     runtimeStatusByEnvironmentId: entry ? new Map([[ENVIRONMENT_ID, entry]]) : new Map(),
@@ -107,6 +115,7 @@ describe('runtime-aware SSH selectors', () => {
     checkedAt: number
     snapshot?: RuntimeHostStatusSnapshot
   }) {
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the selectors read only the SSH maps and the status map built below.
     return {
       sshConnectionStates: new Map(),
       sshTargetLabels: new Map(),
