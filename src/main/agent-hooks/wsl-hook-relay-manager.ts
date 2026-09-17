@@ -1,5 +1,5 @@
 // Host-side lifecycle manager for one guest relay per WSL distro and app instance.
-import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { SpawnedProcessWithStreams } from '../../shared/child-process/process-spec'
 
 import {
   runWslRelayGuestInstall,
@@ -43,7 +43,7 @@ type DistroState = {
   /** Original casing for wsl.exe argv and breadcrumbs; map keys are lowercased. */
   distro: string
   phase: 'starting' | 'running' | 'failed'
-  child?: ChildProcessWithoutNullStreams
+  child?: SpawnedProcessWithStreams
   mux?: SshChannelMultiplexer
   guestHome?: string
   codexHomePath?: string
@@ -268,7 +268,7 @@ export class WslHookRelayManager {
   private async connect(
     state: DistroState,
     transport: MultiplexerTransport,
-    child: ChildProcessWithoutNullStreams,
+    child: SpawnedProcessWithStreams,
     instanceKey: string
   ): Promise<void> {
     const mux = new SshChannelMultiplexer(transport)

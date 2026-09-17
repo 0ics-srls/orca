@@ -1,4 +1,4 @@
-import type { ChildProcessWithoutNullStreams } from 'node:child_process'
+import type { SpawnedProcessWithStreams } from '../../shared/child-process/process-spec'
 
 import { FAILURE_COOLDOWN_MAX_MS, type WslHookRelayManagerDeps } from './wsl-hook-relay-deps'
 import type { WslRelayRecovery } from './wsl-hook-relay-recovery'
@@ -8,7 +8,7 @@ type WslRelayFailureState = {
   distro: string
   phase: 'starting' | 'running' | 'failed'
   failures: number
-  child?: ChildProcessWithoutNullStreams
+  child?: SpawnedProcessWithStreams
   mux?: SshChannelMultiplexer
   cooldownUntil: number
   reinstallTimer?: ReturnType<typeof setTimeout>

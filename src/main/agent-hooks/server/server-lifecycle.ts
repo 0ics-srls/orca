@@ -101,16 +101,6 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
         trackEmptyPaneKeyHook(hookBody)
         const aliasedBody = this.normalizeHookBodyPaneKeyAlias(hookBody)
         const normalized = this.normalizeLocalHookPayload(source, aliasedBody)
-        if (normalized.event && (source === 'opencode' || source === 'auggie')) {
-          recordIntegrationDelivery({
-            source,
-            body: aliasedBody,
-            executionId: normalized.event.launchToken,
-            paneKey: normalized.event.paneKey,
-            host: this.env === 'remote' ? 'remote' : 'local',
-            healthFilePath: join(dirname(this.lastStatusFilePath!), 'integration-health.json')
-          })
-        }
         const statusDisposition = normalized.event
           ? this.getAgentStatusDisposition(normalized.event.paneKey, {
               source,
@@ -134,6 +124,19 @@ export abstract class AgentHookServerLifecycle extends AgentHookServerRuntimeEnv
           const enriched = this.applyNormalizedStatus(event, normalized.onAccepted)
           this.scheduleAssistantMessageRetry(source, aliasedBody, enriched)
           this.scheduleCodexSubagentPoll(source, aliasedBody, enriched)
+        }
+        // Why: a delivery receipt is diagnostics, so it runs after status is applied and
+        // never from an expression that can throw — the endpoint path is null until the
+        // endpoint is set up and again after stop(), which would drop the event entirely.
+        if (normalized.event && this.lastStatusFilePath) {
+          recordIntegrationDelivery({
+            source,
+            body: aliasedBody,
+            executionId: normalized.event.launchToken,
+            paneKey: normalized.event.paneKey,
+            host: this.env === 'remote' ? 'remote' : 'local',
+            healthFilePath: join(dirname(this.lastStatusFilePath), 'integration-health.json')
+          })
         }
         res.writeHead(204)
         res.end()

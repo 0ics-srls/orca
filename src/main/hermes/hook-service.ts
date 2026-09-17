@@ -21,10 +21,10 @@ import {
   getPluginDir,
   getPluginFilesState,
   readConfigFile,
+  resolveHermesHomeForLaunch,
   writeConfigFile,
   writePluginFiles
 } from './hermes-home-filesystem'
-import { resolveHermesHomeForLaunch } from './hermes-home-filesystem'
 import type { ManagedAgentHookScope } from '../agent-hooks/managed-agent-hook-registry'
 import {
   HERMES_EVENTS,

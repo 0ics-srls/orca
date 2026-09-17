@@ -1,7 +1,6 @@
 import { execFile } from 'node:child_process'
 import { readFileSync, statSync } from 'node:fs'
-import { basename } from 'node:path'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
 import { homedir, userInfo } from 'node:os'
 import { promisify } from 'node:util'
 import { installRemoteManagedAgentHooks } from './remote-managed-hook-installers'

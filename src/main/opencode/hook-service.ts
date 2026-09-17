@@ -85,15 +85,7 @@ export class OpenCodeHookService {
       if (!configDir) {
         return {}
       }
-      createIntegrationHealthStore(
-        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
-      ).recordArtifact({
-        integration: 'opencode',
-        host: 'local',
-        scope: configDir,
-        bytes: getOpenCodePluginSource(),
-        version: ORCA_HOOK_PROTOCOL_VERSION
-      })
+      this.recordPluginArtifact(configDir)
       return { OPENCODE_CONFIG_DIR: configDir }
     }
 
@@ -108,21 +100,31 @@ export class OpenCodeHookService {
       mkdirSync(overlayDir, { recursive: true })
       this.mirrorUserConfig(existingConfigDir, overlayDir)
       this.writePluginIntoOverlay(overlayDir)
-      createIntegrationHealthStore(
-        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
-      ).recordArtifact({
-        integration: 'opencode',
-        host: 'local',
-        scope: overlayDir,
-        bytes: getOpenCodePluginSource(),
-        version: ORCA_HOOK_PROTOCOL_VERSION
-      })
     } catch {
       // Why: best-effort — symlink creation needs Windows developer mode (else EPERM) and userData may be read-only; preserve the user's config over dropping their auth/models/keymap.
       return { OPENCODE_CONFIG_DIR: existingConfigDir }
     }
 
+    this.recordPluginArtifact(overlayDir)
     return { OPENCODE_CONFIG_DIR: overlayDir }
+  }
+
+  // Why: artifact bookkeeping is diagnostics — a failed health write must never cost the
+  // user the overlay that carries the status plugin, which is the outage this file prevents.
+  private recordPluginArtifact(scope: string): void {
+    try {
+      createIntegrationHealthStore(
+        join(getAppEnvironment().getPath('userData'), 'agent-hooks', 'integration-health.json')
+      ).recordArtifact({
+        integration: 'opencode',
+        host: 'local',
+        scope,
+        bytes: getOpenCodePluginSource(),
+        version: ORCA_HOOK_PROTOCOL_VERSION
+      })
+    } catch {
+      // Intentionally swallowed: the launch environment must not depend on a health write.
+    }
   }
 
   private getOverlayRoot(): string {
