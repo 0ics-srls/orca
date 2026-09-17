@@ -1,0 +1,9 @@
+{
+  "docs/audits/scanner-shutdown-custody/README.md": "1dfecd4f2669858d61dad10c12d17f826ca9f8e3c846f98f8af5c13b5d42e516",
+  "docs/audits/scanner-shutdown-custody/config.mjs": "6381927a230e114c9ac8fc9e54d0e5e15ace2d0182dd7b17a957f58b328c5b3b",
+  "docs/audits/scanner-shutdown-custody/custody.test.mjs": "fe821a49554b98e0ca4284edf4f8c28b1c1b247cf0be0a63523a16e8f6799e2f",
+  "docs/audits/scanner-shutdown-custody/electron-results.json": "0c6b6ed3e13ce57e739f36e4398363a714cf0a5d0ef67e6dd681b926469d491e",
+  "docs/audits/scanner-shutdown-custody/results.json": "3eded3fef04eb074714ec7f9f5f1faff052b6b36ef5904b4b22a8a21477f38d5",
+  "docs/audits/scanner-shutdown-custody/source-versions.json": "28c1f629a6c078c4d3d28791ef485ad5bd6dc0c1d61c52ec6fd05746372f4cc6",
+  "docs/audits/scanner-shutdown-custody/validation.json": "b1e8dbb4b9e0ad6e843bbe7a774f3be4566c11724c641665987bf8230f01647a"
+}

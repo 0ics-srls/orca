@@ -1,0 +1,33 @@
+{
+  "node": "v26.6.0",
+  "platform": "darwin",
+  "rows": [
+    {
+      "name": "codex-held-stdin",
+      "holdMs": 10250,
+      "aliveBeforeEof": true,
+      "code": 0,
+      "signal": null,
+      "elapsedMs": 10258.791792,
+      "stderr": ""
+    },
+    {
+      "name": "codex-eof",
+      "holdMs": 0,
+      "aliveBeforeEof": true,
+      "code": 0,
+      "signal": null,
+      "elapsedMs": 15.636459000001196,
+      "stderr": ""
+    },
+    {
+      "name": "grok-held-stdin",
+      "holdMs": 2000,
+      "aliveBeforeEof": false,
+      "code": 0,
+      "signal": null,
+      "elapsedMs": 41.31174999999894,
+      "stderr": ""
+    }
+  ]
+}

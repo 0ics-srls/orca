@@ -4,7 +4,7 @@ Read all 38 complete bodies and all 85 cached comments, with pagination complete
 
 ## Findings
 
-- **#10859:** reported renderer-growth lead. Current actual full-store replay stays bounded at two rows after each restart/ingest because existing hydration deduplication intervenes. A separate dirty-draft loss control remains current. Historical source comparison is in progress; no pruning fix is proposed.
+- **#10859:** the reported hydration method reproduces linear restart growth when projected into the current full-store pipeline. Current code stays bounded at two rows after restart/ingest; a separate dirty-draft loss remains current. [Standalone evidence](../mirrored-editor-restart-growth/README.md) records both runtimes, source fences, and scope limits. No pruning fix is proposed.
 - **#7783 / #9229:** real surviving daemon/process-generation resource pressure. Existing #9138 lifecycle work must be checked before duplicating it; persistent live sessions require owner/provenance checks.
 - **#9585 / #10718:** distinguish persisted ghost rows/history from live reusable agents. Later comments explicitly separate those layers; automatic process killing cannot be justified from Done/sidebar state.
 - **#9576:** real GPU/CPU/energy report, with explicit transient-cooling confound and no demonstrated heap growth.
@@ -244,4 +244,4 @@ Read body + 3 comments. Exact hashes: `lower-issue-triage.json`.
 
 ## Current #10859 follow-up
 
-Four bounded actual full-store controls pass in Node26.6 and Electron43.7/Node24.21. Constant one-tab input gives rows[1,2,2,2,2,2,2,2] with restarts and[1,1,1,1,1,1,1,1] without. Current hydration deduplicates restored owner/id; historical reported source investigation remains in progress. Draft correctness risk also reproduced: fresh visible duplicate draft persists but is skipped behind an older clean row during next hydration. No pruning proposal or product edit.
+Five diagnostic controls pass per variant on Node 26.6 and Electron 43.7 / Node 24.21 (20 cases). Projecting the unmodified v1.4.158 hydration method into the current full-store pipeline gives rows `[1,2,3,4,5,6,7,8]` across constant-input restarts. Current code gives `[1,2,2,2,2,2,2,2]`; both variants stay at one row without restart. Current hydration skips a later visible duplicate dirty draft behind an older clean row. The [standalone artifact](../mirrored-editor-restart-growth/README.md) records 19 selected source fences and 11 exact historical helper-body comparisons. This is a historical hydration projection, not a historical whole-app replay or heap measurement. Routing, sleeping-session and varying-identity variants remain untested. No pruning proposal or product edit.

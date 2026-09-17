@@ -1,0 +1,129 @@
+{
+  "observedAt": "2026-09-17T05:37:23.505288+00:00",
+  "head": "587f90770ce7ab79c622726800f4c5c1997b421c",
+  "scope": "Selected current-source boundaries and named commit ancestry; not a complete transitive import fence or historical application replay.",
+  "issues": [
+    {
+      "number": 16759,
+      "url": "https://github.com/stablyai/orca/issues/16759",
+      "bodySha256": "0482869e7501eb67bd5203f2f70414da6a1abca8df42ff6cb5c026546b24596e",
+      "comments": []
+    },
+    {
+      "number": 18200,
+      "url": "https://github.com/stablyai/orca/issues/18200",
+      "bodySha256": "d44f0f49cec5656d7ed56fb6a86d5126e7c19017ef9598d2896e5f2138919542",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18200#issuecomment-5519691859",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18200#issuecomment-5560817236",
+          "sha256": "f4dcdf1c2bf11109dd8ac5975c336a9fca54be92b3c18c0eac98f7d58a86ffbc"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18200#issuecomment-5680692169",
+          "sha256": "be79f26ee4b91cf8ea83c2f0f3deb2826a8825fc197f695955f020261b67e04b"
+        }
+      ]
+    },
+    {
+      "number": 20517,
+      "url": "https://github.com/stablyai/orca/issues/20517",
+      "bodySha256": "1dc4c8660ac4147903cbaab8ab903ff7e4dee1d2cdc08bc410eab2ec0958624d",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/20517#issuecomment-5691566417",
+          "sha256": "b30ca0a42a8bb8ad3aab9504bb20ac39dfa88c2b8b574e3511ad2420d761bd44"
+        }
+      ]
+    },
+    {
+      "number": 18186,
+      "url": "https://github.com/stablyai/orca/issues/18186",
+      "bodySha256": "7226419cd0193e10fbeebf0745eb8cef8160512d033e89f703a7d5d2bd4d73d4",
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18186#issuecomment-5514808696",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ]
+    }
+  ],
+  "sources": {
+    "src/main/daemon/daemon-host-relocation.ts": "10fbdbabd1f72bbb0c92368fb9c76fd010c8ed549e7a74e2d01d8dd1738890de",
+    "src/main/daemon/daemon-out-of-process-launcher.ts": "adbedba72e91c3777e20205ebb05d70e0bcc2c54818fd52ccfe65f06afdcdace",
+    "src/main/daemon/daemon-launch-paths.ts": "a230ed239831333eae1e48aa11f9ad432dd8ffce8cfe624b9973b11fb7041c35",
+    "src/main/daemon/daemon-launched-child.ts": "eb4cd6ddeb480e53bc2f934afc67b10661241f46d80decd3ccfa1d5699c78649",
+    "src/main/startup/main-process-quit.ts": "88b559ae9ac1d24360ecdefb0b46d6289bdb7513d6d27b6d2ac5efe6ac37892a",
+    "src/main/ai-vault/session-scanner-service-client.ts": "6a71b08c6cb7de3cd0d0aa1a193d32f2f8835f361af083b91fdf72ff55c1bedd",
+    "src/main/ai-vault/session-scanner-service-client-state.ts": "b6516ae06cfcdce44946a08441887f3987b020afcd0795c07635fe70a7f8f76c",
+    "src/main/ai-vault/session-scanner-service-spawn.ts": "064f1d299547ec05e63a451a77774098cdb0ce9cbf45406167be6cbbcb846e19",
+    "src/main/ai-vault/session-scanner-service-entry.ts": "e300d4922da94da09abb3c14bbb240ef9593d8a4834a37598c1c2f77b14dcbf5",
+    "src/main/cli/appimage-extracted-root.ts": "a75a485845ef06442158214ede515a522c20554ea77db0786c83a9b828ce5aef",
+    "src/main/crash-reporting/crash-report-store.ts": "07fbc933472dc0b63b19320730ab4fe3a3a752f5375856d65de04eb7ee567583",
+    "src/main/crash-reporting/process-gone-classification.ts": "a12753cb05a7a10173fc12be828d1d78d9d20c5db185054dbafaf5141b512a98",
+    "src/renderer/src/lib/pane-manager/pane-webgl-context-loss-policy.ts": "bcfa5a692f6661ac53dea0b89383a2cae16a7d03251ff7cd98e25709643b8f9e",
+    "src/renderer/src/lib/pane-manager/pane-webgl-reattach.ts": "85f159396a3d4135099fcdb299fdca6bdf97c1e6b4e39a7e1ff12ba0b424afc0",
+    "src/renderer/src/lib/pane-manager/pane-webgl-renderer.ts": "2c62ee214362332e74a11d7fcd638d5d493ce9d28ebc834d81f293f9e97e00e5",
+    "src/renderer/src/components/use-terminal-parking-pass.ts": "3810a4d645aa9645a3eaed2ed49147f4d1f26063231264cda99c3ec6bb9c9c85",
+    "src/renderer/src/lib/pane-manager/pane-webgl-context-recovery.test.ts": "63bccc1ac8810ddbcc17f42cc4a087b19760d1b77794c016a63a9b0a5ce1aa88",
+    "src/renderer/src/components/terminal-pane/terminal-cold-park-pre-gate-loop.react185.test.tsx": "124a2db8fb25d3b23b05a42e887e67655034877cfc55f00372376c25993ca321",
+    "src/renderer/src/components/terminal-pane/terminal-cold-park-exempt-flip.react185.test.tsx": "f0777b9a822e9dbd595a0f01e4d035caa4b22e522cadcdb4fd11af10b8412309",
+    "src/renderer/src/components/terminal-pane/use-parked-terminal-watcher-synchronization.react185.test.tsx": "3cde98505b15de5e54173cfd95f2fc656d3bbe78fcede028a53b0186b63ef264",
+    "src/main/crash-reporting/process-gone-classification.test.ts": "c8e9fcf96743247ee5ca301e9492594ca7ec6dfee14776e7fea86378e711f86e",
+    "src/main/startup/serve-signal-handlers.ts": "e1f1d0163f7846c215a11c6af22490478bcff772cc45fbd971ad2d74ea3249dd",
+    "src/main/startup/serve-signal-handlers.test.ts": "cf373bee1cb38ce6cbc34762fd34558926232a7367ffc0a147bc1dc797168036",
+    "src/main/startup/main-process-runtime-launch.ts": "b729bb201c3bdd8027b409a6a16ca61b5adfbcf126dd221dc8b5c6809722a1dc",
+    "src/main/daemon/daemon-host-relocation.test.ts": "2c856dd4bec1f8add6d1b138bf6346be21769fb9614271822114cac53bb48b4b",
+    "src/main/startup/ensure-virtual-display.ts": "c5361c61a99acdeaf79bba0ccf328cb7758be3838e2080252a3e2f172c093971",
+    "src/cli/runtime/serve-update-supervisor.ts": "3cd094753949093437e00688f2b2289813c2e6a8e85a41be50e46d2156d7de15",
+    "docs/reference/headless-linux-server.md": "7849b1c42f388f6af9f1f5c44eb2564556603a8c39f959992886eceb3d067154",
+    "config/scripts/headless-serve-shutdown-matrix.test.mjs": "71a30a2e09050f9d25713ede5a59172eb921cb843151218466a78265d108a0e3",
+    "config/scripts/headless-serve-shutdown-workflow.test.mjs": "e87a5ffe287d0ba45670c4dc7622191092f530e9c59954db1234ebde47a38154",
+    "config/docker/headless-serve-shutdown/run-signal-case.sh": "0895d877b7674cdfa7c28b7f790d83239fa30b7c6adfd213bc1d19732ffde256"
+  },
+  "ancestry": [
+    {
+      "commit": "81f89a705c5bf334b7ce1086db62fbeafccf1d47",
+      "release": "v1.4.190",
+      "releaseCommit": "6e4f817101daa18d82824b69243d9079baa9c416",
+      "isAncestor": false
+    },
+    {
+      "commit": "ec7e3ea47742ba10aa4e176d6271dc99d00ac345",
+      "release": "v1.4.199",
+      "releaseCommit": "28957d6004dd191b6f0baff493a9fd3d37405d9d",
+      "isAncestor": true
+    }
+  ],
+  "validation": {
+    "command": "ORCA_BACKGROUND_LAUNCH=1 node node_modules/vitest/vitest.mjs run --config config/vitest.config.ts src/renderer/src/lib/pane-manager/pane-webgl-context-recovery.test.ts src/renderer/src/components/terminal-pane/terminal-cold-park-pre-gate-loop.react185.test.tsx src/renderer/src/components/terminal-pane/terminal-cold-park-exempt-flip.react185.test.tsx src/renderer/src/components/terminal-pane/use-parked-terminal-watcher-synchronization.react185.test.tsx src/main/crash-reporting/process-gone-classification.test.ts",
+    "files": 5,
+    "passed": 47,
+    "exitCode": 0,
+    "logSha256": "f7a31a9b8bce05b70541e4295de1126e7d2933c68a3ce1d0fcae37903c749f3e"
+  },
+  "newProductChanges": false,
+  "historicalSignalSource": {
+    "release": "v1.4.193",
+    "releaseCommit": "898022d7fd8e0ff4a708de1673f54d71d3999f86",
+    "sources": {
+      "src/main/index.ts": "809834a8d87af530e4443bb76a05dfa6f98a6d20b97b4ef1cc407ed3c982d5ae",
+      "src/main/startup/serve-signal-handlers.ts": "ababf48f52d2f0e4aa827ccdf0555fd099b83ccbc505f6873de7effd89a9325c",
+      "docs/reference/headless-linux-server.md": "4c1778189c6c78b34d1bec8d383153fe538a8a77d0187b1380b8a5418f3cb937"
+    },
+    "registrationLine": 3443,
+    "signalHandlerIntroducedBy": "0e10fc59258aa3e07e31f33d1dc0024f42389647",
+    "scope": "Named release source comparison, not execution of the historical packaged application."
+  },
+  "linuxLifetimeValidation": {
+    "command": "ORCA_BACKGROUND_LAUNCH=1 node node_modules/vitest/vitest.mjs run --config config/vitest.config.ts src/main/daemon/daemon-host-relocation.test.ts src/main/startup/serve-signal-handlers.test.ts config/scripts/headless-serve-shutdown-matrix.test.mjs config/scripts/headless-serve-shutdown-workflow.test.mjs",
+    "files": 4,
+    "passed": 43,
+    "exitCode": 0,
+    "logSha256": "d369ea903d8b4f14d449397a5863ece69b555a23e49ba28ca6654da7e82bd6e9",
+    "scope": "Controlled callbacks, packaging fixtures and harness contract assertions; no native Linux/FUSE/systemd execution."
+  }
+}

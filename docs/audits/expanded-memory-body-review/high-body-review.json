@@ -1,0 +1,1013 @@
+{
+  "selection": "Pending newly fetched issues numbered >=16000, excluding existingTitleCatalog:true and root-owned #16759/#18200/#20517; 42 issues.",
+  "complete": true,
+  "evidenceScope": "Manual full cached body/comment review, not a fresh code reproduction or affected-host investigation. Linked existing code proofs retain their own scope limits. Cached PR references are not current PR-status checks.",
+  "inputSha256": {
+    "notes/expanded-memory-body-review/focused-issues.json": "f3dafb9888e170fd7e81fb0632b92debbfbcdd650bb281dfa1ff94e8cdbd18b9",
+    "notes/expanded-memory-body-review/additional-issues.json": "6dd2b5b820ba311101b3d17519304c6ca0dbb26d0a43d319d2244997b428b898"
+  },
+  "selectionIndexSha256": "47a301e2d117978705fc4880214f4891a5bd1bb485ef0e4a312373f6ab679272",
+  "selectionIndex": "docs/audits/expanded-memory-body-review/candidate-index.json",
+  "commentCount": 39,
+  "dispositionCounts": {
+    "other_functional_performance_or_lexical": 26,
+    "resource_feature": 2,
+    "resource_report_or_policy": 14
+  },
+  "classificationCounts": {
+    "disk_growth": 1,
+    "external_process_resource": 1,
+    "feature_lexical": 8,
+    "native_crash_and_stale_ready": 1,
+    "native_process_churn": 1,
+    "non_memory_correctness": 16,
+    "performance_nonmemory": 2,
+    "process_lifecycle": 5,
+    "resource_bound_correctness": 1,
+    "resource_feature": 2,
+    "resource_pressure_lifecycle": 1,
+    "stale_terminal_registry": 1,
+    "ui_growth_candidate": 1,
+    "ui_owner_retention": 1
+  },
+  "issues": [
+    {
+      "number": 16005,
+      "url": "https://github.com/stablyai/orca/issues/16005",
+      "title": "[Feature]: Name remote terminal sessions in the Resource Manager instead of showing raw pids",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-22T22:51:59Z",
+      "classification": "resource_feature",
+      "disposition": "resource_feature",
+      "reason": "Resource Manager naming request: remote snapshots show raw PIDs because the client's tab store lacks remote titles. Existing CPU/RSS numbers are UI examples, not growth evidence; suggested title enrichment explicitly calls out polling cost and cache TTL.",
+      "followup": "No memory fix implied; preserve naming-only scope and live/unverifiable/exited remote authority.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "9bd8b1481ed23428109c1d8509ad31765dbdc25fc04d5f8fc3320a03ead49434",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16008,
+      "url": "https://github.com/stablyai/orca/issues/16008",
+      "title": "[Feature]: Preload the local speech model so the first dictation does not wait ~2.3 s",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-22T23:26:26Z",
+      "classification": "resource_feature",
+      "disposition": "resource_feature",
+      "reason": "Speech startup latency proposal explicitly trades about 1.2 GB of retained model RSS for a warm recognizer. Report measures roughly 2.3 seconds of ONNX session construction and a one-hour idle teardown; it asks for opt-in preload/keep-warm, not relief from an accidental leak.",
+      "followup": "Relate to existing speech-worker accounting audit as intentional model residency, not proof of the audio-queue mechanism.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "096ca3776817da5b02f6b2528208f42aae49033fa4149173115ed1a223ea7ff1",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": ["../speech-worker-audio-budget/README.md"],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16086,
+      "url": "https://github.com/stablyai/orca/issues/16086",
+      "title": "[Bug]: Mobile pairing URL advertises an E2EE public key that differs from the WS listener's key \u2014 Linux headless serve (1.4.188), all pairings fail 4001",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-23T13:53:37Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Pairing URL key differs from the persisted key used by the listener; the reporter's handshake succeeds with the persisted key. In-memory keypair is a state-authority reference, with no growing allocation or process-retention measurement.",
+      "followup": "Authentication/bootstrap key consistency; proposed process-chain cause remains reporter inference.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "e148607af4fd0d53a1178faa73ff479aaa4f1ffd8fbaa3f607e7922d772a42ab",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16464,
+      "url": "https://github.com/stablyai/orca/issues/16464",
+      "title": "[Feature]: bindable keybinding action to move a tab to a new pane column",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-25T13:51:55Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests a bindable action to move the active tab into a pane column. The memory match is muscle memory for a shortcut, not resource usage.",
+      "followup": "No memory-audit code follow-up.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "34202d2a7f25cf7d5e6a7d6f49360d4d02625ce75076eb16a7448f5dfd0ee766",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16629,
+      "url": "https://github.com/stablyai/orca/issues/16629",
+      "title": "[Bug]: [AV False Positive] PowerShell OSC 133 integration triggers 'PowerShell/Bypass.K' EDR flag",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-26T12:39:20Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "PowerShell EncodedCommand shell integration triggers an EDR heuristic. Execution in memory describes the antivirus concern; no resource growth or exhaustion is reported.",
+      "followup": "Security/launch compatibility, separate from OSC parser retained-parent memory fixes.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "319ca72dd88b2faac06047b1424060de88840f1e56351d1b23c2dc9aa155ec13",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16776,
+      "url": "https://github.com/stablyai/orca/issues/16776",
+      "title": "codex-runtime-home/sessions grows unbounded, consumed 11GB with no cleanup mechanism",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-27T17:10:11Z",
+      "classification": "disk_growth",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports 11 GB of Codex rollout JSONL history, over 1000 files, inside a 15 GB app-data footprint. Claims no TTL/cap/cleanup UI; this is persistent disk accumulation, not a reported JS-heap or RSS leak.",
+      "followup": "Review existing Codex session-history ownership and retention policy before any deletion proposal; do not apply the reporter's destructive cleanup command automatically.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "419ca92147ce6ffa00633dda5c379a40b42e95d2d85a413aa6977e381f6d7d55",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16790,
+      "url": "https://github.com/stablyai/orca/issues/16790",
+      "title": "[Feature]: Add configurable command palette shortcut (F1)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-27T12:14:03Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests configurable Monaco command-palette shortcuts across editors/diffs/notebooks. Memory means familiar shortcut muscle memory; proposed listener disposal tests are feature implementation detail, not a reported leak.",
+      "followup": "No new memory mechanism.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "17acf10f8a9128525890b8f3810b0ad771964b76e10d8145f954b1489f74b523",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 16910,
+      "url": "https://github.com/stablyai/orca/issues/16910",
+      "title": "[Feature] Orca feature request more like an assistant/ Orca Bot mode",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-28T18:51:21Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Body and all five comments propose persistent bots, connected apps, provider-independent long-term memory, and orchestration UI. Memory means stored preferences/history/identity, not RAM; final comment only reports a CLI bot integration.",
+      "followup": "No memory/resource incident or measured leak.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "570d9c195aa9ab7c59c89f21367e1f5c12934d1ef1a0912df2ccfa4463673ce6",
+      "commentCount": 5,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/16910#issuecomment-5446975757",
+          "sha256": "363e4db2823b9828423a88535f5ffac176b14b095bdb2dff6bbba8ac64e40027"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/16910#issuecomment-5446980067",
+          "sha256": "1f1cdc9b765d8312bf53392a3b8c67a1706466c066d76d627a21af979db5a0ff"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/16910#issuecomment-5446982792",
+          "sha256": "192a2a686eb6080fe53163dbf7df97e6b66a475c9fbbccf84f974a26edf0a5af"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/16910#issuecomment-5446983767",
+          "sha256": "f13af18f027621b5ec776e4d966dd3d604b4a13e721b996551ab3ef095b83c71"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/16910#issuecomment-5456474190",
+          "sha256": "624a099ca53a1d73426ff05101fcf5fb11eb49227e9834e8cc818c7eebbdf16c"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17114,
+      "url": "https://github.com/stablyai/orca/issues/17114",
+      "title": "Log-cap rotation replaces durable scrollback with the live window",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-30T19:11:31Z",
+      "classification": "resource_bound_correctness",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports that normal log-cap rotation replaces deep durable scrollback with a shorter live snapshot, losing history (638 shrinking rotations, 1936 MB cumulatively discarded). The issue concerns correct behavior of an existing bound, not growing RAM. Suggested safeguards distinguish actual overflow, disk checkpoint depth, user-cleared history, and once-per-generation refusal.",
+      "followup": "Link existing terminal-history/checkpoint audit; do not increase memory limits or accept infinite rotation refusal as a fix.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "7f74eae9dfdfb5f79900024ea858847f0e1ae7670383e4034e198decea968fee",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17117,
+      "url": "https://github.com/stablyai/orca/issues/17117",
+      "title": "Visible terminal initialization needs an incarnation-aware Runtime identity proof",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-01T07:33:17Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests an incarnation-aware Runtime identity proof for visible terminals after restart/reconnect. In-memory bounded challenge state is a design requirement, not observed retention. Both comments are acknowledgement/community contact, with no memory evidence.",
+      "followup": "Terminal identity/authority feature; no memory attribution.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "164a084bfa437903a281a70338a84a24e1eb32799f42ea42c76828a0e834cdf7",
+      "commentCount": 2,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/17117#issuecomment-5470695649",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/17117#issuecomment-5490508542",
+          "sha256": "9422b3664cbcd87e0ad873966ea1bdcaf650c656ce31ead88f175d7631b93c9d"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17307,
+      "url": "https://github.com/stablyai/orca/issues/17307",
+      "title": "[Bug]: worker-start validates a reused terminal against a stale leaf.worktreeId, missing PTY-reincarnation drift",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-02T01:07:32Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Reports reused-terminal worktree validation reading stale leaf metadata after PTY reincarnation. Comment reproduces the source mismatch and links PR18042 with freshWorktreeId and older-host fallback. The in-memory map is a correctness authority, not a measured growth owner.",
+      "followup": "Existing PR18042 reported in cached comment; do not claim its current merge status without verification.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "79fffb3c96273f3c99d705c79d8e293f738fac66dab7ccacf4560d9f27967b0a",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/17307#issuecomment-5502797351",
+          "sha256": "df6b45f8f04cc5b9a3e4fa785c54aed970c8908c89887f01457b00d5c1c57edd"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17435,
+      "url": "https://github.com/stablyai/orca/issues/17435",
+      "title": "Onboarding can report GitHub CLI unavailable after runtime GitHub commands succeed",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-03T23:03:45Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Onboarding caches a negative GitHub capability result while runtime operations succeed. Original Linux report expressly does not establish PATH or initial probe cause; later macOS/MacPorts comment separately demonstrates GUI PATH excluding /opt/local/bin. Preserve that platform-specific correction; no cache-cardinality or memory-growth evidence.",
+      "followup": "Capability resolver/state invalidation, not cache eviction or heap attribution.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "0ac5b6464545657906ff989cbb1552bb4b9346201023fb115527e9972df91399",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/17435#issuecomment-5533248157",
+          "sha256": "c245b0566534579b56a70f3bc35a3516a2ec5fe15933f6f9e8aa0d761b5becfa"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17645,
+      "url": "https://github.com/stablyai/orca/issues/17645",
+      "title": "[Bug]: On a primary-checkout row, \"Remove Project from Orca\" occupies the \"Delete\" slot and its confirmation understates the blast radius",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-08-31T16:39:04Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Project removal occupies the row-delete menu slot and hides all worktrees; reporter confirms checkouts/branches/commits remained on disk. Memory is menu muscle memory. Re-add identity/metadata loss and visibility defaults are UX/persistence issues, not growth.",
+      "followup": "Do not infer destructive filesystem deletion or memory leakage from disappearing UI rows.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "7be6c7b5c2adff1492cece2dd7f4326e25f00925dca97bf900ef6cb4b225295b",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 17864,
+      "url": "https://github.com/stablyai/orca/issues/17864",
+      "title": "[Feature]: task-update has no terminal status for 'dispatched, outcome never recorded' (abandoned/cancelled)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-01T07:14:03Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests an honest abandoned/cancelled orchestration outcome for revoked dispatches whose work is unverifiable. Coordinator memory means conversational context after restart. Incorrect durable task statuses are not a resource leak measurement.",
+      "followup": "State vocabulary/authority; do not equate missing outcome with process death.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "226f5558d96332ae1718cd16f8faf5865de3e20cb9e77a605d9ebb3062fdd649",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18186,
+      "url": "https://github.com/stablyai/orca/issues/18186",
+      "title": "[Bug][Linux/headless]: `orca serve` ignores SIGTERM \u2014 systemd stop always ends in SIGKILL of the whole cgroup, and needrestart/unattended-upgrades trigger it unattended (v1.4.193)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-02T19:01:16Z",
+      "classification": "process_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports headless SIGTERM ignored for 90 seconds, systemd escalation to whole-cgroup SIGKILL, killed agents, and leftover Xvfb/orca processes during two needrestart-triggered service restarts. Explicitly reports idle load, 14% RAM and no OOM; resource ownership/shutdown is real, but OOM wording is adjacent policy discussion.",
+      "followup": "Source follow-up on graceful serve shutdown and remaining children; relate to existing headless crash/daemon survivability work without claiming RAM exhaustion caused this incident.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "7226419cd0193e10fbeebf0745eb8cef8160512d033e89f703a7d5d2bd4d73d4",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18186#issuecomment-5514808696",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18191,
+      "url": "https://github.com/stablyai/orca/issues/18191",
+      "title": "[Bug]: CLI-created terminals on the SSH relay lose their tab across a desktop restart, and inventory reports them identical to healthy ones",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-10T08:33:18Z",
+      "classification": "process_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "CLI-created SSH tabs disappear across desktop restart while their remote PTYs demonstrably survive and accept writes; UI-created control tabs remain. Later comment describes PR19860 as a partial graph-drop fix, explicitly leaving restart ordering and restored-lease renewal unresolved. The old-agent source appendix is reporter-supplied evidence, not a fresh source reproduction by this audit. A tab_not_found close followed by disappearance is temporal evidence, not proof that close killed it.",
+      "followup": "Audit restart graph/lease authority separately from the existing headless late-spawn-close mechanism. Preserve paired/headless snapshot authority; blindly refusing restored leases would break valid hosts.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "c05c1e64dc1ae538819130b5975dac862d4488346b9325de407cd63d8542146c",
+      "commentCount": 2,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18191#issuecomment-5514806443",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18191#issuecomment-5615625853",
+          "sha256": "f94409caa7ad4a9c8d2aa5bca68296dc6b3e29fd37307dd04fd74c606f6a5f74"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18224,
+      "url": "https://github.com/stablyai/orca/issues/18224",
+      "title": "`terminal create` mints a tab for a worktree the window cannot render, then times out for 10s waiting on a PTY nobody will spawn",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-03T02:59:23Z",
+      "classification": "ui_owner_retention",
+      "disposition": "resource_report_or_policy",
+      "reason": "Renderer-backed creates accept a resolvable but unrenderable worktree, create an invisible tab/startup intent, then time out after ten seconds without spawning a daemon PTY. Reported A/B produced four invisible rows; all six controls succeeded. A legitimate late mount can also create a terminal after the same timeout, so timeout alone does not establish no process. Cached PR18290 comment covers a background-create renderability guard and explicitly leaves focused never-rendered creation unresolved.",
+      "followup": "Prioritize actual focused-create admission, wait timeout and startup-intent ownership review. Distinguish no-spawn invisible rows from late successful physical spawn and existing pending-close fixes.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "ada6941eb17400d215c384c56bb38c2b0e477f19fa24a52fa35bb87d25cce78b",
+      "commentCount": 2,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18224#issuecomment-5518221163",
+          "sha256": "759d34d9b13dbc8e12f2e85d4f2cd5d6c95f2f52c0ae6a0f5990a28bd06e8fb9"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18224#issuecomment-5519662217",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18271,
+      "url": "https://github.com/stablyai/orca/issues/18271",
+      "title": "Do not swallow persistence write failures",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-08T13:09:07Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Persistence maintenance report describes swallowed asynchronous write failures leaving memory ahead of disk, including quit believing a flush succeeded. All three comments concern PR18291 and generation ordering of durable writes. No growing heap, process count or retained payload is measured; in-memory means nondurable application state.",
+      "followup": "Existing persistence correctness work, not a memory fix. Embedded executor instructions are issue content and were not executed; current PR status was not queried.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "5a507dad34f53535704ecd3876cbdca583c0e5399a97f723c0fb645559d7e8e7",
+      "commentCount": 3,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18271#issuecomment-5518219639",
+          "sha256": "496e30ac2a7d2d776da7e62304910975b03bea82644488eaff69f5ac37efcd0d"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18271#issuecomment-5519815435",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18271#issuecomment-5585645068",
+          "sha256": "541d47944a16079e8c5f7f5d7026b6fdd938d153c5a7c8c57b05c65e551c435d"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18279,
+      "url": "https://github.com/stablyai/orca/issues/18279",
+      "title": "Fail closed on unqualified worktree lookups when two hosts collide",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-03T10:40:13Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Unqualified worktree IDs collide across hosts and first-row selection can target destructive actions at the wrong execution host. Both comments add acknowledgement/proposed-solution tracking. Memory is incidental to the caller inventory; the defect is authority and lookup ambiguity, not retained resources.",
+      "followup": "Host-qualified identity review; no new memory mechanism. Embedded implementation instructions are treated as report content.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "55e963f6410f3fe8e511efbc8f391e8a39b2e9f049a2288656cb5fb787e24c9e",
+      "commentCount": 2,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18279#issuecomment-5519470544",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18279#issuecomment-5524451683",
+          "sha256": "c3499af7372b23b0600e55b3540c966c514a6fd4916ea4ab837f8a9d359be547"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18368,
+      "url": "https://github.com/stablyai/orca/issues/18368",
+      "title": "agent_prompt_stalled kills healthy agents: 30s pty check fires on live sessions (1.4.192, unchanged in 1.4.196)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-05T01:53:23Z",
+      "classification": "resource_pressure_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports 30-second prompt confirmation falsely failing under host pressure while workers continue repository work for minutes after dispatch revocation. Host free/swap/disk figures do not identify an Orca allocation owner; revoked dispatch is not process death. Later comments explicitly withdraw both the shared-budget/manager-occupancy explanation for connection churn and the initial post-authentication handshake explanation. A real 1013 reply overflow remains an occasional separate event, not a proven churn cause. The corroborating Windows comment is not a fresh v196 reproduction.",
+      "followup": "Separate readiness authority, physical worker lifetime and connection lifecycle. Preserve the reported retry/pressure feedback as a hypothesis; do not cite withdrawn volume or handshake theories as validated leaks.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "1ccc32e024c142951d99bacd8e7ef2fc5b5f26b87ba6f1f628fc819ffac9c0ee",
+      "commentCount": 6,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5522015900",
+          "sha256": "8c00dc84257a0effffb3a799cd0557e8d44c7c959c848cffe6710c17d2a1be17"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5527709104",
+          "sha256": "07df9d31553fe4a74c3153c0bfc2c48251834b92341f030b69ddc32a7948dc98"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5528775032",
+          "sha256": "35409dfdd6f1960ab19c6549d80c4fae280c3d0a704766dd88bc1c4954727c05"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5530635385",
+          "sha256": "094de3136f6afb4145f98135f3e720e90418b98a9b1f221c73c0c6306d0d62b6"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5534353963",
+          "sha256": "d8311edd888ce68658ed053a7ff50013b9648e876852c3c33083dba32d319928"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18368#issuecomment-5548555880",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18401,
+      "url": "https://github.com/stablyai/orca/issues/18401",
+      "title": "Root cause: local-only repo-id filter (filterRepoIds) hides all worktrees on paired remote hosts; plus showPinnedWorktreesInGroups breaks pinned drag-reorder",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-14T11:16:47Z",
+      "classification": "ui_growth_candidate",
+      "disposition": "resource_report_or_policy",
+      "reason": "Latest comment reports remote repository headings accumulating during scrolling, but provides no heap, DOM-count or source reproduction. Earlier remote-visibility failure was a local-only filter and drag failure a pinned-group option; rollback disproved the original v196 regression claim. Reporter then corrected an erroneous claim that remote tabs were not persisted, corrected a no-discriminator claim, and disclosed that earlier function names were invented descriptive labels. Exact duplicate counts and recycling/append cause remain unproven.",
+      "followup": "Bounded current sticky-header/virtual-row lifecycle control is worthwhile. Scope to the latest observable accumulation; do not reuse retracted version, persistence or invented-symbol claims.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "13e417583670302cd7c3f13c3186a97529aa1faa8836da89e38a2d77249e4549",
+      "commentCount": 5,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/18401#issuecomment-5524390497",
+          "sha256": "1b8db15204fbf16f315e8d573a6bb143b30023629cac501425d9d521ad92e343"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18401#issuecomment-5524793818",
+          "sha256": "ee3e5fa96f2c392bb5f8c8a2ae2410c932f1087186bc765b4c20ed2430eed158"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18401#issuecomment-5525079317",
+          "sha256": "6655880ef31032a850623615349f256ac12bfa984d98f073e2b9f86a2eb15389"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18401#issuecomment-5557594861",
+          "sha256": "432bdb4d50d00b6f0a657b54eb43aca607cd46b7775a25b0209f12a361a97236"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/18401#issuecomment-5663091353",
+          "sha256": "3bc0016f3e15f0a1f20157b12de4eb9a7c8ba7f5d673c8990a6fc6de1eea6392"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18483,
+      "url": "https://github.com/stablyai/orca/issues/18483",
+      "title": "[Bug][Windows] Updater requires closing Orca but update cannot proceed once closed (deadlock)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-03T15:44:45Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Windows updater requires app closure but installation does not proceed after closing. Diagnostics memory is only an offered diagnostic; no memory pressure, allocation growth or lingering-process measurement appears in the report.",
+      "followup": "Updater lifecycle correctness; no memory-audit mechanism established.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "fbcfd7b90babc3d0e38b6d97af1bf6934d3d7c8be50f3a217f4ce044afb18f0a",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18689,
+      "url": "https://github.com/stablyai/orca/issues/18689",
+      "title": "[Bug]: Orca Mobile over Tailscale disconnects on initial agent prompt / drops iOS NetworkExtension",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-04T19:13:21Z",
+      "classification": "external_process_resource",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports Tailscale's iOS NetworkExtension being jetsammed during terminal output bursts on v190, then a remaining WebSocket heartbeat loss on v197 while full VPN loss is mitigated. The killed process is the VPN extension, not Orca's renderer or main process. Packet-buffer accumulation, MTU effects and claimed extension limits are reporter explanations, not independently verified by this body review.",
+      "followup": "Review existing mobile output/backpressure and heartbeat ownership before attributing the external jetsam. Keep v190 extension death distinct from v197 socket timeout and endpoint-selection behavior.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "4274ef40f82b4ff12bbdcef3c648af48e87c8eeffec46f5870ca8fec062117c7",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18831,
+      "url": "https://github.com/stablyai/orca/issues/18831",
+      "title": "Session daemon never auto-updates for users with live terminals \u2014 silent, unbounded version drift (daemon 1.4.190 vs app 1.4.197)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-05T12:30:59Z",
+      "classification": "process_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "A v190 daemon remains active for eight days under a v197 app because replacement preserves live or unverifiable sessions. Unbounded refers to version drift, not allocation growth. Twenty-one live terminals intentionally prevent destructive replacement; the report asks for visibility and a nondestructive update path.",
+      "followup": "Track exact daemon version when mapping memory fixes to incidents. Do not remove live/unverifiable preservation or interpret idle sessions as safely dead.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "aaa423761747ed7851bef60fbbc26036668d79f39d2f0f287d2506c506e12130",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 18855,
+      "url": "https://github.com/stablyai/orca/issues/18855",
+      "title": "[Bug]: Windows sign-in follow-ups: cancellation reported as ENOENT, Codex loopback ends on ERR_CONNECTION_REFUSED, child-process timeouts too tight under endpoint security",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-05T16:43:38Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Windows sign-in cancellation is surfaced as ENOENT; a successful Codex login ends on a misleading loopback error; endpoint inspection delays child startup and triggers memory-enumeration/daemon timeouts. The memory log is a process-enumeration timeout, not measured memory exhaustion. Reporter distinguishes successful credential capture and Store alias EACCES from executable absence.",
+      "followup": "Timeout and platform/authentication correctness; no retained-memory owner shown. Preserve daemon fallback's loss of terminal survivability as a separate consequence.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "e4d82a0c329c2053e55e83491aba0f7c6cdb1740082de63e06a22b02a96fef62",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19018,
+      "url": "https://github.com/stablyai/orca/issues/19018",
+      "title": "terminal_pane_owner_conflict: dead PTYs stay connected:true and can never be closed (local Windows host)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-07T01:26:23Z",
+      "classification": "stale_terminal_registry",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports rising connected registry entries, duplicate pane owners and stop_unverified on Windows. Already covered by the memory ledger's actual delayed-exit, queued-graph and stop-verification proofs. Missing diagnostics.memory attribution alone does not prove a process is dead; the reporter's phantom terminology and automatic cleanup comment cannot replace authoritative owning-host exit evidence.",
+      "followup": "Reuse ML028/ML035/ML037/ML039 and existing exact-owner/endpoint proofs; do not count as a new discovery or claim the issue's exact event ordering is established.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "08bd52e01864d0d69700a3dd953a34d69dd57642bbfb5a04aea68b35b0f3173f",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19018#issuecomment-5563726393",
+          "sha256": "f16713c27367ffa346abcba9527c031480e714c22c54454222b166f56b23fceb"
+        }
+      ],
+      "existingAuditLinks": [
+        "../memory-leak-scan-2026-09-15.md",
+        "../daemon-late-exit/README.md",
+        "../queued-terminal-graph-exit/README.md",
+        "../terminal-close-observed-exit/README.md"
+      ],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19066,
+      "url": "https://github.com/stablyai/orca/issues/19066",
+      "title": "[Other]: Creator Micro 2 community plugin \u2014 review and distribution path",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-06T10:56:26Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests review/distribution of a hardware-controller community plugin. A CPU/memory advisory above six agents is a feature description; the separate HID child and loopback configurator are disclosed architecture, with no measured leak or abandoned child report.",
+      "followup": "Community plugin distribution/lifecycle feedback, not a memory incident.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "e15796a707236fb073a19c9c4313a47ae62ea3bfd3d19cd423b07069fd52ab83",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19169,
+      "url": "https://github.com/stablyai/orca/issues/19169",
+      "title": "[Bug]: Drag-selecting text is choppy in a terminal running Claude Code (macOS); smooth in iTerm2",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T05:35:18Z",
+      "classification": "performance_nonmemory",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Reports choppy terminal drag selection, worse during redraws and long scrollback, with iTerm2 as a control. Diagnostics memory is offered but no heap, RSS, allocation or collection growth is reported. Large scrollback can increase rendering work without establishing retained-memory leakage.",
+      "followup": "Selection/redraw performance investigation; do not equate UI lag with OOM.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "51b173153226ca86e50a61fcb478f0b9a5c254c1ef0283a9e33bfc7a4ab1ab06",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19173,
+      "url": "https://github.com/stablyai/orca/issues/19173",
+      "title": "[Bug]: Runtime-owned SSH workspace has no PTY provider after desktop/host restart",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T05:38:19Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Persisted runtime-owned SSH workspace says running after restart while process-local PTY provider registration is absent; sandbox remains reachable. Reporter offers a readiness/resume lifecycle hypothesis and explicitly does not establish the complete cause. The Mac/Orbstack comment reports similar symptoms without proving identity of mechanism. In-memory describes a registry that naturally disappears on restart, not growth.",
+      "followup": "Runtime-owned provider restoration and readiness authority, separate from cache retention.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "3039470ac77682910c82db0358273e8554f97779bb5d68b29a4f52ba88077d1d",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19173#issuecomment-5585462624",
+          "sha256": "bce4261611d7761e4e5763328bdfcd94d1b31996ef0622c4096f3db49e50fe97"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19333,
+      "url": "https://github.com/stablyai/orca/issues/19333",
+      "title": "[Bug]: Windows \u2014 agent terminal panes need ~2.3-2.5 s to first paint while shell panes need ~0.5 s (agent's own floor is 720 ms on a bare conpty)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T05:33:52Z",
+      "classification": "performance_nonmemory",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Corrected report isolates slow agent first paint, retracting the original generic pane-creation explanation because shell panes are fast. It measures component timings and a remaining roughly one-second gap; history size, injected environment and frame-processing throughput controls did not explain it. Renderer_memory appears only as existing telemetry; no heap-growth claim survives the corrected report. CPR timing establishes terminal byte processing, not necessarily physical screen presentation.",
+      "followup": "Agent startup instrumentation/performance; preserve the reporter's corrected scope and distinguish a terminal response from a displayed frame.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "d7da63c587b57780f0a786894d09192ab95b27135cbc4b4def5eaad375bc6777",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19333#issuecomment-5574753078",
+          "sha256": "8c4e678ec19b6ac702ec12d8cb301dbf230f39111defb2a1458bef1c4c21174d"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19522,
+      "url": "https://github.com/stablyai/orca/issues/19522",
+      "title": "[Bug]: Windows \u2014 the relocated daemon host copies only node-pty, so every process-table read falls back to the PowerShell CIM scan (35 powershell.exe/min on v1.4.197)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-11T13:16:22Z",
+      "classification": "native_process_churn",
+      "disposition": "resource_report_or_policy",
+      "reason": "Already-cataloged Windows relocation manifest omits native modules and repeatedly falls back to PowerShell process-table scans. Report measures 35 spawns/minute and removal after copying the addon; later v199 comments add execution-policy event-log flooding and laptop CPU/power cost. These are process/CPU/disk resources, not a retained JS-heap measurement. Reporter explicitly leaves registry PATH behavior, arm64, packaging and consumer identity unproven; reboot/session/browser changes confound the total power delta.",
+      "followup": "Link the existing #16905/#19522/#17033 ledger row and cited PR17115 without asserting its current status. Preserve missing windows-native-registry JS-entry-point coverage as the distinct packaging caveat.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "873aa5d54b2add5ad751092fc07e5c6931ace3ad7749b82ca48836621d642c4c",
+      "commentCount": 2,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19522#issuecomment-5629786549",
+          "sha256": "8adcfb234af0e46d25f04d463a30e43b7be23fb848a797bb7a6bd56429bb0e9f"
+        },
+        {
+          "url": "https://github.com/stablyai/orca/issues/19522#issuecomment-5634983744",
+          "sha256": "ac4657ff13a80cda06584c1a93b2d67d7ba25d6f2f1f75c7d110ac54b891ae9c"
+        }
+      ],
+      "existingAuditLinks": ["../memory-leak-scan-2026-09-15.md"],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19582,
+      "url": "https://github.com/stablyai/orca/issues/19582",
+      "title": "orca-serve: terminal tab rename does not survive browser reload",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T06:32:20Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Manual terminal customTitle persists but is lost in host projection, hydration and renderer mirror across reload. In-memory desktop rename is a state durability comparison, not a retained allocation. Comment is acknowledgement; proposed optional wire field is a reporter patch, not a memory result.",
+      "followup": "Title persistence/projection correctness, separate from retained title-string memory fixes.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "90794a7c13e123dd41b1f79c2379b5e8f5641e97b46134e6ed51c80c20886fcb",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19582#issuecomment-5597121108",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19737,
+      "url": "https://github.com/stablyai/orca/issues/19737",
+      "title": "[Bug]: Valid worker_done is rejected while worker-start is still confirming readiness",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T13:59:42Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Valid worker_done during readiness is rejected as inactive_dispatch. Reporter supplies a deterministic database-state regression and explains that a missing WSL Pi extension enlarged the timing window but is not the state-guard cause. In-memory database means a test fixture; no process or heap growth is measured.",
+      "followup": "Readiness/completion settlement ordering and late receipts; no memory fix inferred.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "61cdd192891740572949794a196efbf9529fb6ecf2c1f65b14f661c51a7692eb",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19738,
+      "url": "https://github.com/stablyai/orca/issues/19738",
+      "title": "[Bug]: worker-stop returns dispatch_inactive when terminal exit precedes the close receipt",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-09T13:59:45Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Actual worker exit before stop receipt changes dispatch state so worker-stop incorrectly reports dispatch_inactive. The report explicitly warns that synthetic onPtyExit(-1) is not physical exit proof and rejects an incomplete fix. In-memory database is deterministic test setup, not a memory incident.",
+      "followup": "Stop-settlement ordering with authoritative exit evidence; do not infer death from synthetic callbacks.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "cc617aeca8c82ff2d966c896b9009b256500edecb488067693701f7213b2032f",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19857,
+      "url": "https://github.com/stablyai/orca/issues/19857",
+      "title": "Terminals stop binding on 1.4.199: daemon createOrAttach times out, new tabs render blank and swallow input",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-12T00:33:11Z",
+      "classification": "process_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "createOrAttach remains pending until 30-second timeout; existing sessions keep running while new panes stay blank and repeated remounts occur. A comment identifies the reused daemon as v192 despite app v199 and a separate old v34 daemon with seven children. Restarting daemons restores creation but destroys sessions; no heap measurement identifies the wedge. App version alone cannot attribute this to v199 daemon code.",
+      "followup": "Trace actual daemon admission/pending creation and old-version compatibility without killing sessions. Distinguish create wedge, retained old daemon and stale retry identity; existing spawn-input retention fixes do not by themselves prove this hang.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "0e1cc9817dacdbcc628e4e681e54a0e37899d5d89c849bfc5553f89ed7e53e15",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/19857#issuecomment-5627766149",
+          "sha256": "0952a612cbd07b33e6aabb6b6606d6fc8bc10f24da5550d36db21746eb379fa8"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 19891,
+      "url": "https://github.com/stablyai/orca/issues/19891",
+      "title": "[Bug][Windows]: v1.4.199 conpty.node crash leaves Mobile chat falsely ready and unable to send",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-10T12:54:48Z",
+      "classification": "native_crash_and_stale_ready",
+      "disposition": "resource_report_or_policy",
+      "reason": "Reports a minidump-confirmed conpty.node access violation and independently reproduced mobile ready state for a disconnected/unwritable terminal. A second predecessor death has no matching dump; replacement start is not death time. Invalid-pointer native failure is not evidence of OOM. Exact native cause and proposed renderer-leaf projection route are not established by this body-only review; recovery did not prove end-to-end mobile send or sustained reliability.",
+      "followup": "Keep native fault investigation separate from authoritative stale-ready projection and activation recovery. Link existing queued-graph/exit authority work as related, not proof of this native incident.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "31ca0eb3ee9be06cd8f03277a7cfb8a7c70205b66df87a904346836ba46e9e0a",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": ["../queued-terminal-graph-exit/README.md"],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20083,
+      "url": "https://github.com/stablyai/orca/issues/20083",
+      "title": "All terminal sessions of an active project killed at once (session-killed immediate) without user action",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-11T23:15:16Z",
+      "classification": "process_lifecycle",
+      "disposition": "resource_report_or_policy",
+      "reason": "Logs show multiple immediate session-killed events carrying one clientId while daemon stays alive; reporter denies user action and supplies low renderer heap/no OS-pressure records. This is unexpected termination, not growing memory. A daemon clientId identifies the requesting client connection, not by itself the exact renderer callback or GUI code path; nearby git refresh is temporal correlation.",
+      "followup": "Trace explicit immediate-kill callers and project-view ownership without accepting refresh correlation as cause or treating one heap sample as a complete process census.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "697c82638dbeb9461c6537f67f03d26885eb9be83f6f031513620b5a2fcdbead",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20383,
+      "url": "https://github.com/stablyai/orca/issues/20383",
+      "title": "[Bug]: Agent installed after the first probe never appears on a remote host until the Orca client restarts",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-15T18:54:43Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "A nonempty per-target agent detection cache never refreshes after another CLI is installed; restart clears it. The issue is stale content and wrong-host refresh targeting, not growing cache cardinality. In-memory cache denotes lifetime of stale results.",
+      "followup": "Existing target-scoped detection refresh behavior; no memory-budget change implied.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "d0773155f15ca9b2494fb3d392020416267026946d97edd088f845b1abd40684",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/20383#issuecomment-5686298511",
+          "sha256": "60600e58e07f681fe4a6079bc4162a7be69468c9a349a96fb9464c73611a7672"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20437,
+      "url": "https://github.com/stablyai/orca/issues/20437",
+      "title": "[Bug]: Pi idle extension dialogs trigger false \u201cwork completed\u201d notifications",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-15T18:54:27Z",
+      "classification": "non_memory_correctness",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Idle Pi extension dialogs emit waiting then done without any agent turn, causing false completion notifications. Reporter reproduced state mapping offline and observed notifications live, explicitly not replaying notification dispatch. In-memory trial refers to a candidate experiment, not retention.",
+      "followup": "Agent-status producer semantics; no heap/resource-growth mechanism.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "726d282ffcd34cbafdebb24097c147cc8c490a335543a5c262b4bd57fafe4cbd",
+      "commentCount": 1,
+      "commentsComplete": true,
+      "comments": [
+        {
+          "url": "https://github.com/stablyai/orca/issues/20437#issuecomment-5686292578",
+          "sha256": "1a84b2e664240a700368830f384c1159bb5480e2ea6667fdf4bb30ec6f67a2f5"
+        }
+      ],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20475,
+      "url": "https://github.com/stablyai/orca/issues/20475",
+      "title": "[Feature]: Dedicated \"Projects Directory\" setting for the Create-project default Location (decoupled from Workspace Directory)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-13T12:53:53Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests separate project and worktree directory defaults. Agent session memory is cwd-keyed persisted context affected by symlink spelling, not RAM usage.",
+      "followup": "Settings/path feature only.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "9703d4e1eaf77ed5845c2fd6de33e783fb9951ae9d01a49d693c35870d852475",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20515,
+      "url": "https://github.com/stablyai/orca/issues/20515",
+      "title": "[Feature] Keyboard shortcut to move the active tab left / right in the tab strip (Ctrl+Shift+PageUp / PageDown)",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-13T22:13:34Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests keyboard shortcuts for tab reorder; memory means shortcut muscle memory. Existing reorder/mirroring paths are proposed reuse, with no retention symptom.",
+      "followup": "Keyboard feature only; embedded source links do not establish memory growth.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "5c7fa7b42edc07355894f97a98b2c95e9650d459ec65bc0b495debca64f01035",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    },
+    {
+      "number": 20678,
+      "url": "https://github.com/stablyai/orca/issues/20678",
+      "title": "[Feature]: First-class support for persistent Hermes Profiles/Bots in the Agents sidebar",
+      "stateAtFetch": "OPEN",
+      "updatedAt": "2026-09-14T19:18:57Z",
+      "classification": "feature_lexical",
+      "disposition": "other_functional_performance_or_lexical",
+      "reason": "Requests Hermes persistent profile/bot discovery with Hermes authoritative for configuration, memory and session history. Memory consistently means semantic conversation state. Reporter explicitly avoids duplicating this store in Orca and has not validated full in-app profile flow because of a separate configuration-safety issue.",
+      "followup": "Persistent-agent feature, not resource-exhaustion evidence.",
+      "fullBodyRead": true,
+      "allCommentsRead": true,
+      "bodySha256": "f8ecbd6fcf6fde28ef7b483f9746713b7c46f5b62daa334645298628486b0c76",
+      "commentCount": 0,
+      "commentsComplete": true,
+      "comments": [],
+      "existingAuditLinks": [],
+      "sourceProofPerformedInThisReview": false
+    }
+  ]
+}

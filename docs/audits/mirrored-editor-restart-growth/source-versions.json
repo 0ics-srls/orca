@@ -1,0 +1,338 @@
+{
+  "canonicalLF": true,
+  "sources": [
+    {
+      "path": "src/renderer/src/store/slices/editor/actions/hydrate-editor-session.ts",
+      "currentSha256": "27eed43b546ba809ed773c631112373a013e43e7b527462c4d52efdbc8fa1149",
+      "lineCount": 160,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "27eed43b546ba809ed773c631112373a013e43e7b527462c4d52efdbc8fa1149",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor/file-ids/hydrated-editor-file-ids.ts",
+      "currentSha256": "8e49521752e7aef0a55ecc2000c5eb170cd157b93d85f60377de209ff3ab4e64",
+      "lineCount": 208,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "8e49521752e7aef0a55ecc2000c5eb170cd157b93d85f60377de209ff3ab4e64",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor/file-ids/editor-file-ids.ts",
+      "currentSha256": "62f78e85217435e8bc6842bc3682fc808b3b8d5cc9a158c0d67ccec4795bcff6",
+      "lineCount": 154,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "62f78e85217435e8bc6842bc3682fc808b3b8d5cc9a158c0d67ccec4795bcff6",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor/actions/editor-draft-state.ts",
+      "currentSha256": "7fcd29b0d0ef039920356342f4505dd56f5e5a4e8b83d994c9957fa8bde919b1",
+      "lineCount": 164,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "7fcd29b0d0ef039920356342f4505dd56f5e5a4e8b83d994c9957fa8bde919b1",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor/actions/open-file-mutations.ts",
+      "currentSha256": "d531f26f1997b9a5b0965fa5be805bcb79712594092d4d97fc2f5e55bb2b2a3e",
+      "lineCount": 198,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "d531f26f1997b9a5b0965fa5be805bcb79712594092d4d97fc2f5e55bb2b2a3e",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor/actions/close-file-action.ts",
+      "currentSha256": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+      "lineCount": 219,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/tabs-hydration.ts",
+      "currentSha256": "2ba4d92ed9fd92bf32a02f8f7f6a4b9a5101c5e47a35cba5972627c64b69fb17",
+      "lineCount": 349,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "2ba4d92ed9fd92bf32a02f8f7f6a4b9a5101c5e47a35cba5972627c64b69fb17",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": true,
+          "sha256": "f018bfbb7934628d7d7123ba97335fb37c16154b9e8043c13e54e0a7165c8220",
+          "matchesCurrent": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/editor-session-duplicate-restore.test.ts",
+      "currentSha256": "2a4a0ae4d6903d149ee6370b15855257c23987d7ac9a61326ad7f66f39cf8129",
+      "lineCount": 358,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "2a4a0ae4d6903d149ee6370b15855257c23987d7ac9a61326ad7f66f39cf8129",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/store-test-helpers.ts",
+      "currentSha256": "6570df8b14ce33da99504ce262c50a84b74ee0fcd50a6f9b342e6c08fa06667b",
+      "lineCount": 213,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "6570df8b14ce33da99504ce262c50a84b74ee0fcd50a6f9b342e6c08fa06667b",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": true,
+          "sha256": "41fe55ba64d6c1c2d6867aaa2359bbaab90f68e6388bcef6fafb1832e56969ca",
+          "matchesCurrent": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/store/slices/store-session-test-harness.ts",
+      "currentSha256": "6c05cec03c7e3bedf7c8183b3a7e8fd833678bf737e4f5fca1aa97d8d6759bfb",
+      "lineCount": 130,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "6c05cec03c7e3bedf7c8183b3a7e8fd833678bf737e4f5fca1aa97d8d6759bfb",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/lib/workspace-session.ts",
+      "currentSha256": "a61b3b23173331d289e51710ea857e8a0cb2e42321d2af09728e7d8294b4b7e5",
+      "lineCount": 341,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "a61b3b23173331d289e51710ea857e8a0cb2e42321d2af09728e7d8294b4b7e5",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": true,
+          "sha256": "ced589fac86b2ddc3363f86723f869523f6e491d1f550b12e97017b3be98437f",
+          "matchesCurrent": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/apply-preparation-browser.ts",
+      "currentSha256": "e3d3ab08a328de061bd5f0febf804a910407c2554e14042ef1abd6fd1dec8eea",
+      "lineCount": 236,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "e3d3ab08a328de061bd5f0febf804a910407c2554e14042ef1abd6fd1dec8eea",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/tab-builders.ts",
+      "currentSha256": "493af1cc51b3dfac9004b85d91d1b2c9a6642c4fd5a30726ccfa6f757202310d",
+      "lineCount": 144,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "493af1cc51b3dfac9004b85d91d1b2c9a6642c4fd5a30726ccfa6f757202310d",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/terminal-surfaces.ts",
+      "currentSha256": "228242311d8cfee6c8309a4a9d0583c5fac7c3418c466bb07e2a2845f0fe13b5",
+      "lineCount": 250,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "228242311d8cfee6c8309a4a9d0583c5fac7c3418c466bb07e2a2845f0fe13b5",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/apply-snapshot.ts",
+      "currentSha256": "7ed04ffb53e6c054082efd5bd3ff43fc67c4921ef317bf97348d1628ba4ef3cc",
+      "lineCount": 52,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "7ed04ffb53e6c054082efd5bd3ff43fc67c4921ef317bf97348d1628ba4ef3cc",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync/snapshot-api.ts",
+      "currentSha256": "b748bd0d8b99a23be6b8f7ab413d4f2b934e580739a6270541539d6049b5f0ba",
+      "lineCount": 130,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "b748bd0d8b99a23be6b8f7ab413d4f2b934e580739a6270541539d6049b5f0ba",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/shared/workspace-session-state-types.ts",
+      "currentSha256": "fc6c6c52c303fd50fbb9720b94e9cd9e1c98cff9fffa084623530a41892a0fcd",
+      "lineCount": 136,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "fc6c6c52c303fd50fbb9720b94e9cd9e1c98cff9fffa084623530a41892a0fcd",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync.ts",
+      "currentSha256": "158cadae423c5f124afbb8ee27451955e62e0a6ca35bfc38e4bf4b0b1e24ba94",
+      "lineCount": 55,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "158cadae423c5f124afbb8ee27451955e62e0a6ca35bfc38e4bf4b0b1e24ba94",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": true,
+          "sha256": "579bf94e10d566a96b10af1331b71ed01db7550f3a11623e854e77aed0345fda",
+          "matchesCurrent": false
+        }
+      }
+    },
+    {
+      "path": "src/renderer/src/runtime/web-session-tabs-sync-test-harness.ts",
+      "currentSha256": "95c20025b9c8c2a416bb09b93f9e045958725f647aa32ee97d6506826468495a",
+      "lineCount": 87,
+      "refs": {
+        "mainCheckpoint": {
+          "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+          "present": true,
+          "sha256": "95c20025b9c8c2a416bb09b93f9e045958725f647aa32ee97d6506826468495a",
+          "matchesCurrent": true
+        },
+        "reported": {
+          "ref": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+          "present": false
+        }
+      }
+    }
+  ],
+  "historicalMonolithicEditor": "a9ae202f00d7d66c788626b357b4e0c12c22e227d32cf0f02ed51f7e4346e3c3",
+  "historicalModuleMovementCaveat": "Several current modules were extracted after v1.4.158; absence at same path is not absence of logic."
+}

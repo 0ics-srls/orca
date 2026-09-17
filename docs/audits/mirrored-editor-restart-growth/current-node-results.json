@@ -1,0 +1,208 @@
+{
+  "variant": "current",
+  "runtime": {
+    "node": "26.6.0",
+    "acorn": "8.17.0",
+    "ada": "4.0.0",
+    "amaro": "1.1.11",
+    "ares": "1.34.8",
+    "brotli": "1.2.0",
+    "cldr": "48.0",
+    "icu": "78.3",
+    "libffi": "3.7.1",
+    "llhttp": "9.4.3",
+    "merve": "1.2.2",
+    "modules": "147",
+    "napi": "10",
+    "nbytes": "0.1.4",
+    "ncrypto": "0.0.1",
+    "nghttp2": "1.70.0",
+    "nghttp3": "",
+    "ngtcp2": "",
+    "openssl": "3.6.3",
+    "simdjson": "4.6.6",
+    "simdutf": "7.7.0",
+    "sqlite": "3.53.4",
+    "tz": "2026a",
+    "undici": "8.9.0",
+    "unicode": "17.0",
+    "uv": "1.52.1",
+    "uvwasi": "0.0.23",
+    "v8": "14.6.202.34-node.26",
+    "zlib": "1.2.12",
+    "zstd": "1.5.7"
+  },
+  "sources": {
+    "src/renderer/src/store/slices/editor/actions/hydrate-editor-session.ts": "27eed43b546ba809ed773c631112373a013e43e7b527462c4d52efdbc8fa1149",
+    "src/renderer/src/store/slices/editor/file-ids/hydrated-editor-file-ids.ts": "8e49521752e7aef0a55ecc2000c5eb170cd157b93d85f60377de209ff3ab4e64",
+    "src/renderer/src/store/slices/editor/file-ids/editor-file-ids.ts": "62f78e85217435e8bc6842bc3682fc808b3b8d5cc9a158c0d67ccec4795bcff6",
+    "src/renderer/src/store/slices/editor/actions/editor-draft-state.ts": "7fcd29b0d0ef039920356342f4505dd56f5e5a4e8b83d994c9957fa8bde919b1",
+    "src/renderer/src/store/slices/editor/actions/open-file-mutations.ts": "d531f26f1997b9a5b0965fa5be805bcb79712594092d4d97fc2f5e55bb2b2a3e",
+    "src/renderer/src/store/slices/editor/actions/close-file-action.ts": "7fd1cafc62e3c20b38532ab9c849d21fb4199d7ff40b6a2cb9c7031fd5dcccb1",
+    "src/renderer/src/store/slices/tabs-hydration.ts": "2ba4d92ed9fd92bf32a02f8f7f6a4b9a5101c5e47a35cba5972627c64b69fb17",
+    "src/renderer/src/store/slices/editor-session-duplicate-restore.test.ts": "2a4a0ae4d6903d149ee6370b15855257c23987d7ac9a61326ad7f66f39cf8129",
+    "src/renderer/src/store/slices/store-test-helpers.ts": "6570df8b14ce33da99504ce262c50a84b74ee0fcd50a6f9b342e6c08fa06667b",
+    "src/renderer/src/store/slices/store-session-test-harness.ts": "6c05cec03c7e3bedf7c8183b3a7e8fd833678bf737e4f5fca1aa97d8d6759bfb",
+    "src/renderer/src/lib/workspace-session.ts": "a61b3b23173331d289e51710ea857e8a0cb2e42321d2af09728e7d8294b4b7e5",
+    "src/renderer/src/runtime/web-session-tabs-sync/apply-preparation-browser.ts": "e3d3ab08a328de061bd5f0febf804a910407c2554e14042ef1abd6fd1dec8eea",
+    "src/renderer/src/runtime/web-session-tabs-sync/tab-builders.ts": "493af1cc51b3dfac9004b85d91d1b2c9a6642c4fd5a30726ccfa6f757202310d",
+    "src/renderer/src/runtime/web-session-tabs-sync/terminal-surfaces.ts": "228242311d8cfee6c8309a4a9d0583c5fac7c3418c466bb07e2a2845f0fe13b5",
+    "src/renderer/src/runtime/web-session-tabs-sync/apply-snapshot.ts": "7ed04ffb53e6c054082efd5bd3ff43fc67c4921ef317bf97348d1628ba4ef3cc",
+    "src/renderer/src/runtime/web-session-tabs-sync/snapshot-api.ts": "b748bd0d8b99a23be6b8f7ab413d4f2b934e580739a6270541539d6049b5f0ba",
+    "src/shared/workspace-session-state-types.ts": "fc6c6c52c303fd50fbb9720b94e9cd9e1c98cff9fffa084623530a41892a0fcd",
+    "src/renderer/src/runtime/web-session-tabs-sync.ts": "158cadae423c5f124afbb8ee27451955e62e0a6ca35bfc38e4bf4b0b1e24ba94",
+    "src/renderer/src/runtime/web-session-tabs-sync-test-harness.ts": "95c20025b9c8c2a416bb09b93f9e045958725f647aa32ee97d6506826468495a"
+  },
+  "fixtureHashes": {
+    "reported-hydration-module.txt": "80685adb874a8bd13da0126ab890b60851010fa867f12d95403a4db22d4fa4fa",
+    "reported-hydration-ids.txt": "2f164e364b61e4377418e8f81da60888f9a09fd9a2c66f0c1ca6e2d818eb33ea",
+    "reported-hydration-method.txt": "34d45fedfb5a5ff45022113d12638a60440264f706ca9b52561c299fde98ecbb"
+  },
+  "artifactHashes": {
+    "sources.cjs": "607d5e9522b730283e63217c7abe928e20aadf41b2d0d92723f901492712e2ea",
+    "vitest.config.mjs": "44d73c58e3df4094b8c3cbc2c8b54eeaecd6738d987f41966e73e219c1ff58c0",
+    "lifecycle.test.mjs": "f9cbff5e9a0a1a25f87ddd44f6b8a1f8e5b1491c2cb1c4c6b5b61d76ec595ba4",
+    "source-versions.json": "8aae2d1381bff046598dc390b4fe59c37f1dde6b98278618e1a89c38257bf779",
+    "reported-projection.json": "248722e2ac7068f554889bcbb34f213117036b88009468496c789971b90b6372",
+    "reported-hydration-module.txt": "80685adb874a8bd13da0126ab890b60851010fa867f12d95403a4db22d4fa4fa",
+    "reported-hydration-ids.txt": "2f164e364b61e4377418e8f81da60888f9a09fd9a2c66f0c1ca6e2d818eb33ea",
+    "reported-hydration-method.txt": "34d45fedfb5a5ff45022113d12638a60440264f706ca9b52561c299fde98ecbb"
+  },
+  "cases": [
+    {
+      "kind": "restart-growth",
+      "liveRows": [1, 1, 1, 1, 1, 1, 1, 1],
+      "restartedRows": [1, 2, 2, 2, 2, 2, 2, 2],
+      "hydratedRows": [1, 1, 1, 1, 1, 1, 1, 1],
+      "final": {
+        "rows": 1,
+        "ids": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "dirty": [],
+        "drafts": {},
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "existing-draft-behind-mirror",
+      "before": {
+        "rows": 1,
+        "ids": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "dirty": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "drafts": {
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md": "unsaved original draft"
+        },
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+          }
+        ]
+      },
+      "after": {
+        "rows": 2,
+        "ids": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md",
+          "/fixture/worktree/README.md"
+        ],
+        "dirty": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "drafts": {
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md": "unsaved original draft"
+        },
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "/fixture/worktree/README.md"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "later-visible-draft-restore",
+      "before": {
+        "rows": 2,
+        "ids": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md",
+          "/fixture/worktree/README.md"
+        ],
+        "dirty": ["/fixture/worktree/README.md"],
+        "drafts": {
+          "/fixture/worktree/README.md": "new draft in visible mirror"
+        },
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "/fixture/worktree/README.md"
+          }
+        ]
+      },
+      "serialized": [
+        {
+          "filePath": "/fixture/worktree/README.md",
+          "relativePath": "README.md",
+          "worktreeId": "repo-a::/fixture/worktree",
+          "language": "markdown",
+          "runtimeEnvironmentId": "peer-a"
+        },
+        {
+          "filePath": "/fixture/worktree/README.md",
+          "relativePath": "README.md",
+          "worktreeId": "repo-a::/fixture/worktree",
+          "language": "markdown",
+          "runtimeEnvironmentId": "peer-a",
+          "dirtyDraftContent": "new draft in visible mirror"
+        }
+      ],
+      "after": {
+        "rows": 1,
+        "ids": [
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "dirty": [],
+        "drafts": {},
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "local-owner-isolation",
+      "rows": [2, 3, 3, 3, 3, 3, 3, 3],
+      "final": {
+        "rows": 2,
+        "ids": [
+          "/fixture/worktree/README.md",
+          "editor:repo-a%3A%3A%2Ffixture%2Fworktree:peer-a:%2Ffixture%2Fworktree%2FREADME.md"
+        ],
+        "dirty": [],
+        "drafts": {},
+        "unified": [
+          {
+            "id": "host-tab",
+            "entityId": "/fixture/worktree/README.md"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "canonical-crlf-source-control",
+      "reads": 48,
+      "variants": 2
+    }
+  ]
+}

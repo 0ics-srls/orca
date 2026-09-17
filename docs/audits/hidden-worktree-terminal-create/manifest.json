@@ -1,0 +1,48 @@
+{
+  "scope": "Actual-source fixture; 35 selected main-boundary paths, other dependencies current; no native processes or visible UI.",
+  "originManifestSha256": "cb66174c630d90ea28357b399e0411d5bf60636445be3a9cc13202807b8f1603",
+  "relocatedValidation": [
+    {
+      "source": "working",
+      "runtime": "node",
+      "exitCode": 0,
+      "passed": 8,
+      "logSha256": "744105b5b6a05562b791268dfb5e61891ab84a04c73b7ee7815629b4ad3e9cd2"
+    },
+    {
+      "source": "working",
+      "runtime": "electron",
+      "exitCode": 0,
+      "passed": 8,
+      "logSha256": "2a550e7f43bdf078806a55b60d4ba4bab4b2406c555c4993f54bea76a86b878a"
+    },
+    {
+      "source": "main291b",
+      "runtime": "node",
+      "exitCode": 0,
+      "passed": 8,
+      "logSha256": "b171571c5efbbfbd57a7ebd0ae8e536b2f3e3e9cd5f1d3d08cf13b04f5c1f6ee"
+    },
+    {
+      "source": "main291b",
+      "runtime": "electron",
+      "exitCode": 0,
+      "passed": 8,
+      "logSha256": "c37b3fb1a32e5e68104db4e8d96e819c82f4923e56d89a58a61cba67093d3be1"
+    }
+  ],
+  "quality": "All five OXLINT_SCANS pass on both executable MJS artifacts with --no-ignore --deny-warnings.",
+  "artifactSha256": {
+    "docs/audits/hidden-worktree-terminal-create/README.md": "2d884085c4cbec0147651a48860bd0372b8c38ab23bcb1dd9ba9d8e419594e63",
+    "docs/audits/hidden-worktree-terminal-create/candidate-design.md": "e138c32b4036a56c19f6544d2b1094566fb89548702220ae8234de441ef20b77",
+    "docs/audits/hidden-worktree-terminal-create/config.mjs": "3cd8bf28d33dab65653675935a05af38791e79bbf034aa744a42a030dce5d09d",
+    "docs/audits/hidden-worktree-terminal-create/main-electron-results.json": "5020ec7afe011f9db48b6dbde7a6bbc970772d4dd41a1e2796bea22cd6073c3a",
+    "docs/audits/hidden-worktree-terminal-create/main-node-results.json": "a6aac4cd34b5c05c2420cf60c3f994760273d5d9b8ba5af05c754bd74ce1abe1",
+    "docs/audits/hidden-worktree-terminal-create/main-sources.json": "8530cb46ab635a4e90bb835d27aface5e94a3f7ada6f76bc6bdadc83c276aa00",
+    "docs/audits/hidden-worktree-terminal-create/probe.test.mjs": "659a1afd6d9365af5ae7dc4ffb375b1fdeeeeef696f47c2f1ba5ac9c68b21729",
+    "docs/audits/hidden-worktree-terminal-create/source-review.py": "83ae456936e16a3688a66a6d0deb8520b4153e7285abef54900cf66d35698b81",
+    "docs/audits/hidden-worktree-terminal-create/source-versions.json": "b0f8279ee4602981e4df0b31769634b8c47d29f8d27939b63bf9aa08b13572e3",
+    "docs/audits/hidden-worktree-terminal-create/working-electron-results.json": "a04d6bf62d7fd431364e09595b3c982176a73085648462bf903daff65c61e869",
+    "docs/audits/hidden-worktree-terminal-create/working-node-results.json": "0227898307895f032e4db438cc96c1f16fcbfa7eec8bbe5d230fb17facb9bec6"
+  }
+}

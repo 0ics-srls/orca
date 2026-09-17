@@ -1,0 +1,92 @@
+{
+  "quality": [
+    {
+      "label": "ordinary",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec oxlint --no-ignore --deny-warnings  docs/audits/mirrored-editor-restart-growth/sources.cjs docs/audits/mirrored-editor-restart-growth/vitest.config.mjs docs/audits/mirrored-editor-restart-growth/lifecycle.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "label": "casting",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec oxlint --no-ignore --deny-warnings --config config/oxlint-code-quality-casting.json docs/audits/mirrored-editor-restart-growth/sources.cjs docs/audits/mirrored-editor-restart-growth/vitest.config.mjs docs/audits/mirrored-editor-restart-growth/lifecycle.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "label": "type-aware",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec oxlint --no-ignore --deny-warnings --type-aware --config config/oxlint-code-quality-type-aware.json docs/audits/mirrored-editor-restart-growth/sources.cjs docs/audits/mirrored-editor-restart-growth/vitest.config.mjs docs/audits/mirrored-editor-restart-growth/lifecycle.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "label": "React Doctor",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec oxlint --no-ignore --deny-warnings --config config/oxlint-react-doctor.json docs/audits/mirrored-editor-restart-growth/sources.cjs docs/audits/mirrored-editor-restart-growth/vitest.config.mjs docs/audits/mirrored-editor-restart-growth/lifecycle.test.mjs",
+      "exitCode": 0
+    },
+    {
+      "label": "design system",
+      "command": "ORCA_BACKGROUND_LAUNCH=1 pnpm exec oxlint --no-ignore --deny-warnings --config config/oxlint-design-system.json docs/audits/mirrored-editor-restart-growth/sources.cjs docs/audits/mirrored-editor-restart-growth/vitest.config.mjs docs/audits/mirrored-editor-restart-growth/lifecycle.test.mjs",
+      "exitCode": 0
+    }
+  ],
+  "diagnosticOnly": true,
+  "productionFilesChanged": 0,
+  "portableProof": {
+    "cases": 20,
+    "reports": [
+      {
+        "file": "current-electron-results.json",
+        "variant": "current",
+        "node": "24.21.0",
+        "electron": "43.7.0",
+        "cases": 5,
+        "canonicalCrLfReads": 48,
+        "restartRows": [1, 2, 2, 2, 2, 2, 2, 2]
+      },
+      {
+        "file": "current-node-results.json",
+        "variant": "current",
+        "node": "26.6.0",
+        "electron": null,
+        "cases": 5,
+        "canonicalCrLfReads": 48,
+        "restartRows": [1, 2, 2, 2, 2, 2, 2, 2]
+      },
+      {
+        "file": "reported-hydration-electron-results.json",
+        "variant": "reported-hydration",
+        "node": "24.21.0",
+        "electron": "43.7.0",
+        "cases": 5,
+        "canonicalCrLfReads": 48,
+        "restartRows": [1, 2, 3, 4, 5, 6, 7, 8]
+      },
+      {
+        "file": "reported-hydration-node-results.json",
+        "variant": "reported-hydration",
+        "node": "26.6.0",
+        "electron": null,
+        "cases": 5,
+        "canonicalCrLfReads": 48,
+        "restartRows": [1, 2, 3, 4, 5, 6, 7, 8]
+      }
+    ],
+    "selectedSourcesHashFenced": 19,
+    "fullTransitiveGraphFenced": false,
+    "historicalMethodExactNamedRef": true,
+    "historicalHelperFunctionBodiesExact": 11,
+    "scope": "Unmodified reported-version hydration method projected into current full-store persistence/mirror pipeline; not historical whole-app replay."
+  },
+  "typecheck": {
+    "status": "not-run",
+    "reason": "No product TypeScript edit; runnable audit CJS/MJS passes type-aware lint. Historical TypeScript is immutable source-as-data overlaid for the tests."
+  },
+  "formatting": {
+    "status": "pass",
+    "tool": "oxfmt --stdin-filepath",
+    "scope": "Runnable code and JSON/Markdown; historical source-as-data .txt fixtures preserved verbatim. Runnable code formatting is idempotent; all four reports captured after final code formatting."
+  },
+  "fullFileWhitespace": {
+    "status": "pass",
+    "files": 16,
+    "command": "git diff --no-index --check /dev/null <path>",
+    "scope": "All 14 artifact files and both updated lower-issue-triage files, including ignored new files."
+  }
+}

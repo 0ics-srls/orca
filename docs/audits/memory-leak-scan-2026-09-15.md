@@ -98,7 +98,10 @@ alive for a scenario were reviewed separately from application code.
 | ML-057 | Retired browser viewport user-agent state | Late native clear rejection recreates retired boolean metadata or alters a replacement guest. | Fence state writes and rollback by captured guest identity; [#21160](https://github.com/stablyai/orca/pull/21160). | 42 tests; 16 late entries before and zero after, preserving same-owner rollback and replacements. Small metadata, no guest/RSS claim. [Artifacts](./browser-viewport-owner-retention/README.md). |
 | ML-058 | Shared daemon owner incarnation indexes | The first resolver removes shared routes before the second can find its private retired metadata. | Prune private entries absent from shared routes after invalidation; [#21162](https://github.com/stablyai/orca/pull/21162). | 54 tests and Node/Electron current/main overlays: 32 replacements leave 32 entries before and zero after. Live routes, successor IDs and authoritative direct attach remain intact. [Artifacts](./daemon-shared-owner-incarnation-retention/README.md). |
 | ML-059 | Completed results in a closed browser command dispatcher | Settled payloads remain until the last delayed native handler settles despite closed requests being refused. | Release settled page records at close and evict newly settled closed records; [#21164](https://github.com/stablyai/orca/pull/21164). | 77 tests and all 4 Node/Electron variants pass; 32 objects before and zero after while native/page ownership remains. Independent reentrant-close control passes. Controlled delay, no incident-size claim. [Artifacts](./browser-closed-result-retention/README.md). |
-| ML-060 | SSH file notifications before a reader receives metadata | Every waiting reader queues completed foreign transfers until its metadata request settles. | Use the existing synchronous mux metadata callback and omit foreign history; [#21167](https://github.com/stablyai/orca/pull/21167). | 73 focused tests and 80 portable controls; four delayed readers retain 44,739,584 logical base64 bytes shared across 144 params objects before and none after. Existing deadlines bound ordinary duration. No affected-host attribution. [Artifacts](./ssh-file-metadata-retention/README.md). |
+| ML-060 | SSH file notifications before a reader receives metadata | Every waiting reader queues completed foreign transfers until its metadata request settles. | Use the existing synchronous mux metadata callback and omit foreign history; [#21167](https://github.com/stablyai/orca/pull/21167). | 127 focused/transport tests and 80 portable controls; four delayed readers retain 44,739,584 logical base64 bytes shared across 144 params objects before and none after. Existing deadlines bound ordinary duration. No affected-host attribution. [Artifacts](./ssh-file-metadata-retention/README.md). |
+| ML-061 | GUI-removed paired-host session partitions | Stored partitions survive unpair; late renderer writes and failed recovery rollback can recreate them. | Retire only unowned exact runtime partitions and admit new writes by current authority; [#21175](https://github.com/stablyai/orca/pull/21175). | 79 tests, 156 Node/Electron comparative cases; 32 pair/remove cycles retain 32 before and 0 after memory/flush/reload. No CLI sweep, renderer-object cleanup, or atomic-save guarantee. [Artifacts](./paired-host-session-partition-retirement/README.md). |
+| ML-062 | Closed Monaco models while the editor panel is unmounted | Final-tab closure removes the cleanup hook before it observes the close; hidden closes are also missed. | Subscribe in the app shell and retain exact model ownership until safe disposal; [#21178](https://github.com/stablyai/orca/pull/21178). | 37 tests, 32 comparative cases and 12 independent controls. Eight distinct closed models before, zero after; live same-URI/reopened/replacement owners preserved. No incident heap attribution. [Artifacts](./closed-editor-model-lifetime/README.md). |
+| ML-063 | Plugin service, installer, worker/panel/event log producers | Successful uninstall leaves per-key log rings; late producers can recreate retired keys or write into same-key replacements. Eight uninstalls retain 1,600 rows before and zero afterward. | Retire the exact log owner only after deactivation and filesystem removal; fence producers with entry tokens and serialize removal through the existing refresh queue. [#21185](https://github.com/stablyai/orca/pull/21185). | 89 tests, Node typecheck, changed-code and explicit anti-slop gates; 16 comparative Node/Electron cases, six expected baseline retention failures, independent review and exact 33-path publication hash verification. Failure/retry, bundled protection, replacement and callback controls. No field RSS or incident attribution. [Evidence](./plugin-uninstall-log-retirement/README.md). |
 
 ## GitHub memory-issue correlation
 
@@ -112,9 +115,9 @@ title matches for `memory`, `oom`, `leak`, `orphan`, `RAM`, and `growth`, plus n
 later reports, with explicit unrelated exclusions. The expanded batched recheck
 adds `heap`, `RSS` and `swap` and found 66 open matches; #9141 remains absent.
 All nine `hasNextPage` flags were false. The separate [expanded body-search review](./expanded-memory-body-review/README.md)
-tracks 201 discovery candidates, including lexical false positives and pending
-reviews. The `memory` body query returned 147 matches across two complete pages;
-134 additional bodies and all their comments were fetched. These counts do not
+tracks 201 discovery candidates, including lexical false positives and unresolved
+causal investigations. The `memory` body query returned 147 matches across two complete pages;
+134 additional bodies and all their comments were fetched and read. These counts do not
 mean 201 memory defects or 201 completed code reviews.
 
 The [expanded search review](./expanded-memory-issue-review/README.md) accounts for six further title matches. #13852 has a direct code explanation: the build-hash endpoint and exact-version handshake strand older relay sessions, while discovery/GC preserve live owners. Seven current isolation/handshake tests pass. A comment reports 19 relay processes and 839 MB RSS; those are field measurements from the commenter, not this audit. This remote path does not explain #19831’s all-local workload. #10382’s [reported-version telemetry review](./renderer-exit5-telemetry/README.md) passes 89 current tests and five historical actual-source controls. Minute-only heap sampling and survivor-only process metrics cannot identify or exclude memory failure. Its recovery breaker naturally permits all eight reported intervals; the concrete crash cause remains unresolved. Four other new matches concern layout, configuration or archive swaps rather than reported retained RAM.
@@ -211,7 +214,7 @@ PR.
 
 The [speech worker delivery proof](./speech-worker-audio-queue/README.md) adds a separate conditional native-queue mechanism: the real feed method transfers 16 MiB of audio behind an injected synchronous decoder stall, increasing process RSS by about 17 MB while the main isolate heap changes by under 40 KB. All frames drain after release; stopping and ownership controls reject delivery. No natural decoder stall or dictation activity in #19768/#19831 is established. Ordinary capture rates cannot explain #19768's reported 95 MB/s lifetime-average estimate. A safe overload policy must handle audio loss explicitly, so no silent-drop fix is proposed.
 
-The [unbound close authority experiments](./local-unbound-close-authority/README.md) preserve the rejected tombstone/clock-receipt approaches. Replay after bounded receipt eviction, same-millisecond replacement and clock rollback show why those prototypes cannot be promoted. The narrower synchronous one-shot retirement is still under independent integration review.
+The [unbound close authority experiments](./local-unbound-close-authority/README.md) preserve the rejected tombstone/clock-receipt approaches. Replay after bounded receipt eviction, same-millisecond replacement and clock rollback show why those prototypes cannot be promoted. The narrower synchronous one-shot retirement passed independent review and is published in [#21113](https://github.com/stablyai/orca/pull/21113).
 
 ## Runtime debugging availability
 
@@ -402,6 +405,9 @@ Windows creator-PID reuse can admit a numeric cycle after a parent exits and its
 - [#21162 — release retired daemon owner incarnation metadata](https://github.com/stablyai/orca/pull/21162)
 - [#21164 — release completed browser results after host close](https://github.com/stablyai/orca/pull/21164)
 - [#21167 — avoid retaining foreign SSH file frames before metadata](https://github.com/stablyai/orca/pull/21167)
+- [#21175 — retire unowned paired-host session partitions](https://github.com/stablyai/orca/pull/21175)
+- [#21178 — retire closed editor models from the app shell](https://github.com/stablyai/orca/pull/21178)
+- [#21185 — retire plugin log owners after successful uninstall](https://github.com/stablyai/orca/pull/21185)
 
 Validation: the initial lifecycle pass ran 27 focused tests. Subsequent fixes ran
 24 stats tests, 42 relay foreground tests, 163 daemon stream tests, and 66 CDP tests.
@@ -429,7 +435,7 @@ window was opened.
 
 The first daemon-idle cleanup proposal (#20925) was closed and reverted after a
 race review showed that pre-v24 `listSessions` followed by `shutdown` could kill
-new live work. It is not counted among the 56 published fixes. Fan-out was used
+new live work. It is excluded from the published fixes. Fan-out was used
 for the initial audit and issue passes. Agents temporarily hit the service
 usage limit, so the hyperlink, retained-string, transcript, and WebGL work was
 reviewed and validated locally. The resumed pass again used three parallel
@@ -439,3 +445,8 @@ overlapping-resume cleanup race before publication.
 ### Remote CI follow-up
 
 Local verification is separate from GitHub CI. The [CI ledger](./memory-pr-validation-2026-09-16.json) records reviewed failures, corrected test/proof issues, branch-specific mobile payload hashes, and timestamped head statuses. Earlier merge-tree runs failed on an unused type import introduced by main #20898; two other failures involved untouched watcher/React teardown fixtures. Later CI found introduced gaps: a transcript-close test confused a reused descriptor number with its original handle, xterm tests expected obsolete negative properties and a prior mobile payload hash, and the new empty-tab bridge assumed a renderer window in store-only tests. These have targeted corrections and passing local regressions. No all-green CI claim is made.
+
+
+## Final review handoff and pause
+
+At the user’s request, discovery stopped after the current fixes were finished. The [review handoff](./memory-pr-review-handoff-2026-09-17.md) lists all 59 open PRs, their dependencies and exact-head CI status. The final corrections address #21175’s main-only permanent-test signature and #21178’s forbidden reflection in an attachment fixture. Their local tests and typechecks pass; published CI remains separately timestamped. No PR was merged. Unattributed incidents and evidence-only scanner/native/hidden-worktree leads remain available for a future continuation.

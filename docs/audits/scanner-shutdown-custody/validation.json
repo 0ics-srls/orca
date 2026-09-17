@@ -1,0 +1,47 @@
+{
+  "scope": "Current scanner disposal semantics; no production quit drain added",
+  "node": {
+    "cases": 4,
+    "passed": true,
+    "logSha256": "6be90371c03f964d67fe25362314a8db9a0c0b4df9ee3f1907cf79cc42d6ce03"
+  },
+  "electron": {
+    "cases": 4,
+    "passed": true,
+    "logSha256": "4652149267e9a946bb006d653664f22ba21944ba4ba80dffc1e02ea17562971b"
+  },
+  "quality": [
+    {
+      "label": "code quality",
+      "status": 0,
+      "output": ""
+    },
+    {
+      "label": "casting code quality",
+      "status": 0,
+      "output": ""
+    },
+    {
+      "label": "type-aware code quality",
+      "status": 0,
+      "output": ""
+    },
+    {
+      "label": "React Doctor",
+      "status": 0,
+      "output": ""
+    },
+    {
+      "label": "design system",
+      "status": 0,
+      "output": ""
+    }
+  ],
+  "independentReview": "rpc_queue_retention: source and four controls approved; physical child/startup/error/late-invalidation coverage required before any future quit-drain promotion",
+  "limitations": [
+    "Selected source fences only, not a full dependency graph",
+    "Fake child and controlled clock; no native FUSE/systemd reproduction",
+    "Pending invalidation cases are latent disposal races, not an ordinary production growth loop",
+    "No scanner product change or incident RSS attribution"
+  ]
+}

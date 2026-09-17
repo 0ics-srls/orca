@@ -29,25 +29,25 @@
     ".tsx",
     ".vbs"
   ],
-  "sourceFilesSearched": 25717,
-  "matchingFiles": 7900,
+  "sourceFilesSearched": 25758,
+  "matchingFiles": 7916,
   "counts": {
     "addEventListener": 1555,
     "removeEventListener": 1203,
-    "setTimeout": 3969,
-    "clearTimeout": 1858,
+    "setTimeout": 3971,
+    "clearTimeout": 1859,
     "setInterval": 384,
     "clearInterval": 219,
     "requestAnimationFrame": 586,
     "cancelAnimationFrame": 381,
-    "subscribe(": 738,
-    "unsubscribe": 3289,
+    "subscribe(": 744,
+    "unsubscribe": 3299,
     "DisposableStore": 7,
     "MutableDisposable": 1,
-    "onWillDispose": 1,
+    "onWillDispose": 5,
     "onDidDispose": 17,
-    "new Map": 7613,
-    "new Set": 7277,
+    "new Map": 7630,
+    "new Set": 7291,
     "Buffer.concat": 279,
     "Promise.race": 215,
     "Promise.withResolvers": 161
@@ -1301,6 +1301,16 @@
     "docs/audits/claude-branch-proof-streaming/parity-cases.cjs": {
       "Buffer.concat": 2
     },
+    "docs/audits/closed-editor-model-lifetime/lifecycle.test.mjs": {
+      "subscribe(": 1
+    },
+    "docs/audits/closed-editor-model-lifetime/sources.cjs": {
+      "new Map": 2
+    },
+    "docs/audits/codex-hook-stdin-lifetime/probe.test.mjs": {
+      "clearTimeout": 1,
+      "setTimeout": 2
+    },
     "docs/audits/codex-prompt-claim-retention/reproduce.cjs": {
       "clearTimeout": 1,
       "setTimeout": 1
@@ -1338,6 +1348,14 @@
     "docs/audits/headless-pending-tab-resurrection/reproduce.mjs": {
       "new Map": 1
     },
+    "docs/audits/hidden-worktree-terminal-create/config.mjs": {
+      "new Map": 1
+    },
+    "docs/audits/hidden-worktree-terminal-create/probe.test.mjs": {
+      "new Map": 5,
+      "new Set": 1,
+      "unsubscribe": 6
+    },
     "docs/audits/legacy-import-source-budget/reproduce.mjs": {
       "new Map": 1
     },
@@ -1350,6 +1368,9 @@
     "docs/audits/macos-allocation-tags/probe.cjs": {
       "clearTimeout": 1,
       "setTimeout": 2
+    },
+    "docs/audits/mirrored-editor-restart-growth/sources.cjs": {
+      "new Map": 1
     },
     "docs/audits/native-pty-spawn-env-retention/reproduce.cjs": {
       "clearTimeout": 1,
@@ -1367,8 +1388,18 @@
     "docs/audits/paired-host-partition-retention/store-removal.test.mjs": {
       "new Map": 1
     },
+    "docs/audits/paired-host-session-partition-retirement/scenario.test.mjs": {
+      "new Map": 1,
+      "new Set": 2
+    },
     "docs/audits/pending-split-close/daemon-proof.test.ts": {
       "Promise.withResolvers": 2
+    },
+    "docs/audits/plugin-uninstall-log-retirement/loader-controls.cjs": {
+      "new Map": 1
+    },
+    "docs/audits/plugin-uninstall-log-retirement/sources.cjs": {
+      "new Map": 2
     },
     "docs/audits/plugin-worker-output-retention/reproduce.cjs": {
       "setTimeout": 1
@@ -8046,6 +8077,9 @@
       "new Map": 3,
       "subscribe(": 1
     },
+    "src/main/ipc/runtime-environment-session-retirement.test.ts": {
+      "new Map": 1
+    },
     "src/main/ipc/runtime-environment-transport-generation.ts": {
       "new Map": 1
     },
@@ -9591,6 +9625,9 @@
       "clearTimeout": 1,
       "setInterval": 2,
       "setTimeout": 2
+    },
+    "src/main/plugins/__mocks__/plugin-uninstall-log-fixture.ts": {
+      "new Map": 1
     },
     "src/main/plugins/plugin-artifact-validation.ts": {
       "Buffer.concat": 1,
@@ -12156,6 +12193,9 @@
     "src/main/runtime/runtime-workspace-session-controller.ts": {
       "new Map": 5,
       "new Set": 4
+    },
+    "src/main/runtime/runtime-workspace-session-namespace-custody.test.ts": {
+      "new Set": 2
     },
     "src/main/runtime/runtime-worktree-agent-rows-structured.test.ts": {
       "new Map": 6,
@@ -16121,13 +16161,29 @@
       "cancelAnimationFrame": 1,
       "requestAnimationFrame": 2
     },
+    "src/renderer/src/components/editor/closed-editor-model-reentrancy.test.ts": {
+      "onWillDispose": 3
+    },
+    "src/renderer/src/components/editor/closed-editor-model-shell.test.tsx": {
+      "subscribe(": 1
+    },
     "src/renderer/src/components/editor/closed-editor-tab-cache-sweep.test.ts": {
       "new Map": 9
     },
     "src/renderer/src/components/editor/closed-editor-tab-cache-sweep.ts": {
       "new Set": 1
     },
+    "src/renderer/src/components/editor/closed-editor-tab-controller.ts": {
+      "new Map": 3,
+      "new Set": 8,
+      "onWillDispose": 1,
+      "subscribe(": 2,
+      "unsubscribe": 4
+    },
     "src/renderer/src/components/editor/closed-editor-tab-disposal.test.ts": {
+      "new Map": 1
+    },
+    "src/renderer/src/components/editor/closed-editor-tab-disposal.ts": {
       "new Map": 1
     },
     "src/renderer/src/components/editor/combined-diff-on-demand-load.ts": {
@@ -16588,9 +16644,6 @@
       "cancelAnimationFrame": 2,
       "removeEventListener": 3,
       "requestAnimationFrame": 2
-    },
-    "src/renderer/src/components/editor/useClosedEditorTabCleanup.ts": {
-      "new Map": 2
     },
     "src/renderer/src/components/editor/useDiffViewerLargeDiffLifecycle.test.tsx": {
       "new Map": 1
@@ -23266,6 +23319,10 @@
     "src/renderer/src/lib/editor-file-operation-owner.test.ts": {
       "new Map": 10,
       "new Set": 1
+    },
+    "src/renderer/src/lib/editor-model-registry.ts": {
+      "new Set": 1,
+      "subscribe(": 2
     },
     "src/renderer/src/lib/ephemeral-vm-runtime-cleanup.ts": {
       "new Set": 5

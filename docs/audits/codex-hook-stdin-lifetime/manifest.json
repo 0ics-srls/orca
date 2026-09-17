@@ -1,0 +1,26 @@
+{
+  "scope": "Six current actual-generated POSIX script controls across Node/Electron; selected source boundaries only. No native app, agent CLI, hook installation, HTTP request or memory measurements.",
+  "validation": [
+    {
+      "runtime": "node",
+      "passed": 3,
+      "exitCode": 0,
+      "logSha256": "05cb7d5e1488066518af79efc14a151ee62bf6b0e89d6a2ff14d1477f6a36b77"
+    },
+    {
+      "runtime": "electron",
+      "passed": 3,
+      "exitCode": 0,
+      "logSha256": "e15647042afbbb55121146c743dd1b10889c8c94f21b662529c9d5b2b079f107"
+    }
+  ],
+  "finalStyleOnlyEdits": "After runtime validation, added braces to the existing finally conditional and replaced equivalent newline string concatenation with a template literal; all five full-file quality scans passed.",
+  "artifactSha256": {
+    "docs/audits/codex-hook-stdin-lifetime/README.md": "396b777b60cc0f9191b0d56ce321be689c9aec67ea8f81c11a35ce6a1e1a0b22",
+    "docs/audits/codex-hook-stdin-lifetime/config.mjs": "772c92768c3573e0f2f1ce9885720a42e4e570c6697b19e7c45dcd1694dab9cb",
+    "docs/audits/codex-hook-stdin-lifetime/electron-results.json": "aa533520482f8afcb231ebbcf511cd91a2d3afb47cdb4dffefd1779da80137d6",
+    "docs/audits/codex-hook-stdin-lifetime/probe.test.mjs": "242b6b9841b767334542be9809e6b1eeff36628fce0f8772862334873945a725",
+    "docs/audits/codex-hook-stdin-lifetime/results.json": "ee0c4d578f042b7421f8acf964a2949321d1629a975c3c38f09803bf6e621333",
+    "docs/audits/codex-hook-stdin-lifetime/source-versions.json": "a1b9adaf5a888a97c3bb5a9a68323c6f7fdf2612d79ec5f9542d8314344b31c6"
+  }
+}

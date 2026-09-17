@@ -1,0 +1,37 @@
+{
+  "scope": "Selected source boundaries only; current scripts executed, historical source inspected. Hashes canonicalize CRLF.",
+  "currentPaths": {
+    "src/main/codex/codex-hook-script.ts": "c4d7f4270d70cb38162ca0dbe87369fde6545e167e08a5bd4fbb5efd1f65f17b",
+    "src/main/agent-hooks/hook-stdin-contract.ts": "fd5253d1fe2e37fd5b1a8abf3859d9c7f0b6898965e69f3a14e11685abaa676c",
+    "src/main/agent-hooks/hook-post-command.ts": "53d78a65d5d05d450608b7b03ef4c0a87bacd4a92e6a2b04084826e955de347b",
+    "src/main/agent-hooks/installer-utils.ts": "1f1dad9b2354aa1a16381e83caa904cb30c2e423dc0987a3bf6fa45641c38dfa",
+    "src/main/agent-hooks/posix-hook-command.ts": "956aef5641377e744066e45221d750e663736b292ae0b658955abd30c80b8855",
+    "src/main/codex/codex-hook-definition.ts": "4fa8e261ddb599998d0fc6b1a2528bd6e2c3477ae13556797b7404d530cc854f",
+    "src/main/codex/codex-hook-local-install.ts": "dfb26eedd836b1f9e9093dd424f341bfdd75c46dd33cffddf70881fc2e004175",
+    "src/main/codex/codex-hook-remote-install.ts": "b8e004b5c079eaadf965f819f3c40b6c58261e8a45e1e4560e5b1f40fdd4bdf1",
+    "src/main/codex/codex-hook-wsl-runtime.ts": "0539b3f2763f6720f4a11636946c581ecc3043832b29d0ce170fdb8e89118101",
+    "src/main/grok/grok-hook-script.ts": "ec9578882ab5d60eb818832f84dfe621ce1aa32fb902ee965bb745dd0fa88e0a"
+  },
+  "namedRefs": {
+    "291b4ddd6f1c1af480169885e0fda7f9c78ff053": {
+      "src/main/codex/codex-hook-script.ts": "c4d7f4270d70cb38162ca0dbe87369fde6545e167e08a5bd4fbb5efd1f65f17b",
+      "src/main/agent-hooks/hook-stdin-contract.ts": "fd5253d1fe2e37fd5b1a8abf3859d9c7f0b6898965e69f3a14e11685abaa676c",
+      "src/main/agent-hooks/hook-post-command.ts": "53d78a65d5d05d450608b7b03ef4c0a87bacd4a92e6a2b04084826e955de347b",
+      "src/main/agent-hooks/installer-utils.ts": "4c7baf8b5bfdd2382bc118df25c7bf2e86c4b44d2a3c85f9a215655961081b2f",
+      "src/main/agent-hooks/posix-hook-command.ts": "956aef5641377e744066e45221d750e663736b292ae0b658955abd30c80b8855",
+      "src/main/codex/codex-hook-definition.ts": "d43b77224323d6335a4757ae644cfd7b84fcb831b17c6fa4271f0a1b359292a8",
+      "src/main/codex/codex-hook-local-install.ts": "dfb26eedd836b1f9e9093dd424f341bfdd75c46dd33cffddf70881fc2e004175",
+      "src/main/codex/codex-hook-remote-install.ts": "b8e004b5c079eaadf965f819f3c40b6c58261e8a45e1e4560e5b1f40fdd4bdf1",
+      "src/main/codex/codex-hook-wsl-runtime.ts": "0539b3f2763f6720f4a11636946c581ecc3043832b29d0ce170fdb8e89118101",
+      "src/main/grok/grok-hook-script.ts": "ec9578882ab5d60eb818832f84dfe621ce1aa32fb902ee965bb745dd0fa88e0a"
+    },
+    "49f57f83b4054aed486d365d4b277bb2a652f660": {
+      "src/main/codex/hook-service.ts": "532e7506a38b63a4fa5c3baf35faca14be50b52dc5356b635101d75098c65733",
+      "src/main/agent-hooks/hook-stdin-contract.ts": "335345945d797c7473a2ccf60337fc84d7ed4c539b3ce7705ff617570f76125f"
+    }
+  },
+  "reportedRelease": "v1.4.183",
+  "reportedCommit": "49f57f83b4054aed486d365d4b277bb2a652f660",
+  "reportedDefaultCaptureSelectionPresent": true,
+  "currentAndMainSelectedPathsIdentical": false
+}

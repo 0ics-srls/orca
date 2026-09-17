@@ -1,6 +1,6 @@
 # Memory leak audit (2026-09-15)
 
-The audit produced **56 separate PRs**: 51 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
+The audit produced **59 separate PRs**: 54 target `main`; five are stacked to reuse existing fixes and fixtures. Terminal-cell cleanup builds on the contrast-cache PR, reflow cleanup builds on terminal-cell cleanup, scoped remote pending-pane close builds on IPC pending-close, and queued-graph plus observed-exit fixes build on physical-exit reconciliation. The largest new
 reproduced mechanisms are terminal hyperlink metadata retention, stalled daemon
 output, stalled CDP delivery, oversized strings retained by small text tails,
 unbounded transcript record assembly, invisible WebGL glyph caches, and contrast-color caches. They establish real defects in code paths that
@@ -9,6 +9,8 @@ can consume large amounts of memory; **they do not prove the cause of #19831 or
 explicit.
 
 ## Results
+
+**Paused at the user's request after finishing the current fixes.** Start with the [complete review and merge handoff](./memory-pr-review-handoff-2026-09-17.md), which includes all 59 PRs, dependency order, timestamped CI status, and remaining evidence-only leads. No PR was merged. The scan inventory is complete for tracked files; incident attribution remains incomplete.
 
 | Mechanism                                                          | Evidence and fix                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -77,8 +79,9 @@ safe cleanup must also protect a newer live owner.
 The [expanded body-search index](./expanded-memory-body-review/README.md) now
 tracks 201 discovery candidates, including the old catalog and lexical false
 positives. Its 147 `memory` body matches were fully paginated, and 134 additional
-bodies/comments were fetched. Pending rows are explicitly unreviewed; the earlier
-title catalog is not presented as complete body coverage. Reporter corrections
+bodies and all their comments were fetched and read. The index links each body's
+assessment; causal code follow-ups remain open. The earlier title catalog is not
+presented as complete body coverage. Reporter corrections
 for #18839 and #16630 identify test-runner children as the incident memory owners.
 
 The ledger separates reproduced retaining paths, ownership/cleanup gaps,
@@ -124,7 +127,7 @@ not proof of process death. The new pending-split and delayed-exit proofs now ex
 
 The [reconnect comparison](./relay-replay-overflow/README.md) reproduces a historical inline-replay capacity failure relevant to #11943. Existing #17968 already prevents that overflow from closing the connection. The precise reported publication and the watcher-to-EPIPE chain in #12931 remain unproven; neither is a demonstrated memory leak.
 
-A separate [actual Store/runtime proof](./local-tab-close-rebase/README.md) reproduces #17344-style local tab resurrection: host membership rebasing restores an explicitly closed unbound row, and an acknowledgment can precede graph removal. The acknowledged whole-tab path is now fixed by [#21020](https://github.com/stablyai/orca/pull/21020), with replacement/pin/split-exit controls. Direct renderer-only never-bound closes remain a separate confirmed gap; no broad stale-save protection was removed.
+A separate [actual Store/runtime proof](./local-tab-close-rebase/README.md) reproduces #17344-style local tab resurrection: host membership rebasing restores an explicitly closed unbound row, and an acknowledgment can precede graph removal. The acknowledged whole-tab path is fixed by [#21020](https://github.com/stablyai/orca/pull/21020), with replacement/pin/split-exit controls. [#21113](https://github.com/stablyai/orca/pull/21113) separately fixes direct local never-bound closes with synchronous one-shot retirement; broad stale-save protection remains intact.
 
 ## Coverage and reproducibility
 
@@ -137,20 +140,20 @@ because the retaining path crosses that boundary.
 
 | Category       | Inventoried files |
 | -------------- | ----------------: |
-| Source         |            25,717 |
-| Config         |               963 |
-| Documentation  |               324 |
-| Asset/other    |               238 |
-| **Total rows** |        **27,242** |
+| Source         |            25,758 |
+| Config         |             1,012 |
+| Documentation  |               340 |
+| Asset/other    |               245 |
+| **Total rows** |        **27,355** |
 
 The [file inventory](./memory-leak-file-inventory-2026-09-15.tsv) records size and
 SHA-256 for every tracked path except the inventory itself. That self-exclusion
-avoids a circular hash; symlinks are hashed as link text. Thus 27,242 rows plus
-the inventory account for 27,243 tracked paths. Hashes describe the final
+avoids a circular hash; symlinks are hashed as link text. Thus 27,355 rows plus
+the inventory account for 27,356 tracked paths. Hashes describe the final
 worktree contents, including staged evidence files, rather than only HEAD.
 
 The [mechanical search results](./memory-pattern-scan-2026-09-15.json) record
-25,717 source files searched, including 7,900 matching files, and per-file hits for
+25,758 source files searched, including 7,916 matching files, and per-file hits for
 listener, timer, subscription, disposal, Map/Set, buffer-concatenation and shared-promise signals. Zero-hit source
 files remain represented in the inventory. These searches include comments and
 tests; unequal add/remove counts do not establish a leak. Candidate review traced
@@ -276,7 +279,17 @@ Forty-five tests and 117 cases in each runtime preserve completion/reset behavio
 [#21167](https://github.com/stablyai/orca/pull/21167) installs SSH file metadata
 synchronously and removes the queue of unrelated stream frames. Four deliberately
 delayed readers retain 44,739,584 logical base64 bytes shared across completed
-foreign transfers before the fix and none afterward. Seventy-three focused tests
+foreign transfers before the fix and none afterward. 127 focused/transport tests
 and 80 portable controls pass across Node/Electron and both source graphs. The
 metadata deadline bounds ordinary duration; this proves a conditional retention
 mechanism, not an SSH cause for #19831. [Artifacts](./ssh-file-metadata-retention/README.md).
+
+## Final review handoff additions
+
+[#21175](https://github.com/stablyai/orca/pull/21175) retires unowned paired-server session partitions on GUI removal and prevents late writes or failed recovery rollback from recreating them. The actual 32-cycle proof falls from 32 retained partitions to zero after explicit flush and reload; 79 tests and 156 runtime comparative cases pass. [Evidence and limits](./paired-host-session-partition-retirement/README.md).
+
+[#21178](https://github.com/stablyai/orca/pull/21178) moves closed-editor model cleanup into the app shell. Eight distinct final-tab closes retain eight models before and none afterward; 37 tests, 32 comparative cases and 12 independent ownership controls pass. This supplies a renderer mechanism relevant to #12845 without assigning its measured GiB heap to these controlled fixtures. [Evidence and limits](./closed-editor-model-lifetime/README.md).
+
+[#21185](https://github.com/stablyai/orca/pull/21185) releases log owners after successful plugin uninstall and prevents old callbacks from writing into retired or replacement owners. Eight uninstalls retain 1,600 log rows before and zero afterward while old worker callbacks remain rooted. All 89 tests, 16 comparative cases, Node typecheck, changed-code checks and explicit anti-slop checks pass. Failure and installed-history policies remain covered. [Evidence and limits](./plugin-uninstall-log-retirement/README.md).
+
+The first published heads of #21175 and #21178 exposed introduced test-fixture issues. The published persistence fixture now matches main's one-argument handler and passes exact-source Node typecheck plus 16 cases. The Monaco fixture now uses checked attachment calls and passes 46 selected tests, full Web typecheck and anti-slop. Their corrected heads and the final plugin PR have separate, timestamped CI status in the handoff.

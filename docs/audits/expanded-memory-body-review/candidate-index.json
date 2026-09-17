@@ -1,6 +1,6 @@
 {
   "observedAt": "2026-09-17T04:54:10.281758+00:00",
-  "scope": "Union of prior title catalog and fully paginated expanded body/unbounded-title queries; includes lexical false positives and closed historical controls. Pending rows are not claimed reviewed.",
+  "scope": "Union of prior title catalog and fully paginated expanded body/unbounded-title queries; includes lexical false positives and closed historical controls. All 134 new bodies/comments have been read; body triage is distinct from completed causal code investigation.",
   "candidateCount": 201,
   "newBodiesFetched": 134,
   "bodyMemoryQueryMatches": 147,
@@ -949,11 +949,11 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "body_and_all_comments_reviewed",
+      "reviewStatus": "historical_hydration_projection_reproduced_current_growth_bounded_draft_defect",
       "classification": "genuine-renderer-growth-report",
-      "assessment": "Reported mirrored editor duplication with renderer heap near 3.47 GB and exit 5; full 10 comment correction chain read. Executed author controls withdraw cross-machine amplification: +1 uncullable row per restart/hydrate with constant one-tab wire input, no growth without restart. Hydrate changes ids and persistence strips mirror flag. Both simple flag persistence and path-based culling fixes were withdrawn after dropping dirty drafts. Current safe reconciliation requires proof and draft/ownership preservation; later comments add stale worktree-id and ghost sleeping-session variants.",
-      "reviewArtifact": "lower-issue-triage.json",
-      "currentCodeStatus": "Four bounded actual full-store controls pass in Node26.6 and Electron43.7/Node24.21. Constant one-tab input gives rows[1,2,2,2,2,2,2,2] with restarts and[1,1,1,1,1,1,1,1] without. Current hydration deduplicates restored owner/id; historical reported source investigation remains in progress. Draft correctness risk also reproduced: fresh visible duplicate draft persists but is skipped behind an older clean row during next hydration. No pruning proposal or product edit."
+      "assessment": "Reported hydration projection grows one row per constant-input restart; current deduplication plateaus at two. Twenty Node/Electron controls include a current dirty-duplicate draft-loss counterexample. No heap measurement or whole historical app replay.",
+      "reviewArtifact": "../mirrored-editor-restart-growth/README.md",
+      "currentCodeStatus": "Twenty current/reported-hydration projection controls pass across Node/Electron: current restart counts plateau at two; reported v158 hydration grows one row per restart. Current first-row dedup can lose a newer duplicate draft. Historical method-body projection reuses current callers, not a full old app. Existing draft PR21124/21125 remain open; no new pruning fix."
     },
     {
       "number": 10923,
@@ -1030,7 +1030,10 @@
       "bodySha256": "87f77492c19ecfdd1c59554dd93f228e0c79ef77d34379689d933b742a3252f9",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Quick-command ordering/grouping request; memory means muscle memory. The body explicitly accepts the existing 40-command cap and asks for order/labels, with no growth or resource incident.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11218,
@@ -1080,7 +1083,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Agent Dashboard grouping and group badges; memory means remembering which project a card belongs to. The one comment discusses planned design, without resource measurements.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11486,
@@ -1095,7 +1101,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Reparent a running Claude session after cwd/worktree change while preserving conversation memory. This is identity/grouping behavior, not retained heap or process accumulation.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11495,
@@ -1108,7 +1117,10 @@
       "bodySha256": "e7584423ae6edd8108e6013496047a30a172e247a57704c895bc006ca00c1925",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-connectivity-lifecycle",
+      "assessment": "Paired viewer loses attachments across restart while all 51 host PTYs remain writable. Body explicitly reports no CPU saturation/OOM and no crash; stable-tab handle rebinding and subscription recovery are the claimed boundary.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11529,
@@ -1134,7 +1146,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "crash-context-without-memory-attribution",
+      "assessment": "Conversation/editor state loss after restart with a GPU abnormal exit 8704 example; fresh 26 MB heap is restart context, not growth evidence. main_process_lifecycle_started counts main starts and is not by itself proof of 25 renderer crashes. Later comment adds SSH Pi history loss, without heap measurements.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11710,
@@ -1160,7 +1175,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-stale-identity",
+      "assessment": "Team leader handle snapshot becomes stale, blocking tmuxCompat while pane-key identity survives. Memory refers to in-process registry location; comments identify existing reporter PR 11742, not growing ownership or OOM.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11786,
@@ -1170,7 +1188,10 @@
       "bodySha256": "04eb17536543827c3b7f654bf2638b505301994436ee3317c04644a5468cd131",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-delivery-race",
+      "assessment": "Same orchestration message injected twice during 500 ms before delivered_at is stamped. An in-memory guard is proposed; no accumulating memory or resource measurement is reported.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 11824,
@@ -1208,7 +1229,10 @@
       "bodySha256": "b2e8cfded636584941580199c02348dd612154ede71bbc76329b1606bfe8b1f5",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Global macOS Ctrl/Cmd remap request; memory means keyboard muscle memory. The author explicitly calls their patch untested.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 12241,
@@ -1221,8 +1245,9 @@
       "bodySha256": "af34dd1b9f3d59ddbb52ebf30107decb3fc39e13c0a91b6a7279dd18ba89b833",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "actual_gui_store_retention_reproduced_fix_design_pending",
-      "assessment": "32 pair/remove cycles leave32 Store partitions on disk and after reload;4 existing renderer purge tests pass but do not delete old partitions."
+      "reviewStatus": "actual_retention_reproduced_scoped_fix_published",
+      "assessment": "PR #21175 retires unowned GUI-removed runtime session partitions and blocks late renderer writes/absent-partition recovery rollback. 32 ordinary cycles retain32 before and0 after in memory, explicitly flushed disk, and reload.79 tests and156 Node/Electron comparative cases pass. CLI removal, old orphans, renderer-held objects, and non-atomic save durability remain separate.",
+      "reviewArtifact": "../paired-host-session-partition-retirement/README.md"
     },
     {
       "number": 12243,
@@ -1271,7 +1296,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-performance-churn-report",
+      "assessment": "Measured 12 park-verdict flips per~30 s for 13.5 min on SSH, followed 80 s later by 3 renderer reloads; heap 60\u201397 MB is modest and causal linkage is unproven. Maintainer suggests 1.4.168 retest. Current later 17009 damps 1 s bursts, so its presence does not establish coverage of 2.5 s slow flips.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 12662,
@@ -1301,7 +1329,10 @@
       "bodySha256": "6c5a05512f93d6659a294bd3a22176a6e3692d3b6e6c0261f0de926a5bdf449e",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "actual_closed_model_retention_reproduced_scoped_fix_published",
+      "classification": "genuine-renderer-high-heap-crash",
+      "assessment": "PR #21178 moves cleanup to the app shell: eight distinct final-tab closes leave8 actual Monaco models/2,097,208 logical characters before and0 after. Hidden closes also reproduced.37 tests,32 comparative cases,and12 independent lifecycle controls pass. Same lifetime chain exists statically in v1.4.170, but incident GiB heap attribution remains unresolved; sampled2142 openFiles/~3.9MiB and wholeStore/~6.2MiB alone do not explain it.",
+      "reviewArtifact": "../closed-editor-model-lifetime/README.md"
     },
     {
       "number": 12864,
@@ -1316,7 +1347,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-retention-depth-correctness",
+      "assessment": "Configured 50 k renderer scrollback is allegedly replaced by 5 k daemon history on reveal. Memory is the acknowledged cost of increasing retention; the defect is lost history, not excessive retained growth.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 12913,
@@ -1334,7 +1368,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-premature-process-teardown",
+      "assessment": "Seven session teardowns, with a measured~1 s .git rename trigger for a subset; memory pressure is explicitly described as an abandoned diagnosis. Reports missing termination cause, not accumulating resources.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 12931,
@@ -1366,7 +1403,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-cookie-state-transition",
+      "assessment": "Cookie import clears live cookies before some replacements can load and stages 81 for restart; authentication returns after restart. Memory describes cookie residency, not OOM or failed allocation.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13047,
@@ -1404,7 +1444,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-mixed-worker-resource-lifetime",
+      "assessment": "Initial 22 live terminals/21 workers and~3.95 GB session RSS; automation comment measures 9 completed Codex processes alive for days and~540 MB recovered. Later 161/162 and 124/127 retained records have no live terminal, separating stale bookkeeping from cost. Final 3 live terminals are user_owned and can still act; settled dispatch is insufficient authority to kill them. Root 19388 ownership/policy review overlaps.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13171,
@@ -1421,7 +1464,10 @@
       "bodySha256": "559eb4cbdea0ea1bd3302c91ad0f129032cf576cf23bfcd955a5d1dcd8331887",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Sidebar collapse/expand-all request; in-memory refers to already loaded sections and cheap set clearing. No resource incident.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13612,
@@ -1452,7 +1498,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-provider-auth-scope",
+      "assessment": "Directory-scoped GH_TOKEN not inherited by UI subprocesses; proposed account binding may use a short-lived token cache. Full spec/comments identify existing PR 13664 and its remaining Projects/identity scope; no memory growth report.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13628,
@@ -1462,7 +1511,10 @@
       "bodySha256": "18db472c15e3b4eff18c052852fbf89e0ee42dd91a696f5de0bfe2d06ecc53ab",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "Local multi-agent conversation rooms; memory only appears in a related project-group feature description.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13678,
@@ -1493,7 +1545,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource-ownership-observability-gap",
+      "assessment": "Injected dispatch has context but no worker row, hiding it from supervision and causing worker-release errors; later comment leaves 2 settled low-level terminals unreleased. In-memory DB is the test fixture, not a leak measurement. Source review comments reject unconditional supervision because it changes authority over hand-started panes.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 13764,
@@ -1520,7 +1575,10 @@
       "bodySha256": "547dcb9f898d6f6f979e4ed2c1214a0c9a2c071393dfe77ee11967afb8040432",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-cookie-decryption",
+      "assessment": "Linux Chrome key source prevents cookie decryption; memory load 1 OK/21 failed describes import success, not allocation pressure. No resource growth.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14210,
@@ -1530,7 +1588,10 @@
       "bodySha256": "cb138c93d1bae763f7f0e463da94b3cda93fd6780c0569499efca498acaf18f8",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-connectivity-with-known-removal-crash",
+      "assessment": "Application handshake timeout despite WebSocket 101. Additional environment-rm Unknown environment exception overlaps root 20995/reporter PR 21048; in-memory references describe stale state, not retention magnitude.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14316,
@@ -1559,7 +1620,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-emulator-protocol",
+      "assessment": "Exec stdout type errors, camera argument routing and stale skill documentation. memory-warning is a simulator command name; reported kill control explicitly leaves no orphan helper.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14549,
@@ -1576,7 +1640,10 @@
       "bodySha256": "996d63fe1cfe95b5831b5a37e4f43874a84342af223717b5f4210870b6c9f115",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-external-agent-cost-feature",
+      "assessment": "Feature request includes actual 30+ Grok TUI fleet consuming 8 GB swap and triggering oomd; external CLI costs are hundreds ofMB toGB each. Requests ACP/one-shot/leader policy, not an identified Orca heap leak. Current TUI catalog still uses Grok positional-prompt interactive launch.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14631,
@@ -1606,7 +1673,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-client-state-accumulation-report",
+      "assessment": "Mobile delivered messages leave one ghostQueued duplicate per busy send; host ledger balances and cache count 0 for the observed ghosts. Separate stale cached counts and Android corroboration are recorded. Current mobile hook has exact/glued/image transcript reconciliation from 14936/17783; latest symptom needs a remaining-path reproduction before calling this an unfixed heap leak.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14693,
@@ -1616,7 +1686,10 @@
       "bodySha256": "e14d54150d874ab092b0fa670e9f58e6825c619477ac3a027356ded538c3a5d8",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature-non-memory",
+      "assessment": "F 2/Enter file rename shortcut and registry discoverability; memory means muscle memory.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14740,
@@ -1626,7 +1699,10 @@
       "bodySha256": "d48b5abcdc40f04d6fcd0358b88a65dfb9d0d629aba3335af6a3249dfcdbf661",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-provider-env-cache",
+      "assessment": "Packaged Windows Gitea auth differs from dev; process env snapshot and session cache are explanatory state. No increasing cache or memory-cost observation; environment-staleness conclusion belongs to the reporter.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14800,
@@ -1641,7 +1717,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-editor-viewstate",
+      "assessment": "Editor scroll/cursor restoration fails across tab switches. Body itself identifies a 20-entry LRU, and memory means non-durable state, not unbounded cache.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14833,
@@ -1660,7 +1739,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-cache-persistence",
+      "assessment": "Claude per-account last-known usage disappears on switch/restart and OAuth failure. Complains cache expires after 30 min and requests longer persistence. Comments identify 18732 token-refresh fix, remaining error rows, and corrected limited non-active statusline scope.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14882,
@@ -1678,7 +1760,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-compositor-cpu-not-heap",
+      "assessment": "Measured renderer Compositor~1 core while JS/GPU idle; minimize/restore returns healthy under same TUI load.4781 samples show stable 66\u201399 MB JS heap.42 h onset is estimated from thread averages; mixedDPI is unproven. Treat as CPU/frame-scheduling incident, not JS memory leak.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 14999,
@@ -1693,7 +1778,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-external-process-cost-feature",
+      "assessment": "Measured 28 MCP-related processes/~1.4 GB resident beneath 2 Claude+1 Codex sessions. Requests per-launch MCP policy; later comment adds tenant isolation and loss of accounting on low-level launch. Configured external process overhead is real but no Orca heap retention mechanism or universal safe disable policy is shown.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15098,
@@ -1724,7 +1812,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "genuine-detached-descendant-resource-report",
+      "assessment": "Six claude-swarm tmux servers and 22 live Claude processes/~2.34 GB RSS, age 1\u20137 days and parentPID 1 while Resource Manager shows no inactive workspace. Current collector follows registered PTY descendant trees, so reparented servers are outside attribution; existing managed tmux shim is a distinct path. Exact detached ownership must be proven before reclamation.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15210,
@@ -1770,7 +1861,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-agent-status-regression",
+      "assessment": "Resumed Claude sessions missing status rows/restore; memory means ephemeral state. Full comment correction proves SessionStart:resume does occur, retracting the original never-emitted premise. No heap or growing process report.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15313,
@@ -1800,7 +1894,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-stale-agent-status",
+      "assessment": "Relay state stays working after task completion; bounded per-pane flags described as in-memory, not a growth slope. Reporter supplies PR 15591 exact transcript reconciliation; later Pi comment explicitly states symptom-only overlap, not same cause.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15352,
@@ -1831,7 +1928,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "shutdown-lifecycle-with-descendant-cost",
+      "assessment": "Healthy app refuses quit; SIGKILL workaround leaves reparented dev servers. Reinstall helped one reporter. Later demonstrated checkpoint throw and PR 16497 match current durable-only fallback/error reporting; no new duplicate fix proposed.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15439,
@@ -1841,7 +1941,10 @@
       "bodySha256": "a5e7d1a3249038691bd98354b183f05b9c2fdb96ff13695ccca2769781b3d6fb",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "bounded-resource-policy-feature",
+      "assessment": "Measured increased reveal/remount latency over 80 worktrees/141 tabs after warm-set cap lowered. Wants adjustable count/time while retaining current defaults; acknowledges~2.5 MB/default hidden pane vs~19 MB at 50 k rows and concurrent-daemon confound. This is deliberate memory/latency policy, not proof of leaked ownership.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15497,
@@ -1868,7 +1971,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-stale-label-with-corrections",
+      "assessment": "Full 4 comment chain retracts unified title/parse-cache diagnosis: correct persisted custom title and current hook prompt can coexist with a rendered first-prompt label.18 dead per-PID session files are disk leftovers, not 18 live processes. No measured heap growth.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15504,
@@ -1878,7 +1984,10 @@
       "bodySha256": "57a6d50fdac0eddb7294bf7bebd44e4ea130f46576cffd3f9ef4c3ef45f5b857",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-output-loss",
+      "assessment": "Hidden delivery/reveal restoration loses recent transcript output; disabling gate is described as a memory-cost workaround. Candidate abandon routes are unproven for incident; preserving lost bytes is correctness scope, not leak evidence.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15833,
@@ -1888,7 +1997,10 @@
       "bodySha256": "7300ab8e710bb272bdedb92f805e946a7440a7f204c54d86c117b4c611437c79",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "generated_posix_hook_eof_liveness_reproduced_runner_behavior_unattributed",
+      "classification": "genuine-hook-liveness-resource-report",
+      "assessment": "Actual generated Codex script remains alive with complete JSON stdin held for10.25s, then exits immediately after EOF. Immediate-EOF and Grok complete-JSON controls pass on Node/Electron, six cases. Reported v183 source selects same default cat capture. Runner timeout enforcement and duplicate-hook loading are not exercised; no heap or OOM attribution.",
+      "reviewArtifact": "../codex-hook-stdin-lifetime/README.md"
     },
     {
       "number": 15882,
@@ -1922,7 +2034,10 @@
       "bodySha256": "f58ebb751d7454a824c389f08b31045d3cfa24196deace2dff63fe7632c79147",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non-memory-address-persistence",
+      "assessment": "Pairing dropdown forgets explicit Thunderbolt interface after restart/dropout; in-memory cache location explains persistence behavior, not resource growth.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15984,
@@ -1935,7 +2050,10 @@
       "bodySha256": "fd1a39931b88f27c330db3cf20e3de769821308500349d54bd3441487c84b24a",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource-observability-feature",
+      "assessment": "Resource Manager only attributes local processes; requests selected-host diagnostics.memory sampling with no remote kill. Existing PR 8394 noted. Host visibility gap matters to incident interpretation, but body supplies no OOM/leak observation.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 15987,
@@ -1950,7 +2068,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "historical-bounded-allocation-already-rewritten",
+      "assessment": "Old runtime imports read entire\u226425 MiB file then base 64 and IPC it;100 MiB budget is per-source directory, not whole multi-file drop. Latest comment explicitly says merged 16106 absent from released 1.4.204. Current staging stores identity and 384 KiB streaming slices; remaining partial-failure UI is separate. No new allocation fix proposed.",
+      "reviewArtifact": "./middle-issue-triage.json"
     },
     {
       "number": 16005,
@@ -1960,7 +2081,10 @@
       "bodySha256": "9bd8b1481ed23428109c1d8509ad31765dbdc25fc04d5f8fc3320a03ead49434",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource_feature",
+      "assessment": "Resource Manager naming request: remote snapshots show raw PIDs because the client's tab store lacks remote titles. Existing CPU/RSS numbers are UI examples, not growth evidence; suggested title enrichment explicitly calls out polling cost and cache TTL.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16008,
@@ -1970,7 +2094,10 @@
       "bodySha256": "096ca3776817da5b02f6b2528208f42aae49033fa4149173115ed1a223ea7ff1",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource_feature",
+      "assessment": "Speech startup latency proposal explicitly trades about 1.2 GB of retained model RSS for a warm recognizer. Report measures roughly 2.3 seconds of ONNX session construction and a one-hour idle teardown; it asks for opt-in preload/keep-warm, not relief from an accidental leak.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16084,
@@ -1993,7 +2120,10 @@
       "bodySha256": "e148607af4fd0d53a1178faa73ff479aaa4f1ffd8fbaa3f607e7922d772a42ab",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Pairing URL key differs from the persisted key used by the listener; the reporter's handshake succeeds with the persisted key. In-memory keypair is a state-authority reference, with no growing allocation or process-retention measurement.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16275,
@@ -2010,7 +2140,10 @@
       "bodySha256": "34202d2a7f25cf7d5e6a7d6f49360d4d02625ce75076eb16a7448f5dfd0ee766",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests a bindable action to move the active tab into a pane column. The memory match is muscle memory for a shortcut, not resource usage.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16629,
@@ -2020,7 +2153,10 @@
       "bodySha256": "319ca72dd88b2faac06047b1424060de88840f1e56351d1b23c2dc9aa155ec13",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "PowerShell EncodedCommand shell integration triggers an EDR heuristic. Execution in memory describes the antivirus concern; no resource growth or exhaustion is reported.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16630,
@@ -2077,7 +2213,10 @@
       "bodySha256": "0482869e7501eb67bd5203f2f70414da6a1abca8df42ff6cb5c026546b24596e",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "source_and_existing_control_review_completed_cause_limits_explicit",
+      "classification": "native_access_violation_unattributed",
+      "assessment": "Native Windows crash near WebGL activity; existing later retry guard is version-appropriate but does not establish the unsymbolized fault cause.",
+      "reviewArtifact": "../native-and-react-crash-body-review/README.md"
     },
     {
       "number": 16776,
@@ -2087,7 +2226,10 @@
       "bodySha256": "419ca92147ce6ffa00633dda5c379a40b42e95d2d85a413aa6977e381f6d7d55",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "disk_growth",
+      "assessment": "Reports 11 GB of Codex rollout JSONL history, over 1000 files, inside a 15 GB app-data footprint. Claims no TTL/cap/cleanup UI; this is persistent disk accumulation, not a reported JS-heap or RSS leak.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16790,
@@ -2097,7 +2239,10 @@
       "bodySha256": "17acf10f8a9128525890b8f3810b0ad771964b76e10d8145f954b1489f74b523",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests configurable Monaco command-palette shortcuts across editors/diffs/notebooks. Memory means familiar shortcut muscle memory; proposed listener disposal tests are feature implementation detail, not a reported leak.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 16905,
@@ -2135,7 +2280,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Body and all five comments propose persistent bots, connected apps, provider-independent long-term memory, and orchestration UI. Memory means stored preferences/history/identity, not RAM; final comment only reports a CLI bot integration.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17033,
@@ -2152,7 +2300,10 @@
       "bodySha256": "7f74eae9dfdfb5f79900024ea858847f0e1ae7670383e4034e198decea968fee",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource_bound_correctness",
+      "assessment": "Reports that normal log-cap rotation replaces deep durable scrollback with a shorter live snapshot, losing history (638 shrinking rotations, 1936 MB cumulatively discarded). The issue concerns correct behavior of an existing bound, not growing RAM. Suggested safeguards distinguish actual overflow, disk checkpoint depth, user-cleared history, and once-per-generation refusal.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17117,
@@ -2171,7 +2322,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Requests an incarnation-aware Runtime identity proof for visible terminals after restart/reconnect. In-memory bounded challenge state is a design requirement, not observed retention. Both comments are acknowledgement/community contact, with no memory evidence.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17293,
@@ -2200,7 +2354,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Reports reused-terminal worktree validation reading stale leaf metadata after PTY reincarnation. Comment reproduces the source mismatch and links PR18042 with freshWorktreeId and older-host fallback. The in-memory map is a correctness authority, not a measured growth owner.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17435,
@@ -2215,7 +2372,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Onboarding caches a negative GitHub capability result while runtime operations succeed. Original Linux report expressly does not establish PATH or initial probe cause; later macOS/MacPorts comment separately demonstrates GUI PATH excluding /opt/local/bin. Preserve that platform-specific correction; no cache-cardinality or memory-growth evidence.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17645,
@@ -2225,7 +2385,10 @@
       "bodySha256": "7be6c7b5c2adff1492cece2dd7f4326e25f00925dca97bf900ef6cb4b225295b",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Project removal occupies the row-delete menu slot and hides all worktrees; reporter confirms checkouts/branches/commits remained on disk. Memory is menu muscle memory. Re-add identity/metadata loss and visibility defaults are UX/persistence issues, not growth.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 17864,
@@ -2235,7 +2398,10 @@
       "bodySha256": "226f5558d96332ae1718cd16f8faf5865de3e20cb9e77a605d9ebb3062fdd649",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests an honest abandoned/cancelled orchestration outcome for revoked dispatches whose work is unverifiable. Coordinator memory means conversational context after restart. Incorrect durable task statuses are not a resource leak measurement.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18186,
@@ -2250,7 +2416,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "reported_source_contradicts_missing_handler_claim_shutdown_step_unattributed",
+      "classification": "process_lifecycle",
+      "assessment": "Reported v1.4.193 already registers persistent SIGTERM/SIGINT -> app.quit after headless RPC startup and includes a quit deadline. Current43 controlled Linux lifetime/signal harness tests pass; no actual FUSE/systemd run. Signal delivery or stalled quit stage remains unproven. Body explicitly reports no OOM.",
+      "reviewArtifact": "../native-and-react-crash-body-review/README.md"
     },
     {
       "number": 18191,
@@ -2269,7 +2438,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "process_lifecycle",
+      "assessment": "CLI-created SSH tabs disappear across desktop restart while their remote PTYs demonstrably survive and accept writes; UI-created control tabs remain. Later comment describes PR19860 as a partial graph-drop fix, explicitly leaving restart ordering and restored-lease renewal unresolved. The old-agent source appendix is reporter-supplied evidence, not a fresh source reproduction by this audit. A tab_not_found close followed by disappearance is temporal evidence, not proof that close killed it.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18200,
@@ -2297,7 +2469,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "source_and_existing_control_review_completed_cause_limits_explicit",
+      "classification": "native_appimage_backing_lifetime_source_compatible",
+      "assessment": "Reporter instruction-fetch SIGBUS/mount evidence matches detached Linux daemon runtime lifetime. Scanner has no production quit drain;8 controlled Node/Electron disposal cases establish unjoined exit and latent invalidation races. No native mount reproduction or scanner product change; future work preserved at user-requested pause.",
+      "reviewArtifact": "../native-and-react-crash-body-review/README.md"
     },
     {
       "number": 18224,
@@ -2316,7 +2491,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "actual_source_hidden_catalog_create_retention_reproduced_fix_design_pending",
+      "classification": "ui_owner_retention",
+      "assessment": "Eight actual-source controls pass in four current/main-boundary Node/Electron variants. Hidden external-worktree policy yields a valid main launch row but no renderer surface; focused create times out retaining its tab/startup command even after authoritative refresh. A late show/catalog arrival makes the command eligible, so timeout alone cannot authorize deletion. Local metadata fallback claim is corrected: named release requires SSH. Existing background PR18290 remains separate; no focused product change.",
+      "reviewArtifact": "../hidden-worktree-terminal-create/README.md"
     },
     {
       "number": 18271,
@@ -2339,7 +2517,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Persistence maintenance report describes swallowed asynchronous write failures leaving memory ahead of disk, including quit believing a flush succeeded. All three comments concern PR18291 and generation ordering of durable writes. No growing heap, process count or retained payload is measured; in-memory means nondurable application state.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18279,
@@ -2358,7 +2539,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Unqualified worktree IDs collide across hosts and first-row selection can target destructive actions at the wrong execution host. Both comments add acknowledgement/proposed-solution tracking. Memory is incidental to the caller inventory; the defect is authority and lookup ambiguity, not retained resources.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18364,
@@ -2403,7 +2587,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "resource_pressure_lifecycle",
+      "assessment": "Reports 30-second prompt confirmation falsely failing under host pressure while workers continue repository work for minutes after dispatch revocation. Host free/swap/disk figures do not identify an Orca allocation owner; revoked dispatch is not process death. Later comments explicitly withdraw both the shared-budget/manager-occupancy explanation for connection churn and the initial post-authentication handshake explanation. A real 1013 reply overflow remains an occasional separate event, not a proven churn cause. The corroborating Windows comment is not a fresh v196 reproduction.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18401,
@@ -2434,7 +2621,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "ui_growth_candidate",
+      "assessment": "Latest comment reports remote repository headings accumulating during scrolling, but provides no heap, DOM-count or source reproduction. Earlier remote-visibility failure was a local-only filter and drag failure a pinned-group option; rollback disproved the original v196 regression claim. Reporter then corrected an erroneous claim that remote tabs were not persisted, corrected a no-discriminator claim, and disclosed that earlier function names were invented descriptive labels. Exact duplicate counts and recycling/append cause remain unproven.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18483,
@@ -2444,7 +2634,10 @@
       "bodySha256": "fbcfd7b90babc3d0e38b6d97af1bf6934d3d7c8be50f3a217f4ce044afb18f0a",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Windows updater requires app closure but installation does not proceed after closing. Diagnostics memory is only an offered diagnostic; no memory pressure, allocation growth or lingering-process measurement appears in the report.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18689,
@@ -2454,7 +2647,10 @@
       "bodySha256": "4274ef40f82b4ff12bbdcef3c648af48e87c8eeffec46f5870ca8fec062117c7",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "external_process_resource",
+      "assessment": "Reports Tailscale's iOS NetworkExtension being jetsammed during terminal output bursts on v190, then a remaining WebSocket heartbeat loss on v197 while full VPN loss is mitigated. The killed process is the VPN extension, not Orca's renderer or main process. Packet-buffer accumulation, MTU effects and claimed extension limits are reporter explanations, not independently verified by this body review.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18789,
@@ -2482,7 +2678,10 @@
       "bodySha256": "aaa423761747ed7851bef60fbbc26036668d79f39d2f0f287d2506c506e12130",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "process_lifecycle",
+      "assessment": "A v190 daemon remains active for eight days under a v197 app because replacement preserves live or unverifiable sessions. Unbounded refers to version drift, not allocation growth. Twenty-one live terminals intentionally prevent destructive replacement; the report asks for visibility and a nondestructive update path.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 18839,
@@ -2512,7 +2711,10 @@
       "bodySha256": "e4d82a0c329c2053e55e83491aba0f7c6cdb1740082de63e06a22b02a96fef62",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Windows sign-in cancellation is surfaced as ENOENT; a successful Codex login ends on a misleading loopback error; endpoint inspection delays child startup and triggers memory-enumeration/daemon timeouts. The memory log is a process-enumeration timeout, not measured memory exhaustion. Reporter distinguishes successful credential capture and Store alias EACCES from executable absence.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19018,
@@ -2527,7 +2729,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "stale_terminal_registry",
+      "assessment": "Reports rising connected registry entries, duplicate pane owners and stop_unverified on Windows. Already covered by the memory ledger's actual delayed-exit, queued-graph and stop-verification proofs. Missing diagnostics.memory attribution alone does not prove a process is dead; the reporter's phantom terminology and automatic cleanup comment cannot replace authoritative owning-host exit evidence.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19066,
@@ -2537,7 +2742,10 @@
       "bodySha256": "e15796a707236fb073a19c9c4313a47ae62ea3bfd3d19cd423b07069fd52ab83",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests review/distribution of a hardware-controller community plugin. A CPU/memory advisory above six agents is a feature description; the separate HID child and loopback configurator are disclosed architecture, with no measured leak or abandoned child report.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19116,
@@ -2557,7 +2765,10 @@
       "bodySha256": "51b173153226ca86e50a61fcb478f0b9a5c254c1ef0283a9e33bfc7a4ab1ab06",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "performance_nonmemory",
+      "assessment": "Reports choppy terminal drag selection, worse during redraws and long scrollback, with iTerm2 as a control. Diagnostics memory is offered but no heap, RSS, allocation or collection growth is reported. Large scrollback can increase rendering work without establishing retained-memory leakage.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19173,
@@ -2572,7 +2783,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Persisted runtime-owned SSH workspace says running after restart while process-local PTY provider registration is absent; sandbox remains reachable. Reporter offers a readiness/resume lifecycle hypothesis and explicitly does not establish the complete cause. The Mac/Orbstack comment reports similar symptoms without proving identity of mechanism. In-memory describes a registry that naturally disappears on restart, not growth.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19187,
@@ -2629,7 +2843,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "performance_nonmemory",
+      "assessment": "Corrected report isolates slow agent first paint, retracting the original generic pane-creation explanation because shell panes are fast. It measures component timings and a remaining roughly one-second gap; history size, injected environment and frame-processing throughput controls did not explain it. Renderer_memory appears only as existing telemetry; no heap-growth claim survives the corrected report. CPR timing establishes terminal byte processing, not necessarily physical screen presentation.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19342,
@@ -2686,7 +2903,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "native_process_churn",
+      "assessment": "Already-cataloged Windows relocation manifest omits native modules and repeatedly falls back to PowerShell process-table scans. Report measures 35 spawns/minute and removal after copying the addon; later v199 comments add execution-policy event-log flooding and laptop CPU/power cost. These are process/CPU/disk resources, not a retained JS-heap measurement. Reporter explicitly leaves registry PATH behavior, arm64, packaging and consumer identity unproven; reboot/session/browser changes confound the total power delta.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19582,
@@ -2701,7 +2921,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Manual terminal customTitle persists but is lost in host projection, hydration and renderer mirror across reload. In-memory desktop rename is a state durability comparison, not a retained allocation. Comment is acknowledgement; proposed optional wire field is a reporter patch, not a memory result.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19660,
@@ -2722,7 +2945,10 @@
       "bodySha256": "61cdd192891740572949794a196efbf9529fb6ecf2c1f65b14f661c51a7692eb",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Valid worker_done during readiness is rejected as inactive_dispatch. Reporter supplies a deterministic database-state regression and explains that a missing WSL Pi extension enlarged the timing window but is not the state-guard cause. In-memory database means a test fixture; no process or heap growth is measured.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19738,
@@ -2732,7 +2958,10 @@
       "bodySha256": "cc617aeca8c82ff2d966c896b9009b256500edecb488067693701f7213b2032f",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Actual worker exit before stop receipt changes dispatch state so worker-stop incorrectly reports dispatch_inactive. The report explicitly warns that synthetic onPtyExit(-1) is not physical exit proof and rejects an incomplete fix. In-memory database is deterministic test setup, not a memory incident.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19768,
@@ -2783,7 +3012,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "process_lifecycle",
+      "assessment": "createOrAttach remains pending until 30-second timeout; existing sessions keep running while new panes stay blank and repeated remounts occur. A comment identifies the reused daemon as v192 despite app v199 and a separate old v34 daemon with seven children. Restarting daemons restores creation but destroys sessions; no heap measurement identifies the wedge. App version alone cannot attribute this to v199 daemon code.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19891,
@@ -2793,7 +3025,10 @@
       "bodySha256": "31ca0eb3ee9be06cd8f03277a7cfb8a7c70205b66df87a904346836ba46e9e0a",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "native_crash_and_stale_ready",
+      "assessment": "Reports a minidump-confirmed conpty.node access violation and independently reproduced mobile ready state for a disconnected/unwritable terminal. A second predecessor death has no matching dump; replacement start is not death time. Invalid-pointer native failure is not evidence of OOM. Exact native cause and proposed renderer-leaf projection route are not established by this body-only review; recovery did not prove end-to-end mobile send or sustained reliability.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 19953,
@@ -2814,7 +3049,10 @@
       "bodySha256": "697c82638dbeb9461c6537f67f03d26885eb9be83f6f031513620b5a2fcdbead",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "process_lifecycle",
+      "assessment": "Logs show multiple immediate session-killed events carrying one clientId while daemon stays alive; reporter denies user action and supplies low renderer heap/no OS-pressure records. This is unexpected termination, not growing memory. A daemon clientId identifies the requesting client connection, not by itself the exact renderer callback or GUI code path; nearby git refresh is temporal correlation.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20108,
@@ -2836,7 +3074,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "A nonempty per-target agent detection cache never refreshes after another CLI is installed; restart clears it. The issue is stale content and wrong-host refresh targeting, not growing cache cardinality. In-memory cache denotes lifetime of stale results.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20437,
@@ -2851,7 +3092,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "non_memory_correctness",
+      "assessment": "Idle Pi extension dialogs emit waiting then done without any agent turn, causing false completion notifications. Reporter reproduced state mapping offline and observed notifications live, explicitly not replaying notification dispatch. In-memory trial refers to a candidate experiment, not retention.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20475,
@@ -2861,7 +3105,10 @@
       "bodySha256": "9703d4e1eaf77ed5845c2fd6de33e783fb9951ae9d01a49d693c35870d852475",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests separate project and worktree directory defaults. Agent session memory is cwd-keyed persisted context affected by symlink spelling, not RAM usage.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20515,
@@ -2871,7 +3118,10 @@
       "bodySha256": "5c7fa7b42edc07355894f97a98b2c95e9650d459ec65bc0b495debca64f01035",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests keyboard shortcuts for tab reorder; memory means shortcut muscle memory. Existing reorder/mirroring paths are proposed reuse, with no retention symptom.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20517,
@@ -2889,7 +3139,10 @@
         }
       ],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "source_and_existing_control_review_completed_cause_limits_explicit",
+      "classification": "react_update_depth_unattributed",
+      "assessment": "React update-depth loop remains unattributed; current equality guards predate release. Five-report retention and unexplained killed/15 suppression have direct code explanations.",
+      "reviewArtifact": "../native-and-react-crash-body-review/README.md"
     },
     {
       "number": 20678,
@@ -2899,7 +3152,10 @@
       "bodySha256": "f8ecbd6fcf6fde28ef7b483f9746713b7c46f5b62daa334645298628486b0c76",
       "comments": [],
       "state": "OPEN",
-      "reviewStatus": "pending"
+      "reviewStatus": "body_and_all_comments_reviewed",
+      "classification": "feature_lexical",
+      "assessment": "Requests Hermes persistent profile/bot discovery with Hermes authoritative for configuration, memory and session history. Memory consistently means semantic conversation state. Reporter explicitly avoids duplicating this store in Orca and has not validated full in-app profile flow because of a separate configuration-safety issue.",
+      "reviewArtifact": "./high-body-review.json"
     },
     {
       "number": 20696,
@@ -2949,5 +3205,6 @@
       "matchedQueries": [],
       "existingTitleCatalog": true
     }
-  ]
+  ],
+  "newBodiesReadWithAllComments": 134
 }

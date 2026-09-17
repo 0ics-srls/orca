@@ -1,0 +1,120 @@
+{
+  "numTotalTestSuites": 2,
+  "numPassedTestSuites": 2,
+  "numFailedTestSuites": 0,
+  "numPendingTestSuites": 0,
+  "numTotalTests": 8,
+  "numPassedTests": 8,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "numTodoTests": 0,
+  "snapshot": {
+    "added": 0,
+    "failure": false,
+    "filesAdded": 0,
+    "filesRemoved": 0,
+    "filesRemovedList": [],
+    "filesUnmatched": 0,
+    "filesUpdated": 0,
+    "matched": 0,
+    "total": 0,
+    "unchecked": 0,
+    "uncheckedKeysByFile": [],
+    "unmatched": 0,
+    "updated": 0,
+    "didUpdate": false
+  },
+  "startTime": 1789624898827,
+  "success": true,
+  "testResults": [
+    {
+      "assertionResults": [
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait focused never-listed creates survive wait timeout",
+          "status": "passed",
+          "title": "focused never-listed creates survive wait timeout",
+          "duration": 39.36729199999991,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait background never-listed creates survive wait timeout",
+          "status": "passed",
+          "title": "background never-listed creates survive wait timeout",
+          "duration": 8.630290999999488,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait keeps the late mount intent after timeout and makes it eligible when the catalog arrives",
+          "status": "passed",
+          "title": "keeps the late mount intent after timeout and makes it eligible when the catalog arrives",
+          "duration": 3.7979160000004413,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait settles an ordinary handle published before the deadline",
+          "status": "passed",
+          "title": "settles an ordinary handle published before the deadline",
+          "duration": 4.390124999999898,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait rejects an unknown repo before creating any tab or startup intent",
+          "status": "passed",
+          "title": "rejects an unknown repo before creating any tab or startup intent",
+          "duration": 2.724916000000121,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait refuses stale local metadata when no actual main catalog row resolves",
+          "status": "passed",
+          "title": "refuses stale local metadata when no actual main catalog row resolves",
+          "duration": 1.2076250000000073,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait still reaches the renderer via saved SSH metadata when the scan has no row",
+          "status": "passed",
+          "title": "still reaches the renderer via saved SSH metadata when the scan has no row",
+          "duration": 2.7472499999994398,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        },
+        {
+          "ancestorTitles": ["issue18224 actual renderer bridge/store and desktop handle wait"],
+          "fullName": "issue18224 actual renderer bridge/store and desktop handle wait ordinary external-worktree visibility hides the surface while the same Git rows remain launchable",
+          "status": "passed",
+          "title": "ordinary external-worktree visibility hides the surface while the same Git rows remain launchable",
+          "duration": 5.776832999999897,
+          "failureMessages": [],
+          "meta": {},
+          "tags": []
+        }
+      ],
+      "startTime": 1789624903067,
+      "endTime": 1789624903135.7769,
+      "status": "passed",
+      "message": "",
+      "name": "/Users/m4air/orca/workspaces/orca/np-oom-scan/docs/audits/hidden-worktree-terminal-create/probe.test.mjs"
+    }
+  ]
+}

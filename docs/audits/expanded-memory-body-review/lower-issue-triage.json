@@ -734,11 +734,11 @@
           "sha256": "893b586d6a4321c879f8685f8af232c11b6714e294df6c5cfa5773014ebe8021"
         }
       ],
-      "currentCodeStatus": "Four bounded actual full-store controls pass in Node26.6 and Electron43.7/Node24.21. Constant one-tab input gives rows[1,2,2,2,2,2,2,2] with restarts and[1,1,1,1,1,1,1,1] without. Current hydration deduplicates restored owner/id; historical reported source investigation remains in progress. Draft correctness risk also reproduced: fresh visible duplicate draft persists but is skipped behind an older clean row during next hydration. No pruning proposal or product edit.",
+      "currentCodeStatus": "Five diagnostic controls pass per variant on Node 26.6 and Electron 43.7 / Node 24.21 (20 cases). The unmodified v1.4.158 hydration method projected into the current full-store pipeline produces rows [1,2,3,4,5,6,7,8] across constant-input restarts; current code is bounded at [1,2,2,2,2,2,2,2]. Both remain at one row without restart. Current hydration loses a later visible duplicate dirty draft behind an older clean row. This is a historical hydration projection, not a historical whole-app replay or a heap measurement. No pruning proposal or product edit; routing, sleeping-session and varying-identity variants remain untested. See docs/audits/mirrored-editor-restart-growth/README.md.",
       "existingRelevantFix": {
         "pullRequest": 14850,
         "commit": "470ef65bd793396fe94efecd7f82edecabdbec8e",
-        "description": "Adds usedOpenFileIds duplicate guard; later17370 adds explicit owner guard. Exact historical/version parity still being recorded."
+        "description": "Adds usedOpenFileIds duplicate guard; later PR 17370 adds an explicit owner guard. All 19 selected current source files match named main 291b4ddd6f1c1af480169885e0fda7f9c78ff053; the historical method and 11 helper bodies have exact named-source parity recorded in the standalone artifact."
       },
       "currentSourceHashes": {
         "src/renderer/src/store/slices/editor/actions/hydrate-editor-session.ts": "27eed43b546ba809ed773c631112373a013e43e7b527462c4d52efdbc8fa1149",
@@ -807,5 +807,5 @@
   "issueCount": 38,
   "commentCount": 85,
   "reviewedHead": "49a8671f68a29f2d399ded065432361b9d62a4cb",
-  "codeTraceStatus": "Issue10859 current bounded behavior and dirty-draft correctness risk reproduced with actual full store. Historical source investigation remains in progress. Other37 rows are full issue-evidence classification, not new code proofs."
+  "codeTraceStatus": "Issue 10859 historical restart growth, current constant-input bound, and current dirty-draft loss are reproduced in docs/audits/mirrored-editor-restart-growth. Other 37 rows classify full issue evidence rather than execute new code proofs."
 }

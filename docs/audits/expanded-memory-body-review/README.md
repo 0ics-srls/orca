@@ -9,16 +9,26 @@ and a closed historical control from the earlier catalog.
 The `memory` body query returned 147 matches across two complete pages. The other
 seven queries also completed; 134 additional issue bodies and all their comments
 were fetched. [The candidate index](./candidate-index.json) records query matches,
-body/comment hashes, links and explicit review status. Pending rows remain open
-audit work. Raw read-only responses are retained locally under
+body/comment hashes, links and explicit review status. All 134 additional bodies
+and their complete comment threads have now been read. Causal code investigations
+remain open where the evidence does not establish a mechanism. Raw read-only responses are retained locally under
 `notes/expanded-memory-body-review/`; they are not required to interpret the index.
 
 The [first 38 newly discovered issues](./lower-issue-triage.md) now have complete
 body/comment triage, with 85 comments checked. Seven are resource/crash/growth
 reports; the other 31 concern features or other functional bugs. This body review
 does not claim a reproduced root cause for all seven. The current editor restart
-path for #10859 is bounded by an existing deduplication fix, with historical
-attribution and a separate draft-preservation defect still under investigation.
+path for #10859 is bounded by an existing deduplication fix. The
+[20-case historical/current projection](../mirrored-editor-restart-growth/README.md)
+reproduces the earlier per-restart growth and a separate current draft-loss
+counterexample; it does not quantify the reported heap or replay a whole old app.
+
+The [middle 40](./middle-issue-triage.md) add 54 comments and the
+[higher-numbered 42](./high-body-review.md) add 39 comments. Their digests preserve
+reporter corrections and distinguish disk growth, external process costs, native
+crashes, ownership gaps, intentional limits and lexical false positives. Body
+triage does not turn these candidates into proven memory leaks. The remaining
+14 newly fetched reports have individual current-source reviews linked by the index.
 
 ## Corrections that affect attribution
 
@@ -40,6 +50,10 @@ attribution and a separate draft-preservation defect still under investigation.
   `78b942c468aa32b57051e41d0bcc484617b5cecc`, so this audit does not duplicate it.
   The reported integration measurement belongs to that PR's author; it was not
   rerun here.
+- [#18186](https://github.com/stablyai/orca/issues/18186): the reported 1.4.193
+  source already registers persistent SIGTERM/SIGINT handlers after headless RPC
+  startup. The claim that signal handling was absent is contradicted by that
+  release. Signal delivery and the stalled quit step remain unproven.
 
 ## Current code follow-ups
 
@@ -64,6 +78,19 @@ attribution and a separate draft-preservation defect still under investigation.
   The [RPC/worker-record review](../runtime-resource-body-review/README.md)
   reproduces #19342 admission saturation and #19660's ignored local caller
   deadline; the latter already has open PR #19662.
+- [#18224's hidden-worktree create path](../hidden-worktree-terminal-create/README.md)
+  is reproduced with eight controls across four current/main-boundary Node and
+  Electron runs. A successful main worktree scan can supply a launch row that
+  renderer visibility policy hides. Timeout retains the tab and command; a late
+  catalog arrival or visibility change can still make that command eligible.
+  Cleanup based only on timeout would lose valid late launches. The existing
+  background guard PR #18290 remains separate from this focused-path review.
+- [#15833's generated Codex hook](../codex-hook-stdin-lifetime/README.md) stays
+  blocked with a complete JSON payload while the input pipe remains open beyond
+  ten seconds, then exits on EOF. Six controls across Node and Electron include
+  immediate EOF and the current Grok JSON reader. This confirms a script-level
+  liveness mechanism; it does not reproduce Codex's own timeout enforcement or
+  establish memory growth.
 
 The [unpairing artifact](../paired-host-partition-retention/README.md) records the
 32-partition Store/disk/reload result and four late-writer counterexamples to
@@ -71,3 +98,10 @@ deletion alone. Product changes remain under ownership review.
 
 No affected-host diagnostic data is available. The audit continues with code,
 bounded actual-source experiments and the evidence already supplied in issues.
+
+The [native/React crash review](../native-and-react-crash-body-review/README.md)
+traces #16759, #18186, #18200 and #20517, with 47 crash-focused controls and 43
+separate Linux lifetime/signal contract controls passing. The Linux
+AppImage report has specific backing-lifetime evidence; the Windows native fault
+and macOS React initiating cycle remain unattributed. Scanner child retirement is
+an active follow-up, and passing known-loop tests is not incident reproduction.

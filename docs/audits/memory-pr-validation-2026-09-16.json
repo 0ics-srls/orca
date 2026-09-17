@@ -25,392 +25,413 @@
       "base": "main",
       "head": "86cd9f2ee1ad92ecc559993fdf92e08407c31c75",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20904,
       "base": "main",
       "head": "0a2a06068c0e7a1dda3fd053396cd2764edbfc1c",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20905,
       "base": "main",
       "head": "42a1b16c3c49403735b6656435bb6eb6a4f31fbe",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20906,
       "base": "main",
       "head": "dcc4338a4221017b215a3f0f8fc0ae62825c16d3",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20908,
       "base": "main",
       "head": "04a81de660dba6595c047b152f4da97a660f031c",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20909,
       "base": "main",
       "head": "c2e588e985b139995538e3e57cd48915357e9eea",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20910,
       "base": "main",
       "head": "4b3a336ffb004d090ce8faa8966cfee067df7ab7",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20924,
       "base": "main",
       "head": "0c4809b96920df62ec64cd1ff0549bc01916d9d2",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20941,
       "base": "main",
       "head": "b34a5d921a66f9a26388fe32273732d48303dcf7",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20946,
       "base": "main",
       "head": "47a50b69344148ad965a4334ce4f10124bbeeda6",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20947,
       "base": "main",
       "head": "ca5aea1a056bcf38ff989907071e6beea003c5de",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20949,
       "base": "main",
       "head": "d12d1e0a06f3ced9425e98f3593e0864ef16830b",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20955,
       "base": "main",
       "head": "5e984fd09326c41a596863a3dee6607d3a1024ad",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20960,
       "base": "main",
       "head": "a74f6f49c275bae1f46af8d7ab2f5dc2ad3af47a",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20963,
       "base": "main",
       "head": "4beab0c60cdb9c80c124b37d4b43c3863b1a38c8",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20965,
       "base": "main",
       "head": "2a48cae631b81b4b58c8dfd7f8379cfad7b6365f",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20976,
       "base": "main",
       "head": "8138b484eaf2e3efa656d1066eb24be63e40435c",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20978,
       "base": "main",
       "head": "1b739a95c949cbbfa52de7bd7e217854ef1aaa6a",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20980,
       "base": "main",
       "head": "87b2d00025337e5d7e5fac0a72245a89702853ec",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20981,
       "base": "main",
       "head": "05caeb6df18ef319fe9e9437e86e39e99cd02bf4",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20986,
       "base": "main",
       "head": "03270639f008359752ba0b4c5a45339ac39eeeb7",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20992,
       "base": "np-oom-scan-contrast-cache",
       "head": "ccac7bb908ef74856a9f51973faffc9204f085ff",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 20996,
       "base": "main",
       "head": "a664619361bcf6cf4409d0b50480c87830ed1ce5",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21000,
       "base": "main",
       "head": "827dabf9582a92820d340c58452b66468f5e2199",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21001,
       "base": "main",
       "head": "ff9cdbc498ebc1d7d41d9e0463d01ab3e25a3415",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21002,
       "base": "main",
       "head": "bbab979c73c81c90a6096626195ae244a1dedd9c",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21005,
       "base": "np-oom-scan-pending-split-close",
       "head": "9effc47aacec86d2be4a44c94249073ac5adda09",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21006,
       "base": "main",
       "head": "5333f0f4e1d8be5bceefc467a9e28feb5a422554",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21009,
       "base": "main",
       "head": "8da602c7e3a74655f98039705bbfede174078e79",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21010,
       "base": "main",
       "head": "c8f5623aa7768f9dcb6b26303d4af7dba375c04f",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21011,
       "base": "np-oom-scan-daemon-late-exit",
       "head": "dc5418efc2f3257d3b07b01ea6df1aecbbbc2187",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21012,
       "base": "main",
       "head": "1ee3295630baf2e7c10e17d51978ef7fc02d22bc",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21014,
       "base": "main",
       "head": "099f3396524554fc6725a7f0b727434dc7369527",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21018,
       "base": "main",
       "head": "cdbf8609e7bed60f38c0ba68cd678824e5b6ab68",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21019,
       "base": "np-oom-scan-daemon-late-exit",
       "head": "d60b74976e7b6bd78f8fabf1e1411058ce0ef2e1",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21020,
       "base": "main",
       "head": "ee8d1c0c4a4fd87e09d24895c0525497006dc5a9",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21021,
       "base": "main",
       "head": "840f32b645882b70fdecee0a25e4971e70b6f0f5",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21022,
       "base": "main",
       "head": "97338c35d95151b744cc653f328a1180f17dd182",
       "state": "FAILURE",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21024,
       "base": "main",
       "head": "ff8411085a4b588ca313672a53957c1d7e9a7aa5",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21112,
       "base": "np-oom-scan-terminal-cell-retention",
       "head": "f893dc4a7598e77944b53f644a874d838a080ce6",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21113,
       "base": "main",
       "head": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21128,
       "base": "main",
       "head": "fa06e08229e677e69592e6f68ea4f9e5a96ffc2b",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21129,
       "base": "main",
       "head": "1f231d6147852a729fcbe4d2b5ad7262391fee27",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21131,
       "base": "main",
       "head": "671bf4c3a0fad1140a6c37c1f026fc96a4b17a1d",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21135,
       "base": "main",
       "head": "90162ad9b45d2d52c353ad8788cf9a4b80f13e8b",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21136,
       "base": "main",
       "head": "967357866c1ce8c2b805a1675198dc0f722fd04e",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21138,
       "base": "main",
       "head": "86bb5899725ccceedac0537e2d68f61d5149bbed",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21139,
       "base": "main",
       "head": "66d12af6a54cc928f269dae02c399db7d8431f03",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21140,
       "base": "main",
       "head": "b11197c371f6e0e75d6096004b39a5d18829ee52",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21142,
       "base": "main",
       "head": "0c87f12809329eb76f77c9ebaba7fc821c404db7",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21144,
       "base": "main",
       "head": "ac2316d6c7ea975a2646c064492c17f98e4307c6",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21150,
       "base": "main",
       "head": "5c00d5d2acfce6ddea7f5281d8cd1fcb452eff7a",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21160,
       "base": "main",
       "head": "d83da0060426ef3ceeb1052a4feb4bb9119901f1",
       "state": "SUCCESS",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21162,
       "base": "main",
       "head": "4e106236a8baa4a160ca8a8b97dda22fee766013",
-      "state": "PENDING",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21164,
       "base": "main",
       "head": "e7751fbbfa0908e814558c56947e1ab6dab6ab06",
-      "state": "PENDING",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     },
     {
       "number": 21167,
       "base": "main",
-      "head": "458e11e9f3f5981a85fc1006083c19738a8b26e3",
+      "head": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "state": "SUCCESS",
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
+    },
+    {
+      "number": 21175,
+      "base": "main",
+      "head": "4ad5d393f77d44dfb0ef2845bc287a947375fc38",
       "state": "PENDING",
-      "observedAt": "2026-09-17T05:32:21.280024+00:00"
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
+    },
+    {
+      "number": 21178,
+      "base": "main",
+      "head": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "state": "PENDING",
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
+    },
+    {
+      "number": 21185,
+      "base": "main",
+      "head": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+      "state": "PENDING",
+      "observedAt": "2026-09-17T07:26:27.577402+00:00"
     }
   ],
   "correctedPatchFailures": [
@@ -526,12 +547,12 @@
               },
               {
                 "path": "src/main/native-chat/transcript-watch.test.ts",
-                "message": "AssertionError: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n ❯ src/main/native-chat/transcript-watch.test.ts:724:47\n\n",
+                "message": "AssertionError: expected 1 to be +0 // Object.is equality\n\n- Expected\n+ Received\n\n- 0\n+ 1\n\n \u276f src/main/native-chat/transcript-watch.test.ts:724:47\n\n",
                 "annotationLevel": "FAILURE"
               },
               {
                 "path": "src/main/native-chat/transcript-watch.test.ts",
-                "message": "Error: timed out waiting for condition\n ❯ waitFor src/main/native-chat/transcript-watch.test.ts:76:13\n ❯ src/main/native-chat/transcript-watch.test.ts:602:5\n\n",
+                "message": "Error: timed out waiting for condition\n \u276f waitFor src/main/native-chat/transcript-watch.test.ts:76:13\n \u276f src/main/native-chat/transcript-watch.test.ts:602:5\n\n",
                 "annotationLevel": "FAILURE"
               }
             ]
@@ -3137,7 +3158,7 @@
                 {
                   "path": "src/main/native-chat/transcript-watch-liveness.test.ts",
                   "title": "src/main/native-chat/transcript-watch-liveness.test.ts > native chat transcript watcher liveness > replaces a same-size prefix rewrite with an unchanged trailing boundary",
-                  "message": "AssertionError: expected \"vi.fn()\" to be called once, but got 2 times\n ❯ src/main/native-chat/transcript-watch-liveness.test.ts:183:26\n\n",
+                  "message": "AssertionError: expected \"vi.fn()\" to be called once, but got 2 times\n \u276f src/main/native-chat/transcript-watch-liveness.test.ts:183:26\n\n",
                   "annotationLevel": "FAILURE"
                 }
               ]
@@ -3158,7 +3179,7 @@
                 {
                   "path": "src/renderer/src/lib/browser-history-match.performance.test.ts",
                   "title": "src/renderer/src/lib/browser-history-match.performance.test.ts > browser history match performance budget > prepares a cold corpus within budget",
-                  "message": "AssertionError: expected 2.711498000000006 to be less than 2\n ❯ src/renderer/src/lib/browser-history-match.performance.test.ts:50:35\n\n",
+                  "message": "AssertionError: expected 2.711498000000006 to be less than 2\n \u276f src/renderer/src/lib/browser-history-match.performance.test.ts:50:35\n\n",
                   "annotationLevel": "FAILURE"
                 }
               ]
@@ -3240,6 +3261,39 @@
       "correction": "Skip the optional bridge request when no window exists; preserve the existing synchronous store close.",
       "publishedHead": "718ead7ea9f6296d69ceb7d1460a3579116fe85f",
       "validation": "42 tests across four affected suites; independent five-test review; before/after restart proof remains two expected baseline failures and ten fixed passes; Web typecheck, lint and changed-code quality passed."
+    },
+    "sshEmptyFileFixture": {
+      "pullRequest": 21167,
+      "failedHead": "458e11e9f3f5981a85fc1006083c19738a8b26e3",
+      "publishedHead": "17b57bfbc486449fbb4cad453ce2fc6e96c4a8ee",
+      "primaryCommit": "f142544a8653eedab2eec0237a9005001497b2f5",
+      "cause": "The old general provider test double omitted the synchronous beforeResolve metadata callback and timed out.",
+      "correction": "Move the existing empty-file control into the existing streaming mux fixture and assert stream/disposal listeners are released. No product change.",
+      "validation": "124 focused tests pass; baseline lifetime control fails as expected with22other controls passing; ordinary lint/React Doctor pass. Current combined-worktree changed gate has only in-progress Monaco fixture findings.",
+      "jobUrl": "https://github.com/stablyai/orca/actions/runs/35186075669/job/105088389138",
+      "otherFailure": "Untouched windows-pty-job.win32.test.ts: grandchild never reported pid; identical main/topic blob c5f408f73115a11821b06fafe04ca28eaa15acb7. Cause unproven; new-head CI pending."
+    },
+    "pairedHostPublishedFixture": {
+      "pullRequest": 21175,
+      "failedHead": "ace839c0ffdd9659fdf65d19e0c74284658fbd7d",
+      "publishedHead": "4ad5d393f77d44dfb0ef2845bc287a947375fc38",
+      "primaryCommit": "c4388abf8ffa8bf5cfcb603e4d765ffd177a392b",
+      "jobUrl": "https://github.com/stablyai/orca/actions/runs/35190942403/job/105103456606",
+      "cause": "Permanent fixture passed audit branch second argument to main one-argument handler",
+      "correction": "Explicit fenced one-argument publication fixture; primary retains its current two-argument signature. No product behavior changes.",
+      "validation": "Exact publication-source Node typecheck,16 projected-main tests,28 primary tests,78 Node and78 Electron cases; independent7primary/8publication path hash verification,888 source fences and reversible patches.",
+      "evidence": "docs/audits/paired-host-session-partition-retirement/validation.json"
+    },
+    "monacoAttachmentFixture": {
+      "pullRequest": 21178,
+      "failedHead": "082e8659238d59ae4d12ad78607408264226e06a",
+      "publishedHead": "29820ed587cab4f2ab31a9306ca2180355b3e745",
+      "primaryCommit": "16d4ff48cf257e3ed841db2a69a46c335c90af42",
+      "jobUrl": "https://github.com/stablyai/orca/actions/runs/35191331126/job/105104807447",
+      "cause": "Reflect.get/Reflect.apply fixture calls forbidden by separate CI anti-slop gate",
+      "correction": "Checked attachment port with direct receiver-preserving calls; product/proof graphs unchanged",
+      "validation": "46tests/7suites, actual Web typecheck, five fixture quality configurations, explicit anti-slop on all13published source paths;3correction paths and17artifact hashes verified against publication.",
+      "evidence": "docs/audits/closed-editor-model-lifetime/validation.json"
     }
   },
   "reflowAndEmptyTabFollowup": {
@@ -3250,5 +3304,87 @@
       "emptyTab": "29 focused/43 existing tests;47 mainbase overlay; desktop typechecks; independent review; postcommit before2fail8controls,after10pass"
     },
     "limits": "Both current PRchecks pending. Prior CI failures remain recorded below; no claim allCIgreen. Xterm stacks on20992; publication preserves unrelatedWebGLlockhash and records projected-lock qualification."
+  },
+  "finalHandoffLeafReview": {
+    "scope": "Two previously unclassified failed shard5 logs; no patch changes or reruns",
+    "failures": [
+      {
+        "pullRequest": 21009,
+        "jobUrl": "https://github.com/stablyai/orca/actions/runs/35077649975/job/104733891264",
+        "logSha256": "44e09c8bbf42f17b6f12f5a1b067d61d7eec10982412dd6124b17e69ba94be5b",
+        "passingFiles": 1094,
+        "passingTests": 10067,
+        "unhandledErrors": 1,
+        "error": "React scheduler ReferenceError: window is not defined",
+        "vitestAttribution": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx",
+        "cause": "Asynchronous source not attributed; test file attribution is not proof of faulting callback"
+      },
+      {
+        "pullRequest": 21010,
+        "jobUrl": "https://github.com/stablyai/orca/actions/runs/35077651745/job/104733965979",
+        "logSha256": "2b28206841c9b585d8800f3c43fb1c24a471b2aff6d996643697314b8a12c983",
+        "passingFiles": 1092,
+        "passingTests": 9985,
+        "unhandledErrors": 1,
+        "error": "React scheduler ReferenceError: window is not defined",
+        "vitestAttribution": "src/renderer/src/components/right-sidebar/AiVaultSessionSubagents.test.tsx",
+        "cause": "Asynchronous source not attributed; test file attribution is not proof of faulting callback"
+      }
+    ],
+    "currentMainCorrection": {
+      "observedAt": "2026-09-17T07:01:31Z",
+      "path": "src/renderer/src/components/native-chat/NativeChatMessageList.windowing.test.tsx",
+      "ref": "main",
+      "blob": "b843a6bdc5dd0b12d64809d21c7649160e0f3747",
+      "exactNativeChatMessageTypeTokenOccurrences": 0,
+      "result": "Historical unused type import is absent on current main; refresh/retest old PR merge trees, preserve separate test-failure limits"
+    }
+  },
+  "finalHandoff": {
+    "userInstruction": "Finish the current fixes then pause the goal",
+    "auditWorkStopped": true,
+    "goalToolStatus": "Active at finalization; available goal tool cannot pause. Do not mark the unfinished comprehensive objective complete.",
+    "pullRequestCount": 59,
+    "mainBased": 54,
+    "stacked": 5,
+    "mergedByAudit": 0,
+    "handoff": "docs/audits/memory-pr-review-handoff-2026-09-17.md",
+    "ciStatus": "docs/audits/memory-pr-handoff-status-2026-09-17.json",
+    "pluginFinalPublication": {
+      "pullRequest": 21185,
+      "primaryCommit": "6607a8ab9ea9824ab2d7f19963c2b21367fb65e2",
+      "publishedHead": "f1e7e62d3cf59cb6667e330f9a3f930d57490f4a",
+      "verifiedPaths": 33,
+      "internalArtifactHashes": 38,
+      "tests": 89,
+      "comparativeCases": 16,
+      "explicitAntiSlopCodePaths": 23,
+      "evidence": "docs/audits/plugin-uninstall-log-retirement/validation.json"
+    },
+    "limits": [
+      "All tracked files inventoried and mechanically searched; manual review follows selected ownership candidates, not proof every line is safe",
+      "No affected-host data; #19831 and #19768 remain causally unattributed",
+      "Further scanner/native/hidden-worktree and renderer paired-host leads retained without new fixes"
+    ],
+    "localFinalGate": {
+      "comparisonBase": "587f90770ce7ab79c622726800f4c5c1997b421c",
+      "changedCodeFiles": 68,
+      "newFindings": 0,
+      "scans": [
+        "code quality",
+        "casting",
+        "type-aware",
+        "React Doctor",
+        "design system",
+        "casting SAFETY rationale"
+      ]
+    },
+    "inventory": {
+      "trackedPaths": 27356,
+      "inventoryRowsExcludingSelf": 27355,
+      "sourceFilesSearched": 25758,
+      "matchingSourceFiles": 7916,
+      "independentHashVerification": "Performed before and after checkpoint commit; inventory excludes itself only"
+    }
   }
 }

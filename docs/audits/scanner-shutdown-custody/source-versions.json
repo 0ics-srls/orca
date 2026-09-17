@@ -1,0 +1,102 @@
+[
+  {
+    "path": "src/main/ai-vault/session-scanner-service-client.ts",
+    "workingSha256": "6a71b08c6cb7de3cd0d0aa1a193d32f2f8835f361af083b91fdf72ff55c1bedd",
+    "versions": [
+      {
+        "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+        "available": true,
+        "sha256": "6a71b08c6cb7de3cd0d0aa1a193d32f2f8835f361af083b91fdf72ff55c1bedd"
+      },
+      {
+        "ref": "v1.4.195",
+        "available": true,
+        "sha256": "785582b374cdcdf575323c79ebb16a79d8c6000a12f09b939e7ab573428c5955"
+      }
+    ]
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-client-state.ts",
+    "workingSha256": "b6516ae06cfcdce44946a08441887f3987b020afcd0795c07635fe70a7f8f76c",
+    "versions": [
+      {
+        "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+        "available": true,
+        "sha256": "b6516ae06cfcdce44946a08441887f3987b020afcd0795c07635fe70a7f8f76c"
+      },
+      {
+        "ref": "v1.4.195",
+        "available": true,
+        "sha256": "cb8bce9cf53356c97f4cd3bf07947a23627ec5f0f29a9844b02e417e4177d38a"
+      }
+    ]
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-entry.ts",
+    "workingSha256": "e300d4922da94da09abb3c14bbb240ef9593d8a4834a37598c1c2f77b14dcbf5",
+    "versions": [
+      {
+        "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+        "available": true,
+        "sha256": "846f9af9577dbaf14d05aa5a2eea9e16a44a28ef7993e6b04c43b65db1f1f44f"
+      },
+      {
+        "ref": "v1.4.195",
+        "available": true,
+        "sha256": "c261780237cbcb97adc34d7c406890185b56c540d5e1333945a58ed7c5105365"
+      }
+    ]
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-spawn.ts",
+    "workingSha256": "064f1d299547ec05e63a451a77774098cdb0ce9cbf45406167be6cbbcb846e19",
+    "versions": [
+      {
+        "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+        "available": true,
+        "sha256": "064f1d299547ec05e63a451a77774098cdb0ce9cbf45406167be6cbbcb846e19"
+      },
+      {
+        "ref": "v1.4.195",
+        "available": true,
+        "sha256": "4dd95f6ce3af676f99c60d2f4085d7fcbbf0cdc94bc6a20ca1e910f9e2b13717"
+      }
+    ]
+  },
+  {
+    "path": "src/main/startup/main-process-quit.ts",
+    "workingSha256": "88b559ae9ac1d24360ecdefb0b46d6289bdb7513d6d27b6d2ac5efe6ac37892a",
+    "versions": [
+      {
+        "ref": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+        "available": true,
+        "sha256": "88b559ae9ac1d24360ecdefb0b46d6289bdb7513d6d27b6d2ac5efe6ac37892a"
+      },
+      {
+        "ref": "v1.4.195",
+        "available": false,
+        "sha256": null
+      }
+    ]
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-protocol.ts",
+    "workingSha256": "3a1a952674cdcbfb25454ff574d4a95f6923081fb0d874da51086b32ede55b75",
+    "versions": []
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-restart-policy.ts",
+    "workingSha256": "15ba1dca794e0dab6509a33a2c7ab68f4f6d64fad6f5de2d71af0bdd4158d866",
+    "versions": []
+  },
+  {
+    "path": "src/main/ai-vault/session-scanner-service-test-child.ts",
+    "workingSha256": "6f3d528a17982c01aab09d428d32a085068289e8ceb50941fb3517c6da1b5a1f",
+    "versions": []
+  },
+  {
+    "path": "src/main/ai-vault/ai-vault-scan-cancellation.ts",
+    "workingSha256": "ed066ca50633c0d2493e1733051242b2cbfe5f0509cec17df6174081b5142cc8",
+    "versions": []
+  }
+]

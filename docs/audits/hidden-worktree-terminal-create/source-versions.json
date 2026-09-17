@@ -1,0 +1,910 @@
+{
+  "scope": "35 explicitly selected source paths at current worktree and three named refs; null means absent at that ref. Historical monolithic wait/selector excerpts are read directly from Git objects. Method signature/body comparison excludes the private/protected visibility modifier. No whole historical release execution is claimed.",
+  "refs": {
+    "main291b": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+    "reportedV194": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+    "reportSourceV191": "6b48a370d9d363f3b7d997573eaef5490381a946"
+  },
+  "comparisons": [
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/cli/handlers/terminal.ts",
+      "sha256": "9a5b624153c5dbf1454c504cbf6dab42607c8078f413be6daa661389d675299f",
+      "workingSha256": "6352e60c0f7c0beec49e124a552b3acc2ddd53f8c443293ace4a4442a3e526be",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/cli/codex-command-classification.ts",
+      "sha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "workingSha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/rpc/methods/terminal/terminal-lifecycle-methods.ts",
+      "sha256": "014cee46dc3ab22ab1b381a91793cafd5499bc721891a55a07548f156b085f3d",
+      "workingSha256": "64e90871b23b2dab1c5e3eb58d98e1e128dd372312fb565df828d97e1050f0a3",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-create-terminal.ts",
+      "sha256": "1a76531f42e96cd702f90cd22b3430e6de93b3596d22c2f9850152563fd5f17b",
+      "workingSha256": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-terminal-create-deduplication.ts",
+      "sha256": "2d66cc97725d44cab96bc63d8fd6beb55a58a43aa5836d55534a3133980d904c",
+      "workingSha256": "2d66cc97725d44cab96bc63d8fd6beb55a58a43aa5836d55534a3133980d904c",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-create-terminal-desktop.ts",
+      "sha256": "8b505d20c68cc3bb6d47969d8da625680947e335e5923e1e4e5fcbfee427ec07",
+      "workingSha256": "74739dfa78dba37c71bd154452e22ad5f84c886bdf0a95ecb4476ea27c513c26",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts",
+      "sha256": "604bfd04b3289628e1b3f88ab8d0254eaee58cfb10af97f534509e4c536b397b",
+      "workingSha256": "604bfd04b3289628e1b3f88ab8d0254eaee58cfb10af97f534509e4c536b397b",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-resolve-worktree-selector.ts",
+      "sha256": "5838605da94d0ee3bab8f03ecc881688f80db37bf9a6aecd916f8e68fffa3579",
+      "workingSha256": "5838605da94d0ee3bab8f03ecc881688f80db37bf9a6aecd916f8e68fffa3579",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts",
+      "sha256": "eebf47e574a48c7d205e20c444d57ee9c2b04d9d94b99d45e3dd5159bbc5bcb6",
+      "workingSha256": "eebf47e574a48c7d205e20c444d57ee9c2b04d9d94b99d45e3dd5159bbc5bcb6",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts",
+      "sha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+      "workingSha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/repo-worktree-row-resolution.ts",
+      "sha256": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+      "workingSha256": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/ipc/worktrees/listing/register-worktree-catalog-handlers.ts",
+      "sha256": "db07c520c6a9cc309345759e3209405465585176e3075a56e0187e6fc1e0e2a5",
+      "workingSha256": "db07c520c6a9cc309345759e3209405465585176e3075a56e0187e6fc1e0e2a5",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/ipc/worktrees/listing/ssh-worktree-fallback.ts",
+      "sha256": "9fbab508052c190568fde1ea82c8a5607e797820ccd5f4c0f0d0f52b2f0ed1f0",
+      "workingSha256": "9fbab508052c190568fde1ea82c8a5607e797820ccd5f4c0f0d0f52b2f0ed1f0",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/shared/worktree/ownership.ts",
+      "sha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "workingSha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/shared/worktree-visibility-resolution.ts",
+      "sha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "workingSha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/shared/external-worktree-visibility.ts",
+      "sha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "workingSha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
+      "sha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "workingSha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+      "sha256": "2ecd6b5f90a98a2075c570c126656d893b912fb05cd123264f78b1714ba86016",
+      "workingSha256": "aa0c3d30c2281dd2d8cf686ea0c087be2223e08a4358b291a017b7be88363928",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-command-state.ts",
+      "sha256": "2e33dbf9d9463fea0d68b9ddea8a69833dab6189a4a540b44f64d14407c1193f",
+      "workingSha256": "2e33dbf9d9463fea0d68b9ddea8a69833dab6189a4a540b44f64d14407c1193f",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/lib/terminal-worktree-route.ts",
+      "sha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "workingSha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/lib/worktree-operation-route.ts",
+      "sha256": "60b328bad436069728eec5c3ba9466d6d49a6ffcc0936c21a14081f0136bd9a9",
+      "workingSha256": "84d15a22381aabf85f1ba9c45a696950607e3329cedc3568f9fb96d669819738",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetched-worktree-merge.ts",
+      "sha256": "d39dc6022e961cc096afdbe920175c7c51f5a5d57273f16083851a08eec94702",
+      "workingSha256": "d39dc6022e961cc096afdbe920175c7c51f5a5d57273f16083851a08eec94702",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/slices/worktrees/listing/worktree-host-ownership.ts",
+      "sha256": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+      "workingSha256": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetch-worktrees.ts",
+      "sha256": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+      "workingSha256": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+      "sha256": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+      "workingSha256": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+      "sha256": "c301c484a5bb664b9c0ce400988a3bd020d518caeb3ddcdac8fb793148100ddb",
+      "workingSha256": "c301c484a5bb664b9c0ce400988a3bd020d518caeb3ddcdac8fb793148100ddb",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/slices/terminal-orphan-helpers.ts",
+      "sha256": "93c5b6a16ab5009108693de1f5f5c76c7222a249094e702d43d83ebbabf3d07f",
+      "workingSha256": "93c5b6a16ab5009108693de1f5f5c76c7222a249094e702d43d83ebbabf3d07f",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/store/slices/worktrees/session/set-active-worktree.ts",
+      "sha256": "d66c8caa675bf715a47162fdc92724462ac613273f93ab2b1d1d4534d0f2ab14",
+      "workingSha256": "d66c8caa675bf715a47162fdc92724462ac613273f93ab2b1d1d4534d0f2ab14",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/Terminal.tsx",
+      "sha256": "7fa8ab4ea6be741f95bed86d8159e0f020704a2f460b8c654ca45d6151a567fc",
+      "workingSha256": "7fa8ab4ea6be741f95bed86d8159e0f020704a2f460b8c654ca45d6151a567fc",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/use-terminal-workspace-foundation.ts",
+      "sha256": "1635b66b066658bcfb25646d5075a2fe1d62c42f507907b855e9a33958e96ea4",
+      "workingSha256": "1635b66b066658bcfb25646d5075a2fe1d62c42f507907b855e9a33958e96ea4",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/workspace-surface-projection.ts",
+      "sha256": "b30257b60aefe5a86877b3b587adb9b2e5d4f3152eeb1a4856a3c898fc835da1",
+      "workingSha256": "b30257b60aefe5a86877b3b587adb9b2e5d4f3152eeb1a4856a3c898fc835da1",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/TerminalSplitWorkspaceSurfaces.tsx",
+      "sha256": "18168d1c47e2e8ea039a1056d49766221aa345e6583dad224a98262d6b8486ef",
+      "workingSha256": "18168d1c47e2e8ea039a1056d49766221aa345e6583dad224a98262d6b8486ef",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/TerminalLegacyTerminalPanes.tsx",
+      "sha256": "d48724f0a566428fa4d9780d8039aa6756c4887b5dc923d17f831d8d767c11e2",
+      "workingSha256": "d48724f0a566428fa4d9780d8039aa6756c4887b5dc923d17f831d8d767c11e2",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
+      "sha256": "2cfac9328c8f9691ef59400fc3200e68b795cdddcf774742a38c8313f737a413",
+      "workingSha256": "2cfac9328c8f9691ef59400fc3200e68b795cdddcf774742a38c8313f737a413",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "main291b",
+      "commit": "291b4ddd6f1c1af480169885e0fda7f9c78ff053",
+      "path": "src/main/runtime/orca-runtime.ts",
+      "sha256": "de1e82e14c1ea541f3d5100eade6af4786346c5370d6a18fc8a1848d28d0c459",
+      "workingSha256": "28084b4cce95506fb0f67a50bdef4287144806f65a6862e0fb3d3b8354a7db3b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/cli/handlers/terminal.ts",
+      "sha256": "af45b271d977c46a0addf1f90316779bf7c4d2b61206b150a10642a3787d9b90",
+      "workingSha256": "6352e60c0f7c0beec49e124a552b3acc2ddd53f8c443293ace4a4442a3e526be",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/cli/codex-command-classification.ts",
+      "sha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "workingSha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/rpc/methods/terminal/terminal-lifecycle-methods.ts",
+      "sha256": "b721ef39508fd2af0e020c5a387bfad854662ca98684352bbd85104c70444cea",
+      "workingSha256": "64e90871b23b2dab1c5e3eb58d98e1e128dd372312fb565df828d97e1050f0a3",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-create-terminal.ts",
+      "sha256": null,
+      "workingSha256": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-terminal-create-deduplication.ts",
+      "sha256": null,
+      "workingSha256": "2d66cc97725d44cab96bc63d8fd6beb55a58a43aa5836d55534a3133980d904c",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-create-terminal-desktop.ts",
+      "sha256": null,
+      "workingSha256": "74739dfa78dba37c71bd154452e22ad5f84c886bdf0a95ecb4476ea27c513c26",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts",
+      "sha256": null,
+      "workingSha256": "604bfd04b3289628e1b3f88ab8d0254eaee58cfb10af97f534509e4c536b397b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-resolve-worktree-selector.ts",
+      "sha256": null,
+      "workingSha256": "5838605da94d0ee3bab8f03ecc881688f80db37bf9a6aecd916f8e68fffa3579",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts",
+      "sha256": null,
+      "workingSha256": "eebf47e574a48c7d205e20c444d57ee9c2b04d9d94b99d45e3dd5159bbc5bcb6",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts",
+      "sha256": null,
+      "workingSha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/repo-worktree-row-resolution.ts",
+      "sha256": "cfecf3eaf021c7b0db330dd78acfb380bfd4d21468023f8d70de3e698c3e3870",
+      "workingSha256": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/ipc/worktrees/listing/register-worktree-catalog-handlers.ts",
+      "sha256": "ffebeff2bf94d1622ef5d0b153d41d5a4f8f08af9e2a44ceff6bced65e841a7a",
+      "workingSha256": "db07c520c6a9cc309345759e3209405465585176e3075a56e0187e6fc1e0e2a5",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/ipc/worktrees/listing/ssh-worktree-fallback.ts",
+      "sha256": "d363f4ca5279248e50d208671bd76360f9d565fbc8aed711c0e7f63157b237fb",
+      "workingSha256": "9fbab508052c190568fde1ea82c8a5607e797820ccd5f4c0f0d0f52b2f0ed1f0",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/shared/worktree/ownership.ts",
+      "sha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "workingSha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/shared/worktree-visibility-resolution.ts",
+      "sha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "workingSha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/shared/external-worktree-visibility.ts",
+      "sha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "workingSha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
+      "sha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "workingSha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+      "sha256": "29a877d8221aff5a9173f66ffe226361a6ee6ebb061376cfd9110b13444b711d",
+      "workingSha256": "aa0c3d30c2281dd2d8cf686ea0c087be2223e08a4358b291a017b7be88363928",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-command-state.ts",
+      "sha256": "0834582fcc2f95b0adecb518ba43058f4fbc37591d1ec1f6d14da7a020a5e1ab",
+      "workingSha256": "2e33dbf9d9463fea0d68b9ddea8a69833dab6189a4a540b44f64d14407c1193f",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/lib/terminal-worktree-route.ts",
+      "sha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "workingSha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/lib/worktree-operation-route.ts",
+      "sha256": "84d15a22381aabf85f1ba9c45a696950607e3329cedc3568f9fb96d669819738",
+      "workingSha256": "84d15a22381aabf85f1ba9c45a696950607e3329cedc3568f9fb96d669819738",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetched-worktree-merge.ts",
+      "sha256": "5e8a434cba55cc2b4484fe692c1ec6a9accb04b9dfcf2e1f025af99233023ff3",
+      "workingSha256": "d39dc6022e961cc096afdbe920175c7c51f5a5d57273f16083851a08eec94702",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/slices/worktrees/listing/worktree-host-ownership.ts",
+      "sha256": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+      "workingSha256": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetch-worktrees.ts",
+      "sha256": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+      "workingSha256": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+      "sha256": "691b1384c77b9a4ead8470a36363d1f29c1914c988bead6c38dd87330199fe8a",
+      "workingSha256": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+      "sha256": "1016b4c0957d750001c5a59771b3856c0ef14feb3e79d9dbf3fb4665277c3334",
+      "workingSha256": "c301c484a5bb664b9c0ce400988a3bd020d518caeb3ddcdac8fb793148100ddb",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/slices/terminal-orphan-helpers.ts",
+      "sha256": "aa329bad57957baf6ca87d4f83688816eda69f1c7a86a2b7661a7cc568b25ab5",
+      "workingSha256": "93c5b6a16ab5009108693de1f5f5c76c7222a249094e702d43d83ebbabf3d07f",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/store/slices/worktrees/session/set-active-worktree.ts",
+      "sha256": "a4b61468c99e005b55a5d5a1b29ad394333d96749dfab15425725fae9b77c12d",
+      "workingSha256": "d66c8caa675bf715a47162fdc92724462ac613273f93ab2b1d1d4534d0f2ab14",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/Terminal.tsx",
+      "sha256": "3a6d8041f4ab37854f21250bb56a598f35b7c2d801998b6951130bb7d5c528a2",
+      "workingSha256": "7fa8ab4ea6be741f95bed86d8159e0f020704a2f460b8c654ca45d6151a567fc",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/use-terminal-workspace-foundation.ts",
+      "sha256": null,
+      "workingSha256": "1635b66b066658bcfb25646d5075a2fe1d62c42f507907b855e9a33958e96ea4",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/workspace-surface-projection.ts",
+      "sha256": null,
+      "workingSha256": "b30257b60aefe5a86877b3b587adb9b2e5d4f3152eeb1a4856a3c898fc835da1",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/TerminalSplitWorkspaceSurfaces.tsx",
+      "sha256": null,
+      "workingSha256": "18168d1c47e2e8ea039a1056d49766221aa345e6583dad224a98262d6b8486ef",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/TerminalLegacyTerminalPanes.tsx",
+      "sha256": null,
+      "workingSha256": "d48724f0a566428fa4d9780d8039aa6756c4887b5dc923d17f831d8d767c11e2",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
+      "sha256": "68f348a377510419596ec5a60cc2bae2bf791a807e385508cc55698a2bae492a",
+      "workingSha256": "2cfac9328c8f9691ef59400fc3200e68b795cdddcf774742a38c8313f737a413",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportedV194",
+      "commit": "5d709e45f6b0ba51d62c5b81870895be65c60177",
+      "path": "src/main/runtime/orca-runtime.ts",
+      "sha256": "133c1144ae36ca3f2e97d3995176eb96616a5dc9c4e1527d49f722d81d00c6d3",
+      "workingSha256": "28084b4cce95506fb0f67a50bdef4287144806f65a6862e0fb3d3b8354a7db3b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/cli/handlers/terminal.ts",
+      "sha256": "a3fb93bce879851fef8f60c648eb248469fb59355107f9209af28c9b01fda3df",
+      "workingSha256": "6352e60c0f7c0beec49e124a552b3acc2ddd53f8c443293ace4a4442a3e526be",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/cli/codex-command-classification.ts",
+      "sha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "workingSha256": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/rpc/methods/terminal/terminal-lifecycle-methods.ts",
+      "sha256": "b721ef39508fd2af0e020c5a387bfad854662ca98684352bbd85104c70444cea",
+      "workingSha256": "64e90871b23b2dab1c5e3eb58d98e1e128dd372312fb565df828d97e1050f0a3",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-create-terminal.ts",
+      "sha256": null,
+      "workingSha256": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-terminal-create-deduplication.ts",
+      "sha256": null,
+      "workingSha256": "2d66cc97725d44cab96bc63d8fd6beb55a58a43aa5836d55534a3133980d904c",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-create-terminal-desktop.ts",
+      "sha256": null,
+      "workingSha256": "74739dfa78dba37c71bd154452e22ad5f84c886bdf0a95ecb4476ea27c513c26",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts",
+      "sha256": null,
+      "workingSha256": "604bfd04b3289628e1b3f88ab8d0254eaee58cfb10af97f534509e4c536b397b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-resolve-worktree-selector.ts",
+      "sha256": null,
+      "workingSha256": "5838605da94d0ee3bab8f03ecc881688f80db37bf9a6aecd916f8e68fffa3579",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts",
+      "sha256": null,
+      "workingSha256": "eebf47e574a48c7d205e20c444d57ee9c2b04d9d94b99d45e3dd5159bbc5bcb6",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts",
+      "sha256": null,
+      "workingSha256": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/repo-worktree-row-resolution.ts",
+      "sha256": "893270e00dcff794de428cde58613e503321f13d799db3f73c1b8c41724552db",
+      "workingSha256": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/ipc/worktrees/listing/register-worktree-catalog-handlers.ts",
+      "sha256": "d70cd9d8b0ad2e7512d2e96f4102f32d7978195eefd79774e48cc183459cc4dc",
+      "workingSha256": "db07c520c6a9cc309345759e3209405465585176e3075a56e0187e6fc1e0e2a5",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/ipc/worktrees/listing/ssh-worktree-fallback.ts",
+      "sha256": "dbf5d2d4bafc9377ef02135368a7159dd65ec890933fc60a6cc051d2c90abee7",
+      "workingSha256": "9fbab508052c190568fde1ea82c8a5607e797820ccd5f4c0f0d0f52b2f0ed1f0",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/shared/worktree/ownership.ts",
+      "sha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "workingSha256": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/shared/worktree-visibility-resolution.ts",
+      "sha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "workingSha256": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/shared/external-worktree-visibility.ts",
+      "sha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "workingSha256": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts",
+      "sha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "workingSha256": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts",
+      "sha256": "29a877d8221aff5a9173f66ffe226361a6ee6ebb061376cfd9110b13444b711d",
+      "workingSha256": "aa0c3d30c2281dd2d8cf686ea0c087be2223e08a4358b291a017b7be88363928",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/hooks/ipc-events/terminal-command-state.ts",
+      "sha256": "0834582fcc2f95b0adecb518ba43058f4fbc37591d1ec1f6d14da7a020a5e1ab",
+      "workingSha256": "2e33dbf9d9463fea0d68b9ddea8a69833dab6189a4a540b44f64d14407c1193f",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/lib/terminal-worktree-route.ts",
+      "sha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "workingSha256": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+      "byteEqualToWorking": true
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/lib/worktree-operation-route.ts",
+      "sha256": "42bd1eaa27b8b66a7a30e51c0360e30a61ca2afa1ace3b507623ed6a913cb762",
+      "workingSha256": "84d15a22381aabf85f1ba9c45a696950607e3329cedc3568f9fb96d669819738",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetched-worktree-merge.ts",
+      "sha256": "5e8a434cba55cc2b4484fe692c1ec6a9accb04b9dfcf2e1f025af99233023ff3",
+      "workingSha256": "d39dc6022e961cc096afdbe920175c7c51f5a5d57273f16083851a08eec94702",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/slices/worktrees/listing/worktree-host-ownership.ts",
+      "sha256": "8776f8a8aace148b9d35c54ec47581943adeab76ce28d854c5f2a65846e8825b",
+      "workingSha256": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/slices/worktrees/listing/fetch-worktrees.ts",
+      "sha256": "2f7a0416877279b461fdbccc7d261bd767b5d2a23c9b96c336e4e07f07660c66",
+      "workingSha256": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/terminals/terminal-tab-creation.ts",
+      "sha256": "82709f6aaf742f146ae3bcb5dd3ba2df798508161409919df2a4b59ff8e404bf",
+      "workingSha256": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/terminals/terminal-startup-queues.ts",
+      "sha256": "14f326a62730f210b0a1582d65424a2a7b751d73e2c56483e6d922c1de68594a",
+      "workingSha256": "c301c484a5bb664b9c0ce400988a3bd020d518caeb3ddcdac8fb793148100ddb",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/slices/terminal-orphan-helpers.ts",
+      "sha256": "aa329bad57957baf6ca87d4f83688816eda69f1c7a86a2b7661a7cc568b25ab5",
+      "workingSha256": "93c5b6a16ab5009108693de1f5f5c76c7222a249094e702d43d83ebbabf3d07f",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/store/slices/worktrees/session/set-active-worktree.ts",
+      "sha256": "a4b61468c99e005b55a5d5a1b29ad394333d96749dfab15425725fae9b77c12d",
+      "workingSha256": "d66c8caa675bf715a47162fdc92724462ac613273f93ab2b1d1d4534d0f2ab14",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/Terminal.tsx",
+      "sha256": "9046c36d212ecd12c0895671fa263832ca02ee2f8f4d2abe6e02d17f0d3d91f9",
+      "workingSha256": "7fa8ab4ea6be741f95bed86d8159e0f020704a2f460b8c654ca45d6151a567fc",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/use-terminal-workspace-foundation.ts",
+      "sha256": null,
+      "workingSha256": "1635b66b066658bcfb25646d5075a2fe1d62c42f507907b855e9a33958e96ea4",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/workspace-surface-projection.ts",
+      "sha256": null,
+      "workingSha256": "b30257b60aefe5a86877b3b587adb9b2e5d4f3152eeb1a4856a3c898fc835da1",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/TerminalSplitWorkspaceSurfaces.tsx",
+      "sha256": null,
+      "workingSha256": "18168d1c47e2e8ea039a1056d49766221aa345e6583dad224a98262d6b8486ef",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/TerminalLegacyTerminalPanes.tsx",
+      "sha256": null,
+      "workingSha256": "d48724f0a566428fa4d9780d8039aa6756c4887b5dc923d17f831d8d767c11e2",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts",
+      "sha256": "68f348a377510419596ec5a60cc2bae2bf791a807e385508cc55698a2bae492a",
+      "workingSha256": "2cfac9328c8f9691ef59400fc3200e68b795cdddcf774742a38c8313f737a413",
+      "byteEqualToWorking": false
+    },
+    {
+      "name": "reportSourceV191",
+      "commit": "6b48a370d9d363f3b7d997573eaef5490381a946",
+      "path": "src/main/runtime/orca-runtime.ts",
+      "sha256": "59850c5e59dd70113c542ca95b634b0ba1c0fdbad106888c01a6c15c672f0c37",
+      "workingSha256": "28084b4cce95506fb0f67a50bdef4287144806f65a6862e0fb3d3b8354a7db3b",
+      "byteEqualToWorking": false
+    }
+  ],
+  "currentPaths": {
+    "src/cli/handlers/terminal.ts": "6352e60c0f7c0beec49e124a552b3acc2ddd53f8c443293ace4a4442a3e526be",
+    "src/cli/codex-command-classification.ts": "1d0aa9a5051694b5d8efaa2a2ebfa851abb0b1532129138cd7e5f793866d6e89",
+    "src/main/runtime/rpc/methods/terminal/terminal-lifecycle-methods.ts": "64e90871b23b2dab1c5e3eb58d98e1e128dd372312fb565df828d97e1050f0a3",
+    "src/main/runtime/orca-runtime-create-terminal.ts": "c5d5bd6d2c69c86f2f91a0478b4ca16ee0e6322fc032242029247e75592faa39",
+    "src/main/runtime/orca-runtime-terminal-create-deduplication.ts": "2d66cc97725d44cab96bc63d8fd6beb55a58a43aa5836d55534a3133980d904c",
+    "src/main/runtime/orca-runtime-create-terminal-desktop.ts": "74739dfa78dba37c71bd154452e22ad5f84c886bdf0a95ecb4476ea27c513c26",
+    "src/main/runtime/orca-runtime-restore-live-paired-renderer-session-owned-mobile-terminals.ts": "604bfd04b3289628e1b3f88ab8d0254eaee58cfb10af97f534509e4c536b397b",
+    "src/main/runtime/orca-runtime-resolve-worktree-selector.ts": "5838605da94d0ee3bab8f03ecc881688f80db37bf9a6aecd916f8e68fffa3579",
+    "src/main/runtime/orca-runtime-resolve-browser-network-execution-host-for-worktree.ts": "eebf47e574a48c7d205e20c444d57ee9c2b04d9d94b99d45e3dd5159bbc5bcb6",
+    "src/main/runtime/orca-runtime-list-known-resolved-worktrees-for-explicit-target.ts": "36b23ae998ee90188454a769e4e9fdadc87041a12384a5929f88bc9cc509913a",
+    "src/main/runtime/repo-worktree-row-resolution.ts": "eb0f32a5ff0cddfae4ba8a496ed5fb2a5388d354c24c30c5ef0149e4eb8a21ae",
+    "src/main/ipc/worktrees/listing/register-worktree-catalog-handlers.ts": "db07c520c6a9cc309345759e3209405465585176e3075a56e0187e6fc1e0e2a5",
+    "src/main/ipc/worktrees/listing/ssh-worktree-fallback.ts": "9fbab508052c190568fde1ea82c8a5607e797820ccd5f4c0f0d0f52b2f0ed1f0",
+    "src/shared/worktree/ownership.ts": "13509cd83da5923c2b313b5094cced7dee70e4a15f384c290557d607b77156bf",
+    "src/shared/worktree-visibility-resolution.ts": "b722adfff27a791ae62fac3fc29ae0ab9fa2212284f27f2f19ee9f0b224724e3",
+    "src/shared/external-worktree-visibility.ts": "86749725a0b0fa80a1c75e425d924ddc59add492938fb38eac8d016a4d93d59c",
+    "src/renderer/src/components/sidebar/worktree-list/navigation/use-pending-reveal.ts": "89411fecbe5053e6817d225d3edfe81cfe6ecae46b69b550cbe7bf2477db36d8",
+    "src/renderer/src/hooks/ipc-events/terminal-request-ipc-bridge.ts": "aa0c3d30c2281dd2d8cf686ea0c087be2223e08a4358b291a017b7be88363928",
+    "src/renderer/src/hooks/ipc-events/terminal-command-state.ts": "2e33dbf9d9463fea0d68b9ddea8a69833dab6189a4a540b44f64d14407c1193f",
+    "src/renderer/src/lib/terminal-worktree-route.ts": "f42ab8f05219380f4b4a6cbe0f6b4c8f758444e2d8236bd8a66c6f2dbd4e34a6",
+    "src/renderer/src/lib/worktree-operation-route.ts": "84d15a22381aabf85f1ba9c45a696950607e3329cedc3568f9fb96d669819738",
+    "src/renderer/src/store/slices/worktrees/listing/fetched-worktree-merge.ts": "d39dc6022e961cc096afdbe920175c7c51f5a5d57273f16083851a08eec94702",
+    "src/renderer/src/store/slices/worktrees/listing/worktree-host-ownership.ts": "a45e5cba7432c48b82773a2b76d2fc8965eb69c8aa8bbf98d742232a00a5d611",
+    "src/renderer/src/store/slices/worktrees/listing/fetch-worktrees.ts": "5c26defc67a4da89e31c1a790bc1c530830b4f786903208f033ca5a1a43380ce",
+    "src/renderer/src/store/terminals/terminal-tab-creation.ts": "6cbc077d32d1e58171e0f9aec3acd542590b06aae613edbf66a6c697abffdf5b",
+    "src/renderer/src/store/terminals/terminal-startup-queues.ts": "c301c484a5bb664b9c0ce400988a3bd020d518caeb3ddcdac8fb793148100ddb",
+    "src/renderer/src/store/slices/terminal-orphan-helpers.ts": "93c5b6a16ab5009108693de1f5f5c76c7222a249094e702d43d83ebbabf3d07f",
+    "src/renderer/src/store/slices/worktrees/session/set-active-worktree.ts": "d66c8caa675bf715a47162fdc92724462ac613273f93ab2b1d1d4534d0f2ab14",
+    "src/renderer/src/components/Terminal.tsx": "7fa8ab4ea6be741f95bed86d8159e0f020704a2f460b8c654ca45d6151a567fc",
+    "src/renderer/src/components/use-terminal-workspace-foundation.ts": "1635b66b066658bcfb25646d5075a2fe1d62c42f507907b855e9a33958e96ea4",
+    "src/renderer/src/components/workspace-surface-projection.ts": "b30257b60aefe5a86877b3b587adb9b2e5d4f3152eeb1a4856a3c898fc835da1",
+    "src/renderer/src/components/TerminalSplitWorkspaceSurfaces.tsx": "18168d1c47e2e8ea039a1056d49766221aa345e6583dad224a98262d6b8486ef",
+    "src/renderer/src/components/TerminalLegacyTerminalPanes.tsx": "d48724f0a566428fa4d9780d8039aa6756c4887b5dc923d17f831d8d767c11e2",
+    "src/renderer/src/components/terminal/background-terminal-worktree-mount.ts": "2cfac9328c8f9691ef59400fc3200e68b795cdddcf774742a38c8313f737a413",
+    "src/main/runtime/orca-runtime.ts": "28084b4cce95506fb0f67a50bdef4287144806f65a6862e0fb3d3b8354a7db3b"
+  },
+  "waitMethodSignatureAndBodyIdenticalAcrossAllFour": true,
+  "excerpts": {
+    "working": {
+      "localMetadataGuard": "const fallback =\n          repo?.connectionId && this.store?.getWorktreeMeta(worktreeId)\n            ? this.buildResolvedWorktreeFromId(worktreeId)\n            : null\n        if (fallback !== null) {\n          candidates = [fallback]\n        }\n      }\n    } else if (sel",
+      "waitForTerminalHandle": "waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {\n    const existing = this.resolveHandleForTab(tabId)\n    if (existing) {\n      return Promise.resolve(existing)\n    }\n\n    return new Promise<string>((resolve, reject) => {\n      const timer = setTimeout(() => {\n        const idx = this.graphSyncCallbacks.indexOf(check)\n        if (idx !== -1) {\n          this.graphSyncCallbacks.splice(idx, 1)\n        }\n        reject(new Error('Timed out waiting for terminal handle after creation'))\n      }, timeoutMs)\n\n      const check = (): void => {\n        const handle = this.resolveHandleForTab(tabId)\n        if (handle) {\n          clearTimeout(timer)\n          const idx = this.graphSyncCallbacks.indexOf(check)\n          if (idx !== -1) {\n            this.graphSyncCallbacks.splice(idx, 1)\n          }\n          resolve(handle)\n        }\n      }\n      this.graphSyncCallbacks.push(check)\n      // Why: graph sync may have fired between the initial check and registration; re-check to avoid a missed wake-up.\n      check()\n    })\n  }",
+      "waitMethodSha256": "d4381b3c0bf82a8aa68817e3c7feea9a100af9ec21509b56af160d1620086252"
+    },
+    "main291b": {
+      "localMetadataGuard": "const fallback =\n          repo?.connectionId && this.store?.getWorktreeMeta(worktreeId)\n            ? this.buildResolvedWorktreeFromId(worktreeId)\n            : null\n        if (fallback !== null) {\n          candidates = [fallback]\n        }\n      }\n    } else if (sel",
+      "waitForTerminalHandle": "waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {\n    const existing = this.resolveHandleForTab(tabId)\n    if (existing) {\n      return Promise.resolve(existing)\n    }\n\n    return new Promise<string>((resolve, reject) => {\n      const timer = setTimeout(() => {\n        const idx = this.graphSyncCallbacks.indexOf(check)\n        if (idx !== -1) {\n          this.graphSyncCallbacks.splice(idx, 1)\n        }\n        reject(new Error('Timed out waiting for terminal handle after creation'))\n      }, timeoutMs)\n\n      const check = (): void => {\n        const handle = this.resolveHandleForTab(tabId)\n        if (handle) {\n          clearTimeout(timer)\n          const idx = this.graphSyncCallbacks.indexOf(check)\n          if (idx !== -1) {\n            this.graphSyncCallbacks.splice(idx, 1)\n          }\n          resolve(handle)\n        }\n      }\n      this.graphSyncCallbacks.push(check)\n      // Why: graph sync may have fired between the initial check and registration; re-check to avoid a missed wake-up.\n      check()\n    })\n  }",
+      "waitMethodSha256": "d4381b3c0bf82a8aa68817e3c7feea9a100af9ec21509b56af160d1620086252"
+    },
+    "reportedV194": {
+      "localMetadataGuard": "const fallback =\n          repo?.connectionId && this.store?.getWorktreeMeta(worktreeId)\n            ? this.buildResolvedWorktreeFromId(worktreeId)\n            : null\n        if (fallback !== null) {\n          candidates = [fallback]\n        }\n      }\n    } else if (sel",
+      "waitForTerminalHandle": "waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {\n    const existing = this.resolveHandleForTab(tabId)\n    if (existing) {\n      return Promise.resolve(existing)\n    }\n\n    return new Promise<string>((resolve, reject) => {\n      const timer = setTimeout(() => {\n        const idx = this.graphSyncCallbacks.indexOf(check)\n        if (idx !== -1) {\n          this.graphSyncCallbacks.splice(idx, 1)\n        }\n        reject(new Error('Timed out waiting for terminal handle after creation'))\n      }, timeoutMs)\n\n      const check = (): void => {\n        const handle = this.resolveHandleForTab(tabId)\n        if (handle) {\n          clearTimeout(timer)\n          const idx = this.graphSyncCallbacks.indexOf(check)\n          if (idx !== -1) {\n            this.graphSyncCallbacks.splice(idx, 1)\n          }\n          resolve(handle)\n        }\n      }\n      this.graphSyncCallbacks.push(check)\n      // Why: graph sync may have fired between the initial check and registration; re-check to avoid a missed wake-up.\n      check()\n    })\n  }",
+      "waitMethodSha256": "d4381b3c0bf82a8aa68817e3c7feea9a100af9ec21509b56af160d1620086252"
+    },
+    "reportSourceV191": {
+      "localMetadataGuard": "const fallback =\n          repo?.connectionId && this.store?.getWorktreeMeta(worktreeId)\n            ? this.buildResolvedWorktreeFromId(worktreeId)\n            : null\n        if (fallback !== null) {\n          candidates = [fallback]\n        }\n      }\n    } else if (sel",
+      "waitForTerminalHandle": "waitForTerminalHandle(tabId: string, timeoutMs = 10_000): Promise<string> {\n    const existing = this.resolveHandleForTab(tabId)\n    if (existing) {\n      return Promise.resolve(existing)\n    }\n\n    return new Promise<string>((resolve, reject) => {\n      const timer = setTimeout(() => {\n        const idx = this.graphSyncCallbacks.indexOf(check)\n        if (idx !== -1) {\n          this.graphSyncCallbacks.splice(idx, 1)\n        }\n        reject(new Error('Timed out waiting for terminal handle after creation'))\n      }, timeoutMs)\n\n      const check = (): void => {\n        const handle = this.resolveHandleForTab(tabId)\n        if (handle) {\n          clearTimeout(timer)\n          const idx = this.graphSyncCallbacks.indexOf(check)\n          if (idx !== -1) {\n            this.graphSyncCallbacks.splice(idx, 1)\n          }\n          resolve(handle)\n        }\n      }\n      this.graphSyncCallbacks.push(check)\n      // Why: graph sync may have fired between the initial check and registration; re-check to avoid a missed wake-up.\n      check()\n    })\n  }",
+      "waitMethodSha256": "d4381b3c0bf82a8aa68817e3c7feea9a100af9ec21509b56af160d1620086252"
+    }
+  }
+}

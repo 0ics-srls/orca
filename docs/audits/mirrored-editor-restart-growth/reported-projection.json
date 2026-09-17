@@ -1,0 +1,90 @@
+{
+  "reportedVersion": "v1.4.158",
+  "reportedRef": "141e5b6ca32001a8d2dc313def1276e37196b9cf",
+  "reportedEditorSourceSha256": "a9ae202f00d7d66c788626b357b4e0c12c22e227d32cf0f02ed51f7e4346e3c3",
+  "methodStartLine": 4465,
+  "methodEndLine": 4633,
+  "verbatimMethodSha256": "7b329c95d182838c566d9cd59d992f81469ac23837f8f8816d2738657c831c38",
+  "projectedMethodModuleSha256": "80685adb874a8bd13da0126ab890b60851010fa867f12d95403a4db22d4fa4fa",
+  "helperSourceRef": "6cf6a7faffd381d6f0d3db9f36b9e14027810f0a",
+  "helperSourcePath": "src/renderer/src/store/slices/editor/file-ids/hydrated-editor-file-ids.ts",
+  "helperSourceSha256": "2f164e364b61e4377418e8f81da60888f9a09fd9a2c66f0c1ca6e2d818eb33ea",
+  "projectionScope": "Unmodified v1.4.158 hydrateEditorSession method body with imports from its later modular extraction and that extraction helper. Current full store, persistence and mirrored-snapshot pipeline otherwise unchanged. Not a historical whole-app binary replay.",
+  "helperBodyParity": [
+    {
+      "function": "shouldHydrateWithOwnedEditorFileId",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "7bc690feae2868f95758833447d17469b702305eb1dbbdc1c974c94d73acea24",
+      "helperSliceSha256": "7bc690feae2868f95758833447d17469b702305eb1dbbdc1c974c94d73acea24"
+    },
+    {
+      "function": "addEditorFileIdMigration",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "fb9cbdc875ddc3596bb5280d079421ef8fa9c646e3a254c0fdf73eb172101342",
+      "helperSliceSha256": "fb9cbdc875ddc3596bb5280d079421ef8fa9c646e3a254c0fdf73eb172101342"
+    },
+    {
+      "function": "resolveLegacyHydratedEditorFileId",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "8f9444a61a3a4d432a522b3f1a42f855c944fe240890d4c5a6d2775a5d1b2332",
+      "helperSliceSha256": "8f9444a61a3a4d432a522b3f1a42f855c944fe240890d4c5a6d2775a5d1b2332"
+    },
+    {
+      "function": "migrateEditorFileId",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "6aa3ad4d5933d6a6f0272b74b086f38298689dca744631a1fc32a9a0553e64d1",
+      "helperSliceSha256": "6aa3ad4d5933d6a6f0272b74b086f38298689dca744631a1fc32a9a0553e64d1"
+    },
+    {
+      "function": "dedupeEditorTabOrder",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "ffffb02e6160bb3e72c65aaa994c34e5e7341d21aedeba5d05bac0f6da884707",
+      "helperSliceSha256": "ffffb02e6160bb3e72c65aaa994c34e5e7341d21aedeba5d05bac0f6da884707"
+    },
+    {
+      "function": "areStringArraysEqual",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "586f8203ff45356d4d6d7b90d602919bed41432858919f8cdfb86dfaf583a072",
+      "helperSliceSha256": "586f8203ff45356d4d6d7b90d602919bed41432858919f8cdfb86dfaf583a072"
+    },
+    {
+      "function": "migrateHydratedEditorTabsAndGroups",
+      "matchesReportedIgnoringWhitespace": true,
+      "reportedSliceSha256": "3d23977743fcbc6a6c11592066f9fbed61617e00bea5de24e491a351467981c2",
+      "helperSliceSha256": "3d23977743fcbc6a6c11592066f9fbed61617e00bea5de24e491a351467981c2"
+    }
+  ],
+  "currentPrimitiveHelperParity": [
+    {
+      "function": "runtimeOwnerKey",
+      "exactFunctionParity": true,
+      "reportedSha256": "5ce51fa6e50fe2cd4ca198afa94cb16dccf6e20730d04442f50849897f423061",
+      "currentSha256": "5ce51fa6e50fe2cd4ca198afa94cb16dccf6e20730d04442f50849897f423061"
+    },
+    {
+      "function": "isSameEditorOwner",
+      "exactFunctionParity": true,
+      "reportedSha256": "e40689e0e7467b8ecae8b03af008b692095fc7d1ba4ae6f80007360f7fc9c7ed",
+      "currentSha256": "e40689e0e7467b8ecae8b03af008b692095fc7d1ba4ae6f80007360f7fc9c7ed"
+    },
+    {
+      "function": "buildOwnedEditorFileId",
+      "exactFunctionParity": true,
+      "reportedSha256": "e5b7dabb1a0992917d5592af0c17614dfd32dd1a051d960f7c98545cfde52594",
+      "currentSha256": "e5b7dabb1a0992917d5592af0c17614dfd32dd1a051d960f7c98545cfde52594"
+    },
+    {
+      "function": "isEditorFileIdOccupiedByOtherOwner",
+      "exactFunctionParity": true,
+      "reportedSha256": "6b6653af39c6bf5109991fb349d5d8e053129505b468705cbaf7862fe40b0fd8",
+      "currentSha256": "6b6653af39c6bf5109991fb349d5d8e053129505b468705cbaf7862fe40b0fd8"
+    }
+  ],
+  "verbatimMethodHashConvention": "Exact original method excluding its final LF; method fixture includes that LF.",
+  "reportedEditorPath": "src/renderer/src/store/slices/editor.ts",
+  "fixtureSha256": {
+    "reported-hydration-module.txt": "80685adb874a8bd13da0126ab890b60851010fa867f12d95403a4db22d4fa4fa",
+    "reported-hydration-ids.txt": "2f164e364b61e4377418e8f81da60888f9a09fd9a2c66f0c1ca6e2d818eb33ea",
+    "reported-hydration-method.txt": "34d45fedfb5a5ff45022113d12638a60440264f706ca9b52561c299fde98ecbb"
+  }
+}
