@@ -55,7 +55,10 @@ vi.mock('./MobilePageContent', () => ({
     onCustomAddressSelect: (address: string) => void
     onCustomAddressRemove: (address: string) => void
     beforeCustomAddressChange: (address: string) => Promise<boolean>
+    handleBack: () => void
     handleContinue: () => void
+    pairAnotherDevice: () => void
+    pairLoading: boolean
     pairQrDataUrl: string | null
     pairQrSize: number | null
     pairingUrl: string | null
@@ -74,6 +77,7 @@ vi.mock('./MobilePageContent', () => ({
       <span data-testid="step">{props.stepIdx}</span>
       <span data-testid="mode">{props.connectionMode}</span>
       <span data-testid="can-generate">{String(props.canGeneratePairing)}</span>
+      <span data-testid="pair-loading">{String(props.pairLoading)}</span>
       <span data-testid="pairing-qr">{props.pairQrDataUrl ?? 'none'}</span>
       <span data-testid="pairing-qr-size">{props.pairQrSize ?? 'none'}</span>
       <span data-testid="pairing-url">{props.pairingUrl ?? 'none'}</span>
@@ -88,6 +92,12 @@ vi.mock('./MobilePageContent', () => ({
       </button>
       <button type="button" onClick={props.handleContinue}>
         Continue
+      </button>
+      <button type="button" onClick={props.handleBack}>
+        Back
+      </button>
+      <button type="button" onClick={props.pairAnotherDevice}>
+        Pair another device
       </button>
       <button type="button" onClick={() => props.handleConnectionModeChange('automatic')}>
         Orca Relay
@@ -130,6 +140,7 @@ vi.mock('./MobilePageContent', () => ({
 }))
 
 import MobilePage from './MobilePage'
+import { replacePairedMobileDevices } from './paired-mobile-devices'
 
 describe('MobilePage pairing connection mode', () => {
   const getPairingQR = vi.fn()
@@ -143,6 +154,9 @@ describe('MobilePage pairing connection mode', () => {
       pairingUrl: 'orca://pair#automatic'
     })
     listNetworkInterfaces.mockReset().mockResolvedValue({ interfaces: [] })
+    // The paired-device cache is module state shared by every surface; reset it so
+    // one test's phones cannot decide the next test's opening stage.
+    replacePairedMobileDevices([])
     mocks.storeState = {
       closeMobilePage: vi.fn(),
       orcaProfileAuthStatus: { state: 'connected' },
@@ -538,6 +552,85 @@ describe('MobilePage pairing connection mode', () => {
         rotate: true
       })
     )
+  })
+
+  it('mints one offer when Continue lands while the address refresh is in flight', async () => {
+    listNetworkInterfaces.mockResolvedValue({
+      interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }]
+    })
+    const user = userEvent.setup()
+    render(<MobilePage />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+    await waitFor(() =>
+      expect(getPairingQR).toHaveBeenCalledWith({
+        address: '10.0.0.5',
+        connectionMode: 'automatic'
+      })
+    )
+
+    // Leave the flow so re-entering refetches the interface list, and hold that
+    // refetch open so Continue is clicked while the address is still unsettled.
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await user.click(screen.getByRole('button', { name: 'Back' }))
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('intro'))
+    getPairingQR.mockClear()
+    let resolveRefresh: ((value: Record<string, unknown>) => void) | undefined
+    listNetworkInterfaces.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRefresh = resolve
+        })
+    )
+    await user.click(screen.getByRole('button', { name: 'Enter flow' }))
+    await user.click(screen.getByRole('button', { name: 'Continue' }))
+
+    // Nothing may be minted yet, and Step 2 must read as busy rather than
+    // offering "Generate a pairing code" it is about to run itself.
+    expect(getPairingQR).not.toHaveBeenCalled()
+    expect(screen.getByTestId('pair-loading')).toHaveTextContent('true')
+
+    // The lease moved while the page was away.
+    resolveRefresh?.({ interfaces: [{ name: 'Wi-Fi', address: '10.0.0.9' }] })
+    await waitFor(() =>
+      expect(screen.getByTestId('selected-address')).toHaveTextContent('10.0.0.9')
+    )
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    // One Continue is one offer. Minting against the stale address and then
+    // rotating to the settled one runs two overlapping mints through main, whose
+    // rotate deletes the pending credential the first mint already returned.
+    expect(getPairingQR).toHaveBeenCalledTimes(1)
+    expect(getPairingQR).toHaveBeenCalledWith({
+      address: '10.0.0.9',
+      connectionMode: 'automatic'
+    })
+  })
+
+  it('mints "Pair another device" against the resolved address, not the default', async () => {
+    window.api.mobile.listDevices = vi.fn().mockResolvedValue({
+      devices: [{ deviceId: 'phone-1', name: 'Pixel', pairedAt: 1, lastSeenAt: 2 }]
+    })
+    listNetworkInterfaces.mockResolvedValue({
+      interfaces: [{ name: 'Wi-Fi', address: '10.0.0.5' }]
+    })
+    const user = userEvent.setup()
+    render(<MobilePage />)
+    await waitFor(() => expect(screen.getByTestId('stage')).toHaveTextContent('paired'))
+
+    // This jumps straight to Step 2 in the same commit that starts the interface
+    // lookup, so the auto-mint always runs before any address is known.
+    await user.click(screen.getByRole('button', { name: 'Pair another device' }))
+
+    await waitFor(() => expect(getPairingQR).toHaveBeenCalledTimes(1))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(getPairingQR).toHaveBeenCalledTimes(1)
+    expect(getPairingQR).toHaveBeenCalledWith({
+      address: '10.0.0.5',
+      connectionMode: 'automatic'
+    })
   })
 
   it('keeps custom intent when the saved address is also discovered', async () => {

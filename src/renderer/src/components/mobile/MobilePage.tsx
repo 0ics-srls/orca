@@ -62,6 +62,9 @@ export default function MobilePage(): React.JSX.Element {
   const [refreshingNetworkInterfaces, setRefreshingNetworkInterfaces] = useState(false)
   const hasGeneratedRef = useRef(false)
   const pairingRequestIdRef = useRef(0)
+  // Why: written synchronously so the Step 2 auto-mint sees a lookup that started
+  // in the same commit, before `refreshingNetworkInterfaces` has been committed.
+  const networkInterfacesPendingRef = useRef(false)
   const mountedRef = useMountedRef()
   const closeMobilePage = useAppStore((s) => s.closeMobilePage)
   const showMobileButton = useAppStore((s) => s.settings?.showMobileButton !== false)
@@ -188,6 +191,7 @@ export default function MobilePage(): React.JSX.Element {
   })
 
   const loadNetworkInterfaces = useCallback(async () => {
+    networkInterfacesPendingRef.current = true
     if (mountedRef.current) {
       setRefreshingNetworkInterfaces(true)
     }
@@ -200,6 +204,7 @@ export default function MobilePage(): React.JSX.Element {
     } catch {
       // Network list is non-critical; the QR will still mint with default routing.
     } finally {
+      networkInterfacesPendingRef.current = false
       if (mountedRef.current) {
         setRefreshingNetworkInterfaces(false)
       }
@@ -263,8 +268,15 @@ export default function MobilePage(): React.JSX.Element {
     if (!canGenerate) {
       return
     }
+    // Why: entering Step 2 also starts the address lookup, and minting before it
+    // settles advertises an address the lookup is about to replace — the
+    // replacement then rotates away the credential this mint just created, so one
+    // Continue runs two overlapping offers through main for one pending token.
+    if (refreshingNetworkInterfaces || networkInterfacesPendingRef.current) {
+      return
+    }
     void generatePairing(false)
-  }, [stage, stepIdx, canGenerate, generatePairing])
+  }, [stage, stepIdx, canGenerate, generatePairing, refreshingNetworkInterfaces])
 
   // Why: entering the flow must mint a fresh pairing token — clear stale QR
   // state so we never flash an expired code from a previous session.
@@ -311,6 +323,18 @@ export default function MobilePage(): React.JSX.Element {
 
   useMobilePageEscape(closeMobilePage)
 
+  // Why: while the deferred first mint waits on the address, Step 2 would
+  // otherwise read "Generate a pairing code to continue" — a prompt for work it
+  // is already about to do on the user's behalf.
+  const pairPreparing =
+    pairLoading ||
+    (stage === 'flow' &&
+      stepIdx === 1 &&
+      canGenerate &&
+      refreshingNetworkInterfaces &&
+      pairQrDataUrl === null &&
+      relayMintFailure === null)
+
   return (
     <MobilePageContent
       closeMobilePage={closeMobilePage}
@@ -336,7 +360,7 @@ export default function MobilePage(): React.JSX.Element {
       openAndroidInstallGuide={openAndroidInstallGuide}
       openInstallUrl={openInstallUrl}
       pairAnotherDevice={pairAnotherDevice}
-      pairLoading={pairLoading}
+      pairLoading={pairPreparing}
       connectionMode={connectionMode}
       handleConnectionModeChange={handleConnectionModeChange}
       pairQrDataUrl={pairQrDataUrl}
