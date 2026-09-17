@@ -5,6 +5,10 @@ import { BrowserManager } from './browser-manager'
 const session = { getUserAgent: () => 'Chrome/140.0.0.0' }
 
 export class DestroyedGuestTestManager extends BrowserManager {
+  downloadCount(): number {
+    return this.downloadsById.size
+  }
+
   retainedCounts(): Record<string, number> {
     return {
       guests: this.webContentsIdByTabId.size,

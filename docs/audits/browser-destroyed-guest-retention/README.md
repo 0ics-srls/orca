@@ -4,7 +4,13 @@ An embedded browser guest's `destroyed` event called `cleanupGuestPolicyAttachme
 
 Renderer reload can destroy guests without each page sending explicit unregister IPC. A later close of a restored, unmounted page does not send that IPC either: `destroyPersistentWebview` returns early when its renderer registry has no guest. Explicit unregister correctly releases these resources; same-page re-registration also replaces its callbacks. The defect affects destroyed owners that do not take either path.
 
-The fix routes destruction through the existing `unregisterGuest` only when that exact guest still owns the primary page ID. Unregistered guests and popups retain policy-only cleanup. A stale callback cannot unregister a replacement. Normal renderer-process loss keeps its live WebContents and metadata for reload recovery; a fresh guest registration supplies its ownership metadata again. Shared browser sessions and sibling pages are untouched.
+The fix routes destruction through the existing `unregisterGuest` with a guest-retirement reason only when that exact guest still owns the primary page ID. Already bound downloads retain their existing renderer routing until they settle; explicit page close still cancels them. Unregistered guests and popups retain policy-only cleanup. A stale callback cannot unregister a replacement. Normal renderer-process loss keeps its live WebContents and metadata for reload recovery; a fresh guest registration supplies its ownership metadata again. Shared browser sessions and sibling pages are untouched.
+
+## Download lifetime correction
+
+Review found that the initial fix treated guest destruction as logical page closure and canceled bound downloads. An exact-source before/after control confirmed that difference with an EventEmitter guest and controlled DownloadItem. Guest retirement now releases guest-owned callbacks while preserving ongoing page downloads, their destinations and cancel authorization. A retained numeric renderer route drains after the last download settles, provided no replacement guest, other download or newer routing owner needs it.
+
+Nine additional controls cover progress and completion/error delivery, explicit close after guest destruction, multiple downloads, replacement guests/routing, repeated guest destruction and renderer loss. Together with four existing browser suites, 55 tests pass; Node typecheck and ordinary/anti-slop lint pass. These controls do not establish native Chromium download survival after destruction on each operating system. No download capacity or wire format changes.
 
 ## Reproduce
 

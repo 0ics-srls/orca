@@ -18,7 +18,7 @@ const current = await readFile(resolve(root, productionPath), 'utf8')
 const fix = `      const browserTabId = this.tabIdByWebContentsId.get(guest.id)
       // A destroyed primary guest also owns per-page callbacks that capture its WebContents.
       if (browserTabId && this.webContentsIdByTabId.get(browserTabId) === guest.id) {
-        this.unregisterGuest(browserTabId)
+        this.unregisterGuest(browserTabId, 'guest-destroyed')
         return
       }
 `
@@ -40,6 +40,13 @@ const sourceHashes = {
   [productionPath]: { before: sha256(baseline), after: sha256(current) },
   [testPath]: { current: sha256(test), observed: sha256(observedTest) },
   [fixturePath]: { current: sha256(await readFile(resolve(root, fixturePath))) }
+}
+for (const path of [
+  'src/main/browser/browser-manager-state.ts',
+  'src/main/browser/browser-manager-registration.ts',
+  'src/main/browser/browser-manager-download-lifecycle.ts'
+]) {
+  sourceHashes[path] = { current: sha256(await readFile(resolve(root, path))) }
 }
 const scratch = await mkdtemp(join(tmpdir(), 'orca-browser-destroyed-guest-'))
 const require = createRequire(import.meta.url)

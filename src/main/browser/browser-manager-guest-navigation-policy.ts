@@ -132,7 +132,7 @@ export abstract class BrowserManagerGuestNavigationPolicy extends BrowserManager
       const browserTabId = this.tabIdByWebContentsId.get(guest.id)
       // A destroyed primary guest also owns per-page callbacks that capture its WebContents.
       if (browserTabId && this.webContentsIdByTabId.get(browserTabId) === guest.id) {
-        this.unregisterGuest(browserTabId)
+        this.unregisterGuest(browserTabId, 'guest-destroyed')
         return
       }
       this.cleanupGuestPolicyAttachment(guest.id)
