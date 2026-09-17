@@ -9,6 +9,7 @@ import {
   type RelayCellConnectionHardCap,
   type RelayRegion
 } from '@orca-cloud/relay-contract'
+import { RELAY_MAX_READINESS_GRACE_MS, RELAY_READINESS_GRACE_MS } from './relay-readiness.js'
 
 export const RELAY_MAX_CELL_CAPACITY_REQUESTS = 100_000
 export const RELAY_DATABASE_POOL_MAX = 10
@@ -81,6 +82,13 @@ const EnvSchema = z.object({
     .optional(),
   ORCA_RELAY_ADMIN_JWKS_URL: z.string().url().default('https://www.googleapis.com/oauth2/v3/certs'),
   ORCA_RELAY_DATABASE_POOL_MAX: z.coerce.number().int().positive().max(100).optional(),
+  // 0 disables the grace window and restores the fail-on-first-error readiness behaviour.
+  ORCA_RELAY_READINESS_GRACE_MS: z.coerce
+    .number()
+    .int()
+    .min(0)
+    .max(RELAY_MAX_READINESS_GRACE_MS)
+    .default(RELAY_READINESS_GRACE_MS),
   ORCA_RELAY_PUBLIC_ASSIGNMENTS_ENABLED: EnvironmentBooleanSchema,
   ORCA_RELAY_REGIONAL_PLACEMENT_ENABLED: EnvironmentBooleanSchema,
   ORCA_RELAY_REGION_CORRECTION_COHORT_PERCENT: z.coerce.number().int().min(0).max(100).default(0),
@@ -187,6 +195,7 @@ export type RelayConfig = {
   connectionUnobservedBound?: number
   adminJwksUrl: string
   databasePoolMax: number
+  readinessGraceMs?: number
   publicAssignmentsEnabled: boolean
   regionalPlacementEnabled?: boolean
   regionCorrectionCohortPercent?: number
@@ -335,6 +344,7 @@ export function loadRelayConfig(env: NodeJS.ProcessEnv = process.env): RelayConf
     connectionUnobservedBound: ownCell.connectionUnobservedBound,
     adminJwksUrl: parsed.ORCA_RELAY_ADMIN_JWKS_URL,
     databasePoolMax,
+    readinessGraceMs: parsed.ORCA_RELAY_READINESS_GRACE_MS,
     publicAssignmentsEnabled: parsed.ORCA_RELAY_PUBLIC_ASSIGNMENTS_ENABLED,
     regionalPlacementEnabled: parsed.ORCA_RELAY_REGIONAL_PLACEMENT_ENABLED,
     regionCorrectionCohortPercent: parsed.ORCA_RELAY_REGION_CORRECTION_COHORT_PERCENT,

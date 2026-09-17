@@ -115,7 +115,9 @@ export function createRelayServer(
       observability.recordControlRenewal?.(durationMs, outcome)
   })
   const ready = createRelayReadiness(observedDatabase, config.jwksUrl, {
-    observe: (observation) => observability.recordReadiness(observation)
+    graceMs: config.readinessGraceMs,
+    observe: (observation) => observability.recordReadiness(observation),
+    observeGrace: (event) => observability.recordReadinessGrace(event)
   })
   const queuedBytes = new ProcessQueuedByteBudget()
   const sessions = new HostSessionRegistry(

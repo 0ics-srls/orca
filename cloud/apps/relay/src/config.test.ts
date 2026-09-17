@@ -8,6 +8,10 @@ import {
   RELAY_PUBLIC_RESOLVE_CONCURRENCY,
   RELAY_PUBLIC_RESOLVE_WAIT_MS
 } from './config.js'
+import {
+  RELAY_MAX_READINESS_GRACE_MS,
+  RELAY_READINESS_GRACE_MS
+} from './relay-readiness.js'
 
 function cellEnvironment(capacity: number): NodeJS.ProcessEnv {
   return {
@@ -32,6 +36,19 @@ describe('GCE relay capacity configuration', () => {
     expect(loadRelayConfig(env).regionCorrectionCohortPercent).toBe(5)
     for (const invalid of ['-1', '101', '1.5', 'not-a-number']) {
       env.ORCA_RELAY_REGION_CORRECTION_COHORT_PERCENT = invalid
+      expect(() => loadRelayConfig(env)).toThrow()
+    }
+  })
+
+  it('defaults the readiness grace window to fifteen minutes and bounds it', () => {
+    const env = cellEnvironment(4_000)
+    expect(loadRelayConfig(env).readinessGraceMs).toBe(RELAY_READINESS_GRACE_MS)
+    env.ORCA_RELAY_READINESS_GRACE_MS = '0'
+    expect(loadRelayConfig(env).readinessGraceMs).toBe(0)
+    env.ORCA_RELAY_READINESS_GRACE_MS = String(RELAY_MAX_READINESS_GRACE_MS)
+    expect(loadRelayConfig(env).readinessGraceMs).toBe(RELAY_MAX_READINESS_GRACE_MS)
+    for (const invalid of ['-1', String(RELAY_MAX_READINESS_GRACE_MS + 1), '1.5', 'soon']) {
+      env.ORCA_RELAY_READINESS_GRACE_MS = invalid
       expect(() => loadRelayConfig(env)).toThrow()
     }
   })
