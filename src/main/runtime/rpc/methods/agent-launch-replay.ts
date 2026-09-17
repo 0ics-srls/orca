@@ -87,9 +87,9 @@ function answerFromRecordedRow(
     // Replayed verbatim rather than narrowed to the `agentSession.*` vocabulary. A launch fails
     // with its own codes — `worktree_not_found` and the reuse-terminal guards — none of which is on
     // that closed list, so narrowing would answer every one of them with
-    // `agent_session_operation_invalid`: the ledger's "your id is malformed" signal, which invites
-    // a client to mint a fresh id when what actually happened is a launch that definitively did not
-    // run and is worth retrying under the same one.
+    // `agent_session_operation_invalid`: the ledger's "your id is malformed" signal. The original
+    // code says this launch definitively failed; the same id replays that answer, while a deliberate
+    // new attempt must use a fresh id.
     return {
       decision: 'refuse',
       refusal: {
