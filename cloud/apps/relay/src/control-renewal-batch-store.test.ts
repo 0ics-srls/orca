@@ -183,6 +183,40 @@ describe('batched control renewals on PostgreSQL', () => {
     expect(outcomes).toEqual(['renewed', 'assignment_lock_unavailable'])
   })
 
+  it('counts a lone renewal that threw before rethrowing it', async () => {
+    const probe = new RenewalStatementProbe(() => 'renewed')
+    probe.failuresRemaining = 1
+    const recordControlRenewal = vi.fn()
+    const store = new RelayAssignmentStore(probe, () => now, { recordControlRenewal })
+
+    // A one-row flush keeps the pre-batch contract and rethrows, but the metric
+    // still owes an outcome for the attempt.
+    await expect(
+      store.renewControlActivities([renewal('user-a', 'host000000000001')])
+    ).rejects.toThrow('statement timeout')
+
+    expect(recordControlRenewal).toHaveBeenCalledTimes(1)
+    expect(recordControlRenewal.mock.calls[0]![1]).toBe('database_error')
+  })
+
+  it('counts a batch in which every row was rejected before the statement', async () => {
+    const probe = new RenewalStatementProbe(() => 'renewed')
+    const recordControlRenewal = vi.fn()
+    const store = new RelayAssignmentStore(probe, () => now, { recordControlRenewal })
+
+    const outcomes = await store.renewControlActivities([
+      { ...renewal('user-a', 'host000000000001'), activityId: '' },
+      renewal('user-a', 'host000000000002', now - 1)
+    ])
+
+    expect(outcomes).toEqual(['invalid_activity_id', 'invalid_activity_expiry'])
+    expect(probe.statements).toHaveLength(0)
+    expect(recordControlRenewal.mock.calls.map((call) => call[1])).toEqual([
+      'invalid_activity_id',
+      'invalid_activity_expiry'
+    ])
+  })
+
   it('counts one renewal metric per row against the flush latency', async () => {
     const probe = new RenewalStatementProbe((userId) =>
       userId === 'user-b' ? 'assignment_not_found' : 'renewed'

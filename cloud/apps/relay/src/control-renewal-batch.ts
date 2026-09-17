@@ -28,9 +28,12 @@ type PendingWaiter = { resolve: () => void; reject: (error: unknown) => void }
 
 type PendingRenewal = { request: ControlRenewalRequest; waiters: PendingWaiter[] }
 
+type QueuedRenewal = { request: ControlRenewalRequest; waiter: PendingWaiter }
+
+// Per host, not per activity: one statement updates a host's assignment row
+// once, so two activities for the same host must not share a flush.
 function pendingKey(request: ControlRenewalRequest): string {
-  const { userId, relayHostId } = request.identity
-  return [userId, relayHostId, request.activityId].join('\u0000')
+  return [request.identity.userId, request.identity.relayHostId].join('\u0000')
 }
 
 // Collects the control-lease renewals a cell owes and spends one statement on
@@ -39,6 +42,9 @@ function pendingKey(request: ControlRenewalRequest): string {
 // keep their per-session error routing unchanged.
 export class ControlRenewalBatch {
   private pending = new Map<string, PendingRenewal>()
+  // Renewals a host cannot contribute to the flush being built; they open the
+  // next one.
+  private deferred: QueuedRenewal[] = []
   private timer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
@@ -51,29 +57,42 @@ export class ControlRenewalBatch {
 
   enqueue(request: ControlRenewalRequest): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-      const key = pendingKey(request)
-      const existing = this.pending.get(key)
-      if (existing) {
-        // A second attempt for the same lease inside one window supersedes the
-        // first expiry; both callers still hear the outcome they waited for.
-        existing.request = {
-          ...request,
-          expiresAt: Math.max(existing.request.expiresAt, request.expiresAt)
-        }
-        existing.waiters.push({ resolve, reject })
-        return
-      }
-      this.pending.set(key, { request, waiters: [{ resolve, reject }] })
-      if (this.pending.size >= CONTROL_RENEWAL_BATCH_MAX_ROWS) {
-        void this.flush()
-        return
-      }
-      this.timer ??= setTimeout(() => {
-        this.timer = null
-        void this.flush()
-      }, CONTROL_RENEWAL_BATCH_INTERVAL_MS)
-      this.timer.unref?.()
+      this.admit({ request, waiter: { resolve, reject } })
     })
+  }
+
+  private admit(queued: QueuedRenewal): void {
+    const key = pendingKey(queued.request)
+    const existing = this.pending.get(key)
+    if (existing && existing.request.activityId !== queued.request.activityId) {
+      this.deferred.push(queued)
+      this.scheduleFlush()
+      return
+    }
+    if (existing) {
+      // A second attempt at the same lease inside one window supersedes the
+      // first expiry; both callers still hear the outcome they waited for.
+      existing.request = {
+        ...queued.request,
+        expiresAt: Math.max(existing.request.expiresAt, queued.request.expiresAt)
+      }
+      existing.waiters.push(queued.waiter)
+      return
+    }
+    this.pending.set(key, { request: queued.request, waiters: [queued.waiter] })
+    if (this.pending.size >= CONTROL_RENEWAL_BATCH_MAX_ROWS) {
+      void this.flush()
+      return
+    }
+    this.scheduleFlush()
+  }
+
+  private scheduleFlush(): void {
+    this.timer ??= setTimeout(() => {
+      this.timer = null
+      void this.flush()
+    }, CONTROL_RENEWAL_BATCH_INTERVAL_MS)
+    this.timer.unref?.()
   }
 
   // Flushes run concurrently on purpose: a statement stalled in PostgreSQL must
@@ -85,6 +104,11 @@ export class ControlRenewalBatch {
     }
     const batch = [...this.pending.values()]
     this.pending = new Map()
+    // Re-admitted against the empty map, so a host deferred out of this flush
+    // leads the next one.
+    const deferred = this.deferred
+    this.deferred = []
+    for (const queued of deferred) this.admit(queued)
     if (batch.length === 0) return
     const startedAt = performance.now()
     let outcomes: ControlRenewalOutcome[]

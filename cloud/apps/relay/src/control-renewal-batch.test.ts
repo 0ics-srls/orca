@@ -19,10 +19,14 @@ function outcomeOf(renewal: Promise<void>): Promise<string> {
   )
 }
 
-function request(host: string, expiresAt = 1_000): ControlRenewalRequest {
+function request(
+  host: string,
+  expiresAt = 1_000,
+  activityId = 'control:cell-a:1'
+): ControlRenewalRequest {
   return {
     identity: { userId: 'user-a', relayHostId: host },
-    activityId: `control:cell-a:1`,
+    activityId,
     cellId: 'cell-a',
     expiresAt
   }
@@ -152,6 +156,32 @@ describe('control renewal batch', () => {
     ])
     await expect(earlier).resolves.toBeUndefined()
     await expect(later).resolves.toBeUndefined()
+  })
+
+  it('holds a second activity for one host back to the next flush', async () => {
+    const renew = vi.fn(async (rows: readonly ControlRenewalRequest[]) =>
+      rows.map((): ControlRenewalOutcome => 'renewed')
+    )
+    const batch = new ControlRenewalBatch(renew)
+    const first = batch.enqueue(request('host0000000000h1', 1_000, 'control:cell-a:1'))
+    const second = batch.enqueue(request('host0000000000h1', 1_000, 'control:cell-a:2'))
+    const other = batch.enqueue(request('host0000000000h2'))
+
+    await vi.advanceTimersByTimeAsync(CONTROL_RENEWAL_BATCH_INTERVAL_MS)
+
+    // One statement updates a host's assignment row once, so the host appears in
+    // one flush only; the newer generation leads the next one.
+    expect(renew.mock.calls[0]![0].map((row) => row.activityId)).toEqual([
+      'control:cell-a:1',
+      'control:cell-a:1'
+    ])
+    await expect(Promise.all([first, other])).resolves.toEqual([undefined, undefined])
+
+    await vi.advanceTimersByTimeAsync(CONTROL_RENEWAL_BATCH_INTERVAL_MS)
+
+    expect(renew).toHaveBeenCalledTimes(2)
+    expect(renew.mock.calls[1]![0].map((row) => row.activityId)).toEqual(['control:cell-a:2'])
+    await expect(second).resolves.toBeUndefined()
   })
 
   it('stays quiet for a fast flush that renewed everything', async () => {

@@ -462,6 +462,9 @@ export class RelayObservability implements RelayRuntimeObserver {
         deltas.controlRenewalsByOutcome.control_activity_not_found ?? 0,
       controlActivityRecoveriesDelta: deltas.controlActivityRecoveries,
       controlActivityRecoveryFailuresDelta: deltas.controlActivityRecoveryFailures,
+      // Meaning changed when renewals began batching: for a batched row this is
+      // the flush's duration, not that row's own statement latency. The
+      // per-flush fields below are the ones to read for statement cost.
       controlRenewalLatencyMsP50: controlRenewal.p50,
       controlRenewalLatencyMsP95: controlRenewal.p95,
       controlRenewalLatencyMsMax: controlRenewal.max,

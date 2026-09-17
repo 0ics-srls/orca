@@ -3491,10 +3491,7 @@ export class RelayAssignmentStore {
       outcome = await this.renewOneControlActivity({ identity, ...input }, now)
       if (outcome !== 'renewed') throw new Error(outcome)
     } catch (error) {
-      const message = String((error as { message?: unknown }).message)
-      if (CONTROL_RENEWAL_STATEMENT_OUTCOMES.has(message as ControlRenewalOutcome)) {
-        outcome = message as ControlRenewalOutcome
-      }
+      outcome = controlRenewalOutcomeOfError(error)
       throw error
     } finally {
       this.recordControlRenewal?.(performance.now() - startedAt, outcome)
@@ -3515,19 +3512,27 @@ export class RelayAssignmentStore {
       if (rejection) outcomes[index] = rejection
       else accepted.push({ ...row, index })
     }
-    if (accepted.length === 0) return outcomes
     const startedAt = performance.now()
-    let results: ControlRenewalOutcome[]
     try {
-      results = await this.executeControlRenewals(accepted, now)
-    } catch (error) {
-      if (rows.length === 1) throw error
-      results = accepted.map(() => 'database_error')
+      if (accepted.length === 0) return outcomes
+      let results: ControlRenewalOutcome[]
+      try {
+        results = await this.executeControlRenewals(accepted, now)
+      } catch (error) {
+        if (rows.length === 1) {
+          outcomes[accepted[0]!.index] = controlRenewalOutcomeOfError(error)
+          throw error
+        }
+        results = accepted.map(() => 'database_error')
+      }
+      for (const [position, row] of accepted.entries()) outcomes[row.index] = results[position]!
+      return outcomes
+    } finally {
+      // Every path, so a rethrown lone renewal and an all-invalid batch are
+      // counted the same as a batch that reached PostgreSQL.
+      const durationMs = performance.now() - startedAt
+      for (const outcome of outcomes) this.recordControlRenewal?.(durationMs, outcome)
     }
-    const durationMs = performance.now() - startedAt
-    for (const [position, row] of accepted.entries()) outcomes[row.index] = results[position]!
-    for (const outcome of outcomes) this.recordControlRenewal?.(durationMs, outcome)
-    return outcomes
   }
 
   private async executeControlRenewals(
@@ -7912,6 +7917,15 @@ function controlRenewalExpiryIsValid(expiresAt: number, now: number): boolean {
   const maximumExpiresAt =
     now + ASSIGNMENT_LIMITS.activityLeaseMs + RELAY_PROTOCOL_LIMITS.controlPingIntervalMs * 2
   return Number.isSafeInteger(expiresAt) && expiresAt > now && expiresAt <= maximumExpiresAt
+}
+
+// A renewal that threw still owes the metric an outcome: the message carries one
+// when the statement decided it, and anything else is the driver failing.
+function controlRenewalOutcomeOfError(error: unknown): ControlRenewalOutcome {
+  const message = String((error as { message?: unknown }).message)
+  return CONTROL_RENEWAL_STATEMENT_OUTCOMES.has(message as ControlRenewalOutcome)
+    ? (message as ControlRenewalOutcome)
+    : 'database_error'
 }
 
 function controlRenewalRejection(

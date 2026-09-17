@@ -26,8 +26,8 @@ const targetCell = {
 }
 const userId = 'control-renewal-postgres-user'
 // Indexes 0-5 belong to the single-renewal cases below, which mutate their
-// host's migration and lease state; the batch cases own 6-12.
-const identities = Array.from({ length: 13 }, (_, index) => ({
+// host's migration and lease state; the batch cases own 6-13.
+const identities = Array.from({ length: 14 }, (_, index) => ({
   userId,
   relayHostId: `controlrenewal${index + 1}`
 }))
@@ -439,6 +439,60 @@ describePostgres('PostgreSQL control renewal', () => {
       )
     )[0]
     expect(Number(lease!.expires_at)).toBe(expiresAt)
+  })
+
+  it('renews both of one host\u2019s control leases in a single batch', async () => {
+    const store = new RelayAssignmentStore(database, () => now)
+    const identity = identities[13]!
+    // Two live control leases on one host. Written directly because
+    // activateControl retires the prior generation, and what is under test is the
+    // statement's row-wise behaviour, not how the second lease came to exist.
+    await database.query(
+      `INSERT INTO relay_assignment_activity_leases
+         (user_id, relay_host_id, activity_id, activity_kind, cell_id,
+          request_units, expires_at, updated_at)
+       VALUES (?, ?, ?, 'control', ?, 1, ?, ?)`,
+      [
+        identity.userId,
+        identity.relayHostId,
+        `control:${sourceCell.id}:2`,
+        sourceCell.id,
+        now,
+        now
+      ]
+    )
+    now += 30_000
+    const expiresAt = now + 105_000
+
+    const outcomes = await store.renewControlActivities(
+      [1, 2].map((generation) => ({
+        identity,
+        activityId: `control:${sourceCell.id}:${generation}`,
+        cellId: sourceCell.id,
+        expiresAt: expiresAt - generation
+      }))
+    )
+
+    expect(outcomes).toEqual(['renewed', 'renewed'])
+    const leases = await database.query(
+      `SELECT activity_id, expires_at FROM relay_assignment_activity_leases
+       WHERE user_id = ? AND relay_host_id = ? ORDER BY activity_id ASC`,
+      [identity.userId, identity.relayHostId]
+    )
+    expect(leases.map((lease) => Number(lease.expires_at))).toEqual([
+      expiresAt - 1,
+      expiresAt - 2
+    ])
+    // The assignment row is written once, carrying the later of the two.
+    const row = (
+      await database.query(
+        `SELECT lease_expires_at, last_activity_at FROM relay_assignments
+         WHERE user_id = ? AND relay_host_id = ?`,
+        [identity.userId, identity.relayHostId]
+      )
+    )[0]
+    expect(Number(row!.lease_expires_at)).toBe(expiresAt - 1)
+    expect(Number(row!.last_activity_at)).toBe(now)
   })
 
   it('uses one autocommitted PostgreSQL statement for a steady renewal', async () => {

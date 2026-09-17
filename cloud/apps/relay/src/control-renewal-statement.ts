@@ -142,14 +142,22 @@ export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
              AND state.activity_kind = 'control' AND state.cell_id = input.cell_id
            RETURNING state.row_index
          ), renewed_assignment AS (
+           -- Grouped per host: an UPDATE whose FROM offers a target row more than
+           -- once applies one source row and returns one, so two leases on one
+           -- host would leave the assignment carrying the wrong expiry. The
+           -- aggregate hands it exactly one row, carrying the later expiry.
            UPDATE relay_assignments assignment
-           SET lease_expires_at = GREATEST(assignment.lease_expires_at, input.expires_at),
+           SET lease_expires_at = GREATEST(assignment.lease_expires_at, renewed.expires_at),
                last_activity_at = GREATEST(assignment.last_activity_at, ?)
-           FROM renewed_lease renewed
-           JOIN renewal_input input ON input.row_index = renewed.row_index
-           WHERE assignment.user_id = input.user_id
-             AND assignment.relay_host_id = input.relay_host_id
-           RETURNING renewed.row_index
+           FROM (
+             SELECT input.user_id, input.relay_host_id, MAX(input.expires_at) AS expires_at
+             FROM renewed_lease renewed
+             JOIN renewal_input input ON input.row_index = renewed.row_index
+             GROUP BY input.user_id, input.relay_host_id
+           ) renewed
+           WHERE assignment.user_id = renewed.user_id
+             AND assignment.relay_host_id = renewed.relay_host_id
+           RETURNING renewed.user_id
          )
          SELECT input.row_index, CASE
            WHEN NOT EXISTS (
@@ -171,8 +179,11 @@ export const CONTROL_RENEWAL_BATCH_SQL = `WITH renewal_input AS MATERIALIZED (
              WHERE state.row_index = input.row_index
                AND (state.activity_kind <> 'control' OR state.cell_id <> input.cell_id)
            ) THEN 'control_activity_moved'
+           -- Read from renewed_lease, which has one row per input row. The
+           -- assignment update collapses to one row per host, so it cannot answer
+           -- for a host that brought two leases to the same batch.
            WHEN EXISTS (
-             SELECT 1 FROM renewed_assignment renewed
+             SELECT 1 FROM renewed_lease renewed
              WHERE renewed.row_index = input.row_index
            ) THEN 'renewed'
            ELSE 'control_activity_not_found'
