@@ -4,7 +4,6 @@ import type { RuntimeCapability } from '../../../shared/protocol-version'
 import { withBrowserPaneUiRuntimeRpcSource } from '../../../shared/runtime-rpc-feature-interaction-source'
 import { assertRuntimeStatusCompatible } from './runtime-protocol-compat'
 import { createRuntimeRpcAbortError } from './abortable-runtime-environment-call'
-import { callLocalRuntimeWithDeadline } from './local-runtime-call-deadline'
 import { callRuntimeEnvironmentWithRevision } from './runtime-rpc-environment-call'
 import { RuntimeRpcCallError, unwrapRuntimeRpcResult } from './runtime-rpc-result'
 import { captureRuntimeEnvironmentRequestRevision } from './runtime-environment-revision'
@@ -83,7 +82,7 @@ export async function callRuntimeRpc<TResult>(
     : params
   const response =
     target.kind === 'local'
-      ? await callLocalRuntimeWithDeadline(method, nextParams, options.timeoutMs)
+      ? await window.api.runtime.call({ method, params: nextParams })
       : await callRuntimeEnvironmentWithRevision({
           environmentId: target.environmentId,
           method,
