@@ -12,12 +12,16 @@ export async function readNativeSessionOptionRestoration(input: {
   sessionId: string
   fence: number
   priorOptions?: Readonly<Record<string, string>>
+  permissionModeAdoption?: 'required' | 'if-confirmed'
 }): Promise<NativeSessionOptionRestoration | undefined> {
   const reported = await input.adapter.readOptions?.({
     sessionId: input.sessionId,
     fence: input.fence
   })
   if (!reported) {
+    if (input.permissionModeAdoption === 'required') {
+      throw new Error('The resumed provider did not report its current permission mode.')
+    }
     return undefined
   }
   return {
@@ -42,6 +46,7 @@ function restoredNativeSessionOptions(
     adapter: Pick<StructuredAgentSessionAdapter, 'readOptionRestoreFailures'>
     sessionId: string
     priorOptions?: Readonly<Record<string, string>>
+    permissionModeAdoption?: 'required' | 'if-confirmed'
   },
   reported: NonNullable<
     Awaited<ReturnType<NonNullable<StructuredAgentSessionAdapter['readOptions']>>>
@@ -64,6 +69,19 @@ function restoredNativeSessionOptions(
     reported.current.confirmed?.includes('permissionMode') === true
   ) {
     delete restored.permissionMode
+  }
+  if (input.permissionModeAdoption) {
+    const permissionMode = reported.current.permissionMode
+    const confirmed = reported.current.confirmed?.includes('permissionMode') === true
+    if ((!permissionMode || !confirmed) && input.permissionModeAdoption === 'required') {
+      throw new Error('The resumed provider did not report its current permission mode.')
+    }
+    if (permissionMode && confirmed) {
+      delete restored.permissionMode
+      if (permissionMode === 'plan') {
+        restored.permissionMode = 'plan'
+      }
+    }
   }
   const fastMode =
     reported.current.fastMode === undefined

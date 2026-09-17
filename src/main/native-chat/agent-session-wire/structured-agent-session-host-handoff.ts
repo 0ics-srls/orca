@@ -21,6 +21,7 @@ import { StructuredTuiTranscriptCatchup } from './structured-tui-transcript-catc
 import { adapterSupportsCreateIfDeclared } from './structured-agent-session-provider-support'
 import { retryLoadedStructuredAgentSessionSettlement } from './structured-agent-session-settlement-retry'
 import { latestJournalDispatchObservation } from '../agent-session-journal/journal-dispatch-observation'
+import { resolveClaudeNativeHandoffOptions } from './claude-tui-permission-mode'
 
 type HostHandoffAccess = {
   session: (sessionId: string) => StructuredAgentSessionHostSession
@@ -244,10 +245,12 @@ export async function acquireNativeHandoffOwner(
   if (!adapterSupportsCreateIfDeclared(deps.adapter, record.location, record.provider)) {
     throw new Error('structured_agent_session_unsupported')
   }
-  const acquisitionOptions = recoverResolvedPromptSessionOptions(
+  const resolvedOptions = recoverResolvedPromptSessionOptions(
     record,
     session.journal.snapshot().items
   )
+  const nativeHandoffOptions = resolveClaudeNativeHandoffOptions(record, resolvedOptions)
+  const acquisitionOptions = nativeHandoffOptions.options
   const acquired = await deps.adapter.acquire({
     identity: journalIdentityFor(record, session.params),
     fence: input.fence,
@@ -264,7 +267,10 @@ export async function acquireNativeHandoffOwner(
       adapter: deps.adapter,
       sessionId: input.sessionId,
       fence: input.fence,
-      ...(acquisitionOptions ? { priorOptions: acquisitionOptions } : {})
+      ...(acquisitionOptions ? { priorOptions: acquisitionOptions } : {}),
+      ...(nativeHandoffOptions.permissionModeAdoption
+        ? { permissionModeAdoption: nativeHandoffOptions.permissionModeAdoption }
+        : {})
     })
     await deps.store.commitProcessIdentity({
       sessionId: input.sessionId,

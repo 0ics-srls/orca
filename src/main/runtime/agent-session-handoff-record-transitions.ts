@@ -1,5 +1,6 @@
 import type { AgentSessionOwnerProbe } from '../../shared/agent-session-lease-adjudication'
 import type { AgentSessionHandoffStage } from '../../shared/agent-session-record'
+import type { StructuredAgentSessionPermissionMode } from '../../shared/structured-agent-session-permission-mode'
 import {
   abandonAgentSessionHandoffAttempt,
   recoverDeadTuiOwnerForHandoff,
@@ -47,11 +48,29 @@ export function recoverStoredDeadTuiOwnerForHandoff(
 
 export function stopStoredAgentSessionOwnerForHandoff(
   store: AgentSessionRecordStore,
-  args: { sessionId: string; expectedFence: number; operationId: string; now: number }
+  args: {
+    sessionId: string
+    expectedFence: number
+    operationId: string
+    now: number
+    tuiPermissionMode?: StructuredAgentSessionPermissionMode | null
+  }
 ) {
-  return store.transitionHandoff(args.sessionId, (record) =>
-    stopAgentSessionOwnerForHandoff({ ...args, record })
-  )
+  return store.transitionHandoff(args.sessionId, (record) => {
+    const stopped = stopAgentSessionOwnerForHandoff({ ...args, record })
+    if (args.tuiPermissionMode === undefined || args.tuiPermissionMode === null) {
+      return stopped
+    }
+    const options = { ...stopped.options }
+    if (args.tuiPermissionMode === 'plan') {
+      options.permissionMode = 'plan'
+    } else {
+      delete options.permissionMode
+    }
+    return stopped.options?.permissionMode === options.permissionMode
+      ? stopped
+      : withAgentSessionRecordOptions(stopped, options, args.now)
+  })
 }
 
 export function rollbackStoredAgentSessionHandoffPreparation(
