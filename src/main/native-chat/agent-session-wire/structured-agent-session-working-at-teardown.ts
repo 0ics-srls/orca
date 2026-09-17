@@ -73,7 +73,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
   getRecord: (sessionId: string) => AgentSessionRecord | null
   trigger: AgentSessionResumeTrigger
   /** Identity of the launch that is dying. Only the launch immediately after it may act on these. */
-  launchId: string
+  teardownId: string
   now: number
 }): AgentSessionResumeMarker[] {
   const markers: AgentSessionResumeMarker[] = []
@@ -119,7 +119,7 @@ export function structuredAgentSessionsWorkingAtTeardown(input: {
       latestUserItemId: latestStructuredAgentSessionUserItem(snapshot.items)?.itemId ?? null,
       recordedAt: input.now,
       trigger: input.trigger,
-      launchId: input.launchId,
+      teardownId: input.teardownId,
       // Root, not key: the close path advances Claude's leaf moments after this runs, and a key
       // comparison would then refuse the session forever.
       providerHandleRoot: agentSessionProviderHandleRoot(head.handle)

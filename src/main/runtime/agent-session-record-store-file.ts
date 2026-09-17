@@ -20,8 +20,6 @@ import {
   isAgentSessionRecord,
   type AgentSessionRecord
 } from '../../shared/agent-session-record'
-import type { AgentSessionResumeMarker } from '../../shared/agent-session-resume-marker'
-import { parseAgentSessionResumeMarkers } from './agent-session-resume-marker-file'
 import { agentSessionStoreBackupPath as backupPath } from './agent-session-record-store-write'
 export { saveAgentSessionStore } from './agent-session-record-store-write'
 import { parseVisibleSessionIds } from './agent-session-visible-tab-index'
@@ -45,11 +43,6 @@ export type AgentSessionStoreState = {
   visibleSessionIds: Set<string>
   /** True once this store has committed the visibility index field. */
   visibleSessionIdsIndexPresent: boolean
-  /** Teardown's record of the sessions that were working when the app went away. Kept beside the
-   *  records rather than on them: a marker is a consumed-once obligation with its own expiry, not
-   *  part of a session's durable identity, and quit writes every session's marker in ONE
-   *  transaction — a per-journal write would race the bounded quit deadline 20-30 times over. */
-  resumeMarkers: Map<string, AgentSessionResumeMarker>
 }
 
 export type LoadedAgentSessionStore = {
@@ -76,8 +69,7 @@ function emptyState(hostId: string): AgentSessionStoreState {
     retiredClaimKeys: [],
     unreadableRecords: new Map(),
     visibleSessionIds: new Set(),
-    visibleSessionIdsIndexPresent: false,
-    resumeMarkers: new Map()
+    visibleSessionIdsIndexPresent: false
   }
 }
 
@@ -102,7 +94,7 @@ function parseState(
   if (typeof parsed !== 'object' || parsed === null) {
     return null
   }
-  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field is read back as `unknown` and validated below before use; adding `resumeMarkers` brought this long-standing assertion into the changed-code gate.
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: every field is read back as `unknown` and validated below before use.
   const file = parsed as {
     schemaVersion?: unknown
     hostId?: unknown
@@ -111,7 +103,6 @@ function parseState(
     retiredClaimKeys?: unknown
     unusableRecords?: unknown
     visibleSessionIds?: unknown
-    resumeMarkers?: unknown
   }
   if (
     !Number.isSafeInteger(file.schemaVersion) ||
@@ -229,7 +220,6 @@ function parseState(
   }
   state.visibleSessionIdsIndexPresent = visibleSessionIds.present
   visibleSessionIds.ids.forEach((sessionId) => state.visibleSessionIds.add(sessionId))
-  state.resumeMarkers = parseAgentSessionResumeMarkers(file.resumeMarkers)
   return { state, needsRewrite }
 }
 

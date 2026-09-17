@@ -1,19 +1,9 @@
-// The host's restart-resume surface: what teardown records, what may resume, and the one call that
-// resumes it.
-//
-// TWO TIERS, deliberately. Teardown writes a durable marker; startup CLAIMS that marker into
-// launch-scoped memory and deletes the durable copy in the same step. The durable fact therefore
-// dies at claim time, not at use time, which is what makes a stranded marker impossible: a failed
-// resume, a timed-out teardown write, or a store restored from its `.bak` can no longer leave
-// something actionable behind, because nothing actionable is left on disk and the claim dies with
-// the process.
-//
-// The marker also carries the id of the launch that wrote it, and only the launch immediately after
-// it may act on it. Without that stamp a marker from an older generation stays valid for its whole
-// 24h TTL — and in automatic mode it would be acted on silently.
+// Recovery offers live in memory only after an atomic take of the advisory capsule.
+// A crash after take loses the offer; ordinary chat acquisition remains independent.
 
+import { randomUUID } from 'node:crypto'
 import type { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
-import type { AgentSessionLaunchGeneration } from '../../runtime/agent-session-launch-generation'
+import type { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import type {
   AgentSessionResumeMarker,
   AgentSessionResumeTrigger
@@ -101,45 +91,23 @@ export function createStructuredAgentSessionRestartResume(
   deps: {
     store: AgentSessionRecordStore
     adapter: StructuredAgentSessionAdapter
-    /** Absent only where a host is built without the runtime wiring it — a test harness. The
-     *  fallback proves no adjacency, so such a host claims nothing. */
-    launchGeneration?: AgentSessionLaunchGeneration
+    recoveryCapsule?: Pick<AgentSessionRecoveryCapsule, 'take' | 'record'>
   },
   /** The host's LIVE session map — the only honest answer to "was this actually working". */
   sessions: ReadonlyMap<string, LiveSession>,
   surfaces: StructuredAgentSessionRestartResumeSurfaces
 ): StructuredAgentSessionRestartResume {
   const admission = new StructuredAgentSessionResumeAdmission()
-  // `previous: null` accepts nothing, and markers stamped `unproven` can never match a real launch
-  // id, so an unwired host neither claims nor creates anything actionable.
-  const launch = deps.launchGeneration ?? { current: 'unproven', previous: null }
-
-  /** The claimed set: markers this launch owns, held only in memory. Null until the claim runs. */
+  const teardownId = randomUUID()
   let claimed: AgentSessionResumeMarker[] | null = null
   let claiming: Promise<void> | undefined
 
-  /**
-   * Claims the previous launch's markers exactly once, and deletes EVERY durable marker in the
-   * same step — including ones this launch refuses, so a non-adjacent marker cannot be re-examined
-   * by a later launch either.
-   *
-   * Fails closed: an unprovable adjacency (`previous === null`) claims nothing, and a clear that
-   * throws claims nothing rather than proceeding with markers still live on disk.
-   */
   const claimMarkers = async (): Promise<AgentSessionResumeMarker[]> => {
-    if (claimed) {
-      return claimed
-    }
     claiming ??= (async () => {
-      const stored = deps.store.resumeMarkers.list(surfaces.now())
-      const adjacent =
-        launch.previous === null
-          ? []
-          : stored.filter((marker) => marker.launchId === launch.previous)
       try {
-        await deps.store.resumeMarkers.clear()
-        claimed = adjacent
-      } catch {
+        claimed = (await deps.recoveryCapsule?.take(surfaces.now())) ?? []
+      } catch (error) {
+        console.warn('[structured-agent-session] taking recovery capsule failed', error)
         claimed = []
       }
     })()
@@ -307,13 +275,13 @@ export function createStructuredAgentSessionRestartResume(
   }
 
   return {
-    recordMarkers: (trigger) =>
-      deps.store.resumeMarkers.record(
+    recordMarkers: async (trigger) =>
+      deps.recoveryCapsule?.record(
         structuredAgentSessionsWorkingAtTeardown({
           sessions,
           getRecord: deps.store.getRecord,
           trigger,
-          launchId: launch.current,
+          teardownId,
           now: surfaces.now()
         }),
         surfaces.now()

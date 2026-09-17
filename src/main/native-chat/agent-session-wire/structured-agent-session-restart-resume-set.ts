@@ -1,4 +1,4 @@
-// Which of the previous generation's markers a launch may actually act on.
+// Which claimed teardown witnesses still describe resumable work.
 //
 // Every clause here exists to refuse, and the bias is deliberate: a session resumed that should not
 // have been spends the user's tokens and can make an agent redo destructive work it already

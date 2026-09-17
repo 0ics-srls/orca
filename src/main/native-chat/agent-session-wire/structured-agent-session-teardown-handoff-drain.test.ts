@@ -171,6 +171,39 @@ describe('structured agent-session host teardown', () => {
     ])
   })
 
+  it('bounds and diagnoses a stalled capsule write without preventing later cleanup', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const pending = Promise.withResolvers<void>()
+    const cleaned = vi.fn(async () => {})
+    const phases = structuredAgentSessionHostTeardownPhases({
+      holds: { dispose: cleaned },
+      runtimeState: { stopLeaseRenewal: () => {}, flushAllEventSinks: cleaned },
+      handoffs: { stopTuiHistoryCatchup: () => {}, drain: cleaned },
+      tasks: { drainAttaches: cleaned },
+      evictOwnedSessions: cleaned,
+      recordResumeMarkers: () => pending.promise
+    })
+    try {
+      const teardown = (async () => {
+        for (const phase of phases) {
+          await phase.run()
+        }
+      })()
+      await vi.advanceTimersByTimeAsync(2000)
+      await teardown
+      expect(cleaned).toHaveBeenCalledTimes(5)
+      expect(warning).toHaveBeenCalledWith(
+        '[structured-agent-session] recording recovery capsule failed',
+        expect.objectContaining({ message: expect.stringContaining('2000ms') })
+      )
+    } finally {
+      pending.resolve()
+      warning.mockRestore()
+      vi.useRealTimers()
+    }
+  })
+
   it('gives up on a wedged handoff instead of holding the quit open', async () => {
     const request = requests.request('to-tui', 'now', { operationId: hostTestOperationId() })
     expect(await host.requestHandoff(CALLER, request)).toMatchObject({ ok: true })

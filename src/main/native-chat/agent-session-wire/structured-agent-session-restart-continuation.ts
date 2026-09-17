@@ -59,7 +59,7 @@ export function restartContinuationEnvelope(
       clientOperationId: `${marker.recordedAt.toString().padStart(13, '0')}-${createHash('sha256')
         .update(
           JSON.stringify([
-            marker.launchId,
+            marker.teardownId,
             sessionId,
             marker.work.kind,
             marker.work.id,

@@ -18,7 +18,6 @@ import {
   type AgentSessionMutationOperationAdmission,
   type AgentSessionOperationAdmission
 } from './agent-session-operation-admission'
-import { createAgentSessionResumeMarkerStore } from './agent-session-resume-marker-store'
 import {
   isAgentSessionClaimKeyVerifiable,
   retireAgentSessionClaimKey
@@ -80,12 +79,7 @@ export const AGENT_SESSION_LEASE_TTL_MS = 30_000,
   AGENT_SESSION_LEASE_RENEW_INTERVAL_MS = 10_000
 
 export class AgentSessionRecordStore {
-  /** Teardown's record of what was working; spent once by the resume that uses one. */
-  readonly resumeMarkers: ReturnType<typeof createAgentSessionResumeMarkerStore>
-
-  private constructor(private readonly transactions: AgentSessionStoreTransactionQueue) {
-    this.resumeMarkers = createAgentSessionResumeMarkerStore(transactions)
-  }
+  private constructor(private readonly transactions: AgentSessionStoreTransactionQueue) {}
 
   static async open(args: { directory: string; hostId: string }): Promise<AgentSessionRecordStore> {
     const filePath = agentSessionStorePath(args.directory)

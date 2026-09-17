@@ -15,9 +15,9 @@ export const SESSION = 'session-working-1'
 export const THREAD = 'thread-1'
 export const HANDLE_ROOT = `codex:${JSON.stringify(THREAD)}`
 export const NOW = 1_700_000_000_000
-/** The launch that wrote the markers, and the one reading them. Adjacent by construction. */
-export const LAUNCH_PREVIOUS = 'launch-previous'
-export const LAUNCH_CURRENT = 'launch-current'
+/** Distinct teardown identities; neither encodes launch ancestry. */
+export const TEARDOWN_PREVIOUS = 'teardown-previous'
+export const TEARDOWN_CURRENT = 'teardown-current'
 
 export function turnItem(
   turnId: string,
@@ -164,7 +164,7 @@ export function marker(
     recordedAt: NOW,
     trigger: 'quit',
     providerHandleRoot: HANDLE_ROOT,
-    launchId: LAUNCH_PREVIOUS,
+    teardownId: TEARDOWN_PREVIOUS,
     latestUserItemId: null,
     ...overrides
   }

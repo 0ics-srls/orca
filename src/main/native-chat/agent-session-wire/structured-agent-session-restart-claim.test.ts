@@ -1,9 +1,3 @@
-// The claim: which markers a launch may act on at all, and what the surface does with them.
-//
-// Teardown's marker is durable, so on its own it is a write-ahead latch that stays actionable for a
-// whole TTL. Two things bound it, and both are asserted here: it is scoped to the launch that wrote
-// it, and the next launch deletes every durable copy in the same step that it claims them.
-
 import { describe, expect, it, vi } from 'vitest'
 import type { AgentSessionRecord } from '../../../shared/agent-session-record'
 import type { AgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
@@ -16,8 +10,6 @@ import { createStructuredAgentSessionRestartResume } from './structured-agent-se
 import {
   HANDLE_ROOT,
   journal,
-  LAUNCH_CURRENT,
-  LAUNCH_PREVIOUS,
   liveLeaseRecord,
   marker,
   NOW,
@@ -33,8 +25,6 @@ function surface(input: {
   sessions?: Map<string, HarnessSession>
   record?: AgentSessionRecord
   holdFails?: boolean
-  /** The launch generation the host reads. Absent means adjacent to the marker fixtures. */
-  launchGeneration?: { current: string; previous: string | null }
   clearFails?: boolean
   /** Orca refused to take the message at all. */
   sendRefusal?: AgentSessionWireRefusal
@@ -54,21 +44,22 @@ function surface(input: {
   const held: string[] = []
   const noted: { sessionId: string; text: string }[] = []
   const store = {
-    getRecord: () => input.record ?? record(),
-    resumeMarkers: {
-      list: () => [...live.values()],
-      record: async (markers: readonly AgentSessionResumeMarker[]) => {
-        recorded.push([...markers])
-        live.clear()
-        markers.forEach((entry) => live.set(entry.sessionId, entry))
-      },
-      clear: async () => {
-        if (input.clearFails) {
-          throw new Error('durable store refused the clear')
-        }
-        live.clear()
+    getRecord: () => input.record ?? record()
+  }
+  const recoveryCapsule = {
+    record: async (markers: readonly AgentSessionResumeMarker[]) => {
+      recorded.push([...markers])
+      live.clear()
+      markers.forEach((entry) => live.set(entry.sessionId, entry))
+    },
+    take: vi.fn(async () => {
+      if (input.clearFails) {
+        throw new Error('durable store refused the clear')
       }
-    }
+      const markers = [...live.values()]
+      live.clear()
+      return markers
+    })
   }
   const sent: { sessionId: string; text: string }[] = []
   const sessions =
@@ -95,14 +86,11 @@ function surface(input: {
   const noteFailures: { sessionId: string; error: unknown }[] = []
   return {
     restartResume: createStructuredAgentSessionRestartResume(
-      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the collaborator reads only getRecord and resumeMarkers from the store, and supportsCreate from the adapter.
+      // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the collaborator reads only getRecord from the store, and supportsCreate from the adapter.
       {
         store,
         adapter: { supportsCreate: () => true },
-        launchGeneration: input.launchGeneration ?? {
-          current: LAUNCH_CURRENT,
-          previous: LAUNCH_PREVIOUS
-        }
+        recoveryCapsule
       } as never,
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the live-session map is read for journal, hasProviderChild and fence only.
       sessions as never,
@@ -158,77 +146,24 @@ function surface(input: {
     held,
     sent,
     noted,
-    noteFailures
+    noteFailures,
+    recoveryCapsule
   }
 }
 
-describe('claiming the previous launch markers', () => {
-  // The adjacency proof. A marker two generations old is inside its TTL and otherwise perfectly
-  // resumable; only the launch stamp separates it from one written by the quit the user just did.
-  it('refuses a marker written by a launch that was not the immediately preceding one', async () => {
-    const { restartResume, held } = surface({
-      markers: [marker({ launchId: 'launch-two-generations-ago' })]
-    })
-
-    expect(await restartResume.list()).toEqual([])
-    expect(await restartResume.resume(undefined, 'modal')).toEqual([])
-    expect(held).toEqual([])
-  })
-
-  // Fail closed: a launch that cannot name its predecessor cannot prove adjacency for anything, so
-  // it acts on nothing rather than on everything inside the TTL.
-  it('refuses every marker when the previous launch id could not be read', async () => {
-    const { restartResume, held } = surface({
-      launchGeneration: { current: LAUNCH_CURRENT, previous: null }
-    })
-
-    expect(await restartResume.list()).toEqual([])
-    expect(held).toEqual([])
-  })
-
-  // The write-ahead case the whole launch-scoping exists for: teardown's marker write fails or times
-  // out, so the PREVIOUS generation's markers are still on disk when the app comes back. They are
-  // not adjacent to the launch that is now reading them, so none of them is actionable.
-  it('leaves a previous generation unactionable when the teardown write never landed', async () => {
-    // Nothing was recorded at the last quit, so what survives is the generation before it.
-    const { restartResume, held, live } = surface({
-      markers: [marker({ launchId: 'launch-before-previous' })],
-      launchGeneration: { current: LAUNCH_CURRENT, previous: LAUNCH_PREVIOUS }
-    })
-
-    expect(await restartResume.list()).toEqual([])
-    expect(held).toEqual([])
-    // And it is gone from disk, so the launch after this one cannot find it either.
-    expect(live.size).toBe(0)
-  })
-
-  // Backup recovery is the other way a spent marker comes back: the store is restored from a copy
-  // taken before the claim deleted it. The restored marker names a launch that is no longer the
-  // predecessor, so it stays refused however many times it is recovered.
-  it('refuses a claimed marker that a backup recovery put back on disk', async () => {
-    const { restartResume, live, held } = surface({})
-
-    expect(await restartResume.list()).toHaveLength(1)
-    await restartResume.resume(undefined, 'modal')
-    expect(held).toEqual([SESSION])
-
-    // The store rolls back to its pre-claim copy, and the app launches again.
-    const recovered = marker()
-    const next = surface({
-      markers: [recovered],
-      launchGeneration: { current: 'launch-after-current', previous: LAUNCH_CURRENT }
-    })
-
-    expect(await next.restartResume.list()).toEqual([])
-    expect(next.held).toEqual([])
-    expect(live.size).toBe(0)
+describe('claiming the recovery capsule', () => {
+  it('shares one take across concurrent initial readers', async () => {
+    const { restartResume, recoveryCapsule } = surface({})
+    const results = await Promise.all([restartResume.list(), restartResume.list()])
+    expect(results.map((items) => items.length)).toEqual([1, 1])
+    expect(recoveryCapsule.take).toHaveBeenCalledTimes(1)
   })
 
   // The claim is the deletion. Everything on disk goes in one step — including markers this launch
   // refuses — so a later launch has nothing left to re-examine.
   it('deletes every durable marker at claim time, refused ones included', async () => {
     const { restartResume, live } = surface({
-      markers: [marker(), marker({ sessionId: 'session-working-2', launchId: 'launch-older' })]
+      markers: [marker(), marker({ sessionId: 'session-working-2', teardownId: 'launch-older' })]
     })
 
     await restartResume.list()
@@ -404,7 +339,7 @@ describe('the restart-resume surface', () => {
         work: { kind: 'turn', id: 'turn-2' },
         recordedAt: NOW,
         trigger: 'update',
-        launchId: LAUNCH_CURRENT,
+        teardownId: expect.any(String),
         providerHandleRoot: HANDLE_ROOT,
         latestUserItemId: null
       }

@@ -74,7 +74,7 @@ export class StructuredAgentSessionResumeAdmission {
 
 export type StructuredAgentSessionResumeRunnerDeps = {
   admission: StructuredAgentSessionResumeAdmission
-  /** Spends the marker durably. False means another launch already took it. */
+  /** Spends the runtime claim. False means another request already took it. */
   consumeMarker: (sessionId: string) => Promise<boolean>
   /** Takes the resume-capable hold that re-acquires the provider child. */
   resume: (sessionId: string) => Promise<void>

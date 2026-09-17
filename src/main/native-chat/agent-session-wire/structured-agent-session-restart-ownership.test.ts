@@ -1,3 +1,9 @@
+import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
+import {
+  AgentSessionRecoveryCapsule,
+  AGENT_SESSION_RECOVERY_CAPSULE_FILE
+} from '../../runtime/agent-session-recovery-capsule'
+import { parseAgentSessionResumeMarker } from '../../../shared/agent-session-resume-marker'
 import { join } from 'node:path'
 import { afterEach, expect, it, vi } from 'vitest'
 import { AgentSessionRecordStore } from '../../runtime/agent-session-record-store'
@@ -67,7 +73,7 @@ async function interruptedRestart(
     claimKeyId: 'key-1',
     mintSpawnToken: () => 'spawn-next',
     probeOwner: async () => ({ outcome: 'pid-absent' }),
-    launchGeneration: { current: 'next', previous: 'unproven' },
+    recoveryCapsule: new AgentSessionRecoveryCapsule(previous.root),
     releaseGraceMs: GRACE,
     now: () => NOW
   })
@@ -75,7 +81,11 @@ async function interruptedRestart(
   previous.acquire.mockClear()
   previous.releaseAcquisition.mockClear()
   previous.dispatch.mockClear()
-  return { ...hostTestState(), host, store, closeSession }
+  const capsule = JSON.parse(
+    await readFile(join(previous.root, AGENT_SESSION_RECOVERY_CAPSULE_FILE), 'utf8')
+  )
+  const marker = parseAgentSessionResumeMarker(capsule.markers[0])
+  return { ...hostTestState(), host, store, closeSession, marker }
 }
 
 afterEach(() => vi.useRealTimers())
@@ -173,8 +183,7 @@ it.each(['turn', 'message'] as const)(
 )
 
 it('replays the same logical continuation through the durable send ledger', async () => {
-  const { host, store, dispatch } = await interruptedRestart()
-  const marker = store.resumeMarkers.list(NOW)[0]
+  const { host, store, dispatch, marker } = await interruptedRestart()
   if (!marker) {
     throw new Error('missing interrupted restart marker')
   }
@@ -208,7 +217,7 @@ it('releases a failed acquisition without retrying the spent offer', async () =>
 it.each([false, true])(
   'admits one durable continuation under concurrent calls (pane already live: %s)',
   async (alreadyLive) => {
-    const { host, store, acquire, dispatch } = await interruptedRestart()
+    const { host, root, acquire, dispatch } = await interruptedRestart()
     if (alreadyLive) {
       expect(await host.restartResume.list()).toHaveLength(1)
       await host.hold(SESSION, 'pane')
@@ -226,7 +235,7 @@ it.each([false, true])(
     expect(acquire).toHaveBeenCalledTimes(1)
     expect(dispatch).toHaveBeenCalledTimes(1)
     expect(host.journalSnapshot(SESSION).submissions).toHaveLength(1)
-    expect(store.resumeMarkers.list(NOW)).toEqual([])
+    expect(await new AgentSessionRecoveryCapsule(root).take(NOW)).toEqual([])
     await host.restartResume.continueAfterRestart([SESSION], 'later-click')
     expect(dispatch).toHaveBeenCalledTimes(1)
     host.release(SESSION, 'pane')
@@ -275,4 +284,60 @@ it('retains acquisition through slow continuation settlement, then releases it',
   await vi.advanceTimersByTimeAsync(GRACE)
   await vi.waitFor(() => expect(closeSession).toHaveBeenCalledTimes(1))
   expect(dispatch).toHaveBeenCalledTimes(1)
+})
+
+it('shares one real-file take across concurrent first recovery requests', async () => {
+  const { host, root } = await interruptedRestart()
+  const take = vi.spyOn(AgentSessionRecoveryCapsule.prototype, 'take')
+  const results = await Promise.all([host.restartResume.list(), host.restartResume.list()])
+  expect(results.map((items) => items.length)).toEqual([1, 1])
+  expect(take).toHaveBeenCalledTimes(1)
+  expect(await new AgentSessionRecoveryCapsule(root).take(NOW)).toEqual([])
+  take.mockRestore()
+})
+
+it('fails closed on corrupt recovery storage while ordinary hold and send still work', async () => {
+  const { host, root, dispatch } = await interruptedRestart()
+  await writeFile(join(root, AGENT_SESSION_RECOVERY_CAPSULE_FILE), '{')
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  expect(await host.restartResume.list()).toEqual([])
+  expect(await host.restartResume.continueAfterRestart([SESSION], 'modal')).toEqual({
+    resumed: [],
+    continued: []
+  })
+  await host.hold(SESSION, 'pane')
+  const body = hostTestMessage('A fresh ordinary request')
+  expect(
+    await host.send(CALLER, { envelope: envelope('agentSession.send', { body }), body })
+  ).toMatchObject({ ok: true })
+  expect(dispatch).toHaveBeenCalledTimes(1)
+  expect(warning).toHaveBeenCalledTimes(1)
+  warning.mockRestore()
+  host.release(SESSION, 'pane')
+})
+
+it('logs teardown capsule publication failure and still releases the provider', async () => {
+  const previous = hostTestState()
+  await attach()
+  const events = previous.acquire.mock.calls[0]?.[0].events
+  if (!events) {
+    throw new Error('missing provider event sink')
+  }
+  events.appendItem(
+    { provider: 'codex', threadId: THREAD, turnId: 'working', ordinal: 1 },
+    { kind: 'turn', turnId: 'working', state: 'running' }
+  )
+  await previous.host.flushStreamedEvents(SESSION)
+  const capsulePath = join(previous.root, AGENT_SESSION_RECOVERY_CAPSULE_FILE)
+  await mkdir(capsulePath)
+  const warning = vi.spyOn(console, 'warn').mockImplementation(() => {})
+  await expect(previous.host.flushAllStreamedEvents()).resolves.toBeUndefined()
+  expect(() => previous.host.journalSnapshot(SESSION)).toThrow('agent_session_ownership_unknown')
+  expect(warning).toHaveBeenCalledWith(
+    '[structured-agent-session] recording recovery capsule failed',
+    expect.any(Error)
+  )
+  expect(previous.store.getRecord(SESSION)?.lease.claimStatus).toBe('released')
+  warning.mockRestore()
+  await rm(capsulePath, { recursive: true })
 })

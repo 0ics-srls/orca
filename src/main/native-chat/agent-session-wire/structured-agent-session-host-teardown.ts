@@ -18,9 +18,7 @@ export type StructuredAgentSessionTeardownPhase = {
 /** Quit must not wait indefinitely on an in-flight handoff; see `drain-handoffs` below. */
 const HANDOFF_DRAIN_TIMEOUT_MS = 5_000
 
-/** The marker write goes through the store's transaction queue, which an operation wedged at quit
- *  can still be occupying. Giving up costs the user one click on the next launch; waiting costs
- *  them a quit that never finishes, so this bookkeeping never gets to gate the shutdown. */
+/** Advisory persistence must not hold shutdown open. */
 const RESUME_MARKER_RECORD_TIMEOUT_MS = 2_000
 
 /** Eight steps at ten seconds each would outlast the global quit deadline, and a quit that dies
@@ -69,12 +67,10 @@ export function structuredAgentSessionHostTeardownPhases(collaborators: {
     {
       name: 'record-resume-markers',
       run: () =>
-        withTimeout(
-          collaborators.recordResumeMarkers().catch((error: unknown) => {
-            console.warn('[structured-agent-session] recording resume markers failed', error)
-          }),
-          RESUME_MARKER_RECORD_TIMEOUT_MS,
-          undefined
+        withPhaseTimeout(collaborators.recordResumeMarkers, RESUME_MARKER_RECORD_TIMEOUT_MS).catch(
+          (error: unknown) => {
+            console.warn('[structured-agent-session] recording recovery capsule failed', error)
+          }
         )
     },
     { name: 'dispose-holds', run: () => collaborators.holds.dispose() },

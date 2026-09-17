@@ -5,8 +5,7 @@
 // the first of two records a resume needs: the journal's own turn record has to name the same turn
 // before anything is handed a provider child again.
 //
-// Markers are transient obligations, so each one carries the two ways it can die: it is consumed on
-// the resume that uses it, and it expires on its own if no launch ever does.
+// The capsule is consumed before offers enter runtime memory; unused witnesses also expire.
 
 import { z } from 'zod'
 
@@ -52,15 +51,8 @@ export type AgentSessionResumeMarker = {
    * preserve — a resume that changes it forked — which is exactly what this guard is for.
    */
   providerHandleRoot: string
-  /**
-   * Identity of the launch whose teardown wrote this.
-   *
-   * The adjacency proof: a launch accepts a marker only when this equals the id of the launch
-   * immediately before it. Without it the marker is a durable write-ahead latch with a 24h TTL —
-   * a previous generation's marker stays actionable after a failed clear, a timed-out teardown
-   * write, or a store restored from its backup, and auto mode would act on it silently.
-   */
-  launchId: string
+  /** Stable teardown identity for continuation deduplication, not launch ancestry. */
+  teardownId: string
 }
 
 const MAX_FIELD_LENGTH = 512
@@ -76,7 +68,7 @@ const agentSessionResumeWorkSchema = z.object({
 /**
  * The single parse boundary for a marker.
  *
- * Markers re-enter from the store as JSON this process may not have written — an older build, a
+ * Markers re-enter from the capsule as JSON this process may not have written — an older build, a
  * hand-edited profile, a partially recovered file. Everything downstream dereferences the shape
  * without guards and decides whether to hand an agent a provider child, so the untyped value is
  * turned into a typed one exactly once, here, and never read field-by-field off `unknown`.
@@ -90,7 +82,7 @@ const agentSessionResumeMarkerSchema = z.object({
   recordedAt: z.number().int().nonnegative(),
   trigger: z.enum(AGENT_SESSION_RESUME_TRIGGERS),
   providerHandleRoot: markerField,
-  launchId: markerField
+  teardownId: markerField
 })
 
 /** The marker this value describes, or null when it is not one. Null is always a drop, never a
@@ -98,10 +90,6 @@ const agentSessionResumeMarkerSchema = z.object({
 export function parseAgentSessionResumeMarker(value: unknown): AgentSessionResumeMarker | null {
   const parsed = agentSessionResumeMarkerSchema.safeParse(value)
   return parsed.success ? parsed.data : null
-}
-
-export function isAgentSessionResumeMarker(value: unknown): value is AgentSessionResumeMarker {
-  return parseAgentSessionResumeMarker(value) !== null
 }
 
 export function isExpiredAgentSessionResumeMarker(

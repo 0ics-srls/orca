@@ -9,7 +9,7 @@ import {
   type AgentSessionStoreState,
   type LoadedAgentSessionStore
 } from './agent-session-record-store-file'
-import { withAgentSessionStoreTransactionLock } from './agent-session-store-transaction-lock'
+import { withFileTransactionLock } from '../file-transaction-lock'
 
 function markLoadedLeasesUnreconciled(state: AgentSessionStoreState): void {
   for (const [sessionId, record] of state.records) {
@@ -39,15 +39,12 @@ function agentSessionStoreStateChanged(
   retiredClaimKeys: AgentSessionStoreState['retiredClaimKeys'],
   unreadableRecords: AgentSessionStoreState['unreadableRecords'],
   visibleSessionIds: AgentSessionStoreState['visibleSessionIds'],
-  visibleSessionIdsIndexPresent: AgentSessionStoreState['visibleSessionIdsIndexPresent'],
-  resumeMarkers: AgentSessionStoreState['resumeMarkers']
+  visibleSessionIdsIndexPresent: AgentSessionStoreState['visibleSessionIdsIndexPresent']
 ): boolean {
   return (
     !mapEntriesMatch(state.records, records) ||
     !mapEntriesMatch(state.operations, operations) ||
     !mapEntriesMatch(state.unreadableRecords, unreadableRecords) ||
-    // Without this a markers-only transaction compares equal and is never written to disk.
-    !mapEntriesMatch(state.resumeMarkers, resumeMarkers) ||
     state.visibleSessionIdsIndexPresent !== visibleSessionIdsIndexPresent ||
     state.visibleSessionIds.size !== visibleSessionIds.size ||
     [...state.visibleSessionIds].some((id) => !visibleSessionIds.has(id)) ||
@@ -93,7 +90,7 @@ export class AgentSessionStoreTransactionQueue {
 
   transact<T>(apply: () => T): Promise<T> {
     const run = this.queue.then(() =>
-      withAgentSessionStoreTransactionLock(this.filePath, async () => {
+      withFileTransactionLock(this.filePath, async () => {
         if (this.readOnly) {
           throw new Error('agent_session_legacy_required')
         }
@@ -104,7 +101,6 @@ export class AgentSessionStoreTransactionQueue {
         const unreadableRecords = new Map(this.state.unreadableRecords)
         const visibleSessionIds = new Set(this.state.visibleSessionIds)
         const visibleSessionIdsIndexPresent = this.state.visibleSessionIdsIndexPresent
-        const resumeMarkers = new Map(this.state.resumeMarkers)
         try {
           // The lost commit may have granted a higher fence than the backup records show. Rather
           // than refuse forever, raise every recovered fence clear of anything that commit could
@@ -124,8 +120,7 @@ export class AgentSessionStoreTransactionQueue {
               retiredClaimKeys,
               unreadableRecords,
               visibleSessionIds,
-              visibleSessionIdsIndexPresent,
-              resumeMarkers
+              visibleSessionIdsIndexPresent
             )
           ) {
             return result
@@ -146,7 +141,6 @@ export class AgentSessionStoreTransactionQueue {
           this.state.unreadableRecords = unreadableRecords
           this.state.visibleSessionIds = visibleSessionIds
           this.state.visibleSessionIdsIndexPresent = visibleSessionIdsIndexPresent
-          this.state.resumeMarkers = resumeMarkers
           throw error
         }
       })

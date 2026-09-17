@@ -17,7 +17,7 @@ import {
   tearDownRuntime,
   type InstalledRuntime
 } from './structured-agent-session-runtime-teardown'
-import { rotateAgentSessionLaunchGeneration } from './agent-session-launch-generation'
+import { AgentSessionRecoveryCapsule } from './agent-session-recovery-capsule'
 import { createCodexStructuredLaunchResolver } from '../codex/codex-structured-launch-resolution'
 import type { CodexStructuredPermissionPolicy } from '../codex/codex-structured-permission-policy'
 import {
@@ -193,9 +193,6 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
     directory: join(deps.stateDirectory, RECORD_STORE_DIR_NAME),
     hostId: deps.hostId
   })
-  // Rotated once per launch, before anything can act on a marker. Deliberately NOT inside the
-  // record store directory: see the module for why its rollback domain must stay separate.
-  const launchGeneration = await rotateAgentSessionLaunchGeneration(deps.stateDirectory)
   agentSessionPtyWriteGate.attachRecordLookup((sessionId) => store.getRecord(sessionId))
   // Why: only the durable store can identify a provider child lost before record publication.
   void (deps.reapOrphanChildren ?? stopOrphanAgentSessionChildren)({ store }).catch((error) => {
@@ -294,7 +291,7 @@ async function install(deps: StructuredAgentSessionRuntimeDeps): Promise<Install
     host = new StructuredAgentSessionHost({
       store,
       adapter,
-      launchGeneration,
+      recoveryCapsule: new AgentSessionRecoveryCapsule(deps.stateDirectory),
       journalRoot: deps.stateDirectory,
       claimKeyId: deps.claimKeyId,
       probeOwner: createStructuredAgentSessionOwnerProbe(deps.hostId),

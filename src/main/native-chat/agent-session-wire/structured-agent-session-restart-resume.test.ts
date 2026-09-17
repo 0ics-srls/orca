@@ -29,7 +29,7 @@ import {
   claudeRecord,
   HANDLE_ROOT,
   journal,
-  LAUNCH_CURRENT,
+  TEARDOWN_CURRENT,
   marker,
   NOW,
   pendingApproval,
@@ -69,7 +69,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => record(),
       trigger: 'quit',
-      launchId: LAUNCH_CURRENT,
+      teardownId: TEARDOWN_CURRENT,
       now: NOW
     })
 
@@ -79,7 +79,7 @@ describe('deriving what was working at teardown', () => {
         work: { kind: 'turn', id: 'turn-1' },
         recordedAt: NOW,
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         providerHandleRoot: HANDLE_ROOT,
         latestUserItemId: null
       }
@@ -93,7 +93,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => record(),
       trigger: 'update',
-      launchId: LAUNCH_CURRENT,
+      teardownId: TEARDOWN_CURRENT,
       now: NOW
     })
 
@@ -106,7 +106,7 @@ describe('deriving what was working at teardown', () => {
         sessions: new Map([[SESSION, { journal: journal([]), hasProviderChild: true }]]),
         getRecord: () => record(),
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -120,7 +120,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -136,7 +136,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -158,7 +158,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record(),
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -172,7 +172,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => claudeRecord(null),
       trigger: 'quit',
-      launchId: LAUNCH_CURRENT,
+      teardownId: TEARDOWN_CURRENT,
       now: NOW
     })
 
@@ -187,7 +187,7 @@ describe('deriving what was working at teardown', () => {
         ]),
         getRecord: () => record({ chain: [] }),
         trigger: 'quit',
-        launchId: LAUNCH_CURRENT,
+        teardownId: TEARDOWN_CURRENT,
         now: NOW
       })
     ).toEqual([])
@@ -209,7 +209,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => claudeRecord(null),
       trigger: 'quit',
-      launchId: LAUNCH_CURRENT,
+      teardownId: TEARDOWN_CURRENT,
       now: NOW
     })
 
@@ -233,7 +233,7 @@ describe('deriving what was working at teardown', () => {
       ]),
       getRecord: () => record(),
       trigger: 'quit',
-      launchId: LAUNCH_CURRENT,
+      teardownId: TEARDOWN_CURRENT,
       now: NOW
     })
 

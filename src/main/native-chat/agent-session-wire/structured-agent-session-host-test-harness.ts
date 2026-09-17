@@ -1,3 +1,4 @@
+import { AgentSessionRecoveryCapsule } from '../../runtime/agent-session-recovery-capsule'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -140,6 +141,7 @@ beforeEach(async () => {
     store,
     adapter: adapter(),
     journalRoot: root,
+    recoveryCapsule: new AgentSessionRecoveryCapsule(root),
     claimKeyId: 'key-1',
     mintSpawnToken: () => 'spawn-a',
     now: () => NOW
