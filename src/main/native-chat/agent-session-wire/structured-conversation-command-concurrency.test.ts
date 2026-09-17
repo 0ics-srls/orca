@@ -153,8 +153,37 @@ describe('host conversation command concurrency', () => {
     expect(compact).not.toHaveBeenCalled()
   })
 
+  it('does not start provider work after the durable lease advances ahead of publication', async () => {
+    const flush = Promise.withResolvers<void>()
+    const flushing = Promise.withResolvers<void>()
+    vi.spyOn(host, 'flushStreamedEvents').mockImplementationOnce(() => {
+      flushing.resolve()
+      return flush.promise
+    })
+    const readRecord = store.getRecord.bind(store)
+    let leaseAdvanced = false
+    vi.spyOn(store, 'getRecord').mockImplementation((sessionId) => {
+      const record = readRecord(sessionId)
+      return leaseAdvanced && record && sessionId === HOST_TEST_SESSION
+        ? {
+            ...record,
+            lease: { ...record.lease, runtimeFence: record.lease.runtimeFence + 1 }
+          }
+        : record
+    })
+    const running = host.conversationCommand(CALLER, commandParams('compact'))
+    await flushing.promise
+
+    leaseAdvanced = true
+    flush.resolve()
+
+    await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(compact).not.toHaveBeenCalled()
+  })
+
   it('retires a provider completion that arrives after recovery advances the generation', async () => {
     await host.hold(HOST_TEST_SESSION, 'conversation-surface')
+    const flush = vi.spyOn(host, 'flushStreamedEvents')
     const completion = Promise.withResolvers<Record<string, never>>()
     compact.mockReturnValueOnce(completion.promise)
     const running = host.conversationCommand(CALLER, commandParams('compact'))
@@ -170,9 +199,11 @@ describe('host conversation command concurrency', () => {
       acquisitionGeneration: 'generation-1'
     })
     expect(store.getRecord(HOST_TEST_SESSION)?.lease.runtimeFence).toBeGreaterThan(fence)
+    const flushesBeforeCompletion = flush.mock.calls.length
     completion.resolve({})
 
     await expect(running).resolves.toMatchObject({ ok: true, value: { state: 'unknown' } })
+    expect(flush).toHaveBeenCalledTimes(flushesBeforeCompletion)
     await expect(host.conversationCommand(CALLER, commandParams('compact'))).resolves.toMatchObject(
       { ok: true, value: { state: 'completed' } }
     )

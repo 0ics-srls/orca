@@ -4,11 +4,12 @@ import type {
 } from '../../../shared/agent-session-conversation-command'
 import { attachConversationClearReplacement } from './structured-conversation-clear-replacement'
 import {
+  conversationCommandExecutionIsCurrent,
   conversationCommandResult,
   persistConversationCommandResult,
   type ConversationCommandResult,
-  type PendingConversationCommand,
-  type PreparedConversationCommand
+  type PendingConversationCommand as PendingCommand,
+  type PreparedConversationCommand as PreparedCommand
 } from './structured-conversation-command'
 import {
   COMPACTION_UNCONFIRMED,
@@ -19,10 +20,10 @@ import type { StructuredAgentSessionMutationContext } from './structured-agent-s
 import type { StructuredAgentSessionHost as Host } from './structured-agent-session-host'
 
 type ExecutionOwner = {
-  isCurrent: (entry: PendingConversationCommand) => boolean
-  finish: (entry: PendingConversationCommand, result: ConversationCommandResult) => void
-  settleWaiter: (entry: PendingConversationCommand, result: ConversationCommandResult) => void
-  report: (entry: PendingConversationCommand, error: unknown) => void
+  isCurrent: (entry: PendingCommand) => boolean
+  finish: (entry: PendingCommand, result: ConversationCommandResult) => void
+  settleWaiter: (entry: PendingCommand, result: ConversationCommandResult) => void
+  report: (entry: PendingCommand, error: unknown) => void
 }
 type ExecutionHost = Pick<Host, 'attach' | 'close' | 'flushStreamedEvents' | 'hasSession'>
 
@@ -33,7 +34,7 @@ export class StructuredConversationCommandExecution {
     private readonly owner: ExecutionOwner
   ) {}
 
-  async run(entry: PendingConversationCommand): Promise<void> {
+  async run(entry: PendingCommand): Promise<void> {
     const execution = entry.execution
     if (!execution || !this.owner.isCurrent(entry)) {
       return
@@ -41,9 +42,11 @@ export class StructuredConversationCommandExecution {
     let providerMaySettleLate = false
     try {
       await this.publishLifecycle(entry, execution.prepared, 'running')
+      if (await this.retireStale(entry, execution)) {
+        return
+      }
       await this.host.flushStreamedEvents(execution.turn.sessionId)
-      if (!this.canSettle(entry, execution)) {
-        await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
+      if (await this.retireStale(entry, execution)) {
         return
       }
       providerMaySettleLate = entry.command === 'compact'
@@ -55,7 +58,7 @@ export class StructuredConversationCommandExecution {
     }
   }
 
-  async abandon(entry: PendingConversationCommand): Promise<ConversationCommandResult> {
+  async abandon(entry: PendingCommand): Promise<ConversationCommandResult> {
     const execution = entry.execution
     if (!execution) {
       throw new Error('Conversation command was not prepared.')
@@ -76,10 +79,7 @@ export class StructuredConversationCommandExecution {
     return conversationCommandResult(execution, value)
   }
 
-  private async executeCompact(
-    entry: PendingConversationCommand,
-    execution: PreparedConversationCommand
-  ): Promise<void> {
+  private async executeCompact(entry: PendingCommand, execution: PreparedCommand): Promise<void> {
     const compact = execution.turn.adapter.compact
     if (!compact) {
       await this.complete(entry, 'Compaction is unavailable for this provider.')
@@ -91,6 +91,9 @@ export class StructuredConversationCommandExecution {
       fence: execution.turn.fence,
       onLateResult: (late) => this.complete(entry, late.error)
     })
+    if (await this.retireStale(entry, execution)) {
+      return
+    }
     try {
       await this.host.flushStreamedEvents(execution.turn.sessionId)
     } catch (error) {
@@ -100,10 +103,7 @@ export class StructuredConversationCommandExecution {
     await this.complete(entry, result.error)
   }
 
-  private async executeClear(
-    entry: PendingConversationCommand,
-    execution: PreparedConversationCommand
-  ): Promise<void> {
+  private async executeClear(entry: PendingCommand, execution: PreparedCommand): Promise<void> {
     let effectiveOptions = execution.source.options
     if (!execution.supersededOperation) {
       try {
@@ -129,8 +129,7 @@ export class StructuredConversationCommandExecution {
         return
       }
     }
-    if (!this.canSettle(entry, execution)) {
-      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
+    if (await this.retireStale(entry, execution)) {
       return
     }
     if (effectiveOptions) {
@@ -140,8 +139,7 @@ export class StructuredConversationCommandExecution {
         }
       })
     }
-    if (!this.canSettle(entry, execution)) {
-      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
+    if (await this.retireStale(entry, execution)) {
       return
     }
     const replacementSessionId = execution.prepared.replacementSessionId!
@@ -180,7 +178,7 @@ export class StructuredConversationCommandExecution {
   }
 
   private async complete(
-    entry: PendingConversationCommand,
+    entry: PendingCommand,
     error?: string,
     discardReplacement = false
   ): Promise<void> {
@@ -215,11 +213,7 @@ export class StructuredConversationCommandExecution {
     })
   }
 
-  private async markUnknown(
-    entry: PendingConversationCommand,
-    cause: unknown,
-    retire = false
-  ): Promise<void> {
+  private async markUnknown(entry: PendingCommand, cause: unknown, retire = false): Promise<void> {
     const execution = entry.execution
     if (!execution) {
       return
@@ -230,7 +224,7 @@ export class StructuredConversationCommandExecution {
   }
 
   private async markUnknownInLane(
-    entry: PendingConversationCommand,
+    entry: PendingCommand,
     cause: unknown,
     retire = false
   ): Promise<void> {
@@ -269,7 +263,7 @@ export class StructuredConversationCommandExecution {
   }
 
   private publishLifecycle(
-    entry: PendingConversationCommand,
+    entry: PendingCommand,
     value: AgentSessionConversationCommandResult,
     state: Parameters<typeof publishConversationCommandLifecycle>[0]['state']
   ): Promise<void> {
@@ -283,29 +277,25 @@ export class StructuredConversationCommandExecution {
     })
   }
 
-  private canSettle(
-    entry: PendingConversationCommand,
-    execution: PreparedConversationCommand
-  ): boolean {
-    const store = this.context().deps.store
-    const command = store.getRecord(execution.turn.sessionId)?.conversationCommand
+  private canSettle(entry: PendingCommand, execution: PreparedCommand): boolean {
+    const command = this.context().deps.store.getRecord(
+      execution.turn.sessionId
+    )?.conversationCommand
     return this.ownsExecution(entry, execution) && command?.phase === 'prepared'
   }
 
-  private ownsExecution(
-    entry: PendingConversationCommand,
-    execution: PreparedConversationCommand
-  ): boolean {
-    const sessionId = execution.turn.sessionId
-    const session = this.context().sessions.get(sessionId)
-    const command = this.context().deps.store.getRecord(sessionId)?.conversationCommand
+  private async retireStale(entry: PendingCommand, execution: PreparedCommand): Promise<boolean> {
+    if (!this.canSettle(entry, execution)) {
+      await this.markUnknown(entry, new Error(CONVERSATION_COMMAND_ABANDONED), true)
+      return true
+    }
+    return false
+  }
+
+  private ownsExecution(entry: PendingCommand, execution: PreparedCommand): boolean {
     return (
       this.owner.isCurrent(entry) &&
-      session?.journal === execution.turn.journal &&
-      session.fence === execution.turn.fence &&
-      command?.runtimeFence === execution.turn.fence &&
-      command.operationId === execution.prepared.operationId &&
-      command.callerKey === execution.prepared.callerKey
+      conversationCommandExecutionIsCurrent(this.context(), execution)
     )
   }
 }

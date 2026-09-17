@@ -60,6 +60,24 @@ export type ConversationCommandPreparation =
     }
   | { decision: 'execute'; execution: PreparedConversationCommand }
 
+export function conversationCommandExecutionIsCurrent(
+  context: StructuredAgentSessionMutationContext,
+  execution: PreparedConversationCommand
+): boolean {
+  const { sessionId, fence, journal } = execution.turn
+  const session = context.sessions.get(sessionId)
+  const record = context.deps.store.getRecord(sessionId)
+  const command = record?.conversationCommand
+  return (
+    session?.journal === journal &&
+    session.fence === fence &&
+    record?.lease.runtimeFence === fence &&
+    command?.runtimeFence === fence &&
+    command.operationId === execution.prepared.operationId &&
+    command.callerKey === execution.prepared.callerKey
+  )
+}
+
 function clearReplacementSessionId(
   sessionId: string,
   callerKey: string,
