@@ -34,7 +34,6 @@ import {
   launchPairedElectronClient,
   type PairedElectronClient
 } from './helpers/paired-electron-client'
-import { cleanupE2EDaemons, closeElectronAppForE2E } from './helpers/electron-process-shutdown'
 import {
   callEnvironment,
   createPairedHostTerminal,
@@ -77,7 +76,11 @@ function fixtureCommand(): string {
     : command.map((value) => `'${value.replaceAll("'", `'\\''`)}'`).join(' ')
 }
 
-/** -1 means no session file was found at all — a reader problem, not an empty buffer. */
+/** Returns -1 when no session file was found at all, and 0 when one was found without buffers.
+ *  Why the two are distinguished: when a measurement reads zero, something in the same log line
+ *  has to separate *measured zero* from *measured nothing*. An earlier version of this reported
+ *  "0 buffers" for a profile that had been deleted out from under it, and the phantom data-loss
+ *  bug that produced was caught only because a sibling diagnostic listed zero *files*. */
 function readOnDiskBufferLength(userDataDir: string, webTabId: string): number {
   let best = -1
   for (const file of globSync(path.join(userDataDir, '**', 'orca-data.json'))) {
@@ -203,8 +206,7 @@ test.describe('host retains nothing', () => {
       const storeAtPark = await readStoreBufferLength(first.page, target.webTabId)
 
       await first.page.evaluate(() => window.dispatchEvent(new Event('beforeunload')))
-      await closeElectronAppForE2E(first.app)
-      await cleanupE2EDaemons(userDataDir)
+      await first.quitPreservingProfile()
       const onDiskAfterQuit = readOnDiskBufferLength(userDataDir, target.webTabId)
 
       relaunched = await launchPairedElectronClient(offer, testInfo, 'parked-restart-relaunch', {
