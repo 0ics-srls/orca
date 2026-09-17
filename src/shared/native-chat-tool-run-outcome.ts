@@ -5,24 +5,14 @@
 // claim the header makes on its own. "Nothing is running" is not that claim:
 // `failed` is neither running nor a success, so a header that reads one off the
 // other marks a failed run done and leaves the failure to be found by expanding
-// it. Success must be stated, which is what `nativeChatToolRunSucceeded` does.
+// it. Success must be stated, which is what `nativeChatToolRunOutcome` does.
 
 import { selectActiveToolCall } from './native-chat-tool-activity'
-import { pairToolBlocks, type NativeChatToolPair } from './native-chat-tool-fold'
-import { isToolCallBlock, type NativeChatBlock } from './native-chat-types'
+import type { NativeChatBlock } from './native-chat-types'
 
-/** A call that did not succeed: the provider's own `failed` verdict, or a result
- *  the tool returned as an error. Both are needed because only the structured
- *  lanes set lifecycle `state` — this is the same composite test the task-list,
- *  edit-card and ask-row readers already use to reject a call's payload. */
-function isFailedToolPair({ call, result }: NativeChatToolPair): boolean {
-  return call !== undefined && (call.state === 'failed' || result?.isError === true)
-}
-
-/** How many of a run's calls failed, over every call rather than the latest:
- *  a failure anywhere in a collapsed run is what its header has to report. */
-export function countFailedToolCalls(blocks: readonly NativeChatBlock[]): number {
-  return pairToolBlocks(blocks).filter(isFailedToolPair).length
+export type NativeChatToolRunOutcome = {
+  failedCallCount: number
+  succeeded: boolean
 }
 
 /** Whether the run may be marked done: settled, nothing failed, nothing still
@@ -33,13 +23,28 @@ export function countFailedToolCalls(blocks: readonly NativeChatBlock[]): number
  *  A call carrying no lifecycle `state` is not a failure and not in flight, so a
  *  legacy transcript still settles; nothing here demands an explicit `completed`
  *  that those lanes never wrote. */
-export function nativeChatToolRunSucceeded(
+export function nativeChatToolRunOutcome(
   blocks: readonly NativeChatBlock[],
   { activeTurnIsWorking }: { activeTurnIsWorking?: boolean }
-): boolean {
-  return (
-    selectActiveToolCall(blocks, { activeTurnIsWorking }) === null &&
-    !blocks.some((block) => isToolCallBlock(block) && block.state === 'running') &&
-    countFailedToolCalls(blocks) === 0
-  )
+): NativeChatToolRunOutcome {
+  let failedStateCount = 0
+  let errorResultCount = 0
+  let hasRunningCall = false
+  for (const block of blocks) {
+    if (block.type === 'tool-call') {
+      failedStateCount += block.state === 'failed' ? 1 : 0
+      hasRunningCall ||= block.state === 'running'
+    } else if (block.type === 'tool-result') {
+      errorResultCount += block.isError === true ? 1 : 0
+    }
+  }
+  // Structured lanes carry both signals for one failure; legacy lanes carry only the result.
+  const failedCallCount = Math.max(failedStateCount, errorResultCount)
+  return {
+    failedCallCount,
+    succeeded:
+      selectActiveToolCall(blocks, { activeTurnIsWorking }) === null &&
+      !hasRunningCall &&
+      failedCallCount === 0
+  }
 }

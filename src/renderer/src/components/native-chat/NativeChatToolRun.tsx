@@ -25,10 +25,7 @@ import {
   selectActiveToolCall
 } from '../../../../shared/native-chat-tool-activity'
 import { nativeChatToolRunIconName } from '../../../../shared/native-chat-tool-icon'
-import {
-  countFailedToolCalls,
-  nativeChatToolRunSucceeded
-} from '../../../../shared/native-chat-tool-run-outcome'
+import { nativeChatToolRunOutcome } from '../../../../shared/native-chat-tool-run-outcome'
 import {
   nativeChatAskRunBlocks,
   nativeChatAskRunSubject
@@ -127,8 +124,9 @@ export function NativeChatToolRun({
     : null
   const isSettled = headerActiveCall == null
   const askIsActive = selectActiveToolCall(unansweredAsks, { activeTurnIsWorking }) !== null
-  const runSucceeded = nativeChatToolRunSucceeded(headerBlocks, { activeTurnIsWorking })
-  const failedCallCount = countFailedToolCalls(headerBlocks)
+  const { succeeded: runSucceeded, failedCallCount } = nativeChatToolRunOutcome(headerBlocks, {
+    activeTurnIsWorking
+  })
   // The turn caret opens the activity group while each child tool stays collapsed.
   const expandToolLines = expandOverride === undefined ? open : false
   // Diffing every edit is the run's most expensive work, so a collapsed run —
@@ -297,7 +295,7 @@ export function NativeChatToolRun({
               )}
             </span>
           ) : null}
-          {/* Only a stated success is marked done — see nativeChatToolRunSucceeded. */}
+          {/* Only a stated success is marked done — see nativeChatToolRunOutcome. */}
           {structuredActivityUi && runSucceeded ? (
             <Check aria-hidden className="size-3 shrink-0 text-muted-foreground" />
           ) : null}
