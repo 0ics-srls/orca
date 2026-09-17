@@ -23,6 +23,7 @@ const profile = {
   }
 }
 
+// oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: readFreshOrcaCloudSession is mocked, so nothing ever reads a field off authConfig.
 const authConfig = {} as never
 
 describe('readRelayAuthContext session-read taxonomy', () => {
