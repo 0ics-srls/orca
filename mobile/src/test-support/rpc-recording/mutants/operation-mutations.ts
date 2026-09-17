@@ -26,14 +26,18 @@ export const OPERATION_MUTATIONS = {
 `,
     after: ''
   },
-  // Accepts a null result envelope instead of rejecting it. The guard is repeated for three
-  // mutations in this file; the anchor carries the message so only the recorded one is edited.
+  // Re-anchored where step 7 moved the defence. The b2 seed's defect is a null result envelope
+  // reaching the metadata sheet, and the call-site guard it used to be injected at can no longer
+  // see one: the checked reader refuses the envelope first. So the anchor is the schema, and
+  // loosening it to `z.unknown()` puts the null back on the path to `result.ok` — which is main's
+  // own property-read TypeError, and a different visible error from the reply the reader names.
   acceptance: {
-    file: 'use-mobile-tasks-project-metadata-actions.tsx',
-    before: `if (result.ok === false) {
-          throw new Error(result.error?.message ?? 'Failed to update GitHub item')`,
-    after: `if (result?.ok === false) {
-          throw new Error(result.error?.message ?? 'Failed to update GitHub item')`
+    file: 'task-project-board-reply-schema.ts',
+    before: `export const taskProjectMutationStatusSchema = z.looseObject({
+  ok: optionalOk,
+  error: optionalProjectError
+})`,
+    after: `export const taskProjectMutationStatusSchema = z.unknown()`
   },
   // Interprets inside the request chain instead of at the declared barrier, so the issue leg
   // rejects the group early and the sibling comment request is abandoned out of order. Re-anchored
@@ -69,11 +73,22 @@ export const OPERATION_MUTATIONS = {
     before: 'const snapshot = decodeAccountsSnapshot(accounts.value)',
     after: 'const snapshot = decodeAccountsSnapshot(reply)'
   },
+  // Puts the workspace catalog's reply back behind an unchecked reader, so a reply carrying neither
+  // rows nor an `unchanged` token reaches `admitWorktreeCatalogResponse` as an invalid admission
+  // instead of being named at the boundary — main's answer, and the one the host screen showed as
+  // an empty host rather than a failure (STA-3123).
+  'worktree-catalog-unchecked-reader': {
+    file: 'worktree-catalog-operations.ts',
+    before: "read: rpcResultVariant('worktree-catalog', worktreeCatalogSchema)",
+    after:
+      "read: (raw: unknown) => ({ compatible: true, variant: 'worktree-catalog', value: raw, salvage: { droppedPaths: [], droppedCount: 0 } })"
+  },
   // Reads the push test result one level above the envelope, so an accepted test reports failure.
+  // Re-anchored when step 7 deleted the cast the checked reader made unnecessary; same defect.
   'push-test-envelope': {
     file: 'notification-display-test.tsx',
-    before: 'const result = delivered.value as MobilePushTestResult',
-    after: 'const result = reply as unknown as MobilePushTestResult'
+    before: 'const result = delivered.value',
+    after: 'const result = reply as unknown as typeof delivered.value'
   },
   // Publishes the repo reply's payload instead of the member the reader took off it.
   'task-screen-repo-envelope': {
