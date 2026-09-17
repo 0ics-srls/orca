@@ -75,6 +75,7 @@
       "NativeChatResumeOnRestartModal": {
         "manyAgents": "{{value0}} agents",
         "oneAgent": "1 agent",
+        "projects": "Folder workspaces",
         "reconnectAgent": "Reconnect {{value0}} chat",
         "resume": "Reconnect"
       },

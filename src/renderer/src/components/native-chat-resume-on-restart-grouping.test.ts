@@ -8,6 +8,7 @@ import {
   allResumeSessionIds,
   groupResumeCandidates,
   groupResumeWorkspacesByRepo,
+  resolveResumeGroupHeader,
   resumeWorkspaceKind,
   selectedResumeSessionIds,
   type ResumeCandidate
@@ -113,5 +114,42 @@ describe('choosing the workspace glyph', () => {
     const { workspaceKind: _dropped, ...withoutKind } = candidate({ workspaceId })
 
     expect(resumeWorkspaceKind(withoutKind)).toBe(expected)
+  })
+})
+
+describe('naming the group header', () => {
+  const REPO_ICON = { type: 'lucide', name: 'git-branch' } as const
+  const REPOS = [{ id: 'repo-1', displayName: 'orca', repoIcon: REPO_ICON }]
+  const GROUPS = [{ id: '4c3c3452-758b-418b-add1-0a280c8e03a0', name: 'Scratch' }]
+
+  // THE REGRESSION. A folder workspace's repoId is `folder-workspace:<projectGroupId>` and is never
+  // null, so the old "repoId !== null means it is a repo" test took the repo branch, found nothing
+  // in the repos list, and printed the raw synthetic id — a uuid — as the header.
+  it('titles a folder workspace with its project group name, not the raw id', () => {
+    const header = resolveResumeGroupHeader(
+      'folder-workspace:4c3c3452-758b-418b-add1-0a280c8e03a0',
+      REPOS,
+      GROUPS
+    )
+
+    expect(header).toEqual({ kind: 'project', name: 'Scratch' })
+    expect(header.name).not.toContain('folder-workspace:')
+    expect(header.name).not.toContain('4c3c3452')
+  })
+
+  it('titles a git repo with its display name and keeps its own glyph', () => {
+    expect(resolveResumeGroupHeader('repo-1', REPOS, GROUPS)).toEqual({
+      kind: 'repo',
+      name: 'orca',
+      repoIcon: REPO_ICON
+    })
+  })
+
+  // An unknown project group still reads as a project, so it takes the group glyph rather than
+  // falling back into the repo branch.
+  it('still reports a project for a group it cannot find', () => {
+    const header = resolveResumeGroupHeader('folder-workspace:missing', REPOS, GROUPS)
+
+    expect(header.kind).toBe('project')
   })
 })
