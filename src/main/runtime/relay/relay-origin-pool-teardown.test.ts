@@ -13,7 +13,10 @@ const fakes = vi.hoisted(() => ({
   }[],
   controlConnect: vi.fn(),
   exchange: vi.fn(),
-  assign: vi.fn()
+  assign: vi.fn(),
+  // Why mutable: a retiring origin only keeps its grace timer while something still answers
+  // through it; at zero, maybeClose retires it on the spot and there is no timer left to survive.
+  pendingRequestCount: 0
 }))
 
 vi.mock('./relay-http-client', async (importOriginal) => ({
@@ -27,7 +30,9 @@ vi.mock('./relay-control-client', () => ({
     connect = fakes.controlConnect
     closeNow = vi.fn()
     isLive = vi.fn(() => true)
-    pendingRequestCount = 0
+    get pendingRequestCount(): number {
+      return fakes.pendingRequestCount
+    }
     constructor(readonly options: (typeof fakes.controls)[number]['options']) {
       fakes.controls.push(this)
     }
@@ -70,45 +75,93 @@ function brokerOptions(
   }
 }
 
+const ACK: RelayHostHelloAckMessage = {
+  type: 'host-hello-ack',
+  v: 1,
+  generation: 1,
+  controlResumeSecret: 'R'.repeat(43),
+  leaseExpiresAt: 1_000_000,
+  activeConnIds: [],
+  pendingConns: []
+}
+
+const ASSIGNMENT = {
+  cellUrl: 'https://relay.example.test',
+  assignmentEpoch: 1,
+  leaseExpiresAt: 1_000_000
+}
+
+function drainActiveOrigin(): void {
+  fakes.controls[0]!.options.onDrain({
+    type: 'drain',
+    graceMs: 5_000,
+    recovery: 'resolve-director'
+  })
+}
+
+/**
+ * Every timer the pool and its broker can leave armed, each reached the way production reaches it.
+ *
+ * Why a table and not one case: teardown here is a hand-maintained list of verbs — `rotation.cancel()`,
+ * `drainRetry.cancel()`, `retirement.clear()` — against three helper classes that each spell "disarm"
+ * differently. `drainRetry.reset()` sat next to `rotation.cancel()` looking symmetric while only
+ * zeroing a counter, and every behavioural test stayed green because the guard at fire time meant
+ * nothing reopened. Counting timers is the only assertion that sees a leak with no behaviour.
+ */
+const ARMED_STATES: { name: string; arm: () => Promise<void> }[] = [
+  {
+    // Rotation is armed by openInitial itself, and the broker arms its lease refresh on connect.
+    name: 'a live broker doing nothing else (control rotation + lease refresh)',
+    arm: async () => {}
+  },
+  {
+    name: 'a drain retry armed by a director refusal',
+    arm: async () => {
+      fakes.assign.mockRejectedValue(new Error('director_unavailable'))
+      drainActiveOrigin()
+      await vi.advanceTimersByTimeAsync(0)
+    }
+  },
+  {
+    name: 'an origin retirement grace armed by a rotation to a different cell',
+    arm: async () => {
+      // A different cellUrl skips the rebind arm and lands in activateTarget, which is what
+      // schedules the grace. Something must still answer through the old origin or it retires now.
+      fakes.pendingRequestCount = 1
+      fakes.assign.mockResolvedValue({
+        ...ASSIGNMENT,
+        cellUrl: 'https://relay-2.example.test',
+        assignmentEpoch: 2
+      })
+      drainActiveOrigin()
+      await vi.advanceTimersByTimeAsync(0)
+    }
+  }
+]
+
 describe('RelayOriginPool teardown', () => {
   beforeEach(() => {
     fakes.controls.length = 0
     fakes.controlConnect.mockReset()
     fakes.exchange.mockReset().mockResolvedValue({ relayToken: 'relay-jwt', expiresAt: 1_000_000 })
     fakes.assign.mockReset()
+    fakes.pendingRequestCount = 0
   })
 
-  it('disarms the drain retry so no timer survives closeNow', async () => {
+  it.each(ARMED_STATES)('leaves no timer armed after closeNow: $name', async ({ arm }) => {
     vi.useFakeTimers()
     try {
-      const ack: RelayHostHelloAckMessage = {
-        type: 'host-hello-ack',
-        v: 1,
-        generation: 1,
-        controlResumeSecret: 'R'.repeat(43),
-        leaseExpiresAt: 1_000_000,
-        activeConnIds: [],
-        pendingConns: []
-      }
-      fakes.controlConnect.mockResolvedValue(ack)
-      fakes.assign
-        .mockResolvedValueOnce({
-          cellUrl: 'https://relay.example.test',
-          assignmentEpoch: 1,
-          leaseExpiresAt: 1_000_000
-        })
-        .mockRejectedValue(new Error('director_unavailable'))
+      fakes.controlConnect.mockResolvedValue(ACK)
+      fakes.assign.mockResolvedValueOnce(ASSIGNMENT)
 
       const broker = await RelaySessionBroker.connect(brokerOptions())
-      fakes.controls[0]!.options.onDrain({
-        type: 'drain',
-        graceMs: 5_000,
-        recovery: 'resolve-director'
-      })
-      // The director refusal arms the drain retry.
-      await vi.advanceTimersByTimeAsync(0)
-      const armedWhileLive = vi.getTimerCount()
-      expect(armedWhileLive).toBeGreaterThan(0)
+      await arm()
+
+      // The census must be able to find things: a case that armed nothing would assert 0 === 0 and
+      // pass for the wrong reason, which is exactly how the drain-retry leak stayed invisible.
+      expect(vi.getTimerCount(), 'nothing was armed, so this case guards nothing').toBeGreaterThan(
+        0
+      )
 
       broker.closeNow()
       expect(vi.getTimerCount()).toBe(0)
