@@ -43,6 +43,26 @@ export type WorkspaceSessionState = {
   /** Keys may be legacy raw worktree IDs or canonical WorkspaceKey values. */
   tabsByWorktree: Record<string, TerminalTab[]>
   terminalLayoutsByTabId: Record<string, TerminalLayoutSnapshot>
+  /**
+   * Client-local scrollback captured when a pane cold-parks, keyed tabId -> leafId -> buffer.
+   *
+   * Why a second home for scrollback rather than `TerminalLayoutSnapshot.buffersByLeafId`: the two
+   * encode different things. `buffersByLeafId` is **shared with peers** — it rides the remote
+   * projection so a second desktop can cold-restore a tab this machine parked. This field is
+   * **local-only**: the ordinary cold park fires every time a workspace is hidden, and shipping
+   * that in a wholesale `replace-session` costs tens of MiB on the common path for a copy no peer
+   * consumes. `exportRemoteWorkspaceSession` is an explicit allowlist of named top-level fields,
+   * so a top-level field is omitted from the upload for free — a field *inside* the layout would
+   * ride along, because layout entries are copied whole.
+   *
+   * Second, weaker-but-real property: the mirrored-tab apply rewrites only `ptyIdsByTabId` and
+   * `terminalLayoutsByTabId`, so scrollback here cannot be wiped by a host inventory frame at all.
+   * Moving it back into the layout for tidiness would reintroduce that wipe.
+   *
+   * Never read this field directly — resolve through `resolveLeafScrollback` so no consumer has to
+   * know which of the two homes a leaf's bytes live in.
+   */
+  parkedScrollbackByTabId?: Record<string, Record<string, string>>
   /** Worktree IDs that had at least one tab with a live PTY at shutdown.
    *  Used on startup to eagerly re-spawn PTY processes so the Active filter
    *  works immediately after restart. */

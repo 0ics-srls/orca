@@ -12,6 +12,7 @@ function createSnapshot(browserUrlHistory: BrowserHistoryEntry[]): WorkspaceSess
     tabsByWorktree: {},
     ptyIdsByTabId: {},
     terminalLayoutsByTabId: {},
+    parkedScrollbackByTabId: {},
     activeTabIdByWorktree: {},
     openFiles: [],
     editorDrafts: {},

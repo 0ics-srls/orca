@@ -23,9 +23,26 @@ export function createTerminalLayoutActions(
   | 'setTabPaneExpanded'
   | 'setTabCanExpandPane'
   | 'setTabLayout'
+  | 'setTabParkedScrollback'
   | 'syncPaneDetachPtyOwnership'
 > {
   return {
+    // Why separate from setTabLayout: park scrollback is client-local and must not ride the remote
+    // projection. See WorkspaceSessionState.parkedScrollbackByTabId; read via resolveLeafScrollback.
+    setTabParkedScrollback: (tabId, buffersByLeafId) => {
+      set((s) => {
+        const current = s.parkedScrollbackByTabId ?? {}
+        if (!buffersByLeafId || Object.keys(buffersByLeafId).length === 0) {
+          if (!(tabId in current)) {
+            return s
+          }
+          const next = { ...current }
+          delete next[tabId]
+          return { parkedScrollbackByTabId: next }
+        }
+        return { parkedScrollbackByTabId: { ...current, [tabId]: buffersByLeafId } }
+      })
+    },
     replaceTerminalLayoutPanePtyId: (tabId, leafId, ptyId) => {
       set((s) => {
         const layout = s.terminalLayoutsByTabId[tabId]

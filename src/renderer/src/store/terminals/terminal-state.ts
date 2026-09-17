@@ -44,6 +44,9 @@ export type TerminalState = {
   expandedPaneByTabId: Record<string, boolean>
   canExpandPaneByTabId: Record<string, boolean>
   terminalLayoutsByTabId: Record<string, TerminalLayoutSnapshot>
+  /** Client-local park scrollback, tabId -> leafId -> buffer. Never uploaded to a peer; see
+   *  WorkspaceSessionState.parkedScrollbackByTabId. Read via `resolveLeafScrollback`, never directly. */
+  parkedScrollbackByTabId: Record<string, Record<string, string>>
   recentQuickCommandIdByGroup: Record<string, string>
   /** Runtime-only claim bridging startup payload consumption until terminal hooks mount. */
   automaticAgentResumeClaimsByTabId: Record<string, AutomaticAgentResumeClaim>
