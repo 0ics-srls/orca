@@ -200,3 +200,49 @@ describe('requireSchemaLockTarget', () => {
     expect(requireSchemaLockTarget(statement)).toBeUndefined()
   })
 })
+
+describe('multi-action ALTER TABLE', () => {
+  it('throws rather than deriving only the first subcommand', () => {
+    // Deriving `a` and skipping on it would drop `b` for the life of the database, and the first
+    // subcommand parses fine, so nothing else here would catch it.
+    const statement =
+      'ALTER TABLE t ADD COLUMN IF NOT EXISTS a TEXT, ADD COLUMN IF NOT EXISTS b TEXT'
+    expect(schemaLockTarget(statement)).toEqual({
+      kind: 'column',
+      table: 't',
+      name: 'a',
+      skipWhen: 'present'
+    })
+    expect(() => requireSchemaLockTarget(statement)).toThrow(/unparsed_schema_lock_target/)
+  })
+
+  it('throws on a constraint swap written as one statement', () => {
+    expect(() =>
+      requireSchemaLockTarget(
+        'ALTER TABLE t DROP CONSTRAINT IF EXISTS old, ADD CONSTRAINT new CHECK (x > 0)'
+      )
+    ).toThrow(/unparsed_schema_lock_target/)
+  })
+
+  it.each([
+    ['a parenthesised type', 'ALTER TABLE t ADD COLUMN IF NOT EXISTS a NUMERIC(10, 2)'],
+    ['a CHECK body', "ALTER TABLE t ADD CONSTRAINT c CHECK (r IN ('us-central1', 'asia-east2'))"],
+    ['a quoted comma', `ALTER TABLE t ADD COLUMN IF NOT EXISTS a TEXT DEFAULT 'x, y'`],
+    ['a doubled quote before a comma', `ALTER TABLE t ADD COLUMN a TEXT DEFAULT 'it''s, fine'`],
+    ['a trailing line comment', 'ALTER TABLE t ADD COLUMN a TEXT -- one, two'],
+    ['a trailing block comment', 'ALTER TABLE t ADD COLUMN a TEXT /* one, two */']
+  ])('does not throw on %s', (_label, statement) => {
+    expect(() => requireSchemaLockTarget(statement)).not.toThrow()
+  })
+
+  it('throws on a block comment sitting where the column name belongs', () => {
+    // Unparseable for an ordinary reason, and still the right answer: no target means no pre-check.
+    expect(() =>
+      requireSchemaLockTarget('ALTER TABLE t ADD COLUMN /* note */ a TEXT')
+    ).toThrow(/unparsed_schema_lock_target/)
+  })
+
+  it('leaves a multi-column CREATE INDEX alone', () => {
+    expect(() => requireSchemaLockTarget('CREATE INDEX IF NOT EXISTS i ON t(a, b)')).not.toThrow()
+  })
+})

@@ -110,14 +110,52 @@ export function schemaLockTarget(statement: string): SchemaLockTarget | undefine
   return undefined
 }
 
+const ALTER_TABLE = /^ALTER\s+TABLE\b/i
+
+// A comma that separates ALTER TABLE subcommands rather than sitting inside a type, a default, or a
+// CHECK body. Quotes and parentheses are tracked so `CHECK (r IN ('a', 'b'))` and `NUMERIC(10, 2)`
+// do not read as one.
+function hasTopLevelComma(sql: string): boolean {
+  let depth = 0
+  let quote: string | undefined
+  for (let index = 0; index < sql.length; index += 1) {
+    const character = sql[index]
+    if (quote !== undefined) {
+      if (character !== quote) continue
+      if (sql[index + 1] === quote) index += 1
+      else quote = undefined
+      continue
+    }
+    if (character === "'" || character === '"') quote = character
+    else if (character === '-' && sql[index + 1] === '-') {
+      const newline = sql.indexOf('\n', index)
+      if (newline === -1) return false
+      index = newline
+    } else if (character === '/' && sql[index + 1] === '*') {
+      const close = sql.indexOf('*/', index + 2)
+      if (close === -1) return false
+      index = close + 1
+    } else if (character === '(') depth += 1
+    else if (character === ')') depth -= 1
+    else if (character === ',' && depth === 0) return true
+  }
+  return false
+}
+
 // An index or column statement whose target cannot be read is the dangerous case: it would be sent
 // unchecked and take the lock the pre-check exists to avoid, silently and on every boot. An
 // auto-named `CREATE INDEX ON t(c)` lands here too, because nothing in the text says what the
 // catalog will call it. Fail the boot with the statement instead.
 export function requireSchemaLockTarget(statement: string): SchemaLockTarget | undefined {
+  const sql = sqlWithoutLeadingComments(statement)
+  // A multi-action ALTER TABLE parses to its FIRST subcommand's target only, so skipping on that
+  // one object would silently drop every later action for the life of the database. One action per
+  // statement, or no pre-check is possible.
+  if (ALTER_TABLE.test(sql) && hasTopLevelComma(sql)) {
+    throw new Error(`unparsed_schema_lock_target: ${sql}`)
+  }
   const target = schemaLockTarget(statement)
   if (target) return target
-  const sql = sqlWithoutLeadingComments(statement)
   if (MUST_PARSE.some((shape) => shape.test(sql))) {
     throw new Error(`unparsed_schema_lock_target: ${sql}`)
   }
