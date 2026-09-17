@@ -275,4 +275,24 @@ describe('relay live-broker wait under interleaving', () => {
     await vi.advanceTimersByTimeAsync(0)
     expect(seen()).not.toBe('unsettled')
   })
+  it('settles a waiter that arrives after a fence, without joining the open it abandoned', async () => {
+    // The fence installs an idle authority, so a caller arriving while the abandoned open is still
+    // in flight is told the cause now. Joining that open would park it behind readContext's own
+    // ceiling for an answer the fence already decided.
+    vi.useFakeTimers()
+    const neverReturns = deferred<CoordinatedRelayBroker>()
+    const coordinator = new RelayAuthCoordinator({
+      readContext: async () => context,
+      openBroker: async () => await neverReturns.promise,
+      onStatus: vi.fn(),
+      random: () => 0.5
+    })
+    coordinator.reconcile()
+    await vi.advanceTimersByTimeAsync(0)
+    coordinator.fenceAndCloseNow()
+
+    const seen = observe(coordinator.waitForLiveBrokerResult(20_000))
+    await vi.advanceTimersByTimeAsync(0)
+    expect(seen()).not.toBe('unsettled')
+  })
 })

@@ -7,11 +7,8 @@ import type { RelayBrokerStatus } from './relay-session-broker'
 import { RelayHttpError, shouldRetryRelayConnectionError } from './relay-http-client'
 import { relayOfflineReasonForOpenFailure, type RelayOfflineReason } from './relay-offline-reason'
 import { RelayRetrySchedule } from './relay-retry-schedule'
-import {
-  runLiveBrokerWait,
-  LIVE_BROKER_WAIT_BUDGET_MS,
-  type LiveBrokerWaitSource
-} from './relay-live-broker-wait'
+import { RelayAuthority } from './relay-authority'
+import { withTimeout } from '../../../shared/promise-timeout-fallback'
 import {
   relayAuthIdentityKey as identityKey,
   type CoordinatedRelayBroker,
@@ -28,6 +25,12 @@ export type {
   RelayAuthIdentity
 } from './relay-auth-coordinator-contract'
 
+// Bounds only how long a waiter sits through superseded opens and armed retries, never the open
+// it arrived on. It does NOT bound the call: a reconcile's own ceiling is readContext's cloud
+// refresh (60s) plus the broker open, so a wait can outlive this. relay-auth-coordinator-wait-
+// budget.test.ts pins that so the claim cannot drift back.
+export const LIVE_BROKER_WAIT_BUDGET_MS = 20_000
+
 type BrokerOwnership = {
   identityKey: string
   broker: CoordinatedRelayBroker | null
@@ -36,24 +39,12 @@ type BrokerOwnership = {
 
 export class RelayAuthCoordinator {
   private readonly options: RelayAuthCoordinatorOptions
-  private authEpoch = 0
   private offlineReason: RelayOfflineReason | null = null
   private ownership: BrokerOwnership | null = null
   private readonly pendingOwnerships = new Set<BrokerOwnership>()
-  private latestReconcile: Promise<void> = Promise.resolve()
-  // Why waiters are woken on every authority turnover (fresh reconcile, fence)
-  // rather than left on the reconcile they joined: that reconcile's result is
-  // discarded once it is superseded, so parking on it holds the caller behind
-  // an open nobody will use — even after a newer one registered a broker.
-  private authorityChange = Promise.withResolvers<void>()
-  private readonly waitSource: LiveBrokerWaitSource = {
-    stopped: () => this.stopped,
-    liveBroker: () => this.getLiveBroker(),
-    reconcile: () => this.latestReconcile,
-    authorityChange: () => this.authorityChange.promise,
-    armedRetry: () => this.retry.settled,
-    offlineReason: () => this.offlineReason
-  }
+  // The reconcile whose result will be kept. Everything older is discarded, so a waiter parked on
+  // a superseded one would be held behind an open nobody will use.
+  private authority = RelayAuthority.idle()
   private lingerTimer: ReturnType<typeof setTimeout> | null = null
   private readonly retry: RelayRetrySchedule
   private stopped = false
@@ -75,36 +66,33 @@ export class RelayAuthCoordinator {
     if (this.stopped) {
       return
     }
-    this.retry.cancel()
     if (resetRetry) {
       this.retry.reset()
     }
-    const epoch = ++this.authEpoch
-    this.invalidatePendingOwnerships()
-    const reconcile = this.reconcileEpoch(epoch, expectedIdentityKey, options)
-    this.latestReconcile = reconcile
-    this.wakeWaiters()
-    void reconcile
+    this.turnover((authority) => this.reconcileUnder(authority, expectedIdentityKey, options))
   }
 
-  private wakeWaiters(): void {
-    const change = this.authorityChange
-    this.authorityChange = Promise.withResolvers<void>()
-    change.resolve()
+  // The only way the authority changes hands, so ending the outgoing one — which is what releases
+  // every waiter parked on it — cannot be skipped. `run` absent means nothing is running.
+  private turnover(run?: (authority: RelayAuthority) => Promise<void>): void {
+    this.retry.cancel()
+    for (const ownership of this.pendingOwnerships) {
+      ownership.valid = false
+    }
+    this.pendingOwnerships.clear()
+    this.authority.end()
+    this.authority = run ? RelayAuthority.running(run) : RelayAuthority.idle()
   }
 
   // hostCloseReason names an auth loss the phone should be told about. Quit,
   // relaunch and every other fence pass nothing, so the control socket dies
   // abruptly exactly as before and the cell records no cause.
   fenceAndCloseNow(hostCloseReason?: RelayHostCloseReason): void {
-    ++this.authEpoch
     this.cancelLinger()
-    this.retry.cancel()
     this.retry.reset()
-    this.invalidatePendingOwnerships()
+    this.turnover()
     this.invalidateOwnership(hostCloseReason)
     this.publish('offline', hostCloseReason)
-    this.wakeWaiters()
   }
 
   // Why derived rather than passed in: the coordinator republishes `registered`
@@ -158,7 +146,33 @@ export class RelayAuthCoordinator {
   async waitForLiveBrokerResult(
     budgetMs = LIVE_BROKER_WAIT_BUDGET_MS
   ): Promise<LiveBrokerWaitResult> {
-    return await runLiveBrokerWait(this.waitSource, budgetMs)
+    const deadline = Date.now() + budgetMs
+    let joined = false
+    while (!this.stopped) {
+      const broker = this.getLiveBroker()
+      if (broker) {
+        return { broker }
+      }
+      // The budget bounds only superseded and retried work; the open the waiter arrived on is
+      // never cut short, because cutting a slow-but-succeeding one fails a pairing about to work.
+      if (joined && Date.now() >= deadline) {
+        break
+      }
+      const authority = this.authority
+      joined = true
+      await authority.settled
+      if (authority !== this.authority) {
+        continue
+      }
+      // A transient failure has armed its own retry, so waiting is worthwhile. A terminal outcome
+      // (signed out, unentitled, rejected) arms nothing, so its cause returns now.
+      if (!this.retry.pending || Date.now() >= deadline) {
+        break
+      }
+      await withTimeout(authority.ended, deadline - Date.now(), undefined)
+    }
+    const broker = this.getLiveBroker()
+    return broker ? { broker } : { broker: null, offlineReason: this.offlineReason }
   }
 
   stop(): void {
@@ -166,15 +180,15 @@ export class RelayAuthCoordinator {
     this.fenceAndCloseNow()
   }
 
-  private async reconcileEpoch(
-    epoch: number,
+  private async reconcileUnder(
+    authority: RelayAuthority,
     expectedIdentityKey?: string,
     options?: ReconcileOptions
   ): Promise<void> {
     let retryIdentityKey: string | undefined
     try {
       const context = await this.options.readContext()
-      if (!this.isEpochCurrent(epoch)) {
+      if (!this.isCurrent(authority)) {
         return
       }
       if (!context || !context.relayEntitled) {
@@ -232,7 +246,7 @@ export class RelayAuthCoordinator {
       const isCurrent = (): boolean =>
         ownership.valid &&
         !this.stopped &&
-        (ownership.broker ? this.ownership === ownership : this.isEpochCurrent(epoch))
+        (ownership.broker ? this.ownership === ownership : this.isCurrent(authority))
       let broker: CoordinatedRelayBroker
       try {
         broker = await this.options.openBroker({
@@ -244,7 +258,7 @@ export class RelayAuthCoordinator {
         this.pendingOwnerships.delete(ownership)
       }
       ownership.broker = broker
-      if (!this.isEpochCurrent(epoch) || !ownership.valid) {
+      if (!this.isCurrent(authority) || !ownership.valid) {
         broker.closeNow()
         return
       }
@@ -252,7 +266,7 @@ export class RelayAuthCoordinator {
       this.retry.reset()
       this.publish('registered')
     } catch (error) {
-      if (this.isEpochCurrent(epoch)) {
+      if (this.isCurrent(authority)) {
         // Why: silent broker-open failures made a dead relay look like standby
         // during incident diagnosis; the message carries operation + status.
         console.warn(
@@ -263,7 +277,7 @@ export class RelayAuthCoordinator {
         this.publish('offline', relayOfflineReasonForOpenFailure(retryable, retryIdentityKey))
         if (retryable) {
           const retryAfterMs = error instanceof RelayHttpError ? (error.retryAfterMs ?? 0) : 0
-          this.scheduleRetry(epoch, retryIdentityKey, retryAfterMs, options)
+          this.scheduleRetry(authority, retryIdentityKey, retryAfterMs, options)
         }
       }
     }
@@ -272,16 +286,16 @@ export class RelayAuthCoordinator {
   // options ride along so a policy-change reconcile that failed transiently
   // still skips the linger when its retry finally observes no demand.
   private scheduleRetry(
-    epoch: number,
+    authority: RelayAuthority,
     expectedIdentityKey: string | undefined,
     retryAfterMs: number,
     options: ReconcileOptions | undefined
   ): void {
-    if (!this.isEpochCurrent(epoch)) {
+    if (!this.isCurrent(authority)) {
       return
     }
     this.retry.schedule(retryAfterMs, () => {
-      if (this.isEpochCurrent(epoch)) {
+      if (this.isCurrent(authority)) {
         // Retry still re-reads entitlement and demand; the timer grants no authority.
         this.beginReconcile(false, expectedIdentityKey, options)
       }
@@ -295,11 +309,11 @@ export class RelayAuthCoordinator {
     if (!ownership.valid || this.stopped) {
       return null
     }
-    const epoch = this.authEpoch
+    const authority = this.authority
     const context = await this.options.readContext()
     if (
       !ownership.valid ||
-      !this.isEpochCurrent(epoch) ||
+      !this.isCurrent(authority) ||
       !context?.relayEntitled ||
       identityKey(context.identity) !== expectedIdentityKey
     ) {
@@ -342,14 +356,7 @@ export class RelayAuthCoordinator {
     }
   }
 
-  private invalidatePendingOwnerships(): void {
-    for (const ownership of this.pendingOwnerships) {
-      ownership.valid = false
-    }
-    this.pendingOwnerships.clear()
-  }
-
-  private isEpochCurrent(epoch: number): boolean {
-    return !this.stopped && this.authEpoch === epoch
+  private isCurrent(authority: RelayAuthority): boolean {
+    return !this.stopped && this.authority === authority
   }
 }

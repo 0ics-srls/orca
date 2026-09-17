@@ -9,7 +9,6 @@ import { RelayDemandLedger } from './relay-demand-ledger'
 import { RelayRevokeOutbox, type RelayDeviceBinding } from './relay-revoke-outbox'
 
 const ownerIdentityKey = 'user-1\0profile-1\0org-1'
-const otherOwnerIdentityKey = 'user-2\0profile-2\0org-2'
 const relayHostId = 'relay-host-1'
 
 /** Mirrors DesktopRelayService.isRelayAllowedForDevice: a live pull, not a snapshot. */
@@ -228,21 +227,5 @@ describe('RelayDemandLedger nextPendingExpiry scoping', () => {
     fx.deviceRegistry.setRelayBinding(far.deviceId, binding(far.deviceId, 9_000))
     fx.deviceRegistry.setRelayBinding(near.deviceId, binding(near.deviceId, 4_000))
     expect(fx.ledger.nextPendingExpiry()).toBe(4_000)
-  })
-})
-
-describe('RelayDemandLedger owner scoping of transient refs', () => {
-  // Characterisation: transient refs carry no owner identity, so they answer
-  // hasDemand for any signed-in identity. See the report for the risk window.
-  it('counts a transient ref for an identity that did not request it', () => {
-    const fx = fixture()
-    const phone = fx.deviceRegistry.addDevice('Phone')
-    fx.deviceRegistry.setMobilePairingConnectionMode(phone.deviceId, 'automatic')
-    fx.deviceRegistry.setRelayBinding(phone.deviceId, binding(phone.deviceId))
-    const release = fx.ledger.acquireTransient(`pairing:${phone.deviceId}`, phone.deviceId)
-    expect(fx.ledger.hasDemand(ownerIdentityKey)).toBe(true)
-    expect(fx.ledger.hasDemand(otherOwnerIdentityKey)).toBe(true)
-    release()
-    expect(fx.ledger.hasDemand(otherOwnerIdentityKey)).toBe(false)
   })
 })

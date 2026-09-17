@@ -51,20 +51,10 @@ export class RelayDemandLedger {
   }
 
   hasDemand(ownerIdentityKey: string): boolean {
-    // KNOWN GAP, deliberately not fixed here: a transient ref carries no owner identity, so this
-    // loop answers true for ANY signed-in identity. The device-binding and revoke-outbox branches
-    // below both filter on `ownerIdentityKey`; this one cannot. A profile/org switch mid-pairing
-    // therefore keeps the coordinator holding a relay control session for an identity that never
-    // asked for one.
-    //
-    // Nothing defends either the current behaviour or that regression: scoping this loop by owner
-    // fails exactly one test across the whole relay suite, the characterisation test written for
-    // it. The fix has to thread identity through `acquireTransient`, whose call site is
-    // desktop-relay-service.ts. Inferring the owner here instead — skipping a ref whose device
-    // carries a different owner's binding — is UNSAFE: `withTransientDemand('provision')` calls
-    // `setMobileRelayBinding` inside the operation, so during a re-pair the device still holds the
-    // old owner's binding and that filter would drop demand mid-provision, tearing the broker down
-    // under the very operation holding the ref.
+    // KNOWN GAP: a transient ref carries no owner identity, so this loop answers true for any
+    // signed-in identity, unlike the owner-filtered branches below. The fix threads identity
+    // through acquireTransient (call site: desktop-relay-service.ts); inferring the owner here is
+    // unsafe, because withTransientDemand('provision') rebinds the device mid-operation.
     for (const ref of this.transientRefs.values()) {
       if (this.isRelayAllowed(ref.deviceId)) {
         return true
