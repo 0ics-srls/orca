@@ -71,7 +71,16 @@ function scriptedLaunchClient(
         // A launch answers with a bare `worktreeId`; `worktree.create` wraps one in `worktree`.
         result:
           'launched' in outcome
-            ? { worktreeId: outcome.launched, outcome: { kind: 'terminal', handle: 'term_x' } }
+            ? {
+                worktreeId: outcome.launched,
+                outcome: { kind: 'terminal', handle: 'term_x' },
+                receipt: {
+                  mode: 'terminal',
+                  preferred: 'terminal',
+                  reason: 'user_default',
+                  detail: 'Terminal selected'
+                }
+              }
             : { worktree: { id: outcome.created } },
         _meta: { runtimeId: 'r' }
       }
@@ -79,10 +88,7 @@ function scriptedLaunchClient(
   } as unknown as RpcClient & { reconnect: () => void }
 }
 
-// The launch route's replay safety is a SECOND name on the wire: `clientMutationId` rides inside
-// the create payload and only reaches the host's in-memory 60s cache, while `operationId` names
-// the whole launch in the durable ledger. Both are minted per candidate and reused verbatim
-// inside it.
+// operationId names the full launch; the host owns suffix selection and bypasses the legacy cache.
 describe('agent.launch operation id', () => {
   const launchOperationIds = (attempts: Attempt[]): unknown[] =>
     attempts.map((attempt) => attempt.params.operationId)
@@ -136,7 +142,10 @@ describe('agent.launch operation id', () => {
     client.reconnect()
 
     await expect(pending).resolves.toEqual({ worktreeId: 'wt-launch', name: 'otter' })
-    expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'agent.launch'])
+    expect(attempts.map((attempt) => attempt.method)).toEqual([
+      'agent.launchReplay',
+      'agent.launchReplay'
+    ])
     // The whole point: the replay is the SAME operation, so the host returns the recorded
     // answer instead of launching a second agent in a second workspace.
     expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1'])
@@ -178,24 +187,20 @@ describe('agent.launch operation id', () => {
     expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1', 'op-1'])
   })
 
-  // The invariant. `computeAgentLaunchFingerprint` folds `target` whole, so the candidate name is
-  // inside the fingerprint: carrying one id onto the bumped name would meet its own row under a
-  // different fingerprint and refuse `agent_session_operation_conflict`, failing the create.
-  it('mints a NEW launch name when a collision bumps the candidate', async () => {
+  it('does not restart the host name search with another operation after a collision', async () => {
     const attempts: Attempt[] = []
     const client = scriptedLaunchClient(
       [
-        { errorCode: 'worktree_create_conflict', errorMessage: 'already exists locally' },
+        { errorCode: 'worktree_create_collision', errorMessage: 'already exists locally' },
         { launched: 'wt-bumped' }
       ],
       attempts
     )
     await expect(launchRetry({ client, attempts })).resolves.toEqual({
-      worktreeId: 'wt-bumped',
-      name: 'otter-2'
+      error: 'already exists locally'
     })
-    expect(launchCandidateNames(attempts)).toEqual(['otter', 'otter-2'])
-    expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-2'])
+    expect(launchCandidateNames(attempts)).toEqual(['otter'])
+    expect(launchOperationIds(attempts)).toEqual(['op-1'])
   })
 
   it('sends no launch name to a host that advertises agent.launch without the ledger', async () => {
@@ -281,7 +286,10 @@ describe('agent.launch operation id', () => {
       worktreeId: 'wt-downgraded',
       name: 'otter'
     })
-    expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'worktree.create'])
+    expect(attempts.map((attempt) => attempt.method)).toEqual([
+      'agent.launchReplay',
+      'worktree.create'
+    ])
     expect(launchOperationIds(attempts)).toEqual(['op-1', undefined])
   })
 
@@ -299,7 +307,10 @@ describe('agent.launch operation id', () => {
     await expect(launchRetry({ client, attempts })).resolves.toEqual({
       error: 'agent_launch_unsupported'
     })
-    expect(attempts.map((attempt) => attempt.method)).toEqual(['agent.launch', 'agent.launch'])
+    expect(attempts.map((attempt) => attempt.method)).toEqual([
+      'agent.launchReplay',
+      'agent.launchReplay'
+    ])
     expect(launchOperationIds(attempts)).toEqual(['op-1', 'op-1'])
   })
 

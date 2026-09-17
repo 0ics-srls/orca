@@ -123,7 +123,7 @@ describe('mobile launch retries through the host ledger', () => {
     createStructuredSession.mockResolvedValue({ ok: false, refusal: { code, message: code } })
     const launch = mobileLaunch()
 
-    await expect(launch.result).resolves.toEqual({ error: code })
+    await expect(launch.result).resolves.toEqual({ error: 'agent_session_operation_unknown' })
     expect(launch.runtime.createManagedWorktree).toHaveBeenCalledTimes(1)
     expect(launch.attempts).toHaveLength(1)
     expect(store.listOperationRows()[0]?.outcome.status).toBe('unknown')

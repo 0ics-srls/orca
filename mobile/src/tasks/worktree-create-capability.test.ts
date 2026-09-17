@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_RUNTIME_CAPABILITY
 } from '../../../src/shared/protocol-version'
@@ -86,7 +87,10 @@ describe('readNewWorktreeRuntimeCapabilities', () => {
       readNewWorktreeRuntimeCapabilities(
         statusClient([
           {
-            capabilities: [AGENT_LAUNCH_RUNTIME_CAPABILITY, AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY]
+            capabilities: [
+              AGENT_LAUNCH_RUNTIME_CAPABILITY,
+              AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY
+            ]
           }
         ])
       )
@@ -103,9 +107,21 @@ describe('readNewWorktreeRuntimeCapabilities', () => {
   it('ignores the replay capability on a host without agent.launch', async () => {
     await expect(
       readNewWorktreeRuntimeCapabilities(
-        statusClient([{ capabilities: [AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY] }])
+        statusClient([{ capabilities: [AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY] }])
       )
     ).resolves.toMatchObject({ agentLaunch: false })
+  })
+
+  it('does not authorize replay from the optional-identity capability alone', async () => {
+    await expect(
+      readNewWorktreeRuntimeCapabilities(
+        statusClient([
+          {
+            capabilities: [AGENT_LAUNCH_RUNTIME_CAPABILITY, AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY]
+          }
+        ])
+      )
+    ).resolves.toMatchObject({ agentLaunch: { replay: false } })
   })
 
   it('uses the bounded fallback for an old idempotent host without an advertisement', async () => {

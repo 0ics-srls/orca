@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
-  AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY,
+  AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY,
   AGENT_LAUNCH_RUNTIME_CAPABILITY
 } from '../../../src/shared/protocol-version'
 import type { AgentLaunchSupport } from './agent-launch-worktree-create'
@@ -65,7 +65,7 @@ export async function readNewWorktreeRuntimeCapabilities(
         tasksSupported: capabilities.includes(MOBILE_TASKS_CAPABILITY),
         // Unsupported stays plain `false`, the same shape `worktreeCreateIdempotency` uses.
         agentLaunch: capabilities.includes(AGENT_LAUNCH_RUNTIME_CAPABILITY)
-          ? { replay: capabilities.includes(AGENT_LAUNCH_REPLAY_RUNTIME_CAPABILITY) }
+          ? { replay: capabilities.includes(AGENT_LAUNCH_REPLAY_REQUIRED_RUNTIME_CAPABILITY) }
           : false,
         worktreeCreateIdempotency: supportsIdempotency
           ? advertisedIdempotency === undefined

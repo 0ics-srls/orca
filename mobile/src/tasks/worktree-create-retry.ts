@@ -2,7 +2,11 @@ import type { TuiAgent } from '../../../src/shared/tui-agent'
 import type { RpcClient } from '../transport/rpc-client'
 import type { RpcResponse } from '../transport/types'
 import { isRpcDeliveryUnknown } from '../transport/rpc-delivery-ambiguity'
-import { agentLaunchRun, worktreeCreateRun } from './mobile-workspace-create-operations'
+import {
+  agentLaunchRun,
+  agentLaunchReplayRun,
+  worktreeCreateRun
+} from './mobile-workspace-create-operations'
 import { waitForRpcClientReconnected } from '../transport/rpc-client-reconnect-wait'
 import { isLogicalClientCutoverError } from '../transport/stable-logical-rpc-client'
 import {
@@ -67,7 +71,7 @@ export type CreateWorktreeWithNameRetryArgs = {
   maxAttempts?: number
   // Injected in tests; production mints a fresh idempotency key per candidate.
   mintMutationId?: () => string
-  // Same partition, same reason: injected in tests, minted per candidate in production.
+  // Injected in tests; the replay-required launch keeps one identity across all deliveries.
   mintLaunchOperationId?: () => string
 }
 
@@ -101,11 +105,7 @@ export async function createWorktreeWithNameRetry(
     const params = worktreeCreateIdempotency
       ? { ...candidateParams, clientMutationId: mintMutationId() }
       : candidateParams
-    // Why here and not inside the sender: the launch fingerprint folds the whole create payload,
-    // so an id carried across a name-collision bump would meet its own row under a different
-    // fingerprint and refuse `agent_session_operation_conflict` — failing the create outright on
-    // the second candidate. One operation per candidate, reused verbatim by every retry within it,
-    // is the same partition `clientMutationId` above is minted on.
+    // Replay-required launches own suffix selection on the host; this id names the entire create.
     const launchOperationId = launch?.replay ? mintLaunchOperationId() : null
     const sent = await sendWorktreeCreateResilient(
       client,
@@ -119,7 +119,11 @@ export async function createWorktreeWithNameRetry(
       !response.ok &&
       !sent.replayed &&
       launch &&
-      isAgentLaunchUnsupportedRefusal(response.error)
+      (launchOperationId
+        ? response.error.code === 'method_not_found' ||
+          response.error.code === 'forbidden' ||
+          response.error.code === 'agent_launch_replay_unsupported'
+        : isAgentLaunchUnsupportedRefusal(response.error))
     ) {
       // The probe said the host knows `agent.launch` but it refused the call — most likely this
       // client's capability list had not landed yet. Downgrade for good rather than fail a create.
@@ -132,7 +136,7 @@ export async function createWorktreeWithNameRetry(
     // Why the raw refusal: the retry decision below is `isRetryableWorktreeCreateConflict` over the
     // host's message, and no acceptance policy carries a refusal message through without throwing.
     if (response.ok) {
-      const created = readCreateResult(response, launch !== null)
+      const created = readCreateResult(response, launch)
       if (created) {
         return {
           worktreeId: created.worktreeId,
@@ -144,7 +148,8 @@ export async function createWorktreeWithNameRetry(
       break
     }
     lastError = response.error.message
-    if (!isRetryableWorktreeCreateConflict(lastError ?? '')) {
+    // The replay-required host already exhausted its candidates; only legacy hosts need this loop.
+    if (launch?.replay || !isRetryableWorktreeCreateConflict(lastError ?? '')) {
       break
     }
   }
@@ -166,10 +171,11 @@ async function resolveAgentLaunchRoute(
 // a create that seated the workspace but could not start the agent surface.
 function readCreateResult(
   response: RpcResponse,
-  launched: boolean
+  launch: { replay: boolean } | null
 ): { worktreeId: string; displayName?: string; warning?: string } | null {
-  if (launched) {
-    return readAgentLaunchCreateOutcome(agentLaunchRun.interpret(response))
+  if (launch) {
+    const operation = launch.replay ? agentLaunchReplayRun : agentLaunchRun
+    return readAgentLaunchCreateOutcome(operation.interpret(response))
   }
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: Preserve the established response shape at this boundary.
   const created = worktreeCreateRun.interpret(response) as {
@@ -220,11 +226,20 @@ async function sendWorktreeCreateResilient(
       // `request` is the transport promise itself, so a delivery-unknown rejection reaches the
       // catch below as the object the transport marked — the WeakSet cannot see through a wrapper.
       const response = await (launchAgent
-        ? agentLaunchRun.request(
-            client,
-            agentLaunchCreateParams(launchAgent, params, launchOperationId),
-            { timeoutMs: WORKTREE_CREATE_TIMEOUT_MS }
-          )
+        ? launchOperationId
+          ? agentLaunchReplayRun.request(
+              client,
+              {
+                ...agentLaunchCreateParams(launchAgent, params),
+                operationId: launchOperationId
+              },
+              { timeoutMs: WORKTREE_CREATE_TIMEOUT_MS }
+            )
+          : agentLaunchRun.request(
+              client,
+              agentLaunchCreateParams(launchAgent, params, launchOperationId),
+              { timeoutMs: WORKTREE_CREATE_TIMEOUT_MS }
+            )
         : worktreeCreateRun.request(client, params, {
             timeoutMs: WORKTREE_CREATE_TIMEOUT_MS
           }))
