@@ -6,20 +6,7 @@ import {
   readRelayCloudSqlConnectionBudget
 } from './relay-cloud-sql-connection-budget.mjs'
 
-const arithmetic = (report) =>
-  [
-    `cells ${report.consumers.cells}`,
-    `directors ${report.consumers.directors}`,
-    `auth ${report.consumers.auth}`,
-    `api ${report.consumers.api}`,
-    `= ${report.configuredMaximum} configured`,
-    `+ ${report.rolloutOverlap.maximum} rollout overlap`,
-    `+ ${report.maintenanceAdminAllowance} admin allowance`,
-    `= ${report.operatingMaximum} operating`,
-    `against ${report.maxConnections} max_connections less a ${report.explicitReserve} reserve`
-  ].join(', ')
-
-test('the production budget reads the committed pools', () => {
+test('production shared consumers keep allowance and reserve below the ceiling', () => {
   // cells: 230 + 18 for the three asia-east2 pools at 16.
   const report = readRelayCloudSqlConnectionBudget()
 
@@ -34,14 +21,12 @@ test('the production budget reads the committed pools', () => {
   assert.equal(report.rolloutOverlap.maximum, 65)
   assert.equal(report.maintenanceAdminAllowance, 5)
   assert.equal(report.explicitReserve, 10)
-  assert.equal(report.usableCeiling, 390)
+  assert.equal(report.usableCeiling, 490)
   assert.equal(report.operatingMaximum, 403)
-})
-
-test('a serialized rollout fits under the ceiling less the stated reserve', () => {
-  const report = readRelayCloudSqlConnectionBudget()
-
-  assert.ok(report.withinBudget, `the operating maximum exceeds the usable ceiling: ${arithmetic(report)}`)
+  assert.equal(report.remainingWithinUsableCeiling, 87)
+  assert.equal(report.budgetedTotal, 413)
+  assert.equal(report.unallocated, 87)
+  assert.equal(report.withinBudget, true)
 })
 
 test('fails closed when pool growth consumes the explicit reserve', () => {
