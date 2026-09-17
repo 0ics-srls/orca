@@ -171,6 +171,47 @@ describe('sweepSupersededRelayEndpoints', () => {
     expect(warn.mock.calls.flat().join('\n')).toContain('no pass ran: exec failed')
   })
 
+  // Same defect as the two arms above, one level down. An ordinary probe failure degrades to
+  // `unverifiable` and the loop carries on, so the only way out of it mid-pass is the one case that
+  // matters most: an exec whose SSH channel never confirmed close, which may still be running
+  // remotely. That rethrows by design — and it used to throw past the log, losing socket 1's
+  // verdict and making a half-run pass read exactly like a host with nothing to sweep.
+  it('keeps the endpoints it already classified when a later probe cannot confirm termination', async () => {
+    const SECOND_SOCK = `${HOME}/.orca-remote/relay-0.1.0+cafebabe1234/${SOCK_NAME}`
+    const unconfirmed = Object.assign(new Error('channel close unconfirmed'), {
+      sshChannelCloseConfirmed: false
+    })
+    const warn = warnSpy()
+    execCommand
+      .mockResolvedValueOnce(`${OLD_SOCK}\n${SECOND_SOCK}\n`)
+      .mockResolvedValueOnce(probe(['PRESENT=yes', 'LISTEN=unknown', 'HOLDERS_SOURCE=unavailable']))
+      .mockRejectedValueOnce(unconfirmed)
+
+    await expect(sweepSupersededRelayEndpoints(CONN, HOST, SWEEP)).rejects.toBe(unconfirmed)
+
+    const logged = warn.mock.calls.flat().join('\n')
+    // Socket 1's verdict survives the abandon...
+    expect(logged).toContain('Superseded relay unverifiable')
+    expect(logged).toContain(OLD_SOCK)
+    // ...and the pass says how far it got, claiming nothing about the one it never reached.
+    expect(logged).toContain('stopped after 1 of 2 endpoints')
+    expect(logged).not.toContain(SECOND_SOCK)
+  })
+
+  // The loop must not stop on a probe that merely failed: that is an absence of evidence, and the
+  // remaining endpoints still deserve a pass.
+  it('carries on past an ordinary probe failure and classifies the rest', async () => {
+    const SECOND_SOCK = `${HOME}/.orca-remote/relay-0.1.0+cafebabe1234/${SOCK_NAME}`
+    execCommand
+      .mockResolvedValueOnce(`${OLD_SOCK}\n${SECOND_SOCK}\n`)
+      .mockRejectedValueOnce(new Error('probe blew up'))
+      .mockResolvedValueOnce(probe(['PRESENT=yes', 'LISTEN=unknown', 'HOLDERS_SOURCE=unavailable']))
+
+    const findings = await sweepSupersededRelayEndpoints(CONN, HOST, SWEEP)
+
+    expect(findings.map((f) => f.outcome)).toEqual(['unverifiable', 'unverifiable'])
+  })
+
   it('does not run against Windows hosts, whose endpoints are named pipes', async () => {
     const warn = warnSpy()
     await expect(sweepSupersededRelayEndpoints(CONN, WINDOWS_HOST, SWEEP)).resolves.toEqual([])

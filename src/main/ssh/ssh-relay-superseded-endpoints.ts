@@ -154,20 +154,35 @@ export async function sweepSupersededRelayEndpoints(
     .slice(0, MAX_SWEPT_ENDPOINTS)
 
   const findings: SupersededRelayFinding[] = []
-  for (const sockPath of sockPaths) {
-    options.signal?.throwIfAborted()
-    const incumbent = await probeRelayEndpointIncumbent(
-      conn,
-      hostPlatform,
-      options.nodePath,
-      sockPath,
-      { signal: options.signal }
+  try {
+    for (const sockPath of sockPaths) {
+      options.signal?.throwIfAborted()
+      const incumbent = await probeRelayEndpointIncumbent(
+        conn,
+        hostPlatform,
+        options.nodePath,
+        sockPath,
+        { signal: options.signal }
+      )
+      findings.push({
+        sockPath,
+        outcome: await applySupersededRelayDecision(conn, incumbent, options),
+        incumbent
+      })
+    }
+  } catch (err) {
+    // Why log before rethrowing: a probe or a reap that throws on socket 2 of N already classified
+    // socket 1, and those lines are the whole point of this pass. Dropping them made a half-run
+    // sweep read exactly like a host with nothing to sweep — the same defect the Windows arm above
+    // has, one level down. The throw still propagates unchanged; the caller separates
+    // RelayProbeCleanupUnconfirmedError from the rest. The count says how much of the pass ran, and
+    // claims nothing about the endpoints it never reached.
+    logSupersededRelayFindings(findings)
+    console.warn(
+      `[ssh-relay] Superseded relay sweep stopped after ${findings.length} of ${sockPaths.length} ` +
+        `endpoints; the rest were not examined: ${err instanceof Error ? err.message : String(err)}`
     )
-    findings.push({
-      sockPath,
-      outcome: await applySupersededRelayDecision(conn, incumbent, options),
-      incumbent
-    })
+    throw err
   }
   logSupersededRelayFindings(findings)
   return findings
