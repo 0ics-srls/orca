@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const fakes = vi.hoisted(() => ({
   configured: true,
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: vi.hoisted needs the widened type up front; null cannot infer the options shape assigned later.
   serviceOptions: null as null | { hostMobilePairingConnectionMode?: () => string },
   service: {
     start: vi.fn(),
@@ -13,7 +14,9 @@ const fakes = vi.hoisted(() => ({
     provisionRelay: vi.fn(),
     ensureLive: vi.fn()
   },
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: an empty literal cannot infer the listener signature, and vi.hoisted runs before any listener registers.
   settingsListeners: [] as ((updates: Record<string, unknown>) => void)[],
+  // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: undefined alone infers as undefined, closing the field to the mode strings each test assigns.
   settings: { mobilePairingConnectionMode: undefined as string | undefined }
 }))
 
@@ -60,6 +63,7 @@ describe('startDesktopRelayService (#18211 host policy wiring)', () => {
     fakes.settingsListeners.length = 0
     fakes.settings.mobilePairingConnectionMode = undefined
     mainProcessState.desktopRelayService = null
+    // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: setMobileRelayPairingProvider is the only member startDesktopRelayService calls on the rpc server.
     startDesktopRelayService({ setMobileRelayPairingProvider: vi.fn() } as never)
   })
 
