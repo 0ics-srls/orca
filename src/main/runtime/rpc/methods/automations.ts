@@ -3,7 +3,7 @@ import {
   AUTOMATION_SHELL_RUNTIME_CAPABILITY
 } from '../../../../shared/protocol-version'
 import type { AutomationOwnerPrecondition } from '../../../../shared/automation-owner-precondition'
-import { defineMethod, InvalidArgumentError, type RpcContext, type RpcMethod } from '../core'
+import { defineMethod, InvalidArgumentError, type RpcContext } from '../core'
 import {
   AutomationCreate,
   AutomationId,
@@ -41,7 +41,7 @@ function assertShellAutomationSupport(context: RpcContext): void {
   }
 }
 
-export const AUTOMATION_METHODS: RpcMethod[] = [
+export const AUTOMATION_METHODS = [
   defineMethod({
     name: 'automation.list',
     params: AutomationList,
